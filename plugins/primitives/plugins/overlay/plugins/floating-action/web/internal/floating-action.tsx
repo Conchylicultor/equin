@@ -207,8 +207,14 @@ function FloatingActionPanel({
         };
         chromeRef.current = chrome;
       }
-      wrapper.style.width = `${trig.width + chrome.width}px`;
-      wrapper.style.height = `${trig.height + chrome.height}px`;
+      // The boxes above are measured in viewport px, which already carry any
+      // CSS `zoom` on the wrapper or its ancestors; a length written into the
+      // wrapper's style is scaled by that zoom again. Divide it back out, or a
+      // zoomed control's hitbox comes out zoom² the size of its panel (and a
+      // `my-auto`-centred one drags the panel off-centre).
+      const zoom = wrapper.currentCSSZoom;
+      wrapper.style.width = `${(trig.width + chrome.width) / zoom}px`;
+      wrapper.style.height = `${(trig.height + chrome.height) / zoom}px`;
     },
     { deps: [open] },
   );

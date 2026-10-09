@@ -41,6 +41,15 @@ const DOCKED_SIZE: ControlSize = "sm";
 const BAR_TONE = "text-muted-foreground";
 
 /**
+ * The floating capsule's scale: the whole capsule (controls, icons, labels,
+ * padding, radius) drawn at this fraction of its `md` design, so it shrinks
+ * without changing its proportions — the 40px capsule renders 34px tall.
+ * One CSS `zoom` rather than a smaller density, which would shrink the
+ * controls' boxes but keep their icons and text at full size.
+ */
+const FLOATING_ZOOM = "[zoom:0.85]";
+
+/**
  * The always-visible leading item: the health report's dot, at its host's
  * density (the one the host gives every other button in the bar).
  */
@@ -143,7 +152,8 @@ export function FloatingActionBarHost() {
     // wears the chrome's fixed theme, exactly as the docked strip does inside
     // the tab bar. `none` because the floating panel paints its own card: a
     // glass capsule (pill, `xs` = 4px padding around the 32px `md` controls,
-    // so 40px tall) that is there collapsed and open alike.
+    // so 40px tall, then scaled by FLOATING_ZOOM) that is there collapsed and
+    // open alike.
     <Theme name={chromeThemeScope} surface="none">
       <FloatingBand>
         <FloatingAction
@@ -151,7 +161,7 @@ export function FloatingActionBarHost() {
           // so the zero-height fallback band cannot squash it (its only child
           // is absolute, so its min-content height is 0).
           // eslint-disable-next-line layout/no-adhoc-layout -- positioning box of the floating hitbox inside its anchored band (centring + no-squash mechanics, not a layout role)
-          className="relative my-auto shrink-0"
+          className={`relative my-auto shrink-0 ${FLOATING_ZOOM}`}
           anchor="top-right"
           variant="glass"
           shape="pill"
