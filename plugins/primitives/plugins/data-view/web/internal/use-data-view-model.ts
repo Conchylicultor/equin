@@ -24,6 +24,21 @@ import { dataViewDescriptors } from "./descriptors";
 import { IDENTITY_GROUPING } from "./identity-grouping";
 import { useViewEphemeral } from "./use-view-ephemeral";
 
+/**
+ * One Set per stored `collapsedSections` array: the array keeps its identity
+ * until a collapse writes a new one, so the Set does too — a read keyed on it
+ * (a sectioned live read's active sections) recomputes only when it changes.
+ */
+const collapsedSets = new WeakMap<readonly string[], ReadonlySet<string>>();
+function collapsedSetOf(keys: readonly string[]): ReadonlySet<string> {
+  let set = collapsedSets.get(keys);
+  if (set === undefined) {
+    set = new Set(keys);
+    collapsedSets.set(keys, set);
+  }
+  return set;
+}
+
 /** Instance actions for the editable view-switcher (every DataView has these). */
 export interface ViewActions {
   /** Add-menu groups, one per source entry (each entry's registered
@@ -338,7 +353,7 @@ export function useDataViewModel(
 
   const collapsedSectionsFor = useCallback(
     (id: string): ReadonlySet<string> =>
-      new Set(ephemeral.localFor(id).collapsedSections),
+      collapsedSetOf(ephemeral.localFor(id).collapsedSections),
     [ephemeral],
   );
 

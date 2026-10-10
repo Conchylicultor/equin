@@ -51,7 +51,9 @@ export function usePlaceholderHeights(
     sized: placeholderHeights([], new Map(), reads, advances, pitch),
   }));
   let sized = state.sized;
-  if (state.reads !== reads) {
+  // Keyed on the layout's content, not its identity: a render-phase update
+  // re-renders at once, so an input re-minted each render would loop forever.
+  if (state.reads !== reads && !sameLayouts(state.reads, reads)) {
     // Derived from the previous render's layout: sized in the render the
     // placeholder appears in, so its first frame already has its height.
     sized = placeholderHeights(
@@ -69,6 +71,28 @@ export function usePlaceholderHeights(
     if (s === undefined) return p.rows * fallback;
     return s.rows === p.rows || s.rows === 0 ? s.px : (s.px * p.rows) / s.rows;
   };
+}
+
+/** Whether two layouts list the same entries and placeholders. */
+function sameLayouts(
+  a: readonly PagedReadLayout[],
+  b: readonly PagedReadLayout[],
+): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((ra, i) => {
+    const rb = b[i]!;
+    return (
+      ra.id === rb.id &&
+      ra.keys.length === rb.keys.length &&
+      ra.keys.every((k, j) => k === rb.keys[j]) &&
+      ra.placeholders.length === rb.placeholders.length &&
+      ra.placeholders.every(
+        (p, j) =>
+          p.key === rb.placeholders[j]!.key &&
+          p.rows === rb.placeholders[j]!.rows,
+      )
+    );
+  });
 }
 
 /**
