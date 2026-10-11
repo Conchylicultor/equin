@@ -1,2 +1,2 @@
-export { majorDegree } from "./degree";
-export type { MajorDegree } from "./degree";
+export { scaleDegree } from "./degree";
+export type { KeyMode, ScaleDegree } from "./degree";

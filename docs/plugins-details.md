@@ -1393,8 +1393,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/theory.romanNumeral`
               - `integrations/hooktheory.HookpadMode`
               - `integrations/hooktheory.hookpadTonicPc`
-              - `music/chord-box.majorDegree`
-              - `music/chord-box.MajorDegree`
+              - `music/chord-box.scaleDegree`
+              - `music/chord-box.ScaleDegree`
             - Exports (types):
               - `ChordDigit`
               - `ChordFunction`
@@ -23799,7 +23799,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`music`** — Umbrella for music building blocks shared across apps, knowing pitch classes and strings only: the chord box (a chord's degree colour, numeral and tile).
   - Plugins:
-    - **`chord-box`** — The chord box: <ChordBox> (a frame painted in the root's major-scale degree colour — filled tile, given or empty — holding its numeral and name, with a full-bleed hit button behind the content and now / selected states), <ChordNumeral> (the Roman numeral in the display serif, its mark raised in the sans), chordToneStyle / chordColour (the degree's --chord-N colour and tile depth as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour, with .chord-caption for a reading under a numeral (V/V, I/3) in the paint's own ink. Knows degrees and strings only, so any app can draw a chord the same way.
+    - **`chord-box`** — The chord box: <ChordBox> (a frame painted in the colour of the root's degree in its key's scale — filled tile, given or empty — holding its numeral and name, with a full-bleed hit button behind the content and now / selected states), <ChordNumeral> (the Roman numeral in the display serif, its mark raised in the sans), chordToneStyle / chordColour (the degree's --chord-N colour and tile depth as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour, with .chord-caption for a reading under a numeral (V/V, I/3) in the paint's own ink. Knows degrees and strings only, so any app can draw a chord the same way.
       - Web:
         - Uses:
           - `primitives/css/overlay.Overlay`
@@ -23825,8 +23825,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/sonata/chord-chart`
           - `apps/sonata/rich/readout-keyboard`
       - Core:
-        - Exports (types): `MajorDegree`
-        - Exports (values): `majorDegree`
+        - Exports (types):
+          - `KeyMode`
+          - `ScaleDegree`
+        - Exports (values): `scaleDegree`
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
@@ -38454,7 +38456,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `ChartTokenValues`
             - Exports (values): `chartGroup`
-        - **`chord-palette`** — Chord colour token group: --chord-1…7 (one colour per major-scale degree, I … vii) and --chord-outside (a root outside the scale), with their customizer section.
+        - **`chord-palette`** — Chord colour token group: --chord-1…7 (one colour per scale degree, the tonic first) and --chord-outside (a root outside the scale), with their customizer section.
           - Web:
             - Contributes:
               - `ThemeEngine.TokenGroup` "Chord colours"

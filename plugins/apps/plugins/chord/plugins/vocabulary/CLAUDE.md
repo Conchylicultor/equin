@@ -209,8 +209,8 @@ surface.
     - `apps/sonata/theory.romanNumeral`
     - `integrations/hooktheory.HookpadMode`
     - `integrations/hooktheory.hookpadTonicPc`
-    - `music/chord-box.majorDegree`
-    - `music/chord-box.MajorDegree`
+    - `music/chord-box.scaleDegree`
+    - `music/chord-box.ScaleDegree`
   - Exports (types):
     - `ChordDigit`
     - `ChordFunction`

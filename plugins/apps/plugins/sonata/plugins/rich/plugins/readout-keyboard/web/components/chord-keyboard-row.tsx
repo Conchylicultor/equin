@@ -6,7 +6,7 @@ import {
   chordToneStyle,
   type ChordBoxLabel,
 } from "@plugins/music/plugins/chord-box/web";
-import type { MajorDegree } from "@plugins/music/plugins/chord-box/core";
+import type { ScaleDegree } from "@plugins/music/plugins/chord-box/core";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ReadoutKeyboard, type ReadoutPlane } from "./readout-keyboard";
@@ -33,8 +33,8 @@ export function ChordKeyboardRow({
   description,
   onPick,
 }: {
-  /** The root's major-scale degree, which paints the box and lights the keys; `null` paints grey. */
-  degree: MajorDegree | null;
+  /** The root's scale degree in its key, which paints the box and lights the keys; `null` paints grey. */
+  degree: ScaleDegree | null;
   label: ChordBoxLabel;
   /** The chord's name, for the accessible label. */
   name: string;

@@ -4,7 +4,7 @@ import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
-import type { MajorDegree } from "../../core";
+import type { ScaleDegree } from "../../core";
 import { chordPaint, type ChordPaint } from "../chord-paint";
 import { chordToneStyle } from "../chord-tone";
 import { ChordNumeral } from "./chord-numeral";
@@ -39,8 +39,8 @@ export interface ChordBoxHit {
 }
 
 export interface ChordBoxProps extends Passthrough<HTMLDivElement> {
-  /** The root's major-scale degree, which paints the box; `null` paints the outside-the-scale grey. */
-  degree: MajorDegree | null;
+  /** The root's scale degree in its key, which paints the box; `null` paints the outside-the-scale grey. */
+  degree: ScaleDegree | null;
   /**
    * `filled` — the solid tile; `given` — the chord printed dimmed and flat
    * (the quiet tint); `empty` — a dashed edge waiting for a chord (the ghost).

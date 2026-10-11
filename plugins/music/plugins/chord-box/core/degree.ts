@@ -1,21 +1,33 @@
-// ── Where a chord's root sits in the major scale ─────────────────────────────
+// ── Where a chord's root sits in its key's scale ─────────────────────────────
 
-/** Semitones above the tonic of each major-scale degree, I to vii. */
-const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11] as const;
-
-/** A major-scale degree: 0 (I) to 6 (vii). */
-export type MajorDegree = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+/** A key's mode: which scale its degrees are read from. */
+export type KeyMode = "major" | "minor";
 
 /**
- * The major-scale degree of `rootPc` in the key whose tonic is `tonicPc` (both
- * pitch classes, any integer — read mod 12): 0 (I) to 6 (vii), or `null` for a
- * root outside the scale (♭VII, ♭III, …).
+ * Semitones above the tonic of each scale degree, 1 to 7: the major scale, and
+ * the natural minor for a minor key (so a minor key's III, VI and VII are
+ * diatonic, not outside the scale).
  */
-export function majorDegree(
+const SCALE: Record<KeyMode, readonly number[]> = {
+  major: [0, 2, 4, 5, 7, 9, 11],
+  minor: [0, 2, 3, 5, 7, 8, 10],
+};
+
+/** A scale degree: 0 (the tonic) to 6 (the seventh). */
+export type ScaleDegree = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+/**
+ * The scale degree of `rootPc` in the `mode` key whose tonic is `tonicPc` (both
+ * pitch classes, any integer — read mod 12): 0 (the tonic) to 6, or `null` for
+ * a root outside the scale (♭VII in major, ♯IV, …). The tonic is degree 0 in
+ * either mode, so home always wears the same colour.
+ */
+export function scaleDegree(
   rootPc: number,
   tonicPc: number,
-): MajorDegree | null {
+  mode: KeyMode,
+): ScaleDegree | null {
   const interval = (((rootPc - tonicPc) % 12) + 12) % 12;
-  const degree = MAJOR_SCALE.findIndex((pc) => pc === interval);
-  return degree === -1 ? null : (degree as MajorDegree);
+  const degree = SCALE[mode].indexOf(interval);
+  return degree === -1 ? null : (degree as ScaleDegree);
 }

@@ -2,5 +2,5 @@
   "name": "@singularity/plugin-ui-tokens-chord-palette",
   "private": true,
   "version": "0.0.1",
-  "description": "Chord colour token group: --chord-1…7, one colour per major-scale degree (I … vii) a chord's root sits on, and --chord-outside for a root outside the scale."
+  "description": "Chord colour token group: --chord-1…7, one colour per scale degree (1 … 7, the tonic first) a chord's root sits on, and --chord-outside for a root outside the scale."
 }

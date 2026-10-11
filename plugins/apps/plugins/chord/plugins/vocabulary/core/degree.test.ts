@@ -1,12 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import { ChordTokenSchema } from "@plugins/apps/plugins/chord/plugins/song-index/core";
-import type { MajorDegree } from "@plugins/music/plugins/chord-box/core";
+import type { ScaleDegree } from "@plugins/music/plugins/chord-box/core";
 import { chordDegree, chordFunction, type ChordFunction } from "./degree";
 
 const token = (text: string) => ChordTokenSchema.parse(text);
 
 describe("chord degree and function", () => {
-  const cases: [string, MajorDegree, ChordFunction][] = [
+  const cases: [string, ScaleDegree, ChordFunction][] = [
     ["0:4-3/0", 0, "tonic"],
     ["2:3-4/0", 1, "subdominant"],
     ["4:3-4/0", 2, "tonic"],
