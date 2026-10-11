@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sql } from "drizzle-orm";
 import {
   index,
   integer,
@@ -7,11 +8,14 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import {
   parsedJson,
   parsedText,
 } from "@plugins/database/plugins/sql-column/server";
+import { HoldClassSchema } from "../../core/hold";
+import { JobRunOutcomeSchema } from "../../core/resources";
 
 // Step log for durable workflows — memoizes side-effects performed via
 // `ctx.step(name, fn)` so replays (retries or resumes after a suspend) skip
@@ -107,11 +111,11 @@ export const _deadJobs = pgTable(
   ],
 );
 
-// How a recorded run ended. `suspended` is a durable workflow that returned to
-// wait (`ctx.waitFor` / `ctx.sleep`, or a supervised job handing its work to a
-// detached child): graphile saw a success, but the work is not over — its
-// resumed run records the real verdict as a run of its own.
-export const JobRunOutcomeSchema = z.enum(["succeeded", "failed", "suspended"]);
+// How a recorded run ended (`JobRunOutcomeSchema`, core). `suspended` is a
+// durable workflow that returned to wait (`ctx.waitFor` / `ctx.sleep`, or a
+// supervised job handing its work to a detached child): graphile saw a
+// success, but the work is not over — its resumed run records the real verdict
+// as a run of its own.
 
 // Run history, part 1: ONE row per job name, the latest run and two counters.
 // Bounded by construction — the key is the job name, so the table holds at
@@ -135,10 +139,26 @@ export const _jobRunStats = pgTable("job_run_stats", {
 
 // Run history, part 2: the last `RECENT_RUNS_RING` runs of each job, as a ring —
 // run number `seq` lands in `slot = (seq - 1) % RECENT_RUNS_RING` and overwrites
-// whatever run held that slot. Bounded by construction at ring × job names.
-export const _jobRecentRuns = pgTable(
-  "job_recent_runs",
+// whatever run held that slot (the upsert's conflict target is the unique
+// (job_name, slot) index). Bounded by construction at ring × job names.
+//
+// Each run's identity is `id` = `<job_name>:<seq>`, a STORED generated column —
+// unique per run, unable to disagree with the two columns it names, and moved
+// with them when a slot is overwritten (the change feed names both the old and
+// the new id of such an UPDATE). It is the single-column primary key the
+// `job-runs` live collection (core/resources.ts) binds to.
+//
+// Successor of `job_recent_runs` (whose composite (job_name, slot) key no
+// collection can bind): the migration that created this table copied that
+// ring's rows across before dropping it.
+export const _jobRuns = pgTable(
+  "job_runs",
   {
+    id: text("id")
+      .primaryKey()
+      .generatedAlwaysAs(
+        (): ReturnType<typeof sql> => sql`job_name || ':' || seq::text`,
+      ),
     jobName: text("job_name").notNull(),
     slot: integer("slot").notNull(),
     // The run's number (the stats row's `runs` after it was counted) — the
@@ -150,6 +170,21 @@ export const _jobRecentRuns = pgTable(
     error: text("error"),
     durationMs: integer("duration_ms").notNull(),
     attempt: integer("attempt").notNull(),
+    // NULL on a run copied from `job_recent_runs`, which never recorded them.
+    // `job_id` is graphile's row id (text, like `dead_jobs.id`); `hold` the
+    // class of the task the row was fetched on; `queued_at` the row's `run_at`
+    // — when it became runnable, so `started_at − queued_at` is how long it
+    // waited for a slot; `input` the payload's input, one shape per job type,
+    // so `unknown` and meant.
+    jobId: text("job_id"),
+    hold: parsedText("hold", HoldClassSchema),
+    maxAttempts: integer("max_attempts"),
+    queuedAt: timestamp("queued_at", { withTimezone: true }),
+    input: jsonb("input"),
   },
-  (t) => [primaryKey({ columns: [t.jobName, t.slot] })],
+  (t) => [
+    uniqueIndex("job_runs_job_name_slot_idx").on(t.jobName, t.slot),
+    // The collection's default order (newest finished first).
+    index("job_runs_finished_at_idx").on(t.finishedAt),
+  ],
 );

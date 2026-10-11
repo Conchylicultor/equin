@@ -93,7 +93,6 @@ toggle, silently resetting any child component state (e.g. an inner
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversations-view/data-view`
     - `debug/profiling/ops/op-gantt`
-    - `debug/queue`
     - `debug/trace/pane`
     - `primitives/css/sticky/stack`
     - `primitives/data-table`

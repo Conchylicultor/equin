@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import {
+  liveInstant,
+  liveNumber,
+  liveText,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import { fieldsToZodObject, type FieldsRecord } from "@plugins/fields/core";
 import { uuidField } from "@plugins/fields/plugins/uuid/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
@@ -66,18 +71,44 @@ export type TriggersPayload = z.infer<typeof TriggersPayloadSchema>;
 // window is the whole ring.
 export const EMISSIONS_CAP = 1000;
 
-// The emit() log — Debug → Queue's Events tab — as a live collection: a
-// bounded window, newest first (200, grown to at most `EMISSIONS_CAP`), plus
-// its `:rows` / `:groups` siblings. Nothing filters it yet (`filterable: {}`).
-// Pushed: an emit's insert, and the ring's inline prune, move the subscribed
-// windows through the change feed.
+/**
+ * Whether an emission reached any trigger: `"unmatched"` exactly when its
+ * `matchedCount` is 0. Not a stored column — the served collection computes it
+ * in SQL, so it filters, groups and counts on the server like any column while
+ * no write can make it disagree with `matchedCount`.
+ */
+export const EmissionMatchSchema = z.enum(["matched", "unmatched"]);
+export type EmissionMatch = z.infer<typeof EmissionMatchSchema>;
+
+/** A row of the {@link eventEmissions} collection: the emission, plus its derived `match`. */
+export const EmissionListRowSchema = EmissionRowSchema.extend({
+  match: EmissionMatchSchema,
+});
+export type EmissionListRow = z.infer<typeof EmissionListRowSchema>;
+
+/**
+ * The emit() log — Debug → Queue's Events tab — as a live collection: a bounded
+ * window, newest first (200, grown to at most `EMISSIONS_CAP`), plus its
+ * `:rows` / `:groups` siblings. Declared `scroll` so it backs a live DataView:
+ * `eventName` and `match` (derived from `matchedCount`) are facets — groupings
+ * of the whole log — and `matchedCount` / `emittedAt` filter and sort. Every
+ * emit prunes the log to `EMISSIONS_CAP` rows, so any query here reads at most
+ * that many. Pushed: an emit's insert, and the ring's inline prune, move the
+ * subscribed windows through the change feed.
+ */
 export const eventEmissions = liveCollection("event-emissions", {
-  row: EmissionRowSchema,
+  row: EmissionListRowSchema,
   id: "id",
-  filterable: {},
-  sortable: ["emittedAt"],
+  filterable: {
+    eventName: liveText(),
+    match: liveText(EmissionMatchSchema),
+    matchedCount: liveNumber(),
+    emittedAt: liveInstant(),
+  },
+  sortable: ["emittedAt", "eventName", "matchedCount"],
   default: { orderBy: [["emittedAt", "desc"]], limit: 200 },
   maxLimit: EMISSIONS_CAP,
+  scroll: true,
 });
 
 // Every trigger binding across every registered event, newest first — the

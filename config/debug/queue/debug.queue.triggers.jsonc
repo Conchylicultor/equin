@@ -1,0 +1,62 @@
+// @hash 6ec84829688d
+{
+  // Debug → Queue → Triggers: every event → job subscription. The first view
+  // groups them by event, the way a subscription is looked up.
+  "views": [
+    {
+      "id": "by-event",
+      "name": "By event",
+      "icon": "workspaces",
+      "view": {
+        "type": "table",
+        "visibleFields": ["jobName", "filters", "jobWith", "oneShot", "createdAt"],
+        "groupBy": { "fieldId": "eventName", "groupingId": "value" },
+        "sort": [{ "fieldId": "jobName", "direction": "asc" }]
+      }
+    },
+    {
+      "id": "all",
+      "name": "All",
+      "icon": "list",
+      "view": { "type": "table", "sort": [{ "fieldId": "createdAt", "direction": "desc" }] }
+    },
+    {
+      // Triggers whose job is no longer registered: they can never deliver.
+      "id": "dangling",
+      "name": "Dangling",
+      "icon": "link-off",
+      "view": {
+        "type": "table",
+        "sort": [{ "fieldId": "createdAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "f-dangling",
+          "conjunction": "and",
+          "children": [
+            { "kind": "rule", "id": "r-dangling", "fieldId": "dangling", "operatorId": "is", "value": true }
+          ]
+        }
+      }
+    },
+    {
+      "id": "disabled",
+      "name": "Disabled",
+      "icon": "toggle-off",
+      "view": {
+        "type": "table",
+        "sort": [{ "fieldId": "createdAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "f-disabled",
+          "conjunction": "and",
+          "children": [
+            { "kind": "rule", "id": "r-disabled", "fieldId": "enabled", "operatorId": "is", "value": false }
+          ]
+        }
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

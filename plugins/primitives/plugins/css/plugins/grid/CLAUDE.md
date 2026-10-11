@@ -71,14 +71,14 @@ Shared (both paths):
   - Exports (types): `GridProps`
   - Exports (values): `Grid`
 - Cross-plugin:
-  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×12
     - `primitives` ×8
     - `ui` ×4
     - `conversations` ×2
+    - `debug` ×2
     - `stats` ×2
     - `apps-core/surface/floating/wallpaper`
-    - `debug/health-monitor`
     - `infra/claude-cli`
     - `page/formatting/color`
     - `screenshot`

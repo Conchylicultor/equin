@@ -14,7 +14,7 @@ the catalog.
   (`cronRanges` → `cronWords`); the next run from the INSTALLED cron item's
   matcher (`nextScheduledRun`), so a main-only job seen from a worktree has no
   next run and reads "Runs on main". A resolver returning null is `Disabled`.
-- **Runs.** From the jobs run history (`job_run_stats`, `job_recent_runs`),
+- **Runs.** From the jobs run history (`job_run_stats`, `job_runs`),
   written on graphile's `job:complete`; a run in flight comes from memory.
 - **Run now.** Scheduled jobs only (their input parses `{}`), and only where the
   job runs.

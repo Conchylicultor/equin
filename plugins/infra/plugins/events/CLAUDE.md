@@ -79,6 +79,7 @@ insert and the ring's inline prune reach it through the change feed. The
   - Uses:
     - `database.db`
     - `database/sql-column.parsedJson`
+    - `database/sql-projection.parsed`
     - `infra/background/catalog.BackgroundTriggerSource`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
@@ -138,7 +139,12 @@ insert and the ring's inline prune reach it through the change feed. The
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveCollection`
     - `network/live.liveValue`
+    - `network/live/filter.liveInstant`
+    - `network/live/filter.liveNumber`
+    - `network/live/filter.liveText`
   - Exports (types):
+    - `EmissionListRow`
+    - `EmissionMatch`
     - `EmissionRow`
     - `EmissionsPayload`
     - `PatchTriggerBody`
@@ -146,6 +152,8 @@ insert and the ring's inline prune reach it through the change feed. The
     - `TriggersPayload`
   - Exports (values):
     - `deleteTriggerEndpoint`
+    - `EmissionListRowSchema`
+    - `EmissionMatchSchema`
     - `EmissionRowSchema`
     - `EMISSIONS_CAP`
     - `EmissionsPayloadSchema`

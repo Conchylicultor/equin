@@ -4,7 +4,9 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { runInBackgroundLane } from "@plugins/infra/plugins/runtime-profiler/core";
-import { _jobRecentRuns, _jobRunStats } from "./tables";
+import { holdForTask, type HoldClass } from "../../core/hold";
+import type { JobRunOutcome } from "../../core/resources";
+import { _jobRuns, _jobRunStats } from "./tables";
 
 // RUN HISTORY: what each job did the last times it ran. graphile deletes a row
 // the moment its job succeeds, so without this a successful run leaves no trace
@@ -32,7 +34,7 @@ export function ringSlot(seq: number): number {
   return (seq - 1) % RECENT_RUNS_RING;
 }
 
-export type JobRunOutcome = "succeeded" | "failed" | "suspended";
+export type { JobRunOutcome };
 
 /** One finished run, as recorded. */
 export interface JobRunRecord {
@@ -40,9 +42,21 @@ export interface JobRunRecord {
   startedAt: Date;
   finishedAt: Date;
   outcome: JobRunOutcome;
+  /** The error's message (capped at {@link RUN_ERROR_CHARS}), or null. */
   error: string | null;
   durationMs: number;
   attempt: number;
+  /**
+   * What the queue row said about the run — graphile's job id, the class of
+   * the task it was fetched on, its retry budget, when it became runnable
+   * (`run_at`) and the payload's input. `null` on a run recorded before the
+   * history kept them.
+   */
+  jobId: string | null;
+  hold: HoldClass | null;
+  maxAttempts: number | null;
+  queuedAt: Date | null;
+  input: unknown;
 }
 
 /** A job's latest run and its counters. */
@@ -142,6 +156,11 @@ export function attachRunStats(events: WorkerEvents): () => void {
         error: failed ? errorMessage(error) : null,
         durationMs: finishedAt - start.at,
         attempt: job.attempts,
+        jobId: id,
+        hold: holdForTask(job.task_identifier),
+        maxAttempts: job.max_attempts,
+        queuedAt: queuedAtOf(job.run_at),
+        input: inputOf(job.payload),
       };
       // Detached on purpose — graphile's emitter must not wait on our write,
       // and a failed write must not reach it (see `guarded`). A rejection is
@@ -180,6 +199,10 @@ export async function recordJobRun(
 ): Promise<void> {
   const failed = run.outcome === "failed" ? 1 : 0;
   const successAt = run.outcome === "failed" ? null : run.finishedAt;
+  // The stats row keeps a one-line preview; the run's own row the full message.
+  const lastError =
+    run.error === null ? null : cap(run.error, STATS_ERROR_CHARS);
+  const input = run.input === undefined ? null : JSON.stringify(run.input);
   await dbx.execute(sql`
     WITH s AS (
       INSERT INTO job_run_stats AS st (
@@ -187,7 +210,7 @@ export async function recordJobRun(
         last_duration_ms, last_success_at, runs, failures
       ) VALUES (
         ${run.jobName}, ${run.startedAt.toISOString()}, ${run.finishedAt.toISOString()},
-        ${run.outcome}, ${run.error}, ${run.durationMs},
+        ${run.outcome}, ${lastError}, ${run.durationMs},
         ${successAt === null ? null : successAt.toISOString()}, 1, ${failed}
       )
       ON CONFLICT (job_name) DO UPDATE SET
@@ -201,12 +224,16 @@ export async function recordJobRun(
         failures = st.failures + excluded.failures
       RETURNING runs
     )
-    INSERT INTO job_recent_runs (
-      job_name, slot, seq, started_at, finished_at, outcome, error, duration_ms, attempt
+    INSERT INTO job_runs (
+      job_name, slot, seq, started_at, finished_at, outcome, error, duration_ms,
+      attempt, job_id, hold, max_attempts, queued_at, input
     )
     SELECT ${run.jobName}, (s.runs - 1) % ${RECENT_RUNS_RING}, s.runs,
       ${run.startedAt.toISOString()}, ${run.finishedAt.toISOString()},
-      ${run.outcome}, ${run.error}, ${run.durationMs}, ${run.attempt}
+      ${run.outcome}, ${run.error}, ${run.durationMs}, ${run.attempt},
+      ${run.jobId}, ${run.hold}, ${run.maxAttempts},
+      ${run.queuedAt === null ? null : run.queuedAt.toISOString()},
+      ${input}::jsonb
     FROM s
     ON CONFLICT (job_name, slot) DO UPDATE SET
       seq = excluded.seq,
@@ -215,7 +242,12 @@ export async function recordJobRun(
       outcome = excluded.outcome,
       error = excluded.error,
       duration_ms = excluded.duration_ms,
-      attempt = excluded.attempt
+      attempt = excluded.attempt,
+      job_id = excluded.job_id,
+      hold = excluded.hold,
+      max_attempts = excluded.max_attempts,
+      queued_at = excluded.queued_at,
+      input = excluded.input
   `);
 }
 
@@ -230,9 +262,9 @@ export async function readRecentJobRuns(
 ): Promise<JobRunRecord[]> {
   const rows = await db
     .select()
-    .from(_jobRecentRuns)
-    .where(eq(_jobRecentRuns.jobName, jobName))
-    .orderBy(desc(_jobRecentRuns.seq))
+    .from(_jobRuns)
+    .where(eq(_jobRuns.jobName, jobName))
+    .orderBy(desc(_jobRuns.seq))
     .limit(RECENT_RUNS_RING);
   return rows.map((r) => ({
     jobName: r.jobName,
@@ -242,6 +274,11 @@ export async function readRecentJobRuns(
     error: r.error,
     durationMs: r.durationMs,
     attempt: r.attempt,
+    jobId: r.jobId,
+    hold: r.hold,
+    maxAttempts: r.maxAttempts,
+    queuedAt: r.queuedAt,
+    input: r.input,
   }));
 }
 
@@ -251,12 +288,40 @@ function emitChanged(jobName: string): void {
   }
 }
 
-// The first line of the error, capped — the full stack is in the job's own
-// failure report (`dispatch()` files one); this is the row's one-line reason.
-const ERROR_CHARS = 500;
+// The error's message, capped. A run's own row keeps enough to read a long
+// message (a command's output, a multi-line SQL error) in Debug → Queue's run
+// detail; the stats row keeps a one-line preview of the latest. The full stack
+// is in the job's own failure report (`dispatch()` files one).
+const RUN_ERROR_CHARS = 8000;
+const STATS_ERROR_CHARS = 500;
 function errorMessage(error: unknown): string {
-  const text = error instanceof Error ? error.message : String(error);
-  return text.length > ERROR_CHARS ? `${text.slice(0, ERROR_CHARS)}…` : text;
+  return cap(
+    error instanceof Error ? error.message : String(error),
+    RUN_ERROR_CHARS,
+  );
+}
+function cap(text: string, chars: number): string {
+  return text.length > chars ? `${text.slice(0, chars)}…` : text;
+}
+
+// graphile reads its rows through a raw `pg` pool, which decodes `timestamptz`
+// to a `Date` (see slot-ledger.ts `epochMs`). Checked, not assumed: a
+// non-Date would land as a wrong `queued_at` in every row. Reported, not
+// thrown, by the caller's `guarded` — and then the run is not recorded.
+function queuedAtOf(runAt: unknown): Date {
+  if (!(runAt instanceof Date)) {
+    throw new Error(
+      `[jobs] run history: run_at = ${String(runAt)}, expected a Date`,
+    );
+  }
+  return runAt;
+}
+
+function inputOf(payload: unknown): unknown {
+  if (typeof payload === "object" && payload !== null && "input" in payload) {
+    return payload.input ?? null;
+  }
+  return null;
 }
 
 function jobNameOf(payload: unknown): string | null {

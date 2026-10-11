@@ -2,12 +2,15 @@ import { desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
+import { parsed } from "@plugins/database/plugins/sql-projection/server";
+import { expr } from "@plugins/infra/plugins/query-resource/core";
 import {
   serveCollection,
   serveValue,
 } from "@plugins/network/plugins/live/server";
 import {
   deadJobs,
+  jobRuns,
   jobsList,
   type DeadJobsPayload,
   type JobsPayload,
@@ -22,7 +25,7 @@ import {
 } from "./introspection";
 import { isSlotForfeited } from "./forfeit";
 import { onQueueActivity } from "./slot-ledger";
-import { _deadJobs } from "./tables";
+import { _deadJobs, _jobRuns } from "./tables";
 
 // One row of `graphile_worker._private_jobs`, as it actually arrives.
 //
@@ -163,6 +166,31 @@ export async function loadDeadJobsList(limit = 2000): Promise<DeadJobsPayload> {
 // and its TTL / cap purge move every subscribed window. A row is written once
 // and never updated, so `archivedAt` never re-sorts one.
 export const deadJobsServed = serveCollection(deadJobs, { from: _deadJobs });
+
+// The run history over `job_runs` (a per-job ring, see tables.ts): its scroll
+// window (newest finished first), its `:rows` point sibling and the `:groups`
+// the facets read. Every stored field binds to its column by name; `waitMs` is
+// the one computed field — `started_at − queued_at` in whole ms, floored at 0
+// because `started_at` is this process's clock and `queued_at` the database's.
+// No poll and no notify: the change feed covers `job_runs`. A run's write is
+// an insert, or an UPDATE of the ring slot it overwrites — which moves the
+// row's generated `id`, and the feed names both the old and the new one, so
+// the overwritten run leaves every window it was in.
+export const jobRunsServed = serveCollection(jobRuns, {
+  from: _jobRuns,
+  columns: {
+    waitMs: (j) =>
+      expr(
+        // GREATEST skips NULLs, so the CASE keeps a run with no `queued_at`
+        // NULL rather than reading it as a 0 ms wait.
+        sql`CASE WHEN ${j.base.queuedAt} IS NULL THEN NULL ELSE GREATEST(0, round(EXTRACT(EPOCH FROM (${j.base.startedAt} - ${j.base.queuedAt})) * 1000))::integer END`,
+        {
+          decoder: parsed(z.number().int(), "job-runs.waitMs"),
+          sqlType: "integer",
+        },
+      ),
+  },
+});
 
 // `jobs-list` reads the `graphile_worker.*` job tables, which live OUTSIDE the
 // public schema the L4 DB change-feed triggers cover (the feed deliberately

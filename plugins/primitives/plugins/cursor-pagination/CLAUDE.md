@@ -75,7 +75,6 @@ See `research/2026-07-03-infinite-scroll-error-gate.md` for the full rationale.
   - Imported by:
     - `apps/mail/search`
     - `apps/pages/trash`
-    - `debug/queue`
     - `primitives/data-view`
     - `shell/notifications`
 - Exemptions:

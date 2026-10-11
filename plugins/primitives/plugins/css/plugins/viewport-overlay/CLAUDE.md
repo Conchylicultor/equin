@@ -177,7 +177,6 @@ looks equivalent and silently discards the caller's.
     - `apps-core/surface`
     - `apps/prototypes/present`
     - `apps/sonata/audio/metronome`
-    - `debug/queue`
     - `page/editor`
     - `primitives/adaptive-bar`
     - `primitives/overlay/floating-surface`

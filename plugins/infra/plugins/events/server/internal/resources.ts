@@ -1,11 +1,14 @@
-import { desc } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import {
   serveCollection,
   serveValue,
 } from "@plugins/network/plugins/live/server";
 import { getAllRegisteredJobNames } from "@plugins/infra/plugins/jobs/server";
+import { expr } from "@plugins/infra/plugins/query-resource/core";
+import { parsed } from "@plugins/database/plugins/sql-projection/server";
 import {
+  EmissionMatchSchema,
   eventEmissions,
   eventTriggers,
   type EmissionsPayload,
@@ -69,13 +72,26 @@ export async function loadTriggers(): Promise<TriggerRow[]> {
   return out;
 }
 
-// The emit() log over `event_emissions`: its window (newest first) and its
-// `:rows` / `:groups` siblings. Every column is on the wire — the row IS the
-// entity (`EmissionRow`), bound by name. Rows are written once and never
-// updated; `emittedAt` never changes, so an emit is a window insert and the
-// ring's inline prune a window delete.
+// The emit() log over `event_emissions`: its scroll window (newest first) and
+// its `:rows` / `:groups` siblings. Every stored column is on the wire — the
+// row is the entity (`EmissionRow`) bound by name, plus `match`, the one
+// computed field: `matched_count = 0`, the same fact `matchedCount` states, so
+// it cannot drift from it. Rows are written once and never updated;
+// `emittedAt` never changes, so an emit is a window insert and the ring's
+// inline prune a window delete.
 export const eventEmissionsServed = serveCollection(eventEmissions, {
   from: _event_emissions,
+  columns: {
+    match: (j) =>
+      expr(
+        sql`(CASE WHEN ${j.base.matchedCount} > 0 THEN 'matched' ELSE 'unmatched' END)`,
+        {
+          decoder: parsed(EmissionMatchSchema, "event-emissions.match"),
+          sqlType: "text",
+          notNull: true,
+        },
+      ),
+  },
 });
 
 // The loader's read-set is every per-event trigger table, so a write to any of

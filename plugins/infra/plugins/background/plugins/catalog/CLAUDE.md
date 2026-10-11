@@ -43,10 +43,10 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
 - Web:
   - Slots:
     - `background.actions`
-    - `background-entry.actions`
+    - `backgroundEntryPane.Actions`
   - Slot contributors:
     - `background.actions` ← `primitives.pane`
-    - `background-entry.actions` ← `primitives.pane`
+    - `backgroundEntryPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-background"
     - `Pane.Register` "debug-background-entry"
@@ -70,6 +70,7 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
     - `primitives/loading.Loading`
     - `runs/run-outcome.RUN_OUTCOME_META`
   - Exports (values):
+    - `backgroundEntryPane`
     - `NextRun`
     - `useBackgroundEntry`
 - Server:
@@ -133,6 +134,7 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
     - `runBackgroundNowEndpoint`
 - Cross-plugin:
   - Imported by:
+    - `debug/queue`
     - `infra/background/timer`
     - `infra/events`
     - `infra/file-watcher/background-arm`

@@ -806,7 +806,7 @@ See "Open questions" in the design doc.
   - Slots: `Pane.Register`
   - Slot contributors: 88 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Pane.Register` ×88
-  - Contributes: 107 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 111 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountsPane.Actions` "title" → `PaneTitleItem`
     - `agentDetailPane.Actions` "title" → `PaneTitleItem`
@@ -819,8 +819,8 @@ See "Open questions" in the design doc.
     - `attemptPane.Actions` "title" → `PaneTitleItem`
     - `automation-detail.actions` "title" → `PaneTitleItem`
     - `automations.actions` "title" → `PaneTitleItem`
-    - `background-entry.actions` "title" → `PaneTitleItem`
     - `background.actions` "title" → `PaneTitleItem`
+    - `backgroundEntryPane.Actions` "title" → `PaneTitleItem`
     - `backupPane.Actions` "title" → `PaneTitleItem`
     - `backupRunPane.Actions` "title" → `PaneTitleItem`
     - `blockDetailPane.Actions` "title" → `PaneTitleItem`
@@ -888,6 +888,10 @@ See "Open questions" in the design doc.
     - `prototypes-present-canvas.actions` "title" → `PaneTitleItem`
     - `prototypes-present.actions` "title" → `PaneTitleItem`
     - `prototypesGalleryPane.Actions` "title" → `PaneTitleItem`
+    - `queue-dead.actions` "title" → `PaneTitleItem`
+    - `queue-emission.actions` "title" → `PaneTitleItem`
+    - `queue-job.actions` "title" → `PaneTitleItem`
+    - `queue-trigger.actions` "title" → `PaneTitleItem`
     - `queuePane.Actions` "title" → `PaneTitleItem`
     - `readSetPane.Actions` "title" → `PaneTitleItem`
     - `recoveryPane.Actions` "title" → `PaneTitleItem`

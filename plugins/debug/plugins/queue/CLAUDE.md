@@ -4,37 +4,65 @@
 
 ## Plugin reference
 
-- Description: Inspect and debug the jobs queue, events emission log, and active triggers.
+- Description: Debug → Queue: the jobs queue as live DataViews with side detail panes — Jobs (the live graphile queue merged with the recorded run history: status, hold class, attempts, when, slot wait, duration against the class ceiling, error; Retry / Cancel / Run now), Dead (the dead-letter archive), Events (the emit() log, matched or not) and Triggers (every event→job subscription, enable / disable / delete).
 - Web:
-  - Slots: `queuePane.Actions`
-  - Slot contributors: `queuePane.Actions` ← `primitives.pane`
+  - Slots:
+    - `queuePane.Actions`
+    - `queue-job.actions`
+    - `queue-dead.actions`
+    - `queue-emission.actions`
+    - `queue-trigger.actions`
+    - `job-actions`
+    - `trigger-actions`
+  - Slot contributors:
+    - `queuePane.Actions` ← `debug.queue`
+    - `queuePane.Actions` ← `primitives.pane`
+    - `queue-job.actions` ← `primitives.pane`
+    - `queue-dead.actions` ← `primitives.pane`
+    - `queue-emission.actions` ← `primitives.pane`
+    - `queue-trigger.actions` ← `primitives.pane`
+    - `job-actions` ← `debug.queue`
+    - `trigger-actions` ← `debug.queue`
   - Contributes:
     - `Pane.Register` "queue"
+    - `Pane.Register` "queue-dead"
+    - `Pane.Register` "queue-emission"
+    - `Pane.Register` "queue-job"
+    - `Pane.Register` "queue-trigger"
+    - `queuePane.Actions` "tabs" → `QueueTabs`
+    - `job-actions` "retry" → `RetryJobAction`
+    - `job-actions` "cancel" → `CancelJobAction`
+    - `trigger-actions` "enabled" → `TriggerEnabledAction`
+    - `trigger-actions` "delete" → `DeleteTriggerAction`
     - `DebugApp.Sidebar` "Queue"
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×3
-    - `primitives/live-state` ×3
+  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×8
+    - `primitives/live-state` ×6
+    - `primitives/data-view` ×4
+    - `infra/background/catalog` ×2
+    - `infra/endpoints` ×2
     - `network/live` ×2
-    - `primitives/cursor-pagination` ×2
-    - `primitives/filter-chips` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/css/ui-kit` ×2
     - `apps/debug/shell.DebugApp`
-    - `infra/endpoints.fetchEndpoint`
+    - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/badge.Badge`
-    - `primitives/css/center.Center`
-    - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
+    - `primitives/css/grid.Grid`
+    - `primitives/css/grow.growClass`
     - `primitives/css/inline.Inline`
+    - `primitives/css/line.Line`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/sticky.Sticky`
+    - `primitives/css/status-dot.StatusDot`
+    - `primitives/css/surface.Surface`
+    - `primitives/css/switch.Switch`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/css/viewport-overlay.ViewportOverlay`
+    - `primitives/css/yield.yieldClass`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
-    - `primitives/pane.Pane`
-    - `shell/notifications.toast`
+    - `primitives/relative-time.useNow`
     - `ui/icons.Icon`
   - Exports (values): `queuePane`
 - Core:

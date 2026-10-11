@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "table:job_runs",
+      "entityType": "table",
+      "entityName": "job_runs",
+      "action": "create"
+    }
+  ]
+}

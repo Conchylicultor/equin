@@ -14837,6 +14837,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-preprompt`
           - `conversations/session-chain`
           - `infra/claude-cli`
+          - `infra/events`
+          - `infra/jobs`
           - `infra/query-resource`
           - `page/callout`
           - `page/links`
@@ -16050,37 +16052,65 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `live/no-endpoint-read` — `web/components/stats-section.tsx` (debt)
           - Shared:
             - Exports (values): `getStatsProfiling`
-    - **`queue`** — Inspect and debug the jobs queue, events emission log, and active triggers.
+    - **`queue`** — Debug → Queue: the jobs queue as live DataViews with side detail panes — Jobs (the live graphile queue merged with the recorded run history: status, hold class, attempts, when, slot wait, duration against the class ceiling, error; Retry / Cancel / Run now), Dead (the dead-letter archive), Events (the emit() log, matched or not) and Triggers (every event→job subscription, enable / disable / delete).
       - Web:
-        - Slots: `queuePane.Actions`
-        - Slot contributors: `queuePane.Actions` ← `primitives.pane`
+        - Slots:
+          - `queuePane.Actions`
+          - `queue-job.actions`
+          - `queue-dead.actions`
+          - `queue-emission.actions`
+          - `queue-trigger.actions`
+          - `job-actions`
+          - `trigger-actions`
+        - Slot contributors:
+          - `queuePane.Actions` ← `debug.queue`
+          - `queuePane.Actions` ← `primitives.pane`
+          - `queue-job.actions` ← `primitives.pane`
+          - `queue-dead.actions` ← `primitives.pane`
+          - `queue-emission.actions` ← `primitives.pane`
+          - `queue-trigger.actions` ← `primitives.pane`
+          - `job-actions` ← `debug.queue`
+          - `trigger-actions` ← `debug.queue`
         - Contributes:
           - `Pane.Register` "queue"
+          - `Pane.Register` "queue-dead"
+          - `Pane.Register` "queue-emission"
+          - `Pane.Register` "queue-job"
+          - `Pane.Register` "queue-trigger"
+          - `queuePane.Actions` "tabs" → `QueueTabs`
+          - `job-actions` "retry" → `RetryJobAction`
+          - `job-actions` "cancel" → `CancelJobAction`
+          - `trigger-actions` "enabled" → `TriggerEnabledAction`
+          - `trigger-actions` "delete" → `DeleteTriggerAction`
           - `DebugApp.Sidebar` "Queue"
-        - Uses: 31 symbols — full list in [`plugins/debug/plugins/queue/REFERENCE.md`](../plugins/debug/plugins/queue/REFERENCE.md)
-          - `primitives/css/ui-kit` ×3
-          - `primitives/live-state` ×3
+        - Uses: 48 symbols — full list in [`plugins/debug/plugins/queue/REFERENCE.md`](../plugins/debug/plugins/queue/REFERENCE.md)
+          - `primitives/pane` ×8
+          - `primitives/live-state` ×6
+          - `primitives/data-view` ×4
+          - `infra/background/catalog` ×2
+          - `infra/endpoints` ×2
           - `network/live` ×2
-          - `primitives/cursor-pagination` ×2
-          - `primitives/filter-chips` ×2
+          - `primitives/css/spacing` ×2
+          - `primitives/css/ui-kit` ×2
           - `apps/debug/shell.DebugApp`
-          - `infra/endpoints.fetchEndpoint`
+          - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/badge.Badge`
-          - `primitives/css/center.Center`
-          - `primitives/css/clip.Clip`
           - `primitives/css/cluster.Cluster`
           - `primitives/css/fill.Fill`
+          - `primitives/css/grid.Grid`
+          - `primitives/css/grow.growClass`
           - `primitives/css/inline.Inline`
+          - `primitives/css/line.Line`
           - `primitives/css/scroll.Scroll`
-          - `primitives/css/spacing.Stack`
-          - `primitives/css/sticky.Sticky`
+          - `primitives/css/status-dot.StatusDot`
+          - `primitives/css/surface.Surface`
+          - `primitives/css/switch.Switch`
           - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.SegmentedControl`
-          - `primitives/css/viewport-overlay.ViewportOverlay`
+          - `primitives/css/yield.yieldClass`
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
-          - `primitives/pane.Pane`
-          - `shell/notifications.toast`
+          - `primitives/relative-time.useNow`
           - `ui/icons.Icon`
         - Exports (values): `queuePane`
       - Core:
@@ -20381,10 +20411,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Slots:
               - `background.actions`
-              - `background-entry.actions`
+              - `backgroundEntryPane.Actions`
             - Slot contributors:
               - `background.actions` ← `primitives.pane`
-              - `background-entry.actions` ← `primitives.pane`
+              - `backgroundEntryPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "debug-background"
               - `Pane.Register` "debug-background-entry"
@@ -20408,6 +20438,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/loading.Loading`
               - `runs/run-outcome.RUN_OUTCOME_META`
             - Exports (values):
+              - `backgroundEntryPane`
               - `NextRun`
               - `useBackgroundEntry`
           - Server:
@@ -20471,6 +20502,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `runBackgroundNowEndpoint`
           - Cross-plugin:
             - Imported by:
+              - `debug/queue`
               - `infra/background/timer`
               - `infra/events`
               - `infra/file-watcher/background-arm`
@@ -21162,6 +21194,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `database.db`
           - `database/sql-column.parsedJson`
+          - `database/sql-projection.parsed`
           - `infra/background/catalog.BackgroundTriggerSource`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
@@ -21221,7 +21254,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveCollection`
           - `network/live.liveValue`
+          - `network/live/filter.liveInstant`
+          - `network/live/filter.liveNumber`
+          - `network/live/filter.liveText`
         - Exports (types):
+          - `EmissionListRow`
+          - `EmissionMatch`
           - `EmissionRow`
           - `EmissionsPayload`
           - `PatchTriggerBody`
@@ -21229,6 +21267,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggersPayload`
         - Exports (values):
           - `deleteTriggerEndpoint`
+          - `EmissionListRowSchema`
+          - `EmissionMatchSchema`
           - `EmissionRowSchema`
           - `EMISSIONS_CAP`
           - `EmissionsPayloadSchema`
@@ -21875,6 +21915,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "dead-jobs"
           - `resource.declare` "dead-jobs:groups"
           - `resource.declare` "dead-jobs:rows"
+          - `resource.declare` "job-runs"
+          - `resource.declare` "job-runs:groups"
+          - `resource.declare` "job-runs:rows"
           - `resource.declare` "jobs-list"
           - `fork-schema-data-exclusion` "graphile_worker"
         - Uses:
@@ -21886,6 +21929,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/connection.withQueryDeadline`
           - `database/sql-column.parsedJson`
           - `database/sql-column.parsedText`
+          - `database/sql-projection.parsed`
           - `infra/background/timer.defineTimer`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
@@ -21991,6 +22035,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `dead-jobs` (keyed, window)
           - `dead-jobs:groups` (push)
           - `dead-jobs:rows` (keyed, point)
+          - `job-runs` (keyed, window)
+          - `job-runs:groups` (push)
+          - `job-runs:rows` (keyed, point)
           - `jobs-list` (invalidate)
         - Routes:
           - `GET /api/jobs`
@@ -22002,12 +22049,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveCollection`
           - `network/live.liveValue`
+          - `network/live/filter.liveInstant`
+          - `network/live/filter.liveNumber`
+          - `network/live/filter.liveText`
         - Exports (types):
           - `DeadJobRow`
           - `DeadJobsPayload`
           - `HoldClass`
           - `HoldClassSpec`
           - `JobRow`
+          - `JobRunOutcome`
+          - `JobRunRow`
           - `JobsPayload`
           - `JobState`
           - `RunnerSpec`
@@ -22022,7 +22074,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HOLD_SPECS`
           - `HoldClassSchema`
           - `holdForTask`
+          - `JOB_RUNS_MAX_LIMIT`
           - `JobRowSchema`
+          - `JobRunOutcomeSchema`
+          - `JobRunRowSchema`
+          - `jobRuns`
           - `jobsList`
           - `JobsPayloadSchema`
           - `JobStateSchema`
@@ -24086,10 +24142,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
           - Cross-plugin:
-            - Imported by: 27 plugins — full list in [`plugins/network/plugins/live/plugins/filter/REFERENCE.md`](../plugins/network/plugins/live/plugins/filter/REFERENCE.md)
+            - Imported by: 29 plugins — full list in [`plugins/network/plugins/live/plugins/filter/REFERENCE.md`](../plugins/network/plugins/live/plugins/filter/REFERENCE.md)
               - `apps` ×10
+              - `infra` ×4
               - `conversations` ×3
-              - `infra` ×2
               - `release` ×2
               - `tasks` ×2
               - `backup/runs-arm`
@@ -28243,12 +28299,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CopyButton`
           - `useCopyToClipboard`
       - Cross-plugin:
-        - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
+        - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
           - `apps` ×6
           - `page` ×4
           - `primitives` ×4
           - `conversations` ×3
           - `review` ×2
+          - `debug/queue`
           - `infra/claude-cli`
           - `tasks/worktree-identity`
     - **`css`** — Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
@@ -28358,12 +28415,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 110 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 109 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×27
               - `primitives` ×24
               - `page` ×18
               - `conversations` ×7
-              - `debug` ×7
+              - `debug` ×6
               - `ui` ×6
               - `apps-core` ×4
               - `plugin-meta` ×3
@@ -28387,11 +28444,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Clip`
               - `clipClasses`
           - Cross-plugin:
-            - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+            - Imported by: 54 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
               - `apps` ×18
               - `primitives` ×8
               - `conversations` ×7
-              - `debug` ×7
+              - `debug` ×6
               - `page` ×5
               - `fields` ×2
               - `review` ×2
@@ -28627,14 +28684,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `GridProps`
             - Exports (values): `Grid`
           - Cross-plugin:
-            - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
+            - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
               - `apps` ×12
               - `primitives` ×8
               - `ui` ×4
               - `conversations` ×2
+              - `debug` ×2
               - `stats` ×2
               - `apps-core/surface/floating/wallpaper`
-              - `debug/health-monitor`
               - `infra/claude-cli`
               - `page/formatting/color`
               - `screenshot`
@@ -28646,6 +28703,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `debug/profiling`
+              - `debug/queue`
               - `debug/timeline`
               - `primitives/css/fill`
               - `primitives/data-view/view-core`
@@ -28769,11 +28827,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 97 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 98 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×25
               - `primitives` ×16
               - `conversations` ×14
-              - `debug` ×6
+              - `debug` ×7
               - `page` ×6
               - `ui` ×6
               - `plugin-meta` ×4
@@ -29133,10 +29191,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `StatusDot`
               - `statusDotPaintClass`
           - Cross-plugin:
-            - Imported by: 38 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
+            - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
               - `apps` ×11
               - `conversations` ×8
-              - `debug` ×7
+              - `debug` ×8
               - `active-data` ×3
               - `build` ×2
               - `infra` ×2
@@ -29166,7 +29224,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversations-view/data-view`
               - `debug/profiling/ops/op-gantt`
-              - `debug/queue`
               - `debug/trace/pane`
               - `primitives/css/sticky/stack`
               - `primitives/data-table`
@@ -29207,13 +29264,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `SurfaceProps`
             - Exports (values): `Surface`
           - Cross-plugin:
-            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/css/plugins/surface/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/surface/REFERENCE.md)
+            - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/css/plugins/surface/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/surface/REFERENCE.md)
               - `apps` ×7
               - `primitives` ×5
               - `page` ×4
               - `apps-core` ×2
               - `infra` ×2
               - `conversations/agents`
+              - `debug/queue`
               - `fields/json/config`
               - `stats`
           - Exemptions:
@@ -29236,6 +29294,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/rich/voicing-controls`
               - `apps/website/improve`
               - `config_v2/fields`
+              - `debug/queue`
               - `primitives/css/control-panel`
               - `primitives/launch`
         - **`text`** — Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group (incl. the eyebrow/section-label role). The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
@@ -29573,7 +29632,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/surface`
               - `apps/prototypes/present`
               - `apps/sonata/audio/metronome`
-              - `debug/queue`
               - `page/editor`
               - `primitives/adaptive-bar`
               - `primitives/overlay/floating-surface`
@@ -29585,11 +29643,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempted by: `primitives/css/ui-kit` (0 debt)
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `primitives` ×7
               - `apps` ×5
               - `conversations` ×4
-              - `debug` ×3
+              - `debug` ×4
               - `ui` ×3
               - `history/dialog`
               - `infra/claude-cli`
@@ -29642,7 +29700,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/mail/search`
           - `apps/pages/trash`
-          - `debug/queue`
           - `primitives/data-view`
           - `shell/notifications`
       - Exemptions:
@@ -29716,8 +29773,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 55 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×47
+        - Contributes: 59 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×51
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
@@ -29892,8 +29949,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowFilter`
           - `useSortController`
       - Server:
-        - Contributes: 49 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×47
+        - Contributes: 53 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×51
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -30016,10 +30073,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `splitFieldSections`
           - `UNGROUPED_FOLD_KEY`
       - Cross-plugin:
-        - Imported by: 79 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 80 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×28
           - `apps` ×19
-          - `debug` ×8
+          - `debug` ×9
           - `conversations` ×7
           - `primitives` ×7
           - `tasks` ×3
@@ -30991,7 +31048,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/studio/contributions`
           - `apps/website/pages/apps`
-          - `debug/queue`
     - **`folder-picker`** — Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser; useHostDir lists/validates a host directory.
       - Web:
         - Uses:
@@ -32399,7 +32455,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `Pane.Register`
         - Slot contributors: 88 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `Pane.Register` ×88
-        - Contributes: 107 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Contributes: 111 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountsPane.Actions` "title" → `PaneTitleItem`
           - `agentDetailPane.Actions` "title" → `PaneTitleItem`
@@ -32412,8 +32468,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `attemptPane.Actions` "title" → `PaneTitleItem`
           - `automation-detail.actions` "title" → `PaneTitleItem`
           - `automations.actions` "title" → `PaneTitleItem`
-          - `background-entry.actions` "title" → `PaneTitleItem`
           - `background.actions` "title" → `PaneTitleItem`
+          - `backgroundEntryPane.Actions` "title" → `PaneTitleItem`
           - `backupPane.Actions` "title" → `PaneTitleItem`
           - `backupRunPane.Actions` "title" → `PaneTitleItem`
           - `blockDetailPane.Actions` "title" → `PaneTitleItem`
@@ -32481,6 +32537,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `prototypes-present-canvas.actions` "title" → `PaneTitleItem`
           - `prototypes-present.actions` "title" → `PaneTitleItem`
           - `prototypesGalleryPane.Actions` "title" → `PaneTitleItem`
+          - `queue-dead.actions` "title" → `PaneTitleItem`
+          - `queue-emission.actions` "title" → `PaneTitleItem`
+          - `queue-job.actions` "title" → `PaneTitleItem`
+          - `queue-trigger.actions` "title" → `PaneTitleItem`
           - `queuePane.Actions` "title" → `PaneTitleItem`
           - `readSetPane.Actions` "title" → `PaneTitleItem`
           - `recoveryPane.Actions` "title" → `PaneTitleItem`
@@ -32864,9 +32924,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 62 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×23
-          - `debug` ×11
+          - `debug` ×12
           - `conversations` ×9
           - `tasks` ×4
           - `build` ×3
@@ -34165,8 +34225,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 234 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×234
+    - Contributes: 240 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×240
     - Uses: 21 symbols — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
       - `reorder/editor` ×5
       - `config_v2` ×3
@@ -34191,8 +34251,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 233 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×233
+    - Contributes: 239 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×239
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -35475,15 +35535,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `NotificationId`
         - Exports (values): `notificationIdKind`
       - Cross-plugin:
-        - Imported by: 35 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Imported by: 34 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `conversations` ×15
           - `tasks` ×6
           - `apps` ×2
           - `build` ×2
-          - `debug` ×2
           - `reports` ×2
           - `screenshot` ×2
           - `auth`
+          - `debug/boot-profile`
           - `history/dialog`
           - `infra/events-test`
           - `page/inline-date`

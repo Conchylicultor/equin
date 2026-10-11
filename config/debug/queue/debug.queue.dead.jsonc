@@ -1,0 +1,50 @@
+// @hash 6ec84829688d
+{
+  // Debug → Queue → Dead: the dead-letter archive (a live collection — every
+  // sort / filter / group runs on the server).
+  "views": [
+    {
+      "id": "all",
+      "name": "All",
+      "icon": "list",
+      "view": { "type": "table", "sort": [{ "fieldId": "archivedAt", "direction": "desc" }] }
+    },
+    {
+      "id": "last-24h",
+      "name": "Last 24h",
+      "icon": "schedule",
+      "view": {
+        "type": "table",
+        "sort": [{ "fieldId": "diedAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "f-24h",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-24h",
+              "fieldId": "diedAt",
+              "operatorId": "is-within-past",
+              "value": { "amount": 1, "unit": "day" }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "by-job",
+      "name": "By job",
+      "icon": "workspaces",
+      "view": {
+        "type": "table",
+        "visibleFields": ["attempts", "diedAt", "lastError"],
+        "groupBy": { "fieldId": "jobName", "groupingId": "value" },
+        "sort": [{ "fieldId": "archivedAt", "direction": "desc" }]
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

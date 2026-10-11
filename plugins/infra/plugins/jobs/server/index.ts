@@ -11,7 +11,11 @@ import {
   handleRetryJob,
 } from "./internal/handle";
 import { deadJobGcJob, reconcileDeadJobs } from "./internal/dead-job-gc";
-import { deadJobsServed, jobsListServed } from "./internal/resources";
+import {
+  deadJobsServed,
+  jobRunsServed,
+  jobsListServed,
+} from "./internal/resources";
 import { jobsResumeJob } from "./internal/resume-job";
 import { installQueueSchema } from "./internal/queue-schema";
 import {
@@ -154,6 +158,7 @@ export default {
   contributions: [
     ...jobsListServed.declare,
     ...deadJobsServed.declare,
+    ...jobRunsServed.declare,
     // Graphile's own bookkeeping — queued jobs, worker locks, and the crontab's
     // last-execution watermarks. Inheriting it is actively wrong for a fresh
     // worktree: it would adopt main's pending jobs and, worse, main's

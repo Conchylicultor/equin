@@ -1,0 +1,94 @@
+// @hash 6ec84829688d
+{
+  // Debug → Queue → Jobs: ONE list over the live graphile queue AND the
+  // recorded run history, merged on the client (plugins/debug/plugins/queue,
+  // `useJobRows`). Each view is just a filter / sort / grouping over it.
+  //
+  // `status` is an enum of the queue states (pending / running / retrying /
+  // dead) and the run outcomes (succeeded / failed / suspended); `problem` a
+  // filter-only enum (no-worker / forfeited); `order` a hidden sort key that
+  // puts in-flight rows first (oldest first), then finished rows newest first.
+  "views": [
+    {
+      "id": "all",
+      "name": "All",
+      "icon": "list",
+      "view": { "type": "table", "sort": [{ "fieldId": "order", "direction": "desc" }] }
+    },
+    {
+      // What is in flight right now.
+      "id": "active",
+      "name": "Active",
+      "icon": "play-circle",
+      "view": {
+        "type": "table",
+        "sort": [{ "fieldId": "order", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "f-active",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-active",
+              "fieldId": "status",
+              "operatorId": "is-any-of",
+              "value": ["pending", "running", "retrying"]
+            }
+          ]
+        }
+      }
+    },
+    {
+      // Everything that needs a look: failed runs, rows retrying or dead in the
+      // queue, and running rows with no worker / a forfeited slot.
+      "id": "failed",
+      "name": "Failed",
+      "icon": "error",
+      "view": {
+        "type": "table",
+        "sort": [{ "fieldId": "order", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "f-failed",
+          "conjunction": "or",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-failed-status",
+              "fieldId": "status",
+              "operatorId": "is-any-of",
+              "value": ["failed", "retrying", "dead"]
+            },
+            {
+              "kind": "rule",
+              "id": "r-failed-problem",
+              "fieldId": "problem",
+              "operatorId": "is-not-empty"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "slow",
+      "name": "Slow",
+      "icon": "hourglass-bottom",
+      "view": { "type": "table", "sort": [{ "fieldId": "durationMs", "direction": "desc" }] }
+    },
+    {
+      "id": "by-job",
+      "name": "By job",
+      "icon": "workspaces",
+      "view": {
+        "type": "table",
+        "visibleFields": ["status", "hold", "attempt", "when", "waitMs", "durationMs", "error"],
+        "groupBy": { "fieldId": "jobName", "groupingId": "value" },
+        "sort": [{ "fieldId": "order", "direction": "desc" }]
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

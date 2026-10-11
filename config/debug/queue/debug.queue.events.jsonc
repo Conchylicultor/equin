@@ -1,0 +1,51 @@
+// @hash 6ec84829688d
+{
+  // Debug → Queue → Events: the emit() log (a live collection). `match` is the
+  // server-derived matched / unmatched flag (`matchedCount` = 0).
+  "views": [
+    {
+      "id": "all",
+      "name": "All",
+      "icon": "list",
+      "view": { "type": "table", "sort": [{ "fieldId": "emittedAt", "direction": "desc" }] }
+    },
+    {
+      // Emissions no trigger picked up — nothing ran for them.
+      "id": "unmatched",
+      "name": "Unmatched",
+      "icon": "link-off",
+      "view": {
+        "type": "table",
+        "sort": [{ "fieldId": "emittedAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "f-unmatched",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-unmatched",
+              "fieldId": "match",
+              "operatorId": "is",
+              "value": "unmatched"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "by-event",
+      "name": "By event",
+      "icon": "workspaces",
+      "view": {
+        "type": "table",
+        "visibleFields": ["emittedAt", "matchedCount", "payload"],
+        "groupBy": { "fieldId": "eventName", "groupingId": "value" },
+        "sort": [{ "fieldId": "emittedAt", "direction": "desc" }]
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

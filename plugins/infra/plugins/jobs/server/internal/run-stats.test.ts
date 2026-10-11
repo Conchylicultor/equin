@@ -57,7 +57,8 @@ describe("recordJobRun", () => {
         failures integer NOT NULL
       )`);
     await t.db.execute(sql`
-      CREATE TABLE job_recent_runs (
+      CREATE TABLE job_runs (
+        id text PRIMARY KEY GENERATED ALWAYS AS (job_name || ':' || seq::text) STORED,
         job_name text NOT NULL,
         slot integer NOT NULL,
         seq integer NOT NULL,
@@ -67,8 +68,14 @@ describe("recordJobRun", () => {
         error text,
         duration_ms integer NOT NULL,
         attempt integer NOT NULL,
-        PRIMARY KEY (job_name, slot)
+        job_id text,
+        hold text,
+        max_attempts integer,
+        queued_at timestamptz,
+        input jsonb
       )`);
+    await t.db.execute(sql`
+      CREATE UNIQUE INDEX job_runs_job_name_slot_idx ON job_runs (job_name, slot)`);
   });
 
   afterAll(async () => {
@@ -85,6 +92,11 @@ describe("recordJobRun", () => {
       error: outcome === "failed" ? `boom ${i}` : null,
       durationMs: 1000,
       attempt: 1,
+      jobId: String(1000 + i),
+      hold: "instant",
+      maxAttempts: 3,
+      queuedAt: new Date(startedAt.getTime() - 250),
+      input: { i },
     };
   }
 
@@ -114,13 +126,48 @@ describe("recordJobRun", () => {
 
     const ring = await executeRows(t.db, {
       label: "run-stats test: ring",
-      row: z.object({ slot: z.number(), seq: z.number() }),
-      query: sql`SELECT slot, seq FROM job_recent_runs ORDER BY seq`,
+      row: z.object({
+        id: z.string(),
+        slot: z.number(),
+        seq: z.number(),
+        job_id: z.string(),
+        hold: z.string(),
+        max_attempts: z.number(),
+        wait_ms: z.number(),
+        input: z.object({ i: z.number() }),
+      }),
+      query: sql`SELECT id, slot, seq, job_id, hold, max_attempts,
+        (EXTRACT(EPOCH FROM (started_at - queued_at)) * 1000)::integer AS wait_ms,
+        input FROM job_runs ORDER BY seq`,
     });
     expect(ring).toHaveLength(RECENT_RUNS_RING);
-    // The oldest runs were overwritten; every survivor sits in its own slot.
+    // The oldest runs were overwritten; every survivor sits in its own slot,
+    // and an overwritten slot carries the NEW run's id and queue facts.
     expect(ring[0]!.seq).toBe(total - RECENT_RUNS_RING + 1);
-    for (const r of ring) expect(r.slot).toBe(ringSlot(r.seq));
+    for (const r of ring) {
+      expect(r.slot).toBe(ringSlot(r.seq));
+      expect(r.id).toBe(`ring.probe:${r.seq}`);
+      expect(r.job_id).toBe(String(1000 + r.seq));
+      expect(r.input).toEqual({ i: r.seq });
+      expect(r).toMatchObject({
+        hold: "instant",
+        max_attempts: 3,
+        wait_ms: 250,
+      });
+    }
+  });
+
+  test("a long error is kept whole on the run and previewed on the stats row", async () => {
+    const long = "x".repeat(2000);
+    await recordJobRun(t.db, { ...run(98, "failed"), error: long });
+    const [row] = await executeRows(t.db, {
+      label: "run-stats test: error lengths",
+      row: z.object({ run_len: z.number(), stats_len: z.number() }),
+      query: sql`SELECT
+        (SELECT length(error) FROM job_runs ORDER BY seq DESC LIMIT 1) AS run_len,
+        (SELECT length(last_error) FROM job_run_stats) AS stats_len`,
+    });
+    expect(row).toEqual({ run_len: 2000, stats_len: 501 });
   });
 
   test("a failure after a success keeps the last success time", async () => {

@@ -447,17 +447,38 @@ database but absent from the ledger is held by a dead worker. The stuck-lock
 sweeper will reclaim it.
 
 **The dead-letter archive is a live collection.** `deadJobs`
-(`core/resources.ts`, key `dead-jobs`) is a `liveCollection` over `dead_jobs`:
-newest archived first, 200 rows by default, grown up to
-`DEAD_JOBS_ARCHIVE_CAP` (2000) — the same constant the dead-job GC trims the
-archive to, so a fully grown window is the whole archive. `deadJobsServed`
-serves it with
+(`core/resources.ts`, key `dead-jobs`) is a `scroll: true` `liveCollection`
+over `dead_jobs` backing a live DataView: newest archived first, 200 rows by
+default, grown up to `DEAD_JOBS_ARCHIVE_CAP` (2000) — the same constant the
+dead-job GC trims the archive to, so a fully grown window is the whole archive.
+It filters on `jobName` / `lastError` (search, and `jobName` as a facet),
+`attempts`, `diedAt` and `archivedAt`. `deadJobsServed` serves it with
 `serveCollection(deadJobs, { from: _deadJobs })`, every row field bound to its
-column by name (the two timestamps are `Date`s). Debug → Queue's Dead tab reads
-`useLive(deadJobs)` and grows the window at the scroll end. `dead_jobs` is a
-public table, so the change feed moves every subscribed window on the GC's
-archive and purge; nothing notifies it. `GET /api/jobs/dead` serves the same
-rows wrapped as `{ rows }` (`DeadJobsPayloadSchema`).
+column by name (the two timestamps are `Date`s). `dead_jobs` is a public table,
+so the change feed moves every subscribed window on the GC's archive and purge;
+nothing notifies it. `GET /api/jobs/dead` serves the same rows wrapped as
+`{ rows }` (`DeadJobsPayloadSchema`).
+
+**The run history is a live collection too.** `run-stats.ts` records every
+finished run (graphile's `job:complete`) into `job_run_stats` (one row per job:
+latest run + counters) and `job_runs`, a ring of the last `RECENT_RUNS_RING`
+(20) runs per job name — so `job_runs` is bounded by 20 × job names. A run's
+row carries what the queue row said about it (graphile's `jobId`, the task's
+`hold`, `maxAttempts`, `queuedAt` = `run_at`, and the payload's `input`) and its
+error message up to `RUN_ERROR_CHARS` (8000; the stats row keeps a 500-char
+preview). Its `id` is `<jobName>:<seq>`, a stored generated column and the
+table's single-column primary key — `job_recent_runs`, its predecessor, had a
+composite (job_name, slot) key no collection can bind; its rows were copied
+over by the migration that dropped it. The ring's upsert targets the unique
+(job_name, slot) index, so overwriting a slot moves the row's id, and the change
+feed names both ids. `jobRuns` (key `job-runs`) is a `scroll: true` collection
+over it: newest finished first, 100 by default, grown up to
+`JOB_RUNS_MAX_LIMIT` (5000, the whole ring with headroom); `jobName`, `outcome`
+and `hold` are facets, `error` searchable, `durationMs` / `waitMs` / `attempt` /
+`startedAt` / `finishedAt` filter and sort. `waitMs` (`startedAt − queuedAt`,
+floored at 0, NULL without a `queuedAt`) is an `expr` column computed in SQL.
+`readRecentJobRuns(name)` still reads one job's ring for the Background
+activity catalog.
 
 ## Connections: every one carries the deadline
 
@@ -503,6 +524,9 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `resource.declare` "dead-jobs"
     - `resource.declare` "dead-jobs:groups"
     - `resource.declare` "dead-jobs:rows"
+    - `resource.declare` "job-runs"
+    - `resource.declare` "job-runs:groups"
+    - `resource.declare` "job-runs:rows"
     - `resource.declare` "jobs-list"
     - `fork-schema-data-exclusion` "graphile_worker"
   - Uses:
@@ -514,6 +538,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `database/connection.withQueryDeadline`
     - `database/sql-column.parsedJson`
     - `database/sql-column.parsedText`
+    - `database/sql-projection.parsed`
     - `infra/background/timer.defineTimer`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
@@ -619,6 +644,9 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `dead-jobs` (keyed, window)
     - `dead-jobs:groups` (push)
     - `dead-jobs:rows` (keyed, point)
+    - `job-runs` (keyed, window)
+    - `job-runs:groups` (push)
+    - `job-runs:rows` (keyed, point)
     - `jobs-list` (invalidate)
   - Routes:
     - `GET /api/jobs`
@@ -630,12 +658,17 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveCollection`
     - `network/live.liveValue`
+    - `network/live/filter.liveInstant`
+    - `network/live/filter.liveNumber`
+    - `network/live/filter.liveText`
   - Exports (types):
     - `DeadJobRow`
     - `DeadJobsPayload`
     - `HoldClass`
     - `HoldClassSpec`
     - `JobRow`
+    - `JobRunOutcome`
+    - `JobRunRow`
     - `JobsPayload`
     - `JobState`
     - `RunnerSpec`
@@ -650,7 +683,11 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `HOLD_SPECS`
     - `HoldClassSchema`
     - `holdForTask`
+    - `JOB_RUNS_MAX_LIMIT`
     - `JobRowSchema`
+    - `JobRunOutcomeSchema`
+    - `JobRunRowSchema`
+    - `jobRuns`
     - `jobsList`
     - `JobsPayloadSchema`
     - `JobStateSchema`

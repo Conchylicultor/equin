@@ -6,6 +6,10 @@ export {
   deadJobs,
   DeadJobRowSchema,
   DeadJobsPayloadSchema,
+  jobRuns,
+  JOB_RUNS_MAX_LIMIT,
+  JobRunRowSchema,
+  JobRunOutcomeSchema,
 } from "./resources";
 export type {
   JobRow,
@@ -13,6 +17,8 @@ export type {
   JobsPayload,
   DeadJobRow,
   DeadJobsPayload,
+  JobRunRow,
+  JobRunOutcome,
 } from "./resources";
 export { listJobs, listDeadJobs, retryJob, cancelJob } from "./endpoints";
 export {

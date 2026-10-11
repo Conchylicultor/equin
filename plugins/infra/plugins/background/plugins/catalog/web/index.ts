@@ -9,6 +9,9 @@ import { backgroundEntryPane, backgroundPane } from "./panes";
 // of the catalog, and the countdown to a scheduled run.
 export { useEntry as useBackgroundEntry } from "./internal/use-entries";
 export { NextRun } from "./components/next-run";
+// The entry detail pane, for a surface that links to one entry (Debug → Queue
+// opens a job's entry from its detail).
+export { backgroundEntryPane } from "./panes";
 
 export default {
   description:

@@ -53,6 +53,7 @@ padding on the track that a flex direction could reinterpret.
     - `apps/sonata/rich/voicing-controls`
     - `apps/website/improve`
     - `config_v2/fields`
+    - `debug/queue`
     - `primitives/css/control-panel`
     - `primitives/launch`
 

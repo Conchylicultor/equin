@@ -58,6 +58,7 @@ needs an axis, because `min-width: 0` and `min-height: 0` are two properties.
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `debug/profiling`
+    - `debug/queue`
     - `debug/timeline`
     - `primitives/css/fill`
     - `primitives/data-view/view-core`

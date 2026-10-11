@@ -4,12 +4,16 @@ export {
   eventTriggers,
   eventEmissionFields,
   EmissionRowSchema,
+  EmissionListRowSchema,
+  EmissionMatchSchema,
   EmissionsPayloadSchema,
   TriggerRowSchema,
   TriggersPayloadSchema,
 } from "./resources";
 export type {
   EmissionRow,
+  EmissionListRow,
+  EmissionMatch,
   EmissionsPayload,
   TriggerRow,
   TriggersPayload,

@@ -2266,8 +2266,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 55 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×47
+  - Contributes: 59 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×51
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
@@ -2442,8 +2442,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useRowFilter`
     - `useSortController`
 - Server:
-  - Contributes: 49 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×47
+  - Contributes: 53 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×51
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getConfig`
@@ -2566,10 +2566,10 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `splitFieldSections`
     - `UNGROUPED_FOLD_KEY`
 - Cross-plugin:
-  - Imported by: 79 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 80 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×28
     - `apps` ×19
-    - `debug` ×8
+    - `debug` ×9
     - `conversations` ×7
     - `primitives` ×7
     - `tasks` ×3

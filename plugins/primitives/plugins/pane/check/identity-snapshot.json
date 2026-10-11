@@ -518,9 +518,33 @@
     },
     {
       "paneId": "queue",
-      "segment": "queue",
+      "segment": "queue/:tab?",
       "appIndex": false,
       "parent": null
+    },
+    {
+      "paneId": "queue-dead",
+      "segment": "queue-dead/:deadId",
+      "appIndex": false,
+      "parent": "queue"
+    },
+    {
+      "paneId": "queue-emission",
+      "segment": "queue-emission/:emissionId",
+      "appIndex": false,
+      "parent": "queue"
+    },
+    {
+      "paneId": "queue-job",
+      "segment": "queue-job/:jobRowId",
+      "appIndex": false,
+      "parent": "queue"
+    },
+    {
+      "paneId": "queue-trigger",
+      "segment": "queue-trigger/:triggerId",
+      "appIndex": false,
+      "parent": "queue"
     },
     {
       "paneId": "release-detail",
