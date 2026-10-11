@@ -1280,10 +1280,10 @@ never add one.
     - `liveValue`
     - `scopedLiveColumns`
 - Cross-plugin:
-  - Imported by: 179 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 180 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×51
     - `conversations` ×35
-    - `tasks` ×22
+    - `tasks` ×23
     - `active-data` ×11
     - `infra` ×10
     - `page` ×10
@@ -1385,7 +1385,6 @@ never add one.
     - `tasks/task-attachments` (1 debt)
     - `tasks/task-category` (1 debt)
     - `tasks/task-events` (1 debt)
-    - `tasks/task-source-url` (1 debt)
     - `ui/theme-engine/saved-themes` (1 debt)
     - `ui/tweakcn/community-browser` (1 debt)
 - Central:

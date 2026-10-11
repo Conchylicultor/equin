@@ -1,14 +1,7 @@
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { getAttemptSourceUrl } from "../../core";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { attemptSourceUrl } from "../../core";
 
-/**
- * The page this attempt's task was filed from. A plain query, not a live
- * resource: the URL is written once at task creation and never changes.
- */
+/** The page this attempt's task was filed from (see `attemptSourceUrl`). */
 export function useAttemptSourceUrl(attemptId: string) {
-  return useEndpoint(
-    getAttemptSourceUrl,
-    { attemptId },
-    { staleTime: Infinity },
-  );
+  return useLive(attemptSourceUrl, { attemptId });
 }

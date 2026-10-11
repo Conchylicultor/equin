@@ -1,2 +1,2 @@
-export { taskSourceUrlShape, getAttemptSourceUrl } from "./schemas";
+export { taskSourceUrlShape, attemptSourceUrl } from "./schemas";
 export type { AttemptSourceUrl } from "./schemas";

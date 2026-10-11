@@ -26,7 +26,7 @@ function OpenAppAction({ attemptId }: { attemptId: string }) {
   const source = useAttemptSourceUrl(attemptId);
   const openPane = useOpenPane();
   const { target } = useConfig(openAppConfig);
-  if (source.isError) throw source.error;
+  if (source.status === "error") throw source.error;
   // Has this worktree ever deployed? Its latest successful build op — one row
   // is enough, and the op-store pushes the next one the moment it lands, so
   // the button enables itself when the agent's first build succeeds.
@@ -46,13 +46,15 @@ function OpenAppAction({ attemptId }: { attemptId: string }) {
       icon={rocketLaunchIcon}
       // Pending until we know whether the task was filed from a page: opening
       // `/` meanwhile would be a guess the click cannot take back.
-      loading={source.isPending || builds.status === "loading"}
+      loading={source.status === "loading" || builds.status === "loading"}
       // Nothing is served at the namespace until its first build deploys it.
       disabled={!built}
       // Plain click opens the app where the setting says (a browser tab by
       // default, or framed beside the chat); ⌘/middle-click takes the other way.
       {...linkGestureProps(({ elsewhere }) => {
-        const path = sourcePath(source.data?.url);
+        const path = sourcePath(
+          source.status === "ready" ? source.data.url : null,
+        );
         // The gesture's "elsewhere" flips the configured default — which is
         // why this is the low-level form: elsewhere is not always a browser tab.
         const inTab = (target === "new-tab") !== elsewhere;

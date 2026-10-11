@@ -21044,12 +21044,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isCodec`
           - `multipart`
       - Cross-plugin:
-        - Imported by: 227 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 226 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×59
           - `conversations` ×26
           - `debug` ×26
           - `infra` ×17
-          - `tasks` ×17
+          - `tasks` ×16
           - `page` ×14
           - `primitives` ×12
           - `build` ×9
@@ -24023,10 +24023,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveValue`
           - `scopedLiveColumns`
       - Cross-plugin:
-        - Imported by: 179 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 180 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×51
           - `conversations` ×35
-          - `tasks` ×22
+          - `tasks` ×23
           - `active-data` ×11
           - `infra` ×10
           - `page` ×10
@@ -24128,7 +24128,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-attachments` (1 debt)
           - `tasks/task-category` (1 debt)
           - `tasks/task-events` (1 debt)
-          - `tasks/task-source-url` (1 debt)
           - `ui/theme-engine/saved-themes` (1 debt)
           - `ui/tweakcn/community-browser` (1 debt)
       - Central:
@@ -37050,14 +37049,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `putTaskPreprompt`
           - `TaskPrepromptSchema`
     - **`task-source-url`** — Reads back the page a task was filed from, by attempt (useAttemptSourceUrl). Owns the tasks_ext_source_url side-table: the page a task was filed from (the draft form's Attach page URL), stored as data rather than only as prompt text, and read back by attempt (falling back to the url of the first <ui-context> in the task's prompt).
-      - Web:
-        - Uses: `infra/endpoints.useEndpoint`
-        - Exports (values): `useAttemptSourceUrl`
       - Server:
+        - Contributes: `resource.declare` "task-source-url.by-attempt"
         - Uses:
           - `database.db`
-          - `infra/endpoints.implement`
           - `infra/entity-extensions.defineExtension`
+          - `network/live.serveValue`
           - `tasks/tasks-core._attempts`
           - `tasks/tasks-core._tasks`
         - DB schema: `plugins/tasks/plugins/task-source-url/server/internal/tables.ts`
@@ -37065,22 +37062,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `setTaskSourceUrl`
           - `tasksSourceUrl`
-        - Routes: `GET /api/task-source-url/by-attempt/:attemptId`
+        - Resources: `task-source-url.by-attempt` (push)
+      - Web:
+        - Uses: `network/live.useLive`
+        - Exports (values): `useAttemptSourceUrl`
       - Core:
         - Uses:
           - `fields/text/config.textField`
-          - `infra/endpoints.defineEndpoint`
           - `infra/entity-extensions.defineExtensionShape`
+          - `network/live.liveValue`
         - Exports (types): `AttemptSourceUrl`
         - Exports (values):
-          - `getAttemptSourceUrl`
+          - `attemptSourceUrl`
           - `taskSourceUrlShape`
       - Cross-plugin:
         - Imported by:
           - `conversations/conversation-view/open-app`
           - `tasks`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/hooks/use-attempt-source-url.ts` (debt)
     - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
       - Web:
         - Uses:
