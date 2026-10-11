@@ -51,7 +51,7 @@ export const PrototypeOptionSchema = z.discriminatedUnion("kind", [
  * - `blurb` — `<meta name="description">` (defaults to `""`)
  * - `viewport` — `<meta name="prototype-viewport" content="window">`: a
  *   size preset's name, `window` or `responsive` (see `viewport.ts`). Absent or
- *   unreadable ⇒ window; an unreadable line is also a `problems[]` entry
+ *   unreadable ⇒ responsive; an unreadable line is also a `problems[]` entry
  * - `mocks` — `<meta name="mocks" content="<kind>:<ref>">`, the real app thing
  *   this prototype is a mockup OF (`exhibit:task-draft/composer`,
  *   `route:/agents/c/123`), so the Compare stage can show the two side by

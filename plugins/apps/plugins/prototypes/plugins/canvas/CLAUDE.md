@@ -198,7 +198,7 @@ One chip in the canvas's bottom-right corner — "This window 1728 × 990 | Fit 
   frame is that device's screen, and a longer page scrolls inside it), or
   **Custom** (a width slid off the presets). A fresh canvas (none saved in
   this browser) **opens at the size the prototype declares** (`<meta name="prototype-viewport" content="window">`
-  — `window`, a preset's name or `responsive`; This window when absent), so a mock always
+  — `window`, a preset's name or `responsive`; Responsive when absent), so a mock always
   opens at the screen it was drawn for rather than at whatever room the pane
   happens to have. The presets and that tag's parser are one list, owned by
   `files/core` (`SIZE_PRESETS`, `parseViewport`); the provider waits for the

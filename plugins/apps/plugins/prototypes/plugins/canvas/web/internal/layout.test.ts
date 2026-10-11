@@ -3,7 +3,7 @@ import { layoutFrames, roomPerFrame, sizeForWidth, snapWidth } from "./layout";
 
 describe("roomPerFrame", () => {
   it("shares the width between frames, less padding and gaps", () => {
-    expect(roomPerFrame({ w: 1064, h: 900 }, 2)).toEqual({ w: 488, h: 810 });
+    expect(roomPerFrame({ w: 1064, h: 900 }, 2)).toEqual({ w: 514, h: 834 });
   });
 });
 

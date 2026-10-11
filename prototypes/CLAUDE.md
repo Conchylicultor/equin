@@ -105,7 +105,7 @@ The gallery reads these out of your HTML — there is no metadata file.
 ```html
 <title>Your prototype</title>
 <meta name="description" content="A sentence about what this explores." />
-<meta name="prototype-viewport" content="window" />
+<meta name="prototype-viewport" content="responsive" />
 <meta name="mocks" content="exhibit:task-draft/composer" />
 ```
 
@@ -113,13 +113,12 @@ The gallery reads these out of your HTML — there is no metadata file.
   folder is an id. Without it every surface reads "Untitled prototype".
 - `<meta name="description">` is the card's blurb.
 - `<meta name="prototype-viewport">` is the kind of screen you design for —
-  a NAME, not pixels: `window` (the default — an app screen, shown at the size
-  the viewer's own browser window gives the real app), `phone` (390×844),
-  `tablet` (820×1180), `laptop` (1440×900), `desktop` (1920×1080), `wide`
-  (2560×1440), or `responsive` (the page fills whatever room it gets — a
-  component mock, a layout meant to stretch). The canvas opens at it, and the
-  gallery card renders at it (`window` and `responsive` render at laptop).
-  Leave it out for an app screen. A pixel size
+  a NAME, not pixels: `responsive` (the default — the page fills whatever
+  room the canvas gives it, so its own responsive layout shows), `window` (an
+  app screen pinned to the size the viewer's own browser window gives the real
+  app), `phone` (390×844), `tablet` (820×1180), `laptop` (1440×900), `desktop`
+  (1920×1080) or `wide` (2560×1440). The canvas opens at it, and the gallery
+  card renders at it (`window` and `responsive` render at laptop). A pixel size
   (`1320x868`) is not read — it is reported as a problem on the card. Don't
   turn it into a fixed width in your CSS (see below).
 - `<meta name="mocks">` names the real app thing this prototype is a mockup

@@ -40,11 +40,13 @@ export type PrototypeViewport =
   | { kind: "preset"; preset: PresetName };
 
 /**
- * What a prototype that declares no size is: an app screen, seen at the size
- * the viewer's own window gives the real app.
+ * What a prototype that declares no size is: a page that fills whatever room
+ * the canvas gives it, so a fresh canvas shows the mock at the pane's own size
+ * (100%, no letterboxing) and the page's own responsive layout. An author
+ * pins a fixed screen by declaring `window` or a preset.
  */
 export const DEFAULT_PROTOTYPE_VIEWPORT = {
-  kind: "window",
+  kind: "responsive",
 } as const satisfies PrototypeViewport;
 
 /**
@@ -101,7 +103,7 @@ export function viewportWord(v: PrototypeViewport): string {
 
 /** The `problems[]` detail for a tag {@link parseViewport} refused. */
 export function viewportProblemDetail(raw: string): string {
-  return `<meta name="prototype-viewport" content="${raw}"> is not a size — write one of ${PROTOTYPE_VIEWPORT_WORDS.join(", ")} (the default is window). Pixel sizes are no longer read`;
+  return `<meta name="prototype-viewport" content="${raw}"> is not a size — write one of ${PROTOTYPE_VIEWPORT_WORDS.join(", ")} (the default is ${viewportWord(DEFAULT_PROTOTYPE_VIEWPORT)}). Pixel sizes are no longer read`;
 }
 
 /** A preset's logical size. */
