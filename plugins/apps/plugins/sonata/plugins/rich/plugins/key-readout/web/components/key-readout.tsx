@@ -17,10 +17,15 @@ import type {
   LabelTone,
 } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import {
-  KeyboardCaption,
+  ChordKeyboardRow,
+  ChordRowFrame,
   ReadoutKeyboard,
   useReadoutPlane,
 } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/readout-keyboard/web";
+import {
+  chordBoxFace,
+  useChordDisplayMode,
+} from "@plugins/apps/plugins/sonata/plugins/rich/plugins/chord-label/web";
 import {
   accidentalGlyph,
   collectKeyEntries,
@@ -92,11 +97,14 @@ function ScaleDot({ tonic, tone }: { tonic: boolean; tone: LabelTone }) {
  *   relative key and where the key came from (the source badge).
  * - A two-octave readout keyboard with a dot on every scale degree — the tonic
  *   in the accent — and the scale's note names as chips beneath it. It is drawn
- *   on the diatonic chords' plane, so it has the same shape as every other
- *   readout keyboard and lines up key-for-key with the chord rows below.
- * - A "Chords" toggle stacks the key's seven diatonic chords below, each a
- *   caption (numeral · spelled name) over a readout keyboard lit with its notes;
- *   the row whose root is the chord under the playhead is marked current.
+ *   on the diatonic chords' plane, in the chord rows' frame (`ChordRowFrame`),
+ *   so it lines up key-for-key with the chord rows below.
+ * - A "Chords" toggle stacks the key's seven diatonic chords below, each the
+ *   chord list's own row (`ChordKeyboardRow`: its chord box under the chord-label
+ *   mode, a readout keyboard lit with its notes in its colour, and how many
+ *   times the song plays a chord on its root — blank when it never does);
+ *   clicking one sounds it, and the row whose root is the chord under the
+ *   playhead is marked.
  *
  * Always available (a key can be established without chords), so the section has
  * no `useAvailable` gate; the keyless case stays an in-body "No key detected."
@@ -107,6 +115,7 @@ function ScaleDot({ tonic, tone }: { tonic: boolean; tone: LabelTone }) {
 export function KeyReadout() {
   const { score } = useSession();
   const { content } = useSongDocument();
+  const mode = useChordDisplayMode();
   const scorePending = content.kind === "pending";
   const scoreFailure = content.kind === "failed" ? content.failure : null;
   const [showChords, setShowChords] = useDraft<boolean>(
@@ -147,6 +156,17 @@ export function KeyReadout() {
       ),
     [score.annotations],
   );
+
+  // How many times the song strikes a chord on each root pitch class — the
+  // count a diatonic chord's row shows (matched by root, as the playhead mark is).
+  const usesByRoot = useMemo(() => {
+    const uses = new Map<number, number>();
+    for (const c of chords) {
+      const pc = ((c.data.root % 12) + 12) % 12;
+      uses.set(pc, (uses.get(pc) ?? 0) + 1);
+    }
+    return uses;
+  }, [chords]);
 
   // The root pitch class of the chord under the playhead — a number, so the
   // panel re-renders only when the chord's root changes, not every frame.
@@ -197,8 +217,14 @@ export function KeyReadout() {
   // keyboard is drawn on this plane too: a scale is a pitch-class set, so its
   // dots repeat in every octave and fit any window.
   const diatonic = useMemo(
-    () => (current ? diatonicChords(current) : []),
-    [current],
+    () =>
+      current
+        ? diatonicChords(current).map((d) => ({
+            ...d,
+            face: chordBoxFace(d.chord, current, mode),
+          }))
+        : [],
+    [current, mode],
   );
   const voicings = useMemo(
     () =>
@@ -263,11 +289,13 @@ export function KeyReadout() {
 
       {/* The scale: dots on every octave, then its note names, tonic first. */}
       <Stack gap="sm">
-        <ReadoutKeyboard
-          plane={chordPlane.plane}
-          lit={NO_KEYS}
-          renderKey={renderScaleDot}
-        />
+        <ChordRowFrame>
+          <ReadoutKeyboard
+            plane={chordPlane.plane}
+            lit={NO_KEYS}
+            renderKey={renderScaleDot}
+          />
+        </ChordRowFrame>
         <Cluster gap="xs">
           {scale.degrees.map((d) => (
             <Badge
@@ -281,20 +309,22 @@ export function KeyReadout() {
       </Stack>
 
       {showChords && (
-        <Stack gap="sm">
-          {diatonic.map((d, k) => (
-            <Stack key={d.degree} gap="xs">
-              <KeyboardCaption
-                lead={d.numeral}
-                trail={d.chord.spelledSymbol ?? d.chord.symbol}
-                current={currentRoot === d.chord.root}
-              />
-              <ReadoutKeyboard
+        <Stack gap="2xs">
+          {diatonic.map((d, k) => {
+            const uses = usesByRoot.get(d.chord.root) ?? 0;
+            return (
+              <ChordKeyboardRow
+                key={d.degree}
+                degree={d.face.degree}
+                label={d.face.label}
+                name={`${d.face.name}, played ${String(uses)} times`}
                 plane={chordPlane.plane}
-                lit={chordPlane.voicings[k] ?? NO_KEYS}
+                notes={chordPlane.voicings[k] ?? NO_KEYS}
+                now={currentRoot === d.chord.root}
+                trail={uses > 0 ? `×${String(uses)}` : undefined}
               />
-            </Stack>
-          ))}
+            );
+          })}
         </Stack>
       )}
     </Stack>

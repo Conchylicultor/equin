@@ -28,7 +28,7 @@
     - `apps/chord/trainer`
     - `apps/chord/vocabulary`
     - `apps/sonata/chord-chart`
-    - `apps/sonata/rich/chord-list`
+    - `apps/sonata/rich/readout-keyboard`
 - Core:
   - Exports (types): `MajorDegree`
   - Exports (values): `majorDegree`

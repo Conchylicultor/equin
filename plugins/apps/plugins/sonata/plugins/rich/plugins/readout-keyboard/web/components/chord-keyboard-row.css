@@ -1,55 +1,55 @@
-/* A row of the chord list: the chord box, its keyboard, its count. The row's
+/* A chord keyboard row: the chord box, its keyboard, its trail (a count, or nothing). The row's
  * `--fn` (its chord colour) comes from `chordToneStyle`; colours are tokens. */
-.chord-list-row {
+.chord-row {
   border-radius: var(--radius-md);
 }
-.chord-list-hit {
+.chord-row-hit {
   border-radius: inherit;
   cursor: pointer;
 }
-.chord-list-hit:hover {
+.chord-row-hit:hover {
   background: var(--accent);
 }
-.chord-list-hit:focus-visible {
+.chord-row-hit:focus-visible {
   outline: 2px solid var(--foreground);
   outline-offset: 1px;
 }
 /* The chord under the playhead: a quiet wash on the row; the ring is the
  * box's own (`ChordBox now`), in its colour. */
-.chord-list-row[data-now] .chord-list-hit {
+.chord-row[data-now] .chord-row-hit {
   background: color-mix(in srgb, var(--fn, var(--chord-outside)) 10%, transparent);
 }
 
-/* Box, keyboard, count: the box and the count are kept small so the keyboard
+/* Box, keyboard, trail: the box and the trail are kept small so the keyboard
  * takes the rest of the row. */
-.chord-list-cells {
+.chord-row-cells {
   display: grid;
   grid-template-columns: 3.25rem minmax(0, 1fr) 1.5rem;
   align-items: center;
   gap: var(--space-sm);
   padding: 3px;
 }
-.chord-list-cells > :last-child {
+.chord-row-cells > :last-child {
   text-align: end;
 }
 /* Doubled with `.chord-box` so it outranks the box's own rules whatever order
  * the two sheets load in. The box's text sizes from its width, which would
  * clamp up to the numeral's floor here; this size states it instead. */
-.chord-box.chord-list-box {
+.chord-box.chord-row-box {
   height: 2.875rem;
   border-radius: var(--radius-md);
 }
-.chord-box.chord-list-box .chord-num {
+.chord-box.chord-row-box .chord-num {
   font-size: 19px;
 }
-.chord-box.chord-list-box .chord-box-symbol {
+.chord-box.chord-row-box .chord-box-symbol {
   font-size: 16px;
 }
-.chord-box.chord-list-box .chord-box-name,
-.chord-box.chord-list-box .chord-num.chord-box-name {
+.chord-box.chord-row-box .chord-box-name,
+.chord-box.chord-row-box .chord-num.chord-box-name {
   font-size: 10.5px;
 }
 /* Ringed, not lifted: a lift would shift the row's own content. */
-.chord-box.chord-list-box[data-now] {
+.chord-box.chord-row-box[data-now] {
   transform: none;
 }

@@ -4,17 +4,26 @@
 
 ## Plugin reference
 
-- Description: Sonata readout keyboard: useReadoutPlane (voicings octave-fitted into the two-octave readout window, laid in the active pitch layout), ReadoutKeyboard (proportional keys in Sonata's skin) and KeyboardCaption (lead · trail caption row, trail accented when current).
+- Description: Sonata readout keyboard: useReadoutPlane (voicings octave-fitted into the two-octave readout window, laid in the active pitch layout), ReadoutKeyboard (proportional keys in Sonata's skin), KeyboardCaption (lead · trail caption row, trail accented when current) and ChordKeyboardRow (a chord's box, its keyboard lit in its colour and a trail — the whole row a button that sounds the chord — shared by the chord list and the current key's chords) with ChordRowFrame, its lead · keyboard · trail columns for a keyboard that must line up with the rows.
 - Web:
   - Uses:
+    - `apps/sonata/audio/live-play.useChordAudition`
     - `apps/sonata/pitch-layout.usePitchGeometry`
     - `apps/sonata/primitives/keyboard.Keyboard`
     - `apps/sonata/primitives/keyboard.KeyboardProps`
     - `apps/sonata/primitives/keyboard.useSonataKeySkin`
+    - `music/chord-box.ChordBox`
+    - `music/chord-box.ChordBoxLabel`
+    - `music/chord-box.chordColour`
+    - `music/chord-box.chordToneStyle`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
+    - `primitives/css/overlay.Overlay`
     - `primitives/css/text.Text`
+  - Exports (types): `ReadoutPlane`
   - Exports (values):
+    - `ChordKeyboardRow`
+    - `ChordRowFrame`
     - `KeyboardCaption`
     - `ReadoutKeyboard`
     - `useReadoutPlane`

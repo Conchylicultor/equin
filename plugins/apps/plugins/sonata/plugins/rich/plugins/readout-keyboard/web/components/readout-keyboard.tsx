@@ -10,6 +10,9 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { fitVoicings } from "../../core";
 
+/** The plane a list of readout keyboards shares. */
+export type ReadoutPlane = KeyboardProps["plane"];
+
 /**
  * The plane a set of readout keyboards is drawn on, and the voicings to light on
  * it: the voicings octave-fitted into the readout window ({@link fitVoicings}),
@@ -19,7 +22,7 @@ import { fitVoicings } from "../../core";
  * Pass a memoized `voicings` array: the fit recomputes when its identity changes.
  */
 export function useReadoutPlane(voicings: readonly (readonly number[])[]): {
-  plane: KeyboardProps["plane"];
+  plane: ReadoutPlane;
   voicings: number[][];
 } {
   const fitted = useMemo(() => fitVoicings(voicings), [voicings]);
@@ -37,7 +40,7 @@ export function ReadoutKeyboard({
   lit,
   renderKey,
 }: {
-  plane: KeyboardProps["plane"];
+  plane: ReadoutPlane;
   lit: KeyboardProps["lit"];
   renderKey?: KeyboardProps["renderKey"];
 }) {

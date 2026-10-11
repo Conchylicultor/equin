@@ -15,19 +15,10 @@ import {
   type ChordBoxFace,
 } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/chord-label/web";
 import {
-  ReadoutKeyboard,
+  ChordKeyboardRow,
   useReadoutPlane,
 } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/readout-keyboard/web";
-import { useChordAudition } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/live-play/web";
-import {
-  ChordBox,
-  chordColour,
-  chordToneStyle,
-} from "@plugins/music/plugins/chord-box/web";
-import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import "./chord-list.css";
 
 /** One distinct chord of the song. */
 interface ChordEntry {
@@ -36,13 +27,14 @@ interface ChordEntry {
   /** Its first occurrence, which names, paints and voices it and is where a click seeks. */
   first: ChordAnnotation;
   face: ChordBoxFace;
-  /** Its colour: the degree's, which lights its keys. */
-  colour: string;
   /** Its notes, root position with a slash bass lowest — before the readout window's octave fit. */
   voicing: number[];
   /** How many times it is struck. */
   uses: number;
 }
+
+/** No notes — a stable identity for a row the fit left empty. */
+const NO_NOTES: readonly number[] = [];
 
 const entryKey = (c: ChordAnnotation) =>
   `${c.data.spelledSymbol ?? c.data.symbol}|${String(c.data.root)}`;
@@ -72,7 +64,6 @@ function distinctChords(
       key,
       first: c,
       face,
-      colour: chordColour(face.degree),
       voicing: chordVoicing(c.data),
       uses: 1,
     });
@@ -98,7 +89,6 @@ function distinctChords(
 export function ChordList() {
   const { score, seekTo } = useSession();
   const mode = useChordDisplayMode();
-  const audition = useChordAudition();
 
   const entries = useMemo(() => distinctChords(score, mode), [score, mode]);
 
@@ -106,16 +96,6 @@ export function ChordList() {
   // to every chord's voicing at once.
   const voicings = useMemo(() => entries.map((e) => e.voicing), [entries]);
   const { plane, voicings: fitted } = useReadoutPlane(voicings);
-  // Each row's notes as its keyboard lights them (and a click sounds them):
-  // every pitch of its fitted voicing in the chord's colour.
-  const rows = useMemo(
-    () =>
-      entries.map((entry, i) => ({
-        entry,
-        lit: new Map((fitted[i] ?? []).map((p) => [p, entry.colour])),
-      })),
-    [entries, fitted],
-  );
 
   // The key of the chord under the playhead; reconciles only on a chord boundary.
   const nowKey = useCursorSelector(
@@ -131,67 +111,20 @@ export function ChordList() {
 
   return (
     <Stack gap="2xs">
-      {rows.map(({ entry, lit }) => (
-        <ChordRow
+      {entries.map((entry, i) => (
+        <ChordKeyboardRow
           key={entry.key}
-          entry={entry}
-          lit={lit}
-          now={entry.key === nowKey}
+          degree={entry.face.degree}
+          label={entry.face.label}
+          name={`${entry.face.name}, played ${String(entry.uses)} times`}
           plane={plane}
-          onPick={() => {
-            audition?.([...lit.keys()]);
-            seekTo(entry.first.start);
-          }}
+          notes={fitted[i] ?? NO_NOTES}
+          now={entry.key === nowKey}
+          trail={`×${String(entry.uses)}`}
+          description="go to its first time"
+          onPick={() => seekTo(entry.first.start)}
         />
       ))}
     </Stack>
-  );
-}
-
-/** One chord: its box, its keyboard and its count, the whole row a play-and-seek button. */
-function ChordRow({
-  entry,
-  lit,
-  now,
-  plane,
-  onPick,
-}: {
-  entry: ChordEntry;
-  lit: ReadonlyMap<number, string>;
-  now: boolean;
-  plane: ReturnType<typeof useReadoutPlane>["plane"];
-  onPick: () => void;
-}) {
-  const { face, uses } = entry;
-  return (
-    <Overlay
-      className="chord-list-row"
-      style={chordToneStyle(face.degree)}
-      data-now={now ? "" : undefined}
-      clickThrough
-      behind={
-        <button
-          type="button"
-          className="chord-list-hit size-full"
-          aria-label={`${face.name}, played ${String(uses)} times — play it and go to its first time`}
-          aria-current={now ? "true" : undefined}
-          onClick={onPick}
-        />
-      }
-    >
-      <div className="chord-list-cells">
-        <ChordBox
-          className="chord-list-box"
-          degree={face.degree}
-          state="filled"
-          label={face.label}
-          now={now}
-        />
-        <ReadoutKeyboard plane={plane} lit={lit} />
-        <Text variant="caption" tone="muted" className="tabular-nums">
-          ×{uses}
-        </Text>
-      </div>
-    </Overlay>
   );
 }

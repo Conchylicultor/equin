@@ -4853,8 +4853,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Imported by:
                   - `apps/sonata/piano-keyboard`
-                  - `apps/sonata/rich/chord-list`
                   - `apps/sonata/rich/circle-of-fifths`
+                  - `apps/sonata/rich/readout-keyboard`
             - **`metronome`** — Sonata metronome: a synthesized click track (continuous + count-in lead-in) scheduled on the engine's audio clock, with a toolbar control and an on-screen countdown. Server registration of the Sonata metronome config.
               - Web:
                 - Contributes:
@@ -5822,26 +5822,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/rich/chord-list`
                   - `apps/sonata/rich/chord-overlay`
                   - `apps/sonata/rich/chord-progression`
+                  - `apps/sonata/rich/key-readout`
             - **`chord-list`** — Sonata Section: the song's chords — one row per distinct chord in order of first appearance, each a chord box (degree colour, chord-label mode) beside a keyboard lit with its notes in that colour and how many times it is played. The chord under the playhead is marked; clicking a row plays the chord and seeks to its first occurrence.
               - Web:
                 - Contributes: `Sonata.Section` "Chord list" → `ChordList`
                 - Uses:
-                  - `apps/sonata/audio/live-play.useChordAudition`
                   - `apps/sonata/document.useHasChords`
                   - `apps/sonata/rich/chord-label.chordBoxFace`
                   - `apps/sonata/rich/chord-label.ChordBoxFace`
                   - `apps/sonata/rich/chord-label.useChordDisplayMode`
-                  - `apps/sonata/rich/readout-keyboard.ReadoutKeyboard`
+                  - `apps/sonata/rich/readout-keyboard.ChordKeyboardRow`
                   - `apps/sonata/rich/readout-keyboard.useReadoutPlane`
                   - `apps/sonata/session.useCursorSelector`
                   - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
-                  - `music/chord-box.ChordBox`
-                  - `music/chord-box.chordColour`
-                  - `music/chord-box.chordToneStyle`
-                  - `primitives/css/overlay.Overlay`
                   - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.Text`
             - **`chord-mode`** — Sonata accompaniment part: per-song chord mode. Exports the 'Play the detected chords' switch row (ChordModeRow) and its gate (useChordModeAvailable) for the Accompaniment section to compose: on, the song document voices the song's detected chords onto the Chords / Bass tracks (same voicing + rhythm options as a chord grid) and the original tracks are turned off in the Tracks card, where any of them can be re-enabled. Persists per song and registers with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's detected chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves it as a per-song lookup collection.
               - Web:
                 - Contributes: `SonataDocument.SongSetting` "chord-mode-sync" → `ChordModeObserver`
@@ -5967,21 +5962,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by: `apps/sonata/rich/key-readout`
               - Exemptions:
                 - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/actions.ts` (sanctioned)
-            - **`key-readout`** — Sonata Section: the current key — its name, relative key and source, the scale as dots on a two-octave readout keyboard plus note-name chips, and (Chords toggle) its seven diatonic chords on readout keyboards — tracking the playback cursor. Reads the session's Score + cursor (useSession).
+            - **`key-readout`** — Sonata Section: the current key — its name, relative key and source, the scale as dots on a two-octave readout keyboard plus note-name chips, and (Chords toggle) its seven diatonic chords as the chord list's rows (chord box + lit keyboard + how often the song plays its root, click to play) — tracking the playback cursor. Reads the session's Score + cursor (useSession).
               - Web:
                 - Contributes: `Sonata.Section` "Current key" → `KeyReadout`
-                - Uses:
-                  - `apps/sonata/document.keyAutoDetectSetting`
-                  - `apps/sonata/document.useLibrarySong`
-                  - `apps/sonata/document.useSongDocument`
-                  - `apps/sonata/document.useSongSetting`
-                  - `apps/sonata/document.useWriteSongSetting`
+                - Uses: 23 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/key-readout/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/key-readout/REFERENCE.md)
+                  - `apps/sonata/document` ×5
+                  - `apps/sonata/rich/readout-keyboard` ×4
+                  - `apps/sonata/rich/chord-label` ×2
+                  - `apps/sonata/session` ×2
                   - `apps/sonata/rich/key-mode.saveKeyAutoDetect`
-                  - `apps/sonata/rich/readout-keyboard.KeyboardCaption`
-                  - `apps/sonata/rich/readout-keyboard.ReadoutKeyboard`
-                  - `apps/sonata/rich/readout-keyboard.useReadoutPlane`
-                  - `apps/sonata/session.useCursorSelector`
-                  - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/cluster.Cluster`
@@ -5991,17 +5980,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
                   - `primitives/persistent-draft.useDraft`
-            - **`readout-keyboard`** — Sonata readout keyboard: useReadoutPlane (voicings octave-fitted into the two-octave readout window, laid in the active pitch layout), ReadoutKeyboard (proportional keys in Sonata's skin) and KeyboardCaption (lead · trail caption row, trail accented when current).
+            - **`readout-keyboard`** — Sonata readout keyboard: useReadoutPlane (voicings octave-fitted into the two-octave readout window, laid in the active pitch layout), ReadoutKeyboard (proportional keys in Sonata's skin), KeyboardCaption (lead · trail caption row, trail accented when current) and ChordKeyboardRow (a chord's box, its keyboard lit in its colour and a trail — the whole row a button that sounds the chord — shared by the chord list and the current key's chords) with ChordRowFrame, its lead · keyboard · trail columns for a keyboard that must line up with the rows.
               - Web:
                 - Uses:
+                  - `apps/sonata/audio/live-play.useChordAudition`
                   - `apps/sonata/pitch-layout.usePitchGeometry`
                   - `apps/sonata/primitives/keyboard.Keyboard`
                   - `apps/sonata/primitives/keyboard.KeyboardProps`
                   - `apps/sonata/primitives/keyboard.useSonataKeySkin`
+                  - `music/chord-box.ChordBox`
+                  - `music/chord-box.ChordBoxLabel`
+                  - `music/chord-box.chordColour`
+                  - `music/chord-box.chordToneStyle`
                   - `primitives/css/fill.Fill`
                   - `primitives/css/line.Line`
+                  - `primitives/css/overlay.Overlay`
                   - `primitives/css/text.Text`
+                - Exports (types): `ReadoutPlane`
                 - Exports (values):
+                  - `ChordKeyboardRow`
+                  - `ChordRowFrame`
                   - `KeyboardCaption`
                   - `ReadoutKeyboard`
                   - `useReadoutPlane`
@@ -23822,7 +23820,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/chord/trainer`
           - `apps/chord/vocabulary`
           - `apps/sonata/chord-chart`
-          - `apps/sonata/rich/chord-list`
+          - `apps/sonata/rich/readout-keyboard`
       - Core:
         - Exports (types): `MajorDegree`
         - Exports (values): `majorDegree`
@@ -28882,7 +28880,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/chord/trainer`
               - `apps/prototypes/gallery`
               - `apps/prototypes/thumbnails`
-              - `apps/sonata/rich/chord-list`
+              - `apps/sonata/rich/readout-keyboard`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `debug/timeline`
               - `music/chord-box`
@@ -29317,8 +29315,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 358 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×94
+            - Imported by: 357 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×93
               - `conversations` ×70
               - `primitives` ×40
               - `debug` ×32

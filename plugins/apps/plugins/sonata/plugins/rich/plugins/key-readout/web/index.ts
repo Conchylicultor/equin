@@ -6,7 +6,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
-    "Sonata Section: the current key — its name, relative key and source, the scale as dots on a two-octave readout keyboard plus note-name chips, and (Chords toggle) its seven diatonic chords on readout keyboards — tracking the playback cursor. Reads the session's Score + cursor (useSession).",
+    "Sonata Section: the current key — its name, relative key and source, the scale as dots on a two-octave readout keyboard plus note-name chips, and (Chords toggle) its seven diatonic chords as the chord list's rows (chord box + lit keyboard + how often the song plays its root, click to play) — tracking the playback cursor. Reads the session's Score + cursor (useSession).",
   contributions: [
     Sonata.Section({
       id: "key-readout",
