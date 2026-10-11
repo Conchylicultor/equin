@@ -37,6 +37,7 @@ compose it without either depending on the other.
     - `apps-core/app-rail`
     - `apps-core/tabs`
     - `apps/sonata/library`
+    - `conversations/commit-conversation`
     - `conversations/conversation-view/open-app`
     - `primitives/data-table`
     - `primitives/data-view/gallery`

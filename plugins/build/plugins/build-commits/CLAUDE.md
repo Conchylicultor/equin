@@ -9,6 +9,7 @@
   - Contributes: `BuildDetailSlots.Section` "Commits" → `BuildCommitsSection`
   - Uses:
     - `build.BuildDetailSlots`
+    - `conversations/commit-conversation.OpenCommitConversation`
     - `infra/endpoints.useEndpoint`
     - `primitives/commit-list.CommitRowItem`
     - `primitives/css/placeholder.Placeholder`

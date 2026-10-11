@@ -118,6 +118,7 @@ construction; *visibility* rests on this signal, and only the runtime asserts it
     - `conversations/conversation-view/jsonl-viewer/row-actions`
     - `page/sub-page`
     - `primitives/breadcrumb`
+    - `primitives/commit-list`
     - `primitives/css/control-panel`
     - `primitives/css/row`
     - `primitives/data-table`

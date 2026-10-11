@@ -1,2 +1,6 @@
-export { CommitRowSchema } from "./commit-row";
-export type { CommitRow } from "./commit-row";
+export {
+  CommitRowSchema,
+  CommitTrailerSchema,
+  commitTrailer,
+} from "./commit-row";
+export type { CommitRow, CommitTrailer } from "./commit-row";

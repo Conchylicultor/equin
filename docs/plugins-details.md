@@ -9161,6 +9161,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes: `BuildDetailSlots.Section` "Commits" → `BuildCommitsSection`
         - Uses:
           - `build.BuildDetailSlots`
+          - `conversations/commit-conversation.OpenCommitConversation`
           - `infra/endpoints.useEndpoint`
           - `primitives/commit-list.CommitRowItem`
           - `primitives/css/placeholder.Placeholder`
@@ -9357,6 +9358,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Routes: `GET /api/build/chain-from`
       - Web:
         - Uses:
+          - `conversations/commit-conversation.OpenCommitConversation`
           - `infra/endpoints.useEndpoint`
           - `network/live.useLive`
           - `primitives/commit-list.CommitRowItem`
@@ -10482,6 +10484,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversations-view/data-view/history`
           - `conversations/conversations-view/data-view/queue`
           - `conversations/usage`
+    - **`commit-conversation`** — The commit row action that opens the conversation which wrote a commit (its Singularity-Conversation trailer) in a new browser tab.
+      - Web:
+        - Uses:
+          - `primitives/icon-button.IconButton`
+          - `primitives/link-gesture.openInBrowserTab`
+        - Exports (values): `OpenCommitConversation`
+      - Cross-plugin:
+        - Imported by:
+          - `build/build-commits`
+          - `build/deployment`
     - **`conversation-category`** — Per-conversation categories: the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn. Classifies each conversation along a user-defined set of categories using Haiku, one item per category. Paints the sidebar avatar from the category chosen for it.
       - Web:
         - Contributes:
@@ -28162,6 +28174,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSize`
           - `primitives/css/ui-kit.useControlSize`
+          - `primitives/row-actions.RowActions`
+          - `primitives/row-actions.rowActionsAnchor`
         - Exports (types): `CommitRow`
         - Exports (values):
           - `CommitRail`
@@ -28197,8 +28211,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/attempt-work`
           - `tasks/tasks-core`
       - Core:
-        - Exports (types): `CommitRow`
-        - Exports (values): `CommitRowSchema`
+        - Exports (types):
+          - `CommitRow`
+          - `CommitTrailer`
+        - Exports (values):
+          - `CommitRowSchema`
+          - `commitTrailer`
+          - `CommitTrailerSchema`
     - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
       - Web:
         - Uses:
@@ -31049,10 +31068,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `IconButtonProps`
         - Exports (values): `IconButton`
       - Cross-plugin:
-        - Imported by: 112 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 113 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×42
           - `primitives` ×19
-          - `conversations` ×14
+          - `conversations` ×15
           - `page` ×7
           - `tasks` ×7
           - `debug` ×6
@@ -31226,6 +31245,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-rail`
           - `apps-core/tabs`
           - `apps/sonata/library`
+          - `conversations/commit-conversation`
           - `conversations/conversation-view/open-app`
           - `primitives/data-table`
           - `primitives/data-view/gallery`
@@ -32875,6 +32895,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/jsonl-viewer/row-actions`
           - `page/sub-page`
           - `primitives/breadcrumb`
+          - `primitives/commit-list`
           - `primitives/css/control-panel`
           - `primitives/css/row`
           - `primitives/data-table`

@@ -235,6 +235,7 @@ convergence mechanisms all missing it) and the design.
   - Routes: `GET /api/build/chain-from`
 - Web:
   - Uses:
+    - `conversations/commit-conversation.OpenCommitConversation`
     - `infra/endpoints.useEndpoint`
     - `network/live.useLive`
     - `primitives/commit-list.CommitRowItem`

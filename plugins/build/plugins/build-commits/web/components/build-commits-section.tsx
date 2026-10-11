@@ -3,6 +3,7 @@ import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { CommitRowItem } from "@plugins/primitives/plugins/commit-list/web";
+import { OpenCommitConversation } from "@plugins/conversations/plugins/commit-conversation/web";
 import { getBuildRunCommits } from "../../shared";
 
 const BRANCH_COLOR = "var(--primary)";
@@ -40,6 +41,7 @@ export function BuildCommitsSection({
           isFirst={idx === 0}
           isLast={idx === data.length - 1}
           color={BRANCH_COLOR}
+          actions={<OpenCommitConversation commit={commit} />}
         />
       ))}
     </ol>

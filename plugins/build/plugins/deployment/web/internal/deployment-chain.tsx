@@ -1,5 +1,6 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { CommitRowItem } from "@plugins/primitives/plugins/commit-list/web";
+import { OpenCommitConversation } from "@plugins/conversations/plugins/commit-conversation/web";
 import type { CommitRow } from "@plugins/primitives/plugins/commit-list/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -366,6 +367,7 @@ function ChainArm({
                 // number of commits between it and HEAD.
                 idx,
               )}
+              actions={<OpenCommitConversation commit={commit} />}
             />
           ))}
         </ol>

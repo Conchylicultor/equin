@@ -7,6 +7,10 @@ import {
   cn,
   useControlSize,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  RowActions,
+  rowActionsAnchor,
+} from "@plugins/primitives/plugins/row-actions/web";
 import type React from "react";
 import type { CommitRow } from "../../core";
 import { CommitRail, commitRowHeight } from "./commit-rail";
@@ -50,6 +54,7 @@ export function CommitRowItem({
   color,
   pushed = false,
   markers,
+  actions,
   onClick,
 }: {
   commit: CommitRow;
@@ -67,6 +72,13 @@ export function CommitRowItem({
    * without this primitive learning anything about what they mean.
    */
   markers?: React.ReactNode;
+  /**
+   * Hover-revealed actions on this commit (plain `IconButton`s) — what a host
+   * can DO with it, as opposed to `markers`, which say what is true of it.
+   * Rendered through `RowActions`, pinned over the row's trailing edge, so a
+   * row reserves no width for them at rest.
+   */
+  actions?: React.ReactNode;
   onClick?: (commit: CommitRow) => void;
 }) {
   const height = commitRowHeight(useControlSize());
@@ -79,7 +91,13 @@ export function CommitRowItem({
       as="li"
       className={cn(
         "gap-sm border-b border-border/50 pl-sm pr-md",
-        onClick && "cursor-pointer hover:bg-accent/50",
+        // A row that does something hovers to its surface's own hover step,
+        // co-publishing it as `--scrim` so the pinned action cluster's mask
+        // matches what is painted under it (the `css/row` contract).
+        (onClick || actions) &&
+          "hover:bg-hover-fill hover:[--scrim:var(--hover-fill)]",
+        onClick && "cursor-pointer",
+        actions && rowActionsAnchor,
       )}
       style={{ height }}
       onClick={onClick ? () => onClick(commit) : undefined}
@@ -114,6 +132,7 @@ export function CommitRowItem({
       >
         {formatRelative(commit.authoredAt)}
       </Text>
+      {actions && <RowActions>{actions}</RowActions>}
     </Line>
   );
 }

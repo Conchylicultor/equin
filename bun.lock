@@ -1430,6 +1430,10 @@
       "name": "@singularity/plugin-conversations-all-conversations",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/commit-conversation": {
+      "name": "@singularity/plugin-conversations-commit-conversation",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-category": {
       "name": "@singularity/plugin-conversations-conversation-category",
       "version": "0.0.1",
@@ -7148,6 +7152,8 @@
     "@singularity/plugin-conversations-agents": ["@singularity/plugin-conversations-agents@workspace:plugins/conversations/plugins/agents"],
 
     "@singularity/plugin-conversations-all-conversations": ["@singularity/plugin-conversations-all-conversations@workspace:plugins/conversations/plugins/all-conversations"],
+
+    "@singularity/plugin-conversations-commit-conversation": ["@singularity/plugin-conversations-commit-conversation@workspace:plugins/conversations/plugins/commit-conversation"],
 
     "@singularity/plugin-conversations-conversation-category": ["@singularity/plugin-conversations-conversation-category@workspace:plugins/conversations/plugins/conversation-category"],
 
