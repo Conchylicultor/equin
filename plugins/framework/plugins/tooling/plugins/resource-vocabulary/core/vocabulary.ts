@@ -94,6 +94,13 @@ export interface MintedResource {
    * `all`).
    */
   requires?: string;
+  /**
+   * Minted only when the call's spec does NOT set this field — the
+   * complement of `requires`, read the same way. A `liveValue` mints its key
+   * as a plain value unless it is declared `paged`, when the key is a keyed
+   * window (a page) instead.
+   */
+  unless?: string;
 }
 
 /**
@@ -211,7 +218,32 @@ export const resourceDescriptorFactories = {
   liveValue: {
     barrel: LIVE_CORE,
     preload: PRELOAD,
-    mints: [{ suffix: "", keyed: false, membership: null, preloadable: true }],
+    mints: [
+      {
+        suffix: "",
+        keyed: false,
+        membership: null,
+        preloadable: true,
+        unless: "paged",
+      },
+      // A paged value's pages: each page tuple a keyed window (D3 of
+      // research/2026-10-11-global-live-paging-unification.md). Never preloaded.
+      {
+        suffix: "",
+        keyed: true,
+        membership: "window",
+        preloadable: false,
+        requires: "paged",
+      },
+      // Its per-question sibling (`paged.meta`): a plain typed-query value.
+      {
+        suffix: ":meta",
+        keyed: false,
+        membership: null,
+        preloadable: false,
+        requires: "paged.meta",
+      },
+    ],
   },
   liveCollection: {
     barrel: LIVE_CORE,

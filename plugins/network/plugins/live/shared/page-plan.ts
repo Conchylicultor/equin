@@ -1,7 +1,8 @@
-// The paged read's plan, as pure data — `useLiveCollectionPages` feeds it what each
-// page's window read holds and where the viewport is, and renders what it
-// assembles; the DB oracle drives the same functions. See
-// `plugins/network/plugins/live/CLAUDE.md` (*Paged collections*) and
+// The paged read's plan, as pure data — `useLive`'s paged read
+// (`web/internal/use-pages.ts`) feeds it what each page's window read holds
+// and where the viewport is, and renders what it assembles; the DB oracle
+// drives the same functions. See
+// `plugins/network/plugins/live/CLAUDE.md` (*Paged reads*) and
 // research/2026-10-09-global-live-key-range-pages-v2.md.
 //
 // A page is a KEY RANGE read with a limit: `(after, until]` in the order, at
@@ -14,7 +15,9 @@
 // rows per reader, past which a released page drops its rows and is drawn as
 // one height-keeping placeholder, subscribed again once it is near the
 // viewport. Depth is unbounded; what is live is bounded by the viewport, and
-// what is held by the viewport plus the budget.
+// what is held by the viewport plus the budget. A read with NO viewport (a
+// reader that cannot say which rows are on screen) keeps every page live
+// instead, and is bounded by `maxLimit` rows (see {@link everyPageLive}).
 
 /** One page: `(after, until]` in the order, at most `limit` rows. */
 export interface Page {
@@ -394,7 +397,8 @@ export interface ReconcileOutcome<R> {
 
 /**
  * Advance the plan against what its live pages observe and where the
- * viewport is. Pure, and the identity once nothing applies: fed its own
+ * viewport is — `null`: the read has none, and {@link everyPageLive} applies
+ * instead of {@link liveSet}. Pure, and the identity once nothing applies: fed its own
  * output while the reads it subscribed have not answered yet, it returns that
  * output unchanged — so a caller may run it on every render.
  *
@@ -419,7 +423,7 @@ export interface ReconcileOutcome<R> {
 export function reconcile<R extends PageEntry, E extends Error>(
   plan: PagePlan<R>,
   observe: Observe<R, E>,
-  viewport: PageViewport,
+  viewport: PageViewport | null,
   limits: PageLimits,
 ): ReconcileOutcome<R> {
   let next = plan;
@@ -437,8 +441,67 @@ export function reconcile<R extends PageEntry, E extends Error>(
     next = step.plan;
     collapsed ??= step.collapsed;
   }
-  next = liveSet(next, observe, viewport, limits);
+  next =
+    viewport === null
+      ? everyPageLive(next, observe, limits)
+      : liveSet(next, observe, viewport, limits);
   return collapsed ? { plan: next, collapsed } : { plan: next };
+}
+
+/**
+ * The live set of a read with no viewport: nothing says which rows are on
+ * screen, so no page can be released — every page is live — and what the
+ * read holds is bounded by `maxLimit` instead (the bound a reader with no
+ * viewport always had). `loadMore()` stops short of it (the caller's check:
+ * a new page must fit), and pages a live insert pushed past it go: once the
+ * pages before the last hold `maxLimit` rows between them, the last is
+ * dropped and the one before it becomes the last (`until: null`), showing
+ * its rows until its own read lands. So the pages before the last hold fewer
+ * than `maxLimit` rows, and the read at most that plus its last page's.
+ */
+export function everyPageLive<R extends PageEntry, E extends Error>(
+  plan: PagePlan<R>,
+  observe: Observe<R, E>,
+  limits: PageLimits,
+): PagePlan<R> {
+  const all = plan.pages.every((p) => p.live)
+    ? plan.pages
+    : plan.pages.map((p) => (p.live ? p : { ...p, live: true }));
+  const obs = all.map((p) => observed(p, observe));
+  const sizes = all.map((p, i) => shownOf(p, obs[i]!)?.entries.length ?? 0);
+  // `held`: the rows of the pages before the last of the first `kept`.
+  let kept = all.length;
+  let held = sizes.slice(0, kept - 1).reduce((n, s) => n + s, 0);
+  while (kept > 1 && held >= limits.maxLimit) {
+    kept--;
+    held -= sizes[kept - 1]!;
+  }
+  if (kept === all.length) {
+    return all === plan.pages ? plan : { ...plan, pages: all };
+  }
+  const last = all[kept - 1]!;
+  const shown = shownOf(last, obs[kept - 1]!);
+  return {
+    pages: [
+      ...all.slice(0, kept - 1),
+      {
+        page: { after: last.page.after, until: null, limit: last.page.limit },
+        live: true,
+        held:
+          shown === null
+            ? last.held
+            : {
+                kind: "rows",
+                entries: shown.entries,
+                own: false,
+                appliedSeq: shown.appliedSeq,
+              },
+        // Its range grew past its old cut: read whole.
+        seed: null,
+      },
+    ],
+    grown: null,
+  };
 }
 
 function structuralStep<R extends PageEntry, E extends Error>(

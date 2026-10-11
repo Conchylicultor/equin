@@ -60,7 +60,13 @@ serves all of them. An entry with `requires: "<field>"` is minted only when the
 call's spec sets that field: a `liveCollection` without `default` is
 lookup-only and mints `k:rows` alone, and one declared `all` mints `k` as the
 whole ordered set (`requires: "all"`, `membership: null`, preloadable) and
-`k:rows` — two mints of suffix `""`, never both kept.
+`k:rows` — two mints of suffix `""`, never both kept. `unless: "<field>"` is
+the complement (minted only when the spec does NOT set it), and a dotted field
+(`paged.meta`) is read inside the spec's inline object of that name: a
+`liveValue` mints a plain `k` unless it is declared `paged`, when `k` is its
+pages — a keyed window (D3 of
+`research/2026-10-11-global-live-paging-unification.md`), never preloaded —
+plus `k:meta` when `paged` sets `meta`.
 
 **`mintsOf(entry, argsText, where)` is the one reading of `requires`** (A28 of
 `research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md`), used by both
@@ -73,11 +79,13 @@ both `default` and `all`. It also throws rather than guess "absent" when the
 text cannot say: a spec that is not one inline object literal (an identifier
 `spec`, a wrapper call `makeSpec({ … })`, `{ … } as const`), a spread at the
 spec's own depth (`{ ...base }` may carry `all`), or a `requires` field written
-as a shorthand property (`{ row, all }`) — a wrong "absent" drops the key from
-the docs and from the eager tier. A factory with no `requires` mint never reads
-its spec. `core/mints.test.ts` cross-checks it against what
-`liveCollection` really registers, for every form (window, lookup-only, `all`,
-union).
+as a shorthand property (`{ row, all }`) — and the same of each object a
+dotted field is read through, which must itself be an inline object literal —
+a wrong "absent" drops the key from the docs and from the eager tier. A
+factory with no conditional mint never reads its spec. `core/mints.test.ts`
+cross-checks it against what `liveCollection` and `liveValue` really
+register, for every form (window, lookup-only, `all`, union; plain, paged,
+paged with `meta`).
 
 Deliberately NOT rewired: `keyed-resource-scope` and `no-db-backed-notify`. Each
 names its markers on purpose, to ban one shape: `keyed-resource-scope` a keyed

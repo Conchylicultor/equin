@@ -1,3 +1,4 @@
+import type { LiveKeyRange } from "@plugins/network/plugins/live/core";
 import type {
   Catalog,
   DetailsSelector,
@@ -7,15 +8,16 @@ import type {
   MetricResult,
 } from "../../core";
 import type { MetricRegistry } from "./registry";
-import { runDetails, runQuery } from "./run";
+import { runDetails, runDetailsTotal, runQuery } from "./run";
 import type { SourceWatch } from "./source-watch";
 
 // The options the three metrics values are served with (`./resources.ts`
 // passes them to `serveValue`), built over a registry and a source watch so a
 // test can drive them on its own.
 //
-// Freshness: a query or drill-down page watches its metric's source for as
-// long as a tab holds it (`whileSubscribed` → the source watch), and a change
+// Freshness: a query or drill-down watches its metric's source for as long as
+// a tab holds it (`whileSubscribed` → the source watch — once per drill-down
+// QUESTION, however many of its pages and its total are held), and a change
 // recomputes it — throttled, so a burst (a bulk write, a fetch landing many
 // commits) is one refetch. Between a last unsubscribe and the next subscribe
 // nothing watches, and nothing needs to: the runtime opens every subscription
@@ -61,28 +63,20 @@ export function queryOptions(
   };
 }
 
-/** One page of the records behind a bucket; the bucket's total is the page meta. */
+/** One key range of the records behind a bucket; the bucket's total is the meta sibling. */
 export function detailsOptions(
   registry: () => MetricRegistry,
   watch: SourceWatch,
 ) {
   return {
     source: "external" as const,
-    loader: async (
+    loader: (
       selector: DetailsSelector,
-      page: { cursor: string | null; limit: number },
-    ): Promise<{
-      items: DrillItem[];
-      nextCursor: string | null;
-      meta: DrillMeta;
-    }> => {
-      const { items, nextCursor, total } = await runDetails(
-        registry(),
-        selector,
-        page,
-      );
-      return { items, nextCursor, meta: { total } };
-    },
+      range: LiveKeyRange,
+    ): Promise<readonly DrillItem[]> => runDetails(registry(), selector, range),
+    meta: async (selector: DetailsSelector): Promise<DrillMeta> => ({
+      total: await runDetailsTotal(registry(), selector),
+    }),
     throttleMs: THROTTLE_MS,
     whileSubscribed: watchMetric(registry, watch),
   };

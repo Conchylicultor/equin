@@ -19023,11 +19023,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DependsOnEntry`
           - `DerivedRead`
           - `ExternalResource`
+          - `ExternalWindowMembership`
+          - `ExternalWindowPolicy`
           - `FullRoute`
           - `HostMap`
           - `KeyedDiff`
           - `KeyedMembership`
           - `KeyedMembershipInput`
+          - `KeyedResourceContract`
           - `KeyedServerResourceOptions`
           - `NotifyCounts`
           - `PersistedBase`
@@ -23864,7 +23867,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
-    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple) and a cursor-paged one (a live chain of pages — re-minted when a boundary moves, deduped by id, capped at MAX_LIVE_PAGES); and useLiveCollectionPages (a scroll collection read with no depth limit as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small, the pages near a measured viewport live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a cursor-paged one — external only — is loaded one page at a time, notify(q) reaching every subscribed page) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); a scroll collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
       - Web:
         - Uses:
           - `primitives/live-state.PagedResourceResult`
@@ -23878,24 +23881,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/log-channels.clientLog`
         - Exports (types):
           - `LiveAllSelect`
-          - `LiveCollectionPageError`
-          - `LiveCollectionPagePlaceholder`
-          - `LiveCollectionPagesOptions`
-          - `LiveCollectionPagesQuery`
-          - `LiveCollectionPagesResult`
           - `LiveIdsQuery`
           - `LiveListResult`
-          - `LivePagesOptions`
+          - `LivePageError`
+          - `LivePagePlaceholder`
+          - `LivePagesQuery`
           - `LivePagesResult`
           - `LiveRowResult`
+          - `LiveValuePagesOptions`
           - `PagesTruncation`
           - `VisibleRange`
         - Exports (values):
           - `mapRow`
-          - `MAX_LIVE_PAGES`
           - `mintVisibleRange`
           - `useLive`
-          - `useLiveCollectionPages`
           - `useLiveRow`
       - Server:
         - Uses: 25 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
@@ -23908,6 +23907,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CollectionSource`
           - `CollectionSpecs`
           - `ColumnOverride`
+          - `CompiledPagedValue`
           - `CompiledValue`
           - `DefaultScope`
           - `LiveValueSource`
@@ -23942,6 +23942,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveScopedColumns`
           - `serveUnionCollection`
           - `serveValue`
+          - `sliceRange`
       - Core:
         - Uses:
           - `infra/query-resource.KIND_RE`
@@ -23998,18 +23999,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveGroupQuery`
           - `LiveGroupsDescriptor`
           - `LiveGroupValue`
+          - `LiveKeyCut`
+          - `LiveKeyDirection`
+          - `LiveKeyRange`
           - `LiveLookupCollection`
           - `LiveLookupSpec`
           - `LiveNoWindowCollection`
           - `LiveNoWindowSpec`
           - `LiveOrderBy`
-          - `LivePage`
-          - `LivePageCodec`
+          - `LivePageBounds`
+          - `LivePagedCodec`
+          - `LivePagedKey`
+          - `LivePagedPages`
+          - `LivePagedParams`
           - `LivePagedSpec`
           - `LivePagedValue`
           - `LivePagedValueSpec`
-          - `LivePageParams`
-          - `LivePageRequest`
           - `LiveParamValueSpec`
           - `LivePlainValue`
           - `LivePreload`
@@ -24043,10 +24048,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ScopedColumnMember`
           - `WithContributedColumns`
         - Exports (values):
-          - `isLivePageCursor`
           - `isPointId`
           - `LIVE_COLUMNS_KEY`
-          - `LIVE_PAGE_CURSOR_MAX_BYTES`
           - `LIVE_QUERY_MAX_BYTES`
           - `LIVE_ROW_KEY`
           - `LIVE_ROW_KEY_MAX_BYTES`
@@ -24166,15 +24169,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tweakcn/community-browser` (1 debt)
       - Central:
         - Exports (types):
+          - `CentralServedPagedValue`
           - `CentralServedQueryValue`
           - `CentralServedValue`
-        - Exports (values): `serveValue`
+        - Exports (values):
+          - `serveValue`
+          - `sliceRange`
       - Test helpers:
+        - Web: `@plugins/network/plugins/live/web/testing`
+          - `pageZeroParams` — The tuple a paged read of `collection` subscribes for its first page, asked nothing (`{}`): the page plan's start page, encoded by the collection's page source.
         - Server: `@plugins/network/plugins/live/server/testing`
+          - `checkPagedSource` — Ask `loader` every range over the items' and `cuts`' keys and throw — naming the range, the answer and the expected ids — on the first answer that differs from `sliceRange` or fails the served half's checks.
           - `compileCollection` — Derive the specs for a collection — three, or just `rows` for a lookup-only one.
           - `compileUnion` — Derive a union collection's three server halves.
           - `subscribeAsOldDescriptor` — Subscribe `old.key` on the server runtime as an old bundle's tab would — its own socket, `params` (default `{}`: a legacy param-less descriptor sent nothing), its `build` graph when given — and answer what that tab gets: the first `sub-ack` or `sub-error` for the tuple, the ack's value parsed with the OLD schema.
-          - Types: `OldDescriptor`, `OldSubscription`
+          - Types: `OldDescriptor`, `OldSubscription`, `PagedSourceCheck`
       - Plugins:
         - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
           - Cross-plugin:
@@ -29817,10 +29826,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
-        - Uses: 80 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 79 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `primitives/css/ui-kit` ×11
           - `primitives/data-view/view-core` ×8
-          - `network/live` ×6
+          - `network/live` ×5
           - `primitives/live-state` ×5
           - `primitives/css/control-panel` ×4
           - `primitives/slot-render` ×4
@@ -31702,11 +31711,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/file-viewer/markdown`
           - `tasks/outcome-report`
           - `tasks/sidequest-autopilot`
-    - **`metrics`** — Metrics surfaces: useMetricCatalog / useMetric / useMetricDetails (live reads of the served metrics values — the details one a live chain of cursor pages — so a change the metric's source announces refetches what is on screen, without polling), MetricTile (KPI toggle with value, polarity-coloured delta and sparkline), MetricCard (controls derived from the catalog entry: split, daily | cumulative for flows, table twin, previous-period line on the unsplit total), BreakdownCard, RangeBar, the DrillDrawer listing the records behind a bucket, BoardView (sections of focus tiles, a lead card and a card grid, every ref checked against the catalog) and Board (a view-core tabbed board whose specs live in a config declared with defineBoardConfig). Metrics engine: the MetricsServer.Source contribution (a source's metrics and breakdowns bound to their evaluators), the served metrics.catalog / metrics.query / metrics.details live values evaluating any of them through the one tz-aware bucketing engine — each query and drill-down page watching its source's `changes` through one refcounted subscription per source — and the sqlFlow / sqlLevel helpers joining a table against the engine's intervals.
+    - **`metrics`** — Metrics surfaces: useMetricCatalog / useMetric / useMetricDetails / useMetricDetailsTotal (live reads of the served metrics values — the details one key-range pages, every loaded one live, and its total the per-question meta sibling — so a change the metric's source announces refetches what is on screen, without polling), MetricTile (KPI toggle with value, polarity-coloured delta and sparkline), MetricCard (controls derived from the catalog entry: split, daily | cumulative for flows, table twin, previous-period line on the unsplit total), BreakdownCard, RangeBar, the DrillDrawer listing the records behind a bucket, BoardView (sections of focus tiles, a lead card and a card grid, every ref checked against the catalog) and Board (a view-core tabbed board whose specs live in a config declared with defineBoardConfig). Metrics engine: the MetricsServer.Source contribution (a source's metrics and breakdowns bound to their evaluators), the served metrics.catalog / metrics.query / metrics.details live values evaluating any of them through the one tz-aware bucketing engine — each query and drill-down (its key-range pages and its total) watching its source's `changes` through one refcounted subscription per source — and the sqlFlow / sqlLevel helpers joining a table against the engine's intervals.
       - Server:
         - Contributes:
           - `resource.declare` "metrics.catalog"
           - `resource.declare` "metrics.details"
+          - `resource.declare` "metrics.details:meta"
           - `resource.declare` "metrics.query"
         - Uses:
           - `network/live.serveValue`
@@ -31714,7 +31724,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `BreakdownImpl`
           - `DetailsCtx`
+          - `DetailsScope`
           - `MetricDetails`
+          - `MetricDetailsTotal`
           - `MetricImpl`
           - `SourceImpl`
           - `SqlFlowSpec`
@@ -31729,7 +31741,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `sqlLevel`
         - Resources:
           - `metrics.catalog` (push)
-          - `metrics.details` (invalidate)
+          - `metrics.details` (keyed, window)
+          - `metrics.details:meta` (push)
           - `metrics.query` (invalidate)
       - Web:
         - Uses: 39 symbols — full list in [`plugins/primitives/plugins/metrics/REFERENCE.md`](../plugins/primitives/plugins/metrics/REFERENCE.md)
@@ -31785,6 +31798,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useMetric`
           - `useMetricCatalog`
           - `useMetricDetails`
+          - `useMetricDetailsTotal`
       - Core:
         - Uses:
           - `network/live.liveValue`
@@ -31814,7 +31828,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DisplayError`
           - `DrillItem`
           - `DrillMeta`
-          - `DrillPage`
           - `EngineQuery`
           - `EntityLink`
           - `EvaluateCtx`
@@ -31866,10 +31879,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DetailsSelectorSchema`
           - `DISPLAY_CHARTS`
           - `displayError`
-          - `DRILL_PAGE`
           - `DrillItemSchema`
           - `DrillMetaSchema`
-          - `DrillPageSchema`
           - `EntityLinkSchema`
           - `enumOf`
           - `evaluateBreakdown`

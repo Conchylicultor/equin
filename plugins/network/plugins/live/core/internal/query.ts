@@ -8,6 +8,7 @@ import type {
 } from "@plugins/network/plugins/live/plugins/filter/core";
 
 import type { LiveColumnsDeclaration } from "./live-columns";
+import type { LiveCutKey } from "./row-key";
 
 // The consumer-facing query language, typed against a collection's
 // declaration: an undeclared column, an op the column's domain does not take,
@@ -200,22 +201,6 @@ export interface LiveWindowBounds {
   after?: string;
   until?: string;
 }
-
-/**
- * The reserved window-only row field a scroll collection's window projects: the
- * canonical JSON array of the row's order-key values as exact Postgres text
- * (`col::text`), then its id — or `null` when that JSON is over
- * {@link LIVE_ROW_KEY_MAX_BYTES} (a long text sort key), at which no page can
- * be cut. It is not a row field: every read splits it off before rows reach a
- * consumer.
- */
-export const LIVE_ROW_KEY = "$key";
-
-/** A `$key` over this many bytes is projected as `null` — cuts ride in every tuple's params. */
-export const LIVE_ROW_KEY_MAX_BYTES = 1024;
-
-/** A decoded cut: each order key's exact text (NULL a NULL key), then the id. */
-export type LiveCutKey = readonly (string | null)[];
 
 /**
  * The groups resource's wire params: `groupBy` and `limit` always, `where` as

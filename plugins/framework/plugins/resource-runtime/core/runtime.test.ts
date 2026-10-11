@@ -917,13 +917,76 @@ describe("P8 23b — the deleted spellings are refused at registration", () => {
     ).not.toThrow();
   });
 
-  test("D31: a keyed entry is a routed membership entry — keyed external and keyed-without-membership throw", () => {
+  test("D31: a keyed entry is a membership entry — routed when DB-backed, an external window otherwise; keyed-without-membership throws", () => {
     const { runtime } = createHarness();
     const noScope = { loader: () => [] };
     expect(() =>
-      // @ts-expect-error — defineExternalResource takes no keyed contract (D31)
+      // @ts-expect-error — a keyed external contract requires the window arm
       runtime.defineExternalResource(rowsContract, noScope),
-    ).toThrow(/a keyed entry is a routed membership entry — key "rows"/);
+    ).toThrow(
+      /a keyed entry is a membership entry — key "rows" declares no membership/,
+    );
+    // The external window: no routes, no point set / alias, no windowIdsOf.
+    const ext = (key: string) => ({ ...rowsContract, key });
+    expect(() =>
+      runtime.defineExternalResource(ext("ext-point"), {
+        membership: { kind: "point", idsOf: () => [] },
+        loader: () => [],
+      } as never),
+    ).toThrow(/an external keyed entry is a bounded window/);
+    expect(() =>
+      runtime.defineExternalResource(ext("ext-ids"), {
+        membership: {
+          kind: "window",
+          limitOf: () => 3,
+          windowIdsOf: async () => [],
+        },
+        loader: () => [],
+      } as never),
+    ).toThrow(/an external keyed entry is a bounded window/);
+    expect(() =>
+      runtime.defineExternalResource(ext("ext-alias"), {
+        scopedMembership: { orderOf: async () => [] },
+        loader: () => [],
+      } as never),
+    ).toThrow(/an external keyed entry is a bounded window/);
+    // Positive control: the window arm registers, keyed.
+    const win = runtime.defineExternalResource(ext("ext-window"), {
+      membership: { kind: "window", limitOf: () => 3 },
+      loader: () => [],
+    });
+    expect(win.mode).toBe("keyed");
+    // D32: nothing cascades out of the window (its drain cascades nothing),
+    // in either registration order.
+    expect(() =>
+      runtime.defineExternalResource({
+        key: "follows-window",
+        mode: "push",
+        schema: z.number(),
+        loader: () => 1,
+        dependsOn: [{ resource: win }],
+      }),
+    ).toThrow(/"follows-window" cascades from the keyed window "ext-window"/);
+    runtime.defineExternalResource({
+      key: "follows-late",
+      mode: "push",
+      schema: z.number(),
+      loader: () => 1,
+      dependsOn: [
+        {
+          resource: { key: "late-window" } as unknown as ExternalResource<
+            unknown,
+            ResourceParams
+          >,
+        },
+      ],
+    });
+    expect(() =>
+      runtime.defineExternalResource(ext("late-window"), {
+        membership: { kind: "window", limitOf: () => 3 },
+        loader: () => [],
+      }),
+    ).toThrow(/"follows-late" cascades from the keyed window "late-window"/);
     const flatKeyed = {
       key: "flat-keyed",
       mode: "keyed" as const,

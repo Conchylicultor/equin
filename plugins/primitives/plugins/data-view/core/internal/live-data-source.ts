@@ -8,7 +8,7 @@ import type {
 } from "@plugins/network/plugins/live/core";
 
 // A DataView's LIVE data origin: a `network/live` collection declared
-// `scroll: true`, read as key-range pages (`useLiveCollectionPages`), the pages near the
+// `scroll: true`, read as key-range pages (`useLive`), the pages near the
 // rows on screen live. The view's sort, filter, search and group-by lower onto
 // its window params, and the rows stay live through the routed runtime. The
 // types live here (the props union names them); the constructor,

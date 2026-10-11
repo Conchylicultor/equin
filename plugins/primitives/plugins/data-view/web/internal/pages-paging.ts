@@ -1,5 +1,5 @@
 import type {
-  LiveCollectionPagesResult,
+  LivePagesResult,
   PagesTruncation,
 } from "@plugins/network/plugins/live/web";
 import type {
@@ -10,7 +10,7 @@ import type {
 
 /** A settled paged read — the arm that has rows to page past. */
 export type SettledPages = Extract<
-  LiveCollectionPagesResult<unknown>,
+  LivePagesResult<unknown>,
   { status: "ready" }
 >;
 
@@ -24,7 +24,7 @@ const TRUNCATION_HINT: Readonly<Record<PagesTruncation, string>> = {
 };
 
 /**
- * A settled `useLiveCollectionPages` read as a DataView's {@link DataViewPaging}: the
+ * A settled `useLive` read as a DataView's {@link DataViewPaging}: the
  * failures paging stopped on become the footer's Retry (re-reading each of
  * them), the rest notices above the rows, its pages past the stale budget the
  * placeholders drawn before and after them, and `viewport` is where the DataView

@@ -17,19 +17,25 @@ import type {
   LiveGroupQuery,
   LiveGroupValue,
   LiveQuery,
+  LivePagedPages,
   LivePagedValue,
   LivePlainValue,
   LiveQueryValue,
   LiveRowsCollection,
+  LiveScrollCollection,
   LiveValue,
   LiveValueOrigin,
 } from "@plugins/network/plugins/live/core";
 import { isPointId } from "@plugins/network/plugins/live/core";
 import {
-  useLivePages,
+  useAllPages,
+  useValuePages,
+  useViewportPages,
   type LivePagesOptions,
   type LivePagesResult,
-} from "./use-live-pages";
+  type LiveValuePagesOptions,
+} from "./use-pages";
+import type { LivePagesQuery } from "./page-source";
 import { withoutWindowFields } from "./window-fields";
 
 // The read half of a `liveCollection`. A consumer asks a QUERY — a window
@@ -43,10 +49,15 @@ import { withoutWindowFields } from "./window-fields";
 // the states every read already has, so it gets no hook of its own.
 
 /**
- * A window read: the paged read every grow-able read returns. `canGrow` is
- * "the window is full and below `maxLimit`", `loadMore()` grows it by one
- * default page (clamped to `maxLimit`), and a grow that FAILS is the error arm
- * with the window it grew from as `stale`.
+ * A window read: the paged read every grow-able read with no viewport
+ * returns, never past `maxLimit` rows. A scroll collection or a paged value
+ * is read as key-range pages, every one live: `loadMore()` splits the last
+ * page, and a page that fails under the rows shown is the error arm with
+ * them as `stale`. Any other collection (until P5, task-1791593959-9liyj7)
+ * is one tuple whose limit grows: `canGrow` is "the window is full and below
+ * `maxLimit`", `loadMore()` grows it by one default page (clamped to
+ * `maxLimit`), and a grow that FAILS is the error arm with the window it grew
+ * from as `stale`.
  */
 export type LiveListResult<Row> = PagedResourceResult<Row>;
 
@@ -154,7 +165,8 @@ function listShape<Row, F, S extends string>(
  *   Its settled arm adds `canGrow` / `growing` / `loadMore()`; while a grown
  *   window loads, the hook STAYS settled on the previous rows (`growing: true`)
  *   — those rows are server-vouched and still subscribed — so `if (pending)`
- *   never flashes a spinner over a list that already rendered.
+ *   never flashes a spinner over a list that already rendered. A `scroll:
+ *   true` collection's window is read as key-range pages (see below).
  * - `useLive(c, { groupBy, where?, limit? })` — the values a text / number /
  *   boolean filterable column takes (with counts), ordered by count desc then
  *   value; each value typed as the row field. The same list result
@@ -203,6 +215,24 @@ export function useLive<Row, F, S extends string>(
   query: LiveCountQuery<F> | null,
 ): ResourceResult<number>;
 /**
+ * - `useLive(scrollCollection, query, { viewport, resetKey? })` — a
+ *   `scroll: true` collection read with no depth limit, its key-range pages
+ *   kept live by the rows a surface has on screen (`viewport`, a branded
+ *   `VisibleRange` only data-view mints): `LivePagesResult<Row>`, with
+ *   per-page errors and the placeholders past the stale budget. `query` has no
+ *   `limit` (the pages own the limits); `null` for both reads nothing
+ *   (loading) with the hook order kept.
+ *
+ *   Without a viewport, `useLive(scrollCollection, query?)` is the window
+ *   overload above, read as the same pages, every one live: `loadMore()`
+ *   splits the last page, and never pages past `maxLimit` rows.
+ */
+export function useLive<Row, F, S extends string>(
+  collection: LiveScrollCollection<Row, F, S> | null,
+  query: LivePagesQuery<F, S> | null,
+  options: LivePagesOptions,
+): LivePagesResult<Row>;
+/**
  * - `useLive(all)` — a collection declared `all`: every row, in its declared
  *   order, as `ResourceResult<Row[]>` (settled on its first render when the
  *   boot snapshot hydrated it). Read straight off the cache with no row map
@@ -246,16 +276,25 @@ export function useLive<Row>(
  *   `null` read left spinning.
  */
 /**
- * - `useLive(pagedValue, query, { first? })` — a cursor-paged value
- *   (`liveValue(key, { query, paged })`): a live chain of pages,
- *   `LivePagesResult<Item, Meta>` — `PagedResourceResult<Item>` plus the first
- *   page's `meta` and `truncated`. `null` reads nothing (loading).
+ * - `useLive(pagedValue, query, { viewport, resetKey? })` — a key-range-paged
+ *   value (`liveValue(key, { query, paged })`) read like a scroll collection
+ *   under a viewport: `LivePagesResult<Item>`, no depth limit. `null` for
+ *   both reads nothing (loading).
+ * - `useLive(pagedValue, query, { limit? })` — no viewport: every page live,
+ *   capped at `paged.maxLimit` items, `LiveListResult<Item>`; `limit` is page
+ *   0's (a preview) and the step `loadMore()` grows by. `null` reads nothing.
+ *   The per-question meta sibling is `useLive(pagedValue.meta, query)`.
  */
+export function useLive<Item, Meta, Q, QIn>(
+  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin> | null,
+  query: NoInfer<QIn> | null,
+  options: LivePagesOptions,
+): LivePagesResult<Item>;
 export function useLive<Item, Meta, Q, QIn>(
   value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin>,
   query: NoInfer<QIn> | null,
-  options?: LivePagesOptions,
-): LivePagesResult<Item, Meta>;
+  options?: LiveValuePagesOptions,
+): LiveListResult<Item>;
 /**
  * - `useLive(queryValue, query)` — a typed-query value
  *   (`liveValue(key, { query })`): the question is the schema's INPUT, encoded
@@ -279,7 +318,9 @@ export function useLive<Row, F, S extends string>(
     | LiveCollection<Row, F, S>
     | LiveRowsCollection<Row>
     | LiveAllCollection<Row>
-    | LiveValue<unknown, Record<string, string>, LiveValueOrigin>,
+    | LiveValue<unknown, Record<string, string>, LiveValueOrigin>
+    // biome-ignore lint/suspicious/noExplicitAny: a generic item's schema is invariant — erased, as page-source's `AnyPagedValue` is.
+    | LivePagedPages<any, any, any, LiveValueOrigin>,
   query?:
     | LiveQuery<F, S>
     | LiveGroupQuery<F>
@@ -288,64 +329,137 @@ export function useLive<Row, F, S extends string>(
     | LiveAllSelect<Row, unknown>
     | Record<string, string>
     | null,
-  options?: LivePagesOptions,
+  options?: LivePagesOptions | LiveValuePagesOptions,
 ):
-  | LiveListResult<unknown>
-  | ResourceResult<unknown>
-  | LivePagesResult<unknown, unknown> {
-  // A declaration never changes kind between renders (it is a module-level
-  // const), so the branch below keeps the hook order stable. No source is the
-  // count overload's skip (the only one that takes `null`).
-  if (source === null) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks -- fixed per call site: only the count overload passes null
-    return useCount(null, null);
-  }
-  if ("live" in source) {
-    const decl = source as
-      | LiveValue<unknown, Record<string, string>, LiveValueOrigin>
-      | LiveQueryValue<unknown, unknown, unknown, LiveValueOrigin>
-      | LivePagedValue<unknown, unknown, unknown, unknown, LiveValueOrigin>;
-    if ("query" in decl && decl.query !== undefined) {
-      if (decl.paged !== undefined) {
-        // eslint-disable-next-line react-hooks/rules-of-hooks -- see below: fixed per call site
-        return useLivePages(decl, query as unknown, options);
-      }
-      // eslint-disable-next-line react-hooks/rules-of-hooks -- see below: fixed per call site
-      return useQueryValue(decl, query as unknown);
-    }
-    // `null` is the substrate's skip; `useResource` canonicalizes the params
-    // (an absent optional one is one tuple however it is spelled).
-    // eslint-disable-next-line react-hooks/rules-of-hooks -- the declaration's kind is fixed for a call site: a module-level const never switches between a value and a collection
-    return useResource(
-      source,
-      query as Record<string, string> | null | undefined,
+  LiveListResult<unknown> | ResourceResult<unknown> | LivePagesResult<unknown> {
+  // Which read this call is. Every branch below calls a different set of
+  // hooks, so a call site must ask the same kind on every render: a
+  // declaration never changes kind (it is a module-level const), and a call
+  // site's overload fixes the rest — a viewport or not, a count or a window,
+  // an id set or not. The first render's kind is held, and a later render
+  // asking another throws rather than corrupting the hook order.
+  const kind = readKindOf(source, query, options);
+  const [firstKind] = useState(kind);
+  if (kind !== firstKind) {
+    throw new Error(
+      `useLive("${keyOf(source)}"): this call site read a ${READ_KIND[firstKind]}, and now asks a ${READ_KIND[kind]} — a call site reads one kind of thing on every render (a viewport, a count, an id set: always or never)`,
     );
+  }
+  /* eslint-disable react-hooks/rules-of-hooks -- each branch is fixed per call site: asserted above */
+  switch (kind) {
+    case "viewport-pages":
+      // Before `null → count`: a paged read passes a `null` collection to
+      // read nothing (a detached or sectioned DataView), keeping its hooks.
+      return useViewportPages(
+        source as LiveScrollCollection<Row, F, S> | null,
+        query as LivePagesQuery<F, S> | null,
+        options as LivePagesOptions,
+      );
+    case "count":
+      // `null` source or query: only the count overload takes one.
+      return useCount(
+        source as LiveCollection<Row, F, S> | null,
+        query as LiveCountQuery<F> | null,
+      );
+    case "value-pages":
+      return useValuePages(
+        source as unknown as LivePagedValue<
+          unknown,
+          unknown,
+          unknown,
+          unknown,
+          LiveValueOrigin
+        >,
+        query as unknown,
+        options as LiveValuePagesOptions | undefined,
+      );
+    case "query-value":
+      return useQueryValue(
+        source as LiveQueryValue<unknown, unknown, unknown, LiveValueOrigin>,
+        query as unknown,
+      );
+    case "value":
+      // `null` is the substrate's skip; `useResource` canonicalizes the params
+      // (an absent optional one is one tuple however it is spelled).
+      return useResource(
+        source as LiveValue<unknown, Record<string, string>, LiveValueOrigin>,
+        query as Record<string, string> | null | undefined,
+      );
+    case "all":
+      return useAll(
+        (source as LiveAllCollection<Row>).all,
+        (query ?? undefined) as LiveAllSelect<Row, unknown> | undefined,
+      );
+    case "all-pages":
+      return useAllPages(
+        source as LiveScrollCollection<Row, F, S>,
+        (query ?? undefined) as LiveQuery<F, S> | undefined,
+      );
+    case "collection":
+      return useCollection(
+        source as LiveCollection<Row, F, S> | LiveRowsCollection<Row>,
+        (query ?? undefined) as
+          LiveQuery<F, S> | LiveGroupQuery<F> | LiveIdsQuery | undefined,
+      );
+  }
+  /* eslint-enable react-hooks/rules-of-hooks */
+}
+
+/** What one `useLive` call reads — each a different set of hooks — in words. */
+const READ_KIND = {
+  "viewport-pages": "paged read kept live by a viewport",
+  count: "count",
+  "value-pages": "paged value (its pages every one live, no viewport)",
+  "query-value": "typed-query value",
+  value: "value",
+  all: "whole `all` set",
+  "all-pages": "window read (its pages every one live, no viewport)",
+  collection: "window, grouping or id set",
+} as const;
+type ReadKind = keyof typeof READ_KIND;
+
+function readKindOf(
+  source: object | null,
+  query: object | null | undefined,
+  options: object | undefined,
+): ReadKind {
+  // A viewport first: a paged read's `null` collection is not a count's skip.
+  // Read by value, not by key: a value read's `{ limit, viewport: undefined }`
+  // (its `viewport?: never`) is a read with none.
+  if ((options as { viewport?: unknown } | undefined)?.viewport !== undefined) {
+    return "viewport-pages";
+  }
+  if (source === null) return "count";
+  if ("live" in source) {
+    const decl = source as {
+      query?: unknown;
+      paged?: unknown;
+    };
+    if (decl.query === undefined) return "value";
+    return decl.paged === undefined ? "query-value" : "value-pages";
   }
   // A collection declared `all` reads its whole set — unless the query is an
-  // id set, which goes to `:rows` like any collection's. Which of the two a
-  // call site asks is fixed by its overload (an `{ ids }` literal or not).
-  const all = (source as { all?: LiveAllCollection<Row>["all"] }).all;
-  if (all !== undefined && !(query != null && "ids" in query)) {
-    const options = (query ?? undefined) as
-      LiveAllSelect<Row, unknown> | undefined;
-    // eslint-disable-next-line react-hooks/rules-of-hooks -- see above: fixed per call site
-    return useAll(all, options);
-  }
+  // id set, which goes to `:rows` like any collection's.
+  const isIds = query != null && "ids" in query;
+  if ((source as { all?: unknown }).all !== undefined && !isIds) return "all";
   // A count — or `null`, which only the count overload takes on a collection.
-  // Which of the two a call site asks is fixed by its overload.
   if (query === null || (query !== undefined && "count" in query)) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks -- see above: fixed per call site
-    return useCount(
-      source as LiveCollection<Row, F, S>,
-      query as LiveCountQuery<F> | null,
-    );
+    return "count";
   }
-  // eslint-disable-next-line react-hooks/rules-of-hooks -- see above: fixed per call site
-  return useCollection(
-    source,
-    (query ?? undefined) as
-      LiveQuery<F, S> | LiveGroupQuery<F> | LiveIdsQuery | undefined,
-  );
+  // A window read of a scroll collection: its pages, every one live.
+  const isGroups =
+    query !== undefined &&
+    "groupBy" in query &&
+    (query as { groupBy?: unknown }).groupBy !== undefined;
+  if ((source as { scroll?: boolean }).scroll === true && !isIds && !isGroups) {
+    return "all-pages";
+  }
+  return "collection";
+}
+
+/** A source's key, for an error message. */
+function keyOf(source: object | null): string {
+  return source === null ? "null" : String((source as { key?: unknown }).key);
 }
 
 /**

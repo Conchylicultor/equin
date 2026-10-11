@@ -13,13 +13,13 @@ import {
   type LiveDecodedGroupQuery,
   type LiveDecodedQuery,
   type LiveGroupableDomain,
-  type LiveCutKey,
   type LiveGroupParams,
   type LiveOrderBy,
   type LiveWindowBounds,
   type LiveSortDirection,
   type LiveWindowParams,
 } from "./query";
+import { parseRowKey, type LiveCutKey } from "./row-key";
 import type { LiveColumnsDeclaration } from "./live-columns";
 
 // The window query codec. A subscription is just a params tuple, so the SAME
@@ -373,22 +373,7 @@ export function createLiveQueryCodec<C extends string, S extends string>(
         `"${which}" is a page cut — only a collection declared \`scroll: true\` takes one`,
       );
     }
-    const parsed = parseJson(raw, onFail);
-    const arity = cutArity(orderBy);
-    if (
-      !Array.isArray(parsed) ||
-      parsed.length !== arity ||
-      !parsed.every((v) => v === null || typeof v === "string") ||
-      parsed[arity - 1] === null
-    ) {
-      onFail(
-        `"${which}" must be a row key of ${arity} text values (the order's keys, then the id) — got ${JSON.stringify(raw)}`,
-      );
-    }
-    if (JSON.stringify(parsed) !== raw) {
-      onFail(`"${which}" is not canonical — got ${JSON.stringify(raw)}`);
-    }
-    return parsed as LiveCutKey;
+    return parseRowKey(raw, cutArity(orderBy), which, onFail);
   };
 
   const encode = (

@@ -6,17 +6,17 @@ import {
   type ResourceDescriptor,
   type ResourcePreload,
 } from "@plugins/primitives/plugins/live-state/core";
-import type { LivePreload } from "./live-collection";
+import type { LivePreload, LiveRowSchema } from "./live-collection";
 import {
   liveQueryCodec,
-  livePageCodec,
-  type LivePage,
-  type LivePageCodec,
-  type LivePageParams,
+  livePagedCodec,
+  type LivePagedCodec,
+  type LivePagedParams,
   type LiveQueryCodec,
   type LiveQueryParams,
   type LiveQuerySchema,
 } from "./query-value";
+import { LIVE_ROW_KEY, type LiveCutKey } from "./row-key";
 
 // `liveValue` — the declaration half of a live VALUE: one payload per params
 // tuple, pushed whole whenever it changes — or, with `load: "on-demand"`,
@@ -97,13 +97,13 @@ type OriginField<O extends LiveValueOrigin> = O extends "central"
   : { origin?: never };
 
 /**
- * A declared live value — a `ResourceDescriptor` discriminated from a
- * collection by `live: "value"`.
+ * What every declared value is, whatever its delivery: a `ResourceDescriptor`
+ * discriminated from a collection by `live: "value"`.
  */
-export type LiveValue<
+type LiveValueBase<
   T,
-  P extends Record<string, string> = Record<string, never>,
-  O extends LiveValueOrigin = "worktree",
+  P extends Record<string, string>,
+  O extends LiveValueOrigin,
 > = Omit<ResourceDescriptor<T, P>, "keyed" | "preload" | "origin" | "load"> &
   OriginField<O> & {
     live: "value";
@@ -117,9 +117,20 @@ export type LiveValue<
     preload?: ResourcePreload;
     /** Absent ⇒ pushed (the declaration's `"push"`). See {@link LiveValueLoad}. */
     load?: "on-demand";
-    /** A value is pushed whole — never a row-keyed delta. */
-    keyed?: never;
   };
+
+/**
+ * A declared live value — a `ResourceDescriptor` discriminated from a
+ * collection by `live: "value"`.
+ */
+export type LiveValue<
+  T,
+  P extends Record<string, string> = Record<string, never>,
+  O extends LiveValueOrigin = "worktree",
+> = LiveValueBase<T, P, O> & {
+  /** A value is pushed whole — never a row-keyed delta (a paged value's pages are: {@link LivePagedPages}). */
+  keyed?: never;
+};
 
 /**
  * How a value reaches the tab. `"push"` (the default): the server recomputes a
@@ -262,34 +273,59 @@ export interface LiveQueryValueSpec<T, Q, QIn, O extends LiveValueOrigin> {
   origin?: O;
 }
 
-/** An item field holding a string — what a paged value dedupes its items by. */
+/** An item field holding a string — what a paged value identifies its items by. */
 type StringKeyOf<Item> = {
   [K in keyof Item]-?: Item[K] extends string ? K : never;
 }[keyof Item] &
   string;
 
+/** A direction of one order-key part. */
+export type LiveKeyDirection = "asc" | "desc";
+
 /**
- * How a paged value pages: each page is a list of `item`, keyed by `id`, at
- * most `limit` long; `meta` (optional) is a per-query fact the first page
- * carries (a total).
+ * How a paged value's items are ordered: `of(item)` reads the item's order
+ * key — one exact TEXT part per `order` entry (or `null`), whose text order
+ * is the order (the source supplies the precision, as Postgres `::text` does:
+ * an instant at a fixed precision, a zero-padded number) — and the framework
+ * appends the item's id as the tiebreak (ascending). A `null` part sorts last
+ * in either direction. See `shared/key-order.ts`.
  */
-export interface LivePagedSpec<Item, Meta> {
-  item: ZodParser<Item>;
-  /** The item field that identifies it — a duplicate across a page boundary is dropped by it. */
-  id: StringKeyOf<Item>;
-  meta?: ZodParser<Meta>;
-  /** The page size — and the most a read may ask for one page (its first page may ask fewer). */
-  limit: number;
+export interface LivePagedKey<Item> {
+  // A method, so a value of any item type is a `LivePagedValue<unknown, …>`.
+  of(item: Item): LiveCutKey;
+  order: readonly LiveKeyDirection[];
 }
 
 /**
- * A CURSOR-PAGED external value: one page per tuple `{ q, n, c? }` (the
- * question, the page size and the server's opaque cursor — absent on the
- * first page), its payload the derived `LivePage<Item, Meta>`
- * (`{ items, nextCursor, meta }`). Read as a chain of pages, every one of them
- * live (`useLive(v, query, { first })`). No `schema` (it is derived), no
- * `params`, no preload; served `source: "external"` only — a paged Postgres
- * list is a `liveCollection`.
+ * How a paged value pages: each page is a key range of `item`s, identified by
+ * `id` and ordered by `key`; page 0 — and each step a read grows by — is
+ * `limit` items, and no page is ever over `maxLimit` (≥ 2 · `limit`). `meta`
+ * (optional) is a per-QUESTION fact (a total), served as the sibling value
+ * `value.meta` — never a page's, since page 0 may be split or released.
+ */
+export interface LivePagedSpec<Item, Meta> {
+  /** The item's wire schema — a zod object (its `$key` field is the framework's). */
+  item: LiveRowSchema<Item>;
+  /** The item field that identifies it — unique within a question's items, and the key's tiebreak. */
+  id: StringKeyOf<Item>;
+  key: LivePagedKey<Item>;
+  /** H: page 0's limit, and the step a read grows by. */
+  limit: number;
+  /** The largest page a tuple may ask — at least 2 · `limit` (a page that splits is read at twice the step). */
+  maxLimit: number;
+  /** The per-question sibling's schema — see {@link LivePagedValue.meta}. */
+  meta?: ZodParser<Meta>;
+}
+
+/**
+ * A KEY-RANGE-PAGED external value: one page per tuple `{ q, limit, after?,
+ * until? }` (the question, the page's limit and its cuts — server-minted row
+ * keys), its payload the page's items, each carrying its `$key`. Read through
+ * `useLive` like a scroll collection's window: with a viewport, the pages near
+ * it live and no depth limit; without one, every page live, capped at
+ * `maxLimit` items. No `schema` (it is derived), no `params`, no preload;
+ * served `source: "external"` only — a paged Postgres list is a
+ * `liveCollection`.
  */
 export interface LivePagedValueSpec<
   Item,
@@ -303,11 +339,29 @@ export interface LivePagedValueSpec<
   paged: LivePagedSpec<Item, Meta>;
   params?: never;
   preload?: never;
-  /** Default `"push"` (see {@link LiveValueLoad}). */
-  load?: LiveValueLoad;
+  /**
+   * None: a page is a keyed window, whose changes ship as keyed deltas (D3)
+   * — there is no `invalidate` of one for a tab to refetch over HTTP. The
+   * meta sibling is pushed like the pages.
+   */
+  load?: never;
   /** `"central"`: served by the central runtime (see {@link LiveValueOrigin}). */
   origin?: O;
 }
+
+/**
+ * Any paged spec, erased — the implementation signatures' view. `any`: an
+ * item type's field names (`id: StringKeyOf<Item>`) erase to `never` under
+ * `unknown`, which no real spec is assignable to.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: see above.
+type AnyPagedValueSpec = LivePagedValueSpec<
+  any,
+  any,
+  any,
+  any,
+  LiveValueOrigin
+>;
 
 /** A declared typed-query value: a {@link LiveValue} over `{ q }` that carries its codec. */
 export type LiveQueryValue<
@@ -320,22 +374,60 @@ export type LiveQueryValue<
   paged?: undefined;
 };
 
-/** A declared paged value: a {@link LiveValue} per page tuple, with its codec and paging. */
+/**
+ * A declared paged value: a {@link LiveValue} per page tuple (its payload the
+ * page's items), with its codec, its paging and — declared `paged.meta` — its
+ * per-question sibling.
+ */
 export type LivePagedValue<
   Item,
   Meta,
   Q,
   QIn = Q,
   O extends LiveValueOrigin = "worktree",
-> = LiveValue<LivePage<Item, Meta>, LivePageParams, O> & {
-  query: LivePageCodec<Q, QIn>;
+> = LivePagedPages<Item, Q, QIn, O> & LivePagedMeta<Meta, Q, QIn, O>;
+
+/**
+ * A paged value without its meta sibling — what a read of its pages needs,
+ * and the one shape every paged value is (whatever its `Meta`).
+ */
+export type LivePagedPages<
+  Item,
+  Q,
+  QIn = Q,
+  O extends LiveValueOrigin = "worktree",
+> = LiveValueBase<Item[], LivePagedParams, O> & {
+  /**
+   * A page is a KEYED window (D3): each item identified by its `paged.id`,
+   * so a change reaches the page as a keyed delta and a page can be seeded
+   * from the items other pages of its question hold — exactly a scroll
+   * collection's window.
+   */
+  keyed: { keyOf: (row: unknown) => string };
+  /** Always pushed: a keyed page ships deltas, never an `invalidate`. */
+  load?: never;
+  query: LivePagedCodec<Q, QIn>;
   paged: {
-    /** The item field a page's items are deduped by. */
+    /** The item field a page's items are identified by. */
     id: string;
-    /** The largest page a tuple may ask. */
+    key: LivePagedKey<Item>;
+    /** H: page 0's limit and a read's step. */
     limit: number;
+    /** The largest page a tuple may ask. */
+    maxLimit: number;
   };
 };
+
+/**
+ * The per-question sibling (`<key>:meta`, a typed-query value over the same
+ * question — `useLive(v.meta, query)`), refreshed by the same `notify(q)`;
+ * absent when the declaration has no `paged.meta`.
+ */
+type LivePagedMeta<Meta, Q, QIn, O extends LiveValueOrigin> = [Meta] extends [
+  undefined,
+]
+  ? { meta?: undefined }
+  : { meta: LiveQueryValue<Meta, Q, QIn, O> };
 
 /**
  * A value read by a params tuple — neither a typed-query nor a paged one. The
@@ -380,7 +472,7 @@ export type LivePlainValue<
  * browser subscribes over the central socket); its `LiveValue` carries the
  * origin in its type, so only `network/live/central`'s `serveValue` takes it.
  *
- * A STRUCTURED question is `query` (a typed-query value), and a cursor-paged
+ * A STRUCTURED question is `query` (a typed-query value), and a key-range-paged
  * external read is `query` + `paged` — see {@link LiveQueryValueSpec} and
  * {@link LivePagedValueSpec}:
  *
@@ -392,7 +484,14 @@ export type LivePlainValue<
  * });
  * export const metricDetails = liveValue("metrics.details", {
  *   query: DetailsSelectorSchema,
- *   paged: { item: DrillItemSchema, id: "id", meta: TotalSchema, limit: 50 },
+ *   paged: {
+ *     item: DrillItemSchema,
+ *     id: "id",
+ *     key: { of: (i) => [i.at], order: ["desc"] },
+ *     limit: 50,
+ *     maxLimit: 500,
+ *     meta: TotalSchema,                // → metricDetails.meta
+ *   },
  * });
  * ```
  */
@@ -459,8 +558,8 @@ export function liveValue<T>(
     | LivePreloadedParamValueSpec<T, readonly string[]>
     | LiveTypedParamValueSpec<T, LiveValueParamParsers>
     | LiveQueryValueSpec<T, unknown, unknown, LiveValueOrigin>
-    | LivePagedValueSpec<unknown, unknown, unknown, unknown, LiveValueOrigin>,
-): LiveValue<T, Record<string, string>, LiveValueOrigin> {
+    | AnyPagedValueSpec,
+): DeclaredValue<T> {
   if (spec.query !== undefined) return queryValue(key, spec);
   // A name list (`["id", "scopeId?"]`) or a typed record of parsers.
   const declared = spec.params ?? [];
@@ -506,17 +605,23 @@ export function liveValue<T>(
   return value;
 }
 
+/** What `liveValue`'s implementation declares, erased: a value, or a paged one's (keyed) pages. */
+type DeclaredValue<T> =
+  | LiveValue<T, Record<string, string>, LiveValueOrigin>
+  | LivePagedPages<unknown, unknown, unknown, LiveValueOrigin>;
+
 /**
  * The typed-query and paged forms: `params` derived from the codec (`["q"]`,
- * or `["q", "n", "c"]` with `c` optional), the gate the codec's strict decode,
- * and — for a paged value — the derived page schema.
+ * or `["q", "limit", "after", "until"]` with the cuts optional), the gate the
+ * codec's strict decode, and — for a paged value — the derived page schema
+ * and the meta sibling.
  */
 function queryValue<T>(
   key: string,
   spec:
     | LiveQueryValueSpec<T, unknown, unknown, LiveValueOrigin>
-    | LivePagedValueSpec<unknown, unknown, unknown, unknown, LiveValueOrigin>,
-): LiveValue<T, Record<string, string>, LiveValueOrigin> {
+    | AnyPagedValueSpec,
+): DeclaredValue<T> {
   // Unreachable from typed code (each is `never` beside `query`).
   const stray = (["params", "preload"] as const).filter(
     (f) => (spec as unknown as Record<string, unknown>)[f] !== undefined,
@@ -534,7 +639,7 @@ function queryValue<T>(
     ...(spec.origin === "central" ? { origin: "central" as const } : {}),
     ...(spec.load === "on-demand" ? { load: "on-demand" as const } : {}),
   };
-  let value: LiveValue<T, Record<string, string>, LiveValueOrigin>;
+  let value: DeclaredValue<T>;
   if (spec.paged === undefined) {
     const s = spec as LiveQueryValueSpec<T, unknown, unknown, LiveValueOrigin>;
     const query = liveQueryCodec(key, s.query);
@@ -547,43 +652,103 @@ function queryValue<T>(
       query,
     } as LiveValue<T, Record<string, string>, LiveValueOrigin>;
   } else {
-    const s = spec as LivePagedValueSpec<
-      unknown,
-      unknown,
-      unknown,
-      unknown,
-      LiveValueOrigin
-    >;
-    if ((s as { schema?: unknown }).schema !== undefined) {
-      throw new Error(
-        `liveValue("${key}"): a paged value derives its schema from \`paged\` — ` +
-          `declare \`paged.item\` (and \`paged.meta\`), not \`schema\`.`,
-      );
-    }
-    const { item, id, meta, limit } = s.paged;
-    if (!Number.isInteger(limit) || limit < 1) {
-      throw new Error(
-        `liveValue("${key}"): paged.limit ${limit} is not a positive integer.`,
-      );
-    }
-    const query = livePageCodec(key, s.query, limit);
-    value = {
-      ...common,
-      schema: z.object({
-        items: z.array(item),
-        nextCursor: z.string().min(1).nullable(),
-        meta: meta ?? z.undefined(),
-      }),
-      params: ["q", "n", "c"],
-      optionalParams: ["c"],
-      validateParams: (params: Record<string, string>) =>
-        void query.decode(params),
-      query,
-      paged: { id, limit },
-    } as unknown as LiveValue<T, Record<string, string>, LiveValueOrigin>;
+    value = pagedValue(key, spec as AnyPagedValueSpec, common);
   }
   registerResourceDescriptor(value as ResourceDescriptor<unknown>);
   return value;
+}
+
+/** A paged value's declaration, checked: its codec, its derived page schema and its meta sibling. */
+function pagedValue(
+  key: string,
+  s: AnyPagedValueSpec,
+  common: {
+    key: string;
+    live: "value";
+    origin?: "central";
+    load?: "on-demand";
+  },
+): LivePagedValue<unknown, unknown, unknown, unknown, LiveValueOrigin> {
+  if ((s as { schema?: unknown }).schema !== undefined) {
+    throw new Error(
+      `liveValue("${key}"): a paged value derives its schema from \`paged\` — ` +
+        `declare \`paged.item\` (and \`paged.meta\`), not \`schema\`.`,
+    );
+  }
+  if (common.load !== undefined) {
+    // Unreachable from typed code (`load` is `never` beside `paged`).
+    throw new Error(
+      `liveValue("${key}"): a paged value takes no \`load\` — its pages are ` +
+        `keyed windows, pushed as deltas.`,
+    );
+  }
+  const { item, id, key: order, meta, limit, maxLimit } = s.paged;
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new Error(
+      `liveValue("${key}"): paged.limit ${limit} is not a positive integer.`,
+    );
+  }
+  if (!Number.isInteger(maxLimit) || maxLimit < 2 * limit) {
+    throw new Error(
+      `liveValue("${key}"): paged.maxLimit needs to be an integer ≥ 2 · paged.limit ` +
+        `(${2 * limit}), got ${maxLimit} — a page that splits is read at ` +
+        `2 · limit, a step of headroom over the items it holds.`,
+    );
+  }
+  if (
+    typeof order?.of !== "function" ||
+    !Array.isArray(order.order) ||
+    !order.order.every((d) => d === "asc" || d === "desc")
+  ) {
+    throw new Error(
+      `liveValue("${key}"): paged.key needs \`of\` (an item's order-key parts) ` +
+        `and \`order\` (one "asc" | "desc" per part).`,
+    );
+  }
+  if (Object.hasOwn(item.shape, LIVE_ROW_KEY)) {
+    throw new Error(
+      `liveValue("${key}"): "${LIVE_ROW_KEY}" is reserved — the framework mints each item's row key under it`,
+    );
+  }
+  const query = livePagedCodec(key, s.query, {
+    // The order's parts, then the id.
+    arity: order.order.length + 1,
+    maxLimit,
+  });
+  // A page's items carry the server-minted `$key` beside the item fields:
+  // declared on the wire schema (so the runtime's parse keeps it), and split
+  // off by every read before items reach a consumer.
+  const row = z.intersection(
+    item as unknown as z.ZodTypeAny,
+    z.object({ [LIVE_ROW_KEY]: z.string().nullable() }),
+  );
+  return {
+    ...common,
+    schema: z.array(row),
+    keyed: {
+      keyOf: (r: unknown) => (r as Record<string, unknown>)[id] as string,
+    },
+    params: ["q", "limit", "after", "until"],
+    optionalParams: ["after", "until"],
+    validateParams: (params: Record<string, string>) =>
+      void query.decode(params),
+    query,
+    paged: { id, key: order, limit, maxLimit },
+    meta:
+      meta === undefined
+        ? undefined
+        : queryValue(`${key}:meta`, {
+            schema: meta,
+            query: s.query,
+            ...(common.origin !== undefined ? { origin: common.origin } : {}),
+          }),
+  } as unknown as LivePagedValue<
+    unknown,
+    unknown,
+    unknown,
+    unknown,
+    LiveValueOrigin
+  >;
 }
 
 function isParamNameList(

@@ -17,7 +17,6 @@ import {
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   LIVE_GROUP_DEFAULT_LIMIT,
-  LIVE_ROW_KEY,
   type LiveCountParams,
   type LiveDecodedCountQuery,
   type LiveDecodedGroupQuery,
@@ -33,6 +32,7 @@ import {
   type LiveWindowBounds,
   type LiveWindowParams,
 } from "./query";
+import { LIVE_ROW_KEY } from "./row-key";
 import { createLiveQueryCodec } from "./query-codec";
 import { mintColumnRef, type LiveColumnRef } from "./column-ref";
 import {
@@ -208,7 +208,7 @@ export interface LiveCollection<
   sortable: readonly S[];
   /**
    * Declared `scroll: true`: its window takes page cuts and projects each
-   * row's `$key`, so it may be read as key-range pages (`useLiveCollectionPages`, a live
+   * row's `$key`, so it may be read as key-range pages (`useLive`, a live
    * DataView source).
    */
   scroll: boolean;
@@ -243,7 +243,7 @@ export interface LiveCollection<
 
 /**
  * A collection declared `scroll: true` — the only kind read as key-range
- * pages (`useLiveCollectionPages`, and so a live DataView source): its window projects
+ * pages (`useLive`, and so a live DataView source): its window projects
  * each row's `$key` and takes `after` / `until` cuts.
  */
 export type LiveScrollCollection<Row, F, S extends string> = LiveCollection<
@@ -360,7 +360,7 @@ export interface LiveCollectionSpec<Row, F, S extends string> {
   /** Default `"none"`. A preload reaches the DEFAULT WINDOW only (see {@link LivePreload}). */
   preload?: LivePreload;
   /**
-   * May be read as key-range pages (`useLiveCollectionPages`, a live DataView source):
+   * May be read as key-range pages (`useLive`, a live DataView source):
    * the window projects each row's `$key` and takes `after` / `until` cuts.
    * Needs `maxLimit ≥ 2 · default.limit` (a declaration throw): a page that
    * splits is read at `2 · default.limit`, so it holds its rows with a step of

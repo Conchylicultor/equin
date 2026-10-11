@@ -13,7 +13,7 @@ const createRule = ESLintUtils.RuleCreator(
  * no-endpoint-read
  *
  * A server read in the browser is a live resource: a `liveValue` (by `params`,
- * by a typed `query`, or cursor-`paged`) or a `liveCollection`, read with
+ * by a typed `query`, or key-range-`paged`) or a `liveCollection`, read with
  * `useLive`. The request/response path beside it — `useEndpoint`,
  * `useEndpointResource`, a TanStack `useQuery` family hook, or a `queryFn`
  * that calls `fetchEndpoint` — is a second read path with no push, so its
@@ -118,14 +118,14 @@ export default createRule({
       readHook:
         "`{{name}}` reads the server over request/response, with no push. " +
         "Declare the read as a `liveValue` (`params`, a typed `query`, or " +
-        "cursor-`paged`) or a `liveCollection`, and read it with `useLive` " +
+        "key-range-`paged`) or a `liveCollection`, and read it with `useLive` " +
         "from @plugins/network/plugins/live — see " +
         "plugins/network/plugins/live/CLAUDE.md. Endpoints stay for writes " +
         "(fetchEndpoint in a mutation or a handler).",
       queryFnFetch:
         "`fetchEndpoint` inside a `queryFn` is a request/response server read, " +
         "with no push. Declare the read as a `liveValue` (`params`, a typed " +
-        "`query`, or cursor-`paged`) or a `liveCollection`, and read it with " +
+        "`query`, or key-range-`paged`) or a `liveCollection`, and read it with " +
         "`useLive` from @plugins/network/plugins/live — see " +
         "plugins/network/plugins/live/CLAUDE.md. Endpoints stay for writes " +
         "(fetchEndpoint in a mutation or a handler).",

@@ -77,7 +77,7 @@ const RELEASE_HISTORY_VIEW_ID = "studio.release.history";
 
 // This namespace's release runs, newest first — the Studio release-history
 // DataView's live source (research/2026-09-29-global-scoped-change-routing.md
-// P3). A scroll collection (segments past `maxLimit`), scoped by the pane to
+// P3). A scroll collection (read as key-range pages, no depth limit), scoped by the pane to
 // one composition (`scoped({ where: { composition } })`) and by the server to
 // this namespace's runs (a worktree's fork inherits main's rows); a status flip
 // or a new run reaches the tuples holding it, through the routed runtime —

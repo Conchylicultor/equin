@@ -1714,7 +1714,8 @@ describe("registration and the legacy path", () => {
     ).toThrow(/duplicate route id "r"/);
     // An external resource's truth is outside Postgres: no table routes into it.
     expect(() =>
-      // @ts-expect-error — an external resource is never keyed (D31)
+      // An external resource is never ROUTED (D31) — the cast stands in for
+      // the type, which has no `routes` on the external window arm.
       h.runtime.defineExternalResource(contract("d"), {
         routes: plan,
         membership: { kind: "point", idsOf: () => [] },

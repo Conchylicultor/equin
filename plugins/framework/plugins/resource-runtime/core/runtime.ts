@@ -146,7 +146,8 @@ export interface RoutedRecomputeOn<P extends ResourceParams = ResourceParams> {
  *   query ever runs; point sets are unordered (entrants append).
  *
  * Declaring `membership` requires `mode: "keyed"` + `routes` (enforced
- * with a loud throw, exactly like `scopedMembership`) and marks the entry as
+ * with a loud throw, exactly like `scopedMembership`) — or, on an EXTERNAL
+ * resource, the routeless window arm `ExternalWindowPolicy` — and marks the entry as
  * BOUNDED: it is excluded from L2 persistence (`live_state_snapshot`) and its
  * keyed snapshot uses the compact hash encoder. The legacy
  * `scopedMembership: { orderOf }` is a thin alias for an UNBOUNDED window
@@ -315,7 +316,8 @@ export interface ResourceDefinition<
    * Bounded-membership selector (window / point) — see `KeyedMembership`. The
    * generalization of `scopedMembership` (which remains as the unbounded-window
    * alias); the two are mutually exclusive. Requires `mode: "keyed"` +
-   * `routes`, enforced with a loud throw in `createResource`. A
+   * `routes` (external: no routes — `ExternalWindowPolicy`), enforced with a
+   * loud throw in `createResource`. A
    * membership-bounded entry is never L2-persisted and its snapshot uses the
    * hash encoder.
    */
@@ -497,6 +499,45 @@ export type ScopePolicy<P extends ResourceParams = ResourceParams> =
     };
 
 /**
+ * The window size and family of an EXTERNAL keyed window — `KeyedMembership`'s
+ * window arm without what only a routed change reads: no `windowIdsOf` (the
+ * runtime derives it from the loader — the tuple's own read, its ids mapped —
+ * for the paths that call it) and no `orderSignatureOf` (every change of an
+ * external entry is a FULL re-read of the tuple, diffed by key, so no refill
+ * ever asks whether a member's order moved).
+ */
+export interface ExternalWindowMembership<
+  P extends ResourceParams = ResourceParams,
+> {
+  kind: "window";
+  /** The tuple's window size — see `KeyedMembership`'s `limitOf`. */
+  limitOf: (params: P) => number;
+  /** The tuple's derivation family — see `KeyedMembership`'s `familyOf`. */
+  familyOf?: (params: P) => string;
+}
+
+/**
+ * An EXTERNAL resource's keyed arm (D31: an external resource is never ROUTED
+ * — its truth is outside Postgres — but it may be keyed): a bounded window
+ * whose change arrives as the resource's own `notify(params)`, which re-reads
+ * the tuple whole and diffs it by key against its snapshot
+ * (`drainMembershipFull`) — keyed `delta` frames, seeded derivation
+ * (`familyOf`) and one client cache path, exactly as a routed window has them.
+ * No `routes` (nothing routes into it) and no cascade OUT of it (D32: a
+ * membership entry has no downstream); it may itself follow external
+ * upstreams (`dependsOn`), each change a FULL re-read.
+ */
+export interface ExternalWindowPolicy<
+  P extends ResourceParams = ResourceParams,
+> {
+  membership: ExternalWindowMembership<P>;
+  routes?: never;
+  scopedMembership?: never;
+  reach?: never;
+  recomputeOn?: never;
+}
+
+/**
  * The strict public input to the flat one-arg `defineResource` (the runtime
  * keeps the loose `ResourceDefinition` internally). This form is
  * **push/invalidate-only**: a keyed resource cannot be declared this way. Keyed-ness
@@ -526,8 +567,8 @@ export type DefineResourceInput<
 
 /**
  * The flat `defineExternalResource` input: the loose `ResourceDefinition`,
- * push / invalidate only (D31 — a keyed entry is a routed membership entry,
- * and nothing routes into an external one), with nothing that routes.
+ * push / invalidate only (keyed-ness comes solely from a shared keyed
+ * contract — the two-arg external window arm), with nothing that routes (D31).
  */
 type ExternalDefinition<T, P extends ResourceParams> = ResourceDefinition<
   T,
@@ -770,8 +811,9 @@ export interface ExternalResource<
 > extends Resource<T, P> {
   /**
    * Signal that state has changed: a FULL recompute of the tuple. No-arg =
-   * parameterless resource. (An external resource is never keyed, so there are
-   * no row ids to scope a recompute to.)
+   * parameterless resource. (An external resource is never routed, so there
+   * are no row ids to scope a recompute to: a keyed external window re-reads
+   * the tuple whole and ships its keyed diff.)
    */
   notify(params?: P): void;
 }
@@ -986,7 +1028,8 @@ interface RegistryEntry {
    * `membership` selector or the `scopedMembership` alias (an unbounded
    * window, `bounded: false`). Present ⇒ `drainEntry` runs the
    * incremental membership path (`diffKeyedScopedMembership`) instead of a FULL
-   * recompute. Present exactly on keyed entries (keyed ⇒ membership ⇒ routed);
+   * recompute. Present exactly on keyed entries (keyed ⇒ membership; routed
+   * when DB-backed, an external window otherwise — whose every change is FULL);
    * undefined ⇒ a non-keyed entry, which always recomputes FULL. See
    * research/2026-07-03-global-scoped-membership-m5.md
    * and research/2026-07-18-global-bounded-working-set-resource-contract.md.
@@ -1626,24 +1669,32 @@ export interface ResourceRuntime {
    * backstop check + `_debug` payload. See
    * research/2026-06-20-global-remove-hand-notify-dependson.md §2.
    *
-   * Two shapes, mirroring `defineResource`:
+   * Three shapes, mirroring `defineResource`:
    *
    * - Flat `(def)` — the loose `ResourceDefinition`, push / invalidate only.
    * - Two-arg `(contract, serverOpts)` — derives `key`/`schema` AND `preload`
    *   from the shared client descriptor so server and client can't drift,
    *   exactly like `defineResource`'s non-keyed two-arg form.
+   * - Two-arg `(keyedContract, opts & ExternalWindowPolicy)` — a keyed
+   *   bounded window (`ExternalWindowPolicy`): `notify(params)` re-reads the
+   *   tuple and ships its keyed diff, and a sub may be seeded from tuples of
+   *   the same family.
    *
-   * Never keyed (D31): a keyed entry is a routed membership entry, and an
-   * external resource's truth is outside Postgres, so nothing could route it.
+   * Never ROUTED (D31): an external resource's truth is outside Postgres, so
+   * no table change routes into it — its own `notify` is how a change arrives.
    */
   defineExternalResource: {
     // No `optionalParams` on the flat form: the spelling rule must come from the
     // shared client descriptor (the two-arg form), or the client would key
-    // tuples the server's echoes never match. No `routes` / `reach` / membership
-    // either: an external resource's truth is outside Postgres, so no table
-    // change may route into it.
+    // tuples the server's echoes never match. No `routes` / `reach` either: an
+    // external resource's truth is outside Postgres, so no table change may
+    // route into it.
     <T, P extends ResourceParams = ResourceParams>(
       def: ExternalDefinition<T, P>,
+    ): ExternalResource<T, P>;
+    <T, P extends ResourceParams = ResourceParams>(
+      contract: KeyedResourceContract<T, P>,
+      opts: KeyedServerResourceOptions<T, P> & ExternalWindowPolicy<P>,
     ): ExternalResource<T, P>;
     <T, P extends ResourceParams = ResourceParams>(
       contract: ResourceContract<T, P> & { keyed?: never },
@@ -3025,6 +3076,14 @@ export function createResourceRuntime(
     };
   }
 
+  /** D32's refusal: `downstream` cascades from `upstream`, a membership entry. */
+  function membershipUpstreamMessage(
+    downstream: string,
+    upstream: string,
+  ): string {
+    return `defineResource: "${downstream}" cascades from the keyed window "${upstream}" — a membership drain cascades nothing (D32), so the edge would never fire; follow what "${upstream}" follows instead`;
+  }
+
   /** T15's refusal: `downstream` cascades from `upstream`, which is DB-backed. */
   function dbBackedUpstreamMessage(
     downstream: string,
@@ -3074,9 +3133,11 @@ export function createResourceRuntime(
     );
     // Membership (bounded `membership` or the M5 `scopedMembership` alias) is
     // only sound on a keyed OWN-IDENTITY resource — the membership diff
-    // reconciles the loader's own row ids against the per-pk snapshot — and
-    // only a routed one: `routes` is what scopes a change to its rows. Fail
-    // loudly at registration.
+    // reconciles the loader's own row ids against the per-pk snapshot — and,
+    // DB-backed, only a routed one: `routes` is what scopes a change to its
+    // rows. An external one is never routed (D31): it is a bounded window
+    // whose change is its own `notify` (`ExternalWindowPolicy`). Fail loudly
+    // at registration.
     if (def.scopedMembership && def.membership) {
       throw new Error(
         `defineResource: "scopedMembership" and "membership" are mutually exclusive for key "${def.key}" — scopedMembership IS the unbounded-window membership alias`,
@@ -3093,7 +3154,7 @@ export function createResourceRuntime(
           `defineResource: ${membershipField} requires mode "keyed" for key "${def.key}"`,
         );
       }
-      if (!def.routes) {
+      if (!externalSource && !def.routes) {
         throw new Error(
           `defineResource: ${membershipField} requires routes (a compiler-minted route plan) for key "${def.key}"`,
         );
@@ -3105,13 +3166,29 @@ export function createResourceRuntime(
       membershipField,
       externalSource,
     );
-    // D31: keyed ⇒ membership ⇒ routed. The keyed drain is the membership
-    // drain; a keyed entry without one would have no path that reconciles its
-    // rows (the types allow no such declaration — this holds the line for an
-    // untyped caller or a cast).
+    // The external window (`ExternalWindowPolicy`) — never routed: its routes
+    // were refused above. The types allow only this arm; this holds the line
+    // for a cast.
+    if (
+      externalSource &&
+      membershipField !== null &&
+      (def.membership?.kind !== "window" ||
+        (def.membership as { windowIdsOf?: unknown }).windowIdsOf !==
+          undefined ||
+        def.membership.orderSignatureOf !== undefined)
+    ) {
+      throw new Error(
+        `defineExternalResource: key "${def.key}" — an external keyed entry is a bounded window ({ kind: "window", limitOf, familyOf? }): no point set or alias, and no windowIdsOf / orderSignatureOf (its ids are its own read's, and every change re-reads the tuple whole)`,
+      );
+    }
+    // Keyed ⇒ membership: the keyed drain is the membership drain; a keyed
+    // entry without one would have no path that reconciles its rows (the
+    // types allow no such declaration — this holds the line for an untyped
+    // caller or a cast). DB-backed, it is routed too (above); external, never
+    // (D31 — `routingRecordFor` refuses its routes).
     if (mode === "keyed" && !membershipField && !placeholder) {
       throw new Error(
-        `defineResource: a keyed entry is a routed membership entry — key "${def.key}" declares no membership (membership / scopedMembership) and routes`,
+        `defineResource: a keyed entry is a membership entry — key "${def.key}" declares no membership (membership / scopedMembership)${externalSource ? "" : " and routes"}`,
       );
     }
     // The routed alias's ORDER BY is the compiler's, so it always states the
@@ -3145,9 +3222,18 @@ export function createResourceRuntime(
       ? def.membership.kind === "window"
         ? {
             kind: "window",
-            windowIdsOf: def.membership.windowIdsOf as (
-              params: ResourceParams,
-            ) => Promise<string[]>,
+            // An external window's ids are its own read's: the loader at the
+            // tuple, its rows mapped to their ids. Every change of it is a
+            // FULL re-read (its `notify`), so no path calls this today; it is
+            // what the window's ids MEAN, never a second source of them.
+            windowIdsOf: externalSource
+              ? async (params: ResourceParams): Promise<string[]> =>
+                  ((await timedLoad(entry, params)) as readonly unknown[]).map(
+                    (row) => entry.keyOf!(row),
+                  )
+              : (def.membership.windowIdsOf as (
+                  params: ResourceParams,
+                ) => Promise<string[]>),
             bounded: true,
             orderSignatureOf: def.membership.orderSignatureOf as
               ((row: unknown, params: ResourceParams) => string) | undefined,
@@ -3214,6 +3300,11 @@ export function createResourceRuntime(
           `defineResource: "${def.key}" dependsOn the routed resource "${dep.resource.key}" — route the table, not the resource: a routed entry is never a cascade upstream`,
         );
       }
+      // D32, the external window: a membership drain cascades nothing, so a
+      // cascade out of one would never fire.
+      if (upstream?.membership) {
+        throw new Error(membershipUpstreamMessage(def.key, upstream.key));
+      }
       // T15 — only an external upstream cascades (see `DependsOnEntry`). The
       // type refuses a DB-backed handle; this holds the line for a cast. An
       // upstream not registered yet is checked when it registers (below, the
@@ -3259,6 +3350,9 @@ export function createResourceRuntime(
           `defineResource: "${def.key}" recomputes on "${r.resource.key}", which is DB-backed — a routed entry routes the tables it reads itself; only an external upstream (truth outside Postgres) may recompute it`,
         );
       }
+      if (upstream.membership) {
+        throw new Error(membershipUpstreamMessage(def.key, upstream.key));
+      }
       upstreamKeys.push(upstream.key);
       ownDownstreamEdges.push({
         upstreamKey: upstream.key,
@@ -3270,16 +3364,19 @@ export function createResourceRuntime(
         },
       });
     }
-    // A5 and T15, the other registration order: a downstream registered first
-    // already names this entry as its upstream — refused when this entry is
-    // routed, or DB-backed (a deferred placeholder is checked at its bind).
-    if (routing || (!externalSource && !placeholder)) {
+    // A5, D32 and T15, the other registration order: a downstream registered
+    // first already names this entry as its upstream — refused when this
+    // entry is routed, a membership entry (an external window), or DB-backed
+    // (a deferred placeholder is checked at its bind).
+    if (routing || membership || (!externalSource && !placeholder)) {
       for (const other of registry.values()) {
         if (!other.upstreamKeys.includes(def.key)) continue;
         throw new Error(
           routing
             ? `defineResource: "${other.key}" dependsOn the routed resource "${def.key}" — route the table, not the resource: a routed entry is never a cascade upstream`
-            : dbBackedUpstreamMessage(other.key, def.key),
+            : membership
+              ? membershipUpstreamMessage(other.key, def.key)
+              : dbBackedUpstreamMessage(other.key, def.key),
         );
       }
     }
@@ -3475,10 +3572,15 @@ export function createResourceRuntime(
   // Two shapes mirroring `defineResource`'s non-keyed ones: the flat loose
   // `ResourceDefinition` (push / invalidate), and the `(contract, serverOpts)`
   // form that reads key/schema AND `preload` off a shared client descriptor.
-  // Never keyed (D31): a keyed entry is a routed membership entry, and nothing
-  // routes into an external one — `buildEntry` refuses one a cast let through.
+  // Never ROUTED (D31): its truth is outside Postgres, so nothing routes into
+  // it — `buildEntry` refuses routes a cast let through. Keyed only as a
+  // bounded window from a shared keyed contract (`ExternalWindowPolicy`).
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     def: ExternalDefinition<T, P>,
+  ): ExternalResource<T, P>;
+  function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
+    contract: KeyedResourceContract<T, P>,
+    opts: KeyedServerResourceOptions<T, P> & ExternalWindowPolicy<P>,
   ): ExternalResource<T, P>;
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     contract: ResourceContract<T, P> & { keyed?: never },
@@ -3486,13 +3588,18 @@ export function createResourceRuntime(
   ): ExternalResource<T, P>;
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     a: ResourceDefinition<T, P> | ResourceContract<T, P>,
-    opts?: ServerResourceOptions<T, P>,
+    opts?:
+      | ServerResourceOptions<T, P>
+      | (KeyedServerResourceOptions<T, P> & ExternalWindowPolicy<P>),
   ): ExternalResource<T, P> {
     const def = opts
       ? contractToDefinition(
           "defineExternalResource",
           a as ResourceContract<T, P>,
-          opts,
+          // The external window's membership has no `windowIdsOf` (the
+          // runtime derives it — `buildEntry`); every other field is the
+          // two-arg form's.
+          opts as ServerResourceOptions<T, P>,
         )
       : (a as ResourceDefinition<T, P>);
     return createResource(def, true);
@@ -3502,9 +3609,9 @@ export function createResourceRuntime(
   // Called lazily — amortised to flushNotifies and the debug endpoint. Two
   // invariants registration already holds are asserted here too, over the
   // whole graph, so a regression of either check is loud (rung 4):
-  //  - D32: a membership entry has no downstream. Membership ⇒ routed, and A5
-  //    refuses a cascade out of a routed entry in both registration orders, so
-  //    the membership drains cascade nothing.
+  //  - D32: a membership entry has no downstream. A5 refuses a cascade out of
+  //    a routed entry and D32 one out of an external window, in both
+  //    registration orders, so the membership drains cascade nothing.
   //  - T15: every upstream is external — a deferred placeholder excepted, which
   //    reports `externalSource: false` until its bind (checked then).
   function rebuildDag(): void {
@@ -3515,7 +3622,7 @@ export function createResourceRuntime(
     for (const entry of registry.values()) {
       if (entry.membership && entry.downstream.length > 0) {
         throw new Error(
-          `[resources] membership entry "${entry.key}" has downstream edges (${entry.downstream.map((d) => d.downstreamKey).join(", ")}) — A5 must refuse a cascade out of a routed entry`,
+          `[resources] membership entry "${entry.key}" has downstream edges (${entry.downstream.map((d) => d.downstreamKey).join(", ")}) — A5 / D32 must refuse a cascade out of a membership entry`,
         );
       }
       for (const upKey of entry.upstreamKeys) {
@@ -5092,8 +5199,8 @@ export function createResourceRuntime(
         continue;
       }
       // The legacy path: a push / invalidate entry, recomputed FULL (`affected`
-      // is always null here — A25). A keyed entry is always a membership entry
-      // (D31); the one exception is a deferred keyed placeholder before its
+      // is always null here — A25). A keyed entry is always a membership entry;
+      // the one exception is a deferred keyed placeholder before its
       // bind, which has no loader to run either — reported, never guessed at.
       if (entry.mode === "keyed") {
         reportLoaderError(
@@ -6892,8 +6999,9 @@ export function createResourceRuntime(
         const subscribed = subscribedParamsFor(key);
         // Fan out to every subscribed params tuple; with none, the `{}` tuple
         // (a param-less resource's only one — a persisted entry recomputes it
-        // with no subscriber). (No membership entry is legacy — membership ⇒
-        // routed.)
+        // with no subscriber). A DB-backed membership entry is never legacy
+        // (it is routed); an external window whose loader read a table is,
+        // and its FULL pending re-reads the tuple (`drainMembershipFull`).
         const targets: ResourceParams[] =
           subscribed.length > 0 ? subscribed : [{}];
         for (const params of targets) {

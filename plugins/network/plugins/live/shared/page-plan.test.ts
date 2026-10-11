@@ -4,7 +4,7 @@
  * `$key`), and every live page's window answered as Postgres would — the
  * first `limit` rows of `(after, until]`. Each answer that changes is a newly
  * applied value (a higher `appliedSeq`). The plan is driven to a fixpoint
- * after each step, as `useLiveCollectionPages` drives it (one reconcile per render).
+ * after each step, as `useLive`'s paged read drives it (one reconcile per render).
  *
  * Run: `./singularity test plugins/network/plugins/live`.
  */
@@ -119,7 +119,7 @@ const MEASURING: PageViewport = { kind: "measuring" };
 function settle(
   server: Server,
   plan: Plan,
-  viewport: PageViewport = MEASURING,
+  viewport: PageViewport | null = MEASURING,
   limits: PageLimits = LIMITS,
 ): { plan: Plan; collapses: string[] } {
   const collapses: string[] = [];
@@ -504,6 +504,43 @@ describe("page plan — liveness follows the viewport", () => {
     expect(resubscribed.pages[last]!.live).toBe(true);
     plan = resubscribed;
     expect(assemble(plan, server.observe).canGrow).toBe(true);
+  });
+});
+
+describe("page plan — no viewport: every page live, capped at maxLimit", () => {
+  test("released pages are made live again; a fixpoint is the identity", () => {
+    const server = new Server(range(0, 9));
+    let plan = scrollToEnd(server, settle(server, startPages(LIMITS)).plan, 1);
+    expect(plan.pages).toHaveLength(2);
+    plan = settle(server, plan, { kind: "none" }).plan;
+    expect(liveOf(plan)).toEqual([false, false]);
+    plan = settle(server, plan, null).plan;
+    expect(liveOf(plan)).toEqual([true, true]);
+    expect(reconcile(plan, server.observe, null, LIMITS).plan).toBe(plan);
+    expect(ids(server, plan)).toEqual(truth(server, 4));
+  });
+
+  test("once the pages before the last hold maxLimit rows, the last goes and the one before it is open-ended", () => {
+    const server = new Server(range(1, 10).map((r) => r * 10));
+    let plan = scrollToEnd(server, settle(server, startPages(LIMITS)).plan, 1);
+    expect(plan.pages).toHaveLength(2);
+    // Inserts at the head fill page 0: it overflow-splits, and the pages
+    // before the last now hold maxLimit rows between them.
+    server.insert(1);
+    server.insert(2);
+    plan = settle(server, plan, null).plan;
+    expectContiguous(plan);
+    expect(liveOf(plan).every((l) => l)).toBe(true);
+    const before = plan.pages
+      .slice(0, -1)
+      .reduce((n, p) => n + server.window(p.page).length, 0);
+    expect(before).toBeLessThan(LIMITS.maxLimit);
+    const shown = ids(server, plan);
+    expect(shown).toEqual(truth(server, shown.length));
+    // Bounded: below maxLimit before the last page, plus the last's limit.
+    expect(shown.length).toBeLessThanOrEqual(
+      LIMITS.maxLimit + plan.pages.at(-1)!.page.limit,
+    );
   });
 });
 

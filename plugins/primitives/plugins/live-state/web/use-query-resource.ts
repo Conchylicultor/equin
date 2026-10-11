@@ -39,7 +39,8 @@ export type QueryResourceOptions<
 
 /**
  * What a paged read adds to its ready arm — one vocabulary for every grow-able
- * read: `useLive`'s window and its cursor-paged value's chain of pages.
+ * read: `useLive`'s window and its paged reads (a scroll collection's or a
+ * paged value's key-range pages, every one live).
  */
 export interface ResourcePaging {
   /** There is more to load — `loadMore()` would add some. */

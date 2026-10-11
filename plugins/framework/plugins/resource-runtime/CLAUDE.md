@@ -104,9 +104,10 @@ at the declaration site or the resource does not compile.
    unbounded alias — its `orderSignatureOf` required). A routed plan names its
    tuples, so there is no "wake every tuple" spelling.
 
-So a keyed entry is always a routed membership entry: `buildEntry` refuses a
-keyed entry with no membership, and `routes` with no membership (a registration
-throw beside the type). There is no `identityTable`, `fanOut` or `recompute`
+So a DB-backed keyed entry is always a routed membership entry: `buildEntry`
+refuses a keyed entry with no membership, and `routes` with no membership (a
+registration throw beside the type). The one keyed entry without routes is
+the external window below (D31: an external resource is never ROUTED). There is no `identityTable`, `fanOut` or `recompute`
 spelling; a cast that carries one in is refused by name
 (`refuseLegacyScopeKeys`, called from `contractToDefinition` and `buildEntry`),
 since no router would read it.
@@ -123,6 +124,24 @@ cast that `tsc` cannot see through, so each states its policy as an annotated
 `const scopePolicy: ScopePolicy<P>` first; the `keyed-resource-scope` check is
 the backstop for anything that still slips past.
 
+**D31 — the external window (`ExternalWindowPolicy`).** An external resource's
+truth is outside Postgres, so nothing routes into it — but it may be keyed:
+`defineExternalResource(keyedContract, { loader, membership: { kind: "window",
+limitOf, familyOf? } })` (network/live compiles a paged value's pages to it).
+Its change arrives as its own `notify(params)`, a FULL pending that re-reads
+the tuple and diffs it by key against its snapshot (`drainMembershipFull`) —
+so it ships keyed `delta` frames, keeps a per-tuple snapshot, and may be
+seeded (*Seeded derivation*, through `familyOf`), exactly as a routed window.
+It has no `windowIdsOf` (the runtime derives it from the loader — the tuple's
+own read, its ids mapped — for the paths that call one; none does today, a
+scoped pending exists only through routes) and no `orderSignatureOf` (every
+change is FULL). No `routes`, no point set or alias (throws, beside the type).
+It may follow external upstreams (`dependsOn`), each change a FULL re-read;
+nothing may cascade OUT of it (D32 — a membership drain cascades nothing), a
+throw in both registration orders. It is never L2-persisted (external and
+bounded). Pinned by `runtime-derive.test.ts` §"an external keyed window" and
+`runtime.test.ts`'s D31 case.
+
 A non-keyed entry has no scope policy. A DB-backed one is reached through its
 captured read-set (the legacy router, `applyLegacyFullChange`, FULL — see
 *Scoped change routing*) or a compiler's `reach` plan; an external one through
@@ -134,7 +153,8 @@ writes are tables the downstream's own read-set or routes reach.
 ## Bounded membership (`membership`) and the `scopedMembership` alias
 
 Every keyed resource declares a **membership selector** (the two-arg keyed
-form's `ScopePolicy`, beside its `routes`; `createResource` throws otherwise). It
+form's `ScopePolicy`, beside its `routes` — or, external, the routeless
+window of `ExternalWindowPolicy`; `createResource` throws otherwise). It
 makes an INSERT / DELETE / where-flip routed to the resource ship an incremental
 delta instead of a FULL recompute — the runtime refills only the changed rows
 and reconciles membership against the per-pk snapshot via
@@ -237,8 +257,8 @@ the diff base), and a scoped drain that changed it arms a **floor persist** (see
 (`drainMembershipFull`) seeds/replaces the snapshot even with zero subs so the
 next incremental diff has a base, and REPLACES the row. A membership drain
 cascades nothing: a membership entry has no downstream, since A5 refuses a
-`dependsOn` onto a routed entry in either registration order, and the DAG
-rebuild asserts it (D32).
+`dependsOn` onto a routed entry and D32 one onto an external window, in
+either registration order, and the DAG rebuild asserts it.
 
 At **boot**, the L2 layer restores each persisted alias's in-memory diff base from
 its durable value BEFORE catch-up: `live-state-snapshot`'s `onReady` reads the L2
@@ -266,7 +286,8 @@ boot-snapshot's persisted fast path is open from readiness, before the seed.
 
 ## Seeded derivation (a `sub` frame's `derive`)
 
-A paged read (network/live's `useLiveCollectionPages`) splits and merges its pages, and
+A paged read (network/live's `useLive` over a scroll collection or a paged
+value) splits and merges its pages, and
 each new page's rows are wholly or partly a slice of pages the client and the
 server already hold (`research/2026-10-09-global-live-key-range-pages-v2.md`
 §4.4). So a fresh `sub` may carry `derive: { id, from: [{ params, version,
@@ -286,7 +307,8 @@ lands between the check and the copy:
   subscriber decided its load), and every source is of the new tuple's
   FAMILY (`familyOf` — the same query, whatever the range and limit:
   query-resource states it for a scroll window, from network/live's codec —
-  the `where` and `order`) and QUIESCENT at the version the client sliced:
+  the `where` and `order` —, and network/live for a paged value's page — its
+  question's `q`) and QUIESCENT at the version the client sliced:
   subscribed, its span's snapshot present, no pending, not draining,
   `versions` equal. Its snapshot order is the window order (every write
   rebuilds it from the wire order), so the slice is cut by position from it; a
@@ -330,7 +352,10 @@ same burst as the derived sub —, a commit racing the registration, an echo
 answering another derivation, every refusal falling back and converging — a
 foreign source and more than two sources included —, and the `makeClientView`
 convergence property under random interleavings of writes, plain and derived
-subs, unsubs and flush timing).
+subs, unsubs and flush timing) — and again over an external window: a
+`notify` as a keyed delta, a head and a merge derived from the pages the
+server holds, a busy source falling back, the same convergence property
+under random notifies.
 
 ## L2 persists: replace and floor (`PersistMeta`)
 
@@ -906,7 +931,8 @@ Each suite's `describe`/`test` names state what it pins; read them there.
   version guard + a mirror of `mergeKeyedDelta`, so tests assert "converges to
   server truth"), and the `rng` mulberry32 PRNG.
 - `runtime.test.ts` (level-parallel flush, `applyLegacyFullChange` routing,
-  revalidate, `authorize`, the D37 / D31 / T15 refusals), `keyed-diff.test.ts` (all three diffs, scenario + property, under
+  revalidate, `authorize`, the D37 / D31 / D32 / T15 refusals — D31: a keyed
+  entry is a membership entry, routed or an external window), `keyed-diff.test.ts` (all three diffs, scenario + property, under
   BOTH encoders), `runtime-h5.test.ts` (notify-vs-fresh-sub race),
   `runtime-scoped-routing.test.ts`, `runtime-scoped-membership.test.ts` (M5 alias),
   `runtime-window-membership.test.ts` (bounded window / point / order signature,
@@ -927,7 +953,8 @@ Each suite's `describe`/`test` names state what it pins; read them there.
   `runtime-debug-policy.test.ts` (A26: every key in `_debug` under one policy,
   before and after a deferred bind, and the central-shaped degradation),
   `runtime-derive.test.ts` (seeded derivation: the derived ack, every refusal's
-  fallback, and convergence under random interleavings).
+  fallback, and convergence under random interleavings — over a routed window
+  and an external one).
   `makeClientView` mirrors the derived sub: `expectDerived(rows, { id })` arms
   the slice a derived `sub-ack` echoing that derivation's id adopts.
 - `testing/routed-fixture.ts` (re-exported from `core/testing`) — the shared
@@ -997,11 +1024,14 @@ and those plugins' `CLAUDE.md`.
     - `DependsOnEntry`
     - `DerivedRead`
     - `ExternalResource`
+    - `ExternalWindowMembership`
+    - `ExternalWindowPolicy`
     - `FullRoute`
     - `HostMap`
     - `KeyedDiff`
     - `KeyedMembership`
     - `KeyedMembershipInput`
+    - `KeyedResourceContract`
     - `KeyedServerResourceOptions`
     - `NotifyCounts`
     - `PersistedBase`

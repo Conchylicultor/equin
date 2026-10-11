@@ -3,15 +3,15 @@ import type { PageViewport } from "../../shared/page-plan";
 declare const visibleRangeBrand: unique symbol;
 
 /**
- * Which rows of a paged read are on screen — what `useLiveCollectionPages` keeps its
- * pages live by. Keyed by row id: `measuring` (not known yet: liveness stays
+ * Which rows of a paged read are on screen — what `useLive(c, query, {
+ * viewport })` keeps its pages live by. Keyed by row id: `measuring` (not known yet: liveness stays
  * as it is), `none` (no row of the read is on screen: every page releases),
  * or the first and last visible row in the read's order.
  *
  * BRANDED, and minted only by what measures a viewport — data-view's
  * `usePagesViewport`, which a DataView feeds from the rows it draws. A read
- * with no viewport to measure (a set reader, a count) cannot spell one, so
- * it cannot page: it reads one bounded window with `useLive`.
+ * with no viewport to measure (a set reader, a count) cannot spell one: it
+ * reads `useLive(c, query)`, every page live and capped at `maxLimit` rows.
  */
 export type VisibleRange = PageViewport & {
   readonly [visibleRangeBrand]: true;

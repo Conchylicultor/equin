@@ -22,22 +22,22 @@ export type {
   WithContributedColumns,
 } from "./internal/live-columns";
 export { liveValue } from "./internal/live-value";
-export {
-  isLivePageCursor,
-  LIVE_PAGE_CURSOR_MAX_BYTES,
-  LIVE_QUERY_MAX_BYTES,
-} from "./internal/query-value";
+export { LIVE_QUERY_MAX_BYTES } from "./internal/query-value";
 export type {
-  LivePage,
-  LivePageCodec,
-  LivePageParams,
-  LivePageRequest,
+  LiveKeyCut,
+  LiveKeyRange,
+  LivePageBounds,
+  LivePagedCodec,
+  LivePagedParams,
   LiveQueryCodec,
   LiveQueryParams,
   LiveQuerySchema,
 } from "./internal/query-value";
 export type {
   LiveCentralValueSpec,
+  LiveKeyDirection,
+  LivePagedKey,
+  LivePagedPages,
   LivePagedSpec,
   LivePagedValue,
   LivePagedValueSpec,
@@ -81,12 +81,12 @@ export type {
   LiveWindowCodec,
   LiveWindowDescriptor,
 } from "./internal/live-collection";
-export { LIVE_ROW_KEY, LIVE_ROW_KEY_MAX_BYTES } from "./internal/query";
+export { LIVE_ROW_KEY, LIVE_ROW_KEY_MAX_BYTES } from "./internal/row-key";
+export type { LiveCutKey } from "./internal/row-key";
 export type {
   LiveColumnFilter,
   LiveCountParams,
   LiveCountQuery,
-  LiveCutKey,
   LiveDecodedCountQuery,
   LiveDecodedGroupQuery,
   LiveDecodedQuery,

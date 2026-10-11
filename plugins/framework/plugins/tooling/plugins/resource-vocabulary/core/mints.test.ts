@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { liveCollection } from "@plugins/network/plugins/live/core";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
 import { mintsOf } from "./mints";
 import { resourceDescriptorFactories } from "./vocabulary";
@@ -165,10 +165,120 @@ describe("mintsOf ≡ liveCollection's runtime mints (A28)", () => {
       ).map((m) => m.key),
     ).toEqual(["spaced:rows"]);
   });
+});
 
-  test("a factory with no `requires` mint never reads its spec", () => {
+/** The keys a value minted, with whether each is keyed, read off the runtime registry. */
+function runtimeValueMints(v: {
+  key: string;
+}): { key: string; keyed: boolean }[] {
+  return ["", ":meta"]
+    .map((suffix) => v.key + suffix)
+    .flatMap((key) => {
+      const d = resourceDescriptorByKey(key);
+      return d === undefined ? [] : [{ key, keyed: d.keyed !== undefined }];
+    });
+}
+
+function scannedValueMints(
+  key: string,
+  specText: string,
+): { key: string; keyed: boolean; membership: string | null }[] {
+  return mintsOf(
+    resourceDescriptorFactories.liveValue,
+    `"${key}", ${specText}`,
+    WHERE,
+  ).map((m) => ({
+    key: key + m.suffix,
+    keyed: m.keyed,
+    membership: m.membership,
+  }));
+}
+
+const Item = z.object({ id: z.string(), at: z.string() });
+const Question = z.object({ metric: z.string() });
+
+describe("mintsOf ≡ liveValue's runtime mints", () => {
+  test("a plain value: its key, not keyed", () => {
+    const v = liveValue("test.mints.value", { schema: z.number() });
+    const scanned = scannedValueMints(
+      "test.mints.value",
+      `{ schema: z.number() }`,
+    );
+    expect(scanned.map(({ key, keyed }) => ({ key, keyed }))).toEqual(
+      runtimeValueMints(v),
+    );
+    expect(scanned).toEqual([
+      { key: "test.mints.value", keyed: false, membership: null },
+    ]);
+  });
+
+  test("a paged value: its pages a keyed window, and its :meta sibling", () => {
+    const v = liveValue("test.mints.paged", {
+      query: Question,
+      paged: {
+        item: Item,
+        id: "id",
+        key: { of: (i) => [i.at], order: ["desc"] },
+        limit: 2,
+        maxLimit: 4,
+        meta: z.object({ total: z.number() }),
+      },
+    });
+    const scanned = scannedValueMints(
+      "test.mints.paged",
+      `{ query: Question, paged: { item: Item, id: "id", key: { of: (i) => [i.at], order: ["desc"] }, limit: 2, maxLimit: 4, meta: z.object({ total: z.number() }) } }`,
+    );
+    expect(scanned.map(({ key, keyed }) => ({ key, keyed }))).toEqual(
+      runtimeValueMints(v),
+    );
+    expect(scanned).toEqual([
+      { key: "test.mints.paged", keyed: true, membership: "window" },
+      { key: "test.mints.paged:meta", keyed: false, membership: null },
+    ]);
+  });
+
+  test("a paged value without meta: its pages alone", () => {
+    const v = liveValue("test.mints.paged-bare", {
+      query: Question,
+      paged: {
+        item: Item,
+        id: "id",
+        key: { of: (i) => [i.at], order: ["desc"] },
+        limit: 2,
+        maxLimit: 4,
+      },
+    });
     expect(
-      mintsOf(resourceDescriptorFactories.liveValue, `"v", spec`, WHERE),
-    ).toEqual(resourceDescriptorFactories.liveValue.mints);
+      scannedValueMints(
+        "test.mints.paged-bare",
+        `{ query: Question, paged: { item: Item, id: "id", key: { of: (i) => [i.at], order: ["desc"] }, limit: 2, maxLimit: 4 } }`,
+      ).map(({ key, keyed }) => ({ key, keyed })),
+    ).toEqual(runtimeValueMints(v));
+  });
+
+  test("a `meta` outside `paged` is not the sibling's", () => {
+    expect(
+      scannedValueMints(
+        "outside",
+        `{ schema: S, meta: { paged: { meta: 1 } } }`,
+      ).map((m) => m.key),
+    ).toEqual(["outside"]);
+  });
+
+  test("a `paged` it cannot read into is refused, never guessed", () => {
+    expect(() =>
+      scannedValueMints("ident", `{ query: Q, paged: spec }`),
+    ).toThrow(
+      /x\.ts:1: the spec's `paged` \(`spec`\) is not an inline object literal/,
+    );
+    expect(() =>
+      scannedValueMints("spread", `{ query: Q, paged: { ...base } }`),
+    ).toThrow(/x\.ts:1: the spec spreads `\.\.\.base`/);
+    expect(() =>
+      scannedValueMints("short", `{ query: Q, paged: { item, meta } }`),
+    ).toThrow(/x\.ts:1: the spec names `meta` as a shorthand property/);
+    expect(() =>
+      scannedValueMints("short-paged", `{ query: Q, paged }`),
+    ).toThrow(/x\.ts:1: the spec names `paged` as a shorthand property/);
   });
 });

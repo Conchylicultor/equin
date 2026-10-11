@@ -355,6 +355,9 @@ export function preloadedKeysIn(
     if (!src.includes(factory)) continue; // cheap fast-path
     masked ??= maskSource(src);
     for (const span of markerCallSpans(masked, factory)) {
+      // A factory's own declaration (`function liveValue<T>(key, spec: …)`,
+      // an overload included) is no call: its "spec" is a parameter list.
+      if (/\bfunction\s*$/.test(masked.slice(0, span.identifier))) continue;
       const argsText = src.slice(span.open + 1, span.close);
       const where = { file: displayPath, line: lineAt(src, span.identifier) };
       // The mints this call's spec actually makes — one reading, shared with

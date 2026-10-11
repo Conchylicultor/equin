@@ -4,7 +4,7 @@
  * runtime serving each page as its own window tuple (`after` / `until` cuts
  * on server-minted `$key`s), and the pages' own plan (`shared/page-plan.ts`)
  * driven by what those tuples' client views hold and by a moving viewport —
- * exactly as `useLiveCollectionPages` drives it: a page near the viewport subscribed,
+ * exactly as `useLive`'s paged read drives it: a page near the viewport subscribed,
  * one far from it unsubscribed and held stale.
  *
  * A random workload of inserts, updates and deletes interleaves with paging
@@ -22,7 +22,7 @@
  * cap, its rows a gap-free prefix at every step.
  *
  * Seeded derivation (P3): a page a split or merge mints is subscribed with
- * its seed — the slices of the pages it replaces — as `useLiveCollectionPages` sends it
+ * its seed — the slices of the pages it replaces — as `useLive`'s paged read sends it
  * through live-state, so `loadMore` loads exactly the new page's `step` rows
  * and a merge loads nothing.
  *
@@ -237,7 +237,7 @@ const paramsOf = (page: Page): ResourceParams =>
 type Wire = { id: string; n: number; $key: string | null };
 
 /**
- * The pages as `useLiveCollectionPages` runs them: the plan, one subscribed window
+ * The pages as `useLive`'s paged read runs them: the plan, one subscribed window
  * tuple per LIVE page (subscribed by diff, a released page unsubscribed at
  * once), a client view per tuple, and the viewport the plan follows.
  */
@@ -399,7 +399,7 @@ class Pages {
     return true;
   }
 
-  /** The rows shown, as `useLiveCollectionPages` assembles them. */
+  /** The rows shown, as `useLive`'s paged read assembles them. */
   ids(): string[] {
     return assemble(this.plan, this.observe).entries.map((e) => e.id);
   }

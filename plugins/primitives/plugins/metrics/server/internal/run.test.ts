@@ -8,7 +8,7 @@ import { bool } from "../../core/params";
 import type { MetricQuery } from "../../core";
 import { serveBreakdown, serveMetric, type SourceImpl } from "./contribution";
 import { buildMetricRegistry } from "./registry";
-import { MetricQueryError, runDetails, runQuery } from "./run";
+import { MetricQueryError, runDetails, runDetailsTotal, runQuery } from "./run";
 
 const NOW = new Date("2026-09-30T15:00:00Z");
 const src = defineMetricSource({
@@ -51,13 +51,10 @@ const source: SourceImpl = {
           ? [{ key: "total", label: "Total", values: intervals.map(() => 1) }]
           : [{ key: "x", label: "X", values: intervals.map(() => 1) }];
       },
-      details: async ({ params }) => ({
-        items: [
-          { id: "t1", title: `mine=${params.onlyMine}`, at: NOW.toISOString() },
-        ],
-        total: 1,
-        nextCursor: null,
-      }),
+      details: async ({ params }) => [
+        { id: "t1", title: `mine=${params.onlyMine}`, at: NOW.toISOString() },
+      ],
+      detailsTotal: async ({ params }) => (params.onlyMine ? 1 : 2),
     }),
     serveMetric(plain, {
       evaluate: async ({ intervals }) => [
@@ -240,7 +237,7 @@ describe("runDetails", () => {
     split: null,
     params: {},
   };
-  const page = { cursor: null, limit: 5 };
+  const page = { after: null, until: null, limit: 5 };
 
   test("calls the metric's details with parsed params", async () => {
     const drill = await runDetails(
@@ -248,7 +245,14 @@ describe("runDetails", () => {
       { ...q, params: { onlyMine: true } },
       page,
     );
-    expect(drill.items[0]!.title).toBe("mine=true");
+    expect(drill[0]!.title).toBe("mine=true");
+  });
+
+  test("the total is the metric's detailsTotal over the parsed params", async () => {
+    expect(
+      await runDetailsTotal(registry, { ...q, params: { onlyMine: true } }),
+    ).toBe(1);
+    expect(await runDetailsTotal(registry, q)).toBe(2);
   });
 
   test.each([
@@ -263,5 +267,6 @@ describe("runDetails", () => {
     ],
   ])("%s is a MetricQueryError", async (_name, query) => {
     expect(await refused(runDetails(registry, query, page))).toBe(true);
+    expect(await refused(runDetailsTotal(registry, query))).toBe(true);
   });
 });

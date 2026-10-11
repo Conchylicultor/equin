@@ -24,12 +24,12 @@ ruleTester.run(
   {
     valid: [
       {
-        code: `import { useLiveCollectionPages, type VisibleRange } from "${BARREL}";`,
+        code: `import { useLive, type VisibleRange } from "${BARREL}";`,
       },
       // Another module's export of the same name.
       { code: `import { mintVisibleRange } from "./visible-range";` },
       {
-        code: `import * as live from "${BARREL}"; live.useLiveCollectionPages(c, q, o);`,
+        code: `import * as live from "${BARREL}"; live.useLive(c, q, o);`,
       },
       // Not a namespace of the barrel.
       { code: `const live = other; live.mintVisibleRange(r);` },

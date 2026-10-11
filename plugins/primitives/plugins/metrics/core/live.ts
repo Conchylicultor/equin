@@ -30,21 +30,27 @@ export const metricQuery = liveValue("metrics.query", {
   load: "on-demand",
 });
 
-/** The page size of a drill-down after its preview. */
-export const DRILL_PAGE = 50;
+/** A drill-down's page size: page 0 of a read with no `limit` of its own, and its step. */
+const DRILL_PAGE = 50;
+
+/** The most records a drill-down lists (its pages are every one live, so it is capped). */
+const DRILL_MAX = 500;
 
 /**
- * The records behind one bucket (or one series of it), paged by the
- * provider's cursor — each loaded page live; the bucket's total is the page
- * meta.
+ * The records behind one bucket (or one series of it), newest first: key-range
+ * pages cut at each record's `at` (then its id) — each loaded page live, a
+ * keyed window a source's change reaches as a delta (so no `load`: a page is
+ * always pushed). The bucket's total is the per-question sibling,
+ * `metricDetails.meta`.
  */
 export const metricDetails = liveValue("metrics.details", {
   query: DetailsSelectorSchema,
   paged: {
     item: DrillItemSchema,
     id: "id",
-    meta: DrillMetaSchema,
+    key: { of: (item) => [item.at], order: ["desc"] },
     limit: DRILL_PAGE,
+    maxLimit: DRILL_MAX,
+    meta: DrillMetaSchema,
   },
-  load: "on-demand",
 });

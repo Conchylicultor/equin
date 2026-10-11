@@ -16,11 +16,14 @@ import type { DescriptorFactory, MintedResource } from "./vocabulary";
 /**
  * The resources one `entry` call with `argsText` (the text between its
  * parentheses) mints, in declaration order: every mint whose `requires` field
- * the call's spec SETS, plus every mint with no `requires`.
+ * the call's spec SETS and whose `unless` field it does not (a mint with
+ * neither is always minted).
  *
  * The spec is the call's second argument, which must be an inline object
  * literal, and a field counts only at the spec's own depth — `all:` inside
- * `filterable` or a nested object is not the spec's `all`.
+ * `filterable` or a nested object is not the spec's `all`. A dotted field
+ * (`paged.meta`) names a field of the spec's inline object `paged`, read at
+ * that object's own depth the same way.
  *
  * THROWS when two kept mints share a key (the same suffix): the spec sets two
  * fields whose mints exclude each other — `default` and `all` both mint `k` —
@@ -34,25 +37,34 @@ import type { DescriptorFactory, MintedResource } from "./vocabulary";
  * identifier `spec`, a wrapper call `makeSpec({ … })`, `{ … } as const` — its
  * fields are not in the call's text), the spec spreads another object at its
  * own depth (`{ ...base }` may carry any field), or it names a `requires`
- * field as a shorthand property (`{ row, all }` — no `all:` to find). A
- * factory with no `requires` mint mints the same set whatever its spec says,
- * so its spec is never read.
+ * field as a shorthand property (`{ row, all }` — no `all:` to find) — and,
+ * for a dotted field, the same of each object it is read through, which must
+ * itself be an inline object literal. A factory with no conditional mint
+ * mints the same set whatever its spec says, so its spec is never read.
  */
 export function mintsOf(
   entry: DescriptorFactory,
   argsText: string,
   where: { file: string; line: number },
 ): readonly MintedResource[] {
-  const requires = new Set(
-    entry.mints.flatMap((m) => (m.requires === undefined ? [] : [m.requires])),
+  const conditions = new Set(
+    entry.mints.flatMap((m) =>
+      [m.requires, m.unless].filter((f): f is string => f !== undefined),
+    ),
   );
-  const spec = requires.size > 0 ? specBody(argsText, where) : null;
-  if (spec !== null) assertReadable(spec, requires, where);
+  const spec = conditions.size > 0 ? specBody(argsText, where) : null;
+  if (spec !== null) {
+    assertReadable(
+      spec,
+      new Set([...conditions].map((f) => f.split(".")[0]!)),
+      where,
+    );
+  }
+  const sets = (field: string): boolean => fieldSet(spec!, field, where);
   const kept = entry.mints.filter(
     (m) =>
-      m.requires === undefined ||
-      (spec !== null &&
-        parseStringField(spec, m.requires, { depth0: true }).kind !== "absent"),
+      (m.requires === undefined || sets(m.requires)) &&
+      (m.unless === undefined || !sets(m.unless)),
   );
   const bySuffix = new Map<string, MintedResource>();
   for (const m of kept) {
@@ -71,7 +83,59 @@ export function mintsOf(
 }
 
 /**
- * Refuse a spec whose `requires` fields cannot be read as `name:` keys at its
+ * Whether `spec` (an object literal's body) sets `field` at its own depth — a
+ * dotted field through the inline object literals it names (each checked
+ * readable on the way down, as the spec is).
+ */
+function fieldSet(
+  spec: string,
+  field: string,
+  where: { file: string; line: number },
+): boolean {
+  const [head, ...rest] = field.split(".");
+  if (rest.length === 0) {
+    return parseStringField(spec, head!, { depth0: true }).kind !== "absent";
+  }
+  const inner = memberObjectBody(spec, head!, where);
+  if (inner === null) return false;
+  assertReadable(inner, new Set([rest[0]!]), where);
+  return fieldSet(inner, rest.join("."), where);
+}
+
+/**
+ * The body of the inline object literal `spec`'s own member `name` holds, or
+ * `null` when the spec has no `name:` member. Throws when it holds anything
+ * else (an identifier, a call): what is inside it cannot be read.
+ */
+function memberObjectBody(
+  spec: string,
+  name: string,
+  where: { file: string; line: number },
+): string | null {
+  const masked = maskSource(spec);
+  const key = new RegExp(`^${name}\\s*:\\s*`);
+  for (const span of depth0Spans(masked)) {
+    const m = key.exec(masked.slice(span.start, span.end));
+    if (m === null) continue;
+    const open = span.start + m[0].length;
+    if (
+      masked[open] === "{" &&
+      matchBracket(masked, open, "{", "}") === span.end - 1
+    ) {
+      return spec.slice(open + 1, span.end - 1);
+    }
+    throw new Error(
+      `${where.file}:${where.line}: the spec's \`${name}\` ` +
+        `(\`${spec.slice(open, span.end).replace(/\s+/g, " ").slice(0, 60)}\`) is not ` +
+        "an inline object literal — which resources it mints cannot be read; " +
+        "write it inline.",
+    );
+  }
+  return null;
+}
+
+/**
+ * Refuse a spec whose conditional fields (`requires` / `unless`) cannot be read as `name:` keys at its
  * own depth: a spread member, or a shorthand member naming one of them.
  */
 function assertReadable(

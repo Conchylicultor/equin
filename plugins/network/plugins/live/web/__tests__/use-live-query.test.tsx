@@ -1,8 +1,10 @@
 /**
- * useLive over a typed-query value and a cursor-paged value, on a real
+ * useLive over a typed-query value and a key-range-paged value, on a real
  * NotificationsProvider + QueryClient (the use-live.test.tsx harness):
  * authoritative values are driven with `client.setQueryData` on the exact tuple
- * the declaration's codec encodes — the same call a WS sub-ack makes.
+ * the declaration's codec encodes — the same call a WS sub-ack makes. (The
+ * paged read's plan and hook are the scroll collection's, pinned in
+ * `use-pages.test.tsx`; here, what a VALUE source changes.)
  */
 
 import { describe, expect, it, vi } from "vitest";
@@ -22,11 +24,12 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { NotificationsClient } from "@plugins/primitives/plugins/live-state/web/testing";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { mintVisibleRange, useLive } from "@plugins/network/plugins/live/web";
 
 const Result = z.object({ n: z.number() });
 const Query = z.object({ metric: z.string(), days: z.number().default(7) });
-const Item = z.object({ id: z.string() });
+const Item = z.object({ id: z.string(), at: z.string() });
+type Item = z.output<typeof Item>;
 const Meta = z.object({ total: z.number() });
 
 let seq = 0;
@@ -53,7 +56,15 @@ function mount<R>(client: QueryClient, useHook: () => R) {
   return { ...rendered, notifications };
 }
 
-const items = (...ids: string[]) => ids.map((id) => ({ id }));
+/** Items at descending `at`s ("9", "8", …), each with the `$key` the server mints. */
+const wire = (...ids: string[]) =>
+  ids.map((id, i) => ({
+    id,
+    at: String(9 - i),
+    $key: JSON.stringify([String(9 - i), id]),
+  }));
+const items = (...ids: string[]): Item[] =>
+  wire(...ids).map(({ $key: _k, ...item }) => item);
 
 describe("useLive — typed-query value", () => {
   it("subscribes on the question's canonical tuple, and goes loading → ready", async () => {
@@ -147,58 +158,89 @@ describe("useLive — paged value", () => {
   function paged() {
     return liveValue(key(), {
       query: z.object({ metric: z.string() }),
-      paged: { item: Item, id: "id", meta: Meta, limit: 3 },
+      paged: {
+        item: Item,
+        id: "id",
+        key: { of: (i: Item) => [i.at], order: ["desc"] },
+        limit: 2,
+        maxLimit: 4,
+        meta: Meta,
+      },
     });
   }
+  const q = '{"metric":"m"}';
 
-  it("reads the first page at `first`, and loadMore grows the chain by the next cursor", async () => {
+  it("no viewport: page 0 is { q, limit }, `$key` is split off, and loadMore splits without flashing", async () => {
     const v = paged();
     const client = makeClient();
-    const q = '{"metric":"m"}';
-    client.setQueryData(queryKeyFor(v.key, { q, n: "2" }), {
-      items: items("a", "b"),
-      nextCursor: "c1",
-      meta: { total: 4 },
-    });
-    const { result } = mount(client, () =>
-      useLive(v, { metric: "m" }, { first: 2 }),
-    );
+    client.setQueryData(queryKeyFor(v.key, { q, limit: "2" }), wire("a", "b"));
+    const { result } = mount(client, () => useLive(v, { metric: "m" }));
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const first = result.current;
     if (first.status !== "ready") throw new Error("unreachable");
     expect(first.data).toEqual(items("a", "b"));
-    expect(first.meta).toEqual({ total: 4 });
     expect(first.canGrow).toBe(true);
 
     act(() => first.loadMore());
-    expect(result.current).toMatchObject({ status: "ready", growing: true });
+    // The split pages have not landed: the rows stay, growing.
+    expect(result.current).toMatchObject({
+      status: "ready",
+      growing: true,
+      data: items("a", "b"),
+    });
+    const cut = JSON.stringify(["8", "b"]);
     act(() => {
-      client.setQueryData(queryKeyFor(v.key, { q, n: "3", c: "c1" }), {
-        items: items("b", "c", "d"),
-        nextCursor: null,
-        meta: { total: 4 },
-      });
+      client.setQueryData(
+        queryKeyFor(v.key, { q, limit: "4", until: cut }),
+        wire("a", "b"),
+      );
+      client.setQueryData(
+        queryKeyFor(v.key, { q, limit: "2", after: cut }),
+        wire("a", "b", "c", "d").slice(2),
+      );
     });
     await waitFor(() =>
       expect(result.current).toMatchObject({ status: "ready", growing: false }),
     );
     const grown = result.current;
     if (grown.status !== "ready") throw new Error("unreachable");
-    // "b" shifted across the boundary: shown once.
     expect(grown.data).toEqual(items("a", "b", "c", "d"));
+    // 4 + a step would pass maxLimit: a read with no viewport stops there.
     expect(grown.canGrow).toBe(false);
-    expect(grown.truncated).toBe(false);
   });
 
-  it("a failed page is the error arm with every item already held as stale", async () => {
+  it("{ limit } is page 0's limit — a preview — and the step", async () => {
     const v = paged();
     const client = makeClient();
-    const q = '{"metric":"m"}';
-    client.setQueryData(queryKeyFor(v.key, { q, n: "3" }), {
-      items: items("a", "b", "c"),
-      nextCursor: "c1",
-      meta: { total: 9 },
+    client.setQueryData(queryKeyFor(v.key, { q, limit: "1" }), wire("a"));
+    const { result } = mount(client, () =>
+      useLive(v, { metric: "m" }, { limit: 1 }),
+    );
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current).toMatchObject({ data: items("a"), canGrow: true });
+  });
+
+  it("with a viewport: the pages result", async () => {
+    const v = paged();
+    const client = makeClient();
+    client.setQueryData(queryKeyFor(v.key, { q, limit: "2" }), wire("a"));
+    const viewport = mintVisibleRange({ kind: "measuring" });
+    const { result } = mount(client, () =>
+      useLive(v, { metric: "m" }, { viewport }),
+    );
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current).toMatchObject({
+      status: "ready",
+      rows: items("a"),
+      exhausted: true,
+      pageErrors: [],
     });
+  });
+
+  it("a failed page under the items shown is the error arm with them as stale", async () => {
+    const v = paged();
+    const client = makeClient();
+    client.setQueryData(queryKeyFor(v.key, { q, limit: "2" }), wire("a", "b"));
     const { result } = mount(client, () => useLive(v, { metric: "m" }));
     await waitFor(() => expect(result.current.status).toBe("ready"));
     act(() => {
@@ -206,9 +248,14 @@ describe("useLive — paged value", () => {
       if (r.status !== "ready") throw new Error("unreachable");
       r.loadMore();
     });
+    const cut = JSON.stringify(["8", "b"]);
     await act(async () => {
+      client.setQueryData(
+        queryKeyFor(v.key, { q, limit: "4", until: cut }),
+        wire("a", "b"),
+      );
       await client.prefetchQuery({
-        queryKey: queryKeyFor(v.key, { q, n: "3", c: "c1" }),
+        queryKey: queryKeyFor(v.key, { q, limit: "2", after: cut }),
         queryFn: () => Promise.reject(new Error("page failed")),
         staleTime: 0,
       });
@@ -217,8 +264,16 @@ describe("useLive — paged value", () => {
     const r = result.current;
     if (r.status !== "error") throw new Error("unreachable");
     expect(r.error.message).toBe("page failed");
-    expect(r.stale).toEqual(items("a", "b", "c"));
-    expect(r.meta).toEqual({ total: 9 });
+    expect(r.stale).toEqual(items("a", "b"));
+  });
+
+  it("the meta sibling is a typed-query value over the same question", async () => {
+    const v = paged();
+    const client = makeClient();
+    client.setQueryData(queryKeyFor(v.meta.key, { q }), { total: 4 });
+    const { result } = mount(client, () => useLive(v.meta, { metric: "m" }));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current).toMatchObject({ data: { total: 4 } });
   });
 
   it("null reads nothing", () => {
@@ -231,11 +286,11 @@ describe("useLive — paged value", () => {
     observe.mockRestore();
   });
 
-  it("a first page larger than the declared limit throws", () => {
+  it("a limit past maxLimit throws", () => {
     const v = paged();
     const client = makeClient();
     expect(() =>
-      mount(client, () => useLive(v, { metric: "m" }, { first: 4 })),
-    ).toThrow(/first 4 is not an integer in 1..3/);
+      mount(client, () => useLive(v, { metric: "m" }, { limit: 5 })),
+    ).toThrow(/not an integer in 1..4/);
   });
 });

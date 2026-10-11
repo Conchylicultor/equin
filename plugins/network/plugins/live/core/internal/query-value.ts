@@ -1,9 +1,10 @@
 import type { z } from "zod";
 import { canonicalJson } from "@plugins/packages/plugins/canonical-params/core";
 import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
+import { parseRowKey, type LiveCutKey } from "./row-key";
 
 // The codecs of a value whose question is STRUCTURED (`liveValue(key, { query })`)
-// and of a cursor-paged one (`{ query, paged }`). A value's params are wire
+// and of a key-range-paged one (`{ query, paged }`). A value's params are wire
 // strings, and everything below the declaration — the runtime, WS frames, the
 // HTTP fallback's `URLSearchParams`, tuple keys, ETags, the query cache — keeps
 // them that way. So the typed question rides as ONE string param, `q`: its
@@ -35,35 +36,46 @@ import { ResourceContractError } from "@plugins/packages/plugins/resource-protoc
  */
 export const LIVE_QUERY_MAX_BYTES = 2048;
 
-/** The bound on a page cursor (`c`), in UTF-8 bytes — the server mints it, so a longer one is its bug. */
-export const LIVE_PAGE_CURSOR_MAX_BYTES = 1024;
-
 /** A typed-query value's wire params: the question's canonical JSON. */
 export type LiveQueryParams = { q: string };
 
 /**
- * One page tuple of a paged value: the question, the page size `n` (decimal),
- * and the server's opaque cursor `c` — absent on the first page.
+ * One page tuple of a paged value: the question, the page's `limit`
+ * (decimal), and its cuts — `after` (exclusive) and `until` (inclusive), each
+ * a row key the server minted (`$key`), absent at the order's start / end.
+ * Page 0 at the declared limit is `{ q, limit }`.
  */
-export type LivePageParams = { q: string; n: string; c?: string };
+export type LivePagedParams = {
+  q: string;
+  limit: string;
+  after?: string;
+  until?: string;
+};
 
-/** What a paged value's loader is asked for one page. */
-export interface LivePageRequest {
-  /** The previous page's `nextCursor`; `null` = the first page. */
-  cursor: string | null;
-  /** At most this many items. */
+/** A page as its tuple names it: the cuts verbatim (`null` = the order's start / end) and its limit. */
+export interface LivePageBounds {
+  after: string | null;
+  until: string | null;
   limit: number;
 }
 
+/** One cut of a key range, decoded: the row's order-key parts, then its id. */
+export interface LiveKeyCut {
+  key: LiveCutKey;
+  id: string;
+}
+
 /**
- * One page of a paged value — the derived wire schema's shape. `meta` (a
- * total, say) is present exactly when the declaration has a `meta` schema.
+ * What a paged value's loader is asked for one page: the items strictly after
+ * `after` and up to and including `until` in the declared key order (`null` =
+ * the order's start / end), at most `limit` of them, in that order. A cut is a
+ * POSITION, not a row: the row it was minted from may be gone.
  */
-export type LivePage<Item, Meta> = {
-  items: Item[];
-  /** The cursor of the page after this one; `null` = this is the last page. */
-  nextCursor: string | null;
-} & ([Meta] extends [undefined] ? { meta?: undefined } : { meta: Meta });
+export interface LiveKeyRange {
+  after: LiveKeyCut | null;
+  until: LiveKeyCut | null;
+  limit: number;
+}
 
 /**
  * A query schema: parses the caller's question (`QIn`, its input — defaults
@@ -80,15 +92,17 @@ export interface LiveQueryCodec<Q, QIn> {
 }
 
 /** A paged value's codec (`LivePagedValue.query`). */
-export interface LivePageCodec<Q, QIn> {
-  /** The caller's question and one page → that page's tuple. */
-  encode(query: QIn, page: LivePageRequest): LivePageParams;
+export interface LivePagedCodec<Q, QIn> {
+  /** The caller's question and one page → that page's tuple. Throws (plain `Error`) on a bad limit or cut. */
+  encode(query: QIn, page: LivePageBounds): LivePagedParams;
   /** An already-encoded question (`encodeQuery`'s) and one page → that page's tuple. */
-  page(q: string, page: LivePageRequest): LivePageParams;
-  /** A page tuple → the question and the page. Strict, as {@link LiveQueryCodec.decode}. */
-  decode(params: Record<string, string>): { query: Q } & LivePageRequest;
+  page(q: string, page: LivePageBounds): LivePagedParams;
+  /** A page tuple → the question and the key range it asks. Strict, as {@link LiveQueryCodec.decode}. */
+  decode(params: Record<string, string>): { query: Q; range: LiveKeyRange };
   /** The question's canonical `q` alone — what every page tuple of it shares. */
   encodeQuery(query: QIn): string;
+  /** A canonical `q` → the question. Strict, as {@link LiveQueryCodec.decode}. */
+  decodeQuery(q: string): Q;
 }
 
 /**
@@ -195,78 +209,93 @@ export function liveQueryCodec<Q, QIn>(
   };
 }
 
-const PAGE_PARAMS: ReadonlySet<string> = new Set(["q", "n", "c"]);
+const PAGE_PARAMS: ReadonlySet<string> = new Set([
+  "q",
+  "limit",
+  "after",
+  "until",
+]);
 
 /**
- * A paged value's codec: the question's `q`, plus `n` (an integer in
- * `1..maxLimit`, canonical decimal) and an optional `c` (non-empty, at most
- * `LIVE_PAGE_CURSOR_MAX_BYTES`).
+ * A paged value's codec: the question's `q`, plus `limit` (an integer in
+ * `1..maxLimit`, canonical decimal) and the optional cuts `after` / `until` —
+ * each a row key of `arity` parts (the declared order's, then the id) as
+ * `parseRowKey` admits it: canonical JSON, within `LIVE_ROW_KEY_MAX_BYTES`.
  */
-export function livePageCodec<Q, QIn>(
+export function livePagedCodec<Q, QIn>(
   key: string,
   schema: LiveQuerySchema<Q, QIn>,
-  maxLimit: number,
-): LivePageCodec<Q, QIn> {
+  bounds: { arity: number; maxLimit: number },
+): LivePagedCodec<Q, QIn> {
+  const { arity, maxLimit } = bounds;
   const codec = queryCodec(key, schema);
   const reject = (detail: string): never => {
     throw new ResourceContractError(key, `liveValue("${key}"): ${detail}`);
   };
+  const fail = (detail: string): never => {
+    throw new Error(`liveValue("${key}"): ${detail}`);
+  };
+  const cutOf = (
+    raw: string,
+    which: "after" | "until",
+    onFail: (detail: string) => never,
+  ): LiveKeyCut => {
+    const parts = parseRowKey(raw, arity, which, onFail);
+    return { key: parts.slice(0, -1), id: parts[arity - 1] as string };
+  };
   const page = (
     q: string,
-    { cursor, limit }: LivePageRequest,
-  ): LivePageParams => {
+    { after, until, limit }: LivePageBounds,
+  ): LivePagedParams => {
     if (!Number.isInteger(limit) || limit < 1 || limit > maxLimit) {
-      throw new Error(
-        `liveValue("${key}"): page size ${limit} is not an integer in 1..${maxLimit}`,
-      );
+      fail(`page limit ${limit} is not an integer in 1..${maxLimit}`);
     }
-    if (cursor !== null && !isLivePageCursor(cursor)) {
-      throw new Error(
-        `liveValue("${key}"): cursor ${JSON.stringify(cursor)} is empty or over ${LIVE_PAGE_CURSOR_MAX_BYTES} bytes`,
-      );
-    }
+    // Validated here too, so a bad cut throws where it was built.
+    if (after !== null) cutOf(after, "after", fail);
+    if (until !== null) cutOf(until, "until", fail);
     return {
       q,
-      n: String(limit),
-      ...(cursor !== null ? { c: cursor } : {}),
+      limit: String(limit),
+      ...(after !== null ? { after } : {}),
+      ...(until !== null ? { until } : {}),
     };
   };
   return {
     encodeQuery: (query) => codec.encode(query),
+    decodeQuery: (q) => codec.decode(q),
     page,
-    encode: (query, request) => page(codec.encode(query), request),
+    encode: (query, bounds) => page(codec.encode(query), bounds),
     decode(params) {
       for (const name of Object.keys(params)) {
         if (!PAGE_PARAMS.has(name)) {
           reject(
-            `unknown param "${name}" — a paged value's tuple is { q, n, c? }`,
+            `unknown param "${name}" — a paged value's tuple is { q, limit, after?, until? }`,
           );
         }
       }
-      const { q, n, c } = params;
+      const { q, limit: n, after, until } = params;
       if (typeof q !== "string") return reject(`missing param "q"`);
-      if (typeof n !== "string") return reject(`missing param "n"`);
+      if (typeof n !== "string") return reject(`missing param "limit"`);
       const limit = Number(n);
       if (
         !/^[1-9][0-9]*$/.test(n) ||
         !Number.isSafeInteger(limit) ||
         limit > maxLimit
       ) {
-        reject(`n = ${JSON.stringify(n)} is not an integer in 1..${maxLimit}`);
-      }
-      if (c !== undefined && !isLivePageCursor(c)) {
         reject(
-          `c is empty or over LIVE_PAGE_CURSOR_MAX_BYTES (${LIVE_PAGE_CURSOR_MAX_BYTES})`,
+          `limit = ${JSON.stringify(n)} is not an integer in 1..${maxLimit}`,
         );
       }
-      return { query: codec.decode(q), limit, cursor: c ?? null };
+      return {
+        query: codec.decode(q),
+        range: {
+          after: after === undefined ? null : cutOf(after, "after", reject),
+          until: until === undefined ? null : cutOf(until, "until", reject),
+          limit,
+        },
+      };
     },
   };
-}
-
-/** A cursor a page tuple can carry: non-empty, within the byte bound. */
-export function isLivePageCursor(cursor: string): boolean {
-  return cursor !== "" && utf8Bytes(cursor) <= LIVE_PAGE_CURSOR_MAX_BYTES;
 }
 
 const encoder = new TextEncoder();

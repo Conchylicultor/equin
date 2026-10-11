@@ -4,6 +4,7 @@ export {
   useMetric,
   useMetricCatalog,
   useMetricDetails,
+  useMetricDetailsTotal,
 } from "./internal/use-metric";
 export { defineBoardConfig } from "./internal/board-config";
 export type { BoardConfig } from "./internal/board-config";
@@ -37,6 +38,6 @@ export type { BoardProps } from "./components/board";
 
 export default {
   description:
-    "Metrics surfaces: useMetricCatalog / useMetric / useMetricDetails (live reads of the served metrics values — the details one a live chain of cursor pages — so a change the metric's source announces refetches what is on screen, without polling), MetricTile (KPI toggle with value, polarity-coloured delta and sparkline), MetricCard (controls derived from the catalog entry: split, daily | cumulative for flows, table twin, previous-period line on the unsplit total), BreakdownCard, RangeBar, the DrillDrawer listing the records behind a bucket, BoardView (sections of focus tiles, a lead card and a card grid, every ref checked against the catalog) and Board (a view-core tabbed board whose specs live in a config declared with defineBoardConfig).",
+    "Metrics surfaces: useMetricCatalog / useMetric / useMetricDetails / useMetricDetailsTotal (live reads of the served metrics values — the details one key-range pages, every loaded one live, and its total the per-question meta sibling — so a change the metric's source announces refetches what is on screen, without polling), MetricTile (KPI toggle with value, polarity-coloured delta and sparkline), MetricCard (controls derived from the catalog entry: split, daily | cumulative for flows, table twin, previous-period line on the unsplit total), BreakdownCard, RangeBar, the DrillDrawer listing the records behind a bucket, BoardView (sections of focus tiles, a lead card and a card grid, every ref checked against the catalog) and Board (a view-core tabbed board whose specs live in a config declared with defineBoardConfig).",
   contributions: [],
 } satisfies PluginDefinition;

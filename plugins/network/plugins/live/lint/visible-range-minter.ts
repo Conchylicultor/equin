@@ -7,8 +7,8 @@ const createRule = ESLintUtils.RuleCreator(
 /**
  * visible-range-minter
  *
- * A paged read (`useLiveCollectionPages`) keeps live the pages near its `viewport`, a
- * branded `VisibleRange`. The brand only means something if the one thing
+ * A paged read (`useLive(c, query, { viewport })`) keeps live the pages near
+ * its `viewport`, a branded `VisibleRange`. The brand only means something if the one thing
  * that MEASURES a viewport mints it: data-view, from the rows a DataView
  * draws (`useLivePagesPaging`). A range minted anywhere else is a viewport
  * nothing measures — left `measuring`, it keeps every page ever minted live
@@ -43,11 +43,14 @@ export default createRule({
     schema: [],
     messages: {
       minter:
-        "`mintVisibleRange` mints a paged read's viewport, which only a " +
-        "DataView measures. Read the pages through data-view's " +
-        "`useLivePagesPaging` and hand its `paging` to the DataView drawing " +
-        "the rows — see plugins/network/plugins/live/CLAUDE.md (Paged " +
-        "collections).",
+        "`mintVisibleRange` mints the viewport a paged read " +
+        "(`useLive(c, query, { viewport })`) keeps its pages live by, which " +
+        "only a DataView measures. Read the pages through data-view's " +
+        "`useLivePagesPaging` (it calls `useLive` with the viewport the " +
+        "DataView measures) and hand its `paging` to the DataView drawing " +
+        "the rows; a list with no DataView reads `useLive(c, query)` with no " +
+        "viewport (every page live, capped at `maxLimit`) — see " +
+        "plugins/network/plugins/live/CLAUDE.md (Paged reads).",
     },
   },
   defaultOptions: [],

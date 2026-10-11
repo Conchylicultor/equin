@@ -1,7 +1,7 @@
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import {
   useLive,
-  type LivePagesResult,
+  type LiveListResult,
 } from "@plugins/network/plugins/live/web";
 import {
   metricCatalog,
@@ -31,16 +31,23 @@ export function useMetric(query: MetricQuery): ResourceResult<MetricResult> {
   return useLive(metricQuery, query);
 }
 
-/** The first page a drawer shows before "Show all". */
-const DETAILS_PREVIEW = 5;
+/** A drawer's preview — page 0 — and the step each "Show more" grows it by. */
+export const DETAILS_STEP = 5;
 
 /**
- * The records behind one bucket (optionally one split key), paged by the
- * provider's cursor: a preview page of `DETAILS_PREVIEW`, then a page of
- * `DRILL_PAGE` per `loadMore`; `meta.total` is how many there are in all.
+ * The records behind one bucket (optionally one split key), newest first: a
+ * preview of `DETAILS_STEP`, growing by as many per `loadMore` — every loaded
+ * page live, up to the declaration's `maxLimit` (`canGrow` false there).
  */
 export function useMetricDetails(
   selector: DetailsSelector,
-): LivePagesResult<DrillItem, DrillMeta> {
-  return useLive(metricDetails, selector, { first: DETAILS_PREVIEW });
+): LiveListResult<DrillItem> {
+  return useLive(metricDetails, selector, { limit: DETAILS_STEP });
+}
+
+/** How many records the bucket holds in all (`total: null` — its metric does not count them). */
+export function useMetricDetailsTotal(
+  selector: DetailsSelector,
+): ResourceResult<DrillMeta> {
+  return useLive(metricDetails.meta, selector);
 }

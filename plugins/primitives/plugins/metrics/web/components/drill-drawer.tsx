@@ -18,15 +18,22 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { formatValue } from "@plugins/primitives/plugins/metrics/plugins/chart-kit/core";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import type { LivePagesResult } from "@plugins/network/plugins/live/web";
 import {
-  DRILL_PAGE,
-  type CatalogMetric,
-  type DrillItem,
-  type DrillMeta,
+  ResourceErrorInline,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
+import type { LiveListResult } from "@plugins/network/plugins/live/web";
+import type {
+  CatalogMetric,
+  DetailsSelector,
+  DrillItem,
+  DrillMeta,
 } from "../../core";
-import { useMetricDetails } from "../internal/use-metric";
+import {
+  DETAILS_STEP,
+  useMetricDetails,
+  useMetricDetailsTotal,
+} from "../internal/use-metric";
 import type { MetricBucket } from "./metric-card";
 
 /** One metric whose records the drawer lists, with the params its card queried with. */
@@ -51,8 +58,9 @@ export interface DrillDrawerProps {
  * The records behind one bucket, from the right edge: the bucket's label,
  * then one group per metric that declares a drill-down (the same records
  * listed once — metrics sharing a source and a drill label are one group).
- * Each group previews five and pages the rest on "Show all"; a record with a
- * link opens it.
+ * Each group previews five and pages the rest on "Show more" (up to the
+ * drill-down's cap — past it, "first N of total"); a record with a link
+ * opens it.
  */
 export function DrillDrawer({ target, onClose }: DrillDrawerProps): ReactNode {
   return (
@@ -124,12 +132,14 @@ function DrillGroup({
 }): ReactNode {
   const { metric, params } = source;
   const label = metric.drill!.label;
-  const details = useMetricDetails({
+  const selector: DetailsSelector = {
     metric: metric.id,
     interval: { start: bucket.start, end: bucket.end },
     split: null,
     params,
-  });
+  };
+  const details = useMetricDetails(selector);
+  const total = useMetricDetailsTotal(selector);
   return (
     <Stack
       gap="xs"
@@ -137,7 +147,12 @@ function DrillGroup({
       aria-label={label}
       data-drill-group={metric.id}
     >
-      <DrillGroupBody label={label} metric={metric} details={details} />
+      <DrillGroupBody
+        label={label}
+        metric={metric}
+        details={details}
+        total={total}
+      />
     </Stack>
   );
 }
@@ -147,10 +162,12 @@ function DrillGroupBody({
   label,
   metric,
   details,
+  total,
 }: {
   label: string;
   metric: CatalogMetric;
-  details: LivePagesResult<DrillItem, DrillMeta>;
+  details: LiveListResult<DrillItem>;
+  total: ResourceResult<DrillMeta>;
 }): ReactNode {
   switch (details.status) {
     case "loading":
@@ -165,14 +182,14 @@ function DrillGroupBody({
       // failure under them; a first page that failed is the failure.
       return (
         <>
-          {details.stale === undefined || details.meta === undefined ? (
+          {details.stale === undefined ? (
             <Text variant="label">{label}</Text>
           ) : (
             <DrillList
               label={label}
               metric={metric}
               items={details.stale}
-              total={details.meta.total}
+              total={total}
             />
           )}
           <ResourceErrorInline
@@ -183,29 +200,44 @@ function DrillGroupBody({
           />
         </>
       );
-    case "ready":
+    case "ready": {
+      const count = total.status === "ready" ? total.data.total : null;
+      const shown = details.data.length;
+      // A full last page may be all there is: once the total says every
+      // record is listed, there is nothing more to show.
+      const more = count === null || count > shown;
       return (
         <>
           <DrillList
             label={label}
             metric={metric}
             items={details.data}
-            total={details.meta.total}
+            total={total}
           />
-          {(details.canGrow || details.growing) && (
+          {((details.canGrow && more) || details.growing) && (
             <Button
               variant="link"
               onClick={details.loadMore}
               disabled={details.growing}
             >
-              {/* The next page completes the list: say how long it will be. */}
-              {details.meta.total <= details.data.length + DRILL_PAGE
-                ? `Show all ${details.meta.total} →`
+              {/* The next step completes the list: say how long it will be. */}
+              {count !== null && count <= shown + DETAILS_STEP
+                ? `Show all ${count} →`
                 : "Show more →"}
             </Button>
           )}
+          {/* At the cap: the list stops short of the bucket's records. */}
+          {!details.canGrow &&
+            !details.growing &&
+            count !== null &&
+            count > shown && (
+              <Text variant="caption" tone="muted">
+                {`First ${shown} of ${count}`}
+              </Text>
+            )}
         </>
       );
+    }
   }
 }
 
@@ -219,14 +251,22 @@ function DrillList({
   label: string;
   metric: CatalogMetric;
   items: readonly DrillItem[];
-  total: number;
+  total: ResourceResult<DrillMeta>;
 }): ReactNode {
   return (
     <>
-      <Text variant="label">
-        {label}
-        <Text tone="muted">{` · ${total}`}</Text>
-      </Text>
+      <Stack direction="row" gap="xs" align="center">
+        <Text variant="label">{label}</Text>
+        <DrillTotal total={total} />
+      </Stack>
+      {total.status === "error" && (
+        <ResourceErrorInline
+          variant="inline"
+          error={total.error}
+          refetch={total.refetch}
+          subject={`${label.toLowerCase()} total`}
+        />
+      )}
       {items.length === 0 && (
         <Text variant="caption" tone="muted">
           None
@@ -239,6 +279,25 @@ function DrillList({
       </Stack>
     </>
   );
+}
+
+/** The bucket's total beside the heading: pending until known — never a 0 standing in. */
+function DrillTotal({
+  total,
+}: {
+  total: ResourceResult<DrillMeta>;
+}): ReactNode {
+  switch (total.status) {
+    case "loading":
+      return <Loading variant="block" className="h-3 w-6" />;
+    case "error":
+      return null;
+    case "ready":
+      // `null`: the metric lists its records without counting them.
+      return total.data.total === null ? null : (
+        <Text tone="muted">{`· ${total.data.total}`}</Text>
+      );
+  }
 }
 
 function DrillRow({

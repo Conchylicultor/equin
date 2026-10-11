@@ -782,7 +782,7 @@ when the read failed.
 
 **A TanStack query is read through an adapter, never returned raw.** A read
 of the SERVER is live — a `liveValue` (`params`, a typed `query`, or
-cursor-`paged`) or a `liveCollection`, read with `useLive` (`network/live`),
+key-range-`paged`) or a `liveCollection`, read with `useLive` (`network/live`),
 so it refreshes itself; the `live/no-endpoint-read` lint ratchets the
 remaining request/response reads. What is left renders through the result
 vocabulary too:
@@ -800,7 +800,7 @@ fetch failed (the previous value as `stale`), `loading` while nothing landed,
 `EndpointError` 404 → `not-found`, other status → `loader-failed`). `enabled`
 is not an option — a disabled query is `loading` forever. There is no form
 keyed by another read's value (a revision tick, the hand-made freshness
-`network/live` replaced), and no paged form: a cursor-paged server read is a
+`network/live` replaced), and no paged form: a paged server read is a
 paged `liveValue`. A paged read's ready arm carries the paging handles
 (`ResourcePaging`: `canGrow` / `growing` / `loadMore` — `useLive`'s window,
 whose `LiveListResult<Row>` is `PagedResourceResult<Row>`, and its paged

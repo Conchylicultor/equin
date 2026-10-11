@@ -25,8 +25,10 @@ resources (all of Sonata's, the page editor's and links', and two data-view ones
 
 The delivery mode is read, never guessed. A keyed descriptor passed as the
 first argument is `keyed`; a `serveValue` is `push`, or `invalidate` when its
-`liveValue` declares `load: "on-demand"`; `serveCollection`'s `:groups` is
-`push`. Everything else is an old form (`defineResource` /
+`liveValue` declares `load: "on-demand"` — except a `paged` value's, whose
+pages are `keyed` (a window) and whose `:meta` sibling (declared `paged.meta`)
+is `push`, as the vocabulary's `liveValue` mints say; `serveCollection`'s
+`:groups` is `push`. Everything else is an old form (`defineResource` /
 `defineExternalResource`) — the flat form, or the two-arg form over a non-keyed
 descriptor — and must show a literal `mode:` in its options object (read at
 that object's own depth, so a loader's object literal never counts). The runtime

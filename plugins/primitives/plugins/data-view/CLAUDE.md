@@ -772,14 +772,18 @@ A live `source` pages its own read. A consumer that must derive its rows in
 memory from a paged read — the conversation Queue, whose Done section is the
 `conversations-gone` pages merged with ranked/active rows — passes
 `paging={…}` beside `rows` (`DataViewPaging`; `useLivePagesPaging(c, query,
-{ resetKey? })` reads the collection as live pages and hands back the read and
-its paging together). Both reach the body as one `paging`, so the footer
-(loading-more, Retry, the stop line), the notices, the hold and the viewport
-are one code path.
+{ resetKey? })` reads the collection as live pages — `network/live`'s
+`useLive(c, query, { viewport, resetKey })`, with the viewport it mints — and
+hands back the read and its paging together). Both reach the body as one
+`paging`, so the footer (loading-more, Retry, the stop line), the notices, the
+hold and the viewport are one code path. It takes a scroll collection only: a
+key-range-paged `liveValue` reads through the same `useLive` pages, but a
+DataView source over one needs the filterable and text-column seams a value
+does not have (task-1791593959-9liyj7).
 
 ```ts
 const { pages, paging } = useLivePagesPaging(conversationsGone, {}); // data-view web
-// pages: network/live's LiveCollectionPagesResult; paging: null until it is ready
+// pages: network/live's LivePagesResult; paging: null until it is ready
 <DataView rows={rows} paging={paging === null ? undefined : { ...paging, isPaged }} … />
 ```
 
@@ -787,7 +791,7 @@ const { pages, paging } = useLivePagesPaging(conversationsGone, {}); // data-vie
   it has on screen and reports each paged read's share to its sink, in the
   read's own order (`DataViewVisibleRows`: the first and last of its rows on
   screen, or `none`); the internal `usePagesViewport` turns the reports into
-  the branded `VisibleRange` `useLiveCollectionPages` keeps its pages live by — the only
+  the branded `VisibleRange` `useLive` keeps its pages live by — the only
   place one is minted (`live/visible-range-minter` lint; data-view's
   sanctioned exemption). `useLivePagesPaging` mints the viewport and the
   paging together, so a read cannot page by a viewport nothing measures: hand
@@ -822,7 +826,7 @@ const { pages, paging } = useLivePagesPaging(conversationsGone, {}); // data-vie
     away are not on screen, so their pages release.
 
 - **Placeholders (`paging.placeholders`, required).** A paged read's pages
-  past its stale budget (`network/live`, *Paged collections*) are
+  past its stale budget (`network/live`, *Paged reads*) are
   `{ before, after }` lists of `DataViewPagePlaceholder` (`{ key, rows }`) —
   never rows, never between two rows. The body draws them
   (`web/components/page-placeholders.tsx`): one element per page, through
@@ -1877,7 +1881,7 @@ stand-in (`rows={[]}` beside a server origin) cannot be spelled:
 - `{ rows; loading?; rowKey }` — in memory;
 - `{ source }` — a live collection (`liveDataSource`, web; its types are
   core's), read as
-  `network/live`'s key-range pages (`useLiveCollectionPages`), kept live by the rows on
+  `network/live`'s key-range pages (`useLive`), kept live by the rows on
   screen (*Paging* above). It refuses `rowKey` (the
   row key is the collection's `id`, the one the runtime keys its deltas by),
   `hierarchy` (a tree over a paged set orphans children), `manualOrder` (a rank
@@ -2019,7 +2023,7 @@ export const threadsSource = liveDataSource(mailThreads, { searchable: ["subject
   `error` arm a `readiness` read fails with (`resolveBodyState` → `errorState`,
   else `ResourceErrorInline`: Retry, or Reload for an out-of-date tab), so a
   live list fails exactly as a resource-backed one does; a failure paging stopped on
-  (`LiveCollectionPageError.blocksPaging` — the last page's, or one holding the read short
+  (`LivePageError.blocksPaging` — the last page's, or one holding the read short
   of its end) in the footer (its own Retry — `useInfiniteScroll`'s `retry`,
   never the next page); any other page's error as one notice above the rows
   ("Rows after ‹row› could not refresh — Retry"), keyed by the failing read. A
@@ -2271,10 +2275,10 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 80 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 79 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×11
     - `primitives/data-view/view-core` ×8
-    - `network/live` ×6
+    - `network/live` ×5
     - `primitives/live-state` ×5
     - `primitives/css/control-panel` ×4
     - `primitives/slot-render` ×4

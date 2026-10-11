@@ -4,9 +4,9 @@ import {
   Resource as ResourceContribution,
 } from "@plugins/framework/plugins/server-core/core";
 import type {
-  LivePage,
+  LivePagedParams,
+  LivePagedPages,
   LivePagedValue,
-  LivePageParams,
   LivePreloadedParamValue,
   LiveQueryParams,
   LiveQueryValue,
@@ -14,6 +14,7 @@ import type {
 } from "@plugins/network/plugins/live/core";
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import {
+  registerPagedOf,
   registerValueOf,
   type AnyServeOptions,
   type ExternalServed,
@@ -67,13 +68,18 @@ export type ServedExternalQueryValue<T, Q> = ServedValue<T, LiveQueryParams> & {
 };
 
 /**
- * A served paged value (always external): `notify(query)` recomputes every
- * page of that question a tab holds right now.
+ * A served paged value (always external): its pages' resource, and
+ * `notify(query)` recomputing every page of that question a tab holds right
+ * now and its meta. `keys` and `declare` name both resources (`[key,
+ * key:meta]` when declared `paged.meta`) — spread `declare` like a
+ * collection's.
  */
-export type ServedPagedValue<Item, Meta, Q> = ServedValue<
-  LivePage<Item, Meta>,
-  LivePageParams
+export type ServedPagedValue<Item, Q> = ServedValueBase<
+  Item[],
+  LivePagedParams
 > & {
+  source: "external";
+  declare: ReturnType<typeof ResourceContribution.Declare>[];
   notify(query: Q): void;
 };
 
@@ -115,8 +121,10 @@ interface PreloadParamsOption<P> {
  *
  * A typed-query value's options take the DECODED question (`loader(query)`,
  * `whileSubscribed(query, notify)`, `notify(query)`); a paged value's loader is
- * asked one page — `loader(query, { cursor, limit })` → `{ items, nextCursor,
- * meta }` — and it is external only (a paged `"db"` value is a tsc error):
+ * asked one key range — `loader(query, { after, until, limit })` → the items
+ * in it, in key order (`sliceRange` answers it for a list held in memory) —
+ * its meta sibling `meta(query)`, and it is external only (a paged `"db"`
+ * value is a tsc error):
  *
  * ```ts
  * export const metricQueryServed = serveValue(metricQuery, {
@@ -126,7 +134,8 @@ interface PreloadParamsOption<P> {
  * });
  * export const detailsServed = serveValue(metricDetails, {
  *   source: "external",
- *   loader: (q, { cursor, limit }) => page(q, cursor, limit),
+ *   loader: (q, range) => details(q, range),
+ *   meta: (q) => ({ total: count(q) }),
  * });
  * ```
  */
@@ -139,7 +148,7 @@ export function serveValue<
 >(
   value: LivePagedValue<Item, Meta, Q, QIn>,
   opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R>,
-): ServedPagedValue<Item, Meta, Q>;
+): ServedPagedValue<Item, Q>;
 export function serveValue<
   T,
   Q,
@@ -197,11 +206,28 @@ export function serveValue<
   },
 ): ServedExternalValue<T, P>;
 export function serveValue<T, P extends Record<string, string>>(
-  value: LiveValue<T, P> & { preloadsParams?: true; query?: unknown },
+  value:
+    | (LiveValue<T, P> & {
+        preloadsParams?: true;
+        query?: unknown;
+        paged?: unknown;
+      })
+    // biome-ignore lint/suspicious/noExplicitAny: a generic item's schema is invariant — erased, as page-source's `AnyPagedValue` is.
+    | LivePagedPages<any, any, any>,
   opts: AnyServeOptions & {
     preloadParams?: () => P[] | Promise<P[]>;
   },
-): ServedValue<T, P> | ServedExternalValue<T, P> {
+):
+  | ServedValue<T, P>
+  | ServedExternalValue<T, P>
+  | ServedPagedValue<unknown, unknown> {
+  // A paged value's pages are the one keyed value (a keyed window each).
+  if (value.keyed !== undefined) {
+    return servePaged(
+      value as unknown as LivePagedValue<unknown, unknown, unknown, unknown>,
+      opts,
+    );
+  }
   // The pairing tsc enforces, for an untyped caller: a param'd preloaded value
   // names its boot tuples, and nothing else may.
   if ((value.preloadsParams === true) !== (opts.preloadParams !== undefined)) {
@@ -274,14 +300,14 @@ export function serveValue<T, P extends Record<string, string>>(
     ] as [ReturnType<typeof ResourceContribution.Declare>],
   };
   if ("notify" in resource && compiled.external) {
-    const queried = (value as { query?: unknown }).query !== undefined;
+    const queried = value.query !== undefined;
     const served: ServedExternalValue<T, P> = {
       ...base,
       // Only the params: `affectedIds` is a keyed concept. The runtime
       // canonicalizes them, so a notify reaches the tuple a read subscribed
       // however an absent optional param is spelled (`undefined`, `""`, left out).
-      // A query or paged value is notified by its QUESTION, which reaches the
-      // tuples the codec spells it as (every subscribed page, for a paged one).
+      // A query value is notified by its QUESTION, which reaches the one
+      // tuple the codec spells it as.
       notify: queried
         ? (query?: unknown) => {
             for (const tuple of compiled.tuplesOf(query))
@@ -296,4 +322,52 @@ export function serveValue<T, P extends Record<string, string>>(
   // change feed alone — so the db arm has no `notify`, at runtime too.
   const served: ServedValue<T, P> = base;
   return served;
+}
+
+/**
+ * A paged value: its pages and — declared `paged.meta` — its meta sibling,
+ * registered together over one per-question lifecycle (`registerPagedOf`).
+ */
+function servePaged(
+  value: LivePagedValue<unknown, unknown, unknown, unknown>,
+  opts: AnyServeOptions & { preloadParams?: unknown },
+): ServedPagedValue<unknown, unknown> {
+  if (opts.preloadParams !== undefined) {
+    // Unreachable from typed code (a paged value is never preloaded).
+    throw new Error(
+      `serveValue("${value.key}"): a paged value is never preloaded — no \`preloadParams\`.`,
+    );
+  }
+  const { resource, compiled, meta } = registerPagedOf(
+    { defineResource, defineExternalResource },
+    value,
+    opts,
+  );
+  const declarations = [
+    ResourceContribution.Declare({ key: resource.key, mode: resource.mode }),
+    ...(meta === null
+      ? []
+      : [
+          ResourceContribution.Declare({
+            key: meta.resource.key,
+            mode: meta.resource.mode,
+          }),
+        ]),
+  ];
+  return {
+    key: resource.key,
+    mode: resource.mode,
+    schema: resource.schema,
+    load: (params: LivePagedParams) => resource.load(params),
+    source: "external",
+    keys: [value.key, ...(meta === null ? [] : [meta.resource.key])],
+    declare: declarations,
+    notify(query: unknown) {
+      for (const tuple of compiled.tuplesOf(query)) resource.notify(tuple);
+      if (meta === null) return;
+      for (const tuple of meta.compiled.tuplesOf(query)) {
+        meta.resource.notify(tuple);
+      }
+    },
+  };
 }

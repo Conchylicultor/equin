@@ -7,7 +7,7 @@ import type { DataViewViewportSink, DataViewVisibleRows } from "../../core";
 
 /**
  * The viewport a paged read pages by, measured by a DataView: `viewport` is
- * what `useLiveCollectionPages` takes, `sink` is what the read's paging hands the
+ * what `useLive` takes, `sink` is what the read's paging hands the
  * DataView (`DataViewPaging.viewport`) to report the rows it has on screen.
  * `measuring` until the first report, so nothing is released before the rows
  * were ever drawn. The only place a `VisibleRange` is minted (the

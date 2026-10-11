@@ -402,8 +402,9 @@ function literalMode(
 /**
  * A `serveValue(value, { source, loader, unbounded? })` call: a value is pushed
  * (`push`) unless its DECLARATION opts into `load: "on-demand"` (the runtime's
- * `invalidate` — see {@link DescriptorInfo.onDemand}), is never keyed and has
- * no membership. `source` and the
+ * `invalidate` — see {@link DescriptorInfo.onDemand}); a paged value's pages
+ * are a keyed window (the vocabulary's `liveValue` mints), served `keyed`
+ * whatever the options say, and its `:meta` sibling a push value. `source` and the
  * `unbounded.reason` are recorded as written. Every field is read at the
  * options object's own depth, so an inline loader's object literal (which may
  * well have a `source` or a `reason` of its own) is never mistaken for one.
@@ -415,10 +416,13 @@ function servedValueDef(
   argsText: string,
   where: { file: string; line: number },
 ): ResourceDef {
-  const def: ResourceDef = {
-    key: info.key,
-    mode: info.onDemand ? "invalidate" : "push",
-  };
+  const def: ResourceDef = info.keyed
+    ? {
+        key: info.key,
+        mode: "keyed",
+        ...(info.membership ? { membership: info.membership } : {}),
+      }
+    : { key: info.key, mode: info.onDemand ? "invalidate" : "push" };
   const masked = maskSource(argsText);
   // The first argument is an identifier, so the first `{` opens the options.
   const optsBody = objectBodyAt(argsText, masked, masked.indexOf("{"));

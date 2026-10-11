@@ -82,7 +82,6 @@ export {
   DetailsSelectorSchema,
   DrillMetaSchema,
   DrillItemSchema,
-  DrillPageSchema,
   EntityLinkSchema,
   IntervalSchema,
   MetricQuerySchema,
@@ -101,7 +100,6 @@ export type {
   DetailsSelector,
   DrillMeta,
   DrillItem,
-  DrillPage,
   EntityLink,
   MetricQuery,
   MetricResult,
@@ -123,4 +121,4 @@ export type {
   CardRef,
   MetricRef,
 } from "./board";
-export { DRILL_PAGE, metricCatalog, metricDetails, metricQuery } from "./live";
+export { metricCatalog, metricDetails, metricQuery } from "./live";

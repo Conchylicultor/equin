@@ -43,7 +43,7 @@ typed reason a display is illegal.
 ```ts
 MetricsServer.Source({
   source: costSource,
-  metrics: [serveMetric(spend, { evaluate, details })],
+  metrics: [serveMetric(spend, { evaluate, details, detailsTotal })],
   breakdowns: [serveBreakdown(top, { evaluate })],
   changes: (bump) => onCostRefreshed(bump),   // → unsubscribe
 });
@@ -53,7 +53,17 @@ MetricsServer.Source({
   one row when `split` is null), each with one value per interval. `null` means
   *not covered* and is drawn as a gap — never write 0 for "no data yet".
 - `serveMetric` / `serveBreakdown` type the evaluator against the declaration's
-  own params. The registry throws at first read on a duplicate source or id, a
+  own params.
+- **Drill-down:** `details({ interval, split, params, range })` answers ONE key
+  range of the bucket's records — newest first, by `at` then `id`: the records
+  strictly after `range.after`, up to and including `range.until`, at most
+  `range.limit` (network/live's `sliceRange` answers it for a list held in
+  memory; `checkPagedSource` from `network/live/server/testing` holds a
+  provider to it). A cut is a position, not a record: it stays valid after its
+  record is gone. `at` is UTC at exactly millisecond precision
+  (`Date#toISOString`), so its text order is time order. The optional
+  `detailsTotal({ interval, split, params })` counts them; without it the
+  total is `null` (not counted), never 0. The registry throws at first read on a duplicate source or id, a
   metric contributed under another source, or `drill` without `details` (or
   the reverse).
 - **SQL-backed metrics:** `sqlFlow({ db, from, time, agg, where?, splits?, empty? })`
@@ -64,9 +74,10 @@ MetricsServer.Source({
   median or ratio.
 - **Freshness:** a source's `changes` → one refcounted watch per source
   (`server/internal/source-watch.ts`) → each held tuple's `notify`. Every
-  served query and drill-down page watches its metric's source while a tab
-  holds it (`whileSubscribed`); the first starts `changes`, a change refetches
-  all of them (throttled, 1 s), and the last release stops it. Nothing watches
+  served query and drill-down watches its metric's source while a tab holds
+  it (`whileSubscribed` — once per drill-down QUESTION, however many of its
+  pages and its total are held); the first starts `changes`, a change
+  refetches all of them (throttled, 1 s), and the last release stops it. Nothing watches
   between spans, and nothing needs to — the runtime opens every subscription
   span with a fresh version. No revision tick, no polling.
 
@@ -95,16 +106,21 @@ reads against one total, so the pair has no spelling.
 - `metrics.query` — a typed-query value: a `MetricQuery` → `MetricResult`
   (`series` for a metric, `breakdown` for a breakdown). On-demand: each tab
   refetches after a change.
-- `metrics.details` — a cursor-paged value over a `DetailsSelector` (metric,
-  interval, split, params): the records behind one bucket (optionally one
-  split key), paged by the provider's own cursor, `meta.total` the bucket's
-  count. The provider's `details` still returns a `DrillPage`
-  (`{ items, total, nextCursor }`); the served loader maps it.
+- `metrics.details` — a key-range-paged value over a `DetailsSelector`
+  (metric, interval, split, params): the records behind one bucket (optionally
+  one split key), cut at each record's `[at]` (desc, then id), pages of 50 up
+  to 500 records. Each page is a keyed window: a source change re-reads the
+  live pages and ships each one's keyed delta (pushed — a paged value has no
+  `load`). Its per-question sibling `metricDetails.meta`
+  (`metrics.details:meta`) is the bucket's total (`{ total: number | null }`),
+  refreshed by the same source watch.
 
-`web/internal/use-metric.ts`: `useMetricCatalog()`, `useMetric(query)` and
-`useMetricDetails(selector)` (a 5-record preview, then pages of `DRILL_PAGE`)
-are `useLive` reads — the query names its metric, and the server resolves the
-source. Unknown ids, splits and params, a bad range, and details on a metric
+`web/internal/use-metric.ts`: `useMetricCatalog()`, `useMetric(query)`,
+`useMetricDetails(selector)` (a `DETAILS_STEP` = 5-record preview, growing by
+5 per "Show more", every loaded page live, capped at 500 — the drawer reads
+"First N of total" there) and `useMetricDetailsTotal(selector)` (pending until
+known, never 0) are `useLive` reads — the query names its metric, and the
+server resolves the source. Unknown ids, splits and params, a bad range, and details on a metric
 without them are a `MetricQueryError` — a `ResourceRefusal` — naming the
 problem: the card's error arm shows that message (`refused`), and nothing is
 reported as a server failure.
@@ -120,11 +136,12 @@ selected tile and the table toggle are device-local, never part of the spec.
 
 ## Plugin reference
 
-- Description: Metrics surfaces: useMetricCatalog / useMetric / useMetricDetails (live reads of the served metrics values — the details one a live chain of cursor pages — so a change the metric's source announces refetches what is on screen, without polling), MetricTile (KPI toggle with value, polarity-coloured delta and sparkline), MetricCard (controls derived from the catalog entry: split, daily | cumulative for flows, table twin, previous-period line on the unsplit total), BreakdownCard, RangeBar, the DrillDrawer listing the records behind a bucket, BoardView (sections of focus tiles, a lead card and a card grid, every ref checked against the catalog) and Board (a view-core tabbed board whose specs live in a config declared with defineBoardConfig). Metrics engine: the MetricsServer.Source contribution (a source's metrics and breakdowns bound to their evaluators), the served metrics.catalog / metrics.query / metrics.details live values evaluating any of them through the one tz-aware bucketing engine — each query and drill-down page watching its source's `changes` through one refcounted subscription per source — and the sqlFlow / sqlLevel helpers joining a table against the engine's intervals.
+- Description: Metrics surfaces: useMetricCatalog / useMetric / useMetricDetails / useMetricDetailsTotal (live reads of the served metrics values — the details one key-range pages, every loaded one live, and its total the per-question meta sibling — so a change the metric's source announces refetches what is on screen, without polling), MetricTile (KPI toggle with value, polarity-coloured delta and sparkline), MetricCard (controls derived from the catalog entry: split, daily | cumulative for flows, table twin, previous-period line on the unsplit total), BreakdownCard, RangeBar, the DrillDrawer listing the records behind a bucket, BoardView (sections of focus tiles, a lead card and a card grid, every ref checked against the catalog) and Board (a view-core tabbed board whose specs live in a config declared with defineBoardConfig). Metrics engine: the MetricsServer.Source contribution (a source's metrics and breakdowns bound to their evaluators), the served metrics.catalog / metrics.query / metrics.details live values evaluating any of them through the one tz-aware bucketing engine — each query and drill-down (its key-range pages and its total) watching its source's `changes` through one refcounted subscription per source — and the sqlFlow / sqlLevel helpers joining a table against the engine's intervals.
 - Server:
   - Contributes:
     - `resource.declare` "metrics.catalog"
     - `resource.declare` "metrics.details"
+    - `resource.declare` "metrics.details:meta"
     - `resource.declare` "metrics.query"
   - Uses:
     - `network/live.serveValue`
@@ -132,7 +149,9 @@ selected tile and the table toggle are device-local, never part of the spec.
   - Exports (types):
     - `BreakdownImpl`
     - `DetailsCtx`
+    - `DetailsScope`
     - `MetricDetails`
+    - `MetricDetailsTotal`
     - `MetricImpl`
     - `SourceImpl`
     - `SqlFlowSpec`
@@ -147,7 +166,8 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `sqlLevel`
   - Resources:
     - `metrics.catalog` (push)
-    - `metrics.details` (invalidate)
+    - `metrics.details` (keyed, window)
+    - `metrics.details:meta` (push)
     - `metrics.query` (invalidate)
 - Web:
   - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
@@ -203,6 +223,7 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `useMetric`
     - `useMetricCatalog`
     - `useMetricDetails`
+    - `useMetricDetailsTotal`
 - Core:
   - Uses:
     - `network/live.liveValue`
@@ -232,7 +253,6 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `DisplayError`
     - `DrillItem`
     - `DrillMeta`
-    - `DrillPage`
     - `EngineQuery`
     - `EntityLink`
     - `EvaluateCtx`
@@ -284,10 +304,8 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `DetailsSelectorSchema`
     - `DISPLAY_CHARTS`
     - `displayError`
-    - `DRILL_PAGE`
     - `DrillItemSchema`
     - `DrillMetaSchema`
-    - `DrillPageSchema`
     - `EntityLinkSchema`
     - `enumOf`
     - `evaluateBreakdown`

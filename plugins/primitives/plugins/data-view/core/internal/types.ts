@@ -1361,7 +1361,7 @@ export interface DataViewViewportSink {
 /**
  * The paging state of a read whose loaded rows a DataView shows — see
  * {@link DataViewInMemoryOrigin.paging}. A live `source` produces one
- * internally; `pagesPaging` maps a `useLiveCollectionPages` read onto it.
+ * internally; `pagesPaging` maps a `useLive` read onto it.
  */
 export interface DataViewPaging<TRow> {
   /** A next page would add rows. */

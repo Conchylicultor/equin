@@ -16,3 +16,8 @@ export { compileUnion } from "../internal/serve-union";
 // The P8 conversions (`task-categories`, `tasks`) run it against their real keys.
 export { subscribeAsOldDescriptor } from "./old-subscription";
 export type { OldDescriptor, OldSubscription } from "./old-subscription";
+// A paged value's source against its contract: every range over the keys it
+// holds (and the cuts of rows it held) answered exactly as `sliceRange` does,
+// and passing the served half's own checks — for a source's own suite.
+export { checkPagedSource } from "./check-paged-source";
+export type { PagedSourceCheck } from "./check-paged-source";

@@ -28,6 +28,7 @@ const fake = vi.hoisted(() => ({
   catalog: PENDING as unknown,
   answers: {} as Record<string, unknown>,
   details: {} as Record<string, unknown>,
+  totals: {} as Record<string, unknown>,
   queries: [] as { query: unknown }[],
 }));
 vi.mock("../internal/use-metric", () => ({
@@ -38,6 +39,9 @@ vi.mock("../internal/use-metric", () => ({
   },
   useMetricDetails: (selector: { metric: string }) =>
     fake.details[selector.metric] ?? PENDING,
+  useMetricDetailsTotal: (selector: { metric: string }) =>
+    fake.totals[selector.metric] ?? PENDING,
+  DETAILS_STEP: 5,
 }));
 
 import {
@@ -64,6 +68,7 @@ afterEach(() => {
   fake.catalog = PENDING;
   fake.answers = {};
   fake.details = {};
+  fake.totals = {};
   fake.queries = [];
   nav.navigate.mockClear();
 });
@@ -254,12 +259,11 @@ describe("BoardView", () => {
           link: { href: "/tasks/t1" },
         },
       ]),
-      meta: { total: 7 },
       canGrow: true,
       growing: false,
-      truncated: false,
       loadMore: vi.fn(),
     };
+    fake.totals["tasks.completed"] = ok({ total: 4 });
     renderBoard(focusSpec);
 
     const hit = card("tasks.completed").querySelector("[data-hit]")!;
@@ -270,10 +274,73 @@ describe("BoardView", () => {
     expect(within(drawer).getByText("Sep 1")).toBeTruthy();
     const group = drawer.querySelector('[data-drill-group="tasks.completed"]')!;
     expect(group.textContent).toContain("Completed tasks");
-    expect(group.textContent).toContain("7");
-    expect(within(group as HTMLElement).getByText("Show all 7 →")).toBeTruthy();
+    expect(group.textContent).toContain("· 4");
+    // One more step (5) holds every record: the button says how many.
+    expect(within(group as HTMLElement).getByText("Show all 4 →")).toBeTruthy();
     fireEvent.click(within(group as HTMLElement).getByText("Fix the rail"));
     expect(nav.navigate).toHaveBeenCalledWith("/tasks/t1");
+  });
+
+  it('a drawer at its cap reads "first N of total"; a total not known yet is pending, never 0', () => {
+    fake.catalog = ok(catalog);
+    fake.answers["tasks.completed"] = series([1, 2, 3], 6, 3);
+    fake.answers["tasks.open"] = series([4, 5, 6], 6, 8);
+    fake.details["tasks.completed"] = {
+      ...ok([
+        { id: "t1", title: "Fix the rail", at: "2026-09-01T10:00:00.000Z" },
+      ]),
+      canGrow: false,
+      growing: false,
+      loadMore: vi.fn(),
+    };
+    fake.totals["tasks.completed"] = ok({ total: 900 });
+    renderBoard(focusSpec);
+    const hit = card("tasks.completed").querySelector("[data-hit]")!;
+    fireEvent.pointerMove(hit, { clientX: 1 });
+    fireEvent.click(hit);
+    let group = screen
+      .getByRole("dialog")
+      .querySelector('[data-drill-group="tasks.completed"]')!;
+    expect(group.textContent).toContain("First 1 of 900");
+    expect(group.textContent).not.toContain("Show");
+
+    cleanup();
+    fake.totals = {};
+    renderBoard(focusSpec);
+    const again = card("tasks.completed").querySelector("[data-hit]")!;
+    fireEvent.pointerMove(again, { clientX: 1 });
+    fireEvent.click(again);
+    group = screen
+      .getByRole("dialog")
+      .querySelector('[data-drill-group="tasks.completed"]')!;
+    expect(group.textContent).not.toContain("·");
+    expect(group.textContent).not.toContain("First");
+  });
+
+  it("a full last page holding every record the total counts offers no more", () => {
+    fake.catalog = ok(catalog);
+    fake.answers["tasks.completed"] = series([1, 2, 3], 6, 3);
+    fake.answers["tasks.open"] = series([4, 5, 6], 6, 8);
+    fake.details["tasks.completed"] = {
+      ...ok([
+        { id: "t1", title: "Fix the rail", at: "2026-09-01T10:00:00.000Z" },
+      ]),
+      // The page is full, so the read cannot tell it is the end.
+      canGrow: true,
+      growing: false,
+      loadMore: vi.fn(),
+    };
+    fake.totals["tasks.completed"] = ok({ total: 1 });
+    renderBoard(focusSpec);
+    const hit = card("tasks.completed").querySelector("[data-hit]")!;
+    fireEvent.pointerMove(hit, { clientX: 1 });
+    fireEvent.click(hit);
+    const group = screen
+      .getByRole("dialog")
+      .querySelector('[data-drill-group="tasks.completed"]')!;
+    expect(group.textContent).toContain("· 1");
+    expect(group.textContent).not.toContain("Show");
+    expect(group.textContent).not.toContain("First");
   });
 
   it("shows the outline rail only once there are two sections", () => {

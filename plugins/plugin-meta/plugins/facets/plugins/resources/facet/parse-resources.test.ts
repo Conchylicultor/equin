@@ -462,6 +462,40 @@ describe("resolveRegisterCall", () => {
     ]);
   });
 
+  it("serves a paged value's pages as a keyed window and its :meta sibling as push", () => {
+    const valueIndex = new Map<string, DescriptorInfo[]>([
+      [
+        "details",
+        [
+          { key: "metrics.details", keyed: true, membership: "window" },
+          { key: "metrics.details:meta", keyed: false, membership: null },
+        ],
+      ],
+    ]);
+    expect(
+      resolveRegisterCall(
+        "serveValue",
+        `details, {
+          source: "external",
+          loader: (q, range) => readItems(q, range),
+          meta: (q) => ({ total: count(q) }),
+        }`,
+        bound("details"),
+        valueIndex,
+        where,
+        NOTHING_IMPORTED,
+      ),
+    ).toEqual([
+      {
+        key: "metrics.details",
+        mode: "keyed",
+        membership: "window",
+        source: "external",
+      },
+      { key: "metrics.details:meta", mode: "push", source: "external" },
+    ]);
+  });
+
   it("reads a serveValue through its lifecycle / recompute options, which carry lookalike fields", () => {
     const valueIndex = new Map<string, DescriptorInfo[]>([
       [

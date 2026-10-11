@@ -23,7 +23,11 @@
  *   - a view answered for another client's derivation adopts nothing;
  *   - the `makeClientView` convergence property under random interleavings of
  *     writes, plain and derived subs (heads, tails, merges), unsubs and
- *     flush timing: every subscribed view equals a fresh load of its tuple.
+ *     flush timing: every subscribed view equals a fresh load of its tuple;
+ *   - all of it again over an EXTERNAL keyed window (never routed): a
+ *     `notify` ships a keyed delta, a head and a merge derive from the
+ *     pages the server holds, a busy source falls back, and the same
+ *     convergence property holds under random notifies.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -867,6 +871,247 @@ describe("seeded derivation — convergence under random interleavings", () => {
       // Both paths were exercised.
       expect(derived).toBeGreaterThan(0);
       expect(fellBack).toBeGreaterThan(0);
+    });
+  }
+});
+
+/**
+ * The same pages over an EXTERNAL source (D31: never routed, but keyed — the
+ * runtime's `ExternalWindowPolicy`, which `network/live` compiles a paged
+ * value's pages to): no table and no routes, the change arriving as the
+ * resource's own `notify(tuple)` of every live page, which re-reads the tuple
+ * whole and diffs it by key (`drainMembershipFull`). So a change ships keyed
+ * `delta` frames, and a page derives from the pages the server holds exactly
+ * as a routed window's does.
+ */
+function externalPagesHarness(o: { sockets?: number } = {}) {
+  const table = new Map<string, number>();
+  const sorted = (): Row[] =>
+    [...table.entries()]
+      .map(([id, n]) => ({ id, n }))
+      .sort((a, b) => (keyOfRow(a) < keyOfRow(b) ? -1 : 1));
+  const truth = (p: ResourceParams): Row[] => {
+    const r = rangeOf(p);
+    return sorted()
+      .filter((row) => inRange(r, row))
+      .slice(0, r.limit);
+  };
+  const loads: string[] = [];
+  const h = createHarness({ sockets: o.sockets ?? 1 });
+  const resource = h.runtime.defineExternalResource(
+    {
+      key: KEY,
+      schema: z.array(z.object({ id: z.string(), n: z.number() })),
+      keyed: { keyOf: (r: unknown) => (r as Row).id },
+      validateParams: () => {},
+    },
+    {
+      membership: {
+        kind: "window",
+        limitOf: (p: ResourceParams) => Number(p.limit),
+        familyOf,
+      },
+      loader: (p) => {
+        loads.push(JSON.stringify(p));
+        return truth(p);
+      },
+    },
+  );
+  /** A change to the source: its truth moves, and every live page is told. */
+  const write = (views: Views, op: "I" | "U" | "D", id: string, n?: number) => {
+    if (op === "D") table.delete(id);
+    else table.set(id, n!);
+    for (const p of views.subscribed()) resource.notify(p);
+  };
+  return { h, table, truth, loads, write };
+}
+
+describe("seeded derivation — an external keyed window (never routed)", () => {
+  test("a notify re-reads the page and ships a keyed delta, never the whole value", async () => {
+    const { h, table, truth, loads, write } = externalPagesHarness();
+    seed(table, 6);
+    const views = new Views(h);
+    const page = paramsOf({ after: null, until: null, limit: 4 });
+    views.send(page);
+    await settle();
+    expect(views.view(page)!.value).toEqual(truth(page));
+
+    const framesAt = h.frames.length;
+    const loadsAt = loads.length;
+    write(views, "I", "x", 15); // an entrant, squeezing r3 out
+    await settle();
+    const sent = h.frames.slice(framesAt).filter((f) => f.key === KEY);
+    expect(sent.map((f) => f.kind)).toEqual(["delta"]);
+    expect(sent[0]!.upserts).toEqual([["x", { id: "x", n: 15 }]]);
+    expect(sent[0]!.order).toEqual(["r0", "r1", "x", "r2"]);
+    expect(loads.slice(loadsAt)).toEqual([JSON.stringify(page)]);
+    expect(views.view(page)!.value).toEqual(truth(page));
+
+    // An in-place change to a member: one upsert, no order.
+    write(views, "U", "r1", 11);
+    await settle();
+    const last = h.pushesFor(KEY).at(-1)!;
+    expect(last.kind).toBe("delta");
+    expect(last.upserts).toEqual([["r1", { id: "r1", n: 11 }]]);
+    expect(views.view(page)!.value).toEqual(truth(page));
+  });
+
+  test("a loadMore-shaped head is derived from a page the server holds: no load, a value-less sub-ack, later changes as deltas", async () => {
+    const { h, table, truth, loads, write } = externalPagesHarness();
+    seed(table, 6);
+    const views = new Views(h);
+    const tail = paramsOf({ after: null, until: null, limit: 3 });
+    views.send(tail);
+    await settle();
+
+    const loadsAt = loads.length;
+    const framesAt = h.frames.length;
+    const head = paramsOf({
+      after: null,
+      until: keyOfRow({ id: "r2", n: 20 }),
+      limit: 6,
+    });
+    const sent = views.send(head, {
+      slices: [{ params: tail, after: null, until: "r2" }],
+    });
+    await settle();
+    const ack = subAckOf(h, head, framesAt)!;
+    expect("value" in ack).toBe(false);
+    expect(ack.derived).toEqual({ id: sent!.id });
+    expect(loads.slice(loadsAt)).toEqual([]);
+    expect(views.view(head)!.value).toEqual(truth(head));
+    expect((await debugOf(h)).derivedSubs).toBe(1);
+
+    views.unsub(tail);
+    await settle();
+    write(views, "I", "x", 5);
+    write(views, "D", "r0");
+    await settle();
+    expect(views.view(head)!.value).toEqual(truth(head));
+    expect(h.pushesFor(KEY).filter((f) => f.kind === "update")).toEqual([]);
+  });
+
+  test("a merge of two external pages loads nothing", async () => {
+    const { h, table, truth, loads } = externalPagesHarness();
+    seed(table, 4);
+    const views = new Views(h);
+    const cut = keyOfRow({ id: "r1", n: 10 });
+    const a = paramsOf({ after: null, until: cut, limit: 4 });
+    const b = paramsOf({ after: cut, until: null, limit: 4 });
+    views.send(a);
+    views.send(b);
+    await settle();
+    const loadsAt = loads.length;
+    const merged = paramsOf({ after: null, until: null, limit: 8 });
+    views.send(merged, {
+      slices: [
+        { params: a, after: null, until: null },
+        { params: b, after: null, until: null },
+      ],
+    });
+    views.unsub(a);
+    views.unsub(b);
+    await settle();
+    expect(loads.slice(loadsAt)).toEqual([]);
+    expect(views.view(merged)!.value).toEqual(truth(merged));
+  });
+
+  test("a source with a notify pending is not quiescent: the sub falls back to a load", async () => {
+    const { h, table, truth, write } = externalPagesHarness();
+    seed(table, 6);
+    const views = new Views(h);
+    const tail = paramsOf({ after: null, until: null, limit: 3 });
+    views.send(tail);
+    await settle();
+    const head = paramsOf({
+      after: null,
+      until: keyOfRow({ id: "r2", n: 20 }),
+      limit: 6,
+    });
+    write(views, "U", "r0", 1);
+    views.send(head, { slices: [{ params: tail, after: null, until: "r2" }] });
+    await settle();
+    expect((await debugOf(h)).deriveFallbacks).toEqual({ "source-busy": 1 });
+    expect(views.view(head)!.value).toEqual(truth(head));
+  });
+
+  for (const seedNo of [1, 2, 3, 4]) {
+    test(`seed ${seedNo}: every subscribed view equals a fresh load under random notifies, derived subs and unsubs`, async () => {
+      const rand = rng(seedNo * 104729);
+      const { h, table, truth, write } = externalPagesHarness();
+      let next = 0;
+      for (let i = 0; i < 12; i++)
+        table.set(`r${next++}`, Math.floor(rand() * 50));
+      const views = new Views(h);
+      const pick = <T>(xs: readonly T[]): T =>
+        xs[Math.floor(rand() * xs.length)]!;
+      const rowsOf = (p: ResourceParams): Row[] => {
+        const v = views.view(p)?.value;
+        return Array.isArray(v) ? (v as Row[]) : [];
+      };
+      const fresh = (r: Range) => {
+        const p = paramsOf(r);
+        return views.view(p) === undefined ? p : null;
+      };
+      views.send(paramsOf({ after: null, until: null, limit: 3 }));
+      await settle();
+
+      for (let step = 0; step < 100; step++) {
+        const roll = rand();
+        const subs = views.subscribed();
+        if (roll < 0.35) {
+          const ids = [...table.keys()];
+          const w = rand();
+          if (w < 0.4 || ids.length < 4)
+            write(views, "I", `r${next++}`, Math.floor(rand() * 50));
+          else if (w < 0.8)
+            write(views, "U", pick(ids), Math.floor(rand() * 50));
+          else write(views, "D", pick(ids));
+        } else if (roll < 0.75 && subs.length > 0) {
+          // A derived head or tail of a held page.
+          const s = pick(subs);
+          const src = rangeOf(s);
+          const held = rowsOf(s);
+          if (held.length === 0) continue;
+          const j = Math.floor(rand() * held.length);
+          const head = rand() < 0.5;
+          const p = fresh(
+            head
+              ? {
+                  after: src.after,
+                  until: keyOfRow(held[j]!),
+                  limit: 1 + Math.floor(rand() * 6),
+                }
+              : {
+                  after: keyOfRow(held[j]!),
+                  until: src.until,
+                  limit: 1 + Math.floor(rand() * 6),
+                },
+          );
+          if (p !== null) {
+            views.send(p, {
+              slices: [
+                head
+                  ? { params: s, after: null, until: held[j]!.id }
+                  : { params: s, after: held[j]!.id, until: null },
+              ],
+            });
+          }
+        } else if (subs.length > 3) {
+          views.unsub(pick(subs));
+        }
+        if (rand() < 0.6) await settle();
+        else if (rand() < 0.5) await tick();
+      }
+      await settle();
+      await settle();
+      for (const p of views.subscribed()) {
+        expect({ params: p, value: views.view(p)!.value }).toEqual({
+          params: p,
+          value: truth(p),
+        });
+      }
+      expect((await debugOf(h)).derivedSubs).toBeGreaterThan(0);
     });
   }
 });

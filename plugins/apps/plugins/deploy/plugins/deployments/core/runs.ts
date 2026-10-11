@@ -221,7 +221,7 @@ const DEPLOY_HISTORY_VIEW_ID = "deploy.deployment.history";
  * pane scoping it to one deployment (`scoped({ where: { deploymentId } })`).
  * A run opening, finishing or failing reaches the tuples holding it through
  * the routed runtime: no revision tick, no refetch. A scroll collection
- * (segments past `maxLimit` — a ledger only grows), and its `columnScope` is the
+ * (read as key-range pages, no depth limit — a ledger only grows), and its `columnScope` is the
  * history surface, so that surface's custom columns sort and filter it.
  */
 export const deployRunHistory = liveCollection("deploy.run-history", {

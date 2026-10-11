@@ -95,37 +95,35 @@ export const MetricResultSchema = z.discriminatedUnion("kind", [
 ]);
 export type MetricResult = z.infer<typeof MetricResultSchema>;
 
+/**
+ * One record behind a bucket. `at` is a UTC instant at exactly millisecond
+ * precision (`2026-10-01T09:30:00.000Z` — `Date#toISOString`), so its text
+ * order IS its time order: the drill-down pages cut at it
+ * (`metricDetails`'s key).
+ */
 export const DrillItemSchema = z.object({
   id: z.string(),
   title: z.string(),
   subtitle: z.string().optional(),
   value: z.number().optional(),
-  at: isoInstant,
+  at: z.string().datetime({ precision: 3 }),
   link: EntityLinkSchema.optional(),
 });
 export type DrillItem = z.infer<typeof DrillItemSchema>;
 
 /**
- * One page of the records behind a bucket, as a provider's `details` returns
- * it: the items, the next page's cursor, and how many records there are in
- * all. The served `metrics.details` value carries the total as its page meta.
+ * What a drill-down's question shares, whatever page is read: how many
+ * records the bucket holds — `null` when its metric does not count them (no
+ * `detailsTotal`).
  */
-export const DrillPageSchema = z.object({
-  items: z.array(DrillItemSchema),
-  total: z.number().int().nonnegative(),
-  nextCursor: z.string().nullable(),
-});
-export type DrillPage = z.infer<typeof DrillPageSchema>;
-
-/** What every page of a drill-down shares: how many records the bucket holds. */
 export const DrillMetaSchema = z.object({
-  total: z.number().int().nonnegative(),
+  total: z.number().int().nonnegative().nullable(),
 });
 export type DrillMeta = z.infer<typeof DrillMetaSchema>;
 
 /**
- * Which records to list: one bucket (or one series of it). The page — cursor
- * and size — is the paged value's own tuple, never part of the question.
+ * Which records to list: one bucket (or one series of it). The page — its key
+ * range and limit — is the paged value's own tuple, never part of the question.
  */
 export const DetailsSelectorSchema = z
   .object({

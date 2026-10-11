@@ -61,7 +61,7 @@ import { useLivePagesPaging } from "./use-live-pages-paging";
 // The DataView → live-window adapter (research/2026-09-29-global-scoped-change-routing.md,
 // "P2 — DataView live-window adapter"; the pages:
 // research/2026-10-09-global-live-key-range-pages-v2.md): a `source` DataView
-// reads its collection as key-range pages (`useLiveCollectionPages`) kept live by the
+// reads its collection as key-range pages (`useLive`) kept live by the
 // rows it has on screen, with the view's sort, filter, search and group-by
 // lowered onto the window query. Field ids stay the persisted vocabulary;
 // `FieldDef.column` maps one to the collection column it reads.

@@ -178,7 +178,7 @@ export const conversationsSystem = liveCollection("conversations-system", {
 // `RECENT_GONE_LIMIT` (the queue's Done section, the welcome recents), grown
 // by a reader that wants more (Recovery reads 50). A `scroll` collection, so
 // the queue's Done section pages through the whole history as the user
-// scrolls (`useLiveCollectionPages`: its first page IS the default window). A close
+// scrolls (`useLive` with a viewport: its first page IS the default window). A close
 // is an entrant at the top, a restore an exit; it is not L2-persisted (a
 // bounded window leaves L2). Nothing filters it (`filterable: {}`).
 // Boot-critical: the default window paints from the boot snapshot. Counted

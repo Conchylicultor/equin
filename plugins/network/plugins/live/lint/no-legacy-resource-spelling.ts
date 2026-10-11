@@ -55,7 +55,7 @@ const REPLACEMENT = {
     "`serveCollection` (a `contributed` / `columnScope` collection binds deferred)",
   deferredWindowQueryResource: "`serveCollection`",
   useResources:
-    "`useLive` (a scrolled list: a DataView `liveDataSource`, which reads `useLiveCollectionPages`)",
+    "`useLive` (a scrolled list: a DataView `liveDataSource`, which reads `useLive(c, query, { viewport })`)",
 } as const;
 
 type LegacyName = keyof typeof REPLACEMENT;

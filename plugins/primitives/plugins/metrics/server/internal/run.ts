@@ -5,11 +5,13 @@ import {
   evaluateMetric,
   parseParams,
   type DetailsSelector,
-  type DrillPage,
+  type DrillItem,
   type MetricQuery,
   type MetricResult,
   type ParamSpecs,
 } from "../../core";
+import type { LiveKeyRange } from "@plugins/network/plugins/live/core";
+import type { MetricImpl } from "./contribution";
 import type { MetricRegistry } from "./registry";
 
 // Evaluating a query and listing a bucket's records — the loaders of the
@@ -82,19 +84,51 @@ export async function runQuery(
   }
 }
 
+/** One key range of the records behind a bucket (or one series of it). */
 export async function runDetails(
   registry: MetricRegistry,
   query: DetailsSelector,
-  page: { cursor: string | null; limit: number },
-): Promise<DrillPage> {
+  range: LiveKeyRange,
+): Promise<readonly DrillItem[]> {
+  const { impl, scope } = detailsScope(registry, query);
+  if (impl.details === undefined) {
+    throw new MetricQueryError(`metric "${impl.metric.id}" has no details`);
+  }
+  return impl.details({ ...scope, range });
+}
+
+/**
+ * How many records a bucket (or one series of it) holds — `null` when its
+ * metric lists them but does not count them (no `detailsTotal`).
+ */
+export async function runDetailsTotal(
+  registry: MetricRegistry,
+  query: DetailsSelector,
+): Promise<number | null> {
+  const { impl, scope } = detailsScope(registry, query);
+  if (impl.details === undefined) {
+    throw new MetricQueryError(`metric "${impl.metric.id}" has no details`);
+  }
+  return impl.detailsTotal === undefined ? null : impl.detailsTotal(scope);
+}
+
+/** The metric a drill-down asks about and its scope, validated as asked. */
+function detailsScope(
+  registry: MetricRegistry,
+  query: DetailsSelector,
+): {
+  impl: MetricImpl;
+  scope: {
+    interval: DetailsSelector["interval"];
+    split: DetailsSelector["split"];
+    params: Record<string, unknown>;
+  };
+} {
   const entry = registry.lookup(query.metric);
   if (entry.kind !== "metric") {
     throw new MetricQueryError(`unknown metric "${query.metric}"`);
   }
-  const { metric: decl, details } = entry.impl;
-  if (details === undefined) {
-    throw new MetricQueryError(`metric "${decl.id}" has no details`);
-  }
+  const decl = entry.impl.metric;
   const split = query.split;
   if (split !== null && !decl.splits.some((s) => s.id === split.id)) {
     throw new MetricQueryError(
@@ -104,13 +138,14 @@ export async function runDetails(
   if (Date.parse(query.interval.start) >= Date.parse(query.interval.end)) {
     throw new MetricQueryError("interval start must be before its end");
   }
-  return details({
-    interval: query.interval,
-    split,
-    params: parsedParams(entry.specs, query.params),
-    cursor: page.cursor,
-    limit: page.limit,
-  });
+  return {
+    impl: entry.impl,
+    scope: {
+      interval: query.interval,
+      split,
+      params: parsedParams(entry.specs, query.params),
+    },
+  };
 }
 
 function parsedParams(

@@ -3,14 +3,15 @@ import {
   defineResource,
 } from "@plugins/framework/plugins/central-core/core";
 import type {
-  LivePage,
+  LivePagedParams,
+  LivePagedPages,
   LivePagedValue,
-  LivePageParams,
   LiveQueryParams,
   LiveQueryValue,
   LiveValue,
 } from "@plugins/network/plugins/live/core";
 import {
+  registerPagedOf,
   registerValueOf,
   type AnyServeOptions,
   type ExternalServed,
@@ -40,7 +41,7 @@ export type CentralServedValue<
   notify(params?: P): void;
 };
 
-/** A central typed-query or paged value: `notify(query)` reaches its question's tuples. */
+/** A central typed-query value: `notify(query)` reaches its question's tuple. */
 export type CentralServedQueryValue<
   T,
   P extends Record<string, string>,
@@ -48,6 +49,21 @@ export type CentralServedQueryValue<
 > = ServedValueBase<T, P> & {
   source: "external";
   notify(query: Q): void;
+};
+
+/**
+ * A central paged value: its pages' resource, `notify(query)` reaching every
+ * subscribed page of the question and its meta, and `meta` — the meta
+ * sibling's resource (declared `paged.meta`), which the central plugin
+ * registers beside it: `resources: [served, served.meta]`.
+ */
+export type CentralServedPagedValue<Item, Q> = ServedValueBase<
+  Item[],
+  LivePagedParams
+> & {
+  source: "external";
+  notify(query: Q): void;
+  meta: ServedValueBase<unknown, LiveQueryParams> | null;
 };
 
 /**
@@ -71,7 +87,7 @@ export function serveValue<
 >(
   value: LivePagedValue<Item, Meta, Q, QIn, "central">,
   opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R>,
-): CentralServedQueryValue<LivePage<Item, Meta>, LivePageParams, Q>;
+): CentralServedPagedValue<Item, Q>;
 export function serveValue<
   T,
   Q,
@@ -90,13 +106,32 @@ export function serveValue<
   opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R>,
 ): CentralServedValue<T, P>;
 export function serveValue<T, P extends Record<string, string>>(
-  value: LiveValue<T, P, "central"> & { query?: unknown },
+  value:
+    | (LiveValue<T, P, "central"> & { query?: unknown; paged?: unknown })
+    // biome-ignore lint/suspicious/noExplicitAny: a generic item's schema is invariant — erased, as page-source's `AnyPagedValue` is.
+    | LivePagedPages<any, any, any, "central">,
   opts: AnyServeOptions,
-): CentralServedValue<T, P> | CentralServedQueryValue<T, P, unknown> {
+):
+  | CentralServedValue<T, P>
+  | CentralServedQueryValue<T, P, unknown>
+  | CentralServedPagedValue<unknown, unknown> {
   if ((opts.source as string) !== "external") {
     // Unreachable from typed code: the only arm is external.
     throw new Error(
       `serveValue("${value.key}"): a central value must be source "external" — central has no change feed.`,
+    );
+  }
+  // A paged value's pages are the one keyed value (a keyed window each).
+  if (value.keyed !== undefined) {
+    return servePaged(
+      value as unknown as LivePagedValue<
+        unknown,
+        unknown,
+        unknown,
+        unknown,
+        "central"
+      >,
+      opts,
     );
   }
   // Erased: the overloads checked the options against the declaration's
@@ -119,8 +154,8 @@ export function serveValue<T, P extends Record<string, string>>(
     load: (params: P) => resource.load(params),
     source: "external",
     keys: [value.key],
-    // Only the params: `affectedIds` is a keyed concept. A query or paged
-    // value is notified by its QUESTION (see the worktree `serveValue`).
+    // Only the params: `affectedIds` is a keyed concept. A query value is
+    // notified by its QUESTION (see the worktree `serveValue`).
     notify:
       (value as { query?: unknown }).query !== undefined
         ? (query?: unknown) => {
@@ -128,5 +163,43 @@ export function serveValue<T, P extends Record<string, string>>(
               resource.notify(tuple);
           }
         : (params?: P) => resource.notify(params),
+  };
+}
+
+/** A central paged value: its pages and meta sibling over one per-question lifecycle. */
+function servePaged(
+  value: LivePagedValue<unknown, unknown, unknown, unknown, "central">,
+  opts: AnyServeOptions,
+): CentralServedPagedValue<unknown, unknown> {
+  const { resource, compiled, meta } = registerPagedOf(
+    { defineResource, defineExternalResource },
+    value,
+    opts,
+  );
+  return {
+    key: resource.key,
+    mode: resource.mode,
+    schema: resource.schema,
+    load: (params: LivePagedParams) => resource.load(params),
+    source: "external",
+    keys: [value.key, ...(meta === null ? [] : [meta.resource.key])],
+    notify(query: unknown) {
+      for (const tuple of compiled.tuplesOf(query)) resource.notify(tuple);
+      if (meta === null) return;
+      for (const tuple of meta.compiled.tuplesOf(query)) {
+        meta.resource.notify(tuple);
+      }
+    },
+    meta:
+      meta === null
+        ? null
+        : {
+            key: meta.resource.key,
+            mode: meta.resource.mode,
+            schema: meta.resource.schema,
+            load: (params: LiveQueryParams) => meta.resource.load(params),
+            source: "external",
+            keys: [meta.resource.key],
+          },
   };
 }

@@ -3,6 +3,7 @@ import { createHarness } from "@plugins/framework/plugins/resource-runtime/core/
 import {
   compilePagedValue,
   compileQueryValue,
+  sliceRange,
 } from "@plugins/network/plugins/live/server";
 import { defineMetric, defineMetricSource } from "../../core/define-metric";
 import { metricDetails, metricQuery } from "../../core";
@@ -31,6 +32,13 @@ const open = defineMetric(src, {
   measure: "level",
 });
 
+/** The records behind every bucket of `done`, oldest first. */
+const RECORDS = [
+  { id: "t1", title: "First", at: "2026-09-29T08:00:00.000Z" },
+  { id: "t2", title: "Second", at: "2026-09-29T09:00:00.000Z" },
+  { id: "t3", title: "Third", at: "2026-09-29T10:00:00.000Z" },
+];
+
 /** A source whose `changes` the test fires, counting starts and stops. */
 function fakeSource() {
   const life = {
@@ -46,17 +54,8 @@ function fakeSource() {
           split === null
             ? [{ key: "total", label: "Total", values: intervals.map(() => 1) }]
             : [],
-        details: async ({ cursor, limit }) => ({
-          items: [
-            {
-              id: cursor ?? "first",
-              title: `${limit}`,
-              at: "2026-10-01T00:00:00Z",
-            },
-          ],
-          total: 2,
-          nextCursor: cursor === null ? "next" : null,
-        }),
+        details: async ({ range }) => sliceRange(metricDetails, RECORDS, range),
+        detailsTotal: async () => RECORDS.length,
       }),
       serveMetric(open, {
         evaluate: async ({ intervals }) => [
@@ -99,7 +98,14 @@ describe("served metrics values", () => {
     expect(result.kind).toBe("series");
   });
 
-  test("the details loader pages by the provider's cursor and carries the total as meta", async () => {
+  const selector = {
+    metric: "fake.done",
+    interval: { start: "2026-09-29T00:00:00Z", end: "2026-09-30T00:00:00Z" },
+    split: null,
+    params: {},
+  };
+
+  test("the details loader answers a key range newest first, each record minted its $key; the total is the meta", async () => {
     const { source } = fakeSource();
     const registry = buildMetricRegistry([source]);
     const watch = createSourceWatch((id) => registry.source(id));
@@ -107,20 +113,67 @@ describe("served metrics values", () => {
       metricDetails,
       detailsOptions(() => registry, watch),
     );
-    const selector = {
-      metric: "fake.done",
-      interval: { start: "2026-09-29T00:00:00Z", end: "2026-09-30T00:00:00Z" },
-      split: null,
-      params: {},
-    };
-    const first = await compiled.options.loader(
-      metricDetails.query.encode(selector, { cursor: null, limit: 5 }),
+    // Each wire row carries the `$key` the served half minted.
+    type Wire = { id: string; $key: string | null };
+    const first = (await compiled.options.loader(
+      metricDetails.query.encode(selector, {
+        after: null,
+        until: null,
+        limit: 2,
+      }),
+    )) as unknown as Wire[];
+    expect(first.map((r) => [r.id, r.$key])).toEqual([
+      ["t3", '["2026-09-29T10:00:00.000Z","t3"]'],
+      ["t2", '["2026-09-29T09:00:00.000Z","t2"]'],
+    ]);
+    const next = await compiled.options.loader(
+      metricDetails.query.encode(selector, {
+        after: first[1]!.$key,
+        until: null,
+        limit: 2,
+      }),
     );
-    expect(first).toEqual({
-      items: [{ id: "first", title: "5", at: "2026-10-01T00:00:00Z" }],
-      nextCursor: "next",
-      meta: { total: 2 },
+    expect(next.map((r) => r.id)).toEqual(["t1"]);
+    expect(
+      await compiled.meta!.options.loader(
+        metricDetails.meta.query.encode(selector),
+      ),
+    ).toEqual({ total: 3 });
+  });
+
+  test("a drill-down watches its source once per question, over its pages and its total", () => {
+    const { source, life } = fakeSource();
+    const registry = buildMetricRegistry([source]);
+    const watch = createSourceWatch((id) => registry.source(id));
+    const compiled = compilePagedValue(
+      metricDetails,
+      detailsOptions(() => registry, watch),
+    );
+    const notified: unknown[] = [];
+    compiled.bindNotify((params) => notified.push(params));
+    compiled.meta!.bindNotify((params) => notified.push(params));
+    const p0 = metricDetails.query.encode(selector, {
+      after: null,
+      until: null,
+      limit: 5,
     });
+    const p1 = metricDetails.query.encode(selector, {
+      after: '["2026-09-29T09:00:00.000Z","t2"]',
+      until: null,
+      limit: 5,
+    });
+    const m = metricDetails.meta.query.encode(selector);
+    void compiled.options.onFirstSubscribe!(p0);
+    void compiled.options.onFirstSubscribe!(p1);
+    void compiled.meta!.options.onFirstSubscribe!(m);
+    expect(life.starts).toBe(1);
+    life.bump!();
+    expect(notified).toEqual([p0, p1, m]);
+    compiled.options.onLastUnsubscribe!(p0);
+    compiled.options.onLastUnsubscribe!(p1);
+    expect(life.stops).toBe(0);
+    compiled.meta!.options.onLastUnsubscribe!(m);
+    expect(life.stops).toBe(1);
   });
 
   test("two subscribed queries on one source share one `changes` subscription; a change notifies both; the last release stops it", () => {

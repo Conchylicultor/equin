@@ -1,26 +1,42 @@
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
+import type { LiveKeyRange } from "@plugins/network/plugins/live/core";
 import type {
   BreakdownDecl,
   BreakdownEvaluate,
   DeclParams,
-  DrillPage,
+  DrillItem,
   Interval,
   MetricDecl,
   MetricEvaluate,
   MetricSourceDecl,
 } from "../../core";
 
-/** What a metric's `details` receives: one bucket (or one series of it), one page. */
-export interface DetailsCtx<P> {
+/** Which records a metric's `details` / `detailsTotal` is asked about: one bucket (or one series of it). */
+export interface DetailsScope<P> {
   interval: Interval;
   /** The split dimension and key the user picked; null = every record in the interval. */
   split: { id: string; key: string } | null;
   params: P;
-  cursor: string | null;
-  limit: number;
 }
 
-export type MetricDetails<P> = (ctx: DetailsCtx<P>) => Promise<DrillPage>;
+/**
+ * What a metric's `details` receives: the scope, and one key range of its
+ * records — newest first, by `at` (UTC, millisecond precision) then `id`:
+ * the records strictly after `range.after` and up to `range.until`, at most
+ * `range.limit` (network/live's `sliceRange` answers it for a list held in
+ * memory). A range's cut is a position: the record it was taken from may be
+ * gone.
+ */
+export interface DetailsCtx<P> extends DetailsScope<P> {
+  range: LiveKeyRange;
+}
+
+export type MetricDetails<P> = (
+  ctx: DetailsCtx<P>,
+) => Promise<readonly DrillItem[]>;
+
+/** How many records a scope holds — the drill-down's total. */
+export type MetricDetailsTotal<P> = (ctx: DetailsScope<P>) => Promise<number>;
 
 // The erased forms the registry holds. Params are `Record<string, unknown>`
 // here because the registry holds every metric at once; each call is handed
@@ -32,6 +48,7 @@ export interface MetricImpl {
   metric: MetricDecl;
   evaluate: MetricEvaluate<AnyParams>;
   details?: MetricDetails<AnyParams>;
+  detailsTotal?: MetricDetailsTotal<AnyParams>;
 }
 
 export interface BreakdownImpl {
@@ -39,19 +56,32 @@ export interface BreakdownImpl {
   evaluate: BreakdownEvaluate<AnyParams>;
 }
 
-/** Bind a metric declaration to its evaluator (and optional drill-down), typed by its params. */
+/**
+ * Bind a metric declaration to its evaluator (and optional drill-down — its
+ * records, and how many there are), typed by its params. A `detailsTotal`
+ * without `details` is a tsc error: a total counts the records it lists.
+ */
 export function serveMetric<M extends MetricDecl>(
   metric: M,
   impl: {
     evaluate: MetricEvaluate<DeclParams<M>>;
-    details?: MetricDetails<DeclParams<M>>;
-  },
+  } & (
+    | { details?: undefined; detailsTotal?: undefined }
+    | {
+        details: MetricDetails<DeclParams<M>>;
+        detailsTotal?: MetricDetailsTotal<DeclParams<M>>;
+      }
+  ),
 ): MetricImpl {
   return {
     metric,
     evaluate: impl.evaluate as unknown as MetricEvaluate<AnyParams>,
     ...(impl.details !== undefined && {
       details: impl.details as unknown as MetricDetails<AnyParams>,
+    }),
+    ...(impl.detailsTotal !== undefined && {
+      detailsTotal:
+        impl.detailsTotal as unknown as MetricDetailsTotal<AnyParams>,
     }),
   };
 }
