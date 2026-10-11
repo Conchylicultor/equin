@@ -282,6 +282,7 @@
       - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
       - **`track`** — Displays the conversation's task track (Main / Sidequest) as a chip in the conversation header.
       - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant)…
+      - **`user-message`** — The user turn's standard look: <UserMessageCard> (the message-card chrome) and <UserMessageText> (the turn's text through every inline-text walker, so chips render). Shared by the transcript's…
       - **`vscode`** — Opens the conversation's worktree in VSCode.
   - **`conversations-view`** — Sidebar list of all conversations.
     - Plugins:

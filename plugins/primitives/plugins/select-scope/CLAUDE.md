@@ -9,7 +9,7 @@
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
     - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
-    - `conversations/conversation-view/jsonl-viewer/user-text`
+    - `conversations/conversation-view/user-message`
     - `page/editor`
     - `primitives/css/surface`
     - `primitives/css/ui-kit`

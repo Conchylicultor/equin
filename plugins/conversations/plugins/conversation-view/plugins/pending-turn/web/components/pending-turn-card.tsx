@@ -1,6 +1,10 @@
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
+import {
+  UserMessageCard,
+  UserMessageText,
+} from "@plugins/conversations/plugins/conversation-view/plugins/user-message/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
 import {
@@ -69,18 +73,13 @@ export function PendingTurnCard({
   if (inFlight && record.echo === false) return null;
 
   if (inFlight) {
-    // Card chrome mirrors UserTextRow in a dimmed "pending" treatment, with the
-    // shared BouncingDots activity indicator below (former PendingTurnEcho).
+    // The same card and text formatting as the confirmed user row (chips
+    // included), dimmed as "pending", with the shared BouncingDots activity
+    // indicator below.
     return (
       <Stack gap="sm" className="opacity-70">
-        <div className="relative rounded-md border border-border/60 bg-background px-md py-sm">
-          <Text
-            as="div"
-            variant="body"
-            className="whitespace-pre-wrap break-words"
-          >
-            {record.text}
-          </Text>
+        <UserMessageCard>
+          <UserMessageText text={record.text} />
           <Text as="div" variant="caption" className="text-muted-foreground/60">
             {record.state === "sending"
               ? "Sending…"
@@ -88,7 +87,7 @@ export function PendingTurnCard({
                 ? "Waiting for the agent to start…"
                 : "Sent to CLI — confirming…"}
           </Text>
-        </div>
+        </UserMessageCard>
         <Stack direction="row" gap="sm" align="center" className="px-xs py-xs">
           <BouncingDots />
         </Stack>
@@ -112,13 +111,7 @@ export function PendingTurnCard({
       )}
     >
       <Stack gap="xs">
-        <Text
-          as="div"
-          variant="body"
-          className="whitespace-pre-wrap break-words"
-        >
-          {record.text}
-        </Text>
+        <UserMessageText text={record.text} />
         <Text
           as="div"
           variant="caption"

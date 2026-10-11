@@ -1,4 +1,3 @@
-import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
 import type {
   JsonlEvent,
   UserTextSegment,
@@ -8,8 +7,10 @@ import {
   useSectionExpand,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { EventRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
-import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  UserMessageCard,
+  UserMessageText,
+} from "@plugins/conversations/plugins/conversation-view/plugins/user-message/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Expandable } from "@plugins/primitives/plugins/expandable/web";
 import { ViewerThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
@@ -42,14 +43,7 @@ function SegmentedContent({
     <>
       {segments.map((seg, i) =>
         seg.kind === "text" ? (
-          <Text
-            as="div"
-            variant="body"
-            key={i}
-            className="whitespace-pre-wrap break-words"
-          >
-            {raw ? seg.value : <InlineText text={seg.value} />}
-          </Text>
+          <UserMessageText key={i} text={seg.value} raw={raw} />
         ) : (
           // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1.5 spaces an inline image segment from the preceding text segment
           <div key={i} className="mt-1.5">
@@ -70,25 +64,17 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
   const body = e.segments ? (
     <SegmentedContent segments={e.segments} raw={raw} />
   ) : (
-    <Text as="div" variant="body" className="whitespace-pre-wrap break-words">
-      {raw ? e.text : <InlineText text={e.text} />}
-    </Text>
+    <UserMessageText text={e.text} raw={raw} />
   );
 
   return (
-    <ContentScope>
-      {/* The user's turn is a card: the shape group's card corners, the
-          thread-card pad (density `padThreadCard*`) and the palette's
-          `messageCard` fill and border — each defaulting to the `rounded-md`,
-          `md` × `sm` pad, page fill and 60% hairline it always wore. */}
-      <div className="relative rounded-card border border-message-card-border bg-message-card p-thread-card">
-        <Pin to="top-right" offset="sm">
-          <EventRowActions floating />
-        </Pin>
-        <Expandable expanded={expanded} onToggle={setExpanded}>
-          {body}
-        </Expandable>
-      </div>
-    </ContentScope>
+    <UserMessageCard>
+      <Pin to="top-right" offset="sm">
+        <EventRowActions floating />
+      </Pin>
+      <Expandable expanded={expanded} onToggle={setExpanded}>
+        {body}
+      </Expandable>
+    </UserMessageCard>
   );
 }

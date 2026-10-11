@@ -59,8 +59,8 @@ Walkers register elsewhere (the primitive itself contributes none):
   - Imported by:
     - `active-data`
     - `active-data/go`
-    - `conversations/conversation-view/jsonl-viewer/user-text`
     - `conversations/conversation-view/markdown-extensions`
+    - `conversations/conversation-view/user-message`
     - `infra/claude-cli`
     - `tasks/task-description`
 

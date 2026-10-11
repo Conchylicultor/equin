@@ -12662,12 +12662,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.RowActionButton`
+                  - `conversations/conversation-view/user-message.UserMessageCard`
+                  - `conversations/conversation-view/user-message.UserMessageText`
                   - `primitives/css/pin.Pin`
-                  - `primitives/css/text.Text`
                   - `primitives/expandable.Expandable`
-                  - `primitives/inline-text.InlineText`
                   - `primitives/overlay/image-viewer.ViewerThumbnail`
-                  - `primitives/select-scope.ContentScope`
                   - `ui/icons.Icon`
         - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree.
           - Web:
@@ -12839,6 +12838,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`pending-turn`** — The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted|held → queued/sent, failed-post, unconfirmed) that runs the turn's registered TurnDelivery, verifies delivery against the transcript (normalized-text match), reports a conversation as working from the instant a turn is sent (useOptimisticConversationStatus), files a report when an accepted turn never lands, and renders the per-record PendingTurnCard. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery; the jsonl-viewer drives reconcilePendingTurns on every events change. Contributes the turn-send-safety lint rule. No slot contributions.
           - Web:
             - Uses:
+              - `conversations/conversation-view/user-message.UserMessageCard`
+              - `conversations/conversation-view/user-message.UserMessageText`
               - `infra/endpoints.EndpointError`
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.getEndpointErrorMessage`
@@ -13223,6 +13224,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `turnSummaryConfig`
               - `turnSummaryRows`
               - `TurnSummarySchema`
+        - **`user-message`** — The user turn's standard look: <UserMessageCard> (the message-card chrome) and <UserMessageText> (the turn's text through every inline-text walker, so chips render). Shared by the transcript's user-text row and the optimistic pending-turn card, so a message looks the same before and after it is confirmed.
+          - Web:
+            - Uses:
+              - `primitives/css/text.Text`
+              - `primitives/inline-text.InlineText`
+              - `primitives/select-scope.ContentScope`
+            - Exports (values):
+              - `UserMessageCard`
+              - `UserMessageText`
+          - Cross-plugin:
+            - Imported by:
+              - `conversations/conversation-view/jsonl-viewer/user-text`
+              - `conversations/conversation-view/pending-turn`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
           - Web:
             - Contributes: `Conversation.ActionBar` → `VscodeButton`
@@ -31216,8 +31230,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `active-data`
           - `active-data/go`
-          - `conversations/conversation-view/jsonl-viewer/user-text`
           - `conversations/conversation-view/markdown-extensions`
+          - `conversations/conversation-view/user-message`
           - `infra/claude-cli`
           - `tasks/task-description`
     - **`keyset`** — Field-agnostic keyset pagination machinery: the sort-rule types (core) and a null-aware keyset seek / at-or-before / order-by compiler over drizzle SQL (server). No data-view dependency, so any server-delegated windowed query can reuse it.
@@ -33162,7 +33176,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations/conversation-view/jsonl-viewer/assistant-text`
           - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
-          - `conversations/conversation-view/jsonl-viewer/user-text`
+          - `conversations/conversation-view/user-message`
           - `page/editor`
           - `primitives/css/surface`
           - `primitives/css/ui-kit`

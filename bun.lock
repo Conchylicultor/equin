@@ -1933,6 +1933,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-turn-summary",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/user-message": {
+      "name": "@singularity/plugin-conversations-conversation-view-user-message",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/vscode": {
       "name": "@singularity/plugin-conversations-conversation-view-vscode",
       "version": "0.0.1",
@@ -7408,6 +7412,8 @@
     "@singularity/plugin-conversations-conversation-view-track": ["@singularity/plugin-conversations-conversation-view-track@workspace:plugins/conversations/plugins/conversation-view/plugins/track"],
 
     "@singularity/plugin-conversations-conversation-view-turn-summary": ["@singularity/plugin-conversations-conversation-view-turn-summary@workspace:plugins/conversations/plugins/conversation-view/plugins/turn-summary"],
+
+    "@singularity/plugin-conversations-conversation-view-user-message": ["@singularity/plugin-conversations-conversation-view-user-message@workspace:plugins/conversations/plugins/conversation-view/plugins/user-message"],
 
     "@singularity/plugin-conversations-conversation-view-vscode": ["@singularity/plugin-conversations-conversation-view-vscode@workspace:plugins/conversations/plugins/conversation-view/plugins/vscode"],
 
