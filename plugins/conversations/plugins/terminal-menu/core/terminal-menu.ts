@@ -17,11 +17,17 @@ export type TerminalMenuOption = z.infer<typeof TerminalMenuOptionSchema>;
  * usage-limit "What do you want to do?" menu), read off the screen.
  *
  * - `title` — the question line above the options ("" when the menu has none).
+ * - `body` — what the menu asks about, above the title: the dialog's content
+ *   from its top border down (a permission prompt's command and the reason it
+ *   is asked), one line per screen line, dedented. "" when the menu has none.
  * - `highlighted` — the `n` of the option the cursor is on.
  * - `footer` — the menu's key hints ("Enter to confirm · Esc to cancel").
  */
 export const TerminalMenuSchema = z.object({
   title: z.string(),
+  // Defaulted for a menu stored before the field existed: a live row read
+  // back across the deploy that added it.
+  body: z.string().default(""),
   options: z.array(TerminalMenuOptionSchema).min(1),
   highlighted: z.number().int().positive(),
   footer: z.string(),
@@ -46,6 +52,7 @@ export function sameTerminalMenu(
   if (a === null || b === null) return a === b;
   return (
     a.title === b.title &&
+    a.body === b.body &&
     a.footer === b.footer &&
     a.highlighted === b.highlighted &&
     a.options.length === b.options.length &&

@@ -198,6 +198,7 @@ describe("any other numbered menu", () => {
       kind: "menu",
       menu: {
         title: "What do you want to do?",
+        body: "",
         options: [
           {
             n: 1,
@@ -238,6 +239,7 @@ describe("any other numbered menu", () => {
       kind: "menu",
       menu: {
         title: "Pick a model",
+        body: "",
         options: [
           {
             n: 1,
@@ -283,6 +285,66 @@ describe("any other numbered menu", () => {
   test("a menu with no cursor is not answered", () => {
     const text = ["Pick", "  1. One", "  2. Two", "Esc to cancel"].join("\n");
     expect(kindOf(text)).toBe("idle");
+  });
+
+  test("a permission prompt's body is its command and reason, without chrome", () => {
+    const dashed = "╌".repeat(40);
+    const text = [
+      "● Bash(earlier output)",
+      "",
+      RULE,
+      " Bash command",
+      " Screenshot the key",
+      "",
+      dashed,
+      " │ S=/tmp/x; rm -f $S/*.png;",
+      " │   ./singularity run shot.ts",
+      dashed,
+      " │ Dangerous rm operation on possibly-empty variable path",
+      " ⚠ Claude Code will automatically deny this request in 1:21, to avoid blocking",
+      " progress on an unattended session",
+      "",
+      " Do you want to proceed?",
+      " ❯ 1. Yes",
+      "   2. No",
+      "",
+      " Esc to cancel · Tab to amend",
+    ].join("\n");
+    const read = classifyPaneText(text);
+    expect(read.kind === "menu" && read.menu.title).toBe(
+      "Do you want to proceed?",
+    );
+    expect(read.kind === "menu" && read.menu.body).toBe(
+      [
+        "Bash command",
+        "Screenshot the key",
+        "",
+        "S=/tmp/x; rm -f $S/*.png;",
+        "  ./singularity run shot.ts",
+        "Dangerous rm operation on possibly-empty variable path",
+      ].join("\n"),
+    );
+  });
+
+  test("the countdown ticking does not change the menu", () => {
+    const at = (t: string) =>
+      [
+        RULE,
+        " Bash command",
+        ` ⚠ Claude Code will automatically deny this request in ${t}, to avoid`,
+        "",
+        " Do you want to proceed?",
+        " ❯ 1. Yes",
+        "   2. No",
+        " Esc to cancel",
+      ].join("\n");
+    expect(classifyPaneText(at("1:21"))).toEqual(classifyPaneText(at("1:20")));
+  });
+
+  test("no top border within reach means no body", () => {
+    const text = ["prose", "Proceed?", "❯ 1. Yes", "  2. No", "Esc to cancel"];
+    const read = classifyPaneText(text.join("\n"));
+    expect(read.kind === "menu" && read.menu.body).toBe("");
   });
 
   test("a footer with no options above it is idle", () => {

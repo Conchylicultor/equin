@@ -82,9 +82,28 @@ const OPTION_RE = /^\s*(❯\s*)?(\d+)\.\s+(.*\S)\s*$/u;
 // A horizontal rule the CLI draws between blocks — chrome, never content.
 const RULE_RE = /^\s*[─━]{8,}\s*$/u;
 
+// A dashed rule — the CLI's divider INSIDE a dialog (Ink's dashed border,
+// U+254C), e.g. around a permission prompt's command. Chrome, dropped from the
+// body; it does not end it the way the dialog's solid top border does.
+const DASHED_RULE_RE = /^\s*╌{8,}\s*$/u;
+
+// A dialog's left border glyph, stripped from a body line.
+const SIDE_BORDER_RE = /^(\s*)[│┃╎╏▎▏] ?/u;
+
+// The permission prompt's countdown notice ("⚠ Claude Code will automatically
+// deny this request in 1:21, to avoid blocking progress on an unattended
+// session"). It ticks every second, so keeping it in the body would make every
+// read a different menu — and refuse every answer as "the menu changed".
+const COUNTDOWN_RE = /will automatically deny this request in\b/;
+
 // How far above the footer a menu's options may start. Bounds the walk so
 // numbered prose far up the scrollback can never be read as a menu.
 const MENU_MAX_LINES = 40;
+
+// How far above the title a dialog's top border may be. A body is read only
+// between the two, so no border within reach means no body — never a guess at
+// where unbounded scrollback stops being the question.
+const BODY_MAX_LINES = 40;
 
 export type PaneMenu =
   | { kind: "idle" }
@@ -174,10 +193,14 @@ function readNumberedMenu(
 
   // The title: the nearest content line above option 1.
   let title = "";
+  let titleAt = i;
   for (let j = i - 1; j >= 0 && i - j <= 3; j--) {
     const line = lines[j]!;
     if (line.trim() === "") continue;
-    if (!RULE_RE.test(line) && !COMPOSER_RE.test(line)) title = squash(line);
+    if (!RULE_RE.test(line) && !COMPOSER_RE.test(line)) {
+      title = squash(line);
+      titleAt = j;
+    }
     break;
   }
 
@@ -199,7 +222,46 @@ function readNumberedMenu(
       : squash(line);
   }
   if (highlighted === null) return null;
-  return { title, options, highlighted, footer };
+  const asked = title ? readBody(lines, titleAt) : "";
+  return { title, body: asked, options, highlighted, footer };
+}
+
+/**
+ * The dialog content above the title at `titleAt`: the lines up to the solid
+ * rule that is the dialog's top border, without its chrome (dashed dividers,
+ * the side border, the countdown notice), dedented, blank runs collapsed.
+ * "" when no top border is within reach.
+ */
+function readBody(lines: readonly string[], titleAt: number): string {
+  let top: number | null = null;
+  for (let j = titleAt - 1; j >= 0 && titleAt - j <= BODY_MAX_LINES; j--) {
+    if (RULE_RE.test(lines[j]!)) {
+      top = j;
+      break;
+    }
+  }
+  if (top === null) return "";
+
+  const kept: string[] = [];
+  let inCountdown = false;
+  for (const raw of lines.slice(top + 1, titleAt)) {
+    const line = raw.replace(SIDE_BORDER_RE, "$1").trimEnd();
+    if (DASHED_RULE_RE.test(line)) continue;
+    // The notice hard-wraps; it runs to the next blank line.
+    if (COUNTDOWN_RE.test(line)) inCountdown = true;
+    if (inCountdown) {
+      if (line === "") inCountdown = false;
+      continue;
+    }
+    if (line === "" && (kept.length === 0 || kept.at(-1) === "")) continue;
+    kept.push(line);
+  }
+  while (kept.at(-1) === "") kept.pop();
+
+  const indent = Math.min(
+    ...kept.filter((l) => l !== "").map((l) => /^ */.exec(l)![0].length),
+  );
+  return kept.map((l) => l.slice(indent)).join("\n");
 }
 
 function squash(text: string): string {

@@ -495,6 +495,7 @@ describe("planConversationUpdate — no live session", () => {
 describe("planConversationUpdate — a terminal menu on screen", () => {
   const MENU: TerminalMenu = {
     title: "What do you want to do?",
+    body: "",
     options: [
       { n: 1, label: "Stop and wait for limit to reset", description: null },
       { n: 2, label: "Switch to usage credits", description: null },

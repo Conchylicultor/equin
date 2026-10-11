@@ -9,6 +9,7 @@ import {
 
 const MENU: TerminalMenu = {
   title: "What do you want to do?",
+  body: "",
   options: [
     { n: 1, label: "Stop and wait for limit to reset", description: null },
     {
