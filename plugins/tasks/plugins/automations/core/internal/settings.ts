@@ -39,6 +39,16 @@ export const ORIGIN_ROLES = ["filed", "launched"] as const;
 export type OriginRole = (typeof ORIGIN_ROLES)[number];
 
 /**
+ * What a person decided about launching a task with a launch-kind automation,
+ * on its decision row: `approved` — it may launch it; `excluded` — it never
+ * proposes it again until restored. A task with no row is undecided, and a
+ * launch-kind automation launches ONLY approved tasks: nothing a person did
+ * not approve ever starts, whatever the automation ranks first.
+ */
+export const LAUNCH_DECISIONS = ["approved", "excluded"] as const;
+export type LaunchDecision = (typeof LAUNCH_DECISIONS)[number];
+
+/**
  * The task statuses that free a launch-kind automation's slot on their own:
  * the task landed or was dropped, its agent went away without reporting
  * (`attempted` — counted as finished, and flagged), or a person held it (the

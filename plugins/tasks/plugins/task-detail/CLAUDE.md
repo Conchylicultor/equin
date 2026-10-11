@@ -54,6 +54,7 @@
     - `conversations/conversation-view/markdown-extensions`
     - `conversations/conversation-view/tasks-panel`
     - `tasks/automations`
+    - `tasks/sidequest-autopilot`
     - `tasks/task-attachments`
     - `tasks/task-dependencies`
     - `tasks/task-deps-tree`

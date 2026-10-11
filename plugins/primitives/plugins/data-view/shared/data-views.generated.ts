@@ -64,6 +64,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "tasks-list", pluginId: "tasks.task-list" },
   { id: "tasks.automations", pluginId: "tasks.automations" },
   { id: "tasks.automations.history", pluginId: "tasks.automations" },
+  { id: "tasks.sidequest-autopilot.launch-list", pluginId: "tasks.sidequest-autopilot" },
   { id: "theme-engine.themes", pluginId: "ui.theme-engine.theme-gallery" },
   { id: "theme-engine.themes.quick", pluginId: "ui.theme-engine.theme-gallery" },
 ];

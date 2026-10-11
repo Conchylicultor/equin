@@ -4,8 +4,10 @@ import {
   type TaskStatus,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { db, type DbExecutor } from "@plugins/database/server";
+import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import { DEFAULT_TASK_TRACK, type TaskTrack } from "../../core";
 import { tasksTrack } from "./tables";
+import { taskTrackChanged } from "./tables-events";
 
 /** The task's track: its stored row, or the default (main) when it has none. */
 export async function getTaskTrack(taskId: string): Promise<TaskTrack> {
@@ -30,6 +32,12 @@ export async function setTaskTrack(
   } else {
     await tasksTrack.upsert(taskId, { track }, exec);
   }
+  // On the writing executor, so the event commits (or rolls back) with the
+  // row. Same PgTransaction ⇄ EmitTx cast as tasks-core's emits.
+  await taskTrackChanged.emit(
+    { taskId, track },
+    exec === db ? undefined : { tx: exec as EmitTx },
+  );
 }
 
 /**

@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Tasks } from "@plugins/tasks/plugins/task-list/web";
 import { TrackField } from "./components/track-field";
 
-export { useTaskTrack } from "./hooks";
+export { useStoredTracks, useTaskTrack } from "./hooks";
 export { TaskTrackControl } from "./components/track-control";
 
 export default {

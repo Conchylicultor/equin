@@ -1,5 +1,11 @@
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { multilineTextField } from "@plugins/fields/plugins/multiline-text/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { defineLaunchAutomationConfig } from "@plugins/tasks/plugins/automations/core";
+import {
+  defineLaunchAutomationConfig,
+  type PromptVariable,
+} from "@plugins/tasks/plugins/automations/core";
 
 /** The automation's id: its config document's name and its job's suffix. */
 export const SIDEQUEST_AUTOPILOT_ID = "sidequest-autopilot";
@@ -14,6 +20,16 @@ export const SIDEQUEST_AUTOPILOT_PROMPT = `You are working through the sidequest
 # {{title}}
 
 {{description}}
+
+## What triage found
+
+A read-only reviewer read the code before you and wrote this for the person, who approved this task for you to work on:
+
+{{context}}
+
+## The person's call
+
+{{decision}}
 
 ## How to work
 
@@ -38,11 +54,69 @@ Finish by calling the \`submit_outcome_report\` MCP tool **exactly once**, then 
 4. **Caveats** — anything you encountered, skipped or are unsure of.
 5. **One decision question**, only if there is one — the single thing you need the person to decide.`;
 
+/** The most commits since filing the triage prompt lists. */
+export const MAX_RECENT_COMMITS = 200;
+
+/** The variables the triage prompt may use. */
+export const TRIAGE_PROMPT_VARIABLES: readonly PromptVariable[] = [
+  { name: "taskId", description: "The sidequest's task id" },
+  { name: "title", description: "The sidequest's title" },
+  {
+    name: "description",
+    description: "The sidequest's description (or a note that it has none)",
+  },
+  { name: "filedAgo", description: "How long ago it was filed" },
+  {
+    name: "recentCommits",
+    description: `Commits on main since it was filed, newest first (at most ${MAX_RECENT_COMMITS})`,
+  },
+];
+
+/**
+ * The prompt triage reads each sidequest with — what the build commits as the
+ * config's `triagePrompt`. The run may only read the code (Read / Grep /
+ * Glob, in the main checkout) and answers with the structured triage record,
+ * whose fields the CLI enforces; this text says how to judge them.
+ */
+export const SIDEQUEST_TRIAGE_PROMPT = `Triage one sidequest before the person decides whether an unattended agent may pick it up. You can only read: the working directory is the main checkout of the repository, at its latest commit. Do not try to change anything.
+
+# The sidequest (\`{{taskId}}\`)
+
+## {{title}}
+
+{{description}}
+
+It was filed {{filedAgo}}. Commits on main since then, newest first:
+
+{{recentCommits}}
+
+# What to decide
+
+1. **Obsolete?** Search the code (and the commits above) for what the task names: is it already fixed, or is the code it talks about gone? If so, verdict \`obsolete\` — quote the commit or the path that shows it.
+2. **Clear?** Could an agent nobody is watching do it without asking anyone? If one call is the person's to make, verdict \`decide\` and ask it.
+3. **Too big?** If it does not fit one session, verdict \`split\` and propose the split as the question.
+4. Otherwise verdict \`ready\`.
+
+Then rate it:
+
+- **risk** — \`high\` when it changes behaviour a person relies on, a shared primitive many screens go through, a schema, auth or the gateway; \`medium\` for a contained behaviour change; \`low\` for a local fix nobody would notice except as "fixed".
+- **sizeMinutes** — your honest estimate of an agent's working time.
+- **value** — 1–5: how much fixing it is worth to the person.
+- **areas** — the plugin paths it would touch (\`tasks/automations\`, \`shell/health-report\`, …).
+
+# The context
+
+Write \`context\` for someone who has never seen this code and must decide in a minute whether to let an agent do it: what the problem is, why it matters (or doesn't), how it could be fixed, and anything that makes it risky or hard. Plain language, short paragraphs, \`- \` bullets where they help, **bold** for the one thing to notice. As long as this task needs, and no longer.
+
+If there is a question, \`question\` is ONE question the person can answer in a click, and \`answers\` its 2–4 short answers (a few words each). Otherwise \`question\` is null and \`answers\` is empty.`;
+
 /**
  * The Sidequest autopilot's config: OFF by default; on, it starts agents on
- * ready sidequests 2 at a time, each allowed to push only an uncontroversial
- * change, until it is turned off — or until `runUntil`, after which it turns
- * itself off. Woken when a task becomes ready to start (a burst settling 2
+ * the ready sidequests the person APPROVED, best first, 2 at a time and at
+ * most 5 in total, each allowed to push only an uncontroversial change — then
+ * it turns itself off (or at `runUntil`, or when the person does). Triage (on
+ * by default, independent of `enabled`) reads each new sidequest read-only and
+ * proposes it; it approves nothing. Woken when a task becomes ready to start (a burst settling 2
  * min), and whenever one of its agents finishes or reports. Stored as
  * `config/tasks/automations/sidequest-autopilot.origin.jsonc`.
  */
@@ -54,9 +128,31 @@ export const sidequestAutopilotConfig = defineLaunchAutomationConfig(
     trigger: "event",
     settleMinutes: 2,
     concurrency: 2,
+    maxLaunches: 5,
     prompt: SIDEQUEST_AUTOPILOT_PROMPT,
   },
   {
+    triage: boolField({
+      label: "Triage",
+      description:
+        "Read each new sidequest with Sonnet (read-only) and propose it in the launch list. It approves nothing; off, nothing new is read.",
+      default: true,
+    }),
+    staleAfterDays: intField({
+      label: "Stale after (days)",
+      description:
+        "A triage read older than this — or of a task edited since — is tagged Stale in the launch list. Nothing re-runs on its own.",
+      min: 1,
+      max: 90,
+      default: 7,
+    }),
+    triagePrompt: multilineTextField({
+      label: "Triage prompt",
+      description:
+        "What triage reads each sidequest with. {{variable}} placeholders are filled per task.",
+      default: SIDEQUEST_TRIAGE_PROMPT,
+      rows: 16,
+    }),
     runUntil: textField({
       label: "Run until",
       description:

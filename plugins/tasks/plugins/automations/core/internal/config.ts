@@ -147,7 +147,12 @@ function automationFields(d: AutomationConfigDefaults) {
 export interface LaunchAutomationConfigDefaults extends AutomationConfigDefaults {
   /** How many of its agents may run at once. */
   concurrency: number;
+  /** How many it launches in total once turned on, before it turns itself off. */
+  maxLaunches: number;
 }
+
+/** The highest `maxLaunches` a launch-kind automation may be set to. */
+export const MAX_LAUNCHES = 50;
 
 /** The highest `concurrency` a launch-kind automation may be set to. */
 export const MAX_LAUNCH_CONCURRENCY = 8;
@@ -162,14 +167,22 @@ function launchFields(d: LaunchAutomationConfigDefaults) {
       max: MAX_LAUNCH_CONCURRENCY,
       default: d.concurrency,
     }),
+    maxLaunches: intField({
+      label: "In total",
+      description:
+        "How many approved tasks it launches once turned on; then it turns itself off. Turning it back on starts a new count.",
+      min: 1,
+      max: MAX_LAUNCHES,
+      default: d.maxLaunches,
+    }),
   };
 }
 
 /** The fields every automation config has. */
 export type AutomationConfigFields = ReturnType<typeof automationFields>;
 
-/** The fields every launch-kind automation config has: the common ones and
- * `concurrency`. */
+/** The fields every launch-kind automation config has: the common ones,
+ * `concurrency` and `maxLaunches`. */
 export type LaunchAutomationConfigFields = AutomationConfigFields &
   ReturnType<typeof launchFields>;
 
@@ -194,7 +207,8 @@ export function defineAutomationConfig<
 /**
  * Declare a launch-kind automation's config document: everything
  * `defineAutomationConfig` declares, plus `concurrency` — how many of its
- * agents run at once. Registered and stored exactly like a file-kind one.
+ * agents run at once — and `maxLaunches` — how many it launches before it
+ * turns itself off. Registered and stored exactly like a file-kind one.
  */
 export function defineLaunchAutomationConfig<
   const X extends FieldsRecord = Record<never, never>,

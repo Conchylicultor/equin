@@ -1,0 +1,25 @@
+// @hash 6ec84829688d
+// The launch list reads top to bottom as "what will run": grouped by where a
+// sidequest stands — Approved first, then Proposed by triage, Needs your call,
+// Looks obsolete, Triaging, Excluded (the lane field's option order) — and,
+// inside each group, in launch order (triage's value for size, best first).
+{
+  "views": [
+    {
+      "id": "lanes",
+      "name": "Launch list",
+      "icon": "checklist",
+      "view": {
+        "type": "list",
+        "groupBy": { "fieldId": "lane", "groupingId": "value" },
+        "sort": [
+          { "fieldId": "lane", "direction": "asc" },
+          { "fieldId": "rank", "direction": "asc" }
+        ]
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

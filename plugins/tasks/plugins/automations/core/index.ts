@@ -12,6 +12,7 @@ export type {
 export {
   AUTOMATION_KINDS,
   AutomationSettingsSchema,
+  LAUNCH_DECISIONS,
   ORIGIN_ROLES,
   ScheduleSettingsSchema,
   SLOT_SETTLED_STATUSES,
@@ -30,6 +31,7 @@ export type {
   AutomationKind,
   AutomationSettings,
   Cadence,
+  LaunchDecision,
   OriginRole,
   PushPolicy,
   ScheduleSettings,
@@ -43,6 +45,7 @@ export {
   defineLaunchAutomationConfig,
   isLaunchAutomationConfig,
   MAX_LAUNCH_CONCURRENCY,
+  MAX_LAUNCHES,
   readAutomationSettings,
 } from "./internal/config";
 export type {
@@ -65,7 +68,14 @@ export {
   automationsCatalog,
   automationTasks,
   AutomationTaskRowSchema,
+  launchDecisions,
+  launchDecisionShape,
+  LaunchDecisionRowSchema,
   taskOriginShape,
 } from "./internal/resources";
-export type { AutomationTaskRow } from "./internal/resources";
+export type {
+  AutomationTaskRow,
+  LaunchDecisionRow,
+} from "./internal/resources";
 export { automationsRoute, automationDetailRoute } from "./internal/routes";
+export { decideLaunchEndpoint, MAX_DECIDED_TASKS } from "./internal/endpoints";

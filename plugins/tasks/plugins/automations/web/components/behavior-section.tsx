@@ -9,6 +9,7 @@ import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import {
   isLaunchAutomationConfig,
   MAX_LAUNCH_CONCURRENCY,
+  MAX_LAUNCHES,
   PUSH_POLICIES,
   PUSH_POLICY_LABELS,
   type AutomationEntry,
@@ -43,9 +44,7 @@ export function BehaviorSection({
           onSelect={() => set("enabled", !settings.enabled)}
           description={
             entry.kind === "launch"
-              ? settings.enabled
-                ? `Starts agents on ready tasks, ${entry.concurrency} at a time.`
-                : "Starts nothing until you turn it on. Agents already running finish."
+              ? launchEnabledWords(entry, settings.enabled)
               : settings.enabled
                 ? "Files a task and starts its agent when it finds work."
                 : "Files nothing until you turn it on."
@@ -87,6 +86,18 @@ export function BehaviorSection({
   );
 }
 
+type LaunchEntry = Extract<AutomationEntry, { kind: "launch" }>;
+
+function launchEnabledWords(entry: LaunchEntry, enabled: boolean): string {
+  const approved =
+    entry.approvedCount === 0
+      ? "Nothing is approved, so it would launch nothing."
+      : `${entry.approvedCount} approved and waiting.`;
+  return enabled
+    ? `Starts agents on the tasks you approved, ${entry.concurrency} at a time — ${entry.launchedInBatch} of at most ${entry.maxLaunches} launched, then it turns itself off. ${approved}`
+    : `Starts nothing until you turn it on, and then only tasks you approved. Agents already running finish. ${approved}`;
+}
+
 const CONCURRENCY_OPTIONS = Array.from(
   { length: MAX_LAUNCH_CONCURRENCY },
   (_, i) => String(i + 1),
@@ -108,7 +119,12 @@ function ConcurrencySetting({
       `automation ${entry.id} is launch-kind but its config has no concurrency — declare it with defineLaunchAutomationConfig`,
     );
   }
-  return <LaunchConcurrency entry={entry} descriptor={descriptor} />;
+  return (
+    <>
+      <LaunchConcurrency entry={entry} descriptor={descriptor} />
+      <MaxLaunchesSetting entry={entry} descriptor={descriptor} />
+    </>
+  );
 }
 
 function LaunchConcurrency({
@@ -130,6 +146,43 @@ function LaunchConcurrency({
           value={String(entry.concurrency)}
           options={CONCURRENCY_OPTIONS.map((n) => ({ value: n, label: n }))}
           onChange={(n) => set("concurrency", Number(n))}
+        />
+      }
+    />
+  );
+}
+
+const MAX_LAUNCHES_OPTIONS = Array.from({ length: MAX_LAUNCHES }, (_, i) =>
+  String(i + 1),
+);
+
+/**
+ * How many approved tasks a launch-kind automation launches once turned on,
+ * before it turns itself off — and how many it has this time.
+ */
+function MaxLaunchesSetting({
+  entry,
+  descriptor,
+}: {
+  entry: LaunchEntry;
+  descriptor: ConfigDescriptor<LaunchAutomationConfigFields>;
+}): ReactElement {
+  const set = useSetConfig(descriptor);
+  return (
+    <ControlPanel.Setting
+      label="In total"
+      hint={
+        entry.enabled
+          ? `${entry.launchedInBatch} launched since it was turned on. At ${entry.maxLaunches} it turns itself off; turning it back on starts a new count.`
+          : "Launches at most this many approved tasks once turned on, then turns itself off."
+      }
+      fit="field"
+      control={
+        <ChoiceSelect
+          ariaLabel="Launches in total"
+          value={String(entry.maxLaunches)}
+          options={MAX_LAUNCHES_OPTIONS.map((n) => ({ value: n, label: n }))}
+          onChange={(n) => set("maxLaunches", Number(n))}
         />
       }
     />

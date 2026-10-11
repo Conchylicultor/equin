@@ -10,7 +10,7 @@ import {
 import { nullable } from "@plugins/fields/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { AutomationEntrySchema } from "./entry";
-import { ORIGIN_ROLES } from "./settings";
+import { LAUNCH_DECISIONS, ORIGIN_ROLES } from "./settings";
 
 /**
  * Every registered automation. External and bounded by the declared set (the
@@ -62,5 +62,35 @@ export const automationTasks = liveCollection("automations.tasks", {
   filterable: { automationId: liveText() },
   sortable: ["filedAt"],
   default: { orderBy: [["filedAt", "desc"]], limit: 50 },
+  maxLimit: 2000,
+});
+
+// What a person decided about launching a task with a launch-kind automation:
+// one row per decided task, in the `tasks_ext_launch_decision` side-table,
+// written ONLY by the person's click (`decideLaunchEndpoint`). `approved` ⇒
+// that automation may launch it; `excluded` ⇒ it is not proposed again until
+// the row is cleared. No row ⇒ undecided, never launched.
+export const launchDecisionShape = defineExtensionShape({
+  key: "taskId",
+  fields: {
+    automationId: textField(),
+    decision: enumTextField(LAUNCH_DECISIONS),
+    decidedAt: dateField(),
+  },
+});
+export const LaunchDecisionRowSchema = launchDecisionShape.schema;
+export type LaunchDecisionRow = z.infer<typeof LaunchDecisionRowSchema>;
+
+/**
+ * The launch decisions, newest first: one automation's are
+ * `useLive(launchDecisions, { where: { automationId } })`. Bounded by what a
+ * person clicked through — a review list, not the task table.
+ */
+export const launchDecisions = liveCollection("automations.launch-decisions", {
+  row: LaunchDecisionRowSchema,
+  id: "taskId",
+  filterable: { automationId: liveText() },
+  sortable: ["decidedAt"],
+  default: { orderBy: [["decidedAt", "desc"]], limit: 500 },
   maxLimit: 2000,
 });

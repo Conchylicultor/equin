@@ -80,7 +80,26 @@ export async function runClaudePrint(
     "--no-session-persistence",
   ];
   if (input.system) args.push("--system-prompt", input.system);
+  return invokeClaude({ args, cwd: "/tmp", input, timeoutMs, resolvedModel });
+}
 
+/**
+ * Spawn `claude` with `args` once, feeding `input.prompt` on stdin, and return
+ * its stdout — recording the call in the log either way.
+ */
+export async function invokeClaude({
+  args,
+  cwd,
+  input,
+  timeoutMs,
+  resolvedModel,
+}: {
+  args: readonly string[];
+  cwd: string;
+  input: RunClaudePrintInput;
+  timeoutMs: number;
+  resolvedModel: ReturnType<typeof requireModel>;
+}): Promise<string> {
   const startedAt = performance.now();
   let output: string | undefined;
   let caughtError: Error | undefined;
@@ -105,11 +124,11 @@ export async function runClaudePrint(
     // REAL ceiling (SIGTERM, then SIGKILL) reported as `timedOut` on the result
     // rather than inferred from a signal anyone could have sent.
     //
-    // `cwd: "/tmp"` so claude doesn't auto-discover project CLAUDE.md files even
-    // with --system-prompt set (defensive — the system prompt replacement should
-    // already cover this).
+    // `cwd: "/tmp"` for a plain print so claude doesn't auto-discover project
+    // CLAUDE.md files even with --system-prompt set (defensive — the system
+    // prompt replacement should already cover this).
     const result = await spawnCaptured([requireClaudeBin(), ...args], {
-      cwd: "/tmp",
+      cwd,
       env: claudeEnv,
       stdin: input.prompt,
       timeoutMs,

@@ -7,12 +7,17 @@ import { _claudeCliCalls } from "./internal/tables";
 
 export { runClaudePrint, ClaudeCliError } from "./internal/run-claude-print";
 export type { RunClaudePrintInput } from "./internal/run-claude-print";
+export {
+  runClaudeReadOnly,
+  READ_ONLY_TOOLS,
+} from "./internal/run-claude-read-only";
+export type { RunClaudeReadOnlyInput } from "./internal/run-claude-read-only";
 export { _claudeCliCalls } from "./internal/tables";
 export { listCallsFor } from "./internal/list-calls";
 
 export default {
   description:
-    "One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.",
+    "One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations, and runClaudeReadOnly — a print that may only Read / Grep / Glob one directory and answers with a zod-schema'd structured value. Reuses the user's local Claude CLI auth — no API key plumbing.",
   httpRoutes: {
     [listClaudeCliCallsFor.route]: handleListCallsFor,
   },

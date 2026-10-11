@@ -514,11 +514,13 @@ serves them.
     - `tasks/task-category` (table `tasks_ext_category`)
     - `tasks/task-effort` (table `tasks_ext_effort`)
     - `plugin-meta/plugin-health` (table `tasks_ext_health_review`)
+    - `tasks/automations` (table `tasks_ext_launch_decision`)
     - `tasks/automations` (table `tasks_ext_origin`)
     - `tasks/outcome-report` (table `tasks_ext_outcome_report`)
     - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
     - `page/prompt/link` (table `tasks_ext_prompt_block`)
     - `tasks/task-title` (table `tasks_ext_short_title`)
+    - `tasks/sidequest-autopilot` (table `tasks_ext_sidequest_triage`)
     - `tasks/task-source-url` (table `tasks_ext_source_url`)
     - `tasks/task-track` (table `tasks_ext_track`)
 - Exemptions:

@@ -3,11 +3,9 @@ import { getConfig, setConfig } from "@plugins/config_v2/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { sidequestAutopilotConfig } from "../../shared/config";
+import { log } from "./log";
 import { parseRunUntil, runUntilPassed } from "../../shared/run-until";
-
-const log = Log.channel("sidequest-autopilot");
 
 /**
  * Turn the autopilot off if its `runUntil` has passed — a write to its config

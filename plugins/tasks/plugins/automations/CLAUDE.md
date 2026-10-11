@@ -6,12 +6,15 @@ Things that start agents with nobody clicking anything. Two kinds:
   for it and launches its agent, and files nothing more while that task is
   open (dependency upgrades, report investigations).
 - **launch** — `candidates` names EXISTING tasks, best first; the automation
-  launches agents on them, at most `concurrency` at a time, the next one when a
-  slot frees (the sidequest autopilot).
+  launches agents on the ones **a person approved** — never any other — at most
+  `concurrency` at a time, the next one when a slot frees, and at most
+  `maxLaunches` per turn-on, after which it turns itself off (the sidequest
+  autopilot).
 
 Design: `research/2026-10-07-global-automations.md`; triggers, prompt and
 Report investigations: `research/2026-10-07-global-automations-triggers-and-reports-v2.md`;
-the launch kind: `research/2026-10-10-tasks-sidequest-autopilot.md`.
+the launch kind: `research/2026-10-10-tasks-sidequest-autopilot.md`; approval and
+the total cap: `research/2026-10-11-tasks-sidequest-autopilot-v2.md`.
 
 ## Declaring one
 
@@ -40,7 +43,7 @@ export const depsUpgradesAutomation = defineAutomation({
 ```
 
 A launch-kind one declares its config with `defineLaunchAutomationConfig`
-(the common fields plus `concurrency`) and `kind: "launch"` with `candidates`
+(the common fields plus `concurrency` and `maxLaunches`) and `kind: "launch"` with `candidates`
 instead of `categoryId` / `detect` (it files nothing, so it stamps no
 category):
 
@@ -69,7 +72,7 @@ fields are `enabled`, `push` (`never` | `safe` = only an uncontroversial change 
 `checks`), `model` (one shared field object, so one `DynamicEnum.Options`),
 `excludedSources`, `trigger` + the schedule (`cadence` hour/day/days/week/cron,
 `at` local HH:MM, `everyDays`, `weekday`, `cron` UTC) + `settleMinutes`, and
-`prompt`; a launch-kind config adds `concurrency`.
+`prompt`; a launch-kind config adds `concurrency` and `maxLaunches`.
 
 **The automation owns its job** (`automation.<id>`, singleton, `serial` — one
 run at a time, so two runs can never both find no open task or both count a
@@ -119,11 +122,17 @@ around its settings.
    `releasedAt` null, whose task is not in `SLOT_SETTLED_STATUSES` (`done`,
    `dropped`, `attempted` — its agent went away without reporting, counted as
    finished and belled — and `held`, a person's own act; waiting on it would
-   stall the automation). `free = concurrency − occupied` (never below 0:
-   lowering the concurrency stops nothing). None free ⇒ stops.
-3. Calls `candidates` (best first), skips any task an automation already filed
-   or launched (a task has ONE origin) or someone already armed, and takes the
-   first `free` (`selectLaunches`).
+   stall the automation), and what is left of its **batch**: `maxLaunches`
+   minus its launches since the batch opened (`automation_launch_batches`: a
+   batch opens when it is turned on, closes when it is turned off — synced by
+   the config watcher and at boot). `free = min(concurrency − occupied,
+   batch left)` (never below 0: lowering either stops nothing). Batch spent ⇒
+   it writes `enabled: false` (its config, `systemOrigin`) and stops; none free
+   ⇒ stops.
+3. Calls `candidates` (best first), keeps ONLY the tasks a person approved for
+   it, skips any task an automation already filed or launched (a task has ONE
+   origin) or someone already armed, and takes the first `free`
+   (`selectLaunches`). After launching, a spent batch turns it off the same way.
 4. For each: fills the template with the candidate's `variables` +
    `pushPolicy`, writes its origin row (role `launched`; insert-or-nothing, so
    a race loses cleanly), then `armTaskAutoStart` with the model and the
@@ -132,6 +141,14 @@ around its settings.
    The existing launch gates (main only, not held/dropped/blocked, Claude Code
    ready, the model resolves) apply as for any armed task; a task waiting on
    them still holds its slot.
+
+**Approval.** `tasks_ext_launch_decision` (one row per task: `automationId`,
+`decision: approved | excluded`, `decidedAt`) is the approved set, written
+ONLY by `decideLaunchEndpoint` (`POST /api/automations/:automationId/launch-decisions`,
+`decision: null` clears) — the person's click. Nothing on the server approves
+a task, and `candidates` cannot bypass the filter: an automation only ranks.
+`excluded` is for the automation's own review UI (not proposed again); the pump
+ignores it. Read with `useLive(launchDecisions, { where: { automationId } })`.
 
 Dedupe ("one open task") is file-kind only. A launched task stays the person's
 task: its category, title and description are untouched; the role says the
@@ -179,7 +196,8 @@ window filterable by `automationId` (newest first), and point reads by task id.
   automation with `kind`, `enabled`, its trigger (supported kinds, current
   kind, words, `jobName`, installed `cron`, `scheduleError`), sources, prompt
   variables, and by kind: `categoryId` + `openTaskId` (file), `concurrency` +
-  `runningTaskIds` (launch; the list shows "N running"). Re-pushed when an
+  `runningTaskIds` + `maxLaunches` + `launchedInBatch` + `approvedCount`
+  (launch; the list shows "N running"). Re-pushed when an
   automation's config changes, it files, launches or releases a task, or one of
   its tasks changes status.
 - `automationTasks` — see above.
@@ -202,7 +220,7 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
 
 ## Plugin reference
 
-- Description: Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the `origin` Automation field in every task DataView, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, concurrency slots held until a task settles or releaseLaunchedTask), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value and the automations.tasks collection (the origin side-table), and notifies the bell when an automated task needs its person.
+- Description: Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the `origin` Automation field in every task DataView, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, written by the decide-launch endpoint alone — concurrency slots held until a task settles or releaseLaunchedTask, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value, the automations.tasks collection (the origin side-table) and the automations.launch-decisions collection, and notifies the bell when an automated task needs its person.
 - Web:
   - Slots:
     - `Automations.Config`
@@ -258,17 +276,22 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
   - Exports (values):
     - `automationConfigContributions`
     - `Automations`
+    - `PromptTemplateBlock`
 - Server:
   - Contributes:
     - `resource.declare` "automations.catalog"
+    - `resource.declare` "automations.launch-decisions"
+    - `resource.declare` "automations.launch-decisions:groups"
+    - `resource.declare` "automations.launch-decisions:rows"
     - `resource.declare` "automations.tasks"
     - `resource.declare` "automations.tasks:groups"
     - `resource.declare` "automations.tasks:rows"
     - `trigger` "automations.task-status"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×5
-    - `config_v2` ×3
+    - `config_v2` ×4
     - `database` ×2
+    - `infra/endpoints` ×2
     - `infra/jobs` ×2
     - `network/live` ×2
     - `infra/entity-extensions.defineExtension`
@@ -280,7 +303,9 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `tasks/task-category.setTaskCategory`
     - `tasks.armTaskAutoStart`
   - DB schema: `plugins/tasks/plugins/automations/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_origin`)
+  - Entity extension of:
+    - `tasks/tasks-core` (table `tasks_ext_launch_decision`)
+    - `tasks/tasks-core` (table `tasks_ext_origin`)
   - Exports (types):
     - `Automation`
     - `AutomationDetectCtx`
@@ -298,11 +323,15 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
   - Register: `defineJob('automations.task-status')`
   - Resources:
     - `automations.catalog` (push)
+    - `automations.launch-decisions` (keyed, window)
+    - `automations.launch-decisions:groups` (push)
+    - `automations.launch-decisions:rows` (keyed, point)
     - `automations.tasks` (keyed, window)
     - `automations.tasks:groups` (push)
     - `automations.tasks:rows` (keyed, point)
+  - Routes: `POST /api/automations/:automationId/launch-decisions`
 - Core:
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2` ×3
     - `conversations/model-provider` ×3
     - `fields/text/config` ×2
@@ -317,6 +346,7 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `fields/string-list/config.stringListField`
     - `fields.nullable`
     - `framework/plugin-id.asPluginId`
+    - `infra/endpoints.defineEndpoint`
     - `infra/entity-extensions.defineExtensionShape`
     - `network/live/filter.liveText`
     - `primitives/pane.defineRoute`
@@ -333,6 +363,8 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `CadenceCron`
     - `LaunchAutomationConfigDefaults`
     - `LaunchAutomationConfigFields`
+    - `LaunchDecision`
+    - `LaunchDecisionRow`
     - `OriginRole`
     - `PromptVariable`
     - `PushPolicy`
@@ -357,11 +389,18 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `cadenceCron`
     - `CADENCES`
     - `cadenceWords`
+    - `decideLaunchEndpoint`
     - `defineAutomationConfig`
     - `defineLaunchAutomationConfig`
     - `isLaunchAutomationConfig`
     - `labeledOptions`
+    - `LAUNCH_DECISIONS`
+    - `LaunchDecisionRowSchema`
+    - `launchDecisions`
+    - `launchDecisionShape`
+    - `MAX_DECIDED_TASKS`
     - `MAX_LAUNCH_CONCURRENCY`
+    - `MAX_LAUNCHES`
     - `ORIGIN_ROLES`
     - `PromptVariableSchema`
     - `PUSH_POLICIES`

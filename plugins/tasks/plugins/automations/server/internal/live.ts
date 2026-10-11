@@ -5,6 +5,7 @@ import {
 import {
   automationsCatalog,
   automationTasks,
+  launchDecisions,
   cadenceWords,
   PUSH_POLICY_VARIABLE,
   type AutomationEntry,
@@ -16,9 +17,11 @@ import {
   occupiedSlotTaskIdsByAutomation,
   openAutomationTaskIds,
 } from "./origin";
+import { pendingApprovalCounts } from "./decisions";
+import { launchedInOpenBatches } from "./launch-batch";
 import { registeredAutomations, type AutomationSpec } from "./registry";
 import { automationCron, automationSettings } from "./settings";
-import { tasksOrigin } from "./tables";
+import { tasksLaunchDecision, tasksOrigin } from "./tables";
 
 function triggerOf(
   spec: AutomationSpec,
@@ -43,9 +46,11 @@ function triggerOf(
 }
 
 async function loadCatalog(): Promise<AutomationEntry[]> {
-  const [open, running] = await Promise.all([
+  const [open, running, inBatch, approved] = await Promise.all([
     openAutomationTaskIds(),
     occupiedSlotTaskIdsByAutomation(),
+    launchedInOpenBatches(),
+    pendingApprovalCounts(),
   ]);
   return registeredAutomations().map(({ spec, jobName }) => {
     const settings = automationSettings(spec);
@@ -59,28 +64,34 @@ async function loadCatalog(): Promise<AutomationEntry[]> {
       sources: spec.sources?.() ?? [],
       promptVariables: [...spec.promptVariables, PUSH_POLICY_VARIABLE],
     };
-    return spec.kind === "launch"
-      ? {
-          ...common,
-          kind: "launch" as const,
-          concurrency: getConfig(spec.config).concurrency,
-          runningTaskIds: running.get(spec.id) ?? [],
-        }
-      : {
-          ...common,
-          kind: "file" as const,
-          categoryId: spec.categoryId,
-          openTaskId: open.get(spec.id) ?? null,
-        };
+    if (spec.kind === "launch") {
+      const config = getConfig(spec.config);
+      return {
+        ...common,
+        kind: "launch" as const,
+        concurrency: config.concurrency,
+        runningTaskIds: running.get(spec.id) ?? [],
+        maxLaunches: config.maxLaunches,
+        launchedInBatch: inBatch.get(spec.id) ?? 0,
+        approvedCount: approved.get(spec.id) ?? 0,
+      };
+    }
+    return {
+      ...common,
+      kind: "file" as const,
+      categoryId: spec.categoryId,
+      openTaskId: open.get(spec.id) ?? null,
+    };
   });
 }
 
 /**
  * The catalog, pushed. External: the declarations are process state, the
  * installed schedule and the concurrency move when an automation's config
- * changes, and the DB-derived fields (`openTaskId`, `runningTaskIds`) move only
- * when an automation files, launches or releases a task or one of its tasks
- * changes status — each says so (`notify`). Bounded by the declared set.
+ * changes, and the DB-derived fields (`openTaskId`, `runningTaskIds`,
+ * `launchedInBatch`, `approvedCount`) move only when an automation files,
+ * launches or releases a task, one of its tasks changes status, a batch opens
+ * or closes, or a person decides on a launch — each says so (`notify`). Bounded by the declared set.
  */
 export const automationsCatalogServed = serveValue(automationsCatalog, {
   source: "external",
@@ -93,4 +104,10 @@ export const automationsCatalogServed = serveValue(automationsCatalog, {
 // a task's deletion cascades its row away (an exit).
 export const automationTasksServed = serveCollection(automationTasks, {
   from: tasksOrigin,
+});
+
+// Served from the extension handle, like the origin rows: a decision is a
+// window entry, a cleared one an exit.
+export const launchDecisionsServed = serveCollection(launchDecisions, {
+  from: tasksLaunchDecision,
 });

@@ -192,6 +192,7 @@ export const exemptEntries: CollectedEntry[] = [
   { pluginPath: "tasks/plugins/task-category", id: "tasks.task-category", loader: () => import("@plugins/tasks/plugins/task-category/exempt"), dependsOn: [] },
   { pluginPath: "tasks/plugins/task-events", id: "tasks.task-events", loader: () => import("@plugins/tasks/plugins/task-events/exempt"), dependsOn: [] },
   { pluginPath: "tasks/plugins/task-graph", id: "tasks.task-graph", loader: () => import("@plugins/tasks/plugins/task-graph/exempt"), dependsOn: [] },
+  { pluginPath: "tasks/plugins/task-track", id: "tasks.task-track", loader: () => import("@plugins/tasks/plugins/task-track/exempt"), dependsOn: [] },
   { pluginPath: "tasks/plugins/tasks-core", id: "tasks.tasks-core", loader: () => import("@plugins/tasks/plugins/tasks-core/exempt"), dependsOn: [] },
   { pluginPath: "ui/plugins/icons", id: "ui.icons", loader: () => import("@plugins/ui/plugins/icons/exempt"), dependsOn: [] },
   { pluginPath: "ui/plugins/theme-engine/plugins/saved-themes", id: "ui.theme-engine.saved-themes", loader: () => import("@plugins/ui/plugins/theme-engine/plugins/saved-themes/exempt"), dependsOn: [] },

@@ -51,6 +51,7 @@
     - `infra/git/git-watcher`
     - `review/plugin-changes`
     - `tasks/attempt-work`
+    - `tasks/sidequest-autopilot`
     - `tasks/tasks-core`
 - Core:
   - Exports (types):

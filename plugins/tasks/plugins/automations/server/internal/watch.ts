@@ -1,7 +1,10 @@
 import { watchConfig } from "@plugins/config_v2/server";
 import { refreshJobSchedules } from "@plugins/infra/plugins/jobs/server";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { automationsCatalogServed } from "./live";
-import { registeredAutomations } from "./registry";
+import { syncLaunchBatch } from "./launch-batch";
+import { registeredAutomations, type RegisteredAutomation } from "./registry";
+import { automationSettings } from "./settings";
 
 /**
  * For the life of the process: when an automation's config changes, re-install
@@ -10,17 +13,37 @@ import { registeredAutomations } from "./registry";
  * slots), it starts at once rather than at its next event. Run once every
  * plugin is ready — `watchConfig` needs the config registered and loaded.
  *
- * Boot wakes every launch-kind automation once too: what settled while the
- * backend was down announced nothing, and a free slot would otherwise wait for
- * the next event.
+ * A launch-kind automation's batch follows its switch first (turned on opens
+ * a new one, turned off closes it — `maxLaunches` counts within it), then it
+ * is woken. Boot does the same once: what changed or settled while the
+ * backend was down announced nothing, and a free slot would otherwise wait
+ * for the next event.
  */
 export function watchAutomationConfigs(): void {
-  for (const { spec, wake } of registeredAutomations()) {
+  for (const registered of registeredAutomations()) {
+    const { spec } = registered;
     watchConfig(spec.config, () => {
       refreshJobSchedules();
       automationsCatalogServed.notify();
-      if (spec.kind === "launch") wake();
+      if (spec.kind === "launch") {
+        void runTracked(`automation:${spec.id}:batch-sync`, () =>
+          syncThenWake(registered),
+        );
+      }
     });
-    if (spec.kind === "launch") wake();
+    if (spec.kind === "launch") {
+      void runTracked(`automation:${spec.id}:batch-sync`, () =>
+        syncThenWake(registered),
+      );
+    }
   }
+}
+
+async function syncThenWake({
+  spec,
+  wake,
+}: RegisteredAutomation): Promise<void> {
+  await syncLaunchBatch(spec.id, automationSettings(spec).enabled);
+  automationsCatalogServed.notify();
+  wake();
 }

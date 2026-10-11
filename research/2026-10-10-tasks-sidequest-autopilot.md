@@ -56,6 +56,8 @@ Add a nullable `autoStartPrompt` column to `tasks_ext_auto_start`; `armTaskAutoS
 
 ### 5. Triage (phase 2, in the sidequest-autopilot plugin)
 
+> **Superseded** by `research/2026-10-11-tasks-sidequest-autopilot-v2.md`: no auto-approval at all (every launch is the person's explicit approval in a launch list), a total cap, and a read-only `claude --print` instead of a system conversation.
+
 - Side-table `tasks_ext_triage`: `{ verdict: ready | decide | split | obsolete, context (free-form markdown), question?, answers?, answer?, risk, size, value (1–5), areas (plugin paths), mainSha, triagedAt }`.
 - A triage job keeps a buffer of K triaged candidates ahead of the slots (and re-triages a row whose `mainSha` is stale when it reaches the front). Each triage = a `kind: "system"` Sonnet conversation (summary pattern), read-only, prompt = `triagePrompt`, result via MCP `submit_triage` (gated with `when` to triage conversations). Cleanup on submit, not a timer. Verify system conversations don't show in the queue (`classifyQueue` has no kind filter — filter upstream if needed).
 - Launch gate setting `autoApprove: clear-low | clear | never`; `obsolete: propose | drop`. `decide`/`split` rows wait for the user's one-click answer (stored as `answer`, fed to the agent as `{{decision}}`; `split` files the proposed children as sidequests).

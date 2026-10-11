@@ -79,7 +79,11 @@ const AutomationEntryBaseSchema = z.object({
  *   never files beside an open task.
  * - `launch` — `concurrency` is how many of its agents may run at once;
  *   `runningTaskIds` the tasks it launched that still hold a slot (not
- *   released, not settled), newest first.
+ *   released, not settled), newest first; `maxLaunches` how many it launches
+ *   once turned on before it turns itself off, `launchedInBatch` how many it
+ *   has launched since it was last turned on (0 while off), and
+ *   `approvedCount` how many tasks a person approved for it that it has not
+ *   launched yet.
  */
 export const AutomationEntrySchema = z.discriminatedUnion("kind", [
   AutomationEntryBaseSchema.extend({
@@ -91,6 +95,9 @@ export const AutomationEntrySchema = z.discriminatedUnion("kind", [
     kind: z.literal("launch"),
     concurrency: z.number().int(),
     runningTaskIds: z.array(z.string()),
+    maxLaunches: z.number().int(),
+    launchedInBatch: z.number().int(),
+    approvedCount: z.number().int(),
   }),
 ]);
 export type AutomationEntry = z.infer<typeof AutomationEntrySchema>;

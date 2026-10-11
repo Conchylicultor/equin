@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
-import { getConfig } from "@plugins/config_v2/server";
+import { getConfig, setConfig } from "@plugins/config_v2/server";
+import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
@@ -30,7 +31,9 @@ import {
   type FileAutomationSpec,
   type LaunchAutomationSpec,
 } from "./registry";
-import { freeSlots, selectLaunches } from "./slots";
+import { batchRemaining, freeSlots, selectLaunches } from "./slots";
+import { approvedTaskIds } from "./decisions";
+import { launchedSince, openLaunchBatch } from "./launch-batch";
 import {
   automationCron,
   automationSettings,
@@ -120,10 +123,14 @@ async function runFiling(
 }
 
 /**
- * A launch-kind run — the pump: count the slots its launched tasks still hold,
- * ask `candidates` only when one is free, and start the first ones that fit —
- * each recorded as launched (its origin row) and armed with the filled prompt
- * ON the marker, so whichever path claims the marker launches with it.
+ * A launch-kind run — the pump: count the slots its launched tasks still hold
+ * and what is left of its batch (`maxLaunches` since it was turned on), ask
+ * `candidates` only when both allow one, and start the first APPROVED ones
+ * that fit — each recorded as launched (its origin row) and armed with the
+ * filled prompt ON the marker, so whichever path claims the marker launches
+ * with it. A task no person approved never starts. Once the batch is spent it
+ * turns itself off (its config), exactly as if the person had: agents still
+ * running finish.
  */
 async function runLaunch(
   spec: LaunchAutomationSpec,
@@ -133,11 +140,21 @@ async function runLaunch(
   if (!settings.enabled) return "disabled; nothing launched";
   const config = getConfig(spec.config);
 
-  const running = await occupiedSlotTaskIds(spec.id);
-  const free = freeSlots(config.concurrency, running.length);
-  const load = () =>
-    `${running.length + launched.length} of ${config.concurrency} running`;
+  const batchStartedAt = await openLaunchBatch(spec.id);
+  const [running, launchedBefore] = await Promise.all([
+    occupiedSlotTaskIds(spec.id),
+    launchedSince(spec.id, batchStartedAt),
+  ]);
   const launched: string[] = [];
+  const load = () =>
+    `${running.length + launched.length} of ${config.concurrency} running, ${launchedBefore + launched.length} of ${config.maxLaunches} launched`;
+  const remaining = batchRemaining(config.maxLaunches, launchedBefore);
+  if (remaining === 0)
+    return `${await turnOffSpent(spec, config.maxLaunches)}; ${load()}`;
+  const free = Math.min(
+    freeSlots(config.concurrency, running.length),
+    remaining,
+  );
   if (free === 0) return `${load()}; no free slot`;
 
   const candidates = await spec.candidates({
@@ -146,12 +163,14 @@ async function runLaunch(
     config,
     signal,
   });
-  const [withOrigin, armed] = await Promise.all([
+  const [approved, withOrigin, armed] = await Promise.all([
+    approvedTaskIds(spec.id),
     taskIdsWithOrigin(candidates.map((c) => c.taskId)),
     listArmedTaskIds(),
   ]);
   const picks = selectLaunches(
     candidates,
+    approved,
     new Set([...withOrigin, ...armed]),
     free,
   );
@@ -169,9 +188,26 @@ async function runLaunch(
     launched.push(pick.taskId);
   }
   if (launched.length > 0) automationsCatalogServed.notify();
+  const spent =
+    batchRemaining(config.maxLaunches, launchedBefore + launched.length) === 0
+      ? `; ${await turnOffSpent(spec, config.maxLaunches)}`
+      : "";
   return launched.length === 0
-    ? `nothing to launch; ${load()}`
-    : `launched ${launched.join(", ")}; ${load()}`;
+    ? `nothing approved to launch; ${load()}${spent}`
+    : `launched ${launched.join(", ")}; ${load()}${spent}`;
+}
+
+/** Its batch is spent: turn it off, the person's own switch. */
+async function turnOffSpent(
+  spec: LaunchAutomationSpec,
+  maxLaunches: number,
+): Promise<string> {
+  await setConfig(spec.config, "enabled", false, {
+    writer: systemOrigin(
+      `${spec.id}: launched ${maxLaunches} of ${maxLaunches}`,
+    ),
+  });
+  return `launched its ${maxLaunches}; turned itself off`;
 }
 
 /** The automation's prompt template filled for one task — or a throw. */
@@ -223,9 +259,11 @@ function adoptLegacyWarmup(spec: FileAutomationSpec, jobName: string) {
  *   sources, fills the config's prompt template, then files ONE task (category
  *   + origin row, one transaction) and arms its launch with the chosen model.
  * - **launch** (`kind: "launch"`): every run counts the slots its launched
- *   tasks hold, and while one is free asks `candidates` and launches the first
- *   ones that fit — origin row role `launched`, marker armed with the filled
- *   prompt. Also woken, whatever its trigger, when a task it launched settles
+ *   tasks hold and what is left of its batch (`maxLaunches` since it was
+ *   turned on), and while both allow asks `candidates` and launches the first
+ *   ones a PERSON APPROVED (`decideLaunchEndpoint`) that fit — origin row role
+ *   `launched`, marker armed with the filled prompt. A spent batch turns it
+ *   off. Also woken, whatever its trigger, when a task it launched settles
  *   or is released, when its config changes, and at boot.
  *
  * ```ts

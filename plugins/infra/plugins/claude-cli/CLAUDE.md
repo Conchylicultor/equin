@@ -22,7 +22,19 @@ const title = await runClaudePrint({
 });
 ```
 
-Throws `ClaudeCliError` on non-zero exit or timeout. Callers that need graceful degradation should `try/catch` and fall back.
+Throws `ClaudeCliError` on non-zero exit or timeout.
+
+### Read-only structured runs
+
+`runClaudeReadOnly({ tier, prompt, system?, readDir, output, timeoutMs, source })`
+is a print that may LOOK at code but never change it: the CLI gets exactly
+`--tools Read,Grep,Glob` (`READ_ONLY_TOOLS`), `--restricted` (no code-running
+tools, file tools confined to `readDir`, user/project settings ignored),
+`--strict-mcp-config`, `--permission-mode dontAsk`, cwd `readDir`. `output` is
+a `zod/v4` schema: it is handed to the CLI as `--json-schema` and the
+`structured_output` is parsed with it — one declaration, so the two cannot
+disagree. Throws `ClaudeCliError` on an error result or an answer outside the
+schema. Used by the sidequest autopilot's triage. Callers that need graceful degradation should `try/catch` and fall back.
 
 The child goes through `spawnCaptured` (`infra/spawn`), **never** a raw
 `Bun.spawn` with piped stdio: bun 1.3.13's exit-during-stream-pull race leaves the
@@ -95,7 +107,7 @@ block keep taking a plain `ClaudeCliCall`.
 
 ## Plugin reference
 
-- Description: Consumer half of the claude-cli call log: useClaudeCliCalls({correlationId, occurredAt}) answers 'which model calls produced this record?' as a calls / none / not-retained result, <ClaudeCliCallDetail> is the one rendering of a recorded call (header, meta grid, context with id chips, output or error, prompt, system — each copyable), and formatCallDuration is how a call's duration reads. One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
+- Description: Consumer half of the claude-cli call log: useClaudeCliCalls({correlationId, occurredAt}) answers 'which model calls produced this record?' as a calls / none / not-retained result, <ClaudeCliCallDetail> is the one rendering of a recorded call (header, meta grid, context with id chips, output or error, prompt, system — each copyable), and formatCallDuration is how a call's duration reads. One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations, and runClaudeReadOnly — a print that may only Read / Grep / Glob one directory and answers with a zod-schema'd structured value. Reuses the user's local Claude CLI auth — no API key plumbing.
 - Server:
   - Contributes:
     - `resource.declare` "claude-cli-calls"
@@ -116,12 +128,16 @@ block keep taking a plain `ClaudeCliCall`.
     - `infra/entities.defineEntity`
     - `network/live.serveCollection`
   - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
-  - Exports (types): `RunClaudePrintInput`
+  - Exports (types):
+    - `RunClaudePrintInput`
+    - `RunClaudeReadOnlyInput`
   - Exports (values):
     - `_claudeCliCalls`
     - `ClaudeCliError`
     - `listCallsFor`
+    - `READ_ONLY_TOOLS`
     - `runClaudePrint`
+    - `runClaudeReadOnly`
   - Resources:
     - `claude-cli-calls` (keyed, window)
     - `claude-cli-calls:groups` (push)
@@ -192,6 +208,7 @@ block keep taking a plain `ClaudeCliCall`.
     - `conversations/conversation-category`
     - `conversations/conversation-view/turn-summary`
     - `debug/claude-cli-calls`
+    - `tasks/sidequest-autopilot`
     - `tasks/task-title`
 - Exemptions:
   - Exempts itself from:

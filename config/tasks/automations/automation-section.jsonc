@@ -1,4 +1,4 @@
-// @hash e9e64c0be1e8
+// @hash ae042cc6fc9a
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -7,10 +7,14 @@
 //   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 {
-  // Each section renders only on its own automation's pane, so their relative
-  // order never shows; listed in plugin order.
+  // Each section renders only on its own automation's pane, so the order
+  // across automations never shows. The Sidequest autopilot's Launch list comes
+  // first — what may run is the thing to review before turning it on — then
+  // when it stops (Run until), then how triage reads the backlog.
   "items": [
     "tasks.reports-investigation:report-scope",
-    "tasks.sidequest-autopilot:run-until"
+    "tasks.sidequest-autopilot:launch-list",
+    "tasks.sidequest-autopilot:run-until",
+    "tasks.sidequest-autopilot:triage"
   ]
 }
