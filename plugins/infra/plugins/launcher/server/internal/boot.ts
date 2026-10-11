@@ -407,6 +407,14 @@ export interface GatewayLaunchOptions {
    * A `Ready`, so a launch that never ensured one does not compile.
    */
   gateway: Ready<BuildSource>;
+  /**
+   * The gateway's working directory, which its supervised children inherit: the
+   * checkout whose scripts `database.json` runs. Those start as `bun run <script>`,
+   * and `bun` is a mise shim that resolves its version from the cwd's
+   * `mise.toml` — so a cwd outside the checkout (the binary's own deps-cache dir)
+   * leaves Postgres unable to start and the gateway exiting at boot.
+   */
+  cwd: string;
   port: number;
   /**
    * Bind host, e.g. `127.0.0.1`. Omitted (the default) is a wildcard bind on
@@ -504,9 +512,9 @@ export function gatewayLaunchSpec(opts: GatewayLaunchOptions): {
       "-child-env",
       runtimeEnvNames().join(","),
     ],
-    // Nothing the gateway reads is relative (every path is a flag above); its
-    // own install dir is simply a directory that exists as long as it does.
-    cwd: opts.gateway.dir,
+    // Nothing the gateway reads is relative (every path is a flag above), but
+    // its children resolve their toolchain from it — see `cwd` above.
+    cwd: opts.cwd,
     // The declared subset of the LIVE `process.env` — never an implicit
     // inherit (which would miss the release launcher's mutations) and never
     // the whole thing (which hands the starter's shell to every backend).
@@ -833,6 +841,7 @@ export async function bootSelfContainedApp(opts: {
   // (the desktop webview, single-origin web) to it via the gateway default.
   const gateway = spawnGatewayDaemon({
     gateway: opts.gateway,
+    cwd: repoRoot,
     port,
     bindHost,
     logLevel,

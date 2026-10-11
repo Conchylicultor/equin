@@ -19,7 +19,7 @@ import {
   getBootProfiling,
   type ProfilingData,
   type MemoryCheckpoint,
-} from "../../shared/endpoints";
+} from "../../core";
 
 const PHASE_ORDER = [
   "register",

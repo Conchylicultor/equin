@@ -2246,6 +2246,10 @@
       "name": "@singularity/plugin-debug-profiling-build",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/profiling/plugins/cold-start": {
+      "name": "@singularity/plugin-debug-profiling-cold-start",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/profiling/plugins/op-log": {
       "name": "@singularity/plugin-debug-profiling-op-log",
       "version": "0.0.1",
@@ -7548,6 +7552,8 @@
     "@singularity/plugin-debug-profiling-boot-bench": ["@singularity/plugin-debug-profiling-boot-bench@workspace:plugins/debug/plugins/profiling/plugins/boot-bench"],
 
     "@singularity/plugin-debug-profiling-build": ["@singularity/plugin-debug-profiling-build@workspace:plugins/debug/plugins/profiling/plugins/build"],
+
+    "@singularity/plugin-debug-profiling-cold-start": ["@singularity/plugin-debug-profiling-cold-start@workspace:plugins/debug/plugins/profiling/plugins/cold-start"],
 
     "@singularity/plugin-debug-profiling-op-log": ["@singularity/plugin-debug-profiling-op-log@workspace:plugins/debug/plugins/profiling/plugins/op-log"],
 

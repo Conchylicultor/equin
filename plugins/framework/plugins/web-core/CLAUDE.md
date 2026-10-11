@@ -122,6 +122,7 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
     - `primitives/live-state.ensureNotificationsClient`
     - `primitives/live-state.NotificationsProvider`
     - `primitives/perfs/boot-trace.markBootInstant`
+    - `primitives/perfs/boot-trace.markBootInstantAtNextCommit`
     - `primitives/perfs/boot-trace.startBootSpan`
     - `primitives/perfs/scheduler.yieldToMain`
 - Cross-plugin:

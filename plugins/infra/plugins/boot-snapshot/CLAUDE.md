@@ -108,6 +108,7 @@ How it works:
     - `infra/endpoints.fetchEndpoint`
     - `primitives/live-state.hydrateResource`
     - `primitives/live-state.resourceDescriptorByKey`
+    - `primitives/perfs/boot-trace.markBootInstantAtNextCommit`
     - `primitives/perfs/boot-trace.recordBootSpan`
     - `reports.report`
 - Server:

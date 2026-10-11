@@ -4,7 +4,11 @@ import {
   hydrateResource,
   resourceDescriptorByKey,
 } from "@plugins/primitives/plugins/live-state/web";
-import { recordBootSpan } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
+import {
+  markBootInstantAtNextCommit,
+  recordBootSpan,
+} from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
+import { FIRST_DATA_COMMIT_ID } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 import { report } from "@plugins/reports/web";
 import { bootSnapshot } from "../../core";
 
@@ -80,6 +84,16 @@ export async function runBootSnapshot(): Promise<void> {
     }
     for (const e of entries) hydrate(d, e.params, e.value);
   }
+  // The first render that can show data: the next React commit after the
+  // snapshot is in the cache. The tree is still empty here (App renders null
+  // until every boot task resolves), so that commit is App's first real render
+  // — chrome and eager panes reading the hydrated cache. Deferred-tier route
+  // content may still be loading at that instant.
+  markBootInstantAtNextCommit(
+    FIRST_DATA_COMMIT_ID,
+    "paint",
+    "First commit after boot snapshot",
+  );
   if (failed.length) {
     const more = failed.length > 5 ? ` (+${failed.length - 5} more)` : "";
     const summary = `boot-snapshot: hydrate failed for ${failed.slice(0, 5).join("; ")}${more}`;

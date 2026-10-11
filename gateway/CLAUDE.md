@@ -111,6 +111,14 @@ If the new backend fails to start (bad code, broken migration), the old backend 
 
 State machine during restart: `Running → Restarting → Running`. During `Restarting`, `Ensure()` returns the old proxy immediately (no blocking, no 502). The idle sweeper skips worktrees in `Restarting` state. `Stop()` waits for an in-flight restart to settle before proceeding.
 
+## Stop on demand
+
+`POST /gateway/worktrees/<name>/stop` is the idle sweeper's teardown on request (the cold-start benchmark's reset step): the same `Worktree.Stop` (waits out an in-flight spawn or restart, SIGTERM → grace → SIGKILL, socket + sidecar removed), leaving the worktree registered at `idle` so the next `/api/*` or `/ws/*` request cold-starts it.
+
+- `200` + the worktree's `WorktreeStatus` JSON (the `GET /gateway/worktrees` element shape) once the backend has exited. Already idle (or broken) → `200`, no-op.
+- `409` for a pinned worktree (`Worktree.Pinned`, today `central`) — the same rule that keeps the sweeper off it. Main (`singularity`) is not pinned: the sweeper stops it too.
+- `503` when another stop is already tearing it down (not yet exited — retry); `404` for an unknown worktree; `500` if the stop fails (e.g. the request's context ends while waiting on a spawn).
+
 ## Service supervision
 
 The gateway includes a generic service supervisor (`supervisor.go`) that manages long-lived daemons defined in the `-db-config` file. The gateway knows nothing about what services are — it just executes start commands, probes readiness, and runs watchdogs.

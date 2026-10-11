@@ -15,7 +15,9 @@ import type {
   LongTask,
   AssetTiming,
   BootTrace,
+  BootTimingDetail,
 } from "../../core";
+import { BOOT_TIMING_PREFIX } from "../../core";
 
 const spans: BootSpan[] = [];
 const longTasks: LongTask[] = [];
@@ -64,9 +66,35 @@ export function refreshBootTrace(): void {
   notify();
 }
 
+/**
+ * Mirror one recorded span into the browser's User Timing buffer: an instant
+ * (0 ms) as a `mark`, a span as a `measure`, both named `boot:<id>` and
+ * carrying the span's phase / label / workMs / detail as `detail`. Same clock
+ * as the store (`performance.now()` on `timeOrigin`).
+ */
+function emitUserTiming(span: BootSpan): void {
+  const detail: BootTimingDetail = {
+    phase: span.phase,
+    label: span.label,
+    ...(span.workMs !== undefined ? { workMs: span.workMs } : {}),
+    ...(span.detail !== undefined ? { detail: span.detail } : {}),
+  };
+  const name = `${BOOT_TIMING_PREFIX}${span.id}`;
+  if (span.durationMs === 0) {
+    performance.mark(name, { startTime: span.startMs, detail });
+  } else {
+    performance.measure(name, {
+      start: span.startMs,
+      duration: span.durationMs,
+      detail,
+    });
+  }
+}
+
 /** Explicit push (used for resource wait/work spans carrying a server `workMs`). */
 export function recordBootSpan(span: BootSpan): void {
   spans.push(span);
+  emitUserTiming(span);
   notify();
 }
 
@@ -105,6 +133,21 @@ export function markBootInstant(
     startMs: performance.now(),
     durationMs: 0,
   });
+}
+
+/**
+ * Stamp a 0-duration marker at the NEXT React commit (of any root) after this
+ * call — for an instant defined by "the first render once X is true", which no
+ * call site can stamp itself because the commit happens inside React. Stamped
+ * at commit time (before the browser paints it). No-op when the commit bridge
+ * (`web-core/web/index.html`) is absent, like the first-commit capture.
+ */
+export function markBootInstantAtNextCommit(
+  id: string,
+  phase: BootPhase,
+  label: string,
+): void {
+  onNextCommit(() => markBootInstant(id, phase, label));
 }
 
 function readNavTiming(): NavTiming | null {
@@ -219,13 +262,13 @@ export function useBootTrace(): BootTrace {
   }, [v]);
 }
 
-// --- First React commit capture (one-shot, at module eval time) --------------
+// --- React commit bridge ------------------------------------------------------
 // The commit bridge installed by `web-core/web/index.html` exposes a
 // `__commitSubscribers` Set on the DevTools global hook; each subscriber is
-// invoked with the committed root on every React commit. We subscribe once,
-// stamp the first-commit time, and remove ourselves. This must NEVER throw and
-// brick boot — the hook/Set may not exist, so guard defensively.
-(function captureFirstCommit() {
+// invoked with the committed root on every React commit. `onNextCommit`
+// subscribes once, runs `cb` at the next commit, and removes itself. This must
+// NEVER throw and brick boot — the hook/Set may not exist, so guard defensively.
+function onNextCommit(cb: () => void): void {
   try {
     const hook = (
       window as unknown as {
@@ -237,17 +280,21 @@ export function useBootTrace(): BootTrace {
     const subscribers = hook?.__commitSubscribers;
     if (!subscribers) return;
     const onCommit = () => {
-      firstCommitMs = performance.now();
-      markBootInstant("first-commit", "paint", "First React commit");
       subscribers.delete(onCommit);
-      notify();
+      cb();
     };
     subscribers.add(onCommit);
-    // boot-path instrumentation must never throw and brick boot; the commit bridge is best-effort, so any failure to install the one-shot subscriber is safe to drop (the trace simply lacks firstCommitMs).
+    // boot-path instrumentation must never throw and brick boot; the commit bridge is best-effort, so any failure to install the one-shot subscriber is safe to drop (the trace simply lacks the instant).
   } catch (err) {
     void err;
   }
-})();
+}
+
+// --- First React commit capture (one-shot, at module eval time) --------------
+onNextCommit(() => {
+  firstCommitMs = performance.now();
+  markBootInstant("first-commit", "paint", "First React commit");
+});
 
 // --- Paint timing observer (buffered) ----------------------------------------
 // first-paint / first-contentful-paint entries land AFTER mount (and after the

@@ -24,7 +24,9 @@ import { yieldToMain } from "@plugins/primitives/plugins/perfs/plugins/scheduler
 import {
   startBootSpan,
   markBootInstant,
+  markBootInstantAtNextCommit,
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
+import { ROUTE_CONTENT_COMMIT_ID } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 import { webEntries } from "@composition-web-registry";
 import { PluginLoadErrors } from "./components/plugin-load-errors";
 
@@ -177,7 +179,19 @@ export default function App() {
       markDeferredPluginsLoaded(plugins.map((p) => p.id));
     };
 
-    const loadDeferredBatch = async (batch: WebEntry[]): Promise<void> => {
+    // The active app's content is on screen at the commit that appends its
+    // priority batch — or at the first render, when it has none.
+    const markRouteContentAtNextCommit = () =>
+      markBootInstantAtNextCommit(
+        ROUTE_CONTENT_COMMIT_ID,
+        "paint",
+        "First commit with the active app's content",
+      );
+
+    const loadDeferredBatch = async (
+      batch: WebEntry[],
+      { routeContent = false } = {},
+    ): Promise<void> => {
       if (batch.length === 0) return;
       // Partial failure is tolerable (loadPlugins uses allSettled + collects
       // errors), so a broken app-content chunk never aborts the tier.
@@ -188,6 +202,7 @@ export default function App() {
       // path so hydration lands before the slot re-render.
       await runBootTasks(plugins);
       if (cancelled) return;
+      if (routeContent) markRouteContentAtNextCommit();
       appendPlugins(plugins);
       recordErrors(errors);
     };
@@ -221,11 +236,6 @@ export default function App() {
       endBoot();
       markBootInstant("set-state", "paint", "App setState (first render)");
       if (cancelled) return;
-      setState({
-        plugins: eagerResult.plugins,
-        coreErrors: eagerResult.errors,
-      });
-      recordErrors(eagerResult.errors);
 
       // Layer 3 — deferred tier, AFTER first paint (never blocks chrome).
       // Active-app-first: front-load the deep-linked app's content as one awaited
@@ -239,7 +249,14 @@ export default function App() {
         else rest.push(e);
       }
 
-      await loadDeferredBatch(priority);
+      if (priority.length === 0) markRouteContentAtNextCommit();
+      setState({
+        plugins: eagerResult.plugins,
+        coreErrors: eagerResult.errors,
+      });
+      recordErrors(eagerResult.errors);
+
+      await loadDeferredBatch(priority, { routeContent: true });
       for (let i = 0; i < rest.length && !cancelled; i += DEFERRED_BATCH_SIZE) {
         await loadDeferredBatch(rest.slice(i, i + DEFERRED_BATCH_SIZE));
         // Breathe between batches so the queued socket grant + input + paint can

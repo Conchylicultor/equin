@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-debug-profiling-cold-start",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Cold-start benchmark: stops the worktree's server, loads a page in a fresh browser and splits page request → first screen with data across the gateway, the server's boot phases and the browser's boot trace."
+}

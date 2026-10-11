@@ -315,6 +315,30 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write([]byte(`{"restarted":true}` + "\n"))
 			return
 
+		case action == "stop" && r.Method == http.MethodPost:
+			// The idle sweeper's teardown, on demand: the backend exits, the
+			// worktree stays registered at idle, and the next request
+			// cold-starts it (the cold-start benchmark's reset step). Same
+			// stop path and the same pinned rule as Registry.Sweep.
+			if wt.Pinned() {
+				http.Error(w, name+" is pinned and is never stopped", http.StatusConflict)
+				return
+			}
+			if err := wt.Stop(r.Context()); err != nil {
+				http.Error(w, "stop failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			snap := wt.Snapshot()
+			// Stop returns at once when another Stop is already tearing the
+			// backend down; it has not exited yet, so do not report it stopped.
+			if snap.State == StateStopping.String() {
+				http.Error(w, "backend is stopping; retry shortly", http.StatusServiceUnavailable)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(snap)
+			return
+
 		case action == "logs" && r.Method == http.MethodGet:
 			streamBackendLogs(w, r, wt)
 			return

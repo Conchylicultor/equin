@@ -108,10 +108,21 @@ export function getProfilingData(): {
   spans: Span[];
   totalDurationMs: number;
   memoryCheckpoints: MemoryCheckpoint[];
+  /**
+   * Where span / checkpoint offsets start, in ms after process start
+   * (`performance.timeOrigin`): this module's evaluation. Adding it to
+   * `timeOrigin` places an offset on the wall clock.
+   */
+  bootStartOffsetMs: number;
 } {
   const totalDurationMs =
     spans.length === 0
       ? 0
       : Math.max(...spans.map((s) => s.startMs + s.durationMs));
-  return { spans, totalDurationMs, memoryCheckpoints };
+  return {
+    spans,
+    totalDurationMs,
+    memoryCheckpoints,
+    bootStartOffsetMs: bootStart,
+  };
 }

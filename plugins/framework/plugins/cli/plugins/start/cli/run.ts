@@ -175,6 +175,7 @@ async function prepareGateway(opts: Opts): Promise<GatewayLaunchOptions> {
   ensureDatabaseConfig(repoRoot, console.log);
   return {
     gateway,
+    cwd: repoRoot,
     port: DEFAULT_PORT,
     logLevel: opts.logLevel,
   };

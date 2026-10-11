@@ -23,6 +23,7 @@ vi.mock("@plugins/infra/plugins/endpoints/web", () => ({
 }));
 vi.mock("@plugins/primitives/plugins/perfs/plugins/boot-trace/web", () => ({
   recordBootSpan: () => {},
+  markBootInstantAtNextCommit: () => {},
 }));
 vi.mock("@plugins/reports/web", () => ({
   report: async (r: { message: string }) => {

@@ -14950,6 +14950,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/trace/engine.captureTrace`
           - `infra/endpoints.implement`
           - `infra/jobs.defineJob`
+        - Exports (values): `getGatewayBootReport`
         - Register: `defineJob('debug.boot-monitor')`
         - Routes: `POST /api/boot/gateway-report`
       - Core:
@@ -14958,6 +14959,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/bool/config.boolField`
           - `fields/int/config.intField`
         - Exports (values): `bootMonitorConfig`
+      - Cross-plugin:
+        - Imported by: `debug/profiling/boot`
     - **`boot-profile`** — Browser boot profiler Gantt debug page: the request → first-paint timeline plus per-resource wait/work split, with shareable permalinks and a browsable list of saved snapshots. Persists captured browser boot traces under a unique id (POST), serves one snapshot (GET) and a metadata-only list (GET) for the permalink + browse panes, and sweeps snapshots older than 30 days via a scheduled job.
       - Web:
         - Slots:
@@ -15741,12 +15744,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-table.ColumnDef`
               - `primitives/data-table.DataTable`
           - Server:
-            - Uses: `infra/endpoints.implement`
+            - Uses:
+              - `debug/boot-monitor.getGatewayBootReport`
+              - `infra/endpoints.implement`
             - Routes: `GET /api/debug/profiling/boot`
+          - Core:
+            - Uses:
+              - `debug/trace/boot.BootGatewaySchema`
+              - `infra/endpoints.defineEndpoint`
+            - Exports (types):
+              - `MemoryCheckpoint`
+              - `ProfilingData`
+            - Exports (values):
+              - `getBootProfiling`
+              - `ProfilingDataSchema`
           - Exemptions:
             - Exempts itself from: `live/no-endpoint-read` — `web/components/boot-section.tsx` (debt)
-          - Shared:
-            - Exports (values): `getBootProfiling`
         - **`boot-bench`** — Cold-boot & live-state loader benchmark harness: a POST endpoint that runs the boot burst in-process and a benchmark_boot MCP tool that aggregates it.
           - Server:
             - Uses:
@@ -15798,6 +15811,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `live/no-endpoint-read` — `web/components/build-detail.tsx`, `web/components/build-section.tsx` (debt)
           - Shared:
             - Exports (values): `getBuildProfiling`
+        - **`cold-start`** — Cold-start benchmark: stops the worktree's server, loads a page in a fresh browser and splits page request → first screen with data across the gateway, the server's boot phases and the browser's boot trace.
         - **`op-log`** — Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, and the merged file reader. Its op-store child ingests it into the DB and owns the orphan reconciler.
           - Core:
             - Uses:
@@ -16806,6 +16820,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `trace-event-class` "boot"
             - Uses: `debug/trace/engine.defineTraceEventClass`
+          - Cross-plugin:
+            - Imported by: `debug/profiling/boot`
           - Core:
             - Exports (types):
               - `BootGateway`
@@ -19539,13 +19555,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 144 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 145 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×44
               - `primitives` ×24
               - `page` ×23
               - `conversations` ×16
               - `apps-core` ×5
-              - `debug` ×4
+              - `debug` ×5
               - `tasks` ×4
               - `active-data` ×3
               - `config_v2` ×3
@@ -19932,6 +19948,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/live-state.ensureNotificationsClient`
           - `primitives/live-state.NotificationsProvider`
           - `primitives/perfs/boot-trace.markBootInstant`
+          - `primitives/perfs/boot-trace.markBootInstantAtNextCommit`
           - `primitives/perfs/boot-trace.startBootSpan`
           - `primitives/perfs/scheduler.yieldToMain`
       - Cross-plugin:
@@ -20502,6 +20519,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.fetchEndpoint`
           - `primitives/live-state.hydrateResource`
           - `primitives/live-state.resourceDescriptorByKey`
+          - `primitives/perfs/boot-trace.markBootInstantAtNextCommit`
           - `primitives/perfs/boot-trace.recordBootSpan`
           - `reports.report`
       - Server:
@@ -32687,7 +32705,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `apps/file-explorer/browser`
     - **`perfs`** — Umbrella for client-side performance primitives.
       - Plugins:
-        - **`boot-trace`** — Module-level boot-span store imported eagerly by the framework boot path. Captures one-clock boot spans (startBootSpan/markBootInstant/recordBootSpan) and folds in Navigation/Paint Timing plus the first React commit; getBootTrace() assembles the trace.
+        - **`boot-trace`** — Module-level boot-span store imported eagerly by the framework boot path. Captures one-clock boot spans (startBootSpan/markBootInstant/recordBootSpan) and folds in Navigation/Paint Timing plus the first React commit; getBootTrace() assembles the trace. Every span / instant is mirrored as a User Timing measure / mark named boot:<id>, so an outside reader (a Playwright script) reads it with performance.getEntriesByType.
           - Cross-plugin:
             - Imported by:
               - `debug/boot-profile`
@@ -32706,6 +32724,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `bootWindowEnd`
               - `getBootTrace`
               - `markBootInstant`
+              - `markBootInstantAtNextCommit`
               - `recordBootSpan`
               - `refreshBootTrace`
               - `startBootSpan`
@@ -32716,9 +32735,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AssetTiming`
               - `BootPhase`
               - `BootSpan`
+              - `BootTimingDetail`
               - `BootTrace`
               - `LongTask`
               - `NavTiming`
+            - Exports (values):
+              - `BOOT_TIMING_PREFIX`
+              - `FIRST_DATA_COMMIT_ID`
+              - `ROUTE_CONTENT_COMMIT_ID`
         - **`scheduler`** — Main-thread scheduling primitives (yieldToMain: scheduler.yield → postTask → setTimeout(0)) for cooperative boot/work batching.
           - Cross-plugin:
             - Imported by: `framework/web-core`

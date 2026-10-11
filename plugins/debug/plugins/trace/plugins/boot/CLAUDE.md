@@ -52,6 +52,8 @@ recompile), so partial reports from either side of the skew must stay valid.
 - Server:
   - Contributes: `trace-event-class` "boot"
   - Uses: `debug/trace/engine.defineTraceEventClass`
+- Cross-plugin:
+  - Imported by: `debug/profiling/boot`
 - Core:
   - Exports (types):
     - `BootGateway`

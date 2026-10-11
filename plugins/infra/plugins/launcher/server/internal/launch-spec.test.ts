@@ -11,16 +11,18 @@ describe("gatewayLaunchSpec", () => {
   const dir =
     "/h/me/.singularity/cache/deps/gateway-binary/0123456789abcdef/env";
   const ready = readyForTests(gatewayBinary, dir, "0123456789abcdef");
+  const checkout = "/h/me/src/singularity";
   const spec = gatewayLaunchSpec({
     gateway: ready,
+    cwd: checkout,
     port: 9000,
     logLevel: "info",
   });
 
-  test("runs the installed binary, from its own install dir", () => {
+  test("runs the installed binary, from the checkout its children resolve their toolchain in", () => {
     expect(builtFile(ready)).toBe(join(dir, "gateway"));
     expect(spec.argv[0]).toBe(join(dir, "gateway"));
-    expect(spec.cwd).toBe(dir);
+    expect(spec.cwd).toBe(checkout);
     expect(spec.argv).toContain("-child-env");
   });
 
@@ -36,7 +38,7 @@ describe("gatewayLaunchSpec", () => {
       `<key>ProgramArguments</key>\n\t<array>\n\t\t<string>${join(dir, "gateway")}</string>`,
     );
     expect(xml).toContain(
-      `<key>WorkingDirectory</key>\n\t<string>${dir}</string>`,
+      `<key>WorkingDirectory</key>\n\t<string>${checkout}</string>`,
     );
   });
 });
