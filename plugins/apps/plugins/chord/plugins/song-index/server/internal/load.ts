@@ -131,6 +131,7 @@ export function deriveRows(
     chords: line.chords,
     keys: line.keys,
     meters: line.meters,
+    tempos: line.tempos,
     endBeat: line.endBeat,
     videoId,
     alignment,

@@ -48,6 +48,8 @@ export const LoopWindowFieldsSchema = z.object({
   changeCount: z.number().int(),
   hasRest: z.boolean(),
   startsOnChange: z.boolean(),
+  /** `isRichLoop`: a real progression, which `find` serves first. */
+  rich: z.boolean(),
 });
 
 export const LoopCandidateSchema = z.object({

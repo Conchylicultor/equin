@@ -246,7 +246,7 @@ export function useLoopQueue(opts: {
       playable: [...playable],
       practised: [...practised],
       extras,
-      shape: "bars-4",
+      shape: "phrase",
       ...(exclude.length > 0 ? { excludeSectionIds: exclude } : {}),
     };
     // The chords furthest below their share get a batch of their own. The

@@ -1112,6 +1112,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations/hooktheory.HookpadMeter`
               - `integrations/hooktheory.HookpadMode`
               - `integrations/hooktheory.HookpadModeSchema`
+              - `integrations/hooktheory.HookpadTempo`
               - `integrations/hooktheory.hookpadTonicPc`
               - `integrations/hooktheory.TheorytabSectionIdSchema`
               - `network/live.liveValue`

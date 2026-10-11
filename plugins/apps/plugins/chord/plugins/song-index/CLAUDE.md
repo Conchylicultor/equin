@@ -18,7 +18,7 @@ POST /api/chord/index/ensure                → IndexStatus
 // — or up to `extras` (0 | 1 | 2 | "any") outside it —, holding `focus` when
 // named (random order), on a video not known to be unplayable. At most
 // `limit` — possibly fewer. `practised` ⊆ `playable`, `focus` ∈ `practised`.
-POST /api/chord/loops/find  { playable, practised, extras, focus?, shape?="bars-4",
+POST /api/chord/loops/find  { playable, practised, extras, focus?, shape?="phrase",
                               requireFeatures?, forbidFeatures?, excludeSectionIds?, limit ≤ 50 }
   → { kind: "not-ready", status } | { kind: "ready", candidates: LoopCandidate[] }
 
@@ -77,6 +77,21 @@ which would read as "no song fits". A `LoopCandidate` carries the section's
 display names, `videoId`, `videoDurationSeconds`, `videoStatus` (`ok`, or
 `unknown` when nobody could tell yet), `alignment`, the window's fields and the
 section's chords overlapping the window (every Hookpad field plus its token).
+
+**Loop shapes** (`core/loop-shapes.ts`). `bars-4` is every 4-bar window as
+cut. `phrase` — the default, and what the trainer plays — is the loops worth
+training on, one per bar start: the 4 bars when they are **rich**
+(`isRichLoop`: at least 3 different chords and 3 changes — a progression, not
+a vamp or an I–V–I–V back-and-forth); else 8 bars when those are rich, hold at
+most 8 chords (one answer box each) and loop within 20 s at the document's
+tempo (a fast song: at 120 bpm in 4/4, 8 bars are 16 s; a section with no
+measurable tempo never stretches); else the 4 bars as they are — unless no
+chord changes in them (one chord held or repeated), which is left out. Every
+window stores `rich`, and `find` orders `rich DESC, random()`: rich loops
+first, the plain ones only for a learner whose chords make too few rich ones.
+Because `phrase` drops vamps, the counts on the default shape no longer see
+the one-chord windows `next-chords` describes below; they still do on
+`bars-4`.
 
 **Video availability** (`research/2026-09-18-apps-chord-video-availability.md`;
 the evidence and the verdict live in the `video-availability` plugin). About 1
@@ -318,6 +333,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `integrations/hooktheory.HookpadMeter`
     - `integrations/hooktheory.HookpadMode`
     - `integrations/hooktheory.HookpadModeSchema`
+    - `integrations/hooktheory.HookpadTempo`
     - `integrations/hooktheory.hookpadTonicPc`
     - `integrations/hooktheory.TheorytabSectionIdSchema`
     - `network/live.liveValue`

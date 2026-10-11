@@ -102,6 +102,12 @@ export const _chordLoopWindows = pgTable(
     changeCount: integer("change_count").notNull(),
     hasRest: boolean("has_rest").notNull(),
     startsOnChange: boolean("starts_on_change").notNull(),
+    /**
+     * `isRichLoop`, stored so `find` ranks on the one TS rule. The default only
+     * fills rows written before the column existed: those are an older
+     * derivation version, never read, and truncated by the reload it triggers.
+     */
+    rich: boolean("rich").notNull().default(false),
   },
   (t) => [
     primaryKey({ columns: [t.sectionId, t.shape, t.startBeat] }),

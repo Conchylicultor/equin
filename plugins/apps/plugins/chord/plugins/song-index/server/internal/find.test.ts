@@ -33,7 +33,7 @@ describe("findLoopsWhere", () => {
     expect(sql).toContain(`"chord_loop_windows"."chord_tokens" <@ $3`);
     expect(sql).not.toContain("@> $");
     // The column's array encoder sends each array as one Postgres array literal.
-    expect(params).toEqual(["bars-4", `{"${IV}"}`, `{"${I}","${IV}","${V}"}`]);
+    expect(params).toEqual(["phrase", `{"${IV}"}`, `{"${I}","${IV}","${V}"}`]);
   });
 
   it("a focus adds the windows-holding-it test", () => {
@@ -152,7 +152,7 @@ describe("nextChordsQuery", () => {
     const { sql, params } = dialect.sqlToQuery(nextChordsQuery(body));
     expect(sql).toContain("NOT (t = ANY($1::text[]))");
     expect(sql).toContain("cardinality(foreign_tokens) = 1");
-    expect(params).toEqual([[I, IV, V], "bars-4", 20]);
+    expect(params).toEqual([[I, IV, V], "phrase", 20]);
   });
 
   it("groups by token AND mode in one scan, ranked by the largest mode", () => {
@@ -188,7 +188,7 @@ describe("nextChordsQuery", () => {
     });
     const { sql, params } = dialect.sqlToQuery(nextChordsQuery(body));
     expect(sql).toContain(`"chord_loop_windows"."key_mode" in ($3)`);
-    expect(params).toEqual([[I], "bars-4", "minor", 5]);
+    expect(params).toEqual([[I], "phrase", "minor", 5]);
   });
 });
 
@@ -217,7 +217,7 @@ describe("chordsInWindow", () => {
   const derived = deriveSection(section(chords, { endBeat: 33 }));
   if (derived.kind !== "indexed") throw new Error("the fixture must index");
   const stored = derived.chords.map(compactChord);
-  const windows = windowsOf(derived);
+  const windows = windowsOf(derived, "bars-4");
 
   it("returns exactly the chords the window was derived from", () => {
     expect(windows.length).toBeGreaterThan(1);

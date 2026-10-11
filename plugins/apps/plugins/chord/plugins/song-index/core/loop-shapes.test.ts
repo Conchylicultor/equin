@@ -17,6 +17,7 @@ describe("bars-4", () => {
     // 8 bars of I–IV–V–I, one chord per bar.
     const windows = windowsOf(
       deriveSection(section(progression([1, 4, 5, 1, 1, 4, 5, 1], 4))),
+      "bars-4",
     );
     expect(starts(windows)).toEqual([1, 5, 9, 13, 17]);
     expect<unknown>(windows[0]).toEqual({
@@ -34,6 +35,7 @@ describe("bars-4", () => {
       changeCount: 3,
       hasRest: false,
       startsOnChange: true,
+      rich: true,
     });
   });
 
@@ -44,6 +46,7 @@ describe("bars-4", () => {
           meters: [{ beat: 1, numBeats: 6, beatUnit: 8 }],
         }),
       ),
+      "bars-4",
     );
     expect(
       sixEight.map((w) => [w.startBeat, w.endBeat, w.beatsPerBar, w.beatUnit]),
@@ -58,6 +61,7 @@ describe("bars-4", () => {
           meters: [{ beat: 1, numBeats: 3, beatUnit: 4 }],
         }),
       ),
+      "bars-4",
     );
     expect(threeFour.map((w) => [w.startBeat, w.endBeat])).toEqual([
       [1, 13],
@@ -82,6 +86,7 @@ describe("bars-4", () => {
           },
         ),
       ),
+      "bars-4",
     );
     expect(windows.map((w) => [w.startBeat, w.endBeat, w.beatsPerBar])).toEqual(
       [
@@ -100,6 +105,7 @@ describe("bars-4", () => {
           keys: [C_MAJOR, { beat: 17, tonic: "G", scale: "major" }],
         }),
       ),
+      "bars-4",
     );
     expect(windows.map((w) => [w.startBeat, w.keyTonic])).toEqual([
       [1, "C"],
@@ -123,13 +129,14 @@ describe("bars-4", () => {
           ],
         }),
       ),
+      "bars-4",
     );
     expect(starts(windows)).toEqual([1, 5, 9]);
   });
 
   it("gives no window to a section shorter than 4 bars", () => {
     expect(
-      windowsOf(deriveSection(section(progression([1, 4, 5], 4)))),
+      windowsOf(deriveSection(section(progression([1, 4, 5], 4))), "bars-4"),
     ).toEqual([]);
   });
 
@@ -147,6 +154,7 @@ describe("bars-4", () => {
           chord(21, 4, { root: 1 }),
         ]),
       ),
+      "bars-4",
     );
     expect(windows[0]).toMatchObject({
       startBeat: 1,
@@ -178,7 +186,75 @@ describe("bars-4", () => {
       deriveSection(
         section([...progression([1, 4], 4), rest(9, 16), chord(25, 4)]),
       ),
+      "bars-4",
     );
     expect(starts(windows)).toEqual([1, 5, 13]);
+  });
+});
+
+describe("phrase", () => {
+  const phrases = (input: Parameters<typeof deriveSection>[0]) =>
+    windowsOf(deriveSection(input), "phrase").map((w) => [
+      w.startBeat,
+      w.bars,
+      w.rich,
+    ]);
+  const slow = { beat: 1, bpm: 60, swingFactor: 0, swingBeat: 0.5 };
+
+  it("keeps 4 bars when they already hold a progression", () => {
+    // I–IV–V–I, one chord per bar, twice. The windows across the held I
+    // (IV–V–I–I, …) change only twice: kept, not rich, and too close to the
+    // end to stretch.
+    expect(phrases(section(progression([1, 4, 5, 1, 1, 4, 5, 1], 4)))).toEqual([
+      [1, 4, true],
+      [5, 4, false],
+      [9, 4, false],
+      [13, 4, false],
+      [17, 4, true],
+    ]);
+  });
+
+  it("stretches a back-and-forth to 8 bars when the song is fast", () => {
+    // I–V–I–V then vi–IV–I–V, at 120 bpm: 8 bars last 16 s.
+    expect(
+      phrases(section(progression([1, 5, 1, 5, 6, 4, 1, 5], 4))).slice(0, 1),
+    ).toEqual([[1, 8, true]]);
+  });
+
+  it("keeps the 4 bars of a slow song, ranked below the rich ones", () => {
+    // The same harmony at 60 bpm: 8 bars would loop for 32 s.
+    expect(
+      phrases(
+        section(progression([1, 5, 1, 5, 6, 4, 1, 5], 4), { tempos: [slow] }),
+      ).slice(0, 1),
+    ).toEqual([[1, 4, false]]);
+  });
+
+  it("never stretches without a tempo to measure it by", () => {
+    expect(
+      phrases(
+        section(progression([1, 5, 1, 5, 6, 4, 1, 5], 4), {
+          tempos: [{ ...slow, bpm: null }],
+        }),
+      ).slice(0, 1),
+    ).toEqual([[1, 4, false]]);
+  });
+
+  it("leaves out a vamp no length can rescue", () => {
+    // Four bars of I, then I–V: the first window changes nothing.
+    expect(
+      phrases(section(progression([1, 1, 1, 1, 5], 4), { tempos: [slow] })),
+    ).toEqual([[5, 4, false]]);
+  });
+
+  it("does not stretch past the chords one answer strip holds", () => {
+    // Two chords a bar: 4 bars of I–V then 4 rich bars — 16 chords in 8 bars.
+    expect(
+      phrases(
+        section(
+          progression([1, 5, 1, 5, 1, 5, 1, 5, 6, 4, 2, 5, 6, 4, 2, 5], 2),
+        ),
+      ).slice(0, 1),
+    ).toEqual([[1, 4, false]]);
   });
 });

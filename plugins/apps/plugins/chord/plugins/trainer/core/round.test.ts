@@ -62,6 +62,7 @@ function candidate(fixture: {
       changeCount: 0,
       hasRest: fixture.chords.some((c) => c.token === null),
       startsOnChange: sounding.some((c) => c.beat === fixture.startBeat),
+      rich: false,
     },
     chords: fixture.chords.map((c) => ({
       root: 1,

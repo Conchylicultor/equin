@@ -74,7 +74,8 @@ prev, next)` between two playhead reads — a forward move finishes every box
 - **The loop queue** (`useLoopQueue`) holds the round on screen and a
   **pool**. When the pool holds 3 loops or fewer it is refilled in parallel:
   one unfocused `find` (every chord on as `playable`, the practised ones, the
-  `extras`; 10 loops) plus one focused `find` (5 loops) for each of the at most
+  `extras`, the `phrase` shape — 4 or 8 bars, rich progressions first; see
+  song-index; 10 loops) plus one focused `find` (5 loops) for each of the at most
   2 chords furthest below their share (`shareDeficits`; for the pooled rare
   chords, one of them at random). The sections of the last 20 loops moved
   past, of the round and of the pool are left out. Each next loop is

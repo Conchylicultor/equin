@@ -4,6 +4,7 @@ import {
   arrayContained,
   arrayContains,
   arrayOverlaps,
+  desc,
   eq,
   inArray,
   isNull,
@@ -238,6 +239,7 @@ export async function findLoopWindows(
         changeCount: w.changeCount,
         hasRest: w.hasRest,
         startsOnChange: w.startsOnChange,
+        rich: w.rich,
       },
     })
     .from(w)
@@ -246,11 +248,13 @@ export async function findLoopWindows(
     // check wave below, which is never staler than this row.
     .leftJoin(chordVideoStatus, eq(chordVideoStatus.videoId, s.videoId))
     .where(and(findLoopsWhere(body), playableVideoWhere()))
-    // A random pick of the matching windows, sorted after the GIN index has cut
-    // them down — never a sort of the table. Measured 2026-09-17 on the full
+    // Rich windows first (`isRichLoop`: a real progression, not a back-and-
+    // forth), a random pick within each — sorted after the GIN index has cut
+    // them down, never a sort of the table. Measured 2026-09-17 on the full
     // index (183,270 windows), 100 random unlocked sets over HTTP: p95 31 ms,
-    // inside the < 50 ms target, so the sort stays.
-    .orderBy(sql`random()`)
+    // inside the < 50 ms target, so the sort stays. A learner whose chords
+    // make no rich window still gets the others.
+    .orderBy(desc(w.rich), sql`random()`)
     .limit(body.limit * CANDIDATE_OVERFETCH);
 
   const candidates = rows.map(({ window, chords, ...section }) => {

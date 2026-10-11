@@ -6,6 +6,7 @@ import {
   type HookpadChordRule,
   type HookpadKey,
   type HookpadMeter,
+  type HookpadTempo,
 } from "@plugins/integrations/plugins/hooktheory/core";
 import type { Alignment } from "./beat-time";
 import { chordFeatures } from "./features";
@@ -19,13 +20,14 @@ import { chordToken } from "./token";
  * Bump it with any change to one of them; an index loaded at an older version
  * is reloaded from the snapshot.
  */
-export const INDEX_DERIVATION_VERSION = 1;
+export const INDEX_DERIVATION_VERSION = 2;
 
 /** What derivation reads of a section, from whichever source (the dump snapshot, the live API). */
 export type DeriveSectionInput = {
   chords: readonly HookpadChord[];
   keys: readonly HookpadKey[];
   meters: readonly HookpadMeter[];
+  tempos: readonly HookpadTempo[];
   /** Hookpad's `endBeat`: the section ends there (exclusive). */
   endBeat: number;
   /** The playable YouTube video id (`youtubeVideoId`), or `null` when none was pasted or it is not a YouTube id. */
@@ -145,6 +147,7 @@ function sectionLoops(
     chords,
     keys: section.keys,
     meters: section.meters,
+    tempos: section.tempos,
     endBeat: section.endBeat,
   };
   return {

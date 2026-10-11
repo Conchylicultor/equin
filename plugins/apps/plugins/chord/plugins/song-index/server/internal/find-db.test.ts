@@ -65,7 +65,7 @@ function window(
 ) {
   return {
     sectionId,
-    shape: "bars-4" as const,
+    shape: "phrase" as const,
     startBeat: 1,
     endBeat: 17,
     bars: 4,
@@ -79,6 +79,7 @@ function window(
     changeCount: tokens.length - 1,
     hasRest: false,
     startsOnChange: true,
+    rich: false,
   };
 }
 
@@ -104,6 +105,7 @@ beforeAll(async () => {
       change_count integer NOT NULL,
       has_rest boolean NOT NULL,
       starts_on_change boolean NOT NULL,
+      rich boolean NOT NULL,
       PRIMARY KEY (section_id, shape, start_beat)
     )
   `);
@@ -267,7 +269,7 @@ describe("find's extras", () => {
 describe("countTokenSets' query", () => {
   test("one row per (mode, chord set), counting its windows", async () => {
     const res = await t.db.execute<TokenSetCount>(
-      tokenSetsQuery({ shape: "bars-4" }),
+      tokenSetsQuery({ shape: "phrase" }),
     );
     const total = res.rows.reduce((sum, row) => sum + row.windows, 0);
     expect(res.rows).toHaveLength(6);
