@@ -8,8 +8,9 @@ declare const stable: unique symbol;
  * body's memos), and a value minted per call busts every one of them each
  * render — a silent cost, and a #301 render loop once it meets a render-phase
  * `setState` keyed on identity. The brand makes "stable" a type: the only way
- * to mint one is `useViewGetter`, and `ReadyViewModel` asserts every getter it
- * exposes is one.
+ * to mint one is `useViewGetter`, and each model that exposes getters
+ * (`ViewActionsCore`, data-view's `ReadyViewModel`) asserts every one is one
+ * via `AssertStableGetters`.
  */
 export type ViewGetter<T> = ((id: string) => T) & { readonly [stable]: true };
 
@@ -79,3 +80,13 @@ export type UnstableGetters<M> = {
         : K
     : never;
 }[keyof M];
+
+/**
+ * `true` when every value-returning member of `M` is a `ViewGetter`, else a
+ * tuple naming the offenders — so a model states its stability contract in one
+ * line: `export const x: AssertStableGetters<Model> = true;` fails tsc the day
+ * someone adds a `fooFor: (id) => Foo` that mints per call.
+ */
+export type AssertStableGetters<M> = [UnstableGetters<M>] extends [never]
+  ? true
+  : ["getters that are not ViewGetters:", UnstableGetters<M>];

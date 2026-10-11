@@ -3,6 +3,7 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import type { DataViewId } from "../../core";
+import { fakeViewGetter } from "@plugins/primitives/plugins/data-view/plugins/view-core/web/testing";
 import { useDataViewModel } from "../internal/use-data-view-model";
 
 // The model's per-view getters must hand back the SAME object for a view until
@@ -21,9 +22,11 @@ vi.mock(
 
 let initialViews: Record<string, VariantValue> = {};
 
+const NO_VARIANTS = new Map<string, never>();
+
 const ACTIONS = {
   availableSources: [],
-  variantsFor: () => new Map(),
+  variantsFor: fakeViewGetter(() => NO_VARIANTS),
   addView: () => {},
   renameView: () => {},
   setViewIcon: () => {},

@@ -29816,9 +29816,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
-        - Uses: 79 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 80 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `primitives/css/ui-kit` ×11
-          - `primitives/data-view/view-core` ×7
+          - `primitives/data-view/view-core` ×8
           - `network/live` ×6
           - `primitives/live-state` ×5
           - `primitives/css/control-panel` ×4
@@ -30355,8 +30355,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/view-switcher.useActiveViewId`
               - `ui/icons.Icon`
             - Exports (types):
+              - `AssertStableGetters`
               - `ResolvedViewInstance`
               - `ViewActionsCore`
+              - `ViewGetter`
               - `ViewModelCore`
               - `ViewsConfigHandle`
             - Exports (values):
@@ -30366,6 +30368,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `buildViewDescriptors`
               - `CollapsedViewSwitcher`
               - `EditableViewSwitcher`
+              - `useViewGetter`
               - `useViewModel`
               - `useViewsConfig`
               - `ViewSettingsPopover`
@@ -30396,6 +30399,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/metrics`
           - Shared:
             - Exports (values): `viewsDescriptor`
+          - Test helpers:
+            - Web: `@plugins/primitives/plugins/data-view/plugins/view-core/web/testing`
+              - `fakeViewGetter` — Brand a test fake's per-view getter as a `ViewGetter`.
         - **`view-order`** — Per-view-instance manual row order for any DataView: subscribes to the persisted (dataViewId, viewId) ranks, synthesizes a total order, and contributes the resulting ManualOrderConfig back through data-view's global RowOrder slot. Persists a per-view-instance manual row order keyed by (dataViewId, viewId, rowKey): a generic DB table, a push live resource, and a validating upsert endpoint that writes only the drag's bounded set (the moved row plus the seeds now ahead of it) rank-ascending — O(gesture), never a full replace, nothing deleted.
           - Web:
             - Contributes: `DataViewSlots.RowOrder` "view-order" → `RowOrderContribution`

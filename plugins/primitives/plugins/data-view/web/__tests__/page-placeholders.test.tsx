@@ -66,7 +66,7 @@ import { liveDataSource } from "../internal/live-data-source";
 import { defineDataViewSources } from "../internal/define-data-view-sources";
 import { MergedDataView } from "../components/merged-data-view";
 import { DataViewSlots } from "../slots";
-import { fakeViewGetter } from "../testing/fake-view-getter";
+import { fakeViewGetter } from "@plugins/primitives/plugins/data-view/plugins/view-core/web/testing";
 
 const NO_COLLAPSED: ReadonlySet<string> = new Set();
 const SECTION = { collapsed: false, hideWhenEmpty: false, description: null };

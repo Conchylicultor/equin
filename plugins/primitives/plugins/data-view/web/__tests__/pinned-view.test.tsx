@@ -11,7 +11,7 @@ import type {
   ViewModel,
 } from "../internal/use-data-view-model";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import { fakeViewGetter } from "../testing/fake-view-getter";
+import { fakeViewGetter } from "@plugins/primitives/plugins/data-view/plugins/view-core/web/testing";
 
 const NO_COLLAPSED: ReadonlySet<string> = new Set();
 const STATE = {

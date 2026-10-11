@@ -2,8 +2,15 @@ import { useCallback, useMemo } from "react";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import type { VariantEntry } from "@plugins/fields/plugins/variant/plugins/config/core";
 import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
-import { useViewModel } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
-import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
+import {
+  useViewGetter,
+  useViewModel,
+} from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
+import type {
+  AssertStableGetters,
+  ResolvedViewInstance,
+  ViewGetter,
+} from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import type {
   AddableSource,
   ViewSourceEntry,
@@ -23,11 +30,6 @@ import { isFilterGroup } from "./filter-shape";
 import { dataViewDescriptors } from "./descriptors";
 import { IDENTITY_GROUPING } from "./identity-grouping";
 import { useViewEphemeral } from "./use-view-ephemeral";
-import {
-  type UnstableGetters,
-  type ViewGetter,
-  useViewGetter,
-} from "./view-getter";
 
 /** Instance actions for the editable view-switcher (every DataView has these). */
 export interface ViewActions {
@@ -37,8 +39,8 @@ export interface ViewActions {
   availableSources: AddableSource[];
   /** The type-switcher registry for ONE instance's settings popover — that
    *  instance's source ∩ the same gate the add menu uses (see
-   *  `ViewActionsCore.variantsFor`). */
-  variantsFor: (id: string) => Map<string, VariantEntry>;
+   *  `ViewActionsCore.variantsFor`), stable per view. */
+  variantsFor: ViewGetter<Map<string, VariantEntry>>;
   addView: (type: string, sourceId?: string) => void;
   renameView: (id: string, name: string) => void;
   setViewIcon: (id: string, icon: SavedSymbolName | null) => void;
@@ -91,20 +93,15 @@ export interface ReadyViewModel {
 }
 
 /**
- * Every value-returning member of `ReadyViewModel` must be a `ViewGetter`:
- * consumers memoise on what a getter returns, so one minting a fresh object per
- * call recomputes them every render (and loops a render-phase `setState` keyed
- * on identity — React #301). A new `fooFor: (id) => Foo` fails here; mint it
- * with `useViewGetter`.
+ * Every value-returning member of `ReadyViewModel` — and of its `actions`, which
+ * the first check cannot see inside — must be a `ViewGetter`: consumers memoise
+ * on what a getter returns, so one minting a fresh object per call recomputes
+ * them every render (and loops a render-phase `setState` keyed on identity —
+ * React #301). A new `fooFor: (id) => Foo` fails here; mint it with
+ * `useViewGetter`.
  */
-export type GettersAreStable = [UnstableGetters<ReadyViewModel>] extends [never]
-  ? true
-  : [
-      "ReadyViewModel getters that are not ViewGetters:",
-      UnstableGetters<ReadyViewModel>,
-    ];
-
-export const gettersAreStable: GettersAreStable = true;
+export const gettersAreStable: AssertStableGetters<ReadyViewModel> = true;
+export const actionsGettersAreStable: AssertStableGetters<ViewActions> = true;
 
 /**
  * What `useDataViewModel` returns: either "the views are not known yet" or the

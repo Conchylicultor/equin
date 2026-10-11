@@ -51,10 +51,7 @@ export function ViewSettingsPopover<T extends ViewTypeMeta>({
 }): ReactNode {
   const id = instance.instance.id;
 
-  // Memoized on (actions, id): `variantsFor` mints a fresh Map per call, and an
-  // unstable map would rebuild the field def — and with it the whole sub-form —
-  // on every keystroke in the Name input above.
-  const viewVariants = useMemo(() => actions.variantsFor(id), [actions, id]);
+  const viewVariants = actions.variantsFor(id);
   const viewField = useMemo(
     () => variantField({ label: "View", useVariants: () => viewVariants }),
     [viewVariants],

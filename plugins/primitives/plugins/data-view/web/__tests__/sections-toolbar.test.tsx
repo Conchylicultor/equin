@@ -37,7 +37,7 @@ import type {
 } from "../internal/use-data-view-model";
 import type { DataViewShellChrome } from "../internal/body-types";
 import { useViewEphemeral } from "../internal/use-view-ephemeral";
-import { fakeViewGetter } from "../testing/fake-view-getter";
+import { fakeViewGetter } from "@plugins/primitives/plugins/data-view/plugins/view-core/web/testing";
 
 const LIST_ICON = symbol("view-list");
 
@@ -143,6 +143,7 @@ function instance(spec: InstanceSpec) {
 }
 
 const NO_COLLAPSED: ReadonlySet<string> = new Set();
+const NO_VARIANTS = new Map<string, never>();
 
 function model(
   specs: InstanceSpec[],
@@ -193,7 +194,7 @@ function model(
     setViewCollapsed: spies.setViewCollapsed ?? (() => {}),
     actions: {
       availableSources: [],
-      variantsFor: () => new Map(),
+      variantsFor: fakeViewGetter(() => NO_VARIANTS),
       addView: () => {},
       renameView: () => {},
       setViewIcon: () => {},

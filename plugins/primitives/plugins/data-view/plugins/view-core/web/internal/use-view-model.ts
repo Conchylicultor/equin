@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
+import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import type { VariantEntry } from "@plugins/fields/plugins/variant/plugins/config/core";
@@ -14,6 +15,11 @@ import { useViewsConfig, type ViewsConfigHandle } from "./use-views-config";
 import { useActiveViewId } from "@plugins/primitives/plugins/view-switcher/web";
 import { resolveActiveId } from "./resolve-active-id";
 import { usableTypes } from "./usable-types";
+import {
+  type AssertStableGetters,
+  type ViewGetter,
+  useViewGetter,
+} from "./view-getter";
 
 /**
  * Instance actions for the editable view-switcher (every view surface has
@@ -31,8 +37,12 @@ export interface ViewActionsCore {
    * each paired with its options sub-form. Per-instance, never global — a
    * global registry is what let a flat surface switch a view to a hierarchical
    * type that then could not resolve, silently emptying the switcher.
+   *
+   * Stable per view: the same Map until THAT view's source entry or type
+   * changes — renaming it, editing its options, or touching another view
+   * leaves it alone, so a consumer can key a memo on it directly.
    */
-  variantsFor: (id: string) => Map<string, VariantEntry>;
+  variantsFor: ViewGetter<Map<string, VariantEntry>>;
   addView: (type: string, sourceId?: string) => void;
   renameView: (id: string, name: string) => void;
   /** Set the switcher glyph; `null` reverts to the view-type's own icon. */
@@ -46,6 +56,13 @@ export interface ViewActionsCore {
     opts?: { merge?: boolean },
   ) => void;
 }
+
+/**
+ * Every value-returning member of `ViewActionsCore` must be a `ViewGetter` — a
+ * new `fooFor: (id) => Foo` minting per call fails here; mint it with
+ * `useViewGetter`.
+ */
+export const actionsGettersAreStable: AssertStableGetters<ViewActionsCore> = true;
 
 /**
  * The generic, type-agnostic view model. Owns the instance list, active-id
@@ -135,24 +152,22 @@ export function useViewModel<T extends ViewTypeMeta>(
   // The instance's current type is always listed even when the entry's `views`
   // whitelist excludes it: the whitelist gates addability, not authored rows
   // (`buildInstanceFromRow` renders them), so the picker must be able to show
-  // the value it is bound to.
-  const variantsFor = useCallback(
-    (id: string): Map<string, VariantEntry> => {
-      const resolved = cfg.instances.find((r) => r.instance.id === id);
-      if (!resolved) return new Map();
-      const entry = entries.find((e) => e.id === resolved.instance.source);
-      const usable = entry ? usableTypes(entry) : [];
-      const listed = usable.some((c) => c.type === resolved.instance.type)
-        ? usable
-        : [...usable, resolved.viewType];
-      return new Map(
-        listed.map((c) => [
-          c.type,
-          { label: c.title, fields: c.configSchema ?? {} },
-        ]),
-      );
-    },
-    [cfg.instances, entries],
+  // the value it is bound to. Its inputs are the instance's source entry (from
+  // the caller's stable `entries`) and resolved `viewType` (the registered
+  // contribution — it changes exactly when the view's type does), so a rename
+  // or an options edit hands back the same Map.
+  const variantsFor = useViewGetter(
+    useCallback(
+      (id: string) => {
+        const resolved = cfg.instances.find((r) => r.instance.id === id);
+        return [
+          resolved && entries.find((e) => e.id === resolved.instance.source),
+          resolved?.viewType,
+        ] as const;
+      },
+      [cfg.instances, entries],
+    ),
+    deriveVariants,
   );
 
   // Adding or duplicating a view makes the new view the active one — every
@@ -192,5 +207,27 @@ export function useViewModel<T extends ViewTypeMeta>(
       availableSources,
     }),
     [cfg, activeId, active.setActiveView, actions, availableSources],
+  );
+}
+
+/**
+ * One instance's type-switcher registry from its source `entry` and resolved
+ * `viewType` (both `undefined` for an unknown id → an empty Map). Module-level
+ * so `useViewGetter` re-runs it only when one of the two changes identity.
+ */
+function deriveVariants<T extends ViewTypeMeta>(
+  entry: ViewSourceEntry<T> | undefined,
+  viewType: SealContributions<T> | undefined,
+): Map<string, VariantEntry> {
+  if (!viewType) return new Map();
+  const usable = entry ? usableTypes(entry) : [];
+  const listed = usable.some((c) => c.type === viewType.type)
+    ? usable
+    : [...usable, viewType];
+  return new Map(
+    listed.map((c) => [
+      c.type,
+      { label: c.title, fields: c.configSchema ?? {} },
+    ]),
   );
 }
