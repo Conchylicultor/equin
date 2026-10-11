@@ -7,7 +7,7 @@ server was stopped (idle sweep), split into where the time goes. Plan:
 ```bash
 ./singularity build      # the script drives the deploy this checkout published
 ./singularity run plugins/debug/plugins/profiling/plugins/cold-start/e2e/cold-start.ts \
-  [--iterations 5] [--path /agents] [--busy N] [--out /tmp/cold-start.json] [--timeout 60000]
+  [--iterations 5] [--path /agents] [--busy N] [--out /tmp/cold-start.json] [--timeout 120000]
 ```
 
 - `--busy N` spawns N CPU-spinning children at background priority
@@ -27,7 +27,10 @@ server was stopped (idle sweep), split into where the time goes. Plan:
 2. A fresh browser context (own cache, cookies, sockets — so asset bytes are
    downloaded cold too), `page.goto(<path>)`.
 3. Waits for the `boot:route-content-commit` User Timing mark (a buffered
-   `PerformanceObserver`, no polling).
+   `PerformanceObserver`, no polling), up to `--timeout`. An iteration that runs
+   out is FAILED but keeps and prints everything it reached (boot marks,
+   navigation timing, and the server profile when the server is up — checked
+   with `GET /gateway/worktrees` first, so the read never boots it).
 4. Reads every `boot:*` mark / measure plus Navigation and Paint Timing, closes
    the context (an open page's socket would respawn the server), then
    `GET /api/debug/profiling/boot` for the server spans and the gateway report.
@@ -43,6 +46,7 @@ start). Every row has a duration and the offset where it ends.
 | --- | --- |
 | **TOTAL page request → route content commit** (headline) | the `route-content-commit` boot instant (web-core's boot sequence): the commit that appends the active app's priority deferred batch, or the first-data commit when that app has no deferred content — the first screen a person sees with data |
 | TOTAL page request → first data commit | the `first-data-commit` boot instant (infra/boot-snapshot): the first React commit after the boot snapshot is hydrated — chrome and eager panes reading real data, deferred route content (e.g. the `/agents` welcome pane) possibly still loading |
+| page request → first request reached the gateway | gateway report `spawnRequestedAt` − page `timeOrigin`: how long the page took to send the request that woke the server (cold runs only) |
 | gateway spawn requested → ready observed (+ spawned split, spawned → server process start = exec + Bun runtime start) | the gateway's report (`spawnRequestedAt`, `spawnedAt`, `readyObservedAt`) POSTed to `/api/boot/gateway-report` (debug/boot-monitor), returned as `gateway` by the profiling endpoint |
 | server process start → first register (code loading) | `bootStartOffsetMs` + the earliest `register` span's offset |
 | server register | first `register` start → last `register` end |
@@ -56,7 +60,10 @@ start). Every row has a duration and the offset where it ends.
 
 Printed per row: min / median / p95 over the iterations and the median end
 offset; then the snapshot entry counts by source and the heaviest keys, the
-host load average (1/5/15 min) at start and end, and one `SUMMARY` line.
+count of 429 responses by path (the log-channels beacon shedding under host
+duress — expected under load, counted, never a failure), the host load average
+(1/5/15 min) at start and end, and one `SUMMARY` line. The `n` column is how
+many iterations reached that row.
 `--out` writes every iteration's raw entries, server profile and derived phases
 as JSON.
 

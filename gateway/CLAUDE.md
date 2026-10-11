@@ -8,7 +8,7 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 
 - Listens on `:9000`, routes `<name>.localhost:9000` → that worktree's backend
 - Serves each worktree's `web/dist` as static files directly (no backend spawn needed for page loads)
-- Lazy-spawns the backend on the first `/api/*` or `/ws/*` request; tears it down after 10 minutes idle
+- Lazy-spawns the backend on a page load (in the background, beside the SPA shell) or the first `/api/*` or `/ws/*` request; tears it down after 10 minutes idle
 - Hands each backend a Unix domain socket at `~/.singularity/sockets/<name>.sock` as `--socket <path>` on its argv. Gateway dials the socket directly — no TCP between gateway and backend.
 - Starts every child (backends, supervised services) from a **declared** environment, never its own: see "Backend Contract", item 2.
 - Discovers worktrees from `~/.singularity/worktrees/<name>/spec.json`
@@ -18,7 +18,7 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 ## Key Design Decisions
 
 - **Subdomain routing, not path-prefix** — each instance thinks it's at `/`, so no base-path rewriting. `*.localhost` resolves natively in Chrome and Firefox
-- **Gateway serves statics, backend serves API/WS** — separating the cheap thing (files) from the expensive thing (process) means page loads are instant and backends only exist when needed
+- **Gateway serves statics, backend serves API/WS** — separating the cheap thing (files) from the expensive thing (process) means page loads are instant and backends only exist when needed. A page load still *starts* the backend (without waiting on it), so its boot overlaps the browser loading the app instead of following it
 - **Gateway owns backend lifecycles** — backends are spawned, supervised, and killed by the gateway. They never know the gateway exists. The convention is `bun bin/index.ts --namespace <name> --socket <path>` in the `server` directory, with the declared runtime environment and nothing else (`backendLaunch` in `worktree.go`)
 - **Children get a declared environment, not an inherited one** — the gateway used to hand every child its own environment, i.e. whatever its starter carried. Started from an agent shell, that put the shell's `SINGULARITY_CONVERSATION_ID`, `TMUX` and `CLAUDE_*` into every backend on the host. Now the launcher declares the names (`-child-env`), `env.go` captures that subset once at boot, and `env.go` is the only file allowed to call `os.Environ()` or `exec.Command` (the `launcher:gateway-env-explicit` check) — so no exec site can fall back to Go's nil-`Env` "inherit everything"
 - **Unix domain sockets, not TCP loopback** — eliminates the IPv4/IPv6 bind-shape asymmetry that allowed unrelated processes to silently steal traffic on macOS (an IPv4-loopback squatter could coexist with a dual-stack listener on the same port). UDS scopes the gateway↔backend channel by filesystem path, removes the port allocator entirely, and removes any LAN-exposure surface.
@@ -30,7 +30,8 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 /gateway/*       → gateway's own API (intercepted before proxying)
 /api/*           → proxy to backend (lazy-spawn if needed)
 /ws/*            → proxy to backend (WebSocket upgrade via http.Hijacker)
-everything else  → static file from web/dist (SPA fallback for extensionless paths)
+everything else  → static file from web/dist (SPA fallback for extensionless paths);
+                   serving the shell to a document navigation also starts the backend in the background
 ```
 
 `/api/*` and `/ws/*` are the same prefixes as the Vite dev proxy in `web/vite.config.ts`.
@@ -111,9 +112,19 @@ If the new backend fails to start (bad code, broken migration), the old backend 
 
 State machine during restart: `Running → Restarting → Running`. During `Restarting`, `Ensure()` returns the old proxy immediately (no blocking, no 502). The idle sweeper skips worktrees in `Restarting` state. `Stop()` waits for an in-flight restart to settle before proceeding.
 
+## Start priority
+
+Every `Ensure` names a `StartReason`, which sets the spawn's priority:
+
+- **Browser** — a document navigation (`Sec-Fetch-Dest: document`), or a WebSocket with `Sec-Fetch-Mode: websocket` and an `Origin` (agents' Playwright browsers included). Spawns at default priority.
+- **Background** — everything else: the app's own `fetch()`es, MCP tools, scripts, other servers, the restart/deploy route, the eager central start. Spawns darwinbg (`taskpolicy -b`), promoted once ready or on escalation. Main and central are never demoted.
+- A browser caller joining an in-flight background spawn promotes it at once. `bk.demoted` is guarded by the worktree's `mu`; whoever flips it runs `taskpolicy -B`.
+
+**Page-load start** (`serveShell` → `prestartBackend`): when `handleStatic` serves the SPA shell (directly or as the fallback) to a document navigation, it starts the backend with a browser reason in a goroutine, on a context that outlives the request. The response never waits on it and never fails because of it; a failed spawn is logged, and the app's own `/api` or `/ws` request reports it. Without this, the server is first asked for only after the browser has loaded and run the app (~4.5 s), and then the whole boot follows. Assets never start anything, and neither do headless worktrees (they have no shell). A running or starting backend is deduped by `Ensure`. A page load counts as activity, so a backend nothing else uses is swept after the usual idle timeout.
+
 ## Stop on demand
 
-`POST /gateway/worktrees/<name>/stop` is the idle sweeper's teardown on request (the cold-start benchmark's reset step): the same `Worktree.Stop` (waits out an in-flight spawn or restart, SIGTERM → grace → SIGKILL, socket + sidecar removed), leaving the worktree registered at `idle` so the next `/api/*` or `/ws/*` request cold-starts it.
+`POST /gateway/worktrees/<name>/stop` is the idle sweeper's teardown on request (the cold-start benchmark's reset step): the same `Worktree.Stop` (waits out an in-flight spawn or restart, SIGTERM → grace → SIGKILL, socket + sidecar removed), leaving the worktree registered at `idle` so the next page load or `/api/*` / `/ws/*` request cold-starts it.
 
 - `200` + the worktree's `WorktreeStatus` JSON (the `GET /gateway/worktrees` element shape) once the backend has exited. Already idle (or broken) → `200`, no-op.
 - `409` for a pinned worktree (`Worktree.Pinned`, today `central`) — the same rule that keeps the sweeper off it. Main (`singularity`) is not pinned: the sweeper stops it too.

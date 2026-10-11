@@ -32,6 +32,8 @@ Change: `Ensure` learns why it starts the server. A browser opening the worktree
 
 Agents' Playwright browsers count as browsers (decided 2026-10-09): same headers, already bounded by the e2e op's host CPU grant, and latency-sensitive too. The server's own heavy children stay demoted via `spawn-priority`.
 
+Start on page load (decided 2026-10-11). The first cold run showed the server asked to start only ~4.5 s after the page request: `handleStatic` serves the SPA shell without `Ensure`, so the start waits for the app's first `/api` or `/ws` request, after its code has loaded. A document request for the shell (`Sec-Fetch-Dest: document`) now also starts the backend asynchronously, with the browser reason, never delaying the static response. Assets don't trigger a start.
+
 ## 3. Ready path
 
 "Ready" keeps meaning fully installed; nothing moves after ready (a write before the change-feed triggers exist would lose its notification).

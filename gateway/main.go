@@ -34,6 +34,11 @@ type Config struct {
 	DefaultNamespace  string
 	PidFile           string
 
+	// Taskpolicy is the macOS priority tool background boots are demoted and
+	// promoted with (detectTaskpolicy), "" where there is none. Not a flag:
+	// main detects it; tests point it at a fake.
+	Taskpolicy string
+
 	// ChildEnv is the environment every child process starts from: the names
 	// declared by -child-env, captured from the gateway's own environment once
 	// at boot (see env.go). Not a flag itself — main resolves it from the flag
@@ -180,6 +185,7 @@ func main() {
 	}
 	childEnv, dropped := captureChildEnv(declared)
 	cfg.ChildEnv = childEnv
+	cfg.Taskpolicy = detectTaskpolicy()
 	slog.Info("child environment", "forwarded", childEnv.Names())
 	if len(dropped) > 0 {
 		slog.Warn("child environment: not forwarding undeclared variables from the gateway's own environment", "dropped", dropped)
@@ -262,7 +268,7 @@ func main() {
 	// central's plugins can connect immediately.
 	if wt := reg.Get("central"); wt != nil {
 		go func() {
-			if _, err := wt.Ensure(ctx); err != nil {
+			if _, err := wt.Ensure(ctx, StartBackground); err != nil {
 				slog.Warn("eager central spawn failed", "err", err)
 			}
 		}()

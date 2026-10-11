@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -115,6 +116,43 @@ func serveIndex(w http.ResponseWriter, r *http.Request, indexPath string) {
 	http.ServeFile(w, r, indexPath)
 }
 
+// serveShell serves the SPA shell, and on a document load starts the backend
+// alongside it (prestartBackend). The only place handleStatic serves the shell,
+// so the direct hit and the SPA fallback cannot disagree about prestarting.
+func serveShell(w http.ResponseWriter, r *http.Request, wt *Worktree, indexPath string) {
+	prestartBackend(r, wt)
+	serveIndex(w, r, indexPath)
+}
+
+// prestartBackend starts the backend, at browser priority, when a browser
+// loads the app's page. Without it the backend is first asked for by the
+// app's first /api or /ws request — after the browser has fetched and run the
+// app's code — and the whole server boot is then paid on top of that; started
+// here, the two overlap.
+//
+// Only a document navigation counts: the shell's own assets, and any
+// non-browser fetch of a path, never start anything. Fire-and-forget: the
+// static response is never delayed and never fails because of it. A failed
+// spawn is logged, and the app's own /api or /ws request then surfaces it
+// exactly as it would have. Ensure dedupes against a running or in-flight
+// start (and a browser joining a background start promotes it). The context
+// outlives the request, which ends as soon as the shell is written.
+func prestartBackend(r *http.Request, wt *Worktree) {
+	if r.Header.Get("Sec-Fetch-Dest") != "document" {
+		return
+	}
+	ctx := context.WithoutCancel(r.Context())
+	go func() {
+		if _, err := wt.Ensure(ctx, StartBrowser); err != nil {
+			slog.Warn("page-load backend start failed", "worktree", wt.Name, "err", err)
+			return
+		}
+		// A page load is a use of the app: without this, a backend about to be
+		// swept would be torn down under the page that just asked for it.
+		wt.TouchBackend()
+	}()
+}
+
 // handleStatic serves a file from the worktree's web/dist directory. Any path
 // that doesn't match an existing file falls back to index.html so the SPA
 // client router can handle it (including paths with extensions like /file/foo.ts)
@@ -135,7 +173,7 @@ func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktre
 	info, err := os.Stat(full)
 	if err == nil && !info.IsDir() {
 		if upath == indexURL {
-			serveIndex(w, r, full)
+			serveShell(w, r, wt, full)
 			return
 		}
 		http.ServeFile(w, r, full)
@@ -153,7 +191,7 @@ func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktre
 	// The client router decides whether it's a real route or a 404.
 	indexPath := filepath.Join(webDir, indexURL)
 	if _, ierr := os.Stat(indexPath); ierr == nil {
-		serveIndex(w, r, indexPath)
+		serveShell(w, r, wt, indexPath)
 		return
 	}
 	http.NotFound(w, r)
@@ -163,7 +201,7 @@ func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktre
 // request is counted against the serving backend for the duration so a hot
 // restart drains it before terminating the process (avoids mid-request 502s).
 func (p *Proxy) handleHTTP(w http.ResponseWriter, r *http.Request, wt *Worktree) {
-	bk, err := wt.Ensure(r.Context())
+	bk, err := wt.Ensure(r.Context(), startReasonOf(r))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
@@ -179,7 +217,7 @@ func (p *Proxy) handleHTTP(w http.ResponseWriter, r *http.Request, wt *Worktree)
 // is pinned to the backend that was active at dial time — a hot restart swaps
 // new requests to the new backend without disturbing open connections.
 func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Worktree) {
-	bk, err := wt.Ensure(r.Context())
+	bk, err := wt.Ensure(r.Context(), startReasonOf(r))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
@@ -303,7 +341,7 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			case "idle", "broken":
-				if _, err := wt.Ensure(ctx); err != nil {
+				if _, err := wt.Ensure(ctx, StartBackground); err != nil {
 					http.Error(w, "cold start failed: "+err.Error(), http.StatusInternalServerError)
 					return
 				}
@@ -440,6 +478,21 @@ func parseWorktree(host string) string {
 
 func isBackendPath(p string) bool {
 	return strings.HasPrefix(p, "/api/") || strings.HasPrefix(p, "/ws/")
+}
+
+// startReasonOf classifies a backend-bound request: StartBrowser for a
+// browser waiting on the result — a document navigation, or a WebSocket a
+// page opened (browsers send Sec-Fetch-Mode: websocket plus the page's
+// Origin) — and StartBackground for everything else, the app's own fetch()es
+// included: by then its document load has already started the backend.
+func startReasonOf(r *http.Request) StartReason {
+	if r.Header.Get("Sec-Fetch-Dest") == "document" {
+		return StartBrowser
+	}
+	if isWebSocketUpgrade(r) && r.Header.Get("Sec-Fetch-Mode") == "websocket" && r.Header.Get("Origin") != "" {
+		return StartBrowser
+	}
+	return StartBackground
 }
 
 func isWebSocketUpgrade(r *http.Request) bool {

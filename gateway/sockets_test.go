@@ -513,7 +513,7 @@ func TestEnsureReturnsProxyDuringRestart(t *testing.T) {
 	// Ensure() should return the old backend during a restart, not block or error.
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-	got, err := wt.Ensure(ctx)
+	got, err := wt.Ensure(ctx, StartBackground)
 	if err != nil {
 		t.Fatalf("Ensure during restart should not error: %v", err)
 	}

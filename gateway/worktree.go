@@ -152,6 +152,30 @@ var (
 	ErrStopping    = errors.New("worktree is stopping")
 )
 
+// StartReason is why a caller may start the backend, which sets the spawn's
+// priority. Every Ensure names one, so no start path can pick a priority by
+// omission.
+type StartReason int
+
+const (
+	// StartBackground: nobody is watching this boot — an agent's MCP call, a
+	// script, another server, a deploy. Spawned darwinbg (when the host
+	// supports it) so the boot burst stays off the cores the user is on;
+	// promoted once ready, or on escalation.
+	StartBackground StartReason = iota
+	// StartBrowser: a browser is waiting on this backend — a document load or
+	// the app's WebSocket (an agent's Playwright browser included). Spawned at
+	// default priority; joining an in-flight background spawn promotes it.
+	StartBrowser
+)
+
+func (r StartReason) String() string {
+	if r == StartBrowser {
+		return "browser"
+	}
+	return "background"
+}
+
 // backend groups the per-process fields for one running backend instance.
 // A Worktree holds at most one active *backend; a second may exist briefly
 // as the "draining" old backend during a hot restart.
@@ -160,7 +184,7 @@ type backend struct {
 	exitCh     chan struct{} // closed when cmd.Wait returns
 	socketPath string
 	proxy      *httputil.ReverseProxy // nil until waitReady succeeds
-	demoted    bool                   // spawned darwinbg (taskpolicy -b); lifted on readiness
+	demoted    bool                   // running darwinbg (taskpolicy -b) until promoted; guarded by the owning Worktree's mu
 
 	// connMu guards both connection counters. httpConns tracks in-flight HTTP
 	// requests — bounded, short-lived, and waited on at drain so they finish
@@ -237,6 +261,10 @@ type Worktree struct {
 	brokenUntil  time.Time
 	readyCh      chan struct{} // signal-only; waiters re-check state
 	lastSpawnErr error
+	// browserJoined records that a StartBrowser caller joined the in-flight
+	// spawn before its backend was published to active, so the spawner
+	// promotes it on publish. Reset at each spawn.
+	browserJoined bool
 
 	// restartMu serializes concurrent Restart() calls.
 	restartMu sync.Mutex
@@ -324,8 +352,10 @@ func (w *Worktree) restartTargetPath() string {
 // caller serves the request through bk.proxy; returning the backend (not just
 // the proxy) lets HTTP/WS handlers count their connection against the exact
 // process serving it, so drain waits on the right backend.
-// Concurrent callers share a single in-flight spawn via readyCh.
-func (w *Worktree) Ensure(ctx context.Context) (*backend, error) {
+// Concurrent callers share a single in-flight spawn via readyCh. reason sets
+// the priority of a spawn this call begins; a StartBrowser caller joining a
+// background spawn promotes it at once.
+func (w *Worktree) Ensure(ctx context.Context, reason StartReason) (*backend, error) {
 	w.mu.Lock()
 
 	switch w.state {
@@ -342,7 +372,16 @@ func (w *Worktree) Ensure(ctx context.Context) (*backend, error) {
 
 	case StateStarting:
 		ch := w.readyCh
+		var joined *backend
+		if reason == StartBrowser {
+			// Before the spawner publishes its backend, the flag tells it to
+			// promote on publish; after, we promote it ourselves. Both under
+			// mu, so exactly one of the two sees the other's write.
+			w.browserJoined = true
+			joined = w.active
+		}
 		w.mu.Unlock()
+		w.promoteBackend(joined)
 		select {
 		case <-ch:
 		case <-ctx.Done():
@@ -370,6 +409,7 @@ func (w *Worktree) Ensure(ctx context.Context) (*backend, error) {
 	w.state = StateStarting
 	w.readyCh = make(chan struct{})
 	w.lastSpawnErr = nil
+	w.browserJoined = false
 	readyCh := w.readyCh
 	spec := w.Spec()
 	socketPath := w.primarySocketPath()
@@ -378,15 +418,20 @@ func (w *Worktree) Ensure(ctx context.Context) (*backend, error) {
 	// Run the spawn outside the lock so concurrent callers see Starting and wait.
 	var stats bootStats
 	stats.SpawnRequestedAt = time.Now().UnixMilli()
-	bk, spawnErr := w.startBackend(spec, socketPath)
+	bk, spawnErr := w.startBackend(spec, socketPath, reason)
 	if spawnErr == nil {
 		stats.SpawnedAt = time.Now().UnixMilli()
 		// Snapshot before any promote clears it (escalation or post-ready).
+		// Unpublished yet, so no other goroutine can touch it.
 		stats.Demoted = bk.demoted
 		// Make cmd visible so Stop can find it before readiness completes.
 		w.mu.Lock()
 		w.active = bk
+		joined := w.browserJoined
 		w.mu.Unlock()
+		if joined {
+			w.promoteBackend(bk)
+		}
 		stats.Escalated, stats.RespondedHTTP, spawnErr = w.awaitBackendReady(bk, socketPath)
 		if spawnErr == nil {
 			stats.ReadyObservedAt = time.Now().UnixMilli()
@@ -482,7 +527,9 @@ func (w *Worktree) Restart(ctx context.Context) error {
 	slog.Info("hot restart: spawning", "worktree", w.Name, "socket", newSocketPath)
 	var stats bootStats
 	stats.SpawnRequestedAt = time.Now().UnixMilli()
-	newBk, spawnErr := w.startBackend(spec, newSocketPath)
+	// A restart is a deploy: nobody is waiting on the new process (the old one
+	// keeps serving), so it boots in the background.
+	newBk, spawnErr := w.startBackend(spec, newSocketPath, StartBackground)
 
 	// --- Step 3: Wait for readiness ---
 	if spawnErr == nil {
@@ -691,31 +738,64 @@ func (w *Worktree) ShouldSweep(idleTimeout time.Duration) bool {
 
 // ─── internal helpers ────────────────────────────────────────
 
-// taskpolicyPath is the macOS priority tool used to spawn agent-worktree
-// backends darwinbg (boot burst on efficiency cores) and lift the demotion
-// once ready.
+// taskpolicyPath is the macOS priority tool used to spawn background boots
+// darwinbg (boot burst on efficiency cores) and lift the demotion once ready.
 const taskpolicyPath = "/usr/sbin/taskpolicy"
+
+// detectTaskpolicy returns the taskpolicy binary main configures as
+// Config.Taskpolicy: taskpolicyPath on macOS when present, else "" (no
+// demotion on this host).
+func detectTaskpolicy() string {
+	if runtime.GOOS != "darwin" {
+		return ""
+	}
+	if _, err := os.Stat(taskpolicyPath); err != nil {
+		return ""
+	}
+	return taskpolicyPath
+}
 
 // promoteBackend lifts a darwinbg-demoted backend back to default priority
 // (taskpolicy -B -p <pid>) once it is ready — the boot burst is over, and
 // steady-state serving (the user browsing the worktree's app) should run on
 // all cores. Best-effort: a failed promote just leaves the backend on the
-// efficiency cores, which is safe. Idempotent: success clears bk.demoted, so
-// the post-ready call after a mid-boot escalation promote is a no-op.
+// efficiency cores, which is safe. Idempotent and safe to race: the caller
+// that flips bk.demoted (under w.mu) is the one that runs taskpolicy, so the
+// post-ready call after an escalation or a browser join is a no-op. A failed
+// promote puts the flag back so a later caller retries.
 // taskpolicy runs with the declared base environment like every other child,
 // so no gateway exec falls back to Go's implicit inherit.
 func (w *Worktree) promoteBackend(bk *backend) {
-	if bk == nil || !bk.demoted || bk.cmd == nil || bk.cmd.Process == nil {
+	if bk == nil {
 		return
 	}
-	out, err := w.cfg.ChildEnv.Command(taskpolicyPath, "-B", "-p", fmt.Sprint(bk.cmd.Process.Pid)).CombinedOutput()
-	if err != nil {
-		slog.Warn("taskpolicy -B failed; backend stays demoted",
-			"worktree", w.Name, "pid", bk.cmd.Process.Pid, "err", err, "out", strings.TrimSpace(string(out)))
+	w.mu.Lock()
+	if !bk.demoted || bk.cmd == nil || bk.cmd.Process == nil {
+		w.mu.Unlock()
 		return
 	}
 	bk.demoted = false
-	slog.Info("backend promoted to default priority", "worktree", w.Name, "pid", bk.cmd.Process.Pid)
+	pid := bk.cmd.Process.Pid
+	w.mu.Unlock()
+
+	out, err := w.cfg.ChildEnv.Command(w.cfg.Taskpolicy, "-B", "-p", fmt.Sprint(pid)).CombinedOutput()
+	if err != nil {
+		w.mu.Lock()
+		bk.demoted = true
+		w.mu.Unlock()
+		slog.Warn("taskpolicy -B failed; backend stays demoted",
+			"worktree", w.Name, "pid", pid, "err", err, "out", strings.TrimSpace(string(out)))
+		return
+	}
+	slog.Info("backend promoted to default priority", "worktree", w.Name, "pid", pid)
+}
+
+// demotes reports whether a spawn for reason runs darwinbg: only a background
+// start, only where taskpolicy exists, and never main ("singularity") or
+// "central" — the interactive / always-on backends.
+func (w *Worktree) demotes(reason StartReason) bool {
+	return reason == StartBackground && w.cfg.Taskpolicy != "" &&
+		w.Name != "singularity" && w.Name != "central"
 }
 
 // backendLaunch returns what a backend is told at spawn beyond the declared
@@ -734,10 +814,11 @@ func backendLaunch(name, socketPath string) []string {
 	return []string{"--namespace", name, "--socket", socketPath}
 }
 
-// startBackend builds and starts a backend process on the given socketPath.
-// Returns a *backend with cmd and exitCh populated; proxy is nil until the
-// caller confirms readiness and calls newReverseProxy.
-func (w *Worktree) startBackend(spec *Spec, socketPath string) (*backend, error) {
+// startBackend builds and starts a backend process on the given socketPath, at
+// the priority reason calls for (see demotes). Returns a *backend with cmd and
+// exitCh populated; proxy is nil until the caller confirms readiness and calls
+// newReverseProxy.
+func (w *Worktree) startBackend(spec *Spec, socketPath string, reason StartReason) (*backend, error) {
 	// Clear any stale socket + pid sidecar a crashed predecessor left on this path.
 	if err := removeBackendArtifacts(socketPath); err != nil {
 		return nil, fmt.Errorf("unlink stale socket: %w", err)
@@ -747,20 +828,17 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string) (*backend, error)
 	if len(argv) == 0 {
 		argv = []string{"bun", "bin/index.ts"}
 	}
-	// Boot-time priority isolation: agent-worktree backends spawn darwinbg
+	// Boot-time priority isolation: a background start spawns darwinbg
 	// (taskpolicy -b execs the target in place, so cmd.Process.Pid stays the
-	// backend pid) so their boot burst (catch-up, derived-table rebuild, pool
+	// backend pid) so its boot burst (catch-up, derived-table rebuild, pool
 	// warm) runs on the efficiency cores and cannot starve the interactive
 	// main backend. Once ready, w.promoteBackend lifts the demotion (-B -p) so
-	// steady-state serving is back on all cores. main ("singularity") and
-	// "central" are the interactive/always-on backends — never demoted.
+	// steady-state serving is back on all cores. A browser start skips it: a
+	// person is waiting on this boot.
 	// See research/2026-07-07-global-background-work-priority-isolation.md.
-	demoted := false
-	if runtime.GOOS == "darwin" && w.Name != "singularity" && w.Name != "central" {
-		if _, err := os.Stat(taskpolicyPath); err == nil {
-			argv = append([]string{taskpolicyPath, "-b", "--"}, argv...)
-			demoted = true
-		}
+	demoted := w.demotes(reason)
+	if demoted {
+		argv = append([]string{w.cfg.Taskpolicy, "-b", "--"}, argv...)
 	}
 	// The backend's namespace and socket travel on argv (backendLaunch),
 	// appended last so they are arguments of the backend, not of the wrapper.
@@ -865,7 +943,10 @@ func logAdaptiveTimeout(worktree string, base, chosen time.Duration) {
 func (w *Worktree) awaitBackendReady(bk *backend, socketPath string) (escalated, respondedHTTP bool, err error) {
 	base := adaptiveTimeout(w.cfg.ReadyTimeout, w.cfg.ReadyTimeoutMax)
 	logAdaptiveTimeout(w.Name, w.cfg.ReadyTimeout, base)
-	err = waitReady(socketPath, base, w.cfg.ReadyTimeoutMax, bk.demoted, func(responded bool) {
+	w.mu.Lock()
+	demoted := bk.demoted
+	w.mu.Unlock()
+	err = waitReady(socketPath, base, w.cfg.ReadyTimeoutMax, demoted, func(responded bool) {
 		escalated = true
 		respondedHTTP = responded
 		slog.Warn("backend slow to become ready; lifting demotion and extending wait instead of killing",
