@@ -108,3 +108,35 @@ that is the home key for this song; in a genuinely modulating song it correctly 
 3. Screenshot both sections with `e2e-harness/e2e/screenshot.ts --path <song route>`.
 4. Spot-check a MIDI song with an authored key and one known modulating song: unchanged
    key, and the modulation still detected.
+
+## Follow-up: tuning on real MIDI (2026-10-11)
+
+The first thresholds (4-bar window, 0.1 margin, 4-bar regions, Krumhansl–Kessler
+profiles) were picked on Là-bas and three synthetic progressions. They were then
+measured on the library's MIDI files whose own key-signature events give a ground
+truth, running inference with those keys stripped (`force`). Scored per beat on the
+**key signature** (relative major/minor counted equal — MIDI files often encode only
+the signature, e.g. Chopin Op.48 No.1 in C minor writes "E♭"). Files whose only key
+event is a placeholder C were left out.
+
+Corpus (9 files): Fantaisie-Impromptu (jazz), Rachmaninoff PC2/1 piano part, three
+Ave Marias (Schubert/Liszt), Beethoven Choral Fantasy (one-key and 13-key
+versions), Chopin Op.48 No.1 (C minor → C major → C minor), Chopin Nocturne in B.
+
+| Inference | key signature right | exact key | extra key entries |
+|---|---|---|---|
+| per-bar (before this fix) | 49.0% | 34.3% | 256 |
+| K–K, window 4 / margin 0.1 / min 4 (first fix) | 59.3% | 34.5% | 95 |
+| K–K, 8 / 0.3 / 8 | 71.2% | 44.4% | 17 |
+| **Aarden–Essen, 8 / 0.3 / 8 (adopted)** | **87.4%** | **54.7%** | **16** |
+
+- Margin ≥ 0.5 or window 16 flattened real modulations (Op.48 lost its C-major middle
+  section); 8 / 0.3 places Op.48's two boundaries on the file's own beats (96, 192).
+- Krumhansl–Kessler named the dominant's key on tonic-heavy pieces (Nocturne in B →
+  E♭ minor, 21%); Aarden–Essen gets it (100%). Temperley's Kostka–Payne profiles
+  scored close behind (84%).
+- Files without a key event stay sane and get simpler (Summertime → one key, A minor,
+  instead of 17 entries; Bo Burnham → D major instead of 6).
+
+Known remaining misses: Liszt's Ave Maria (hoessl) stays ~45%, and the 13-key Choral
+Fantasy ~71% — both pass through short tonicizations an 8-bar minimum absorbs.

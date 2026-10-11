@@ -3,10 +3,10 @@
  *
  * Most MIDI files carry no key header (`score.meta.key` is empty), so to spell
  * accidentals and chord roots correctly we must *infer* the tonal centre from
- * the pitches themselves. This module implements the classic Krumhansl–Schmuckler
+ * the pitches themselves. This module implements the Krumhansl–Schmuckler
  * algorithm: build a duration-weighted pitch-class histogram and correlate it
- * against the Krumhansl–Kessler "key profiles" (empirically-derived tonal
- * hierarchies). The profile that best correlates names the key.
+ * against per-mode "key profiles" (here Aarden–Essen's, measured from a folk
+ * song corpus). The profile that best correlates names the key.
  *
  * Inference starts from the whole-score key and changes it only on clear
  * evidence (a multi-bar window that leaves the key in force well behind), so a
@@ -40,11 +40,19 @@ import {
 const CONFIDENCE_FLOOR = 0.5;
 
 /**
- * Minimum length (in bars) of an inferred key region — a phrase. Shorter
- * "modulations" are a passing harmony (a borrowed chord, a secondary dominant),
- * not a new tonal centre; they fold into a neighbouring region.
+ * Minimum length (in bars) of an inferred key region — a couple of phrases.
+ * Shorter "modulations" are a passing harmony (a borrowed chord, a secondary
+ * dominant, a tonicized phrase), not a new tonal centre; they fold into a
+ * neighbouring region.
+ *
+ * This and the two tunables below were chosen on MIDI files whose own key
+ * events give a ground truth (Chopin, Beethoven, Liszt/Schubert, Rachmaninoff):
+ * 8 / 8 / 0.3 with the Aarden–Essen profiles had the key signature right on 87%
+ * of beats, against 49% for the earlier per-bar inference, while still placing
+ * real modulations (Chopin Op.48 No.1's C minor → C major → C minor) on the
+ * file's own boundaries. See research/2026-10-11-sonata-key-inference-flapping.md.
  */
-const MIN_REGION_BARS = 4;
+const MIN_REGION_BARS = 8;
 
 /**
  * How many bars of music decide a bar's key: a window of this many bars
@@ -52,7 +60,7 @@ const MIN_REGION_BARS = 4;
  * D-major song scores best as B minor, because a key's relative and its
  * one-accidental neighbours share almost all its pitches.
  */
-const MODULATION_WINDOW_BARS = 4;
+const MODULATION_WINDOW_BARS = 8;
 
 /**
  * Hysteresis: a window leaves the key in force only when its best key beats
@@ -61,21 +69,27 @@ const MODULATION_WINDOW_BARS = 4;
  * ties with its home key on any short stretch, while a genuine modulation
  * (new accidentals) leaves the old key far behind.
  */
-const MODULATION_MARGIN = 0.1;
+const MODULATION_MARGIN = 0.3;
 
 /**
- * Krumhansl–Kessler key profiles — the empirically-measured "tonal hierarchy":
- * for a given mode, the relative perceptual stability of each scale degree,
- * indexed by semitones above the tonic (0 = tonic, 1 = ♭2/♯1, … 11 = leading
- * tone). The tonic, dominant (7) and mediant (3/4) dominate; chromatic degrees
- * sit low. We correlate a histogram (rotated so index 0 = the candidate tonic)
- * against these to score how well that tonic explains the music.
+ * Aarden–Essen key profiles — the tonal hierarchy as measured from how often
+ * each scale degree sounds in the Essen folk-song collection: for a given
+ * mode, the weight of each degree, indexed by semitones above the tonic (0 =
+ * tonic, 1 = ♭2/♯1, … 11 = leading tone). We correlate a histogram (rotated so
+ * index 0 = the candidate tonic) against these to score how well that tonic
+ * explains the music.
+ *
+ * Chosen over the classic Krumhansl–Kessler probe-tone profiles, whose
+ * chromatic degrees sit high: on real pieces those named the dominant's key
+ * (Chopin's B-major Nocturne as E♭ minor) where these find the tonic.
  */
 const MAJOR_PROFILE: readonly number[] = [
-  6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88,
+  17.7661, 0.145624, 14.9265, 0.160186, 19.8049, 11.3587, 0.291248, 22.062,
+  0.145624, 8.15494, 0.232998, 4.95122,
 ];
 const MINOR_PROFILE: readonly number[] = [
-  6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17,
+  18.2648, 0.737619, 14.0499, 16.8599, 0.702494, 14.4362, 0.702494, 18.6161,
+  4.56621, 1.93186, 7.37619, 1.75623,
 ];
 
 /**
