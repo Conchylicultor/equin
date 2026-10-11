@@ -37,6 +37,13 @@ the candidates *within* the winning tier (an idle session can go weeks without a
 write, so mtime never means "stale" — only "later than the other candidate"),
 with ties going to the deepest pid.
 
+Within tier 1, a stamped record running **below** another stamped claimant is
+dropped first: the stamp comes from the inherited `$TMUX_PANE`, so it is a
+nested `claude` the agent ran from its Bash tool (`claude --print …`), not the
+pane's session. Without this, the nested run is the fresher file and the pane's
+session id flips to it while it lives (2026-10-11, pane %841, reported as
+`cwd-mismatch`). Relocated sessions are unaffected — they cannot stamp.
+
 Match on `%pane_id` only. `session_name` and `window_id` also appear in the
 stamp, but both move (`rename-session`, `break-pane`, `move-window`); `pane_id`
 is fixed for the pane's life. For the same reason `listPanes` asks tmux for

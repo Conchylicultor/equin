@@ -434,6 +434,42 @@ describe("resolveSessionState — the claim rule", () => {
     expect(kinds(anomalies)).toEqual(["unknown-session-kind"]);
   });
 
+  test("19. a nested `claude --print` the agent ran inherits the stamp but never wins", async () => {
+    // 2026-10-11, pane %841: the agent ran `cd /tmp && claude --print …` from
+    // its Bash tool. The child inherited $TMUX_PANE, stamped this pane, and
+    // wrote its file after the pane's idle one — freshest-in-tier adopted it.
+    const anomalies: AnomalyLog = [];
+    const deps = depsOf(
+      {
+        1: {
+          json: {
+            sessionId: "pane",
+            status: "busy",
+            tmux: stamp("%1"),
+            cwd: WT,
+            kind: "interactive",
+          },
+          mtimeMs: NOW - 60_000,
+        },
+        3: {
+          json: {
+            sessionId: "nested-print",
+            status: "busy",
+            tmux: stamp("%1"),
+            cwd: "/private/tmp",
+            kind: "interactive",
+          },
+          mtimeMs: NOW,
+        },
+      },
+      anomalies,
+    );
+    // 1 = the pane's claude, 2 = its Bash tool's shell, 3 = the nested claude.
+    const state = await resolveSessionState(paneOf(1), chain(1, 2, 3), deps);
+    expect(state.sessionId).toBe("pane");
+    expect(kinds(anomalies)).toEqual([]);
+  });
+
   test("identical mtimes resolve to the deepest pid", async () => {
     const deps = depsOf({
       1: { json: { sessionId: "launcher", cwd: WT }, mtimeMs: NOW },

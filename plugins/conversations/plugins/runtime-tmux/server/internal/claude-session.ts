@@ -382,6 +382,32 @@ function classify(identity: SessionIdentity, pane: PaneRef): ClaimTier {
 }
 
 /**
+ * The stamped claimants that do not run below another stamped claimant.
+ *
+ * A stamp is read from `$TMUX_PANE`, which every child inherits. So when the
+ * pane's agent runs a nested `claude` from its Bash tool (`claude --print …`),
+ * that child stamps THIS pane too, writes its file after the pane's own idle
+ * one, and would win on freshness — the pane's session id flips to the nested
+ * run for as long as it lives (seen 2026-10-11: a `cd /tmp && claude --print`
+ * adopted as pane %841's session, reported as `cwd-mismatch`). A stamped
+ * process below a stamped claimant can only have inherited the stamp, so it is
+ * the claimant's child, never the pane's session. Relocated sessions are
+ * unaffected: a daemon-hosted process does not inherit `$TMUX_PANE`, so it
+ * never stamps and never reaches tier 1.
+ */
+function outermost<T extends { identity: SessionIdentity }>(
+  claimants: T[],
+  tree: ProcessTree,
+): T[] {
+  if (claimants.length < 2) return claimants;
+  const nested = new Set<number>();
+  for (const { identity } of claimants) {
+    for (const pid of subtreePids(tree, identity.pid).slice(1)) nested.add(pid);
+  }
+  return claimants.filter(({ identity }) => !nested.has(identity.pid));
+}
+
+/**
  * The session record in the pane's subtree that claims the pane, or null when
  * none does.
  *
@@ -422,7 +448,7 @@ async function resolveClaimedRecord(
 
   // Tier 2 is a fallback, never a peer: one stamped claimant settles the pane,
   // and any unstamped file beside it belongs to something else.
-  const candidates = self.length > 0 ? self : local;
+  const candidates = self.length > 0 ? outermost(self, tree) : local;
 
   if (candidates.length === 0) {
     // Silent when the subtree named no session at all — that is just Claude not
