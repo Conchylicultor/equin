@@ -6174,6 +6174,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `scaleTempo`
               - `scoreEndBeat`
               - `scoreStartBeat`
+              - `songKey`
               - `spellScore`
               - `subdivideBars`
               - `tonicFifths`

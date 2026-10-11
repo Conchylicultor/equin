@@ -79,6 +79,7 @@
     - `scaleTempo`
     - `scoreEndBeat`
     - `scoreStartBeat`
+    - `songKey`
     - `spellScore`
     - `subdivideBars`
     - `tonicFifths`

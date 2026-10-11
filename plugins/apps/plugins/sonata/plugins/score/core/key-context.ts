@@ -8,9 +8,10 @@
  * consumer (note spelling, chord spelling, the progress-bar key flags) reads the
  * same notion of "the key here" instead of each re-deriving it.
  *
- * Pure TypeScript: no React, no framework. Imports only sibling `./types` — this
- * is the DAG leaf.
+ * Pure TypeScript: no React, no framework. Imports only siblings `./types` and
+ * `./helpers` (itself a leaf over `./types`).
  */
+import { scoreEndBeat } from "./helpers";
 import type { Annotation, KeySignature, Score } from "./types";
 
 /**
@@ -53,7 +54,8 @@ export function collectKeyEntries(score: Score): KeyEntry[] {
   const byBeat = new Map<number, Omit<KeyEntry, "beat">>();
 
   // The starting key is authored truth by definition.
-  if (score.meta.key) byBeat.set(0, { key: score.meta.key, source: "authored" });
+  if (score.meta.key)
+    byBeat.set(0, { key: score.meta.key, source: "authored" });
 
   for (const a of score.annotations) {
     if (a.type !== "key") continue;
@@ -86,4 +88,34 @@ export function effectiveKeyAt(
     else break; // ascending: no later entry can satisfy beat <= `beat`.
   }
   return active;
+}
+
+/**
+ * The song's home key: the key in force over the most beats in all (each entry
+ * lasts until the next, the last until the score's end; a key that returns adds
+ * up its stretches; a tie goes to the key heard first), as its first entry — or
+ * `undefined` for a keyless score.
+ *
+ * For a view of the WHOLE song that has no beat of its own — the chord list, a
+ * vocabulary of every chord the song plays — this is the key to read it in, so
+ * every row is numbered and coloured against one key. A view laid along the
+ * timeline reads `effectiveKeyAt` instead, so a real modulation shows where it
+ * happens. Derived from `collectKeyEntries`, so it can never name a key the
+ * song's other readouts do not know.
+ */
+export function songKey(score: Score): KeyEntry | undefined {
+  const entries = collectKeyEntries(score);
+  const end = scoreEndBeat(score);
+  // Per key (tonic + mode): its first entry and its total beats in force.
+  const byKey = new Map<string, { first: KeyEntry; beats: number }>();
+  entries.forEach((e, i) => {
+    const span = Math.max(0, (entries[i + 1]?.beat ?? end) - e.beat);
+    const id = `${e.key.tonic} ${e.key.mode}`;
+    const known = byKey.get(id);
+    if (known) known.beats += span;
+    else byKey.set(id, { first: e, beats: span });
+  });
+  let best: { first: KeyEntry; beats: number } | undefined;
+  for (const k of byKey.values()) if (!best || k.beats > best.beats) best = k;
+  return best?.first;
 }

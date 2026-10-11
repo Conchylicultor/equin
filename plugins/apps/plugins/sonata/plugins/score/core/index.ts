@@ -85,6 +85,7 @@ export type { KeySpeller } from "./spelling";
 export {
   effectiveKeyAt,
   collectKeyEntries,
+  songKey,
   asKeySignature,
 } from "./key-context";
 export type { KeyEntry } from "./key-context";

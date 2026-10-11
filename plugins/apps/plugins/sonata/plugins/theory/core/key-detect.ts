@@ -8,8 +8,10 @@
  * against the Krumhansl–Kessler "key profiles" (empirically-derived tonal
  * hierarchies). The profile that best correlates names the key.
  *
- * Inference is *windowed* (per bar) so a piece that modulates emits a `key`
- * annotation at each region boundary; a single `effectiveKeyAt(score, beat)`
+ * Inference starts from the whole-score key and changes it only on clear
+ * evidence (a multi-bar window that leaves the key in force well behind), so a
+ * piece that modulates emits a `key` annotation at each region boundary while a
+ * diatonic one keeps a single key; a single `effectiveKeyAt(score, beat)`
  * resolver downstream then spells every note/chord in *its* section's key.
  *
  * Pure TypeScript: no React, no framework. Imports only `score/core` — `theory`
@@ -38,12 +40,28 @@ import {
 const CONFIDENCE_FLOOR = 0.5;
 
 /**
- * Minimum length (in bars) of an inferred key region. Single-bar key "guesses"
- * are almost always histogram noise on a passing chromatic bar, not a real
- * modulation; coalescing such short regions into their neighbours prevents the
- * inferred key from flapping bar-to-bar.
+ * Minimum length (in bars) of an inferred key region — a phrase. Shorter
+ * "modulations" are a passing harmony (a borrowed chord, a secondary dominant),
+ * not a new tonal centre; they fold into a neighbouring region.
  */
-const MIN_REGION_BARS = 2;
+const MIN_REGION_BARS = 4;
+
+/**
+ * How many bars of music decide a bar's key: a window of this many bars
+ * centred on it. One bar is too little evidence — a bar that is all Bm7 in a
+ * D-major song scores best as B minor, because a key's relative and its
+ * one-accidental neighbours share almost all its pitches.
+ */
+const MODULATION_WINDOW_BARS = 4;
+
+/**
+ * Hysteresis: a window leaves the key in force only when its best key beats
+ * THAT key's own correlation on the window by at least this much. Being the
+ * argmax is not enough — a diatonic song's relative / neighbour keys are near
+ * ties with its home key on any short stretch, while a genuine modulation
+ * (new accidentals) leaves the old key far behind.
+ */
+const MODULATION_MARGIN = 0.1;
 
 /**
  * Krumhansl–Kessler key profiles — the empirically-measured "tonal hierarchy":
@@ -69,10 +87,32 @@ const MINOR_PROFILE: readonly number[] = [
  * major but G♯ minor).
  */
 const MAJOR_NAMES: readonly string[] = [
-  "C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B",
+  "C",
+  "Db",
+  "D",
+  "Eb",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "Ab",
+  "A",
+  "Bb",
+  "B",
 ];
 const MINOR_NAMES: readonly string[] = [
-  "C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B",
+  "C",
+  "C#",
+  "D",
+  "Eb",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "G#",
+  "A",
+  "Bb",
+  "B",
 ];
 
 // ---------------------------------------------------------------------------
@@ -147,21 +187,60 @@ function bestKey(hist: readonly number[]): KeyGuess {
   let best: KeyGuess = { pc: 0, mode: "major", correlation: -Infinity };
 
   for (let t = 0; t < 12; t++) {
-    // Rotate the histogram so index = semitones above the candidate tonic `t`.
-    const rotated = new Array<number>(12);
-    for (let i = 0; i < 12; i++) rotated[i] = hist[(t + i) % 12]!;
-
-    const major = pearson(MAJOR_PROFILE, rotated);
-    if (major > best.correlation) {
-      best = { pc: t, mode: "major", correlation: major };
-    }
-    const minor = pearson(MINOR_PROFILE, rotated);
-    if (minor > best.correlation) {
-      best = { pc: t, mode: "minor", correlation: minor };
+    for (const mode of ["major", "minor"] as const) {
+      const correlation = keyCorrelation(hist, t, mode);
+      if (correlation > best.correlation) best = { pc: t, mode, correlation };
     }
   }
 
   return best;
+}
+
+/**
+ * How well one key `(pc, mode)` explains `hist`: the Pearson correlation of its
+ * profile against the histogram rotated so index 0 reads the tonic `pc`.
+ */
+function keyCorrelation(
+  hist: readonly number[],
+  pc: number,
+  mode: "major" | "minor",
+): number {
+  const rotated = new Array<number>(12);
+  for (let i = 0; i < 12; i++) rotated[i] = hist[(pc + i) % 12]!;
+  return pearson(mode === "major" ? MAJOR_PROFILE : MINOR_PROFILE, rotated);
+}
+
+const sameKey = (a: { pc: number; mode: string }, b: typeof a) =>
+  a.pc === b.pc && a.mode === b.mode;
+
+/**
+ * Whether two keys share one key signature — the same key, or a key and its
+ * relative (a minor tonic 9 semitones above its relative major's). Their scales
+ * are the same seven pitch classes, so a window's histogram cannot tell them
+ * apart reliably: a passage dwelling on vi is not a modulation to the relative
+ * minor. Which of the two the song is in is decided once, on the whole score.
+ */
+function sameSignature(
+  a: { pc: number; mode: "major" | "minor" },
+  b: typeof a,
+): boolean {
+  const majorPc = (k: typeof a) =>
+    k.mode === "major" ? k.pc : (k.pc + 3) % 12;
+  return majorPc(a) === majorPc(b);
+}
+
+/**
+ * Merge adjacent regions in the same key into one, in place — the region of a
+ * run of bars that never changed key is ONE region, never several flush ones.
+ */
+function coalesceRegions(regions: Region[]): void {
+  for (let i = regions.length - 1; i > 0; i--) {
+    const prev = regions[i - 1]!;
+    const r = regions[i]!;
+    if (!sameKey(prev, r)) continue;
+    prev.toBar = r.toBar;
+    regions.splice(i, 1);
+  }
 }
 
 /**
@@ -218,7 +297,7 @@ interface Region {
   toBar: number;
   pc: number;
   mode: "major" | "minor";
-  /** The region's representative correlation (the first bar's), as confidence. */
+  /** How well the region's key explains its whole span, as confidence. */
   correlation: number;
 }
 
@@ -263,7 +342,8 @@ export function inferKeys(score: Score, opts?: { force?: boolean }): Score {
 
   // The last beat any note sounds — closes the final bar's window.
   let scoreEnd = 0;
-  for (const n of score.notes) scoreEnd = Math.max(scoreEnd, n.start + n.duration);
+  for (const n of score.notes)
+    scoreEnd = Math.max(scoreEnd, n.start + n.duration);
 
   // 2. Windows: one per bar `[barStart, nextBarStart)`, the last closing at the
   // score's end. With too few bars to window meaningfully, fall back to a single
@@ -286,65 +366,91 @@ export function inferKeys(score: Score, opts?: { force?: boolean }): Score {
   const globalBest = bestKey(globalHist);
   if (globalBest.correlation < CONFIDENCE_FLOOR) return score;
 
-  // 3–5. Per-window best key. A window below the floor inherits the previous
-  // window's key rather than emitting a weak guess (prevents one chromatic bar
-  // from injecting a bogus modulation).
+  // 3–5. Per-bar key, with hysteresis. The key in force starts as the
+  // whole-score key; each bar's evidence is the `MODULATION_WINDOW_BARS`-bar
+  // window centred on it, and the key changes only when that window's best key
+  // has a different key signature, clears the in-force key's own correlation
+  // there by `MODULATION_MARGIN`, and is itself above the floor. A diatonic
+  // song thus keeps its one key however its bars lean, while a real modulation
+  // still lands at its phrase.
+  const before = Math.floor(MODULATION_WINDOW_BARS / 2);
+  const after = MODULATION_WINDOW_BARS - before;
   const perBar: KeyGuess[] = [];
-  let prev: KeyGuess = globalBest; // seed with the global key for an early weak bar.
-  for (const w of windows) {
-    const hist = windowHistogram(score, w.start, w.end);
+  let current: KeyGuess = globalBest;
+  for (let i = 0; i < windows.length; i++) {
+    const from = windows[Math.max(0, i - before)]!.start;
+    const to = windows[Math.min(windows.length, i + after) - 1]!.end;
+    const hist = windowHistogram(score, from, to);
     const guess = bestKey(hist);
-    const effective = guess.correlation < CONFIDENCE_FLOOR ? prev : guess;
-    perBar.push(effective);
-    prev = effective;
-  }
-
-  // 6a. Coalesce consecutive bars with the same (pc, mode) into regions.
-  const regions: Region[] = [];
-  for (let i = 0; i < perBar.length; i++) {
-    const g = perBar[i]!;
-    const last = regions[regions.length - 1];
-    if (last && last.pc === g.pc && last.mode === g.mode) {
-      last.toBar = i + 1;
-    } else {
-      regions.push({
-        fromBar: i,
-        toBar: i + 1,
-        pc: g.pc,
-        mode: g.mode,
-        correlation: g.correlation,
-      });
-    }
-  }
-
-  // 6b. Smooth: drop sub-`MIN_REGION_BARS` regions by merging them into the
-  // PRECEDING region (or the FOLLOWING one, for a too-short first region). This
-  // absorbs flapping while preserving genuine multi-bar modulations. Iterate to
-  // a fixed point so merges that create new adjacencies also collapse.
-  let changed = true;
-  while (changed && regions.length > 1) {
-    changed = false;
-    for (let i = 0; i < regions.length; i++) {
-      const r = regions[i]!;
-      if (r.toBar - r.fromBar >= MIN_REGION_BARS) continue;
-
-      if (i > 0) {
-        // Merge into the preceding region: it absorbs this region's bars.
-        const prevR = regions[i - 1]!;
-        prevR.toBar = r.toBar;
-        regions.splice(i, 1);
-      } else if (regions.length > 1) {
-        // First region too short: fold it into the following region's key.
-        const nextR = regions[i + 1]!;
-        nextR.fromBar = r.fromBar;
-        regions.splice(i, 1);
+    if (
+      !sameSignature(guess, current) &&
+      guess.correlation >= CONFIDENCE_FLOOR &&
+      guess.correlation - keyCorrelation(hist, current.pc, current.mode) >=
+        MODULATION_MARGIN
+    ) {
+      // The centred window only clears the margin once most of it is past the
+      // change, so pull the boundary back over the bars just before that
+      // already sound more like the new key than the old one.
+      for (let j = i - 1; j >= Math.max(0, i - before); j--) {
+        const bar = windowHistogram(score, windows[j]!.start, windows[j]!.end);
+        const prior = perBar[j]!;
+        if (
+          keyCorrelation(bar, guess.pc, guess.mode) <=
+          keyCorrelation(bar, prior.pc, prior.mode)
+        )
+          break;
+        perBar[j] = guess;
       }
-      changed = true;
-      break;
+      current = guess;
     }
+    perBar.push(current);
   }
 
-  // 7–8. Spell each region's tonic and emit a derived `key` annotation. The
+  // 6a. Consecutive bars with the same (pc, mode) form one region.
+  const regions: Region[] = perBar.map((g, i) => ({
+    fromBar: i,
+    toBar: i + 1,
+    pc: g.pc,
+    mode: g.mode,
+    correlation: g.correlation,
+  }));
+  coalesceRegions(regions);
+
+  // 6b. Smooth: fold each sub-`MIN_REGION_BARS` region into the PRECEDING
+  // region (or the FOLLOWING one, for a too-short first region), re-coalescing
+  // after every fold — a fold can leave two regions in the same key side by
+  // side, and those are one region. Iterate to a fixed point.
+  for (;;) {
+    const i = regions.findIndex((r) => r.toBar - r.fromBar < MIN_REGION_BARS);
+    if (i === -1 || regions.length < 2) break;
+    const r = regions[i]!;
+    if (i > 0) regions[i - 1]!.toBar = r.toBar;
+    else regions[i + 1]!.fromBar = r.fromBar;
+    regions.splice(i, 1);
+    coalesceRegions(regions);
+  }
+
+  // 7. Major or relative minor, decided on each region's whole span. Regions
+  // are told apart by key signature only, and the window that opened one may
+  // still have held bars of the previous key — so its own mode guess is not
+  // the region's.
+  for (const r of regions) {
+    const hist = windowHistogram(
+      score,
+      windows[r.fromBar]!.start,
+      windows[r.toBar - 1]!.end,
+    );
+    const majorPc = r.mode === "major" ? r.pc : (r.pc + 3) % 12;
+    const minorPc = (majorPc + 9) % 12;
+    const major = keyCorrelation(hist, majorPc, "major");
+    const minor = keyCorrelation(hist, minorPc, "minor");
+    const isMinor = minor > major;
+    r.pc = isMinor ? minorPc : majorPc;
+    r.mode = isMinor ? "minor" : "major";
+    r.correlation = isMinor ? minor : major;
+  }
+
+  // 8. Spell each region's tonic and emit a derived `key` annotation. The
   // region spans `[firstBarStart, lastBarEnd)` in beats.
   const keyAnnotations: Annotation[] = regions.map((r) => {
     const startBeat = windows[r.fromBar]!.start;

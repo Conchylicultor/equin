@@ -4,7 +4,7 @@ import {
   useSession,
 } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import {
-  effectiveKeyAt,
+  songKey,
   type ChordAnnotation,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
@@ -39,11 +39,17 @@ const NO_NOTES: readonly number[] = [];
 const entryKey = (c: ChordAnnotation) =>
   `${c.data.spelledSymbol ?? c.data.symbol}|${String(c.data.root)}`;
 
-/** Every distinct chord in order of first appearance, with how often it is played. */
+/**
+ * Every distinct chord in order of first appearance, with how often it is
+ * played — each numbered and coloured in the song's home key (`songKey`): the
+ * list spans the whole song, so it has one key, not the key wherever a chord
+ * happens to appear first.
+ */
 function distinctChords(
   score: Score,
   mode: ReturnType<typeof useChordDisplayMode>,
 ): ChordEntry[] {
+  const home = songKey(score)?.key ?? null;
   const byKey = new Map<string, ChordEntry>();
   const chords = score.annotations
     .filter((a): a is ChordAnnotation => a.type === "chord")
@@ -55,11 +61,7 @@ function distinctChords(
       known.uses++;
       continue;
     }
-    const face = chordBoxFace(
-      c.data,
-      effectiveKeyAt(score, c.start) ?? null,
-      mode,
-    );
+    const face = chordBoxFace(c.data, home, mode);
     byKey.set(key, {
       key,
       first: c,
@@ -74,8 +76,9 @@ function distinctChords(
 /**
  * The song's chord vocabulary — the BODY of a `Sonata.Section` card whose
  * chrome (Card + collapsible "Chord list" title) the host paints. One row per
- * distinct chord, in the order the song first plays them: its chord box, a
- * keyboard lit with its notes in its colour, and how many times it is played.
+ * distinct chord, in the order the song first plays them: its chord box (in
+ * the song's home key), a keyboard lit with its notes in its colour, and how
+ * many times it is played.
  * The chord under the playhead is marked; clicking a row sounds the chord (the
  * notes its keyboard lights) and seeks to its first occurrence.
  *
