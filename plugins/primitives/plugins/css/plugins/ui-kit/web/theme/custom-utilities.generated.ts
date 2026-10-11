@@ -15,7 +15,7 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["focus-border"], standalone: true, reason: "State-scoped border-color under :focus-visible; must coexist with the resting border-* class, not replace it." },
   { classes: ["focus-border-within"], standalone: true, reason: "State-scoped border-color under :has(); must coexist with the resting border-* class, not replace it." },
   { classes: ["focus-ring-from"], standalone: true, reason: "Additive box-shadow/outline; no single-value built-in group to conflict with." },
-  { classes: ["rounded-checkbox", "rounded-squircle", "rounded-card", "rounded-control", "rounded-popover"], extend: "rounded" },
+  { classes: ["rounded-checkbox", "rounded-squircle", "rounded-card", "rounded-control", "rounded-control-sm", "rounded-control-xs", "rounded-popover"], extend: "rounded" },
   { classes: ["shadow-popover"], extend: "shadow" },
   { classes: ["region-line"], standalone: true, reason: "Composite single-line invariant (align-items + whitespace); name doesn't misfile into a built-in group and it's a base layer, not a selectively-overridden single property." },
   { classes: ["no-scrollbar"], standalone: true, reason: "Hides scrollbar chrome (scrollbar-width + ::-webkit-scrollbar); additive, no single-value built-in group to conflict with." },

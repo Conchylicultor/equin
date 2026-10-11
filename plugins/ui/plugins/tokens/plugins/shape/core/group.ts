@@ -8,8 +8,21 @@ export const shapeGroup = defineTokenGroup("shape", {
   radiusCard: { default: "calc(var(--radius) * 0.8)", label: "Card radius" },
   // A Button's corners (`rounded-control`): the `md` / `lg` sizes and every
   // segment of a ButtonGroup. Default = the `rounded-lg` step, i.e. `--radius`
-  // itself. The `xs` / `sm` sizes keep their capped `rounded-md` step.
+  // itself.
   radiusControl: { default: "var(--radius)", label: "Control radius" },
+  // The `sm` / `xs` Button sizes' corners (`rounded-control-sm` /
+  // `rounded-control-xs`). Defaults = the capped `rounded-md` step they always
+  // wore, so a big `--radius` does not turn a small button into a pill. Their
+  // own roles (not `radiusControl`) so a container that rounds every control
+  // inside it — a pill capsule — reaches these sizes too.
+  radiusControlSm: {
+    default: "min(calc(var(--radius) * 0.8), 12px)",
+    label: "Small control radius",
+  },
+  radiusControlXs: {
+    default: "min(calc(var(--radius) * 0.8), 10px)",
+    label: "Compact control radius",
+  },
   // A transcript card's tool-name badge: its corners (default = the compact
   // chip's, the rung it sits on) and its hairline, drawn in its own text
   // colour. Width 0 = no border, as always.

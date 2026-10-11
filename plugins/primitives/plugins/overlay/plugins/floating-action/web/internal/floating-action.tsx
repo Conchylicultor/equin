@@ -250,12 +250,13 @@ function FloatingActionPanel({
           className={cn(
             "flex overflow-hidden",
             // A pill capsule's controls echo its ends: every control inside
-            // rounds fully (the shape group's control radius, re-read here),
+            // rounds fully (the shape group's control radius roles, every size's,
+            // re-read here),
             // so a hovered button is a pill inside the pill, never a
             // rounded-rect patch in a capsule. `rounded` keeps the popover's
             // own corner role.
             shape === "pill" &&
-              "rounded-full [--radius-control:calc(infinity*1px)]",
+              "rounded-full [--radius-control:calc(infinity*1px)] [--radius-control-sm:calc(infinity*1px)] [--radius-control-xs:calc(infinity*1px)]",
             FLOW_CLASS[direction][triggerAt],
             "transition-[width,max-width,max-height,padding,background-color,box-shadow] duration-200 ease-out",
             // Collapsed, `outlined` / `ghost` lay their resting look over the

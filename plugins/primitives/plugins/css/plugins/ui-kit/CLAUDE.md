@@ -62,7 +62,9 @@ The global UI kit — one cohesive design-system unit. It owns:
   The glyph inside a Button is a density token too (`controlIcon*`, read as
   `[&_svg]:size-control-icon-<size>`; defaults 12px at `xs`, 16px above), and
   the corners of the `md` / `lg` sizes and of every ButtonGroup segment are the
-  shape group's `radiusControl` (`rounded-control`, default `--radius`). The
+  shape group's `radiusControl` (`rounded-control`, default `--radius`); the
+  `sm` / `xs` sizes read their own capped roles `radiusControlSm` /
+  `radiusControlXs` (`rounded-control-sm` / `-xs`). The
   `xs` compact label is the control role's compact rung (`text-control-compact`:
   the caption role's metrics at the control weight) — there are no
   button-named type tokens; the label is a role of the closed type ladder (see

@@ -23,10 +23,10 @@ import type { Activity } from "@plugins/primitives/plugins/css/plugins/activity-
 
 /**
  * The density each host draws the bar at. The slots declare `sm` (the docked
- * strip's, inside the 36px tab bar); the floating capsule picks `md` — the
- * chrome's 32px control inside its 40px capsule. Every item of a host shares
- * its one height: the host passes it to each slot's `.Render` and to the
- * health dot, never per item.
+ * strip's, inside the 36px tab bar); the floating capsule picks `md` — 32px
+ * controls in a 36px capsule (2px padding), so each hover circle keeps 8px
+ * around its 16px icon. Every item of a host shares its one height: the host
+ * passes it to each slot's `.Render` and to the health dot, never per item.
  */
 const FLOATING_SIZE: ControlSize = "md";
 const DOCKED_SIZE: ControlSize = "sm";
@@ -39,15 +39,6 @@ const DOCKED_SIZE: ControlSize = "sm";
  * status — set `text-foreground` themselves.
  */
 const BAR_TONE = "text-muted-foreground";
-
-/**
- * The floating capsule's scale: the whole capsule (controls, icons, labels,
- * padding, radius) drawn at this fraction of its `md` design, so it shrinks
- * without changing its proportions — the 40px capsule renders 34px tall.
- * One CSS `zoom` rather than a smaller density, which would shrink the
- * controls' boxes but keep their icons and text at full size.
- */
-const FLOATING_ZOOM = "[zoom:0.85]";
 
 /**
  * The always-visible leading item: the health report's dot, at its host's
@@ -92,7 +83,7 @@ function FloatingTrigger({ open }: { open: boolean }) {
         // Each glance draws its own box (the Reload tray), so the row's flex
         // items are the chips themselves: a glance that has nothing to show
         // (no reload due) generates no box at all and takes no gap — the
-        // collapsed capsule stays the 40px circle around the dot.
+        // collapsed capsule stays the 36px circle around the dot.
         <SlotItemLayout orientation="host-owned">
           <ActionBar.Glance.Render controlSize={FLOATING_SIZE} />
         </SlotItemLayout>
@@ -151,9 +142,8 @@ export function FloatingActionBarHost() {
     // The bar is chrome wherever it is mounted: floating over the app it still
     // wears the chrome's fixed theme, exactly as the docked strip does inside
     // the tab bar. `none` because the floating panel paints its own card: a
-    // glass capsule (pill, `xs` = 4px padding around the 32px `md` controls,
-    // so 40px tall, then scaled by FLOATING_ZOOM) that is there collapsed and
-    // open alike.
+    // glass capsule (pill, `2xs` = 2px padding around the 32px `md` controls,
+    // so 36px tall) that is there collapsed and open alike.
     <Theme name={chromeThemeScope} surface="none">
       <FloatingBand>
         <FloatingAction
@@ -161,11 +151,11 @@ export function FloatingActionBarHost() {
           // so the zero-height fallback band cannot squash it (its only child
           // is absolute, so its min-content height is 0).
           // eslint-disable-next-line layout/no-adhoc-layout -- positioning box of the floating hitbox inside its anchored band (centring + no-squash mechanics, not a layout role)
-          className={`relative my-auto shrink-0 ${FLOATING_ZOOM}`}
+          className="relative my-auto shrink-0"
           anchor="top-right"
           variant="glass"
           shape="pill"
-          pad="xs"
+          pad="2xs"
           // No gap between the trigger and the reveal strip: the strip is a
           // zero-width flex item while collapsed, and a gap would still widen
           // the capsule by its width. The strip opens its own 2px lead instead.

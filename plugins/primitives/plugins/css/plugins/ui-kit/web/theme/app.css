@@ -316,6 +316,10 @@
  * without moving the rest of the scale. */
 @utility rounded-card { border-radius: var(--radius-card); } /* twmerge: extend rounded */
 @utility rounded-control { border-radius: var(--radius-control); } /* twmerge: extend rounded */
+/* The `sm` / `xs` Button sizes' corners (`--radius-control-sm` / `-xs`,
+ * default the capped `rounded-md` step). */
+@utility rounded-control-sm { border-radius: var(--radius-control-sm); } /* twmerge: extend rounded */
+@utility rounded-control-xs { border-radius: var(--radius-control-xs); } /* twmerge: extend rounded */
 /* A floating panel's corners (`--radius-popover`, default `rounded-lg` =
  * `--radius`) — `SURFACE_LEVELS.overlay` wears it, so every popover, menu and
  * dialog rounds together. */

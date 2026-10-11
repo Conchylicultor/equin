@@ -60,8 +60,9 @@ its own surface, so it re-publishes `--hover-fill` (the foreground at 8% —
 translucent, so a hover never paints an opaque patch on a light app showing
 through) and `--chrome-mask` (its ground, for cut-out rings such as a badge's).
 
-`shape="pill"` rounds the panel fully and sets `--radius-control` to full
-inside it, so every `md` control in the capsule is a pill too.
+`shape="pill"` rounds the panel fully and sets every control radius role
+(`--radius-control`, `--radius-control-sm`, `--radius-control-xs`) to full
+inside it, so every control in the capsule is a pill too, whatever its size.
 
 ## A popup opened inside holds the panel open
 

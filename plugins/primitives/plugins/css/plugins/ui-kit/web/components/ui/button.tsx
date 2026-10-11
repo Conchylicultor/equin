@@ -89,20 +89,21 @@ const buttonVariants = cva(
       // density group's `controlIcon*`). Its defaults follow the TEXT, not the
       // box: `sm` sets the same 14px label as `md` (`buttonTextClassFor`), so it
       // keeps the 16px icon; only `xs`, whose text drops a rung, gets 12px.
-      // The corners are the shape group's `rounded-control` (md / lg and every
-      // ButtonGroup segment); `xs` / `sm` keep their capped `rounded-md` step.
+      // The corners are the shape group's control radius roles:
+      // `rounded-control` (md / lg and every ButtonGroup segment) and the
+      // capped `rounded-control-sm` / `-xs` for the small sizes.
       size: {
         md: "control-md gap-control-md px-control-md [&_svg:not([class*='size-'])]:size-control-icon-md",
         default:
           "control-md gap-control-md px-control-md [&_svg:not([class*='size-'])]:size-control-icon-md",
-        xs: "control-xs gap-control-xs px-control-xs rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-control [&_svg:not([class*='size-'])]:size-control-icon-xs",
-        sm: "control-sm gap-control-sm px-control-sm rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-control [&_svg:not([class*='size-'])]:size-control-icon-sm",
+        xs: "control-xs gap-control-xs px-control-xs rounded-control-xs in-data-[slot=button-group]:rounded-control [&_svg:not([class*='size-'])]:size-control-icon-xs",
+        sm: "control-sm gap-control-sm px-control-sm rounded-control-sm in-data-[slot=button-group]:rounded-control [&_svg:not([class*='size-'])]:size-control-icon-sm",
         lg: "control-lg gap-control-lg px-control-lg [&_svg:not([class*='size-'])]:size-control-icon-lg",
         icon: "control-icon-md [&_svg:not([class*='size-'])]:size-control-icon-md",
         "icon-xs":
-          "control-icon-xs rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-control [&_svg:not([class*='size-'])]:size-control-icon-xs",
+          "control-icon-xs rounded-control-xs in-data-[slot=button-group]:rounded-control [&_svg:not([class*='size-'])]:size-control-icon-xs",
         "icon-sm":
-          "control-icon-sm rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-control [&_svg:not([class*='size-'])]:size-control-icon-sm",
+          "control-icon-sm rounded-control-sm in-data-[slot=button-group]:rounded-control [&_svg:not([class*='size-'])]:size-control-icon-sm",
         "icon-lg":
           "control-icon-lg [&_svg:not([class*='size-'])]:size-control-icon-lg",
         // Sized by the surrounding text, so it has no control role: its

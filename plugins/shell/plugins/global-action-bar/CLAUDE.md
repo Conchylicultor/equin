@@ -35,17 +35,17 @@ boundary.
 ## The floating capsule
 
 The floating host is one glass capsule (`FloatingAction variant="glass"
-shape="pill" pad="xs"`): a hairline ring, a translucent ground under a
+shape="pill" pad="2xs"`): a hairline ring, a translucent ground under a
 saturated blur and a deep floating shadow, there **collapsed and open alike** —
 collapsed it is a small capsule around the dot (and any glance chip), open the
 same capsule widened around the whole row. The ring is a box-shadow, so the
-capsule is exactly padding + controls tall: 4px + 32px + 4px = 40px. Items sit
+capsule is exactly padding + controls tall: 2px + 32px + 2px = 36px. Items sit
 2px apart (`gap-2xs`), with no tail padding — the capsule's own padding is the
 edge. Collapsed, nothing invisible may take a gap: the panel itself has no gap
 (the reveal strip, a zero-width flex item while closed, opens its own 2px lead
 with `pl-2xs` only when open), and the glance slot renders under
 `SlotItemLayout orientation="host-owned"` so a glance with nothing to show
-generates no box — the idle / building capsule is exactly the 40px circle.
+generates no box — the idle / building capsule is exactly the 36px circle.
 
 Both hosts set one resting tone on their row (`BAR_TONE`, the muted
 foreground): every ghost control inherits it and brightens to the text colour
@@ -60,8 +60,8 @@ default. Each host passes its own density to the slots' `.Render`
 (`controlSize`, which slot-render applies to the WHOLE slot, so every item
 still shares one height) and to the health dot (`HealthItem size`):
 
-- **floating** — `md` (`FLOATING_SIZE`): the chrome's 32px control, centred in
-  the 40px capsule;
+- **floating** — `md` (`FLOATING_SIZE`): 32px controls with 16px icons, in a
+  36px capsule (2px padding);
 - **docked** — `sm` (`DOCKED_SIZE`): inside the 36px tab bar.
 
 Never size an item at the contribution: an item renders at whatever its host
