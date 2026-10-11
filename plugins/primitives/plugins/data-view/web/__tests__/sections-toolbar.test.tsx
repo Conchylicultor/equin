@@ -37,6 +37,7 @@ import type {
 } from "../internal/use-data-view-model";
 import type { DataViewShellChrome } from "../internal/body-types";
 import { useViewEphemeral } from "../internal/use-view-ephemeral";
+import { fakeViewGetter } from "../testing/fake-view-getter";
 
 const LIST_ICON = symbol("view-list");
 
@@ -141,24 +142,43 @@ function instance(spec: InstanceSpec) {
   };
 }
 
+const NO_COLLAPSED: ReadonlySet<string> = new Set();
+
 function model(
   specs: InstanceSpec[],
   spies: { setViewCollapsed?: (id: string, c: boolean) => void } = {},
 ): ReadyViewModel & { ready: true } {
-  const byId = new Map(specs.map((s) => [s.id, s]));
+  // One stored state / presentation per view, like the real getters.
+  const states = new Map(
+    specs.map((s): [string, ViewState] => [
+      s.id,
+      {
+        sort: [],
+        filter: s.filter ?? null,
+        filterScope: s.filterScope,
+        visibleFields: null,
+        query: "",
+        expanded: {},
+      },
+    ]),
+  );
+  const sections = new Map(
+    specs.map((s): [string, SectionPresentation] => [
+      s.id,
+      {
+        hideWhenEmpty: false,
+        description: null,
+        collapsed: false,
+        ...s.presentation,
+      },
+    ]),
+  );
   return {
     ready: true,
     instances: specs.map(instance),
     activeId: specs[0]?.id ?? "",
     setActiveView: () => {},
-    stateFor: (id: string): ViewState => ({
-      sort: [],
-      filter: byId.get(id)?.filter ?? null,
-      filterScope: byId.get(id)?.filterScope,
-      visibleFields: null,
-      query: "",
-      expanded: {},
-    }),
+    stateFor: fakeViewGetter((id) => states.get(id)!),
     setSort: () => {},
     setSortRules: () => {},
     setVisibleFields: () => {},
@@ -167,14 +187,9 @@ function model(
     setFold: () => {},
     setQuery: () => {},
     setExpanded: () => {},
-    collapsedSectionsFor: () => new Set<string>(),
+    collapsedSectionsFor: fakeViewGetter(() => NO_COLLAPSED),
     setSectionCollapsed: () => {},
-    sectionFor: (id: string): SectionPresentation => ({
-      hideWhenEmpty: false,
-      description: null,
-      collapsed: false,
-      ...byId.get(id)?.presentation,
-    }),
+    sectionFor: fakeViewGetter((id) => sections.get(id)!),
     setViewCollapsed: spies.setViewCollapsed ?? (() => {}),
     actions: {
       availableSources: [],

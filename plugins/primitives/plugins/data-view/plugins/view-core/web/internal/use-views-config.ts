@@ -16,7 +16,7 @@ import {
 } from "../../core";
 import { buildInstanceFromRow } from "./resolve-instances";
 import type { ResolvedViewInstance } from "./resolve-instances";
-import { normalizeRows, type RawViewRow } from "./normalize-rows";
+import { normalizeRows, shareRows, type RawViewRow } from "./normalize-rows";
 
 /** Trailing-edge debounce for config writes — `setConfig` POSTs the whole doc. */
 const WRITE_DEBOUNCE_MS = 400;
@@ -193,17 +193,16 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   );
 
   // Reconcile the mirror from config when external truth advances and we have no
-  // pending write. JSON identity guards against re-render thrash. Incoming rows
-  // are normalized (terse → full) — an empty config normalizes to `[]`.
+  // pending write. Incoming rows are normalized (terse → full) — an empty config
+  // normalizes to `[]` — and shared row-by-row with the mirror (`shareRows`), so
+  // an unchanged row (or list) keeps its identity: no re-render thrash, and an
+  // edit to one view leaves the others' raw values untouched.
   const configJson = JSON.stringify(configRows);
   useEffect(() => {
     if (pendingRef.current !== null) return;
-    setMirror((prev) => {
-      const incoming = normalizeRows(JSON.parse(configJson) as RawViewRow[]);
-      return JSON.stringify(prev) === JSON.stringify(incoming)
-        ? prev
-        : incoming;
-    });
+    setMirror((prev) =>
+      shareRows(prev, normalizeRows(JSON.parse(configJson) as RawViewRow[])),
+    );
     // configRows is derived from configJson; depend on the string only.
   }, [configJson]);
 

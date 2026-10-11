@@ -97,9 +97,9 @@ function RowOrderFold(
     emit,
     ...ids
   } = props;
-  // Only `filter` survives into the ordered set, so key the memo on it alone —
-  // `stateFor()` mints a fresh `ViewState` object every render, and spreading it
-  // here would bust `useFlatRows`' memo on every render.
+  // Only `filter` survives into the ordered set (sort and search are excluded
+  // by contract), so key the memo on it alone — a change to the view's sort or
+  // query must not rebuild the ordered set.
   const orderedState = useMemo<ViewState>(
     () => ({ sort: [], query: "", filter: state.filter }),
     [state.filter],

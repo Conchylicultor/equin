@@ -445,20 +445,16 @@ export function useDataViewSections<TRow>(
     resolveOperatorSet,
   );
   const resolveGrouping = useGroupingRegistry().resolve;
-  // Depend on the rule's two PRIMITIVE fields, never on the rule object:
-  // `stateFor` mints a fresh `ViewState` (and thus a fresh `groupBy`) on every
-  // call, so an object dep would re-partition the whole set each render.
-  const groupFieldId = state.groupBy?.fieldId;
-  const groupingId = state.groupBy?.groupingId;
+  // A stored rule carries its `groupingId` (`readGroupBy` defaults it), but a
+  // view handed a hand-built state may omit it — fill the identity grouping.
+  // `state` is stable per view (`stateFor` is a ViewGetter), so this memo holds.
+  const storedGroupBy = state.groupBy;
   const groupBy = useMemo(
     () =>
-      groupFieldId
-        ? {
-            fieldId: groupFieldId,
-            groupingId: groupingId ?? IDENTITY_GROUPING.id,
-          }
-        : undefined,
-    [groupFieldId, groupingId],
+      storedGroupBy && !storedGroupBy.groupingId
+        ? { ...storedGroupBy, groupingId: IDENTITY_GROUPING.id }
+        : storedGroupBy,
+    [storedGroupBy],
   );
   return useMemo(() => {
     let sections = partitionIntoSections(

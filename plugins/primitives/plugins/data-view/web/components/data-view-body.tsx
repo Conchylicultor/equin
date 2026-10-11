@@ -25,6 +25,7 @@ import {
   type DataViewPageNotice,
   type DataViewViewportSink,
   type SortRule,
+  type ViewState,
 } from "../../core";
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import { DataViewSlots, type DataViewContribution } from "../slots";
@@ -407,15 +408,20 @@ function DataViewBodyInner<TRow>(
     lastActivation.rowKey === selectedRowId
   );
 
-  // Computed here (not in the shell): `stateFor` mints a fresh object per call,
-  // so the body reads it off the model itself and stays live on state writes.
-  // A controlled `search` replaces this tab's stored query: the surface's own
-  // field owns it, and every part that shows or applies a query reads this one.
+  // `stateFor` is a ViewGetter: the same object until this view's state
+  // changes, so everything memoised on `activeState` downstream holds. A
+  // controlled `search` replaces this tab's stored query: the surface's own
+  // field owns it, and every part that shows or applies a query reads this one
+  // — derived in a memo, so the override keeps that identity guarantee.
   const storedState = viewModel.stateFor(activeViewId);
-  const activeState =
-    search === undefined
-      ? storedState
-      : { ...storedState, query: search.query };
+  const searchQuery = search?.query;
+  const activeState = useMemo(
+    () =>
+      searchQuery === undefined
+        ? storedState
+        : { ...storedState, query: searchQuery },
+    [storedState, searchQuery],
+  );
 
   // The fold in effect: suspended while a search is typed (a match must never
   // hide behind "…"). Computed from `activeState` BEFORE the live branch below
@@ -711,9 +717,14 @@ function DataViewBodyInner<TRow>(
   // SQL). `visibleFields` is display-only — it never touches the query — so the
   // `...activeState` spread deliberately PRESERVES it so the views still honor
   // Properties on the live path.
-  const effectiveState = origin
-    ? { ...activeState, sort: [], filter: null, query: "", fold }
-    : { ...activeState, fold };
+  const serverOrdered = origin != null;
+  const effectiveState = useMemo<ViewState>(
+    () =>
+      serverOrdered
+        ? { ...activeState, sort: [], filter: null, query: "", fold }
+        : { ...activeState, fold },
+    [serverOrdered, activeState, fold],
+  );
   // What renders in place of the view, if anything: server error > failed
   // read > failed field > loading > pending field > the view (see
   // `resolveBodyState`).

@@ -57,3 +57,28 @@ export function normalizeRows(raw: RawViewRow[]): ViewConfigRow[] {
     };
   });
 }
+
+/**
+ * Reconcile `incoming` onto `prev` with structural sharing: a row whose content
+ * is unchanged (same id, same JSON) keeps its PREVIOUS object, and an unchanged
+ * list keeps the previous array. An external config change to one view then
+ * leaves every other view's row — and its raw `view` value, which the host's
+ * per-view getters key their cached state on — untouched.
+ */
+export function shareRows(
+  prev: readonly ViewConfigRow[],
+  incoming: readonly ViewConfigRow[],
+): ViewConfigRow[] {
+  const prevById = new Map(prev.map((r) => [r.id, r]));
+  let same = prev.length === incoming.length;
+  const next = incoming.map((row, i) => {
+    const old = prevById.get(row.id);
+    const kept =
+      old !== undefined && JSON.stringify(old) === JSON.stringify(row)
+        ? old
+        : row;
+    if (kept !== prev[i]) same = false;
+    return kept;
+  });
+  return same ? (prev as ViewConfigRow[]) : next;
+}

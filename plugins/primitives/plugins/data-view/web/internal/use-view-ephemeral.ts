@@ -29,7 +29,7 @@ const STATE_SUFFIX = ":view-state";
 const QUERY_SUFFIX = ":view-query";
 
 /** The durable half — device-local, survives a browser restart. */
-interface LocalViewState {
+export interface LocalViewState {
   expanded: Record<string, boolean>;
   /** Collapsed group-by section keys (absence = expanded). */
   collapsedSections: string[];
@@ -51,11 +51,6 @@ const EMPTY_LOCAL: LocalViewState = {
   collapsedSections: [],
   collapsed: false,
 };
-
-/** What `localFor` hands back: the durable blob plus this tab's query. */
-export interface ViewRenderState extends LocalViewState {
-  query: string;
-}
 
 // ---------------------------------------------------------------------------
 // Web Storage helpers (DOMException-guarded — private-mode / quota safe). The
@@ -121,9 +116,12 @@ function readQueryMap(key: string): QueryMap {
 }
 
 export interface EphemeralViewState {
-  /** Per-instance render state — expanded/collapsedSections (device-local) plus
-   *  this browser tab's `query`. */
-  localFor: (viewId: string) => ViewRenderState;
+  /** Per-instance device-local render state (expanded / collapsedSections /
+   *  collapsed) — the STORED blob, so it keeps its identity until a write to
+   *  this view replaces it (the model's cached getters key on it). */
+  localFor: (viewId: string) => LocalViewState;
+  /** This browser tab's search query for the instance. */
+  queryFor: (viewId: string) => string;
   setQuery: (viewId: string, query: string) => void;
   /** Apply a whole expand/collapse batch in ONE localStorage write. */
   setExpanded: (viewId: string, changes: readonly ExpandChange[]) => void;
@@ -166,11 +164,12 @@ export function useViewEphemeral(storageKey: string): EphemeralViewState {
   );
 
   const localFor = useCallback(
-    (viewId: string): ViewRenderState => ({
-      ...(localMap[viewId] ?? EMPTY_LOCAL),
-      query: queryMap[viewId] ?? "",
-    }),
-    [localMap, queryMap],
+    (viewId: string): LocalViewState => localMap[viewId] ?? EMPTY_LOCAL,
+    [localMap],
+  );
+  const queryFor = useCallback(
+    (viewId: string): string => queryMap[viewId] ?? "",
+    [queryMap],
   );
 
   const setQuery = useCallback(
@@ -221,11 +220,19 @@ export function useViewEphemeral(storageKey: string): EphemeralViewState {
   return useMemo(
     () => ({
       localFor,
+      queryFor,
       setQuery,
       setExpanded,
       setSectionCollapsed,
       setViewCollapsed,
     }),
-    [localFor, setQuery, setExpanded, setSectionCollapsed, setViewCollapsed],
+    [
+      localFor,
+      queryFor,
+      setQuery,
+      setExpanded,
+      setSectionCollapsed,
+      setViewCollapsed,
+    ],
   );
 }

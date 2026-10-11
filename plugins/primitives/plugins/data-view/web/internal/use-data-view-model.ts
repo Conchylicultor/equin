@@ -23,21 +23,11 @@ import { isFilterGroup } from "./filter-shape";
 import { dataViewDescriptors } from "./descriptors";
 import { IDENTITY_GROUPING } from "./identity-grouping";
 import { useViewEphemeral } from "./use-view-ephemeral";
-
-/**
- * One Set per stored `collapsedSections` array: the array keeps its identity
- * until a collapse writes a new one, so the Set does too — a read keyed on it
- * (a sectioned live read's active sections) recomputes only when it changes.
- */
-const collapsedSets = new WeakMap<readonly string[], ReadonlySet<string>>();
-function collapsedSetOf(keys: readonly string[]): ReadonlySet<string> {
-  let set = collapsedSets.get(keys);
-  if (set === undefined) {
-    set = new Set(keys);
-    collapsedSets.set(keys, set);
-  }
-  return set;
-}
+import {
+  type UnstableGetters,
+  type ViewGetter,
+  useViewGetter,
+} from "./view-getter";
 
 /** Instance actions for the editable view-switcher (every DataView has these). */
 export interface ViewActions {
@@ -72,7 +62,8 @@ export interface ReadyViewModel {
   instances: ResolvedViewInstance<DataViewContribution>[];
   activeId: string;
   setActiveView: (id: string) => void;
-  stateFor: (id: string) => ViewState;
+  /** THIS view's state — the same object until one of its inputs changes. */
+  stateFor: ViewGetter<ViewState>;
   setSort: (id: string, fieldId: string) => void;
   /** Replace the whole sort-rule list for THIS view. */
   setSortRules: (id: string, rules: SortRule[]) => void;
@@ -88,16 +79,32 @@ export interface ReadyViewModel {
   /** Apply a whole expand/collapse batch to THIS view (one localStorage write). */
   setExpanded: (id: string, changes: readonly ExpandChange[]) => void;
   /** Device-local collapsed group-by section keys for THIS view. */
-  collapsedSectionsFor: (id: string) => ReadonlySet<string>;
+  collapsedSectionsFor: ViewGetter<ReadonlySet<string>>;
   /** Collapse/expand a group-by section for THIS view (device-local). */
   setSectionCollapsed: (id: string, key: string, collapsed: boolean) => void;
   /** THIS view's presentation as a section of a sections surface. */
-  sectionFor: (id: string) => SectionPresentation;
+  sectionFor: ViewGetter<SectionPresentation>;
   /** Fold / unfold THIS view as a whole section (device-local). */
   setViewCollapsed: (id: string, collapsed: boolean) => void;
   /** Instance actions for the editable switcher (always present). */
   actions: ViewActions;
 }
+
+/**
+ * Every value-returning member of `ReadyViewModel` must be a `ViewGetter`:
+ * consumers memoise on what a getter returns, so one minting a fresh object per
+ * call recomputes them every render (and loops a render-phase `setState` keyed
+ * on identity — React #301). A new `fooFor: (id) => Foo` fails here; mint it
+ * with `useViewGetter`.
+ */
+export type GettersAreStable = [UnstableGetters<ReadyViewModel>] extends [never]
+  ? true
+  : [
+      "ReadyViewModel getters that are not ViewGetters:",
+      UnstableGetters<ReadyViewModel>,
+    ];
+
+export const gettersAreStable: GettersAreStable = true;
 
 /**
  * What `useDataViewModel` returns: either "the views are not known yet" or the
@@ -218,11 +225,47 @@ export interface SectionPresentation {
   collapsed: boolean;
 }
 
+function deriveViewState(
+  view: VariantValue | undefined,
+  expanded: Record<string, boolean>,
+  query: string,
+): ViewState {
+  return {
+    sort: readSortRules(view),
+    filter: readFilter(view),
+    visibleFields: readVisibleFields(view),
+    groupBy: readGroupBy(view),
+    fold: readFold(view),
+    filterScope: readFilterScope(view),
+    query,
+    expanded,
+  };
+}
+
+function deriveSection(
+  view: VariantValue | undefined,
+  collapsed: boolean,
+): SectionPresentation {
+  return {
+    hideWhenEmpty: view?.hideWhenEmpty === true,
+    description:
+      typeof view?.description === "string" && view.description.length > 0
+        ? view.description
+        : null,
+    collapsed,
+  };
+}
+
+function deriveCollapsedSet(keys: readonly string[]): ReadonlySet<string> {
+  return new Set(keys);
+}
+
 /**
  * data-view's host model. Wraps view-core's generic `useViewModel` and layers the
  * view-content semantics on top:
- *   - `sortFor`/`filterFor` read the host-managed `sort`/`filter` keys off the raw
- *     config row (`viewFor`); `sortFor` migrates legacy single-`sort` → `SortRule[]`,
+ *   - `stateFor` reads the host-managed `sort`/`filter`/… keys off the raw
+ *     config row (`viewFor`), migrating legacy single-`sort` → `SortRule[]`, and
+ *     is a `ViewGetter` — one object per view until its inputs change,
  *   - `setSort` cycles the PRIMARY rule (preserving secondary rules), `setSortRules`
  *     replaces the whole list, and `setFilter` writes the whole tree — all via
  *     `updateView(id, { sort/filter }, { merge: true })` so the engine preserves
@@ -250,15 +293,6 @@ export function useDataViewModel(
     pinnedView,
   );
   const ephemeral = useViewEphemeral(storageKey);
-
-  const sortFor = useCallback(
-    (id: string): SortRule[] => readSortRules(core.viewFor(id)),
-    [core],
-  );
-  const filterFor = useCallback(
-    (id: string): FilterGroup | null => readFilter(core.viewFor(id)),
-    [core],
-  );
 
   const setSortRules = useCallback(
     (id: string, rules: SortRule[]) => {
@@ -351,42 +385,35 @@ export function useDataViewModel(
     [core],
   );
 
-  const collapsedSectionsFor = useCallback(
-    (id: string): ReadonlySet<string> =>
-      collapsedSetOf(ephemeral.localFor(id).collapsedSections),
-    [ephemeral],
+  // The getters read only STORED slots — the config row's raw `view` value and
+  // the ephemeral store's per-view blob — which keep their identity until a
+  // write to that view replaces them, so each derived value does too.
+  const stateFor = useViewGetter(
+    useCallback(
+      (id: string) =>
+        [
+          core.viewFor(id),
+          ephemeral.localFor(id).expanded,
+          ephemeral.queryFor(id),
+        ] as const,
+      [core, ephemeral],
+    ),
+    deriveViewState,
   );
-
-  const stateFor = useCallback(
-    (id: string): ViewState => {
-      const local = ephemeral.localFor(id);
-      return {
-        sort: sortFor(id),
-        filter: filterFor(id),
-        visibleFields: readVisibleFields(core.viewFor(id)),
-        groupBy: readGroupBy(core.viewFor(id)),
-        fold: readFold(core.viewFor(id)),
-        filterScope: readFilterScope(core.viewFor(id)),
-        query: local.query,
-        expanded: local.expanded,
-      };
-    },
-    [core, ephemeral, sortFor, filterFor],
+  const sectionFor = useViewGetter(
+    useCallback(
+      (id: string) =>
+        [core.viewFor(id), ephemeral.localFor(id).collapsed] as const,
+      [core, ephemeral],
+    ),
+    deriveSection,
   );
-
-  const sectionFor = useCallback(
-    (id: string): SectionPresentation => {
-      const view = core.viewFor(id);
-      return {
-        hideWhenEmpty: view?.hideWhenEmpty === true,
-        description:
-          typeof view?.description === "string" && view.description.length > 0
-            ? view.description
-            : null,
-        collapsed: ephemeral.localFor(id).collapsed,
-      };
-    },
-    [core, ephemeral],
+  const collapsedSectionsFor = useViewGetter(
+    useCallback(
+      (id: string) => [ephemeral.localFor(id).collapsedSections] as const,
+      [ephemeral],
+    ),
+    deriveCollapsedSet,
   );
 
   const actions = useMemo<ViewActions>(

@@ -55,6 +55,10 @@ import { liveDataSource } from "../internal/live-data-source";
 import { defineDataViewSources } from "../internal/define-data-view-sources";
 import { MergedDataView } from "../components/merged-data-view";
 import { DataViewSlots } from "../slots";
+import { fakeViewGetter } from "../testing/fake-view-getter";
+
+const NO_COLLAPSED: ReadonlySet<string> = new Set();
+const SECTION = { collapsed: false, hideWhenEmpty: false, description: null };
 
 const LIST_ICON = symbol("view-list");
 
@@ -141,7 +145,7 @@ function model(state: ViewState) {
     ],
     activeId: "history",
     setActiveView: noop,
-    stateFor: () => state,
+    stateFor: fakeViewGetter(() => state),
     setSort: noop,
     setSortRules: noop,
     setVisibleFields: noop,
@@ -150,9 +154,9 @@ function model(state: ViewState) {
     setFold: noop,
     setQuery: noop,
     setExpanded: noop,
-    collapsedSectionsFor: () => new Set<string>(),
+    collapsedSectionsFor: fakeViewGetter(() => NO_COLLAPSED),
     setSectionCollapsed: noop,
-    sectionFor: () => ({ collapsed: false, hideWhenEmpty: false }),
+    sectionFor: fakeViewGetter(() => SECTION),
     setViewCollapsed: noop,
     actions: {
       availableSources: [],

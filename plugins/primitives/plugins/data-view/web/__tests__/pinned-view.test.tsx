@@ -11,6 +11,17 @@ import type {
   ViewModel,
 } from "../internal/use-data-view-model";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { fakeViewGetter } from "../testing/fake-view-getter";
+
+const NO_COLLAPSED: ReadonlySet<string> = new Set();
+const STATE = {
+  sort: [],
+  filter: null,
+  visibleFields: null,
+  groupBy: undefined,
+  query: "",
+  expanded: {},
+};
 
 const LIST_ICON = symbol("view-list");
 
@@ -55,14 +66,7 @@ function model(activeId: string): ViewModel {
     instances: INSTANCES,
     activeId,
     setActiveView: () => {},
-    stateFor: () => ({
-      sort: [],
-      filter: null,
-      visibleFields: null,
-      groupBy: undefined,
-      query: "",
-      expanded: {},
-    }),
+    stateFor: fakeViewGetter(() => STATE),
     setSort: () => {},
     setSortRules: () => {},
     setVisibleFields: () => {},
@@ -71,7 +75,7 @@ function model(activeId: string): ViewModel {
     setFold: () => {},
     setQuery: () => {},
     setExpanded: () => {},
-    collapsedSectionsFor: () => new Set<string>(),
+    collapsedSectionsFor: fakeViewGetter(() => NO_COLLAPSED),
     setSectionCollapsed: () => {},
     actions: {
       availableSources: [],

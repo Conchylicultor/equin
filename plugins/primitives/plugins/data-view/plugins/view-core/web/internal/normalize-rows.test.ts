@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { normalizeRows, type RawViewRow } from "./normalize-rows";
+import { normalizeRows, shareRows, type RawViewRow } from "./normalize-rows";
 
 describe("normalizeRows — source carry-through", () => {
   it("preserves an authored source key verbatim", () => {
@@ -44,5 +44,39 @@ describe("normalizeRows — source carry-through", () => {
     expect(rows[0]!.id).toBe("my-view");
     expect(rows[0]!.source).toBe("s1");
     expect(rows[1]!.id).toBe("view-1");
+  });
+});
+
+describe("shareRows — structural sharing on reconcile", () => {
+  const rows = (views: Record<string, string>) =>
+    normalizeRows(
+      Object.entries(views).map(([id, type]) => ({
+        id,
+        name: id,
+        view: { type },
+      })),
+    );
+
+  it("keeps the previous array when nothing changed", () => {
+    const prev = rows({ a: "list", b: "table" });
+    expect(shareRows(prev, rows({ a: "list", b: "table" }))).toBe(prev);
+  });
+
+  it("keeps an unchanged row's object when another row changed", () => {
+    const prev = rows({ a: "list", b: "table" });
+    const next = shareRows(prev, rows({ a: "list", b: "gallery" }));
+    expect(next).not.toBe(prev);
+    expect(next[0]).toBe(prev[0]);
+    expect(next[0]!.view).toBe(prev[0]!.view);
+    expect(next[1]).not.toBe(prev[1]);
+    expect(next[1]!.view).toEqual({ type: "gallery" });
+  });
+
+  it("follows the incoming order, reusing moved rows", () => {
+    const prev = rows({ a: "list", b: "table" });
+    const next = shareRows(prev, rows({ b: "table", a: "list" }));
+    expect(next).not.toBe(prev);
+    expect(next[0]).toBe(prev[1]);
+    expect(next[1]).toBe(prev[0]);
   });
 });

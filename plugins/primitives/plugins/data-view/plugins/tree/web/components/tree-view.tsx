@@ -452,18 +452,9 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   // unconditionally (a cheap no-op when not grouped) so hook order stays
   // stable; `null` = ungrouped → the fast-path below renders exactly the
   // pre-group-by output.
-  const groupFieldId = props.state.groupBy?.fieldId;
-  const groupingId = props.state.groupBy?.groupingId;
-  // The rule is rebuilt from its two PRIMITIVE fields: `stateFor` mints a fresh
-  // `ViewState` per call, so depending on the object itself would re-partition
-  // the whole tree on every render.
-  const groupBy = useMemo(
-    () =>
-      groupFieldId && groupingId
-        ? { fieldId: groupFieldId, groupingId }
-        : undefined,
-    [groupFieldId, groupingId],
-  );
+  // `state` is stable per view (`stateFor` is a ViewGetter), so the rule object
+  // keeps its identity until the view's group-by changes.
+  const groupBy = props.state.groupBy;
   const resolveGrouping = useGroupingRegistry().resolve;
   const now = props.now;
   const groupOrder = props.groupOrder;
