@@ -41,6 +41,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `claimPending`
       - `codeTag`
       - `declined`
+      - `maskCode`
       - `useActiveDataBinding`
       - `useActiveDataIdentity`
       - `useActiveDataLinkify`
@@ -203,28 +204,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database.db`
       - Core:
         - Exports (values): `EVENT_SOURCE_CHIP_SURFACES`
-    - **`go`** — Renders <go>…</go> in an agent's reply — a part of the answer the user can pick as their reply — highlighted in place with the prompt templates' split chip: ➤ sends it back as <go>…</go> (the agent reads the part of its answer the user picked), ✎ Go puts it in the draft as an editable highlighted region with a GO tab. One line is inline wherever it is written; a multi-line block turns `- [ ]` lines into pickable rows and sends only the picked ones. The user's sent message shows the accepted <go> in full.
+    - **`go`** — Renders <go>…</go> in an agent's reply — a part of the answer the user can pick as their reply — as one tinted unit, [text | ▶]: ▶ sends it back as <go>…</go> (the agent reads the part of its answer the user picked), clicking the text puts it in the draft as an editable tinted region closed by a ✕. One line is inline wherever it is written; a multi-line block is a card with a ✎ / ▶ rail, its `- [ ]` lines pickable rows (only the picked ones are sent, Reset restores the agent's picks). The user's sent message shows the accepted <go> in full, in the same tint.
       - Web:
         - Contributes:
           - `ActiveData.Tag` "go" → `GoBlock`
           - `InlineTextWalkerSlot`
           - `TextEditorSlots.Plugin` → `GoRegionPlugin`
-        - Uses: 21 symbols — full list in [`plugins/active-data/plugins/go/REFERENCE.md`](../plugins/active-data/plugins/go/REFERENCE.md)
+        - Uses: 29 symbols — full list in [`plugins/active-data/plugins/go/REFERENCE.md`](../plugins/active-data/plugins/go/REFERENCE.md)
           - `primitives/inline-text` ×5
-          - `active-data` ×2
+          - `active-data` ×3
+          - `primitives/css/ui-kit` ×3
+          - `primitives/css/clip` ×2
           - `primitives/text-editor` ×2
-          - `conversations/conversation-view/prompt-templates.TemplateChip`
           - `conversations/conversation-view.usePromptComposer`
+          - `primitives/css/center.Center`
+          - `primitives/css/coords.Placed`
           - `primitives/css/fill.Fill`
+          - `primitives/css/grow.growClass`
           - `primitives/css/inline.Inline`
           - `primitives/css/selection-indicator.CheckboxIndicator`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/dom/element-size.useResizeObserver`
           - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `primitives/markdown.Markdown`
+          - `ui/icons.Icon`
     - **`id-chip`** — Id chips, web half: idChip({ presenter, surfaces, component? }) mints a kind's IdKinds.Presenter together with its inline chip — the pattern derived from the kind (never re-typed), a generic title + icon chip unless the family brings its own component. rowReferent folds a live by-id row read into a presenter's referent state. Id chips, server half: idChipServer({ kind, surfaces, resolve }) contributes the kind's IdKinds.Referent, the InlineTokenReferentSource that hands a model the referent's title, and — for a chip that belongs in documents — the Editor.InlineToken that keeps a page block holding it agent-readable.
       - Web:
         - Uses:
@@ -12934,9 +12939,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
           - Cross-plugin:
-            - Imported by:
-              - `active-data/go`
-              - `conversations/conversation-view/selection-actions`
+            - Imported by: `conversations/conversation-view/selection-actions`
           - Shared:
             - Exports (values): `promptTemplatesConfig`
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
@@ -28462,7 +28465,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 109 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 110 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×27
               - `primitives` ×24
               - `page` ×18
@@ -28471,11 +28474,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×6
               - `apps-core` ×4
               - `plugin-meta` ×3
+              - `active-data` ×2
               - `fields` ×2
               - `map` ×2
               - `shell` ×2
               - `tasks` ×2
-              - `active-data/plugin-link`
               - `config_v2/settings`
               - `integrations/gmail`
               - `layouts/route-fallback`
@@ -28491,7 +28494,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Clip`
               - `clipClasses`
           - Cross-plugin:
-            - Imported by: 54 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+            - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
               - `apps` ×18
               - `primitives` ×8
               - `conversations` ×7
@@ -28499,6 +28502,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×5
               - `fields` ×2
               - `review` ×2
+              - `active-data/go`
               - `apps-core/surface`
               - `build/build-logs`
               - `config_v2/settings`
@@ -28687,12 +28691,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placedClasses`
               - `placedStyle`
           - Cross-plugin:
-            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
+            - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
               - `apps` ×17
               - `primitives` ×7
               - `debug` ×3
               - `page` ×2
               - `screenshot` ×2
+              - `active-data/go`
               - `shell/notifications`
         - **`fill`** — Flexible-cell layout primitive: <Fill axis> is the single grow+shrink cell of a Line/Row (min-w-0 flex-1). The one home for the slack-absorbing, truncation-enabling cell, so a stray flex-1 never strands the grow slot.
           - Web:
@@ -28745,6 +28750,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`grow`** — Growing-cell layout primitive: growClass() is the flex child that takes the row's slack (flex-1) while staying floored at its own content width. The half of <Fill> that grows, without the half that gives.
           - Cross-plugin:
             - Imported by:
+              - `active-data/go`
               - `apps/pages/page-tree`
               - `apps/sonata/sources/ultimate-guitar`
               - `conversations/conversation-view/jsonl-viewer`
@@ -37719,7 +37725,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Cross-plugin:
-        - Imported by: 301 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 302 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×62
           - `conversations` ×55
           - `page` ×40
@@ -37729,11 +37735,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui` ×9
           - `tasks` ×7
           - `apps-core` ×6
+          - `active-data` ×4
           - `build` ×4
           - `plugin-meta` ×4
           - `reorder` ×4
           - `review` ×4
-          - `active-data` ×3
           - `auth` ×2
           - `backup` ×2
           - `config_v2` ×2
