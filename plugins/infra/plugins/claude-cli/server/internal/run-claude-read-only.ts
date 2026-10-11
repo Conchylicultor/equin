@@ -49,7 +49,7 @@ const ResultRecordSchema = z4.object({
  */
 export function readOnlyArgs(
   cliFlag: string,
-  jsonSchema: string,
+  output: z4.ZodType<unknown, unknown>,
   system: string | undefined,
 ): string[] {
   const args = [
@@ -70,7 +70,10 @@ export function readOnlyArgs(
     "--output-format",
     "json",
     "--json-schema",
-    jsonSchema,
+    // Draft-07, not zod's default 2020-12: the CLI validates the schema with
+    // a validator that only knows draft-07, and refuses any other `$schema`
+    // ("no schema with key or ref …/draft/2020-12/schema").
+    JSON.stringify(z4.toJSONSchema(output, { target: "draft-7" })),
   ];
   if (system) args.push("--system-prompt", system);
   return args;
@@ -87,9 +90,8 @@ export async function runClaudeReadOnly<T>(
   input: RunClaudeReadOnlyInput<T>,
 ): Promise<T> {
   const resolvedModel = requireModel(input.tier, getModelCatalog());
-  const jsonSchema = JSON.stringify(z4.toJSONSchema(input.output));
   const stdout = await invokeClaude({
-    args: readOnlyArgs(cliFlagFor(resolvedModel), jsonSchema, input.system),
+    args: readOnlyArgs(cliFlagFor(resolvedModel), input.output, input.system),
     cwd: input.readDir,
     input: {
       tier: input.tier,

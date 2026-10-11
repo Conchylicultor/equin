@@ -7,8 +7,15 @@ import {
 } from "./run-claude-read-only";
 
 describe("readOnlyArgs", () => {
-  const args = readOnlyArgs("sonnet", "{}", "sys");
+  const args = readOnlyArgs("sonnet", z4.object({ a: z4.string() }), "sys");
   const after = (flag: string) => args[args.indexOf(flag) + 1];
+
+  test("hands the CLI a draft-07 schema, the only dialect it validates", () => {
+    expect(JSON.parse(after("--json-schema") ?? "")).toMatchObject({
+      $schema: "http://json-schema.org/draft-07/schema#",
+      properties: { a: { type: "string" } },
+    });
+  });
 
   test("offers only the read-only tools", () => {
     expect(after("--tools")).toBe(READ_ONLY_TOOLS.join(","));
