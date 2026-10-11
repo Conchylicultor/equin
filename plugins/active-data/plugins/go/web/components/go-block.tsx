@@ -1,4 +1,8 @@
 import { useState } from "react";
+import { z } from "zod";
+import { useActiveDataBinding } from "@plugins/active-data/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -6,7 +10,12 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { CheckboxIndicator } from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
 import { copiesAsText } from "@plugins/primitives/plugins/dom/plugins/copy-source-text/core";
-import { goWire, parseGo, type GoItem } from "../internal/parse-go";
+import {
+  goWire,
+  parseGo,
+  type GoBody,
+  type GoItem,
+} from "../internal/parse-go";
 import { GoChip } from "./go-chip";
 
 /**
@@ -22,8 +31,6 @@ export function GoBlock({
   attrs: Record<string, string>;
 }) {
   const body = parseGo(content);
-  const [picked, setPicked] = useState(() => body.items.map((i) => i.checked));
-
   if (body.items.length === 0) {
     return (
       <Stack gap="xs" className="rounded-md bg-primary/5 px-md py-xs">
@@ -34,11 +41,48 @@ export function GoBlock({
       </Stack>
     );
   }
+  return <GoChecklist content={content} body={body} />;
+}
+
+/** The picks, persisted per occurrence so they survive a transcript reload. */
+const PicksSchema = z.object({ picked: z.array(z.boolean()) });
+
+function GoChecklist({ content, body }: { content: string; body: GoBody }) {
+  const binding = useActiveDataBinding(PicksSchema);
+  // The picks made in this mount, shown at once while the write lands — and
+  // the only store for a legacy log, which has no binding identity.
+  const [local, setLocal] = useState<boolean[] | null>(null);
+
+  if (binding.enabled && local === null) {
+    if (binding.value.status === "loading") return <Loading variant="text" />;
+    if (binding.value.status === "error") {
+      return (
+        <ResourceErrorInline
+          error={binding.value.error}
+          refetch={binding.value.refetch}
+          variant="inline"
+        />
+      );
+    }
+  }
+  const stored =
+    binding.enabled && binding.value.status === "ready"
+      ? binding.value.data?.picked
+      : undefined;
+  // A stored pick list of another length belongs to other content: ignore it.
+  const picked =
+    local ??
+    (stored?.length === body.items.length
+      ? stored
+      : body.items.map((i) => i.checked));
+
+  const toggle = (i: number) => {
+    const next = picked.map((on, j) => (j === i ? !on : on));
+    setLocal(next);
+    if (binding.enabled) void binding.set({ picked: next });
+  };
 
   const count = picked.filter(Boolean).length;
-  const toggle = (i: number) =>
-    setPicked((prev) => prev.map((on, j) => (j === i ? !on : on)));
-
   return (
     <Stack gap="xs" className="rounded-md bg-primary/5 px-md py-sm">
       {body.lead && <Markdown>{body.lead}</Markdown>}

@@ -61,7 +61,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `LoadingVariant`
   - Exports (values): `Loading`
 - Cross-plugin:
-  - Imported by: 179 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 180 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×59
     - `ui` ×19
     - `primitives` ×17
@@ -72,8 +72,8 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `build` ×4
     - `plugin-meta` ×4
     - `review` ×4
+    - `active-data` ×3
     - `auth` ×3
-    - `active-data` ×2
     - `apps-core` ×2
     - `integrations` ×2
     - `map` ×2

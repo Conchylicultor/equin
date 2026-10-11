@@ -209,10 +209,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ActiveData.Tag` "go" → `GoBlock`
           - `InlineTextWalkerSlot`
           - `TextEditorSlots.Plugin` → `GoRegionPlugin`
-        - Uses:
-          - `active-data.ActiveData`
-          - `conversations/conversation-view.usePromptComposer`
+        - Uses: 21 symbols — full list in [`plugins/active-data/plugins/go/REFERENCE.md`](../plugins/active-data/plugins/go/REFERENCE.md)
+          - `primitives/inline-text` ×5
+          - `active-data` ×2
+          - `primitives/text-editor` ×2
           - `conversations/conversation-view/prompt-templates.TemplateChip`
+          - `conversations/conversation-view.usePromptComposer`
           - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
           - `primitives/css/selection-indicator.CheckboxIndicator`
@@ -220,14 +222,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/dom/element-size.useResizeObserver`
-          - `primitives/inline-text.InlineText`
-          - `primitives/inline-text.InlineTextWalker`
-          - `primitives/inline-text.InlineTextWalkerContext`
-          - `primitives/inline-text.InlineTextWalkerSlot`
-          - `primitives/inline-text.useInlineTextWalker`
+          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/loading.Loading`
           - `primitives/markdown.Markdown`
-          - `primitives/text-editor.registerNodeExtension`
-          - `primitives/text-editor.TextEditorSlots`
     - **`id-chip`** — Id chips, web half: idChip({ presenter, surfaces, component? }) mints a kind's IdKinds.Presenter together with its inline chip — the pattern derived from the kind (never re-typed), a generic title + icon chip unless the family brings its own component. rowReferent folds a live by-id row read into a presenter's referent state. Id chips, server half: idChipServer({ kind, surfaces, resolve }) contributes the kind's IdKinds.Referent, the InlineTokenReferentSource that hands a model the referent's title, and — for a chip that belongs in documents — the Editor.InlineToken that keeps a page block holding it agent-readable.
       - Web:
         - Uses:
@@ -31380,7 +31377,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 199 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 200 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×51
           - `conversations` ×38
           - `ui` ×22
@@ -31388,7 +31385,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page` ×12
           - `debug` ×10
           - `primitives` ×9
-          - `active-data` ×6
+          - `active-data` ×7
           - `infra` ×6
           - `auth` ×4
           - `build` ×4
@@ -31453,7 +31450,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LoadingVariant`
         - Exports (values): `Loading`
       - Cross-plugin:
-        - Imported by: 179 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 180 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×59
           - `ui` ×19
           - `primitives` ×17
@@ -31464,8 +31461,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build` ×4
           - `plugin-meta` ×4
           - `review` ×4
+          - `active-data` ×3
           - `auth` ×3
-          - `active-data` ×2
           - `apps-core` ×2
           - `integrations` ×2
           - `map` ×2
