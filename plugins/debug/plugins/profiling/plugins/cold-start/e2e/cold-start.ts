@@ -5,7 +5,7 @@
 // Usage:
 //   ./singularity run plugins/debug/plugins/profiling/plugins/cold-start/e2e/cold-start.ts \
 //     [--iterations 5] [--path /agents] [--busy N] [--out /tmp/cold-start.json] \
-//     [--no-stop] [--timeout 120000]
+//     [--no-stop] [--timeout 120000] [--code-cache]
 //
 // --busy N   N CPU-spinning children at background priority for the whole run
 //            (standing in for agent builds); always killed at the end.
@@ -13,11 +13,17 @@
 //            iteration that runs out keeps and prints whatever it reached.
 // --no-stop  WARM run: skips the stop, so the server is already up and its boot
 //            phases belong to an earlier boot (printed without a timeline offset).
+// --code-cache  DIAGNOSTIC: one browser context whose HTTP cache a first load
+//            fills with the app's code; every iteration still stops the server
+//            and clears all browser-side storage, so only code is cached. Never
+//            the headline number (see CLAUDE.md).
 
 import { cpus, loadavg } from "node:os";
 import type { Subprocess } from "bun";
 import {
   agentFetch,
+  DEFAULT_VIEWPORT,
+  detectOsColorScheme,
   flag,
   numArg,
   arg,
@@ -30,19 +36,36 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/core";
 import {
+  BOOT_PLUGIN_TIMING_PREFIX,
   BOOT_TIMING_PREFIX,
+  DEFERRED_LOAD_COMPLETE_ID,
   FIRST_DATA_COMMIT_ID,
   ROUTE_CONTENT_COMMIT_ID,
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
-import type { BootTimingDetail } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
+import type {
+  BootPluginLoadDetail,
+  BootTimingDetail,
+} from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 import { ProfilingDataSchema } from "@plugins/debug/plugins/profiling/plugins/boot/core";
 import type { ProfilingData } from "@plugins/debug/plugins/profiling/plugins/boot/core";
+import type { BrowserContext, Page } from "playwright";
+import { browserTrack } from "./browser-track";
+import type { BrowserTrack, BrowserTrackInput } from "./browser-track";
+
+// The page-side accumulator the init script fills: long tasks from the very
+// start of the load. Declared here so the augmentation travels with the module.
+declare global {
+  interface Window {
+    __coldStartLongTasks?: { startMs: number; durationMs: number }[];
+  }
+}
 
 const iterations = numArg("iterations", 5);
 const busy = numArg("busy", 0);
 const timeoutMs = numArg("timeout", 120_000);
 const out = arg("out");
 const warm = flag("no-stop");
+const codeCache = flag("code-cache");
 const url = pageUrl("/agents");
 const namespace = targetNamespace();
 if (!Number.isInteger(iterations) || iterations < 1)
@@ -50,7 +73,15 @@ if (!Number.isInteger(iterations) || iterations < 1)
 if (!Number.isInteger(busy) || busy < 0)
   usage(`--busy expects a non-negative integer, got ${busy}`);
 
-const r = report(`cold-start ${warm ? "(WARM — server not stopped)" : ""}`);
+if (codeCache && warm)
+  usage("--code-cache measures a cold server with cached code; drop --no-stop");
+
+// A code-cached run is a diagnostic, never the headline: its label rides on
+// the header and the SUMMARY line so it cannot be read as one.
+const DIAGNOSTIC = "DIAGNOSTIC: code cached";
+const r = report(
+  `cold-start ${warm ? "(WARM — server not stopped)" : codeCache ? `(${DIAGNOSTIC})` : ""}`,
+);
 
 // Before the spinners start: the host as the run found it.
 const loadStart = loadavg();
@@ -97,6 +128,8 @@ interface PageTimings {
   domContentLoadedMs: number | null;
   firstContentfulPaintMs: number | null;
   entries: TimingEntry[];
+  /** Resource Timing, long tasks and per-plugin imports, for the browser-track breakdown. */
+  track: BrowserTrackInput;
 }
 
 interface Iteration {
@@ -112,6 +145,7 @@ interface Iteration {
   /** Responses the server shed with 429 (the log-channels beacon under host duress — expected under load), by path. */
   shed: Record<string, number>;
   loadAvgEnd: number[];
+  browser: BrowserTrack;
 }
 
 /** The gateway's state for this namespace, without waking its backend. */
@@ -167,56 +201,127 @@ const ROUTE_CONTENT_ROW = "TOTAL page request → route content commit";
 const FIRST_DATA_ROW = "TOTAL page request → first data commit";
 const FIRST_REQUEST_ROW = "page request → first request reached the gateway";
 
-const iterationsRun = await withBrowser(async (h) => {
-  const runs: Iteration[] = [];
-  for (let i = 0; i < iterations; i++) {
-    const stoppedAt = warm ? null : await stopServer();
-    const { context, page } = await h.session();
-    const shed: Record<string, number> = {};
-    page.on("response", (res) => {
-      if (res.status() !== 429) return;
-      const path = new URL(res.url()).pathname;
-      shed[path] = (shed[path] ?? 0) + 1;
-    });
-    const gotoAt = Date.now();
-    let failure: string | null = null;
-    try {
-      await page.goto(url, { waitUntil: "commit", timeout: timeoutMs });
-      // Push-based wait: a buffered PerformanceObserver resolves on the mark
-      // (or on one already recorded), the in-page timer bounds it. A timeout
-      // resolves too — the partial trace is the data, not an exception.
-      const remaining = Math.max(0, timeoutMs - (Date.now() - gotoAt));
-      const reached = await page.evaluate(
-        ([name, limitMs]) =>
-          new Promise<boolean>((resolve) => {
-            const timer = setTimeout(() => resolve(false), limitMs);
-            new PerformanceObserver((list, obs) => {
-              if (list.getEntriesByName(name).length === 0) return;
-              clearTimeout(timer);
-              obs.disconnect();
-              resolve(true);
-            }).observe({ type: "mark", buffered: true });
-          }),
-        [routeContentName, remaining] as const,
-      );
-      if (!reached)
-        failure = `${routeContentName} not recorded within ${timeoutMs} ms`;
-    } catch (err) {
-      // Only the navigation's own timeout is a measurement; anything else is
-      // a broken run.
-      if (!(err instanceof Error && err.name === "TimeoutError")) throw err;
-      failure = `navigation did not commit within ${timeoutMs} ms`;
+const deferredCompleteName = `${BOOT_TIMING_PREFIX}${DEFERRED_LOAD_COMPLETE_ID}`;
+const origin = new URL(url).origin;
+
+/**
+ * Before any page script: a Resource Timing buffer large enough for every
+ * artifact (the default 250 drops most of them) and a buffered long-task
+ * observer from the very first task.
+ */
+async function instrument(context: BrowserContext): Promise<void> {
+  await context.addInitScript(() => {
+    performance.setResourceTimingBufferSize(100_000);
+    const tasks: { startMs: number; durationMs: number }[] = [];
+    window.__coldStartLongTasks = tasks;
+    if (!PerformanceObserver.supportedEntryTypes.includes("longtask")) return;
+    new PerformanceObserver((list) => {
+      for (const e of list.getEntries())
+        tasks.push({ startMs: e.startTime, durationMs: e.duration });
+    }).observe({ type: "longtask", buffered: true });
+  });
+}
+
+/**
+ * --code-cache: wipe everything the app keeps in the browser (cookies,
+ * localStorage, IndexedDB, service workers, Cache Storage, …) but the HTTP
+ * cache, so no data can come from a browser-side copy. sessionStorage is per
+ * page, and every iteration opens a new one.
+ */
+async function clearBrowserStorage(
+  context: BrowserContext,
+  page: Page,
+  tag: string,
+): Promise<void> {
+  const cdp = await context.newCDPSession(page);
+  await cdp.send("Storage.clearDataForOrigin", {
+    origin,
+    storageTypes:
+      "cookies,local_storage,indexeddb,service_workers,cache_storage,file_systems,websql,shader_cache",
+  });
+  await cdp.detach();
+  const state = await context.storageState();
+  r.ok(
+    `${tag} browser storage cleared (HTTP cache kept)`,
+    state.cookies.length === 0 &&
+      state.origins.every((o) => o.localStorage.length === 0),
+    JSON.stringify(state).slice(0, 300),
+  );
+}
+
+/** Wait for a boot mark, push-based: true when recorded, false at the deadline. */
+async function waitMark(
+  page: Page,
+  name: string,
+  limitMs: number,
+): Promise<boolean> {
+  return page.evaluate(
+    ([markName, ms]) =>
+      new Promise<boolean>((resolve) => {
+        const timer = setTimeout(() => resolve(false), ms);
+        new PerformanceObserver((list, obs) => {
+          if (list.getEntriesByName(markName).length === 0) return;
+          clearTimeout(timer);
+          obs.disconnect();
+          resolve(true);
+        }).observe({ type: "mark", buffered: true });
+      }),
+    [name, limitMs] as const,
+  );
+}
+
+/**
+ * Load the page and wait for route content, then (best effort, within the
+ * same budget) for the deferred tier to finish so tier C counts are whole.
+ * A timeout is data, not an exception.
+ */
+async function loadPage(
+  page: Page,
+): Promise<{ gotoAt: number; failure: string | null; timings: PageTimings }> {
+  const gotoAt = Date.now();
+  const remaining = () => Math.max(0, timeoutMs - (Date.now() - gotoAt));
+  let failure: string | null = null;
+  // Cumulative main-thread metrics, read right after route content is seen.
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Performance.enable");
+  let mainThread: BrowserTrackInput["mainThread"] = null;
+  try {
+    await page.goto(url, { waitUntil: "commit", timeout: timeoutMs });
+    if (!(await waitMark(page, routeContentName, remaining())))
+      failure = `${routeContentName} not recorded within ${timeoutMs} ms`;
+    else {
+      const { metrics } = await cdp.send("Performance.getMetrics");
+      const sampledAtMs = await page.evaluate(() => performance.now());
+      const sec = (name: string): number =>
+        (metrics.find((m) => m.name === name)?.value ?? NaN) * 1000;
+      mainThread = {
+        sampledAtMs,
+        taskMs: sec("TaskDuration"),
+        scriptMs: sec("ScriptDuration"),
+        layoutMs: sec("LayoutDuration"),
+        styleMs: sec("RecalcStyleDuration"),
+      };
+      await waitMark(page, deferredCompleteName, remaining());
     }
-    const pageTimings = await page.evaluate((prefix): PageTimings => {
+  } catch (err) {
+    // Only the navigation's own timeout is a measurement; anything else is
+    // a broken run.
+    if (!(err instanceof Error && err.name === "TimeoutError")) throw err;
+    failure = `navigation did not commit within ${timeoutMs} ms`;
+  }
+  await cdp.detach();
+  const evaluated = await page.evaluate(
+    ([prefix, pluginPrefix]): PageTimings => {
       const nav = performance.getEntriesByType("navigation")[0] as
         PerformanceNavigationTiming | undefined;
       const fcp = performance
         .getEntriesByType("paint")
         .find((e) => e.name === "first-contentful-paint");
-      const entries = [
+      const userTiming = [
         ...performance.getEntriesByType("mark"),
         ...performance.getEntriesByType("measure"),
-      ]
+      ];
+      const entries = userTiming
         .filter((e) => e.name.startsWith(prefix))
         .map((e) => ({
           id: e.name.slice(prefix.length),
@@ -226,28 +331,135 @@ const iterationsRun = await withBrowser(async (h) => {
           detail: (e as PerformanceMark | PerformanceMeasure)
             .detail as BootTimingDetail,
         }));
+      const pluginLoads = userTiming
+        .filter((e) => e.name.startsWith(pluginPrefix))
+        .map((e) => {
+          const detail = (e as PerformanceMeasure)
+            .detail as BootPluginLoadDetail;
+          return {
+            pluginPath: e.name.slice(pluginPrefix.length),
+            tier: detail.tier,
+            ok: detail.ok,
+            startMs: e.startTime,
+            endMs: e.startTime + e.duration,
+          };
+        });
+      const resources = (
+        performance.getEntriesByType("resource") as PerformanceResourceTiming[]
+      ).map((e) => ({
+        name: e.name,
+        initiatorType: e.initiatorType,
+        startMs: e.startTime,
+        responseEndMs: e.responseEnd,
+        transferSize: e.transferSize,
+        decodedBodySize: e.decodedBodySize,
+      }));
       // A navigation that has not finished reports 0 for its later stamps.
       const stamp = (v: number | undefined): number | null =>
         v === undefined || v === 0 ? null : v;
+      const at = (id: string): number | null =>
+        entries.find((e) => e.id === id)?.startMs ?? null;
+      const span = (id: string) => {
+        const e = entries.find((x) => x.id === id);
+        return e
+          ? { startMs: e.startMs, endMs: e.startMs + e.durationMs }
+          : null;
+      };
       return {
         timeOrigin: performance.timeOrigin,
         responseStartMs: stamp(nav?.responseStart),
         domContentLoadedMs: stamp(nav?.domContentLoadedEventEnd),
         firstContentfulPaintMs: fcp ? fcp.startTime : null,
         entries,
+        track: {
+          documentTransfer: nav?.transferSize ?? 0,
+          documentDecoded: nav?.decodedBodySize ?? 0,
+          importMapBytes:
+            document.querySelector('script[type="importmap"]')?.textContent
+              ?.length ?? 0,
+          domContentLoadedMs: stamp(nav?.domContentLoadedEventEnd),
+          resources,
+          longTasks: window.__coldStartLongTasks ?? [],
+          pluginLoads,
+          loadPlugins: span("load-plugins"),
+          firstDataMs: at("first-data-commit"),
+          routeContentMs: at("route-content-commit"),
+          deferredCompleteMs: at("deferred-load-complete"),
+          mainThread: null,
+        },
       };
-    }, BOOT_TIMING_PREFIX);
+    },
+    [BOOT_TIMING_PREFIX, BOOT_PLUGIN_TIMING_PREFIX] as const,
+  );
+  const timings: PageTimings = {
+    ...evaluated,
+    track: { ...evaluated.track, mainThread },
+  };
+  return { gotoAt, failure, timings };
+}
+
+const iterationsRun = await withBrowser(async (h) => {
+  const runs: Iteration[] = [];
+  // --code-cache: one context for the whole run, its HTTP cache filled by one
+  // load before the measured ones.
+  //
+  // Not a harness session: any Playwright route disables the HTTP cache, and
+  // the harness routes every session (to strip its agent-provenance headers
+  // from other origins — the app requests Google Fonts). So this context
+  // carries no provenance headers and no route: nothing to leak, and the
+  // cache works. Its requests are unmarked agent traffic (a page load's
+  // telemetry writes); see CLAUDE.md.
+  const shared = codeCache
+    ? await (async () => {
+        const context = await h.browser.newContext({
+          viewport: { ...DEFAULT_VIEWPORT },
+          colorScheme: detectOsColorScheme(),
+        });
+        return { context, page: await context.newPage() };
+      })()
+    : null;
+  if (shared) {
+    await instrument(shared.context);
+    const warmUp = await loadPage(shared.page);
+    if (warmUp.failure !== null)
+      throw new Error(`code-cache warm-up load: ${warmUp.failure}`);
+    await shared.page.close();
+    console.log(`  code cache filled by one load`);
+  }
+  for (let i = 0; i < iterations; i++) {
+    const stoppedAt = warm ? null : await stopServer();
+    let page: Page;
+    let close: () => Promise<void>;
+    if (shared) {
+      const p = await shared.context.newPage();
+      await clearBrowserStorage(shared.context, p, `#${i + 1}`);
+      page = p;
+      close = () => p.close();
+    } else {
+      const session = await h.session();
+      await instrument(session.context);
+      page = session.page;
+      close = () => session.context.close();
+    }
+    const shed: Record<string, number> = {};
+    page.on("response", (res) => {
+      if (res.status() !== 429) return;
+      const path = new URL(res.url()).pathname;
+      shed[path] = (shed[path] ?? 0) + 1;
+    });
+    const { gotoAt, failure, timings } = await loadPage(page);
     // Close BEFORE the next stop: an open page's socket would respawn the
     // server the moment it exits.
-    await context.close();
+    await close();
     const run: Iteration = {
       stoppedAt,
       gotoAt,
       failure,
-      page: pageTimings,
+      page: timings,
       server: await readServerProfile(),
       shed,
       loadAvgEnd: loadavg(),
+      browser: browserTrack(timings.track),
     };
     runs.push(run);
     printIteration(i, run);
@@ -498,7 +710,7 @@ const loadEnd = iterationsRun.at(-1)?.loadAvgEnd ?? loadavg();
 
 console.log("");
 console.log(
-  `=== cold-start ${url} — ${iterationsRun.length} iteration(s), busy=${busy}, ${warm ? "WARM (no stop)" : "cold"} ===`,
+  `=== cold-start ${url} — ${iterationsRun.length} iteration(s), busy=${busy}, ${warm ? "WARM (no stop)" : codeCache ? `cold server, ${DIAGNOSTIC} — not the headline` : "cold"} ===`,
 );
 console.log(
   `clock: one host wall clock — page timeOrigin, server timeOrigin and gateway stamps are epoch ms; offsets are relative to the page request (navigation start).`,
@@ -564,6 +776,54 @@ console.log(
   `shed responses (429, not failures): ${shedTotal}${shedTotal > 0 ? ` — ${[...shedByPath].map(([path, n]) => `${path} ${n}`).join(", ")}` : ""}`,
 );
 
+// Browser track (see browser-track.ts): scalars as median (min–max) over the
+// iterations, ranked lists by each name's median.
+console.log("");
+console.log(
+  `browser track${codeCache ? ` (${DIAGNOSTIC})` : ""} — median (min–max) over ${iterationsRun.length} iteration(s):`,
+);
+const metricNames: string[] = [];
+for (const run of iterationsRun)
+  for (const name of Object.keys(run.browser.metrics))
+    if (!metricNames.includes(name)) metricNames.push(name);
+let section = "";
+for (const name of metricNames) {
+  if (name[0] !== section) {
+    section = name[0] ?? "";
+    console.log("");
+  }
+  const values = iterationsRun
+    .map((run) => run.browser.metrics[name])
+    .filter((v): v is number => v !== undefined && !Number.isNaN(v));
+  if (values.length === 0) {
+    console.log(`  ${name.padEnd(54)} —`);
+    continue;
+  }
+  const st = stats(values);
+  console.log(
+    `  ${name.padEnd(54)} ${ms(st.median).padStart(7)}  (${ms(st.min)}–${ms(Math.max(...values))})`,
+  );
+}
+const listNames: string[] = [];
+for (const run of iterationsRun)
+  for (const name of Object.keys(run.browser.lists))
+    if (!listNames.includes(name)) listNames.push(name);
+for (const name of listNames) {
+  const byName = new Map<string, number[]>();
+  for (const run of iterationsRun)
+    for (const row of run.browser.lists[name] ?? [])
+      byName.set(row.name, [...(byName.get(row.name) ?? []), row.value]);
+  console.log("");
+  console.log(`  ${name} — median, (seen in n runs):`);
+  for (const [rowName, values] of [...byName]
+    .map(([n, v]) => [n, v] as const)
+    .sort((a, b) => stats(b[1]).median - stats(a[1]).median)
+    .slice(0, 15))
+    console.log(
+      `    ${(rowName.length > 64 ? `…${rowName.slice(-63)}` : rowName).padEnd(64)} ${ms(stats(values).median).padStart(7)}  (${values.length})`,
+    );
+}
+
 const fmtLoad = (l: number[]): string => l.map((x) => x.toFixed(2)).join(" ");
 console.log("");
 console.log(
@@ -581,7 +841,7 @@ const total = totalOf(ROUTE_CONTENT_ROW);
 const firstDataTotal = totalOf(FIRST_DATA_ROW);
 console.log("");
 console.log(
-  `SUMMARY cold-start${warm ? " WARM" : ""} ${new URL(url).pathname} n=${iterationsRun.length} busy=${busy}: ` +
+  `SUMMARY cold-start${warm ? " WARM" : codeCache ? ` ${DIAGNOSTIC}` : ""} ${new URL(url).pathname} n=${iterationsRun.length} busy=${busy}: ` +
     `reached ${iterationsRun.filter((x) => x.failure === null).length}/${iterationsRun.length} | ` +
     `route content median ${ms(total.median)} ms (p95 ${ms(total.p95)}) | ` +
     `first data ${ms(firstDataTotal.median)} (p95 ${ms(firstDataTotal.p95)}) | ` +

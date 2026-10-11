@@ -20009,6 +20009,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/perfs/boot-trace.markBootInstant`
           - `primitives/perfs/boot-trace.markBootInstantAtNextCommit`
           - `primitives/perfs/boot-trace.startBootSpan`
+          - `primitives/perfs/boot-trace.traceBootPluginLoad`
           - `primitives/perfs/scheduler.yieldToMain`
       - Cross-plugin:
         - Imported by: `framework/tooling/web-artifacts`
@@ -32843,18 +32844,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `refreshBootTrace`
               - `startBootSpan`
               - `subscribeBootTrace`
+              - `traceBootPluginLoad`
               - `useBootTrace`
           - Core:
             - Exports (types):
               - `AssetTiming`
               - `BootPhase`
+              - `BootPluginLoadDetail`
               - `BootSpan`
               - `BootTimingDetail`
               - `BootTrace`
               - `LongTask`
               - `NavTiming`
             - Exports (values):
+              - `BOOT_PLUGIN_TIMING_PREFIX`
               - `BOOT_TIMING_PREFIX`
+              - `DEFERRED_LOAD_COMPLETE_ID`
               - `FIRST_DATA_COMMIT_ID`
               - `ROUTE_CONTENT_COMMIT_ID`
         - **`scheduler`** — Main-thread scheduling primitives (yieldToMain: scheduler.yield → postTask → setTimeout(0)) for cooperative boot/work batching.

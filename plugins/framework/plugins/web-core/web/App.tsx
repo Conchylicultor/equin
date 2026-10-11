@@ -25,8 +25,13 @@ import {
   startBootSpan,
   markBootInstant,
   markBootInstantAtNextCommit,
+  traceBootPluginLoad,
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
-import { ROUTE_CONTENT_COMMIT_ID } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
+import {
+  DEFERRED_LOAD_COMPLETE_ID,
+  ROUTE_CONTENT_COMMIT_ID,
+} from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
+import type { BootPluginLoadDetail } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 import { webEntries } from "@composition-web-registry";
 import { PluginLoadErrors } from "./components/plugin-load-errors";
 
@@ -188,6 +193,17 @@ export default function App() {
         "First commit with the active app's content",
       );
 
+    // Each plugin import timed per tier (boot-trace's per-plugin User Timing),
+    // so a load can be split into which plugins it waited on.
+    const traced = (
+      batch: WebEntry[],
+      tier: BootPluginLoadDetail["tier"],
+    ): WebEntry[] =>
+      batch.map((e) => ({
+        ...e,
+        loader: () => traceBootPluginLoad(e.pluginPath, tier, e.loader),
+      }));
+
     const loadDeferredBatch = async (
       batch: WebEntry[],
       { routeContent = false } = {},
@@ -195,7 +211,9 @@ export default function App() {
       if (batch.length === 0) return;
       // Partial failure is tolerable (loadPlugins uses allSettled + collects
       // errors), so a broken app-content chunk never aborts the tier.
-      const { plugins, errors } = await loadPlugins(batch);
+      const { plugins, errors } = await loadPlugins(
+        traced(batch, routeContent ? "priority" : "deferred"),
+      );
       if (cancelled) return;
       // Run any Core.Boot tasks these plugins contribute (none under apps/ today,
       // but correct + future-proof) before they register, mirroring the eager
@@ -225,7 +243,7 @@ export default function App() {
         "scripts",
         "loadPlugins (eager)",
       );
-      const eagerResult = await loadPlugins(eager);
+      const eagerResult = await loadPlugins(traced(eager, "eager"));
       endLoad();
       const endBoot = startBootSpan(
         "boot-tasks",
@@ -264,6 +282,11 @@ export default function App() {
         await yieldToMain();
       }
       if (cancelled) return;
+      markBootInstant(
+        DEFERRED_LOAD_COMPLETE_ID,
+        "scripts",
+        "Deferred plugin tier loaded",
+      );
       markDeferredLoadComplete();
     })();
 

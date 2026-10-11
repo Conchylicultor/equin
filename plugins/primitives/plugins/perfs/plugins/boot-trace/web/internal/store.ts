@@ -16,8 +16,9 @@ import type {
   AssetTiming,
   BootTrace,
   BootTimingDetail,
+  BootPluginLoadDetail,
 } from "../../core";
-import { BOOT_TIMING_PREFIX } from "../../core";
+import { BOOT_PLUGIN_TIMING_PREFIX, BOOT_TIMING_PREFIX } from "../../core";
 
 const spans: BootSpan[] = [];
 const longTasks: LongTask[] = [];
@@ -133,6 +134,34 @@ export function markBootInstant(
     startMs: performance.now(),
     durationMs: 0,
   });
+}
+
+/**
+ * Time one plugin module import: runs `load` and, when it settles, records a
+ * `boot-plugin:<pluginPath>` User Timing measure from the call to the settle —
+ * its artifacts' fetch plus their evaluation, behind whatever else the same
+ * flat import wave is fetching. User Timing only (see BOOT_PLUGIN_TIMING_PREFIX);
+ * the import's result or rejection passes through unchanged.
+ */
+export async function traceBootPluginLoad<T>(
+  pluginPath: string,
+  tier: BootPluginLoadDetail["tier"],
+  load: () => Promise<T>,
+): Promise<T> {
+  const start = performance.now();
+  let ok = false;
+  try {
+    const value = await load();
+    ok = true;
+    return value;
+  } finally {
+    const detail: BootPluginLoadDetail = { tier, ok };
+    performance.measure(`${BOOT_PLUGIN_TIMING_PREFIX}${pluginPath}`, {
+      start,
+      end: performance.now(),
+      detail,
+    });
+  }
 }
 
 /**

@@ -124,6 +124,7 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
     - `primitives/perfs/boot-trace.markBootInstant`
     - `primitives/perfs/boot-trace.markBootInstantAtNextCommit`
     - `primitives/perfs/boot-trace.startBootSpan`
+    - `primitives/perfs/boot-trace.traceBootPluginLoad`
     - `primitives/perfs/scheduler.yieldToMain`
 - Cross-plugin:
   - Imported by: `framework/tooling/web-artifacts`

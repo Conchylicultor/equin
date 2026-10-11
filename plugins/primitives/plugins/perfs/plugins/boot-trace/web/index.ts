@@ -12,6 +12,7 @@ export {
   startBootSpan,
   markBootInstant,
   markBootInstantAtNextCommit,
+  traceBootPluginLoad,
   recordBootSpan,
   getBootTrace,
   subscribeBootTrace,

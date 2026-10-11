@@ -15,3 +15,6 @@ export const FIRST_DATA_COMMIT_ID = "first-data-commit";
  * or the first-data commit itself when that app has no deferred content.
  */
 export const ROUTE_CONTENT_COMMIT_ID = "route-content-commit";
+
+/** Every deferred-tier plugin has loaded (or failed): web-core's boot sequence is done. */
+export const DEFERRED_LOAD_COMPLETE_ID = "deferred-load-complete";

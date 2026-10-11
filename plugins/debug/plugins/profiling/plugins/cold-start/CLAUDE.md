@@ -7,7 +7,7 @@ server was stopped (idle sweep), split into where the time goes. Plan:
 ```bash
 ./singularity build      # the script drives the deploy this checkout published
 ./singularity run plugins/debug/plugins/profiling/plugins/cold-start/e2e/cold-start.ts \
-  [--iterations 5] [--path /agents] [--busy N] [--out /tmp/cold-start.json] [--timeout 120000]
+  [--iterations 5] [--path /agents] [--busy N] [--out /tmp/cold-start.json] [--timeout 120000] [--code-cache]
 ```
 
 - `--busy N` spawns N CPU-spinning children at background priority
@@ -17,6 +17,20 @@ server was stopped (idle sweep), split into where the time goes. Plan:
   browser rows describe this load; the server and gateway rows come from the
   running process's earlier boot and print with no timeline offset. For checking
   the script, not for numbers.
+- `--code-cache` is a **DIAGNOSTIC, never the headline, and never counts for the
+  exit criteria**: one browser context whose HTTP cache a first load fills with
+  the app's code; each iteration still stops the server, opens a new page and
+  clears every browser-side store but the HTTP cache (cookies, localStorage,
+  IndexedDB, service workers, Cache Storage — CDP `Storage.clearDataForOrigin`,
+  asserted empty), so no data comes from a browser copy. It answers "how much of
+  the browser track is download?"; the empty-cache run stays the number, since a
+  cache must never hide a structural cost. Header and SUMMARY say
+  `DIAGNOSTIC: code cached`.
+  Its context is the script's own, not a harness session: any Playwright route
+  disables the HTTP cache, and the harness routes every session (to strip its
+  agent-provenance headers from other origins — the app requests Google Fonts).
+  So it sends no provenance headers at all: its requests are unmarked agent
+  traffic, which for a page load is telemetry (app usage, log beacons).
 
 ## Per iteration
 
@@ -64,6 +78,27 @@ count of 429 responses by path (the log-channels beacon shedding under host
 duress — expected under load, counted, never a failure), the host load average
 (1/5/15 min) at start and end, and one `SUMMARY` line. The `n` column is how
 many iterations reached that row.
+Then the **browser track** (`e2e/browser-track.ts`), in every run, median
+(min–max) per scalar and ranked lists by median:
+
+- **A, before DOMContentLoaded** — requests, transfer / decoded KB by kind
+  (document incl. its inline import map, entry JS, plugin artifacts, vendor JS,
+  CSS, fonts, sprites, api), the largest files, network busy time (union of
+  fetch intervals) vs main-thread long tasks.
+- **B, during the eager `load-plugins` span** — plugin modules imported, JS
+  artifacts in hand (already preloaded vs fetched during the span), network
+  busy vs long tasks in the span, the 15 slowest plugin imports (per-plugin
+  `boot-plugin:<path>` measures from boot-trace's `traceBootPluginLoad`, which
+  web-core wraps every plugin loader in) and the 15 largest plugins / vendor
+  files by decoded bytes.
+- **C, tiers** — eager / priority (active app) / deferred plugins imported,
+  and how many resolved before first data / route content / after it. The
+  script waits for the `deferred-load-complete` mark (within `--timeout`) so
+  the counts are whole.
+
+The page gets an init script first: a Resource Timing buffer of 100 000 (the
+default 250 drops most artifacts) and a buffered `longtask` observer.
+
 `--out` writes every iteration's raw entries, server profile and derived phases
 as JSON.
 

@@ -15,3 +15,18 @@ export interface BootTimingDetail {
   workMs?: number;
   detail?: string;
 }
+
+/**
+ * Prefix of the per-plugin load measures: `boot-plugin:<pluginPath>`, one per
+ * plugin module the boot sequence imports. User Timing only — never a span in
+ * the store, so the boot-profile Gantt and persisted traces stay one row per
+ * phase, not one per plugin.
+ */
+export const BOOT_PLUGIN_TIMING_PREFIX = "boot-plugin:";
+
+/** The `detail` a per-plugin load measure carries. */
+export interface BootPluginLoadDetail {
+  /** Which load tier imported it: the eager tier, the active app's priority batch, or the rest of the deferred tier. */
+  tier: "eager" | "priority" | "deferred";
+  ok: boolean;
+}

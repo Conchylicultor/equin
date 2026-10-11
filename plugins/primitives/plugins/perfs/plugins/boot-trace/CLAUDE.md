@@ -41,18 +41,22 @@ clip long tasks to the boot window.
     - `refreshBootTrace`
     - `startBootSpan`
     - `subscribeBootTrace`
+    - `traceBootPluginLoad`
     - `useBootTrace`
 - Core:
   - Exports (types):
     - `AssetTiming`
     - `BootPhase`
+    - `BootPluginLoadDetail`
     - `BootSpan`
     - `BootTimingDetail`
     - `BootTrace`
     - `LongTask`
     - `NavTiming`
   - Exports (values):
+    - `BOOT_PLUGIN_TIMING_PREFIX`
     - `BOOT_TIMING_PREFIX`
+    - `DEFERRED_LOAD_COMPLETE_ID`
     - `FIRST_DATA_COMMIT_ID`
     - `ROUTE_CONTENT_COMMIT_ID`
 
