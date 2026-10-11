@@ -5420,9 +5420,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pitchKeyboardHeight`
               - `pitchLayoutConfig`
           - Cross-plugin:
-            - Imported by:
-              - `apps/sonata/rich/key-readout`
-              - `apps/sonata/rich/readout-keyboard`
+            - Imported by: `apps/sonata/rich/readout-keyboard`
         - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.Effect), and contributes Plays / Last-played fields (Library.Fields) so they appear on the library card, in the DataView's sort and filter pills, and as table columns. Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and serves them as the song library's `playback` columns (LiveColumns.Serve).
           - Web:
             - Contributes:
@@ -5971,15 +5969,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by: `apps/sonata/rich/key-readout`
               - Exemptions:
                 - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/actions.ts` (sanctioned)
-            - **`key-readout`** — Sonata Section: the current key — its name, relative key and source, the scale as dots on a one-octave keyboard plus note-name chips, and (Chords toggle) its seven diatonic chords on readout keyboards — tracking the playback cursor. Reads the session's Score + cursor (useSession).
+            - **`key-readout`** — Sonata Section: the current key — its name, relative key and source, the scale as dots on a two-octave readout keyboard plus note-name chips, and (Chords toggle) its seven diatonic chords on readout keyboards — tracking the playback cursor. Reads the session's Score + cursor (useSession).
               - Web:
                 - Contributes: `Sonata.Section` "Current key" → `KeyReadout`
-                - Uses: 21 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/key-readout/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/key-readout/REFERENCE.md)
-                  - `apps/sonata/document` ×5
-                  - `apps/sonata/rich/readout-keyboard` ×3
-                  - `apps/sonata/session` ×2
-                  - `apps/sonata/pitch-layout.usePitchGeometry`
+                - Uses:
+                  - `apps/sonata/document.keyAutoDetectSetting`
+                  - `apps/sonata/document.useLibrarySong`
+                  - `apps/sonata/document.useSongDocument`
+                  - `apps/sonata/document.useSongSetting`
+                  - `apps/sonata/document.useWriteSongSetting`
                   - `apps/sonata/rich/key-mode.saveKeyAutoDetect`
+                  - `apps/sonata/rich/readout-keyboard.KeyboardCaption`
+                  - `apps/sonata/rich/readout-keyboard.ReadoutKeyboard`
+                  - `apps/sonata/rich/readout-keyboard.useReadoutPlane`
+                  - `apps/sonata/session.useCursorSelector`
+                  - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/cluster.Cluster`

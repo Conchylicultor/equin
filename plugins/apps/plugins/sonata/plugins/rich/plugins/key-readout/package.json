@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-apps-sonata-rich-key-readout",
-  "description": "Sonata Section: the current key — its name, relative key and source, the scale as dots on a one-octave keyboard plus note-name chips, and (Chords toggle) its seven diatonic chords on readout keyboards — tracking the playback cursor.",
+  "description": "Sonata Section: the current key — its name, relative key and source, the scale as dots on a two-octave readout keyboard plus note-name chips, and (Chords toggle) its seven diatonic chords on readout keyboards — tracking the playback cursor.",
   "private": true,
   "version": "0.0.1"
 }

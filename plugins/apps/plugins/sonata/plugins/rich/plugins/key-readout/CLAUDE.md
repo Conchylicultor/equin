@@ -4,15 +4,21 @@
 
 ## Plugin reference
 
-- Description: Sonata Section: the current key — its name, relative key and source, the scale as dots on a one-octave keyboard plus note-name chips, and (Chords toggle) its seven diatonic chords on readout keyboards — tracking the playback cursor. Reads the session's Score + cursor (useSession).
+- Description: Sonata Section: the current key — its name, relative key and source, the scale as dots on a two-octave readout keyboard plus note-name chips, and (Chords toggle) its seven diatonic chords on readout keyboards — tracking the playback cursor. Reads the session's Score + cursor (useSession).
 - Web:
   - Contributes: `Sonata.Section` "Current key" → `KeyReadout`
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/sonata/document` ×5
-    - `apps/sonata/rich/readout-keyboard` ×3
-    - `apps/sonata/session` ×2
-    - `apps/sonata/pitch-layout.usePitchGeometry`
+  - Uses:
+    - `apps/sonata/document.keyAutoDetectSetting`
+    - `apps/sonata/document.useLibrarySong`
+    - `apps/sonata/document.useSongDocument`
+    - `apps/sonata/document.useSongSetting`
+    - `apps/sonata/document.useWriteSongSetting`
     - `apps/sonata/rich/key-mode.saveKeyAutoDetect`
+    - `apps/sonata/rich/readout-keyboard.KeyboardCaption`
+    - `apps/sonata/rich/readout-keyboard.ReadoutKeyboard`
+    - `apps/sonata/rich/readout-keyboard.useReadoutPlane`
+    - `apps/sonata/session.useCursorSelector`
+    - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`

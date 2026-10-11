@@ -16,7 +16,6 @@ import type {
   KeyRenderState,
   LabelTone,
 } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
-import { usePitchGeometry } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/web";
 import {
   KeyboardCaption,
   ReadoutKeyboard,
@@ -50,15 +49,6 @@ function sameActiveKey(
     a.source === b.source
   );
 }
-
-/**
- * The scale keyboard's window: one octave, C4 (60) … B4 (71) — the one readout
- * keyboard that is not the two-octave shape. A scale is a pitch-class set, so a
- * single octave shows all of it; the frame is content-independent, so changing
- * key only moves the dots, never re-lays-out the keyboard.
- */
-const SCALE_LOW = 60;
-const SCALE_HIGH = 71;
 
 /** Nothing is lit on the scale keyboard — the scale is drawn as dots. */
 const NO_KEYS: readonly number[] = [];
@@ -100,8 +90,10 @@ function ScaleDot({ tonic, tone }: { tonic: boolean; tone: LabelTone }) {
  *
  * - The key's name, big; under it, visible rather than in a tooltip, its
  *   relative key and where the key came from (the source badge).
- * - A single-octave keyboard with a dot on every scale degree — the tonic in the
- *   accent — and the scale's note names as chips beneath it.
+ * - A two-octave readout keyboard with a dot on every scale degree — the tonic
+ *   in the accent — and the scale's note names as chips beneath it. It is drawn
+ *   on the diatonic chords' plane, so it has the same shape as every other
+ *   readout keyboard and lines up key-for-key with the chord rows below.
  * - A "Chords" toggle stacks the key's seven diatonic chords below, each a
  *   caption (numeral · spelled name) over a readout keyboard lit with its notes;
  *   the row whose root is the chord under the playhead is marked current.
@@ -168,8 +160,6 @@ export function KeyReadout() {
     [chords],
   );
 
-  const scalePlane = usePitchGeometry(SCALE_LOW, SCALE_HIGH);
-
   const scale = useMemo(() => {
     if (!current) return null;
     const speller = makeKeySpeller(current);
@@ -203,7 +193,9 @@ export function KeyReadout() {
   }, [current]);
 
   // The key's seven diatonic chords, each voiced as written, all fitted onto
-  // ONE readout plane so every row has the same two-octave shape.
+  // ONE readout plane so every row has the same two-octave shape. The scale
+  // keyboard is drawn on this plane too: a scale is a pitch-class set, so its
+  // dots repeat in every octave and fit any window.
   const diatonic = useMemo(
     () => (current ? diatonicChords(current) : []),
     [current],
@@ -269,10 +261,10 @@ export function KeyReadout() {
         </ToggleChip>
       </Stack>
 
-      {/* The scale: dots on one octave, then its note names, tonic first. */}
+      {/* The scale: dots on every octave, then its note names, tonic first. */}
       <Stack gap="sm">
         <ReadoutKeyboard
-          plane={scalePlane}
+          plane={chordPlane.plane}
           lit={NO_KEYS}
           renderKey={renderScaleDot}
         />
