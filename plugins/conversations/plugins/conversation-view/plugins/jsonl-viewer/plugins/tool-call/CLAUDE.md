@@ -46,6 +46,7 @@
     - `JsonlViewerTool`
     - `ToolCallCard`
     - `ToolCallFrame`
+    - `ToolNameLabel`
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`

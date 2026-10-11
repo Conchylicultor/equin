@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { toolName, type ToolCallEvent } from "../../core";
+import { ToolNameLabel } from "./tool-name-label";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -96,14 +97,7 @@ export function ToolCallFrame({
               "font-mono p-tool-badge text-tag font-tag-strong rounded-tool-badge hairline-tool-badge border-current/28",
             )}
           >
-            {tool.server ? (
-              <>
-                <span className="opacity-60">{tool.server}:</span>
-                {tool.name}
-              </>
-            ) : (
-              tool.name
-            )}
+            <ToolNameLabel tool={tool} />
           </Badge>
           {/* Interactive chip sits inside the (click-through) label, so it opts
               back into pointer events via CardHeaderAction to keep its onClick. */}

@@ -12194,6 +12194,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `JsonlViewerTool`
                   - `ToolCallCard`
                   - `ToolCallFrame`
+                  - `ToolNameLabel`
               - Cross-plugin:
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
@@ -12501,6 +12502,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.ToolNameLabel`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/cluster.Cluster`
                       - `primitives/css/spacing.Stack`

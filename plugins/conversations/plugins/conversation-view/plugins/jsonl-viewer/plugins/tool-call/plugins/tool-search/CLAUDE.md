@@ -27,6 +27,7 @@ chip's tooltip.
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+    - `conversations/conversation-view/jsonl-viewer/tool-call.ToolNameLabel`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/spacing.Stack`

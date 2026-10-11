@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
-import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import {
+  ToolCallCard,
+  ToolNameLabel,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -10,8 +13,8 @@ import { plural, readToolSearch } from "../internal/tool-search";
 
 const names = (tools: ToolName[]) => tools.map((t) => t.name).join(", ");
 
-/** One deferred tool as a chip: the name a reader knows, the MCP server that
- *  provides it dimmed after it, and the full id the model calls in the tooltip. */
+/** One deferred tool as a chip: `<server>:<tool>` like the tool-call badge,
+ *  and the full id the model calls in the tooltip. */
 function ToolChip({ tool, missing }: { tool: ToolName; missing?: boolean }) {
   return (
     <Badge
@@ -19,8 +22,7 @@ function ToolChip({ tool, missing }: { tool: ToolName; missing?: boolean }) {
       variant={missing ? "warning" : "primary"}
       title={missing ? `${tool.id} — not found` : tool.id}
     >
-      {tool.name}
-      {tool.server && <span className="opacity-60"> · {tool.server}</span>}
+      <ToolNameLabel tool={tool} />
     </Badge>
   );
 }

@@ -8,6 +8,7 @@ import { CopyToolResultAction } from "./components/copy-result-action";
 export { JsonlViewerTool } from "./slots";
 export type { ToolRendererContribution } from "./slots";
 export { ToolCallCard, ToolCallFrame } from "./components/tool-call-card";
+export { ToolNameLabel } from "./components/tool-name-label";
 
 export default {
   collapsed: true,
