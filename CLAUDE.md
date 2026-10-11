@@ -218,7 +218,7 @@ Independent projects that live in `sidequests/`, not directly related to Singula
 
 ### Quotable choices: `<go>`
 
-Answer normally, and wrap in `<go>…</go>` each part of your answer the user could pick as their reply — an option, a next step, a follow-up. It renders highlighted, with a split chip that sends it back (➤) or puts it in the prompt to edit (✎ Go).
+Answer normally, and wrap in `<go>…</go>` each part of your answer the user could pick as their reply — an option, a next step, a follow-up. It renders tinted as one unit, `[text | ▶]`: ▶ sends it back, clicking the text puts it in the prompt to edit (a checklist block has ✎ / ▶ on its right edge).
 
 ```
 I've done the change. Should I <go>implement it</go>? Or <go>file a task</go>?

@@ -588,6 +588,10 @@
  * theme that sets them draws one. */
 @utility rounded-tool-badge { border-radius: var(--radius-tool-badge); } /* twmerge: extend rounded */
 @utility rounded-inline-code { border-radius: var(--radius-code); } /* twmerge: extend rounded */
+/* The two halves of a box split in the inline-code shape — a `<go>`'s text and
+ * its ▶ cap, which must share the code span's corner. */
+@utility rounded-l-inline-code { border-start-start-radius: var(--radius-code); border-end-start-radius: var(--radius-code); } /* twmerge: standalone -- Rounds only the start side of a two-part inline box; never combined with another radius class on the same element. */
+@utility rounded-r-inline-code { border-start-end-radius: var(--radius-code); border-end-end-radius: var(--radius-code); } /* twmerge: standalone -- Rounds only the end side of a two-part inline box; never combined with another radius class on the same element. */
 @utility hairline-tool-badge { border-width: var(--border-tool-badge); } /* twmerge: standalone -- Role border width for one element that sets no other border width. Not named border-*: tailwind-merge files any border-<word> as a border COLOR, so a colour class beside it would silently drop it. */
 @utility hairline-inline-code { border-width: var(--border-code); } /* twmerge: standalone -- Role border width for one element that sets no other border width. Not named border-*: tailwind-merge files any border-<word> as a border COLOR, so a colour class beside it would silently drop it. */
 /* A conversation row's in-flight op glyph (density `opStatusIcon`, default the

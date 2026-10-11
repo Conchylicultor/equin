@@ -1,10 +1,10 @@
 // Verifies `<go>` end to end, without sending anything:
 //   1. in the agent's reply, one-line <go>s render inline (inside a paragraph)
-//      with the Go chip — including one standing on a line of its own;
-//   2. a checklist row toggles on click;
-//   3. ✎ Go puts the <go> region into the composer: a GO tab and the words,
-//      highlighted (the draft is cleared again afterwards);
-//   4. a user message holding a <go> renders it as an accepted region (GO tab).
+//      as one [text | ▶] unit — including one standing on a line of its own;
+//   2. a checklist row toggles on click, and Reset appears once it differs;
+//   3. clicking an inline Go's text puts the <go> region into the composer:
+//      the words, tinted, closed by a ✕ cap (the draft is cleared afterwards);
+//   4. a user message holding a <go> renders it as an accepted, tinted region.
 //
 // The conversation must hold an assistant reply with an inline <go> and a <go>
 // checklist block; 4 additionally needs a user message containing a <go>.
@@ -47,9 +47,9 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(500);
   await snap(page, OUT, "reply");
 
-  // The Go chip is the template chip titled Go; its send half is labelled.
+  // An inline Go's ▶ cap is a role=button span labelled Send.
   // Polled: the reply's rows hydrate in after its checklist scrolled in.
-  const inlineSends = page.locator(`p button[aria-label="Send: Go"]`);
+  const inlineSends = page.locator(`p [role="button"][aria-label="Send"]`);
   for (let i = 0; i < 20 && (await inlineSends.count()) === 0; i++) {
     await page.waitForTimeout(500);
   }
@@ -64,32 +64,33 @@ await withBrowser(async (h) => {
     "clicking a row toggles it",
     (await row.getAttribute("aria-checked")) !== before,
   );
+  r.ok(
+    "Reset appears once the picks differ from the agent's",
+    (await page.getByRole("button", { name: "Reset" }).count()) > 0,
+  );
 
-  // ✎ Go on the first inline chip: the edit half sits right before its send.
-  const inlineSend = page.locator(`p button[aria-label="Send: Go"]`).first();
-  const edit = inlineSend.locator("xpath=preceding-sibling::button[1]");
-  await edit.click();
+  // Clicking an inline Go's text is its edit half.
+  await page.locator(`p [title="Edit before sending"]`).first().click();
   await page.waitForTimeout(500);
   const editor = page.locator('[contenteditable="true"]').last();
-  const draftHasTag = (await editor.innerText()).includes("GO");
+  const draftHasCap =
+    (await editor.locator('[aria-label="Remove the suggestion"]').count()) > 0;
   const highlighted = await editor.evaluate(
-    (el) => el.querySelectorAll(".bg-primary\\/10").length,
+    (el) => el.querySelectorAll(".bg-primary\\/5").length,
   );
-  r.ok("✎ Go puts a GO-tagged region in the draft", draftHasTag);
-  r.ok("the region's words are highlighted", highlighted > 0);
+  r.ok("clicking the text puts a ✕-capped region in the draft", draftHasCap);
+  r.ok("the region's words are tinted", highlighted > 0);
   await snap(page, OUT, "draft");
   // Leave no draft behind.
   await editor.click();
   await page.keyboard.press("Meta+A");
   await page.keyboard.press("Backspace");
 
-  // A user message with a <go>: the GoEcho region carries the GO tab.
+  // A user message with a <go>: the GoEcho region wears the Go tint.
   const echoes = await page
     .locator(".bg-message-card")
     .evaluateAll(
-      (cards) =>
-        cards.filter((c) => /(^|\s)GO(\s|$)/.test((c as HTMLElement).innerText))
-          .length,
+      (cards) => cards.filter((c) => c.querySelector(".bg-primary\\/5")).length,
     );
   r.note(`${echoes} user message(s) render an accepted <go>`);
 });

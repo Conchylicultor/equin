@@ -37,7 +37,24 @@ function standsAlone(text: string, start: number, end: number): boolean {
   );
 }
 
-function buildSegments(
+/**
+ * `text` with every code span and fenced code block blanked out (same length,
+ * line breaks kept), so a tag written AS CODE — `` `</go>` `` in a sentence
+ * about the tag — is not read as one. Markdown would render it as code, so the
+ * segmenter must not pair it either; indices into the result are indices into
+ * `text`.
+ */
+export function maskCode(text: string): string {
+  const blank = (m: string) => m.replace(/[^\n]/g, " ");
+  return text
+    .replace(
+      /^[ \t]*(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:^[ \t]*\1[ \t]*$|(?![\s\S]))/gm,
+      blank,
+    )
+    .replace(/(`+)[^`\n][^\n]*?\1/g, blank);
+}
+
+export function buildSegments(
   rawText: string,
   blockContribs: SealedBlockContribution[],
 ): ActiveDataSegment[] {
@@ -53,16 +70,23 @@ function buildSegments(
   const segments: ActiveDataSegment[] = [];
   let cursor = 0;
   let m: RegExpExecArray | null;
+  const masked = maskCode(rawText);
 
-  while ((m = re.exec(rawText)) !== null) {
+  while ((m = re.exec(masked)) !== null) {
+    // Matched on the masked text; the body is read back from the raw one (it
+    // ends right before the `</tag>`).
+    const end = m.index + m[0].length;
+    const inner = rawText.slice(
+      end - m[1]!.length - 3 - m[3]!.length,
+      end - m[1]!.length - 3,
+    );
     const contrib = blockContribs.find((c) => c.tag === m![1])!;
     // An inline-capable tag is a block only when it is one: on lines of its
     // own AND spanning lines. Beside prose, or a single line even standing
     // alone, it stays in the markdown and renders through `inline`.
     if (
       contrib.inline &&
-      (!standsAlone(rawText, m.index, m.index + m[0].length) ||
-        !m[3]!.trim().includes("\n"))
+      (!standsAlone(rawText, m.index, end) || !inner.trim().includes("\n"))
     ) {
       continue;
     }
@@ -73,7 +97,7 @@ function buildSegments(
 
     const tag = m[1]!;
     const attrStr = (m[2] ?? "").trim();
-    const content = m[3]!.trim();
+    const content = inner.trim();
     const attrs = attrStr ? parseAttrs(attrStr) : {};
 
     segments.push({
@@ -84,7 +108,7 @@ function buildSegments(
       content,
       attrs,
     });
-    cursor = m.index + m[0].length;
+    cursor = end;
   }
 
   if (cursor < rawText.length) {

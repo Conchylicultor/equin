@@ -1,0 +1,39 @@
+import { describe, expect, test } from "vitest";
+import { buildSegments, maskCode } from "../internal/segment-active-data";
+
+const Go = () => null;
+const contribs = [
+  { display: "block", tag: "go", inline: Go, component: Go },
+] as unknown as Parameters<typeof buildSegments>[1];
+
+describe("maskCode", () => {
+  test("blanks code spans and fences, keeping length and line breaks", () => {
+    const text = "a `</go>` b\n```\n<go>\n```\nc";
+    const masked = maskCode(text);
+    expect(masked).toHaveLength(text.length);
+    expect(masked).toBe("a         b\n   \n    \n   \nc");
+  });
+});
+
+describe("buildSegments", () => {
+  test("a close tag written as code does not end the block", () => {
+    const text = [
+      "Which?",
+      "",
+      "<go>",
+      "- [ ] Drop the `<go>` marker",
+      "- [ ] Keep the stray `</go>`",
+      "</go>",
+    ].join("\n");
+    const segments = buildSegments(text, contribs);
+    expect(segments.map((s) => s.type)).toEqual(["markdown", "block"]);
+    expect(segments[1]).toMatchObject({
+      content: "- [ ] Drop the `<go>` marker\n- [ ] Keep the stray `</go>`",
+    });
+  });
+
+  test("a tag inside a fenced block stays markdown", () => {
+    const text = "```\n<go>\n- [ ] x\n</go>\n```";
+    expect(buildSegments(text, contribs)).toEqual([{ type: "markdown", text }]);
+  });
+});

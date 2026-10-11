@@ -29,10 +29,8 @@ export interface TemplateChipProps {
 }
 
 /**
- * One split prompt chip: ✎ name puts the prompt in the draft, ➤ sends it. The
- * one chip every "here is a prompt you can send" surface draws — the template
- * bar, and a `<go>` in an agent's reply — so they look and behave the same.
- * Its density comes from the ambient ControlSizeProvider.
+ * One split prompt chip: ✎ name puts the prompt in the draft, ➤ sends it — the
+ * template bar's chip. Its density comes from the ambient ControlSizeProvider.
  */
 export function TemplateChip({
   template,

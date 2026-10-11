@@ -14,7 +14,10 @@ export type {
 } from "./slots";
 export { claimPending, declined, claimed } from "./claim";
 export type { CodeClaim, CodeResolver } from "./claim";
-export { useActiveDataSegments } from "./internal/segment-active-data";
+export {
+  maskCode,
+  useActiveDataSegments,
+} from "./internal/segment-active-data";
 export type { ActiveDataSegment } from "./internal/segment-active-data";
 export { useActiveDataLinkify } from "./internal/linkify-active-data";
 export {

@@ -1,28 +1,27 @@
 import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
-import { GoTag } from "./go-tag";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { GO_TINT, GoInlineUnit } from "./go-cap";
 import { PickedBox } from "./picked-box";
 
 const PICKED_RE = /^\s*[-*+] \[[xX]\] (.*)$/;
 
 /**
  * A `<go>` in the USER's message — an agent suggestion they accepted, possibly
- * reworded — shown in full with the GO tab, in the suggestion highlight. A
- * multi-line region is a block; its `- [x]` lines (the picked items) read as
- * checked boxes. The words go through <InlineText>, so chips inside still render.
+ * reworded — shown in full in the same tint the reply drew it in. A multi-line
+ * region is a card; its `- [x]` lines (the picked items) read as checked boxes.
+ * The words go through <InlineText>, so chips inside still render.
  */
 export function GoEcho({ body }: { body: string }) {
   const text = body.replace(/^\n+|\n+$/g, "");
   if (!text.includes("\n")) {
     return (
-      <span className="rounded-sm bg-primary/10 px-2xs text-primary-text box-decoration-clone">
-        <GoTag />
+      <GoInlineUnit>
         <InlineText text={text} />
-      </span>
+      </GoInlineUnit>
     );
   }
   return (
-    <span className="block rounded-md bg-primary/10 px-sm py-xs text-primary-text">
-      <GoTag />
+    <span className={cn("block rounded-md px-md py-sm", GO_TINT)}>
       {text.split("\n").map((line, i) => {
         const picked = PICKED_RE.exec(line);
         return (

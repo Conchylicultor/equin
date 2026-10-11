@@ -10,7 +10,7 @@ import "./internal/register";
 
 export default {
   description:
-    "Renders <go>…</go> in an agent's reply — a part of the answer the user can pick as their reply — highlighted in place with the prompt templates' split chip: ➤ sends it back as <go>…</go> (the agent reads the part of its answer the user picked), ✎ Go puts it in the draft as an editable highlighted region with a GO tab. One line is inline wherever it is written; a multi-line block turns `- [ ]` lines into pickable rows and sends only the picked ones. The user's sent message shows the accepted <go> in full.",
+    "Renders <go>…</go> in an agent's reply — a part of the answer the user can pick as their reply — as one tinted unit, [text | ▶]: ▶ sends it back as <go>…</go> (the agent reads the part of its answer the user picked), clicking the text puts it in the draft as an editable tinted region closed by a ✕. One line is inline wherever it is written; a multi-line block is a card with a ✎ / ▶ rail, its `- [ ]` lines pickable rows (only the picked ones are sent, Reset restores the agent's picks). The user's sent message shows the accepted <go> in full, in the same tint.",
   contributions: [
     ActiveData.Tag({
       display: "block",

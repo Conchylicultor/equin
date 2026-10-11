@@ -35,9 +35,7 @@
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
-  - Imported by:
-    - `active-data/go`
-    - `conversations/conversation-view/selection-actions`
+  - Imported by: `conversations/conversation-view/selection-actions`
 - Shared:
   - Exports (values): `promptTemplatesConfig`
 

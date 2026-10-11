@@ -2,11 +2,26 @@
 
 `<go>…</go>` marks a part of the agent's answer the user can pick as their
 reply — an option, a next step, a follow-up. The agent answers normally and
-wraps only the quotable part. The text stays where the agent wrote it,
-highlighted, followed by the prompt templates' own
-split chip (`TemplateChip` from `conversation-view/prompt-templates`):
-**➤** sends it as a turn, **✎ Go** puts it in the draft to edit. Outside a
-conversation pane there is no prompt to reach, so only the highlight renders.
+wraps only the quotable part. The text stays where the agent wrote it, drawn
+as ONE tinted unit, `[text | ▶]` (`web/components/go-cap.tsx`): **▶** sends it
+as a turn, **clicking the text** puts it in the draft to edit. A block is a
+tinted card with the actions as a rail on its right edge, **✎** over **▶** —
+a checklist has no text to click. Outside a conversation pane there is no
+prompt to reach, so only the tint renders.
+
+## One look in three places
+
+The reply, the draft and the sent message draw a Go the same way. An inline
+Go wears `GO_INLINE_BOX`: the prompt templates' chip colours (the outline
+button's `outline-fill` / `outline-border` palette tokens) at inline `code`'s
+padding, so it reads as the same control as the template chips, at the height
+of the `code` spans beside it — and, where there is an action, a cap closing
+the unit on the right (▶ in the reply, ✕ in the draft). A block is a card in
+`GO_TINT` (`bg-primary/5`) with its words in their normal colour. The cap is an INLINE span, never an inline-block button: an
+inline box with the text's own font size is exactly as tall as the tinted text
+it closes, so the two halves line up and wrap together. Checklists keep their
+boxes everywhere: pickable rows in the reply, ticked lines in the draft and in
+the sent message.
 
 ## The language
 
@@ -45,26 +60,31 @@ its own answer the user picked, rather than a question from the user (`goWire` i
   </go>
   ```
 
-➤ is disabled until an item is picked; ✎ with none picked hands every item
-over to trim.
+▶ is disabled until an item is picked; ✎ with none picked hands every item
+over to trim. Once the picks differ from the agent's own (`- [x]`), **Reset**
+beside the count puts them back.
 
-**In the draft** (✎ Go) the same text is inserted, the close tag moved onto
+**In the draft** (✎, or a click on an inline Go's text) the same text is inserted, the close tag moved onto
 the last line (`goDraft`) so the caret lands below the region. `<go>` and
 `</go>` become marker tokens (`web/internal/marker-node.tsx`): the opening one
-draws the GO tab, the closing one nothing, and the words between stay ordinary
-editable text — so the draft's markdown is exactly what is sent, with no
+draws nothing, the closing one the ✕ that drops the whole region
+(`$removeGoRegion` in `web/internal/go-regions.ts`) — a cap on one line, a
+rail on a box's right edge (placed where the region plugin measured it,
+`web/internal/go-rails.ts`), and the words between stay
+ordinary editable text — so the draft's markdown is exactly what is sent, with no
 serializer of its own. A picked line's `- [x] ` prefix is a token too, drawn as
 the checked box the agent's checklist rows use (`pick-node.tsx`). `GoRegionPlugin` paints each region: one line tinted in
 place, several as a rounded box — a background layer on the editor root,
 measured from the markers, since the root scrolls its content and Lexical owns
 its children (an insert puts line breaks inside ONE paragraph, so there is no
 line element to box). It also turns a marker whose partner was deleted back
-into literal text (deleting the GO tab ends the region).
+into literal text, so a region never leaves an invisible half behind. Only the
+picked items are in the draft: a line is dropped by deleting it.
 
 **In the sent message** an `InlineText` walker (`web/internal/go-walker.tsx`,
-order -1 so it sees the raw string) renders each `<go>` region in full with the
-GO tab (`GoEcho`): one line inline, several as a block whose `- [x]` lines read
-as checked boxes.
+order -1 so it sees the raw string) renders each `<go>` region in full, in the
+same tint (`GoEcho`): one line inline, several as a card whose `- [x]` lines
+read as checked boxes.
 
 Rules for agents are in the root `CLAUDE.md`.
 
@@ -76,13 +96,14 @@ as a block (`GoBlock`); everything else stays in the markdown, where
 active-data's remark pass pairs `<go>` / `</go>` into one element rendered by
 `GoInline` (see `active-data/web/internal/remark-inline-tags.ts`).
 
-The chip is `select-none` and a checklist row copies as its `- [ ] …` line, so
-copying a reply yields the text the agent wrote, without chip labels.
+The caps are `select-none` and a checklist row copies as its `- [ ] …` line,
+so copying a reply yields the text the agent wrote, without action glyphs.
 
 Picks persist per occurrence through active-data's `useActiveDataBinding`
 (`{ picked: boolean[] }`), so they survive a transcript reload; a stored list
 of another length (the content changed) is ignored. A legacy log without a
-message id keeps them in component state only.
+message id keeps them in component state only. Reset stores the agent's picks
+back the same way.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 

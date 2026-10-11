@@ -4,6 +4,7 @@ import {
   useInlineTextWalker,
   type InlineTextWalker,
 } from "@plugins/primitives/plugins/inline-text/web";
+import { maskCode } from "@plugins/active-data/web";
 import { GoEcho } from "../components/go-echo";
 
 const GO_REGION_RE = /<go>([\s\S]*?)<\/go>/g;
@@ -15,9 +16,17 @@ function splitGoRegions(children: ReactNode): ReactNode {
     return children;
   const out: ReactNode[] = [];
   let last = 0;
-  for (const m of children.matchAll(GO_REGION_RE)) {
+  // Paired on the text with its code blanked out, so a `<go>` written as
+  // code is not a tag; the body is read back from the real text.
+  for (const m of maskCode(children).matchAll(GO_REGION_RE)) {
     if (m.index > last) out.push(children.slice(last, m.index));
-    out.push(<GoEcho key={m.index} body={m[1]!} />);
+    const bodyStart = m.index + "<go>".length;
+    out.push(
+      <GoEcho
+        key={m.index}
+        body={children.slice(bodyStart, bodyStart + m[1]!.length)}
+      />,
+    );
     last = m.index + m[0].length;
   }
   if (last === 0) return children;
