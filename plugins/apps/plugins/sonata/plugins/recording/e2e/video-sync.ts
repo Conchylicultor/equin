@@ -3,7 +3,9 @@
 // loop wrap and ↑/↓ tempo (the video's playbackRate must follow). The video
 // lives in the player's Recording section (opened here if it is collapsed),
 // with its volume row (mute, slider, level) below it; collapsing the section
-// mid-play must leave the transport playing on the synth's own clock.
+// mid-play must leave the video playing, parked off screen, still driving the
+// transport (see video-persistence.ts for display switches and the on/off
+// switch).
 //
 // Drift is measured at every cursor PAINT, not by polling: a MutationObserver
 // on the scrubber fill fires in the same task as the paint, and reads the
@@ -473,29 +475,35 @@ await withBrowser(async (h) => {
   // ── The Recording section: video, then its volume row ──
   await snap(page, OUT, "4-recording-section");
 
-  // ── Collapse the section mid-play: the driver goes, the synth carries on ──
-  const beforeCollapse = await cursorSec(page);
+  // ── Collapse the section mid-play: the video plays on, still driving ──
+  // (the player is the session's; the section was only its viewport)
   await recordingHeader.click();
   await page.waitForTimeout(500);
   r.eq(
-    "collapsed: the video is gone",
+    "collapsed: the video is still embedded (parked off screen)",
     await page.locator('iframe[src^="https://www.youtube.com/embed"]').count(),
-    0,
+    1,
   );
-  await page.waitForTimeout(2000);
-  const afterCollapse = await cursorSec(page);
+  await drain(page);
+  await page.waitForTimeout(3000);
+  const collapsed = drifts(await drain(page));
+  const collapsedStats = stats(collapsed);
+  log("collapsed", collapsedStats);
+  results.collapsed = collapsedStats;
   r.ok(
-    "collapsed mid-play: the transport keeps playing on its own clock",
-    afterCollapse > beforeCollapse + 1.5,
-    `${beforeCollapse.toFixed(2)}→${afterCollapse.toFixed(2)}`,
+    "collapsed mid-play: the transport still follows the video (median ≤ 40 ms)",
+    collapsed.length > 0 && collapsedStats.medianAbsMs <= 40,
+    `${collapsed.length} paints, ${collapsedStats.medianAbsMs} ms`,
   );
+  r.eq("collapsed: the video never stops", stops(collapsed), 0);
   await press(page, "Space");
   await page.waitForTimeout(500);
   const stoppedAt = await cursorSec(page);
   await page.waitForTimeout(1000);
   r.ok(
-    "collapsed: Space still pauses (nothing stuck)",
-    Math.abs((await cursorSec(page)) - stoppedAt) < 0.005,
+    "collapsed: Space still pauses, the video too (nothing stuck)",
+    Math.abs((await cursorSec(page)) - stoppedAt) < 0.005 &&
+      (await videoRead(frame)).paused,
   );
   await recordingHeader.click();
   await videoSlider.waitFor({ timeout: 10_000 });

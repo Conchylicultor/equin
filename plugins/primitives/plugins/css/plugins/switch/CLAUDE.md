@@ -48,6 +48,7 @@ padding on the track that a flex direction could reinterpret.
   - Imported by:
     - `apps/deploy/analytics/dashboard`
     - `apps/events/sources`
+    - `apps/sonata/recording`
     - `apps/sonata/rich/chord-mode`
     - `apps/sonata/rich/rhythm-controls`
     - `apps/sonata/rich/voicing-controls`

@@ -7,6 +7,7 @@ import {
   type AlignmentCandidate,
   type AlignmentPhase,
   type UgAlignmentRow,
+  type UgSourceRaw,
 } from "../../core";
 
 /** The three stages of getting a song onto a recording, in order. */
@@ -154,6 +155,19 @@ export function alignProgress(row: UgAlignmentRow): AlignProgress | null {
     };
   }
   return { stage, step, candidate };
+}
+
+/**
+ * The video to play: the one the applied alignment is for (what the score
+ * plays on — a weak match or the resolver's best try included), else the
+ * row's chosen video, which plays unsynced until it has an alignment.
+ */
+export function recordingVideoId(
+  raw: UgSourceRaw,
+  result: LiveRowResult<UgAlignmentRow>,
+): string | null {
+  const found = result.status === "ready" && result.found ? result.row : null;
+  return raw.alignment?.videoId ?? found?.videoId ?? null;
 }
 
 export function recordingState(

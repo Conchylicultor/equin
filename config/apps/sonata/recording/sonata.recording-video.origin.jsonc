@@ -1,0 +1,5 @@
+// @hash fe95d1181611
+{
+  // Play the song's recording video along with the song. Off, the synth plays alone, on the same timing.
+  "playVideo": true
+}

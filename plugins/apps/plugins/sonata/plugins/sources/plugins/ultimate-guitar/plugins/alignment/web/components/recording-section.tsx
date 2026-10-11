@@ -8,6 +8,7 @@ import {
   candidateTitle,
   percent,
   recordingState,
+  recordingVideoId,
   type RecordingState,
 } from "../internal/recording-state";
 import { useUgAlignment } from "../internal/use-ug-raw";
@@ -21,11 +22,7 @@ function useRecordingState(): {
   state: RecordingState;
   /** The row once read (null: the song has none yet); the candidates and the pick live there. */
   row: UgAlignmentRow | null;
-  /**
-   * The video to show: the one the applied alignment is for (what the score
-   * plays on — a weak match or the resolver's best try included), else the
-   * row's chosen video, which plays unsynced until it has an alignment.
-   */
+  /** The video on screen (`recordingVideoId`): the one the session's recording plays. */
   shownVideoId: string | null;
 } {
   const { songId, raw, row } = useUgAlignment();
@@ -39,7 +36,7 @@ function useRecordingState(): {
     songId,
     state: recordingState(row, raw.tab),
     row: found,
-    shownVideoId: raw.alignment?.videoId ?? found?.videoId ?? null,
+    shownVideoId: recordingVideoId(raw, row),
   };
 }
 
@@ -109,14 +106,15 @@ function lineChip(
 
 /**
  * The song's recording (`Sonata.Section`, area `editor`): the video itself
- * (`RecordingVideo` with its volume — synced to the transport when the score
- * plays on it, else playing on its own), then where the alignment stands
+ * (`RecordingVideo` with its volume — a viewport onto the session's recording
+ * player, synced to the transport when the score plays on it, else playing on
+ * its own), then where the alignment stands
  * (`AlignmentStatus`), the video's line (title with its match chip, channel,
  * Replace) and, when Replace is open, the picker inline below it. All of it is
  * derived from the live row (`recordingState`), so it follows a job running in
  * the background; applying the result to the Score is the `UgAlignmentSync`
- * effect's job, not this body's (it unmounts when collapsed — and with it the
- * video, so playback falls back to the synth).
+ * effect's job, and declaring the video the `UgRecordingVideo` effect's, not
+ * this body's: it unmounts when collapsed, and the video plays on unseen.
  */
 export function RecordingSection() {
   const { songId, state, row, shownVideoId } = useRecordingState();
@@ -142,7 +140,9 @@ export function RecordingSection() {
 
   return (
     <Stack gap="md">
-      {shownVideoId !== null ? <RecordingVideo videoId={shownVideoId} /> : null}
+      {/* The viewport onto the session's player (the video is declared by
+          `UgRecordingVideo`, so it plays on while this section is collapsed). */}
+      <RecordingVideo />
 
       <AlignmentStatus
         songId={songId}

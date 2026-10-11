@@ -1,15 +1,9 @@
-import { useEffect } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
-import {
-  YouTubePlayer,
-  useYouTubePlayer,
-  useYouTubePlayerState,
-  type YouTubePlayerState,
-} from "@plugins/integrations/plugins/youtube/web";
-import { statusFromPlayerCode } from "@plugins/integrations/plugins/youtube/core";
+import { useYouTubePlayerState } from "@plugins/integrations/plugins/youtube/web";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
-import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -17,136 +11,107 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Slider } from "@plugins/primitives/plugins/css/plugins/slider/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import { recordingConfig } from "../../shared/config";
-import { createVideoDriver } from "../driver";
-import { RefusalProvider, type MediaRefusal } from "../refusal";
-import { SonataRecording } from "../slots";
+import { recordingConfig, recordingVideoConfig } from "../../shared/config";
+import { faultOf } from "../internal/fault";
+import {
+  canMoveStage,
+  placeStage,
+  useRecordingStore,
+} from "../internal/recording-store";
 
 const volumeOffIcon = symbol("volume-off");
 const volumeDownIcon = symbol("volume-down");
 const volumeUpIcon = symbol("volume-up");
 
-/** What a player error says, for the video it was showing. */
-type PlayerFault =
-  /** YouTube refused the video: it is gone, or not embeddable. Reported to whoever chose it. */
-  | { kind: "refused"; refusal: MediaRefusal }
-  /** The player failed for a reason that says nothing about the video (an invalid parameter, an HTML5 fault). Shown, never reported. */
-  | { kind: "player"; code: number };
-
-function faultOf(
-  state: YouTubePlayerState,
-  videoId: string,
-): PlayerFault | null {
-  if (state.kind !== "error" || state.videoId !== videoId) return null;
-  const verdict = statusFromPlayerCode(state.code);
-  if (verdict.kind === "decided" && verdict.status !== "ok") {
-    return {
-      kind: "refused",
-      refusal: {
-        provider: "youtube",
-        videoId,
-        status: verdict.status,
-        code: state.code,
-      },
-    };
-  }
-  return { kind: "player", code: state.code };
-}
-
 /**
- * A song's recording, for whoever shows it (the UG alignment's Recording
- * section): the YouTube video (16:9) and its volume (on/off, slider, level)
- * right below it. The sync offset is not in the card: it is the
- * `sonata.recording` config's `syncOffsetMs` (Settings → Config), still applied
- * to the driver.
+ * The song's recording, for whoever shows it (the UG alignment's Recording
+ * section): the video (16:9) and its volume (on/off, slider, level) right
+ * below it. Renders nothing while no recording is claimed
+ * (`useShowRecording`).
  *
- * It drives the transport exactly when the open score is timed on this video
- * (`score.meta.recording.videoId === videoId`): while the player is ready it is
- * registered as the session's transport driver, so the cursor, the synth and
- * the loop follow it, and YouTube's own controls are off (the transport is the
- * app's). Otherwise the video is NOT synced: it plays on its own with YouTube's
- * controls, the synth keeps the score's own timing, and a "Not synced" badge
- * sits over the video's top-left corner. Switching between the two re-creates
- * the player (its controls are fixed at creation).
+ * The player is NOT this component's: it belongs to the session
+ * (`RecordingPlayer`), and this is only a viewport — mounting moves the
+ * playing iframe in, unmounting moves it back to its off-screen parking spot.
+ * So collapsing the section, or anything that remounts it, neither stops nor
+ * reloads the video, and the transport stays synced to it. One viewport at a
+ * time.
  *
- * Unmounting (the section collapsed, the player closed) unregisters the driver
- * and the iframe dies with it; playback carries on with the synth alone on the
- * same timing, from where the video was.
+ * Unsynced (the score is not timed on this video) it plays with YouTube's own
+ * controls under a "Not synced" badge. Turned off (`RecordingSwitch`), it says
+ * so in place of the video.
  */
-export function RecordingVideo({ videoId }: { videoId: string }) {
+export function RecordingVideo() {
+  const { videoId, controller, reload } = useRecordingStore();
   const { score } = useSession();
+  const { playVideo } = useConfig(recordingVideoConfig);
+  const state = useYouTubePlayerState(controller);
+  if (videoId === null) return null;
+  if (!playVideo) {
+    return (
+      <Text variant="caption" tone="muted">
+        The video is off: the synth plays on its own.
+      </Text>
+    );
+  }
   const synced = score.meta.recording?.videoId === videoId;
+  const fault = faultOf(state, videoId);
   return (
     <Stack gap="xs">
-      <VideoPlayer
-        key={synced ? "synced" : "free"}
-        videoId={videoId}
-        synced={synced}
-      />
+      <Clip className="relative aspect-video w-full rounded-md bg-muted">
+        {canMoveStage ? (
+          <StageViewport />
+        ) : (
+          <Text variant="caption" tone="muted" className="p-sm">
+            This browser cannot show the playing video here (it has no
+            Element.moveBefore); it plays on, unseen.
+          </Text>
+        )}
+        {!synced && <NotSyncedBadge />}
+      </Clip>
+      {fault?.kind === "refused" && (
+        <Text variant="caption" tone="destructive" role="alert">
+          {fault.refusal.status === "gone"
+            ? "This video is no longer on YouTube."
+            : "YouTube does not allow this video to play here."}{" "}
+          The synth plays on its own.
+        </Text>
+      )}
+      {fault?.kind === "player" && (
+        <Line className="gap-xs">
+          <Fill>
+            <Text variant="caption" tone="destructive" role="alert">
+              The video player failed (YouTube error {fault.code}). The synth
+              plays on its own.
+            </Text>
+          </Fill>
+          <Button variant="ghost" onClick={reload}>
+            Reload video
+          </Button>
+        </Line>
+      )}
       <VideoVolume />
     </Stack>
   );
 }
 
-function VideoPlayer({
-  videoId,
-  synced,
-}: {
-  videoId: string;
-  synced: boolean;
-}) {
-  const { registerTransportDriver } = useSession();
-  const { videoOn, videoVolume, syncOffsetMs } = useConfig(recordingConfig);
-  const offsetSecRef = useLatestRef(syncOffsetMs / 1000);
-
-  const controller = useYouTubePlayer();
-  const state = useYouTubePlayerState(controller);
-  const ready = state.kind === "ready" && state.videoId === videoId;
-
-  useEffect(() => {
-    if (!synced || !ready) return;
-    return registerTransportDriver(
-      createVideoDriver(controller, () => offsetSecRef.current),
-    );
-  }, [synced, ready, controller, registerTransportDriver, offsetSecRef]);
-
-  const fault = faultOf(state, videoId);
-
-  return (
-    <Stack gap="xs">
-      <Clip className="relative aspect-video w-full rounded-md bg-muted">
-        <YouTubePlayer
-          controller={controller}
-          videoId={videoId}
-          loop={null}
-          controls={!synced}
-          audio={{ volume: videoVolume, muted: !videoOn }}
-        />
-        {!synced && <NotSyncedBadge />}
-      </Clip>
-      {fault?.kind === "refused" && (
-        <>
-          <Text variant="caption" tone="destructive" role="alert">
-            {fault.refusal.status === "gone"
-              ? "This video is no longer on YouTube."
-              : "YouTube does not allow this video to play here."}{" "}
-            The synth plays on its own.
-          </Text>
-          <RefusalProvider key={videoId} refusal={fault.refusal}>
-            <SonataRecording.Refused.Mount />
-          </RefusalProvider>
-        </>
-      )}
-      {fault?.kind === "player" && (
-        <Text variant="caption" tone="destructive" role="alert">
-          The video player failed (YouTube error {fault.code}). The synth plays
-          on its own; reopen the song to try the video again.
-        </Text>
-      )}
-    </Stack>
-  );
+/**
+ * Where the session's player shows: on mount the stage (the iframe's holder)
+ * is moved in, on unmount back to the parking spot — before React detaches
+ * this element, so the iframe is never out of the document.
+ */
+function StageViewport() {
+  const { stage, parking } = useRecordingStore();
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (el === null) throw new Error("StageViewport: element missing");
+    placeStage(stage, el);
+    return () => placeStage(stage, parking);
+  }, [stage, parking]);
+  return <div ref={ref} className="size-full" />;
 }
 
 /**
@@ -163,6 +128,24 @@ function NotSyncedBadge() {
         <Text variant="caption">Not synced</Text>
       </Line>
     </Pin>
+  );
+}
+
+/**
+ * The recording on/off switch (`sonata.recording-video`'s `playVideo`), for the
+ * header of the section showing it — so it is reachable while that section is
+ * collapsed. Off removes the player; the synth plays alone, on the same
+ * timing. On creates it again, synced to where the transport is.
+ */
+export function RecordingSwitch() {
+  const { playVideo } = useConfig(recordingVideoConfig);
+  const setConfig = useSetConfig(recordingVideoConfig);
+  return (
+    <Switch
+      checked={playVideo}
+      onCheckedChange={(on) => setConfig("playVideo", on)}
+      aria-label="Play the recording video"
+    />
   );
 }
 

@@ -39,3 +39,18 @@ export const recordingConfig = defineConfig({
     }),
   },
 });
+
+// Whether the recording's video plays at all — its own document, apart from the
+// mix: off, no player exists and the synth plays alone, on the same (aligned)
+// timing. Distinct from `videoOn`, which only mutes the video.
+export const recordingVideoConfig = defineConfig({
+  name: "sonata.recording-video",
+  fields: {
+    playVideo: boolField({
+      label: "Play the video",
+      description:
+        "Play the song's recording video along with the song. Off, the synth plays alone, on the same timing.",
+      default: true,
+    }),
+  },
+});

@@ -47,6 +47,16 @@ playing), `playRange(start, end)`, `seek(seconds)`, `getCurrentTime()`,
   record (no PLAYING since the load), not `getPlayerState()`, which lags the
   load: a `seekTo` sent before the iframe reports the cue hits a player with no
   video and gets error 2.
+- **One cue at a time.** The iframe applies a cue whenever it lands, undoing
+  a command sent meanwhile (a play right after a cue lands the video cued, not
+  playing). So while a cue is in flight (sent, not yet reported), a seek or
+  play of the unstarted video is HELD, and sent in order when the cue is
+  reported: a re-cue at the new time first (if it moved), then `playVideo`.
+  A player that becomes ready mid-song (seek + play at once) relies on this.
+- **A video asked to play is starting.** From a `play()` until a `pause()` a
+  seek is a plain `seekTo` (a re-cue would stop it), and an UNSTARTED the
+  iframe reports on the way (cued → buffering → unstarted → playing) still
+  counts as `isPlaying` — not a stop a follower would act on.
 - **No rates before the first play.** `getAvailablePlaybackRates()` answers
   `undefined` until the video has played; a `setPlaybackRate` then is HELD and
   sent (snapped) when the video first reaches PLAYING, its promise resolving

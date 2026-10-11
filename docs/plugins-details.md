@@ -5726,15 +5726,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/hover-reveal.hoverRevealGroup`
                   - `primitives/hover-reveal.hoverRevealTarget`
                   - `primitives/icon-button.IconButton`
-        - **`recording`** — Sonata recording: RecordingVideo — a song's YouTube video with its volume (on/off, slider, level) below it, for whoever shows the song's recording to render. When the open score is timed on that video (Score.meta.recording) it is registered as the session's transport driver while mounted and ready — the cursor, the synth and the A–B loop follow the video, its rate is the tempo; otherwise it plays on its own with YouTube's controls under a “Not synced” badge. The video's sound, level and the sync offset (no control in the card; Settings → Config) persist in the sonata.recording config. Owns the SonataRecording.Refused seam for whoever picked a video YouTube refuses to embed. Server registration of the Sonata recording mix config.
+        - **`recording`** — Sonata recording: the session's recording player — the YouTube video whoever shows a song's recording declares (useShowRecording), owned by the playback session so it outlives what shows it: RecordingVideo is only a viewport the playing iframe is moved into (Element.moveBefore, never reloaded) and out of, to an off-screen parking spot, so collapsing its section or switching the display neither stops nor reloads it. When the open score is timed on that video (Score.meta.recording) it is the session's transport driver while ready — the cursor, the synth and the A–B loop follow the video, its rate is the tempo; otherwise it plays on its own with YouTube's controls under a “Not synced” badge. RecordingSwitch turns the video off (the synth plays alone, same timing) and on. The video's on/off persists in the sonata.recording-video config; its sound, level and the sync offset (no control in the card; Settings → Config) in the sonata.recording config. Owns the SonataRecording.Refused seam for whoever picked a video YouTube refuses to embed. Server registration of the Sonata recording mix config and the video on/off config.
           - Web:
             - Slots: `SonataRecording.Refused`
             - Slot contributors: `SonataRecording.Refused` ← `apps.sonata.sources.ultimate-guitar.alignment`
-            - Contributes: `ConfigV2.WebRegister` "sonata.recording"
-            - Uses: 21 symbols — full list in [`plugins/apps/plugins/sonata/plugins/recording/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/recording/REFERENCE.md)
-              - `integrations/youtube` ×6
+            - Contributes:
+              - `ConfigV2.WebRegister` "sonata.recording"
+              - `ConfigV2.WebRegister` "sonata.recording-video"
+              - `SonataSession.Provider` → `RecordingProvider`
+            - Uses: 23 symbols — full list in [`plugins/apps/plugins/sonata/plugins/recording/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/recording/REFERENCE.md)
+              - `integrations/youtube` ×5
               - `config_v2` ×3
-              - `apps/sonata/session.useSession`
+              - `apps/sonata/session` ×2
               - `primitives/css/clip.Clip`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
@@ -5742,17 +5745,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/slider.Slider`
               - `primitives/css/spacing.Stack`
+              - `primitives/css/switch.Switch`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/slot-render.defineMountSlot`
             - Exports (types): `MediaRefusal`
             - Exports (values):
+              - `RecordingSwitch`
               - `RecordingVideo`
               - `SonataRecording`
               - `useMediaRefusal`
+              - `useShowRecording`
           - Server:
-            - Contributes: `ConfigV2.Register` "sonata.recording"
+            - Contributes:
+              - `ConfigV2.Register` "sonata.recording"
+              - `ConfigV2.Register` "sonata.recording-video"
             - Uses: `config_v2.ConfigV2`
           - Cross-plugin:
             - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
@@ -6176,6 +6185,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slot contributors:
               - `SonataSession.Provider` ← `apps.sonata.audio.engine`
               - `SonataSession.Provider` ← `apps.sonata.audio.live-play`
+              - `SonataSession.Provider` ← `apps.sonata.recording`
               - `SonataSession.Effect` ← `apps.sonata.audio.engine`
               - `SonataSession.Effect` ← `apps.sonata.audio.live-play`
               - `SonataSession.Effect` ← `apps.sonata.audio.metronome`
@@ -6509,14 +6519,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `UgFetchError`
                   - `UgSearchResultSchema`
               - Plugins:
-                - **`alignment`** — UG sheet alignment in the player: a 'Recording' editor section holding the song's YouTube video (the recording plugin's RecordingVideo with its volume — synced to the transport when the song plays on its alignment, a weak match included, else playing on its own), an alignment status box (icon, status line, one control — Cancel, Re-align, Retry, Try another or Find a video — and while working a three-stage bar: find a video, analyse the audio, align the sheet), the video's line (title, match chip, channel, Replace) and an inline picker (a YouTube link, the candidate videos with thumbnail and outcome — click one to switch — and Search again); a headless report of a video the player refuses (SonataRecording.Refused → video-refused), and a headless effect writing the applied alignment record into the Ultimate Guitar raw so the Score plays on the recording's beats. UG sheet alignment server: owns the sonata_songs_ext_ug_alignment side-table (video, who picked it, the resolver's candidates, status, record) served as a lookup-only live collection, the sonata.ug-alignment.align supervised job (choose a video with findSongVideos and walk the best candidates when none was set; beat features → alignChords → record, its live phase written on the row; a user's Cancel stops it as cancelled), the set-video / find-a-video / video-refused / re-align (also resuming a cancelled or failed walk) / cancel / get endpoints, and a trigger that starts choosing a video for a new UG song and re-aligns one whose sheet changes.
+                - **`alignment`** — UG sheet alignment in the player: a 'Recording' editor section showing the song's YouTube video (the recording plugin's RecordingVideo viewport with its volume, and its on/off RecordingSwitch in the header; the video itself is declared by a headless effect to the session's recording player, so it keeps playing — synced to the transport when the song plays on its alignment, a weak match included, else on its own — while the section is collapsed), an alignment status box (icon, status line, one control — Cancel, Re-align, Retry, Try another or Find a video — and while working a three-stage bar: find a video, analyse the audio, align the sheet), the video's line (title, match chip, channel, Replace) and an inline picker (a YouTube link, the candidate videos with thumbnail and outcome — click one to switch — and Search again); a headless report of a video the player refuses (SonataRecording.Refused → video-refused), and a headless effect writing the applied alignment record into the Ultimate Guitar raw so the Score plays on the recording's beats. UG sheet alignment server: owns the sonata_songs_ext_ug_alignment side-table (video, who picked it, the resolver's candidates, status, record) served as a lookup-only live collection, the sonata.ug-alignment.align supervised job (choose a video with findSongVideos and walk the best candidates when none was set; beat features → alignChords → record, its live phase written on the row; a user's Cancel stops it as cancelled), the set-video / find-a-video / video-refused / re-align (also resuming a cancelled or failed walk) / cancel / get endpoints, and a trigger that starts choosing a video for a new UG song and re-aligns one whose sheet changes.
                   - Web:
                     - Contributes:
                       - `Sonata.Section` "Recording" → `RecordingSection`
                       - `Sonata.Effect` "ug-alignment-sync" → `UgAlignmentSync`
+                      - `Sonata.Effect` "ug-recording-video" → `UgRecordingVideo`
                       - `SonataRecording.Refused` "ug-video-refused" → `ReportVideoRefused`
-                    - Uses: 33 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/REFERENCE.md)
-                      - `apps/sonata/recording` ×3
+                    - Uses: 35 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/REFERENCE.md)
+                      - `apps/sonata/recording` ×5
                       - `infra/endpoints` ×3
                       - `primitives/css/spacing` ×3
                       - `primitives/css/ui-kit` ×3
@@ -29293,6 +29304,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/deploy/analytics/dashboard`
               - `apps/events/sources`
+              - `apps/sonata/recording`
               - `apps/sonata/rich/chord-mode`
               - `apps/sonata/rich/rhythm-controls`
               - `apps/sonata/rich/voicing-controls`
@@ -29573,9 +29585,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 394 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 395 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×101
-              - `apps` ×74
+              - `apps` ×75
               - `conversations` ×52
               - `page` ×25
               - `ui` ×23

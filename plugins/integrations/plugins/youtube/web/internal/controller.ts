@@ -160,6 +160,19 @@ interface Attached {
   playing: boolean;
   /** Strictly PLAYING: media time is advancing. */
   advancing: boolean;
+  /**
+   * A cue sent and not yet reported (CUED). The iframe applies a cue whenever
+   * it lands, so a command sent meanwhile can be undone by it (a play landing
+   * cued, a seek snapped back) — a seek or play of the unstarted video is
+   * HELD in `held` until the cue is reported, then sent in order.
+   */
+  cueInFlight: boolean;
+  /** A play was sent and not paused since: the video is starting, so a seek is a plain `seekTo`, never a re-cue (which would stop it). */
+  playSent: boolean;
+  /** The start time of the last cue sent. */
+  cuedAt: number;
+  /** What the unstarted video was asked while a cue was in flight: a time to cue (null: none) and whether to play. */
+  held: { seconds: number | null; play: boolean } | null;
   /** Last distinct raw `getCurrentTime()`, the media time it stands for, and when it was seen. */
   anchor: { raw: number; media: number; wall: number } | null;
 }
@@ -276,6 +289,10 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
       error: null,
       playing: false,
       advancing: false,
+      cueInFlight: false,
+      playSent: false,
+      cuedAt: 0,
+      held: null,
       anchor: null,
     };
     this.emit();
@@ -314,12 +331,21 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
         this.seekPlayer(a, loop.start);
       }
     }
+    // An unstarted video with a cue in flight plays once the cue lands: a
+    // play sent now can be undone by it (the video lands cued, not playing).
+    if (a.cueInFlight && this.unstarted(a)) {
+      a.held = { seconds: a.held?.seconds ?? null, play: true };
+      return;
+    }
+    a.playSent = true;
     a.player.playVideo();
   }
 
   pause(): void {
     const a = this.requireReady("pause");
     this.clearBoundary();
+    if (a.held !== null) a.held = { ...a.held, play: false };
+    a.playSent = false;
     a.player.pauseVideo();
   }
 
@@ -408,13 +434,17 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
     a.error = null;
     a.playing = false;
     a.advancing = false;
+    a.held = null;
+    a.playSent = false;
     a.anchor = null;
     const request = {
       videoId: source.videoId,
       startSeconds: source.loop?.start ?? 0,
     };
-    if (source.autoplay) a.player.loadVideoById(request);
-    else a.player.cueVideoById(request);
+    if (source.autoplay) {
+      a.cueInFlight = false;
+      a.player.loadVideoById(request);
+    } else this.cue(a, request.startSeconds);
     // Re-stated on every load: the level is the app's, not the video's.
     this.applyAudio(a);
     this.emit();
@@ -453,9 +483,18 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
     if (a.anchor !== null) {
       a.anchor = { raw: a.anchor.raw, media: pinned, wall: performance.now() };
     }
-    a.playing = code === codes.PLAYING || code === codes.BUFFERING;
+    // A play of a cued video can pass UNSTARTED again after BUFFERING on its
+    // way to PLAYING: still starting, not a stop.
+    a.playing =
+      code === codes.PLAYING ||
+      code === codes.BUFFERING ||
+      (code === codes.UNSTARTED && a.playSent);
     a.advancing = code === codes.PLAYING;
     this.refreshDuration(a);
+    if (a.cueInFlight && code !== codes.UNSTARTED) {
+      a.cueInFlight = false;
+      this.releaseHeld(a);
+    }
 
     if (code === codes.PLAYING) {
       this.applyHeldRate(a);
@@ -567,11 +606,9 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
    * player with no video — YouTube answers error 2.
    */
   private seekPlayer(a: Attached, seconds: number): void {
-    const unstarted =
-      a.player.getPlayerState() === a.codes.CUED ||
-      (!a.playingAnnounced && !(this.source?.autoplay ?? false));
-    if (unstarted && a.videoId !== null) {
-      a.player.cueVideoById({ videoId: a.videoId, startSeconds: seconds });
+    if (this.unstarted(a) && a.videoId !== null) {
+      if (a.cueInFlight) a.held = { seconds, play: a.held?.play ?? false };
+      else this.cue(a, seconds);
     } else {
       a.player.seekTo(seconds, true);
     }
@@ -584,6 +621,46 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
     this.clearBoundary();
     if (a.playing) this.armFrom(a, seconds);
     this.readPlayhead(seconds);
+  }
+
+  /** Cue the video at `seconds`; commands to it are held until the iframe reports it. */
+  private cue(a: Attached, seconds: number): void {
+    if (a.videoId === null) return;
+    a.cueInFlight = true;
+    a.cuedAt = seconds;
+    a.player.cueVideoById({ videoId: a.videoId, startSeconds: seconds });
+  }
+
+  /** The cue landed: send what was asked meanwhile, in order — a re-cue at a new time first (held again), then the play. */
+  private releaseHeld(a: Attached): void {
+    const held = a.held;
+    a.held = null;
+    if (held === null) return;
+    if (
+      held.seconds !== null &&
+      Math.abs(held.seconds - a.cuedAt) > BOUNDARY_EPSILON_S
+    ) {
+      this.cue(a, held.seconds);
+      if (held.play) a.held = { seconds: null, play: true };
+      return;
+    }
+    if (held.play) {
+      a.playSent = true;
+      a.player.playVideo();
+    }
+  }
+
+  /**
+   * Cued, or loaded without autoplay and not played since (the controller's
+   * own record) — and no play on its way: a video asked to play is starting,
+   * and re-cueing it would stop it.
+   */
+  private unstarted(a: Attached): boolean {
+    if (a.playSent) return false;
+    return (
+      a.player.getPlayerState() === a.codes.CUED ||
+      (!a.playingAnnounced && !(this.source?.autoplay ?? false))
+    );
   }
 
   private rearm(): void {

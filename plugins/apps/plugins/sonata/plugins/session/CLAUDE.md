@@ -81,6 +81,7 @@ without stopping.
   - Slot contributors:
     - `SonataSession.Provider` ← `apps.sonata.audio.engine`
     - `SonataSession.Provider` ← `apps.sonata.audio.live-play`
+    - `SonataSession.Provider` ← `apps.sonata.recording`
     - `SonataSession.Effect` ← `apps.sonata.audio.engine`
     - `SonataSession.Effect` ← `apps.sonata.audio.live-play`
     - `SonataSession.Effect` ← `apps.sonata.audio.metronome`

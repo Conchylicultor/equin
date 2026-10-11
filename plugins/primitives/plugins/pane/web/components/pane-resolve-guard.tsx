@@ -8,6 +8,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { segmentRequiredParamNames } from "../../core";
 import { paneObjectFor, type PaneInternal, type ResolveHook } from "../pane";
 import { PaneIconAction } from "./pane-icon-action";
 import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
@@ -24,15 +25,18 @@ export function PaneResolveGuard({ pane, params }: Props) {
     const Component = pane.component;
     return <Component />;
   }
-  // Key the sticky guard on the resolved identity (pane + params). A `swap`
-  // re-roots a pane in place — new params, SAME mounted guard — so without the
-  // key the sticky-found memory would leak from one resource to the next. The
-  // key gives React a fresh guard instance (fresh `sawFound`) per identity,
-  // making that leak structurally impossible; a transient `pending`/`error` flip keeps
-  // the identity stable, so the instance — and its stickiness — survives.
+  // Key the sticky guard on the resolved identity: the pane and the params that
+  // ADDRESS its entity (the required ones). A `swap` re-roots a pane in place —
+  // new params, SAME mounted guard — so without the key the sticky-found memory
+  // would leak from one resource to the next. The key gives React a fresh guard
+  // instance (fresh `sawFound`) per identity, making that leak structurally
+  // impossible; a transient `pending`/`error` flip keeps the identity stable, so
+  // the instance — and its stickiness — survives. An optional `:param?` or a
+  // keyed `;name` is a VIEW of the entity (`useSetParams` rewrites it in place),
+  // so it is not part of the key: changing it must not remount the pane.
   return (
     <StickyResolveGuard
-      key={resolveIdentity(pane.id, params)}
+      key={resolveIdentity(pane, params)}
       pane={pane}
       useResolve={pane.useResolve}
       component={pane.component}
@@ -41,15 +45,15 @@ export function PaneResolveGuard({ pane, params }: Props) {
   );
 }
 
-/** Stable per-(pane, params) key so identity changes remount the guard. */
+/** Stable per-(pane, addressing params) key so identity changes remount the guard. */
 function resolveIdentity(
-  paneId: string,
+  pane: PaneInternal,
   params: Record<string, string>,
 ): string {
-  const parts = Object.keys(params)
+  const parts = segmentRequiredParamNames(pane.segment)
     .sort()
     .map((k) => `${k}=${params[k]}`);
-  return `${paneId}\u0000${parts.join("\u0000")}`;
+  return `${pane.id}\u0000${parts.join("\u0000")}`;
 }
 
 /**

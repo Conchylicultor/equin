@@ -566,9 +566,9 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `useSidebar`
     - `useSingleLine`
 - Cross-plugin:
-  - Imported by: 394 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 395 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×101
-    - `apps` ×74
+    - `apps` ×75
     - `conversations` ×52
     - `page` ×25
     - `ui` ×23

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useState } from "react";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 
 import {
@@ -62,6 +63,24 @@ afterEach(() => {
   resolveResult = { status: "pending" };
 });
 
+// A pane whose segment also carries VIEWS of its entity: an optional `:tab?`
+// and a keyed `;view`. Its body counts its own mounts.
+let viewBodyMounts = 0;
+function ViewBody() {
+  const [mount] = useState(() => ++viewBodyMounts);
+  return <div data-testid="view-body">{mount}</div>;
+}
+const viewRoute = defineRoute({
+  id: "sticky-guard-views",
+  segment: "views/:id/:tab?;view",
+});
+const viewPane = Pane.define({
+  route: viewRoute,
+  app: testApp,
+  useResolve: () => resolveResult,
+  component: ViewBody,
+});
+
 /** Mount the guard for `id` in a surface. Returned so a case can re-render it. */
 function guard(id: string) {
   return (
@@ -117,6 +136,25 @@ describe("sticky resolve guard", () => {
     expect(queryByText("Not Found")).toBeNull();
     // "Loading…" appears both as the fallback title and inside <Loading/>.
     expect(getAllByText("Loading…").length).toBeGreaterThan(0);
+  });
+
+  it("keeps the same pane instance when only a view param changes (`:tab?`, `;view`)", () => {
+    resolveResult = { status: "found" };
+    const views = (params: Record<string, string>) => (
+      <TestSurface store={store}>
+        <PaneResolveGuard pane={viewPane._internal} params={params} />
+      </TestSurface>
+    );
+    const { getByTestId, rerender } = render(views({ id: "a" }));
+    const first = getByTestId("view-body").textContent;
+
+    rerender(views({ id: "a", view: "grid" }));
+    rerender(views({ id: "a", tab: "notes", view: "roll" }));
+    expect(getByTestId("view-body").textContent).toBe(first);
+
+    // The entity's own address still remounts.
+    rerender(views({ id: "b", view: "roll" }));
+    expect(getByTestId("view-body").textContent).not.toBe(first);
   });
 
   it("keeps the pane mounted when a resolved resource fails transiently", () => {
