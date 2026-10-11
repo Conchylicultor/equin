@@ -20,7 +20,7 @@ import { chordToken } from "./token";
  * Bump it with any change to one of them; an index loaded at an older version
  * is reloaded from the snapshot.
  */
-export const INDEX_DERIVATION_VERSION = 2;
+export const INDEX_DERIVATION_VERSION = 3;
 
 /** What derivation reads of a section, from whichever source (the dump snapshot, the live API). */
 export type DeriveSectionInput = {

@@ -34,6 +34,8 @@ export {
   sampleBucket,
 } from "./sample";
 export { INDEX_DERIVATION_VERSION, deriveSection } from "./derive";
+export { repeatPeriod } from "./repeat";
+export type { LoopChord } from "./repeat";
 export type {
   DeriveSectionInput,
   DerivedSection,

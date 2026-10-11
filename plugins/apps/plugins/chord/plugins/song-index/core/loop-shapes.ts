@@ -8,6 +8,7 @@ import {
 } from "@plugins/integrations/plugins/hooktheory/core";
 import { CHORD_FEATURES, type ChordFeature } from "./features";
 import type { IndexedChord } from "./indexed-chord";
+import { repeatPeriod, type LoopChord } from "./repeat";
 import type { ChordToken } from "./token";
 
 // ── Loop shapes: which spans of a section the trainer can loop ───────────────
@@ -209,7 +210,8 @@ function enumerateBars(
  * The `phrase` windows: one per bar start, the shortest of `PHRASE_BARS` that
  * is `rich` — a longer one only while it loops within `PHRASE_MAX_SECONDS`
  * and holds at most `PHRASE_MAX_CHORDS` chords, so a fast song stretches to 8
- * bars and a slow one does not. With no rich length, the 4 bars as they are,
+ * bars and a slow one does not, and never to a replay of the shorter one (8
+ * bars that are the same 4 twice hold nothing more to hear). With no rich length, the 4 bars as they are,
  * unless no chord changes in them (a vamp), which no one learns from.
  */
 function enumeratePhrases(section: LoopSectionInput): LoopWindow[] {
@@ -228,12 +230,35 @@ function enumeratePhrases(section: LoopSectionInput): LoopWindow[] {
               w !== undefined &&
               w.rich &&
               w.chordCount <= PHRASE_MAX_CHORDS &&
-              fitsSeconds(section.tempos, w, PHRASE_MAX_SECONDS),
+              fitsSeconds(section.tempos, w, PHRASE_MAX_SECONDS) &&
+              repeatPeriod(windowChords(chords, w), w.endBeat - w.startBeat) >
+                short.endBeat - short.startBeat + BEAT_EPS,
           );
     if (pick !== undefined) windows.push(pick);
     else if (short.changeCount > 0) windows.push(short);
   }
   return windows;
+}
+
+/** The window's sounding chords, clipped to it, in beats from its start. */
+function windowChords(
+  chordsByBeat: readonly IndexedChord[],
+  window: { startBeat: number; endBeat: number },
+): LoopChord[] {
+  return chordsByBeat.flatMap((c) =>
+    c.reading.kind === "sound" &&
+    chordOverlapsWindow(c.chord, window.startBeat, window.endBeat)
+      ? [
+          {
+            start: Math.max(c.chord.beat, window.startBeat) - window.startBeat,
+            end:
+              Math.min(c.chord.beat + c.chord.duration, window.endBeat) -
+              window.startBeat,
+            token: c.reading.token,
+          },
+        ]
+      : [],
+  );
 }
 
 /**

@@ -841,6 +841,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/chord/song-index.LoopExtras`
               - `apps/chord/song-index.LoopExtrasSchema`
               - `apps/chord/song-index.parseChordToken`
+              - `apps/chord/song-index.repeatPeriod`
               - `apps/chord/song-index.TokenSetCount`
               - `apps/chord/vocabulary.appliedReading`
               - `apps/chord/vocabulary.chordLabel`
@@ -1129,6 +1130,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `IndexStatus`
               - `LoadScope`
               - `LoopCandidate`
+              - `LoopChord`
               - `LoopExtras`
               - `LoopSectionInput`
               - `LoopShape`
@@ -1193,6 +1195,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `NextChordCountSchema`
               - `nextChordsEndpoint`
               - `parseChordToken`
+              - `repeatPeriod`
               - `resolveLoadScope`
               - `resolveVideoFraction`
               - `SAMPLE_BUCKETS`

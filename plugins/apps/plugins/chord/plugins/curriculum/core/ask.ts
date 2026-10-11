@@ -1,4 +1,7 @@
-import type { ChordToken } from "@plugins/apps/plugins/chord/plugins/song-index/core";
+import {
+  repeatPeriod,
+  type ChordToken,
+} from "@plugins/apps/plugins/chord/plugins/song-index/core";
 import type { Blanks } from "./blanks";
 
 // ── Which boxes wait for an answer ───────────────────────────────────────────
@@ -15,6 +18,8 @@ export type AskedBox = {
   token: ChordToken;
   /** Beats from the window's start to the box's start. */
   gridStart: number;
+  /** How many beats the box lasts. */
+  gridSpan: number;
 };
 
 export type AskedOptions = {
@@ -29,7 +34,12 @@ export type AskedOptions = {
 
 /**
  * Which boxes of the round wait for an answer, in beat order. Every other box
- * is given. Called once, when the loop is dealt: a `random` draw is not
+ * is given.
+ *
+ * **A given box never gives an asked one away.** In a loop that replays
+ * itself (`repeatPeriod`: I–V–vi–IV twice), the blanks rule below applies to
+ * ONE pass, and every replay of an asked box is asked too — otherwise `half`
+ * would show the first pass and ask its exact copy. Called once, when the loop is dealt: a `random` draw is not
  * repeated for the same round.
  *
  * - `all`: every practised box;
@@ -52,6 +62,35 @@ export function askedPositions(
       `askedPositions: a window lasts a positive number of beats, got ${opts.windowBeats}`,
     );
   }
+  const byBeat = [...boxes].sort((a, b) => a.position - b.position);
+  const period = repeatPeriod(
+    byBeat.map((box) => ({
+      start: box.gridStart,
+      end: box.gridStart + box.gridSpan,
+      token: box.token,
+    })),
+    opts.windowBeats,
+  );
+  // Every pass holds the same boxes, so a box's place in its pass is its
+  // index modulo the pass's length.
+  const perPass = byBeat.length / Math.round(opts.windowBeats / period);
+  const firstPass = byBeat.slice(0, perPass);
+  const askedInPass = new Set(
+    askedInOnePass(firstPass, period, opts).map((box) =>
+      firstPass.indexOf(box),
+    ),
+  );
+  return byBeat
+    .filter((_, i) => askedInPass.has(i % perPass))
+    .map((box) => box.position);
+}
+
+/** The blanks rule over one pass of `windowBeats` beats. Never empty. */
+function askedInOnePass(
+  boxes: readonly AskedBox[],
+  windowBeats: number,
+  opts: AskedOptions,
+): AskedBox[] {
   const practised = boxes.filter((box) => opts.practised.has(box.token));
   const last = practised.at(-1);
   if (last === undefined) {
@@ -72,14 +111,11 @@ export function askedPositions(
       selected = drawHalf(practised, opts.random ?? Math.random);
       break;
     case "half":
-      selected = practised.filter(
-        (box) => box.gridStart >= opts.windowBeats / 2,
-      );
+      selected = practised.filter((box) => box.gridStart >= windowBeats / 2);
       break;
   }
 
-  const asked = selected.length === 0 ? [last] : selected;
-  return asked.map((box) => box.position).sort((a, b) => a - b);
+  return selected.length === 0 ? [last] : selected;
 }
 
 /** Half of `boxes`, rounded up, drawn without replacement (a partial Fisher–Yates). */

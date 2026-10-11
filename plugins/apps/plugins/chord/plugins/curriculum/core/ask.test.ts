@@ -10,10 +10,10 @@ const vi = token("9:3-4/0");
 
 /** A 16-beat loop: I, IV, V, I, one chord per bar. */
 const LOOP: AskedBox[] = [
-  { position: 0, token: I, gridStart: 0 },
-  { position: 1, token: IV, gridStart: 4 },
-  { position: 2, token: V, gridStart: 8 },
-  { position: 3, token: I, gridStart: 12 },
+  { position: 0, token: I, gridStart: 0, gridSpan: 4 },
+  { position: 1, token: IV, gridStart: 4, gridSpan: 4 },
+  { position: 2, token: V, gridStart: 8, gridSpan: 4 },
+  { position: 3, token: I, gridStart: 12, gridSpan: 4 },
 ];
 
 const asked = (
@@ -94,5 +94,48 @@ describe("askedPositions", () => {
 
   test("a window of no beats throws", () => {
     expect(() => asked(LOOP, { windowBeats: 0 })).toThrow(/positive number/);
+  });
+
+  describe("a loop that replays itself", () => {
+    /** I–IV–V–vi, then the same again: 8 bars, 32 beats. */
+    const TWICE: AskedBox[] = [I, IV, V, vi, I, IV, V, vi].map((t, i) => ({
+      position: i,
+      token: t,
+      gridStart: i * 4,
+      gridSpan: 4,
+    }));
+    const twice = (over: Partial<Parameters<typeof askedPositions>[1]>) =>
+      asked(TWICE, {
+        windowBeats: 32,
+        practised: new Set([I, IV, V, vi]),
+        ...over,
+      });
+
+    test("half: the second half of each pass, so the given pass is no answer key", () => {
+      expect(twice({ blanks: "half" })).toEqual([2, 3, 6, 7]);
+    });
+
+    test("first: the first box of each pass is given, the rest asked", () => {
+      expect(twice({ blanks: "first" })).toEqual([1, 2, 3, 5, 6, 7]);
+    });
+
+    test("random: the draw picks within one pass, and its replays follow", () => {
+      expect(twice({ blanks: "random", random: () => 0 })).toEqual([
+        0, 1, 4, 5,
+      ]);
+    });
+
+    test("a replay in another rhythm is not a repeat", () => {
+      const swung = TWICE.map((box) =>
+        box.position === 7 ? { ...box, gridStart: 30, gridSpan: 2 } : box,
+      );
+      expect(
+        asked(swung, {
+          windowBeats: 32,
+          blanks: "half",
+          practised: new Set([I, IV, V, vi]),
+        }),
+      ).toEqual([4, 5, 6, 7]);
+    });
   });
 });

@@ -85,7 +85,8 @@ training on, one per bar start: the 4 bars when they are **rich**
 a vamp or an I–V–I–V back-and-forth); else 8 bars when those are rich, hold at
 most 8 chords (one answer box each) and loop within 20 s at the document's
 tempo (a fast song: at 120 bpm in 4/4, 8 bars are 16 s; a section with no
-measurable tempo never stretches); else the 4 bars as they are — unless no
+measurable tempo never stretches) and are not the 4 bars played twice
+(`repeatPeriod`, also what the trainer's blanks rule deals repeats by); else the 4 bars as they are — unless no
 chord changes in them (one chord held or repeated), which is left out. Every
 window stores `rich`, and `find` orders `rich DESC, random()`: rich loops
 first, the plain ones only for a learner whose chords make too few rich ones.
@@ -353,6 +354,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `IndexStatus`
     - `LoadScope`
     - `LoopCandidate`
+    - `LoopChord`
     - `LoopExtras`
     - `LoopSectionInput`
     - `LoopShape`
@@ -417,6 +419,7 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `NextChordCountSchema`
     - `nextChordsEndpoint`
     - `parseChordToken`
+    - `repeatPeriod`
     - `resolveLoadScope`
     - `resolveVideoFraction`
     - `SAMPLE_BUCKETS`

@@ -30,6 +30,12 @@ askedPositions(boxes, { windowBeats, blanks, practised, random? }) → number[]
 // Called once, when the loop is dealt (trainer's dealLoop).
 ```
 
+**A given box never gives an asked one away.** A loop that replays itself
+(song-index's `repeatPeriod`: the same chords at the same offsets, pass after
+pass — I–V–vi–IV twice) is dealt by ONE pass: the blanks rule picks within
+the first pass, and every replay of an asked box is asked too. So Last half
+asks the second half of each pass, never a copy of a given first half.
+
 ## The catalog
 
 `buildCatalog(sets)` (pure, `catalog.ts`) turns the index's `countTokenSets`
@@ -262,6 +268,7 @@ A round nothing was typed into reads exactly like the next one, so after
     - `apps/chord/song-index.LoopExtras`
     - `apps/chord/song-index.LoopExtrasSchema`
     - `apps/chord/song-index.parseChordToken`
+    - `apps/chord/song-index.repeatPeriod`
     - `apps/chord/song-index.TokenSetCount`
     - `apps/chord/vocabulary.appliedReading`
     - `apps/chord/vocabulary.chordLabel`

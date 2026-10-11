@@ -250,6 +250,31 @@ type BoxRead = {
 
 type StripRead = { heading: string; song: string; boxes: BoxRead[] };
 
+/**
+ * How many passes the strip could be, judged by its rhythm alone (an unfilled
+ * box shows no chord): 1, and every k whose passes put their boxes at the same
+ * places. The trainer's rule (`askedPositions`) also compares the chords, so
+ * the real count is one of these.
+ */
+function passCounts(strip: StripRead): number[] {
+  const n = strip.boxes.length;
+  const counts = [1];
+  for (let k = 2; k <= n; k += 1) {
+    if (n % k !== 0) continue;
+    const perPass = n / k;
+    const same = strip.boxes.every((box, i) => {
+      const echo = strip.boxes[i + perPass];
+      return (
+        echo === undefined ||
+        (echo.beats === box.beats &&
+          Math.abs(echo.fraction - box.fraction - 1 / k) < 0.01)
+      );
+    });
+    if (same) counts.push(k);
+  }
+  return counts;
+}
+
 const BOX_LABEL =
   /^Chord (?<position>\d+), (?<beats>[\d.]+) beats?(?:: (?<chord>[^,]+)(?:, (?!given$|given,|right$|wrong$)(?<name>[^,]+))?)?(?<given>, given)?(?:, (?<mark>right|wrong))?$/;
 
@@ -578,10 +603,15 @@ await withBrowser(async ({ session }) => {
     const practisedBoxes =
       asked(strip).length +
       given(strip).filter((b) => isPractised(selection, b.chord)).length;
-    r.eq(
-      "at Random half the round asks half its practised boxes, rounded up",
-      asked(strip).length,
-      Math.ceil(practisedBoxes / 2),
+    // A loop that replays itself draws within one pass (`askedPositions`).
+    r.ok(
+      "at Random half the round asks half its practised boxes, rounded up — per pass when the loop replays itself",
+      passCounts(strip).some(
+        (passes) =>
+          asked(strip).length ===
+          passes * Math.ceil(practisedBoxes / passes / 2),
+      ),
+      `${String(asked(strip).length)} asked of ${String(practisedBoxes)}`,
     );
   }
 
@@ -593,7 +623,10 @@ await withBrowser(async ({ session }) => {
     strip = await nextSong(page, "a last-half round with more than one box");
   }
   r.note(`last-half round: ${stripText(strip)}`);
-  const secondHalf = asked(strip).every((box) => box.fraction >= 0.49);
+  // The second half of the loop — or of each pass, when it replays itself.
+  const secondHalf = passCounts(strip).some((passes) =>
+    asked(strip).every((box) => (box.fraction * passes) % 1 >= 0.49),
+  );
   const fallback =
     asked(strip).length === 1 &&
     strip.boxes.filter((b) => b.fraction >= 0.49).every((b) => b.given);

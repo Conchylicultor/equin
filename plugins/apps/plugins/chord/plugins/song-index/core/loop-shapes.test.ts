@@ -230,6 +230,13 @@ describe("phrase", () => {
     ).toEqual([[1, 4, false]]);
   });
 
+  it("never stretches to the same 4 bars played twice", () => {
+    // I–IV–V–V twice: the 8 bars are rich, but hold nothing the 4 do not.
+    expect(
+      phrases(section(progression([1, 4, 5, 5, 1, 4, 5, 5], 4))).slice(0, 1),
+    ).toEqual([[1, 4, false]]);
+  });
+
   it("never stretches without a tempo to measure it by", () => {
     expect(
       phrases(
