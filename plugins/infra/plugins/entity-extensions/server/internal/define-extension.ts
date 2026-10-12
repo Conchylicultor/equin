@@ -104,13 +104,23 @@ export interface EntityExtension<
     id: string,
     exec?: DbExecutor,
   ): Promise<ExtensionTable<F, D>["$inferSelect"] | undefined>;
+  // Insert the row or overwrite it: every own column without a DB default is
+  // required, since the INSERT half must stand on its own (Postgres checks
+  // NOT NULL on the proposed row before resolving the conflict).
   upsert(
+    id: string,
+    values: Omit<ExtensionTable<F, D>["$inferInsert"], K | ExtensionTimestamp>,
+    exec?: DbExecutor,
+  ): Promise<ExtensionTable<F, D>["$inferSelect"]>;
+  // Change some columns of an EXISTING row; `undefined` when there is none
+  // (nothing is inserted).
+  update(
     id: string,
     patch: Partial<
       Omit<ExtensionTable<F, D>["$inferInsert"], K | ExtensionTimestamp>
     >,
     exec?: DbExecutor,
-  ): Promise<ExtensionTable<F, D>["$inferSelect"]>;
+  ): Promise<ExtensionTable<F, D>["$inferSelect"] | undefined>;
   delete(id: string, exec?: DbExecutor): Promise<void>;
   // This side table as a join of its parent's collection
   // (`serveCollection(c, { from: parent, joins: [ext.join("playback")] })`):
@@ -247,6 +257,28 @@ export function defineExtension<
         .insert(table)
         .values({ ...patch, [key]: id })
         .onConflictDoUpdate({ target: keyColumn, set })
+        .returning();
+      return rows[0];
+    },
+    async update(
+      id: string,
+      patch: Record<string, unknown>,
+      exec: DbExecutor = db,
+    ) {
+      // An empty patch: nothing to set, so just read the row back.
+      const empty = Object.values(patch).every((v) => v === undefined);
+      if (empty) {
+        const rows = await exec
+          .select()
+          .from(table)
+          .where(eq(keyColumn, id))
+          .limit(1);
+        return rows[0];
+      }
+      const rows = await exec
+        .update(table)
+        .set(patch)
+        .where(eq(keyColumn, id))
         .returning();
       return rows[0];
     },

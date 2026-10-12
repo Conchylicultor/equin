@@ -152,7 +152,13 @@ async function runResolve(
   if (work.release) {
     // Give the earlier choice back first, so the walk (which stops the
     // moment a video is set) knows the resolver owns the choice again.
-    await songUgAlignment.upsert(songId, { videoId: null, candidates });
+    const released = await songUgAlignment.update(songId, {
+      videoId: null,
+      candidates,
+    });
+    if (released === undefined) {
+      throw new Error(`${songId}: no alignment row to release the video of`);
+    }
   }
   const progress = async (phase: AlignmentPhase | null): Promise<void> => {
     await songUgAlignment.upsert(songId, {

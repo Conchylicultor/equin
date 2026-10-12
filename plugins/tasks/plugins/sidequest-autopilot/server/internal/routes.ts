@@ -29,6 +29,11 @@ export const handleAnswerTriage = implement(
         `"${body.answer}" is not one of triage's answers (${row.answers.join(", ")}).`,
       );
     }
-    await tasksSidequestTriage.upsert(params.taskId, { answer: body.answer });
+    const updated = await tasksSidequestTriage.update(params.taskId, {
+      answer: body.answer,
+    });
+    if (updated === undefined) {
+      throw new HttpError(404, `Task ${params.taskId} has not been triaged.`);
+    }
   },
 );

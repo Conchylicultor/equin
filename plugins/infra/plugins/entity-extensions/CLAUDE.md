@@ -40,7 +40,8 @@ export const _songTransposeExt = songTranspose.table;
 ```
 
 ```ts
-await songTranspose.upsert(songId, { semitones: 3 });
+await songTranspose.upsert(songId, { semitones: 3 });   // insert or overwrite
+await songTranspose.update(songId, { semitones: 4 });   // existing row only; undefined if none
 const row = await songTranspose.get(songId);   // full row, server-only columns included
 await songTranspose.delete(songId);
 ```
@@ -62,7 +63,7 @@ Built on `defineEntity`. The table is `<parent>_ext_<name>`; the key column is t
 - `columns` — `default` / `name` / `references` for the plugin's **own** fields (`defineEntity`'s `meta.columns`). The key and the timestamps are the primitive's, so they are not declarable here.
 - `indexes` — see below.
 
-The handle is an `Entity` (`name`, `table`, `schema`, `wireColumns`) plus `key`, `get(id)`, `upsert(id, patch)` and `delete(id)`, all keyed on `table[key]`. `schema` **is** `shape.schema` — the same object, not a rebuilt one. `upsert`'s patch is the plugin's own columns only (DB-defaulted ones optional); it never writes `updatedAt` (see below).
+The handle is an `Entity` (`name`, `table`, `schema`, `wireColumns`) plus `key`, `get(id)`, `upsert(id, values)`, `update(id, patch)` and `delete(id)`, all keyed on `table[key]`. `schema` **is** `shape.schema` — the same object, not a rebuilt one. `upsert`'s values are the plugin's own columns, every one without a DB default **required** (tsc): it is an `INSERT … ON CONFLICT DO UPDATE`, and Postgres checks NOT NULL on the proposed insert row before it sees the conflict, so a partial upsert fails even when the row exists. To change some columns of an existing row, use `update` (a plain `UPDATE`; `undefined` when there is no row). Neither writes `updatedAt` (see below).
 
 ### The key is named after the parent
 

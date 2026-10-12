@@ -88,6 +88,12 @@ const thing = defineExtension(parent, "thing", thingShape, {
   columns: { semitones: { default: 0 }, enabled: { default: false } },
   indexes: (t, b) => [b.index("label").on(t.label, t.createdAt)],
 });
+// Every own column optional on insert, so an empty upsert is well-typed.
+const bareShape = defineExtensionShape({
+  key: "songId",
+  fields: { label: nullable(textField()) },
+});
+const bare = defineExtension(parent, "bare", bareShape);
 
 // ── DDL: byte-identical to the old primitive ────────────────────────────────
 const dialect = new PgDialect();
@@ -178,13 +184,14 @@ describe("defineExtension wire", () => {
 
 // ── Accessors: every one goes through the key column ────────────────────────
 describe("defineExtension accessors", () => {
-  test("get / upsert / delete key on parent_id", async () => {
+  test("get / upsert / update / delete key on parent_id", async () => {
     statements.length = 0;
     await thing.get("s1", recordingDb);
-    await thing.upsert("s1", { semitones: 2 }, recordingDb);
+    await thing.upsert("s1", { semitones: 2, source: "user" }, recordingDb);
+    await thing.update("s1", { label: "x" }, recordingDb);
     await thing.delete("s1", recordingDb);
 
-    const [get, upsert, del] = statements;
+    const [get, upsert, update, del] = statements;
     expect(get?.sql).toContain(`where "ext_probe_ext_thing"."parent_id" = $1`);
     expect(get?.params).toEqual(["s1", 1]);
 
@@ -192,6 +199,14 @@ describe("defineExtension accessors", () => {
     expect(upsert?.sql).toContain(`on conflict ("parent_id") do update`);
     expect(upsert?.params).toContain("s1");
     expect(upsert?.params).toContain(2);
+
+    expect(update?.sql).toMatch(
+      /^update "ext_probe_ext_thing" set "label" = \$1/,
+    );
+    expect(update?.sql).toContain(
+      `where "ext_probe_ext_thing"."parent_id" = $2`,
+    );
+    expect(update?.sql).not.toContain("insert");
 
     expect(del?.sql).toBe(
       `delete from "ext_probe_ext_thing" where "ext_probe_ext_thing"."parent_id" = $1`,
@@ -242,7 +257,7 @@ describe("defineExtension derived updatedAt", () => {
 
   test("upsert never writes updated_at", async () => {
     statements.length = 0;
-    await thing.upsert("s1", { semitones: 2, label: "x" }, recordingDb);
+    await thing.upsert("s1", { semitones: 2, label: "x", source: "user" }, recordingDb);
     const [upsert] = statements;
     expect(conflictSet(upsert?.sql)).toBe(`"semitones" = $4, "label" = $5`);
     expect(bindsADate(upsert?.params)).toBe(false);
@@ -250,8 +265,8 @@ describe("defineExtension derived updatedAt", () => {
 
   test("an empty patch rewrites the key with its own value", async () => {
     statements.length = 0;
-    await thing.upsert("s1", {}, recordingDb);
-    await thing.upsert("s2", { label: undefined }, recordingDb);
+    await bare.upsert("s1", {}, recordingDb);
+    await bare.upsert("s2", { label: undefined }, recordingDb);
     for (const [i, id] of ["s1", "s2"].entries()) {
       const upsert = statements[i];
       expect(conflictSet(upsert?.sql)).toBe(`"parent_id" = $2`);
@@ -259,7 +274,28 @@ describe("defineExtension derived updatedAt", () => {
       expect(upsert?.params.filter((p) => p === id)).toHaveLength(2);
     }
   });
+
+  test("update never writes updated_at; an empty patch only reads", async () => {
+    statements.length = 0;
+    await thing.update("s1", { semitones: 3 }, recordingDb);
+    await thing.update("s1", { label: undefined }, recordingDb);
+    const [update, read] = statements;
+    expect(update?.sql).toMatch(
+      /^update "ext_probe_ext_thing" set "semitones" = \$1 /,
+    );
+    expect(bindsADate(update?.params)).toBe(false);
+    expect(read?.sql).toMatch(/^select /);
+  });
 });
+
+// Never run: an upsert must carry every column without a DB default, since
+// its INSERT half is checked for NOT NULL before the conflict is resolved.
+async function _upsertTypeTests(): Promise<void> {
+  // @ts-expect-error — `source` has no default, so an upsert must give it.
+  await thing.upsert("s1", { semitones: 2 }, recordingDb);
+  // A partial write to an existing row is `update`'s.
+  await thing.update("s1", { semitones: 2 }, recordingDb);
+}
 
 // Never run (it would register a table): declarations the types must refuse.
 function _touchedByTypeTests(): void {
@@ -277,6 +313,7 @@ function _touchedByTypeTests(): void {
   });
 }
 void _touchedByTypeTests;
+void _upsertTypeTests;
 
 describe("defineExtension throws", () => {
   test("on a reserved field, at shape definition", () => {

@@ -181,10 +181,12 @@ export const handleRefuseUgAlignmentVideo = implement(
     if (!repick) {
       // Recorded for the candidate list; nothing else moves.
       if (candidates.some((c, i) => c !== row.candidates[i])) {
-        await songUgAlignment.upsert(params.id, {
-          status: row.status,
+        const updated = await songUgAlignment.update(params.id, {
           candidates,
         });
+        if (updated === undefined) {
+          throw new HttpError(404, `Song ${params.id} has no alignment.`);
+        }
       }
       return { resolving: false };
     }
