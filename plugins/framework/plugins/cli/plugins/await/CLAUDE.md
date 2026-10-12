@@ -45,7 +45,7 @@ Three records, none of them new:
 | is my op still running? | the op's flocked marker `~/.singularity/worktrees/<slug>/ops/<opId>.json` (`infra/worktree`) |
 | what did it decide? | the op log's terminal record for that `opId` (`debug/profiling/op-log`) |
 | what is it blocked on? | `readOpenWait(opId)` — the same feed the build lock prints from |
-| build / test detail | the deploy receipt, and `test-status.json` |
+| build / test detail | the deploy receipt, and the run's own `test-status-<opId>.json` (a test run that joined an in-flight identical run carries the adopted verdict in its own record) |
 
 **The op log wins over the marker.** Every writer appends its terminal record
 BEFORE it releases its marker, so the verdict is on disk by the time the marker

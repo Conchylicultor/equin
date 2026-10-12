@@ -99,6 +99,8 @@ const WAIT_PHASE: Record<WaitKind, RowPhase> = {
   "build-lock": "queued",
   "host-grant": "queued",
   "duress-valve": "held",
+  // Waiting on an identical run's verdict is waiting in an ordinary line.
+  "in-flight": "queued",
 };
 
 export function phaseOf(row: OpRow): RowPhase {

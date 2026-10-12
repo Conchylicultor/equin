@@ -299,6 +299,7 @@ run everywhere.
     - `planMigration`
     - `PLUGINS_DIR`
     - `pruneWorktreeCheckArtifacts`
+    - `pruneWorktreeTestArtifacts`
     - `readCheckoutOwner`
     - `relativeToDataRoot`
     - `releaseIdentity`

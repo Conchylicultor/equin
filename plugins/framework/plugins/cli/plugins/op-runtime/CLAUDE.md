@@ -35,6 +35,29 @@ what the outcome means, and its own exit code (the primitive never calls
 environment (`inheritedGrant()`) means no marker, no record, no handlers — the
 parent owns all three — and the body spends the inherited units.
 
+### Run-level single-flight (`opts.flight`)
+
+`check` and `test` opt in: N identical requests in one worktree at once cost
+one run (2026-10-09: ~14 subagents each ran `check type-check`, 11 concurrent
+15–20 GB workers). The command computes a key — its selection plus the
+**tree hash** (the correctness bar: a verdict is only adopted from a run that
+started on the tree the joiner saw) — and `withDirectOp` wraps the grant step in
+`packages/single-flight` under `worktreeArtifacts.opFlights(slug)`:
+
+- **Joined BEFORE the grant**, because a `Grant` cannot be released early: a
+  duplicate that queued first would hold host CPU for a run it never does. A
+  joiner still writes its marker and `requested`, opens an `in-flight` wait
+  (reason `<kind> <leaderOpId>`), never calls `withHostGrant`, and completes
+  with the leader's outcome via `flight.adopt` (the command prints the leader's
+  transcript / failure list).
+- **Only `success` / `failed` are shared.** `error` says nothing about the work;
+  a joiner whose leader died, threw or published nothing leads itself.
+- **A nested op leads but never waits** (`tryLead`). A top-level leader can be
+  queued for a host grant whose units the nested op's parent holds; joining it
+  would deadlock. Busy → the nested op runs unshared.
+- `--no-cache` / `SINGULARITY_CHECK_NO_CACHE=1` and a fail-open (null) tree
+  hash mean no flight. `e2e` is not opted in (live browser, arbitrary args).
+
 `build` and `push` are **not** direct ops (build lock + duress valve + host grant;
 the push mutex) and keep their own lifecycles. Every seam is injectable
 (`DirectOpDeps`), which is how `direct-op.test.ts` asserts the order and the
@@ -127,10 +150,12 @@ the shared Playwright harness.
     - `CheckSubprocessResult`
     - `DirectOpContext`
     - `DirectOpDeps`
+    - `DirectOpFlight`
     - `DirectOpOptions`
     - `FatalSignal`
     - `FatalSignalExitOptions`
     - `HoldOutcome`
+    - `JoinedRun`
     - `ResolvedReceipt`
     - `SignalOriginTapOptions`
     - `SignalTermination`

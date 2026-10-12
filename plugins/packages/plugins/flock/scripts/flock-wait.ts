@@ -1,12 +1,12 @@
 #!/usr/bin/env bun
 /**
- * Host-semaphore wait subprocess — waits for ONE lock file to become holdable and
+ * `waitForFlock`'s subprocess — waits for ONE lock file to become holdable and
  * signals its parent, without ever freezing on the blocking flock itself.
  *
- * Replaces the old `broker.ts`. Two roles, one script: the parent
- * (`server/internal/host-semaphore.ts`) spawns one of these per slot during fan-out
- * AND one for the turnstile. The single lock file to wait on arrives via env
- * (`HOST_SEM_LOCK_FILE`).
+ * Spawned by `core/internal/wait.ts` (`waitForFlock`), one per wait: the
+ * host-semaphore spawns one per slot during fan-out AND one for the turnstile,
+ * single-flight one per joiner. The single lock file to wait on arrives via env
+ * (`FLOCK_WAIT_FILE`). Moved here from `packages/host-semaphore/scripts/`.
  *
  * Design — why the flock lives on a WORKER thread, not here:
  *   A synchronous FFI `flock(LOCK_EX)` has no yield point; the thread it runs on is
@@ -30,9 +30,11 @@ import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { Worker } from "node:worker_threads";
 
-const file = process.env.HOST_SEM_LOCK_FILE;
+const file = process.env.FLOCK_WAIT_FILE;
 if (!file) {
-  throw new Error("flock-wait: HOST_SEM_LOCK_FILE must be set to one absolute lock-file path");
+  throw new Error(
+    "flock-wait: FLOCK_WAIT_FILE must be set to one absolute lock-file path",
+  );
 }
 
 mkdirSync(dirname(file), { recursive: true });
@@ -40,7 +42,9 @@ mkdirSync(dirname(file), { recursive: true });
 // The worker does the blocking flock off this main thread. `unref()` so a still-
 // blocked worker never keeps our loop alive on its own — the stdin drain below is
 // the sole thing keeping us alive, so EOF always wins.
-const worker = new Worker(join(import.meta.dir, "flock-block.ts"), { workerData: { file } });
+const worker = new Worker(join(import.meta.dir, "flock-block.ts"), {
+  workerData: { file },
+});
 worker.unref();
 
 worker.on("message", () => {
@@ -53,7 +57,11 @@ worker.on("message", () => {
     process.stdout.write("granted\n");
   } catch (err) {
     const code = (err as NodeJS.ErrnoException | undefined)?.code;
-    if (code === "EPIPE" || code === "EBADF" || code === "ERR_STREAM_DESTROYED") {
+    if (
+      code === "EPIPE" ||
+      code === "EBADF" ||
+      code === "ERR_STREAM_DESTROYED"
+    ) {
       process.exit(0);
     }
     throw err;

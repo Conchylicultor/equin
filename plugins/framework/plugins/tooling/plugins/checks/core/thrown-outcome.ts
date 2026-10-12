@@ -17,6 +17,12 @@ export interface CheckOutcome {
   durationMs: number;
   wallStart: number;
   cached: boolean;
+  /**
+   * The run whose verdict this is, when this run JOINED another run's
+   * in-flight check instead of running it (`check-flight.ts`): its run id.
+   * `null` when this run decided the check itself (ran it, or hit the cache).
+   */
+  sharedFrom: string | null;
   observations: CheckObservation[];
 }
 
@@ -72,6 +78,7 @@ export function thrownOutcome(
     durationMs: run.durationMs,
     wallStart: run.wallStart,
     cached: false,
+    sharedFrom: null,
     observations: run.observations,
   };
 }

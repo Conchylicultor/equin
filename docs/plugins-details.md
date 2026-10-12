@@ -18767,7 +18767,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/web-artifacts.carryForwardServedEntries`
         - **`check`** — `./singularity check` — run the repo validation checks (all, a named subset, or one scope). The only in-process caller of runChecks(): `build` and `push` each spawn it as a subprocess, so their `checks ✓` is one claim.
           - Cli:
-            - Uses: `framework/cli/op-runtime.withDirectOp`
+            - Uses:
+              - `framework/cli/op-runtime.DirectOpFlight`
+              - `framework/cli/op-runtime.withDirectOp`
           - Exemptions:
             - Exempts itself from: `check-runner-safety/no-adhoc-check-runner` — `cli/run.ts` (sanctioned)
         - **`db`** — `./singularity db` — worktree database operations; today just `db fork`, which gives a hand-made `git worktree add` checkout the DB fork it never got.
@@ -18855,10 +18857,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CheckSubprocessResult`
               - `DirectOpContext`
               - `DirectOpDeps`
+              - `DirectOpFlight`
               - `DirectOpOptions`
               - `FatalSignal`
               - `FatalSignalExitOptions`
               - `HoldOutcome`
+              - `JoinedRun`
               - `ResolvedReceipt`
               - `SignalOriginTapOptions`
               - `SignalTermination`
@@ -18946,6 +18950,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`test`** — `./singularity test` — the ONLY way to run tests: both runners (bun:test for co-located logic suites, vitest for jsdom suites), with a summary naming both buckets so a green-but-partial result is impossible.
           - Core:
             - Uses:
+              - `infra/paths.pruneWorktreeTestArtifacts`
               - `infra/paths.worktreeArtifacts`
               - `infra/paths.worktreeDataDir`
             - Exports (types):
@@ -18955,10 +18960,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TestStatus`
             - Exports (values):
               - `parseJunit`
+              - `readLatestTestStatus`
               - `readTestStatus`
+              - `testFailureLines`
               - `writeTestStatus`
           - Cli:
-            - Uses: `framework/cli/op-runtime.withDirectOp`
+            - Uses:
+              - `framework/cli/op-runtime.DirectOpFlight`
+              - `framework/cli/op-runtime.withDirectOp`
         - **`upstream`** — `./singularity upstream status|merge` — what the repo this checkout was cloned from has that local main does not, and the one sanctioned merge that brings it into a worktree branch.
     - **`hook-value`** — A React hook carried as a value: the Hook<F> brand, and the two lint rules that keep every binding holding one named use* (the React Compiler recognises hooks by name only and memoizes any other call).
       - Core:
@@ -19286,7 +19295,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `plugin-meta/plugin-refs`
         - **`checks`** — Check runner and built-in checks for ./singularity check
           - Core:
-            - Uses: 42 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 44 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling/exempt` ×7
               - `reports/check-thread-stall` ×7
               - `framework/tooling` ×5
@@ -19298,7 +19307,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/macrotask-yield` ×2
               - `reports/outbox` ×2
               - `infra/file-sink.defineFileSink`
+              - `packages/flock.flockTry`
               - `packages/semaphore.createSemaphore`
+              - `packages/single-flight.singleFlight`
               - `plugin-meta/plugin-tree.buildStructureTreeOnce`
             - Exports (types):
               - `CandidateSource`
@@ -19328,6 +19339,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `checkCollectedDir`
               - `computeCheckSourceHash`
+              - `computeTreeHash`
               - `currentScanView`
               - `fingerprint`
               - `gitGrepList`
@@ -19346,6 +19358,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `publishWarmBase`
               - `readCheckProgress`
               - `readProgramFileList`
+              - `readTranscriptVerdict`
               - `realGitFacts`
               - `repoProgram`
               - `requestedJobs`
@@ -22511,6 +22524,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `planMigration`
           - `PLUGINS_DIR`
           - `pruneWorktreeCheckArtifacts`
+          - `pruneWorktreeTestArtifacts`
           - `readCheckoutOwner`
           - `relativeToDataRoot`
           - `releaseIdentity`
@@ -23053,7 +23067,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/jobs/supervised-job` (0 debt)
           - `infra/launcher` (0 debt)
           - `infra/spawn` (0 debt)
-          - `packages/host-semaphore` (0 debt)
+          - `packages/flock` (0 debt)
       - Plugins:
         - **`daemon`** — defineDaemon: the one declared long-lived process or thread a backend runs on its own — a named, described declaration (startedBy boot | on-demand, where every-worktree | main | host-singleton, restart never | backoff) whose spawnProcess / spawnWorker supervise a child process or Bun Worker (one respawn loop: doubling backoff, give-up after repeated rapid exits, healthy on survival or a ready signal), and whose launchDetached / attach follow a detached process by its pid file. Records per declaration its instances (pid, since, restarts, last exit) and each incarnation as a run for the Background activity catalog (onDaemonActivity / listDaemons / daemonRecentRuns).
           - Cross-plugin:
@@ -24271,27 +24285,42 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `canonicalJson`
           - `canonicalParams`
-    - **`flock`** — Kernel advisory file locking: flockTry/flockRelease over libc flock(2). The one lock ownership the kernel releases on process death (SIGKILL included) and that consults no pid.
+    - **`flock`** — Kernel advisory file locking: flockTry/flockRelease over libc flock(2), and waitForFlock — a push-based blocking acquire run in a child so the event loop never freezes. The one lock ownership the kernel releases on process death (SIGKILL included) and that consults no pid.
       - Cross-plugin:
         - Imported by:
+          - `framework/tooling/checks`
           - `infra/spawn`
           - `infra/worktree`
           - `packages/host-semaphore`
+          - `packages/single-flight`
+      - Exemptions:
+        - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `core/internal/wait.ts` (sanctioned)
       - Server:
+        - Exports (types):
+          - `HeldFlock`
+          - `WaitForFlockOptions`
         - Exports (values):
           - `flockRelease`
           - `flockTry`
+          - `waitForFlock`
       - Core:
-        - Exports (types): `ParentLifeline`
+        - Exports (types):
+          - `HeldFlock`
+          - `ParentLifeline`
+          - `WaitForFlockOptions`
         - Exports (values):
           - `exitWithParent`
           - `flockRelease`
           - `flockTry`
           - `holdParentLifeline`
           - `PARENT_LIFELINE_ENV`
+          - `waitForFlock`
     - **`host-semaphore`** — Cross-process concurrency primitive: createHostSemaphore bounds work across processes via flock slot files (the host-wide twin of packages/semaphore).
       - Server:
-        - Uses: `packages/flock.flockTry`
+        - Uses:
+          - `packages/flock.flockTry`
+          - `packages/flock.HeldFlock`
+          - `packages/flock.waitForFlock`
         - Exports (types):
           - `AcquireHooks`
           - `HostSemaphore`
@@ -24300,8 +24329,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `createHostSemaphore`
       - Cross-plugin:
         - Imported by: `infra/host/host-admission`
-      - Exemptions:
-        - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `server/internal/host-semaphore.ts` (sanctioned)
     - **`inflight`** — In-flight request deduplicator: createInflight() collapses concurrent callers sharing a key onto one execution, plus a caller-supplied freshness floor (notBefore) that supersedes rather than joins a flight older than a change the caller already knows about.
       - Cross-plugin:
         - Imported by:
@@ -24402,6 +24429,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `readSignalOriginLines`
               - `SIGNAL_ORIGIN_FILE`
+    - **`single-flight`** — Cross-process single-flight: singleFlight(opts, lead) lets N processes asking for the same keyed work at once run it once — the first takes a kernel flock and leads, the rest wait on the lock push-based (waitForFlock) and adopt the verdict it publishes, re-leading only when no adoptable verdict from a run in flight since they arrived exists.
+      - Core:
+        - Uses:
+          - `packages/flock.flockTry`
+          - `packages/flock.HeldFlock`
+          - `packages/flock.waitForFlock`
+        - Exports (types):
+          - `Flight`
+          - `FlightLeader`
+          - `Publish`
+          - `SingleFlightOptions`
+        - Exports (values):
+          - `singleFlight`
+          - `tryLead`
+      - Cross-plugin:
+        - Imported by: `framework/tooling/checks`
     - **`sleep-clock`** — How long the machine slept between two reads: the difference between the OS clock that keeps running through sleep and the one that pauses. Exact, read through bun:ffi on macOS; says so where it cannot tell.
       - Core:
         - Exports (types):

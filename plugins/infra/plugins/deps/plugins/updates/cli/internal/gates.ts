@@ -6,7 +6,7 @@ import {
 import { runtimePath } from "@plugins/infra/plugins/launcher/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { readCheckProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { readTestStatus } from "@plugins/framework/plugins/cli/plugins/test/core";
+import { readLatestTestStatus } from "@plugins/framework/plugins/cli/plugins/test/core";
 import type { GateResult } from "../../core/internal/compare";
 import type { UpdaterSmoke } from "../../core/internal/updater";
 
@@ -66,7 +66,10 @@ export async function runChecks(
   return { gate: "checks", failures };
 }
 
-/** Every test (or only `paths`), read back from `test-status.json`. */
+/**
+ * Every test (or only `paths`), read back from the run's `test-status-<opId>.json`
+ * — the newest run, which must have started after this call did.
+ */
 export async function runTests(
   root: string,
   slug: Namespace,
@@ -74,14 +77,14 @@ export async function runTests(
 ): Promise<GateResult> {
   const startedAt = new Date().toISOString();
   const exitCode = await singularity(root, ["test", ...paths]);
-  const status = readTestStatus(slug);
+  const status = readLatestTestStatus(slug);
   if (
     status === null ||
     status.startedAt < startedAt ||
     status.status === "running"
   ) {
     throw new Error(
-      `\`./singularity test\` exited ${exitCode} but did not record a finished run in test-status.json — cannot tell which tests failed.`,
+      `\`./singularity test\` exited ${exitCode} but did not record a finished run in test-status-<opId>.json — cannot tell which tests failed.`,
     );
   }
   // A file that stops reporting on the new toolchain most likely crashes while

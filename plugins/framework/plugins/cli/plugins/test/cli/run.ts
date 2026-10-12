@@ -1,7 +1,10 @@
 import { existsSync, readFileSync, rmSync, statSync } from "fs";
 import { join, relative, resolve } from "path";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
-import { withDirectOp } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
+import {
+  withDirectOp,
+  type DirectOpFlight,
+} from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 import { cpuBudget } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import {
   getWorktreeRoot,
@@ -10,11 +13,14 @@ import {
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import {
   parseJunit,
+  readTestStatus,
+  testFailureLines,
   writeTestStatus,
   type TestRunnerName,
   type TestRunnerOutcome,
   type TestStatus,
 } from "@plugins/framework/plugins/cli/plugins/test/core";
+import { computeTreeHash } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
   TEST_FILE_GLOB,
   isTestFilePath,
@@ -110,6 +116,60 @@ function runnerOutcome(
   return { runner, exitCode, files: files.length, failures, unreported };
 }
 
+/**
+ * The run-level single-flight for a test run: an identical `./singularity test`
+ * already in flight in this worktree — the same test FILES (however the paths
+ * that selected them were spelled), on the same TREE — is joined instead of
+ * run again. `undefined` (no flight) when the tree hash is unavailable
+ * (`computeTreeHash` fails open): with no hash there is no correctness bar.
+ *
+ * The joiner writes its OWN `test-status-<opId>.json` — the leader's runners,
+ * marked `adoptedFrom` — so `await` reads every test op's verdict the same way,
+ * by its own id, and prints the failure summary `await` renders.
+ */
+function testFlight(
+  files: readonly string[],
+  targets: string[],
+  treeHash: string | null,
+): DirectOpFlight<"test"> | undefined {
+  if (treeHash === null) return undefined;
+  return {
+    key: JSON.stringify({ files: [...files].sort(), treeHash }),
+    adopt: ({ outcome, leader }, ctx) => {
+      const ago = Math.max(
+        0,
+        Math.round((Date.now() - leader.startedAt) / 1000),
+      );
+      console.log(
+        `Joined in-flight test ${leader.id} (same files, same tree, started ${ago}s ago) — its verdict: ${outcome}.`,
+      );
+      const led = readTestStatus(ctx.slug, leader.id);
+      if (led === null) {
+        // The verdict is still the leader's; only the detail is gone.
+        console.error(
+          `(the leader's test record is gone: ${worktreeArtifacts.testStatus(ctx.slug, leader.id)})`,
+        );
+        return outcome;
+      }
+      const now = new Date().toISOString();
+      const own: TestStatus = {
+        opId: ctx.opId,
+        pid: process.pid,
+        startedAt: now,
+        targets,
+        status: outcome === "success" ? "passed" : "failed",
+        finishedAt: now,
+        runners: led.runners,
+        adoptedFrom: leader.id,
+      };
+      writeTestStatus(ctx.slug, own);
+      for (const line of testFailureLines(own)) console.log(line);
+      if (outcome !== "success") console.error("\nFAILED (adopted)");
+      return outcome;
+    },
+  };
+}
+
 const run: CliAction<[string[]], object> = async (paths) => {
   const root = await getWorktreeRoot();
   const targets = paths.length > 0 ? paths : [DEFAULT_TARGET];
@@ -169,9 +229,16 @@ const run: CliAction<[string[]], object> = async (paths) => {
   // sized to the core count, so `--maxWorkers=<units>` is what makes the
   // grant real. This asymmetry is deliberate — do not "fix" it into symmetry
   // by capping bun, which would cap nothing.
+  // The tree hash, before the op: the run-level single-flight is keyed on it, and
+  // a duplicate must find the in-flight run before it queues for a host slot.
+  const treeHash = await computeTreeHash(root);
+
   const outcome = await withDirectOp(
     "test",
-    { max: cpuBudget().B },
+    {
+      max: cpuBudget().B,
+      flight: testFlight([...found], runnerArgs, treeHash),
+    },
     async (grant, ctx) => {
       const env = { ...process.env, ...grant.env() };
       // The run's machine-readable record, written before either runner starts

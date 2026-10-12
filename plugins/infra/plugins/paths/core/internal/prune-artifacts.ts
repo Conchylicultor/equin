@@ -91,6 +91,23 @@ const CHECK_FAMILY: ArtifactFamily = {
 };
 
 /**
+ * How many recent per-run test records (`test-status-<opId>.json`) to retain
+ * per worktree. Same disk-bound rationale and number as the families above.
+ */
+export const TEST_ARTIFACTS_RETENTION = 50;
+
+// Test run records: one always-id-keyed file per run. Disjoint from the JUnit
+// reports (`test-<opId>-<runner>.xml`, deleted by the test command once read)
+// by suffix, and from every other family by prefix.
+const TEST_FAMILY: ArtifactFamily = {
+  patterns: [{ prefix: "test-status-", suffix: ".json" }],
+  tmpPrefixes: ["test-status-"],
+};
+
+/** The one legacy fixed-path test record, reaped alongside the family above. */
+const LEGACY_TEST_STATUS = "test-status.json";
+
+/**
  * How many recent supervised-run artifact sets to retain per worktree, PER KIND.
  * A "set" is the two files sharing one run: `<kindId>-<runId>.log` and
  * `<kindId>-<runId>.exit-code`.
@@ -290,4 +307,23 @@ export function pruneWorktreeCheckArtifacts(
   keep: number = CHECK_ARTIFACTS_RETENTION,
 ): void {
   pruneCheckArtifactsInDir(worktreeDataDir(name), keep);
+}
+
+/**
+ * Directory-scoped test prune, split out so it is testable against a throwaway
+ * dir. Also reaps the legacy fixed-path `test-status.json`, written by every run
+ * before the record became per-op — it would otherwise sit beside the per-run
+ * files holding whichever run last finished.
+ */
+export function pruneTestArtifactsInDir(dir: string, keep: number): void {
+  pruneArtifactsInDir(dir, TEST_FAMILY, keep);
+  unlinkQuiet(dir, LEGACY_TEST_STATUS);
+}
+
+/** Cap the per-run test records in one worktree's data dir to the newest `keep` run ids. */
+export function pruneWorktreeTestArtifacts(
+  name: Namespace,
+  keep: number = TEST_ARTIFACTS_RETENTION,
+): void {
+  pruneTestArtifactsInDir(worktreeDataDir(name), keep);
 }

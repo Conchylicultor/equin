@@ -105,6 +105,7 @@ describe("startProgressRun", () => {
       true,
       false,
       0,
+      null,
     );
     const summary = run.finish(true);
 
@@ -321,5 +322,37 @@ describe("reconstructRuns", () => {
     ]);
     expect(run?.thread).toBeNull();
     expect(run?.stalls).toEqual([]);
+  });
+
+  test("a check waiting on another run's flight is outstanding as JOINED, and leaves the running set", () => {
+    const { records, write } = recorder();
+    const run = startProgressRun(
+      { scope: null, requested: null },
+      { write, sampler: fakeSampler([]), reports: noReports },
+    );
+    run.checkStarted("a");
+    run.checkStarted("b");
+    run.checkJoined("a", "op-leader");
+    run.checkJoined("b", null);
+    run.checkJoinEnded("b", false); // b's leader published nothing: b runs itself
+
+    const [open] = reconstructRuns(records);
+    const byId = new Map(open?.outstanding.map((o) => [o.checkId, o]));
+    expect(byId.get("a")?.joined?.leaderId).toBe("op-leader");
+    expect(byId.get("b")?.joined).toBeNull();
+
+    run.checkJoinEnded("a", true);
+    run.checkEnded("a", 5, false, false, 0, "op-leader");
+    run.checkEnded("b", 5, true, false, 0, null);
+    run.finish(false);
+    const [done] = reconstructRuns(records);
+    expect(done?.outstanding).toEqual([]);
+    expect(done?.completed.map((c) => [c.checkId, c.sharedFrom])).toEqual([
+      ["a", "op-leader"],
+      ["b", null],
+    ]);
+    // `sharedFrom` is written only when set.
+    const endB = records.find((r) => r.phase === "end" && r.checkId === "b");
+    expect(endB && "sharedFrom" in endB).toBe(false);
   });
 });

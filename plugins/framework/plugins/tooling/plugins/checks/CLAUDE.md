@@ -158,6 +158,44 @@ hang is still `started − ended`. Queued checks are derived
 disagree with the start/end records. The bound's one real cost: a wedged check
 eventually stalls the run behind it, where before its peers drained.
 
+## A cache miss runs once across concurrent runs
+
+On a cache MISS with a key (cache on, a tree hash, a non-null signature),
+`runOne` runs the body through `runCheckFlight`
+([`core/check-flight.ts`](core/check-flight.ts)): a `packages/single-flight`
+flight keyed on `(check.id, sig, treeHash)` in `<check cache>/flights/`, with
+the run's id (`ProgressRun.runId`, i.e. the op id) as the leader id. So
+`./singularity check` and `./singularity check type-check` launched together
+pay for one type-check body.
+
+- **Leader pass:** the cache record is written as today, then `{kind:"pass"}`
+  is published; a joiner re-enters its own cache lookup and is served the hit
+  (a miss there runs the body — a pass is never fabricated). **Leader failure:**
+  the result and observations are published and returned as the joiner's own.
+  **Inconclusive or a thrown check:** nothing is published; the joiner runs it.
+- **Console/transcript:** `• type-check ... ok (shared with run <id>)` /
+  `FAIL (shared with run <id>)` (`CheckOutcome.sharedFrom`, rendered by
+  `provenance()` for both). **Progress log:** a `joined` / `join-ended` record
+  pair, `sharedFrom` on `end`; `check --status` prints
+  `type-check — joined run <id>, running Ns`. A joined check leaves the
+  thread watch's running set for the wait — it is not on the thread.
+- **The gate slot is released for the wait.** A check takes its `--jobs` slot
+  as a lease (`gateSlot`), gives it back the moment it joins, and re-takes it
+  only to do work (a post-adoption lookup, or leading after a leader it could
+  not adopt). This is what keeps it deadlock-free at any width: no check ever
+  holds a slot while waiting on a flight, so every slot holder finishes without
+  waiting on one, and a joiner that wakes holding a flight lock and queues for
+  its slot is waiting on work that ends. Do not take the slot back before the
+  wait ends, and do not wait on a flight while holding it — either reopens a
+  cycle between two bounded runs.
+- **Grants:** a leader runs on the host grant its run already holds, so a
+  leader is never queued for admission — the nested-op cycle `withDirectOp`
+  guards with `tryLead` does not exist here, and nested (build-spawned) and
+  top-level checks join each other freely.
+- **Reclaim:** the hourly `prune()` sweep also deletes flight files idle for a
+  day, only while it holds the key's lock (`flockTry`), and orphaned publish
+  temps. See `sweepIdleFlights` in `core/cache.ts` for the one benign race.
+
 ## The check thread is shared, and a run reports when it stalls
 
 Every check in a pass runs on ONE JS thread. When code holds that thread, no
@@ -317,7 +355,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./singularity check
 - Core:
-  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/tooling/exempt` ×7
     - `reports/check-thread-stall` ×7
     - `framework/tooling` ×5
@@ -329,7 +367,9 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `packages/macrotask-yield` ×2
     - `reports/outbox` ×2
     - `infra/file-sink.defineFileSink`
+    - `packages/flock.flockTry`
     - `packages/semaphore.createSemaphore`
+    - `packages/single-flight.singleFlight`
     - `plugin-meta/plugin-tree.buildStructureTreeOnce`
   - Exports (types):
     - `CandidateSource`
@@ -359,6 +399,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - Exports (values):
     - `checkCollectedDir`
     - `computeCheckSourceHash`
+    - `computeTreeHash`
     - `currentScanView`
     - `fingerprint`
     - `gitGrepList`
@@ -377,6 +418,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `publishWarmBase`
     - `readCheckProgress`
     - `readProgramFileList`
+    - `readTranscriptVerdict`
     - `realGitFacts`
     - `repoProgram`
     - `requestedJobs`

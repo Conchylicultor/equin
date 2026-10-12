@@ -11,7 +11,10 @@ import {
   type OpState,
 } from "@plugins/framework/plugins/cli/plugins/await/core";
 import { resolveBuildReceipt } from "@plugins/framework/plugins/cli/plugins/op-runtime/core";
-import { readTestStatus } from "@plugins/framework/plugins/cli/plugins/test/core";
+import {
+  readTestStatus,
+  testFailureLines,
+} from "@plugins/framework/plugins/cli/plugins/test/core";
 import {
   OP_KIND_IDS,
   isOpKind,
@@ -103,15 +106,9 @@ function detailFor(state: OpState, slug: Namespace): string[] {
     ];
   }
   if (state.op === "test") {
-    const status = readTestStatus(slug);
+    const status = readTestStatus(slug, state.opId);
     if (!status) return [];
-    const failures = status.runners.flatMap((r) => r.failures);
-    return failures.length > 0
-      ? [
-          `  ${failures.length} failing:`,
-          ...failures.slice(0, 10).map((f) => `    ${f}`),
-        ]
-      : [];
+    return testFailureLines(status);
   }
   return [];
 }

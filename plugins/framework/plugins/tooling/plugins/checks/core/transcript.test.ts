@@ -3,6 +3,7 @@ import {
   renderOutcomeBlock,
   renderStallLine,
   renderThreadBlock,
+  verdictSection,
   type TranscriptOutcome,
 } from "./transcript";
 import type { ThreadSummary } from "./thread-watch";
@@ -15,6 +16,7 @@ function outcome(over: Partial<TranscriptOutcome>): TranscriptOutcome {
     checkId: "some:check",
     result: { ok: true },
     cached: false,
+    sharedFrom: null,
     observations: [],
     ...over,
   };
@@ -26,6 +28,20 @@ describe("renderOutcomeBlock", () => {
     expect(renderOutcomeBlock(outcome({ cached: true }))).toEqual([
       "• some:check ... ok (cached)",
     ]);
+  });
+
+  test("a verdict adopted from another run names that run, pass or fail", () => {
+    expect(
+      renderOutcomeBlock(outcome({ cached: true, sharedFrom: "op-1" })),
+    ).toEqual(["• some:check ... ok (shared with run op-1)"]);
+    expect(
+      renderOutcomeBlock(
+        outcome({
+          result: { ok: false, message: "boom" },
+          sharedFrom: "op-1",
+        }),
+      ),
+    ).toEqual(["• some:check ... FAIL (shared with run op-1)", "  boom"]);
   });
 
   test("observations are indented under the result line, of either stream", () => {
@@ -223,5 +239,50 @@ describe("renderThreadBlock", () => {
       "    100%  import",
       "          of which: apps/mail 40%",
     ]);
+  });
+});
+
+describe("verdictSection", () => {
+  // The shape `openCheckTranscript` writes: header, outcomes, trailer, thread
+  // block, done line.
+  const header = [
+    "check run r1",
+    "  worktree: wt",
+    "  pid:      1",
+    "  scope:    all",
+    "  checks:   a, b",
+    "  started:  2026-10-11T00:00:00.000Z",
+    "",
+  ];
+  const thread = [
+    "",
+    "thread: no stall; longest late tick 1ms; 3 samples; watch cost 1ms",
+    "  who used the thread (whole run):",
+    "    100%  shared run @ x.ts",
+  ];
+
+  test("keeps the outcomes, the trailer and the done line; drops header and thread block", () => {
+    const lines = [
+      ...header,
+      "• a ... ok",
+      "• b ... FAIL",
+      "  boom",
+      "\nIf you cannot fix the failing check(s): STOP",
+      ...thread,
+      "",
+      "done — FAILED in 12ms",
+    ];
+    expect(verdictSection(lines)).toEqual([
+      "• a ... ok",
+      "• b ... FAIL",
+      "  boom",
+      "\nIf you cannot fix the failing check(s): STOP",
+      "",
+      "done — FAILED in 12ms",
+    ]);
+  });
+
+  test("an unfinished transcript (no thread block yet) is its outcomes so far", () => {
+    expect(verdictSection([...header, "• a ... ok"])).toEqual(["• a ... ok"]);
   });
 });

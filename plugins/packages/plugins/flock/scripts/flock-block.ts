@@ -1,5 +1,6 @@
 /**
- * Host-semaphore worker body — the ONLY place a *blocking* flock(2) runs.
+ * `flock-wait.ts`'s worker body — the one place a *blocking* `flock(LOCK_EX)` runs
+ * (`lifeline-block.ts` blocks on a SHARED lock, for a different purpose).
  *
  * Runs as a `node:worker_threads` Worker spawned by `flock-wait.ts`. It opens one
  * lock file (path in `workerData.file`), blocks on `flock(fd, LOCK_EX)`, and posts

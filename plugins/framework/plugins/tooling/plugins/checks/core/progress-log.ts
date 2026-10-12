@@ -121,12 +121,41 @@ export type ProgressRecord =
        * measured it, and a 0 would claim its durations were clean.
        */
       stalledMs?: number;
+      /**
+       * The run whose verdict this check adopted (it joined that run's
+       * in-flight check). Absent when this run decided it itself — and on
+       * every line written before the check-level flight existed.
+       */
+      sharedFrom?: string;
     })
+  /**
+   * A started check found the same check (same signature, same tree) in flight
+   * in another run and is WAITING on it rather than running (`check-flight.ts`).
+   * `leaderId`: that run's id, or null for a leader that had not recorded
+   * itself yet. The wait is a phase of the check, not a hang: `--status` names
+   * the run it is blocked on.
+   */
+  | (RecordBase & {
+      phase: "joined";
+      checkId: string;
+      leaderId: string | null;
+    })
+  /**
+   * The wait above ended. `adopted`: the leader's verdict was taken (an `end`
+   * follows); otherwise the check runs itself — it is running again.
+   */
+  | (RecordBase & { phase: "join-ended"; checkId: string; adopted: boolean })
   | (RecordBase & {
       phase: "pending";
       elapsedMs: number;
       pending: string[];
       bootstrap: string[];
+      /**
+       * Of `pending`, the checks waiting on another run's flight rather than
+       * running. Optional on the wire: lines written before the flight existed
+       * carry none, and none of their checks could be waiting.
+       */
+      joined?: string[];
     })
   | (RecordBase & { phase: "stall" } & ProgressStall)
   | (RecordBase & { phase: "thread" } & ProgressThread)
@@ -281,6 +310,11 @@ function appendToSink(record: ProgressRecord): void {
 /** A live run's handle: the record writers plus the heartbeat's stop. */
 export interface ProgressRun {
   /**
+   * This run's id: the caller's (`ProgressRunArgs.runId`) or a minted one. The
+   * id a joined check in another run prints as `shared with run <id>`.
+   */
+  readonly runId: string;
+  /**
    * Wrap one bootstrap phase (loading the checks, `git rev-parse`, the tree
    * hash, the cache, the tree snapshot). Every one of these can spawn git and
    * therefore hang, and each one that hangs must name ITSELF — a bootstrap hang
@@ -309,7 +343,17 @@ export interface ProgressRun {
     ok: boolean,
     cached: boolean,
     queuedMs: number,
+    sharedFrom: string | null,
   ): void;
+  /**
+   * A started check is waiting on another run's in-flight check
+   * (`leaderId`, or null for a leader not recorded yet). It leaves the
+   * running set for the wait: it is not on the thread, so a stall's `running`
+   * list must not name it.
+   */
+  checkJoined(checkId: string, leaderId: string | null): void;
+  /** The wait ended; `adopted: false` puts the check back in the running set. */
+  checkJoinEnded(checkId: string, adopted: boolean): void;
   /**
    * Stop the heartbeat and the thread watch, write the `thread` record and then
    * the terminal `done`, and return the thread summary — the runner hands it to
@@ -428,6 +472,9 @@ export function startProgressRun(
 
   const inFlight = new Set<string>();
   const inBootstrap = new Set<string>();
+  // Started checks waiting on another run's flight: out of `inFlight` (not on
+  // the thread), but still outstanding for the heartbeat.
+  const joined = new Set<string>();
 
   // Stalls that miss the track's target become reports (stall-report.ts). The
   // record, the transcript and the console line are unchanged by it.
@@ -441,13 +488,15 @@ export function startProgressRun(
   // `.unref()` so this timer can never be the reason the process stays alive —
   // the heartbeat exists to observe a hang, not to cause one.
   const heartbeat = setInterval(() => {
-    if (inFlight.size === 0 && inBootstrap.size === 0) return;
+    if (inFlight.size === 0 && inBootstrap.size === 0 && joined.size === 0)
+      return;
     deps.write({
       ...stamp(),
       phase: "pending",
       elapsedMs: Math.round(performance.now() - startedAt),
-      pending: [...inFlight],
+      pending: [...inFlight, ...joined],
       bootstrap: [...inBootstrap],
+      joined: [...joined],
     });
   }, HEARTBEAT_MS);
   heartbeat.unref();
@@ -467,6 +516,7 @@ export function startProgressRun(
   });
 
   return {
+    runId,
     async bootstrap(step, fn) {
       inBootstrap.add(step);
       watch.noteStarted("bootstrap", step);
@@ -496,8 +546,22 @@ export function startProgressRun(
       watch.noteStarted("running", checkId);
       deps.write({ ...stamp(), phase: "start", checkId });
     },
-    checkEnded(checkId, durationMs, ok, cached, queuedMs) {
+    checkJoined(checkId, leaderId) {
       inFlight.delete(checkId);
+      joined.add(checkId);
+      deps.write({ ...stamp(), phase: "joined", checkId, leaderId });
+    },
+    checkJoinEnded(checkId, adopted) {
+      joined.delete(checkId);
+      if (!adopted) {
+        inFlight.add(checkId);
+        watch.noteStarted("running", checkId);
+      }
+      deps.write({ ...stamp(), phase: "join-ended", checkId, adopted });
+    },
+    checkEnded(checkId, durationMs, ok, cached, queuedMs, sharedFrom) {
+      inFlight.delete(checkId);
+      joined.delete(checkId);
       const now = performance.now();
       deps.write({
         ...stamp(),
@@ -508,6 +572,7 @@ export function startProgressRun(
         cached,
         queuedMs,
         stalledMs: watch.overlapMs(now - durationMs, now),
+        ...(sharedFrom !== null ? { sharedFrom } : {}),
       });
     },
     finish(allOk) {
@@ -536,6 +601,12 @@ export interface OutstandingCheck {
   startedAt: string;
   /** Milliseconds between its `start` and the run's last observed activity. */
   elapsedMs: number;
+  /**
+   * Set while the check is waiting on another run's in-flight check rather
+   * than running: that run's id (`leaderId`, null for a leader not yet
+   * recorded) and when the wait began. Always null for a bootstrap phase.
+   */
+  joined: { leaderId: string | null; since: string } | null;
 }
 
 /** A reconstructed run, newest activity last. */
@@ -573,6 +644,8 @@ export interface CheckRunProgress {
     durationMs: number;
     ok: boolean;
     cached: boolean;
+    /** The run whose verdict it adopted, or null — see the `end` record. */
+    sharedFrom: string | null;
     /** Slot-wait ahead of the body; see the `end` record's own doc. */
     queuedMs: number;
     /**
@@ -687,6 +760,11 @@ export function reconstructRuns(
   // removes its entry. The queued set is `selected − this` — subtracting the
   // still-outstanding set alone would report every settled check as queued.
   const everStartedByRun = new Map<string, Set<string>>();
+  // checkId → the open wait on another run's flight, per run.
+  const joinedByRun = new Map<
+    string,
+    Map<string, { leaderId: string | null; since: string }>
+  >();
 
   for (const record of records) {
     if (record.phase === "run") {
@@ -713,6 +791,7 @@ export function reconstructRuns(
       startsByRun.set(record.runId, new Map());
       bootstrapByRun.set(record.runId, new Map());
       everStartedByRun.set(record.runId, new Set());
+      joinedByRun.set(record.runId, new Map());
       continue;
     }
     const run = runs.get(record.runId);
@@ -735,15 +814,24 @@ export function reconstructRuns(
       run.startedCount += 1;
       starts.set(record.checkId, record.t);
       everStartedByRun.get(record.runId)?.add(record.checkId);
+    } else if (record.phase === "joined") {
+      joinedByRun.get(record.runId)?.set(record.checkId, {
+        leaderId: record.leaderId,
+        since: record.t,
+      });
+    } else if (record.phase === "join-ended") {
+      joinedByRun.get(record.runId)?.delete(record.checkId);
     } else if (record.phase === "end") {
       run.endedCount += 1;
       starts.delete(record.checkId);
+      joinedByRun.get(record.runId)?.delete(record.checkId);
       run.completed.push({
         checkId: record.checkId,
         at: record.t,
         durationMs: record.durationMs,
         ok: record.ok,
         cached: record.cached,
+        sharedFrom: record.sharedFrom ?? null,
         // Records written before the gate landed carry no `queuedMs`. They were
         // written by an UNBOUNDED run, where every check started immediately —
         // so 0 is that run's true wait, not a stand-in for an unknown.
@@ -780,16 +868,22 @@ export function reconstructRuns(
 
   for (const run of runs.values()) {
     const last = Date.parse(run.lastActivityAt);
+    const joins = joinedByRun.get(run.runId);
     const outstandingFrom = (
       m: Map<string, string> | undefined,
+      waits: typeof joins,
     ): OutstandingCheck[] =>
       [...(m ?? [])].map(([checkId, startedAt]) => ({
         checkId,
         startedAt,
         elapsedMs: last - Date.parse(startedAt),
+        joined: waits?.get(checkId) ?? null,
       }));
-    run.outstanding = outstandingFrom(startsByRun.get(run.runId));
-    run.outstandingBootstrap = outstandingFrom(bootstrapByRun.get(run.runId));
+    run.outstanding = outstandingFrom(startsByRun.get(run.runId), joins);
+    run.outstandingBootstrap = outstandingFrom(
+      bootstrapByRun.get(run.runId),
+      undefined,
+    );
     // Derived here rather than recorded: `selected` already says what the run
     // will run, and start/end already say what it has let in. Anything a queued
     // check could write would be a second spelling of that difference.

@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { CheckResult } from "@plugins/framework/plugins/tooling/core";
 import {
@@ -23,7 +23,20 @@ export interface TranscriptOutcome {
   checkId: string;
   result: CheckResult;
   cached: boolean;
+  /** The run this verdict was adopted from (`CheckOutcome.sharedFrom`). */
+  sharedFrom: string | null;
   observations: { line: string; stream: "stdout" | "stderr" }[];
+}
+
+/**
+ * Where a settled check's verdict came from, as the suffix of its result line:
+ * ` (shared with run <id>)` when this run joined another run's in-flight check,
+ * ` (cached)` for an ordinary cache hit, nothing when it ran here. One function
+ * for the console and the transcript, so the two cannot word it differently.
+ */
+export function provenance(cached: boolean, sharedFrom: string | null): string {
+  if (sharedFrom !== null) return ` (shared with run ${sharedFrom})`;
+  return cached ? " (cached)" : "";
 }
 
 /** Indent a possibly-multi-line block by two spaces, every line. */
@@ -40,17 +53,17 @@ function indent(text: string): string {
  * console concern and the very reason this file exists. Nothing here is elided.
  */
 export function renderOutcomeBlock(outcome: TranscriptOutcome): string[] {
-  const { checkId, result, cached, observations } = outcome;
+  const { checkId, result, cached, sharedFrom, observations } = outcome;
   const lines: string[] = [];
 
   if (result.ok) {
-    lines.push(`• ${checkId} ... ok${cached ? " (cached)" : ""}`);
+    lines.push(`• ${checkId} ... ok${provenance(cached, sharedFrom)}`);
   } else if (result.inconclusive) {
     lines.push(
       `⚠ ${checkId} ... inconclusive — ${result.message.split("\n")[0]}`,
     );
   } else {
-    lines.push(`• ${checkId} ... FAIL`);
+    lines.push(`• ${checkId} ... FAIL${provenance(false, sharedFrom)}`);
   }
 
   for (const { line } of observations) lines.push(indent(line));
@@ -137,6 +150,12 @@ function cpuLine(cpu: StallCpu, lateMs: number): string {
  * block). Milliseconds per owner appear only when a stall measured the
  * sampler's rate; without one, shares are all that can be said.
  */
+/**
+ * The thread block's first-line prefix. The one marker `verdictSection` finds
+ * the block by, so the writer and the reader cannot drift apart.
+ */
+const THREAD_BLOCK_HEAD = "thread: ";
+
 export function renderThreadBlock(thread: ThreadSummary): string[] {
   const lines: string[] = [];
   const rate = thread.rateHz;
@@ -146,7 +165,7 @@ export function renderThreadBlock(thread: ThreadSummary): string[] {
       : `${thread.stallCount} stall${thread.stallCount === 1 ? "" : "s"}, ` +
         `${seconds(thread.stalledMs)} stalled (longest ${seconds(longestStallMs(thread))})`;
   lines.push(
-    `thread: ${stalledPart}; longest late tick ${thread.longestLateMs}ms; ` +
+    `${THREAD_BLOCK_HEAD}${stalledPart}; longest late tick ${thread.longestLateMs}ms; ` +
       `${thread.samples} samples${rate === null ? "" : ` at ${rate} Hz`}; ` +
       `watch cost ${thread.selfMs}ms`,
   );
@@ -215,7 +234,7 @@ export interface CheckTranscript {
   /** Record one settled check. Called as each settles, never from a print loop. */
   record(outcome: TranscriptOutcome): void;
   /**
-   * Close the run: append the thread block, then `trailer` (the STOP banner,
+   * Close the run: append `trailer`, then the thread block (the STOP banner,
    * the inconclusive note, or whatever ended the run early), then the `done`
    * line, then prune the family. `thread` is what `ProgressRun.finish()`
    * returned, which is why the runner finishes the progress run first.
@@ -277,8 +296,11 @@ export function openCheckTranscript(args: {
       flush();
     },
     finish(trailer, allOk, thread) {
-      lines.push("", ...renderThreadBlock(thread));
+      // The trailer sits with the outcomes it is about, ahead of the thread
+      // block: `outcomes + trailer` is then the one contiguous section a
+      // joined run replays (`verdictSection`).
       lines.push(...trailer);
+      lines.push("", ...renderThreadBlock(thread));
       lines.push(
         "",
         `done — ${allOk ? "all ok" : "FAILED"} in ${Math.round(performance.now() - startedAt)}ms`,
@@ -290,4 +312,33 @@ export function openCheckTranscript(args: {
       pruneWorktreeCheckArtifacts(args.worktree);
     },
   };
+}
+
+/**
+ * The part of a finished transcript that IS the run's verdict — what its
+ * console showed: every settled check's block, the trailer and the `done`
+ * line. Not the header (a joiner names the run it joined itself) and not the
+ * thread block (it profiles the leader's process, not the verdict). This is
+ * what a run that joined another's in-flight check replays.
+ *
+ * Pure over the file's lines; `openCheckTranscript` is the writer it reads.
+ */
+export function verdictSection(lines: string[]): string[] {
+  // The header always ends at its first blank line.
+  const body = lines.slice(lines.indexOf("") + 1);
+  const thread = body.findIndex((l) => l.startsWith(THREAD_BLOCK_HEAD));
+  if (thread === -1) return body;
+  const outcomes = body.slice(0, thread);
+  while (outcomes.at(-1) === "") outcomes.pop();
+  const done = body.findLast((l) => l.startsWith("done — "));
+  return done === undefined ? outcomes : [...outcomes, "", done];
+}
+
+/** A run's transcript read back as its verdict section, or that it is gone. */
+export function readTranscriptVerdict(
+  path: string,
+): { kind: "ok"; lines: string[] } | { kind: "missing" } {
+  if (!existsSync(path)) return { kind: "missing" };
+  const lines = readFileSync(path, "utf8").trimEnd().split("\n");
+  return { kind: "ok", lines: verdictSection(lines) };
 }

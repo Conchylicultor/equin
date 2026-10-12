@@ -7,7 +7,16 @@ import type {
   GrantHooks,
   Lane,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
-import { actAsCheckoutNamespace } from "@plugins/infra/plugins/paths/server";
+import { z } from "zod";
+import {
+  actAsCheckoutNamespace,
+  worktreeArtifacts,
+} from "@plugins/infra/plugins/paths/server";
+import {
+  singleFlight,
+  tryLead,
+  type FlightLeader,
+} from "@plugins/packages/plugins/single-flight/core";
 import {
   MAIN_WORKTREE_NAME,
   type Namespace,
@@ -65,7 +74,51 @@ export interface DirectOpContext<K extends OpKind> {
   profiler: OpProfiler<K> | undefined;
 }
 
-export interface DirectOpOptions {
+/**
+ * The outcomes one run may hand to an identical concurrent request: a verdict
+ * about the work. `error` (the body threw) is not one — it says nothing about
+ * the work, so a joiner runs the work itself instead.
+ */
+export type SharedOutcome = "success" | "failed";
+
+const SharedVerdictSchema = z.object({
+  outcome: z.enum(["success", "failed"]),
+});
+type SharedVerdict = z.infer<typeof SharedVerdictSchema>;
+
+function isSharedOutcome(outcome: string): outcome is SharedOutcome {
+  return outcome === "success" || outcome === "failed";
+}
+
+/** What a joiner learns about the in-flight run whose verdict it adopted. */
+export interface JoinedRun {
+  outcome: SharedOutcome;
+  /** The run that produced the verdict: its op id (`opId`), pid and start. */
+  leader: FlightLeader;
+}
+
+/**
+ * Opt-in run-level coalescing: N identical requests in this worktree at once
+ * cost one run. See `DirectOpOptions.flight`.
+ */
+export interface DirectOpFlight<K extends OpKind> {
+  /**
+   * What makes two requests the same run — everything that changes the
+   * answer, INCLUDING the content hash of the tree it runs on (the correctness
+   * bar: a verdict is only ever adopted from a run that started on the tree the
+   * joiner's own request saw). The op kind is prepended here, so two kinds can
+   * never share a key.
+   */
+  key: string;
+  /**
+   * The joiner's side: render the adopted verdict (the leader's transcript, its
+   * failure list) and return the outcome to stamp on this op. Called instead of
+   * `body`; no grant is taken.
+   */
+  adopt: (joined: JoinedRun, ctx: DirectOpContext<K>) => OutcomeByKind[K];
+}
+
+export interface DirectOpOptions<K extends OpKind = OpKind> {
   /**
    * How many host CPU units to ask for when acquiring a grant of our own. The
    * acquire is elastic — it hands back the slots it could get, `>= 1` — so this
@@ -81,6 +134,27 @@ export interface DirectOpOptions {
    * this primitive only honours the id it is handed.
    */
   opId?: string;
+  /**
+   * Coalesce with an identical run already in flight in this worktree, BEFORE
+   * the host grant. Omitted, every request runs.
+   *
+   * A request whose key is in flight JOINS: it still writes its marker and its
+   * `requested` record, opens an `in-flight` wait naming the leader, never
+   * calls `withHostGrant`, and completes with the leader's outcome via
+   * `flight.adopt`. A run that could not be adopted (the leader died, threw, or
+   * published nothing) is run by the joiner itself, which then leads.
+   *
+   * Joining happens before the grant because a `Grant` cannot be released
+   * early: a duplicate that queued for a grant first would hold host CPU for a
+   * run it never does.
+   *
+   * A NESTED op (a parent's grant inherited) leads when the key is free — so a
+   * top-level duplicate can still join it — but never waits: a leader still
+   * queued for a host grant may be waiting on exactly the units the nested
+   * op's parent holds, and waiting on it would close a cycle. It runs unshared
+   * instead.
+   */
+  flight?: DirectOpFlight<K>;
 }
 
 /**
@@ -102,6 +176,10 @@ export interface DirectOpDeps {
   /** Register an exit-time cleanup (`process.on("exit", …)`). */
   onExit: (fn: () => void) => void;
   installFatalSignalExit: (opId: string, slug: Namespace) => Promise<void>;
+  singleFlight: typeof singleFlight;
+  tryLead: typeof tryLead;
+  /** The progress line a joiner prints. */
+  log: (line: string) => void;
 }
 
 // This worktree's identity: the op-marker slug (this checkout's namespace,
@@ -150,6 +228,9 @@ const realDeps: DirectOpDeps = {
   // map is shared with `build` and `push`; see ./fatal-signals.ts.
   installFatalSignalExit: async (opId, slug) =>
     installFatalSignalExit(await signalOriginTap({ opId, worktree: slug })),
+  singleFlight,
+  tryLead,
+  log: (line) => console.log(line),
 };
 
 /**
@@ -170,6 +251,10 @@ const realDeps: DirectOpDeps = {
  * published — not-clobbered, so the parent's classification wins — and `body`
  * runs on the inherited grant with `ctx.nested === true` and no profiler.
  *
+ * With `opts.flight`, the grant step is wrapped in a single-flight on the
+ * key: an identical request already in flight is JOINED (an `in-flight` wait,
+ * no grant, the leader's outcome via `flight.adopt`) — see `DirectOpFlight`.
+ *
  * `body` returns the outcome to stamp on the terminal record, and it owns the
  * process exit code: this primitive never calls `process.exit`. A `body` that
  * throws stamps no outcome; the exit handler's `write()` lands it as `error`,
@@ -177,7 +262,7 @@ const realDeps: DirectOpDeps = {
  */
 export async function withDirectOp<K extends OpKind>(
   kind: K,
-  opts: DirectOpOptions,
+  opts: DirectOpOptions<K>,
   body: (grant: Grant, ctx: DirectOpContext<K>) => Promise<OutcomeByKind[K]>,
   deps: DirectOpDeps = realDeps,
 ): Promise<OutcomeByKind[K]> {
@@ -260,15 +345,78 @@ export async function withDirectOp<K extends OpKind>(
       profiler?.complete(outcome);
       return outcome;
     };
-    return inherited
-      ? await runUnder(inherited)
-      : // `grantHooks()` is what makes this queue visible as a `host-grant`
-        // wait — the wait that made a direct check an invisible contender.
-        await deps.withHostGrant(
-          { lane, max: opts.max, hooks: profiler?.grantHooks() },
-          runUnder,
-        );
+    const run = async (): Promise<OutcomeByKind[K]> =>
+      inherited
+        ? await runUnder(inherited)
+        : // `grantHooks()` is what makes this queue visible as a `host-grant`
+          // wait — the wait that made a direct check an invisible contender.
+          await deps.withHostGrant(
+            { lane, max: opts.max, hooks: profiler?.grantHooks() },
+            runUnder,
+          );
+    const { flight } = opts;
+    if (!flight) return await run();
+
+    const flightOpts = {
+      dir: worktreeArtifacts.opFlights(slug),
+      key: `${kind}\n${flight.key}`,
+      id: opId,
+    };
+    // The leader's side: run, then hand the verdict to whoever joined. Only a
+    // verdict about the work is shared; `error` is not one.
+    const lead = async (
+      publish: (v: SharedVerdict) => void,
+    ): Promise<OutcomeByKind[K]> => {
+      const outcome = await run();
+      if (isSharedOutcome(outcome)) publish({ outcome });
+      return outcome;
+    };
+
+    if (inherited) {
+      const led = await deps.tryLead(flightOpts, lead);
+      if (led.role === "led") return led.result;
+      deps.log(
+        `An identical ${kind} is already running in this worktree — running anyway: a nested ${kind} never waits on another run (it may be queued behind this op's own parent's grant).`,
+      );
+      return await run();
+    }
+
+    const result = await deps.singleFlight(
+      {
+        ...flightOpts,
+        schema: SharedVerdictSchema,
+        // Only `success` / `failed` are ever published, and both are verdicts.
+        adoptable: () => true,
+        onJoin: (leader) => {
+          const who = leader ? `${kind} ${leader.id}` : `${kind} (starting)`;
+          deps.log(
+            `An identical ${kind} is already running in this worktree (${leader ? `${leader.id}, started ${ago(leader.startedAt)}` : "starting"}) — waiting for its verdict instead of running again.`,
+          );
+          profiler?.waitStart("in-flight", who);
+        },
+      },
+      async (publish) => {
+        // A join that ends here could not adopt (its leader died, threw, or
+        // published nothing): close that wait and run the work ourselves.
+        profiler?.waitEnd("aborted");
+        return await lead(publish);
+      },
+    );
+    if (result.role === "led") return result.result;
+
+    profiler?.waitEnd("acquired");
+    const outcome = flight.adopt(
+      { outcome: result.verdict.outcome, leader: result.leader },
+      ctx,
+    );
+    profiler?.complete(outcome);
+    return outcome;
   } finally {
     finish();
   }
+}
+
+/** `12s ago` — how long ago an epoch-ms instant was. */
+function ago(epochMs: number): string {
+  return `${Math.max(0, Math.round((Date.now() - epochMs) / 1000))}s ago`;
 }

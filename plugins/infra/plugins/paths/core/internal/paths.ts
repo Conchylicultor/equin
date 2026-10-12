@@ -380,13 +380,18 @@ export const worktreeArtifacts = {
   buildStatus: (name: Namespace): string =>
     join(worktreeDataDir(name), "build-status.json"),
   /**
-   * This checkout's LAST `./singularity test` run: which runners ran and which
-   * test cases failed. A fixed path for the same reason as `buildStatus` — it is
-   * written when the run STARTS (`status: "running"`), so a killed run can never
-   * leave a previous run's verdict in its place.
+   * One `./singularity test` run's record: which runners ran and which test
+   * cases failed. `test-status-<opId>.json`, written when the run STARTS
+   * (`status: "running"`) and again with its verdict.
+   *
+   * Id-keyed, unlike `buildStatus`: two test runs in one checkout may be live
+   * at once (different paths, or one joined onto another's in-flight run), and
+   * a fixed path made them overwrite each other's verdict. The run's `opId` is
+   * what `await` and a joiner already hold, so the record is addressable by it.
+   * Pruned to the newest {@link TEST_ARTIFACTS_RETENTION} by the test command.
    */
-  testStatus: (name: Namespace): string =>
-    join(worktreeDataDir(name), "test-status.json"),
+  testStatus: (name: Namespace, opId: string): string =>
+    join(worktreeDataDir(name), `test-status-${opId}.json`),
   /** One runner's JUnit report for one test run. `test-<opId>-<runner>.xml`. */
   testReport: (name: Namespace, opId: string, runner: string): string =>
     join(worktreeDataDir(name), `test-${opId}-${runner}.xml`),
@@ -423,6 +428,17 @@ export const worktreeArtifacts = {
    */
   checkLog: (name: Namespace, runId: string): string =>
     join(worktreeDataDir(name), `check-${runId}.log`),
+  /**
+   * DIRECTORY. The single-flight lock, leader and verdict files of this
+   * checkout's coalescable direct ops (`check`, `test` — `withDirectOp`'s
+   * `flight` option): N identical requests in flight at once cost one run.
+   * A directory of its own so the files (`<sha256(key)>.lock` /
+   * `.leader.json` / `.verdict.json`) can never collide with an id-keyed
+   * artifact family's prune. Bounded by the set of distinct keys; reclaimed
+   * with the worktree's data dir.
+   */
+  opFlights: (name: Namespace): string =>
+    join(worktreeDataDir(name), "op-flights"),
   /**
    * DIRECTORY. Every supervised run's transcript and exit marker, for every
    * kind. See {@link runsDirFor} for why this family gets a directory of its own.

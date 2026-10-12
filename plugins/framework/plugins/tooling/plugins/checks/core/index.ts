@@ -12,6 +12,8 @@ export type { ProgramFileList } from "./buildinfo";
 export { hashFileBytes, hashFileCached } from "./content-hash";
 export type { ContentHashMemo } from "./content-hash";
 export { listRepoFiles } from "./repo-files";
+export { computeTreeHash } from "./tree-hash";
+export { readTranscriptVerdict } from "./transcript";
 export { openCheckCache } from "./cache";
 export type { CheckCache } from "./cache";
 export { readCheckProgress } from "./progress-log";

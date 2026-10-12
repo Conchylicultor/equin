@@ -165,6 +165,9 @@ const WAIT_FILL: Record<WaitKind, string> = {
   "build-lock": "bg-categorical-9",
   "host-grant": "bg-categorical-4",
   "duress-valve": "bg-categorical-8",
+  // Cool, not on the warm ramp: an in-flight wait is not contention — it is
+  // this op riding on another's run, and costs the host nothing.
+  "in-flight": "bg-categorical-1",
 };
 
 /** Where a wait sits on its op's wall-clock bar: its wall fields, else (legacy) its monotonic ones. */

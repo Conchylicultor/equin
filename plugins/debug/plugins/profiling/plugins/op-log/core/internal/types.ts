@@ -19,7 +19,9 @@ import type { OpKind } from "@plugins/infra/plugins/worktree/core";
  * `push-mutex` = self-queued behind another push; `build-lock` = queued behind
  * another build in the same worktree; `host-grant` = host CPU starved by the
  * rest of the fleet; `duress-valve` = held out of a storm by the cluster
- * sentinel.
+ * sentinel; `in-flight` = an identical op (same work, same tree) was already
+ * running in this worktree, so this one waits for its verdict instead of
+ * running again (`withDirectOp`'s flight). Its reason is `<kind> <leaderOpId>`.
  *
  * `sentence(reason)` is the one human wording of "parked here", shared by every
  * surface (banner, chip tooltip, `await` progress) so they cannot disagree.
@@ -42,6 +44,11 @@ export const WAIT_KINDS = {
     label: "Duress valve",
     sentence: (reason: string | null) =>
       `held: host under duress${reason ? ` (${reason})` : ""}`,
+  },
+  "in-flight": {
+    label: "In-flight run",
+    sentence: (reason: string | null) =>
+      `waiting on in-flight ${reason ?? "identical run"}`,
   },
 } as const satisfies Record<string, WaitKindMeta>;
 

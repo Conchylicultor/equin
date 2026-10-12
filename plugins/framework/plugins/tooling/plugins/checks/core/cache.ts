@@ -1,6 +1,8 @@
 import { createHash, randomUUID } from "crypto";
 import {
+  closeSync,
   existsSync,
+  openSync,
   readdirSync,
   readFileSync,
   renameSync,
@@ -9,6 +11,7 @@ import {
   writeFileSync,
 } from "fs";
 import { dirname, join } from "path";
+import { flockTry } from "@plugins/packages/plugins/flock/core";
 import { checkCacheDir } from "../data-dirs";
 import type { ReadSet } from "./read-set";
 
@@ -36,6 +39,23 @@ const MARKER_FILE = ".last-prune";
 // rename, so anything past this window was orphaned by a hard kill. See
 // `sweepOrphanTemps`.
 const TEMP_ORPHAN_MS = 60 * 60 * 1000;
+
+// A flight key (`check-flight.ts`) carries the tree hash, so its files are
+// dead the moment the run that made them settles — but nothing deletes them
+// then, and one triple per (check, tree) accumulates. A day idle is far past
+// any check's run; reclaimed by the same hourly sweep as the temps.
+const FLIGHT_IDLE_MS = 24 * 60 * 60 * 1000;
+const FLIGHTS_SUBDIR = "flights";
+
+/**
+ * The per-check single-flight directory (`runCheckFlight`): host-global like
+ * the cache itself, so concurrent check runs in every worktree coalesce on one
+ * `(check, sig, treeHash)`. A subdirectory, so its files are never read as
+ * cache entries by `prune()`'s `.json` pass.
+ */
+export function checkFlightDir(): string {
+  return checkCacheDir.file(FLIGHTS_SUBDIR);
+}
 
 function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
@@ -236,6 +256,7 @@ function prune(): void {
   if (names.length <= MAX_ENTRIES && !ageSweepDue(now)) return;
   writeFileSync(checkCacheDir.file(MARKER_FILE), "");
   sweepOrphanTemps(all, now);
+  sweepIdleFlights(now);
   const live: { path: string; mtimeMs: number }[] = [];
   for (const name of names) {
     const path = checkCacheDir.file(name);
@@ -256,6 +277,69 @@ function prune(): void {
     live.sort((a, b) => a.mtimeMs - b.mtimeMs); // oldest first
     for (const { path } of live.slice(0, live.length - TRIM_TO)) {
       rmSync(path, { force: true });
+    }
+  }
+}
+
+/**
+ * Reclaim the flight files (`checkFlightDir()`) of keys idle for a day: per
+ * key `<h>.lock`, `<h>.leader.json`, `<h>.verdict.json`, plus a publish's
+ * `<h>.*.json.tmp.<pid>` a hard kill orphaned.
+ *
+ * A key's files go only while this process HOLDS its lock (`flockTry`), so a
+ * lock a run is holding is never deleted. The one race left is benign: a run
+ * that opened the lock file just before the unlink takes its lock on the
+ * orphaned inode while a later run creates a fresh one — two leaders for one
+ * key, i.e. the check runs twice, never a wrong verdict (both run the same
+ * key's work, and a verdict is only ever adopted for that key). It needs a key
+ * idle for a day to come back within that instant, and the key carries the
+ * tree hash, so in practice it is never reused at all.
+ */
+function sweepIdleFlights(now: number): void {
+  const dir = checkFlightDir();
+  let names: string[];
+  try {
+    names = readdirSync(dir);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return; // no flight yet
+    throw err;
+  }
+  const mtimeOf = (name: string): number | null => {
+    try {
+      return statSync(join(dir, name)).mtimeMs;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      return null; // vanished underneath us
+    }
+  };
+  const byKey = new Map<string, string[]>();
+  for (const name of names) {
+    if (name.includes(".tmp.")) {
+      const mtimeMs = mtimeOf(name);
+      if (mtimeMs !== null && now - mtimeMs > TEMP_ORPHAN_MS)
+        rmSync(join(dir, name), { force: true });
+      continue;
+    }
+    const key = name.split(".")[0] ?? name;
+    byKey.set(key, [...(byKey.get(key) ?? []), name]);
+  }
+  for (const [key, files] of byKey) {
+    const newest = Math.max(0, ...files.map((f) => mtimeOf(f) ?? 0));
+    if (now - newest <= FLIGHT_IDLE_MS) continue;
+    const lock = `${key}.lock`;
+    if (!files.includes(lock)) {
+      // A leader/verdict whose lock is gone: no run can be using it.
+      for (const f of files) rmSync(join(dir, f), { force: true });
+      continue;
+    }
+    const fd = openSync(join(dir, lock), "a");
+    try {
+      if (!flockTry(fd)) continue; // a run holds it: in use, not idle
+      for (const f of files)
+        if (f !== lock) rmSync(join(dir, f), { force: true });
+      rmSync(join(dir, lock), { force: true });
+    } finally {
+      closeSync(fd);
     }
   }
 }

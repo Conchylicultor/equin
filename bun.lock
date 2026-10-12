@@ -3810,6 +3810,10 @@
       "name": "@singularity/plugin-packages-signal-origin-sink",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/single-flight": {
+      "name": "@singularity/plugin-packages-single-flight",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/sleep-clock": {
       "name": "@singularity/plugin-packages-sleep-clock",
       "version": "0.0.1",
@@ -8300,6 +8304,8 @@
     "@singularity/plugin-packages-signal-origin": ["@singularity/plugin-packages-signal-origin@workspace:plugins/packages/plugins/signal-origin"],
 
     "@singularity/plugin-packages-signal-origin-sink": ["@singularity/plugin-packages-signal-origin-sink@workspace:plugins/packages/plugins/signal-origin/plugins/sink"],
+
+    "@singularity/plugin-packages-single-flight": ["@singularity/plugin-packages-single-flight@workspace:plugins/packages/plugins/single-flight"],
 
     "@singularity/plugin-packages-sleep-clock": ["@singularity/plugin-packages-sleep-clock@workspace:plugins/packages/plugins/sleep-clock"],
 

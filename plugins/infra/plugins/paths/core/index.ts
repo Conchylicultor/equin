@@ -93,7 +93,11 @@ export type { LegacyMove, MigrationStep } from "./internal/legacy-layout";
 // module — so its prune has to be reachable from `core`. The build prune stays a
 // `server`-only export because every one of its writers is server-side; exporting
 // it here too would only widen the surface for no caller.
+//
+// The test-run record is written by `cli/test`'s `core` too (`writeTestStatus`),
+// so its prune sits here for the same reason.
 export {
   pruneWorktreeCheckArtifacts,
+  pruneWorktreeTestArtifacts,
   CHECK_ARTIFACTS_RETENTION,
 } from "./internal/prune-artifacts";

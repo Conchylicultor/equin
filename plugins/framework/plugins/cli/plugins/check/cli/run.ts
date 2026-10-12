@@ -1,11 +1,17 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
-import { withDirectOp } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
+import {
+  withDirectOp,
+  type DirectOpFlight,
+} from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { inheritedGrant } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import { cpuBudget } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import {
+  computeTreeHash,
   listAllChecks,
   readCheckProgress,
+  readTranscriptVerdict,
   runChecks,
   requestedJobs,
   scopeOf,
@@ -114,11 +120,79 @@ function printProgress(): void {
     for (const o of [...run.outstanding].sort(
       (a, b) => b.elapsedMs - a.elapsedMs,
     )) {
+      // A check waiting on another run's in-flight copy of itself is not
+      // hung: name the run it is blocked on (`check --status` there shows
+      // what THAT run is doing).
+      const what =
+        o.joined === null
+          ? "running"
+          : `joined run ${o.joined.leaderId ?? "(starting)"}, running`;
       console.log(
-        `    • ${o.checkId} — running ${Math.round(o.elapsedMs / 1000)}s (since ${o.startedAt})`,
+        `    • ${o.checkId} — ${what} ${Math.round(o.elapsedMs / 1000)}s (since ${o.startedAt})`,
       );
     }
   }
+}
+
+/** How much of an adopted verdict a joiner prints before pointing at the file. */
+const ADOPTED_TRANSCRIPT_LINES = 200;
+
+/**
+ * The run-level single-flight for a check: an identical `./singularity check`
+ * already in flight in this worktree — same selection, same scope, same
+ * `--always-run`, same TREE — is joined instead of run again. Its key carries
+ * the tree hash, so a verdict is only ever adopted from a run that started on
+ * the tree this request saw. `--jobs` is left out: it changes how the checks
+ * are scheduled, never what they decide.
+ *
+ * `undefined` (no flight) when the tree hash is unavailable — `computeTreeHash`
+ * fails open, and with no hash there is no correctness bar to key on.
+ */
+function checkFlight(
+  ids: string[],
+  scope: CheckScope[] | undefined,
+  alwaysRun: boolean,
+  treeHash: string | null,
+): DirectOpFlight<"check"> | undefined {
+  if (treeHash === null) return undefined;
+  return {
+    key: JSON.stringify({
+      ids: [...ids].sort(),
+      scope: scope ? [...scope].sort() : null,
+      alwaysRun,
+      treeHash,
+    }),
+    adopt: ({ outcome, leader }, ctx) => {
+      // The leader's transcript is complete: its `done —` trailer is written
+      // before the run returns, and the verdict is published after that.
+      const transcript = worktreeArtifacts.checkLog(ctx.slug, leader.id);
+      const ago = Math.max(
+        0,
+        Math.round((Date.now() - leader.startedAt) / 1000),
+      );
+      console.log(
+        `Joined in-flight check ${leader.id} (same tree, started ${ago}s ago) — its verdict: ${outcome}.\n`,
+      );
+      // Only the verdict section — the per-check blocks, the trailer and the
+      // `done` line, which is what the leader's own console showed. The header
+      // and the thread profile stay in the file.
+      const verdict = readTranscriptVerdict(transcript);
+      if (verdict.kind === "ok") {
+        const { lines } = verdict;
+        console.log(lines.slice(0, ADOPTED_TRANSCRIPT_LINES).join("\n"));
+        if (lines.length > ADOPTED_TRANSCRIPT_LINES)
+          console.log(
+            `… ${lines.length - ADOPTED_TRANSCRIPT_LINES} more lines in ${transcript}`,
+          );
+      } else {
+        console.error(`(the leader's transcript is gone: ${transcript})`);
+      }
+      // Last line, so it survives `./singularity check | tail`.
+      if (outcome !== "success")
+        console.error(`\nFull check output: ${transcript}`);
+      return outcome;
+    },
+  };
 }
 
 /**
@@ -212,6 +286,19 @@ const run: CliAction<
   // env var too, which the runner reads itself.
   requestedJobs(opts.jobs !== undefined ? Number(opts.jobs) : undefined);
 
+  // The tree hash, BEFORE the grant: it is IO (a temp-index `git add -A`), not
+  // CPU work, and the run-level single-flight below is keyed on it — a
+  // duplicate must find the in-flight run without first queueing for a host
+  // slot. Handed to `runChecks` so the cache is keyed on the same reading.
+  // `--no-cache` / SINGULARITY_CHECK_NO_CACHE mean "really run": no hash, no
+  // flight — exactly what the runner does with them.
+  const noCache =
+    opts.cache === false || process.env.SINGULARITY_CHECK_NO_CACHE === "1";
+  const treeHash = noCache
+    ? undefined
+    : { value: await computeTreeHash(await getWorktreeRoot()) };
+  const alwaysRun = opts.alwaysRun === true;
+
   // Everything from here on — the broadcast banner, this worktree's identity,
   // the interrupted-predecessor warning, the lane, the op marker, the op-log
   // record, the signal handlers and the host grant (or the parent's inherited
@@ -224,7 +311,13 @@ const run: CliAction<
   // actually looking at; a top-level check mints its own inside the primitive.
   const outcome = await withDirectOp(
     "check",
-    { max: cpuBudget().B, opId: opts.runId },
+    {
+      max: cpuBudget().B,
+      opId: opts.runId,
+      flight: treeHash
+        ? checkFlight(checks, scope, alwaysRun, treeHash.value)
+        : undefined,
+    },
     async (grant, ctx) => {
       // This run's transcript: `check-<opId>.log` sits in the worktree's data
       // dir beside a build's artifacts, so the three records of one run (op
@@ -263,6 +356,7 @@ const run: CliAction<
               )
           : undefined,
         noCache: opts.cache === false,
+        treeHash,
         // Commander hands every `<n>` option through as a string, so the
         // conversion happens here and the VALIDATION does not: `runChecks`
         // rejects anything that is not a positive integer, with one message
@@ -274,7 +368,7 @@ const run: CliAction<
         // reject by name.
         jobs: opts.jobs !== undefined ? Number(opts.jobs) : undefined,
         scope,
-        alwaysRun: opts.alwaysRun === true,
+        alwaysRun,
         logRun: { worktree: ctx.slug, runId: ctx.opId },
         log: (line, stream) =>
           stream === "stderr" ? console.error(line) : console.log(line),

@@ -263,7 +263,7 @@ presence only — **no re-exports**; import from `core/`.
     - `infra/jobs/supervised-job` (0 debt)
     - `infra/launcher` (0 debt)
     - `infra/spawn` (0 debt)
-    - `packages/host-semaphore` (0 debt)
+    - `packages/flock` (0 debt)
 - Sub-plugins:
   - **`daemon`** — defineDaemon: the one declared long-lived process or thread a backend runs on its own — a named, described declaration (startedBy boot | on-demand, where every-worktree | main | host-singleton…
 

@@ -8,7 +8,11 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { flockTry } from "@plugins/packages/plugins/flock/server";
+import {
+  flockTry,
+  waitForFlock,
+  type HeldFlock,
+} from "@plugins/packages/plugins/flock/server";
 import type { DataDir } from "@plugins/infra/plugins/paths/core";
 
 // Cross-process twin of `createSemaphore` (the in-process counter+queue gate in
@@ -59,34 +63,11 @@ import type { DataDir } from "@plugins/infra/plugins/paths/core";
 // waiter may briefly queue behind a background waiter's fan-out for the wakeup (a few
 // ms), never for a slot.
 
-const FLOCK_WAIT_PATH = join(
-  import.meta.dir,
-  "..",
-  "..",
-  "scripts",
-  "flock-wait.ts",
-);
-
-const GRANTED = "granted\n";
-
-// Spawn one `flock-wait` child that blocks (off our event loop) on ONE lock file and
-// writes "granted\n" once it holds it. `--smol` halves RSS (37 MB vs 76 MB).
-//
-// Module-level on purpose: `WaitChild` is derived from *this* function's return type,
-// so the literal `stdin: "pipe"` / `stdout: "pipe"` options narrow `stdin` to a
-// `FileSink` and `stdout` to a `ReadableStream`. A bare `ReturnType<typeof Bun.spawn>`
-// widens both to `number | ... | undefined` and every `.stdin.end()` / stream read
-// below stops type-checking.
-function spawnWait(file: string) {
-  return Bun.spawn([process.execPath, "--smol", FLOCK_WAIT_PATH], {
-    stdin: "pipe",
-    stdout: "pipe",
-    stderr: "inherit",
-    env: { ...process.env, HOST_SEM_LOCK_FILE: file },
-  });
-}
-
-type WaitChild = ReturnType<typeof spawnWait>;
+// Every wait below — the turnstile, the size guard, each fan-out slot — is ONE
+// `waitForFlock` (`packages/flock`): a `flock-wait` child that blocks off our event
+// loop on one lock file and then HOLDS it until released, or until we die. The
+// child script used to live here; it moved to `packages/flock` so other waiters
+// (single-flight) share it.
 
 export interface HostShare {
   /** Slots actually held — always >= 1, never > the requested max. */
@@ -521,18 +502,14 @@ export function createHostSemaphore(opts: {
     // loop) and polling is banned; the child does the blocking wait off our loop.
     const guard = guardFile();
     const guardFd = openSync(guard, "w");
-    let guardChild: WaitChild | undefined;
+    let guardHeld: HeldFlock | undefined;
     if (!flockTry(guardFd)) {
       closeSync(guardFd);
-      guardChild = spawnWait(guard);
-      await awaitGranted(guardChild.stdout, name);
+      guardHeld = await waitForFlock(guard);
     }
     const releaseGuard = async (): Promise<void> => {
-      if (guardChild) {
-        // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget child-stdin close before kill(); no work to attribute
-        void guardChild.stdin.end();
-        guardChild.kill();
-        await guardChild.exited;
+      if (guardHeld) {
+        await guardHeld.release();
       } else {
         closeSync(guardFd);
       }
@@ -648,60 +625,51 @@ export function createHostSemaphore(opts: {
   async function fanOut(
     order: number[],
     signal: AbortSignal | undefined,
-  ): Promise<WaitChild> {
+  ): Promise<HeldFlock> {
     signal?.throwIfAborted();
-    const children = order.map((i) => spawnWait(slotFile(i)));
-
-    // Attach ALL readers BEFORE awaiting — a sequential read would deadlock on the
-    // wrong (still-blocked) child. `Promise.any` settles on the first SUCCESS and
-    // only rejects (AggregateError) if EVERY child closed without granting; its
-    // attached handlers also swallow the losers' later rejections when we kill them,
-    // so there is no floating rejection.
-    const readers = children.map((child, i) =>
-      awaitGranted(child.stdout, name).then(() => i),
+    // One `waitForFlock` per slot, all sharing one signal: the caller's, plus our
+    // own "the race is over" abort for the losers. Cancellation is expressed as
+    // that abort KILLING the losers' children (inside `waitForFlock`), never as
+    // racing the signal against `Promise.any` — racing would walk away from
+    // pending stream reads whose later rejections have no owner.
+    const losers = new AbortController();
+    const waitSignal = signal
+      ? AbortSignal.any([signal, losers.signal])
+      : losers.signal;
+    const waits = order.map((i) =>
+      waitForFlock(slotFile(i), { signal: waitSignal }),
     );
 
-    // Cancellation is expressed as KILLING OUR OWN CHILDREN, not as racing the
-    // signal against `Promise.any`. Racing would walk away from `size` pending
-    // stream reads whose later rejections have no owner — a floating rejection on
-    // the very path we are making safe. A dead child closes its stdout instead, so
-    // every reader completes on its own (as EOF), `Promise.any` settles, and the
-    // whole fan-out unwinds through the code below that already knows how to reap
-    // it. The AggregateError that results is then REPLACED by `signal.reason`: we
-    // killed them, so reporting a pool fault would be a lie.
-    const onAbort = (): void => {
-      for (const c of children) c.kill(9);
-    };
-    signal?.addEventListener("abort", onAbort, { once: true });
-
-    let winnerIndex: number;
+    let winner: HeldFlock;
     try {
-      winnerIndex = await Promise.any(readers);
+      // Settles on the first SUCCESS; rejects (AggregateError) only if EVERY
+      // wait failed — all killed by the caller's abort, or all children died.
+      winner = await Promise.any(waits);
     } catch (err) {
-      // Reap before reporting, on BOTH arms: a child killed by the abort is a
-      // zombie until awaited, and leaking one here would leave a process holding
-      // a slot the pool can no longer account for.
-      await Promise.all(children.map((c) => c.exited));
+      // Every wait has settled (that is what made `Promise.any` reject), and
+      // each one reaped its own child before rejecting — nothing to clean up.
       signal?.throwIfAborted();
       // Every fan-out child died before granting — loud, never a silent bound drop.
       throw new Error(
         `createHostSemaphore(${name}): all ${order.length} fan-out children exited before granting a slot`,
         { cause: err },
       );
-    } finally {
-      signal?.removeEventListener("abort", onAbort);
     }
 
-    const winner = children[winnerIndex]!;
-    const losers = children.filter((_, i) => i !== winnerIndex);
-    for (const l of losers) l.kill(9);
-    await Promise.all(losers.map((l) => l.exited));
-    // A grant that lands in the same turn as the abort: the winner is dead or dying
-    // (we killed it above), so the slot it "granted" is already back. Reap it and
-    // throw rather than hand the caller a share nothing is actually holding.
+    // Kill the losers and wait for every wait to settle. Awaiting them is
+    // mandatory — each one reaps its child before settling, and that is what
+    // guarantees their slots are back before the caller re-sweeps for extras. A
+    // loser that ALSO won (granted in the same turn) hands its slot straight back.
+    losers.abort();
+    const settled = await Promise.allSettled(waits);
+    for (const s of settled) {
+      if (s.status === "fulfilled" && s.value !== winner)
+        await s.value.release();
+    }
+    // A grant that lands in the same turn as the caller's abort: hand the
+    // winner's slot back and throw rather than return a share nothing will use.
     if (signal?.aborted) {
-      winner.kill(9);
-      await winner.exited;
+      await winner.release();
       signal.throwIfAborted();
     }
     return winner;
@@ -741,7 +709,7 @@ export function createHostSemaphore(opts: {
     // slots. On a window with any free slot this is the whole story — no turnstile,
     // no subprocess.
     let fds = sweepKeep(effectiveMax, order);
-    let winner: WaitChild | undefined;
+    let winner: HeldFlock | undefined;
 
     if (fds.length === 0) {
       // Slow path: every slot is busy (sweepKeep closed all fds it opened).
@@ -755,24 +723,15 @@ export function createHostSemaphore(opts: {
       // for exactly the window an abort could land in.)
       const turnstile = turnstileFile();
       let turnstileFd: number | undefined;
-      let turnstileChild: WaitChild | undefined;
+      let turnstileHeld: HeldFlock | undefined;
       let turnstileReleased = false;
       const releaseTurnstile = async (): Promise<void> => {
         if (turnstileReleased) return;
         turnstileReleased = true;
         if (turnstileFd !== undefined) closeSync(turnstileFd);
-        if (turnstileChild) {
-          // `kill()` is what actually ends the child; the stdin EOF is only the
-          // polite path for a LIVE one. Skipped once the signal has aborted,
-          // because there the child has usually already been SIGKILLed (see
-          // `awaitGrantedCancellable`) and the write would land on a broken pipe.
-          if (!signal?.aborted) {
-            // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget child-stdin close before kill(); no work to attribute
-            void turnstileChild.stdin.end();
-          }
-          turnstileChild.kill();
-          await turnstileChild.exited;
-        }
+        // Idempotent and reaps the holding child; a cancelled wait never
+        // produced one (`waitForFlock` reaped it before throwing).
+        if (turnstileHeld) await turnstileHeld.release();
       };
 
       try {
@@ -783,8 +742,7 @@ export function createHostSemaphore(opts: {
         if (!flockTry(turnstileFd)) {
           closeSync(turnstileFd);
           turnstileFd = undefined;
-          turnstileChild = spawnWait(turnstile);
-          await awaitGrantedCancellable(turnstileChild, name, signal);
+          turnstileHeld = await waitForFlock(turnstile, { signal });
         }
 
         // (b) Re-sweep the lane window: a slot may have freed while we queued for
@@ -824,25 +782,16 @@ export function createHostSemaphore(opts: {
       if (released) return;
       released = true;
       for (const fd of fds) closeSync(fd);
-      if (winner) {
-        // Closing stdin gives the winner EOF → it exits → its fd closes → the flock
-        // releases. Fire-and-forget the flush; correctness is guaranteed by kill() +
-        // awaiting exited, which reaps the child so we never leave a zombie. Skipped
-        // once the signal has aborted, for the same reason as the turnstile child
-        // above: kill() alone is sufficient, and the write may hit a broken pipe.
-        if (!signal?.aborted) {
-          // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget child-stdin close before kill(); no work to attribute
-          void winner.stdin.end();
-        }
-        winner.kill();
-      }
+      // Signals the child holding the winner's slot; it exits, its fd closes and
+      // the flock releases. `release()` below reaps it.
+      winner?.releaseSync();
     };
     const release = async (): Promise<void> => {
       releaseSlots();
       // Reap the killed child. Awaiting a settled `exited` is a no-op, so calling
       // `release()` again — or calling it after an abort listener already ran
       // `releaseSlots()` — stays idempotent.
-      if (winner) await winner.exited;
+      if (winner) await winner.release();
     };
 
     if (signal?.aborted) {
@@ -905,71 +854,4 @@ export function createHostSemaphore(opts: {
       }
     },
   };
-}
-
-/**
- * Read `stream` until the literal `"granted\n"` token appears (the child holds its
- * lock). Async — the event loop is never blocked. If the stream closes without the
- * token, the child died before acquiring → throw loudly (a swallowed failure here
- * would silently drop the gate's bound). In fan-out, a loser rejecting this way is
- * expected and absorbed by `Promise.any`.
- */
-/**
- * `awaitGranted` for a `flock-wait` child WE own, made cancellable.
- *
- * Cancellation is expressed as SIGKILLing the child rather than as a
- * `Promise.race` against the signal, for the same reason as in `fanOut`: racing
- * abandons a pending `reader.read()` on a stream we then release the lock on, and
- * its later rejection has no owner — a floating rejection on exactly the path we
- * are making safe. Killing the child closes its stdout instead, so the read
- * completes normally (as EOF) and the wait unwinds through its own `finally`.
- *
- * That EOF then LOOKS like this pool's loud "the child died before granting"
- * failure, so both outcomes are re-checked against the signal and replaced by
- * `signal.reason`: reporting a pool fault for a child we killed would be a lie,
- * and returning success would claim a lock whose holder we just destroyed. The
- * caller still reaps the child — every call site here does so in a `finally`.
- */
-async function awaitGrantedCancellable(
-  child: WaitChild,
-  name: string,
-  signal: AbortSignal | undefined,
-): Promise<void> {
-  if (!signal) return awaitGranted(child.stdout, name);
-  signal.throwIfAborted();
-  const onAbort = (): void => child.kill(9);
-  signal.addEventListener("abort", onAbort, { once: true });
-  try {
-    await awaitGranted(child.stdout, name);
-  } catch (err) {
-    signal.throwIfAborted(); // our own kill caused this EOF — report the abort
-    throw err;
-  } finally {
-    signal.removeEventListener("abort", onAbort);
-  }
-  signal.throwIfAborted(); // granted in the same turn as the abort — do not keep it
-}
-
-async function awaitGranted(
-  stream: ReadableStream<Uint8Array>,
-  name: string,
-): Promise<void> {
-  const decoder = new TextDecoder();
-  let buffer = "";
-  const reader = stream.getReader();
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (value) buffer += decoder.decode(value, { stream: true });
-      if (buffer.includes(GRANTED)) return;
-      if (done) {
-        throw new Error(
-          `createHostSemaphore(${name}): flock-wait child exited before granting a slot ` +
-            `(stdout closed without "granted")`,
-        );
-      }
-    }
-  } finally {
-    reader.releaseLock();
-  }
 }

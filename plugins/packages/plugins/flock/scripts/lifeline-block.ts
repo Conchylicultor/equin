@@ -19,7 +19,7 @@
  * either way nobody is waiting on our result.
  *
  * Imports nothing cross-plugin (only `node:*` + `bun:ffi`): it is loaded by
- * path as a Worker, like host-semaphore's `flock-block.ts`.
+ * path as a Worker, like `flock-block.ts`.
  */
 import { openSync } from "node:fs";
 import { workerData } from "node:worker_threads";

@@ -65,7 +65,9 @@ export { withDirectOp } from "./direct-op";
 export type {
   DirectOpContext,
   DirectOpDeps,
+  DirectOpFlight,
   DirectOpOptions,
+  JoinedRun,
 } from "./direct-op";
 
 export {

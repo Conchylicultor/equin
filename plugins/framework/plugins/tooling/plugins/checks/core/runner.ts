@@ -14,7 +14,8 @@ import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { computeTreeHash } from "./tree-hash";
 import { resolveCacheSignature } from "./cache-signature";
 import { recordingRepo, runRepoFiles } from "./repo-set";
-import { openCheckCache } from "./cache";
+import { checkFlightDir, openCheckCache } from "./cache";
+import { gateSlot, runCheckFlight, type GateSlot } from "./check-flight";
 import { withScanView } from "./scan-context";
 import {
   loadTreeSnapshot,
@@ -25,7 +26,7 @@ import {
 } from "./read-set";
 import { gitGrepList } from "./grep-code";
 import { openProgressRun } from "./progress-log";
-import { openCheckTranscript, renderStallLine } from "./transcript";
+import { openCheckTranscript, provenance, renderStallLine } from "./transcript";
 import { isBuildProcess } from "./run-context";
 import {
   assertExemptableInvariant,
@@ -164,6 +165,13 @@ export interface RunChecksOptions {
   log: (line: string, stream: "stdout" | "stderr") => void;
   /** Bypass the tree-hash result cache entirely (lookup + record). */
   noCache?: boolean;
+  /**
+   * The working tree's content hash, already computed by the caller
+   * (`computeTreeHash`, whose `null` is its fail-open "no hash": run uncached).
+   * Omitted, the runner computes it itself. Ignored under `noCache`, which
+   * never hashes.
+   */
+  treeHash?: { value: string | null };
   /**
    * Restrict the run to checks of these scopes; omitted = every scope. See
    * `Check.scope`: `push` passes "tree" because a deploy-scoped verdict is about
@@ -436,8 +444,14 @@ export async function runChecks(
   const root = noCache
     ? null
     : await progress.bootstrap("root", () => getWorktreeRoot());
+  // A caller that already hashed the tree (the `check` command, which keys its
+  // run-level single-flight on it before the grant) hands the hash in, so the
+  // tree the flight is keyed on IS the tree the cache is keyed on — one
+  // computation, not two that could straddle an edit.
   const treeHash = root
-    ? await progress.bootstrap("tree-hash", () => computeTreeHash(root))
+    ? options.treeHash !== undefined
+      ? options.treeHash.value
+      : await progress.bootstrap("tree-hash", () => computeTreeHash(root))
     : null;
   const cache = treeHash
     ? await progress.bootstrap("open-cache", () => openCheckCache())
@@ -509,15 +523,20 @@ export async function runChecks(
 
   // One check, start to settle. Extracted from the `Promise.all` callback ONLY
   // so the progress log can wrap it in a try/finally — a `finally` cannot see a
-  // return value, and the callback has four return sites.
+  // return value, and the callback has several return sites.
   //
   // `observations` is the caller's buffer, not one made here: if the check
   // throws, the caller builds its failed outcome from the same buffer, so the
   // lines it logged before throwing survive.
+  //
+  // `slot` is the check's gate slot, held on entry. Only a check that joins
+  // another run's flight lets go of it (and takes it back before doing work);
+  // the caller releases it when the check settles, whatever happened here.
   const runOne = async (
     check: Check,
     wallStart: number,
     observations: CheckObservation[],
+    slot: GateSlot,
   ): Promise<CheckOutcome> => {
     // A check opts out of caching by returning null from cacheSignature();
     // absent → "" (keyed on tree hash alone). Awaited: a signature may be async.
@@ -540,127 +559,140 @@ export async function runChecks(
       repo,
     };
 
-    // INPUT-KEYED path (validate-by-replay). Selected GENERICALLY on the
-    // `inputKeyed` flag — the runner never names check ids. Live: nine checks
-    // set the flag today, so this branch runs on every check pass. A boolean
-    // `true` uses record-then-replay; the
-    // `"declared"` variant (opaque checks) is not wired yet and falls through
-    // to the legacy path until its stage lands. Narrow inline (not via a stored
-    // boolean) so TS sees cache/treeHash/sig as non-null in this branch.
-    if (
-      cache !== null &&
-      treeHash !== null &&
-      sig !== null &&
-      snapshot !== null &&
-      check.inputKeyed === true
-    ) {
-      const stored = cache.loadReadSet(check.id, sig);
-      if (stored !== null) {
-        // Replay a recorded `git grep -l` query against the CURRENT snapshot
-        // tree — called by `validate` ONLY when a query's pathspec fingerprint
-        // changed (the cheap in-memory gate runs first). Re-runs the SAME grep
-        // plumbing `readCandidates` used (via the shared `gitGrepList`), over
-        // the fresh tree, so a brand-new matching file is seen (H9).
-        //
-        // FAIL-OPEN: any error thrown by validate (a grep-replay spawn failure,
-        // a malformed snapshot) degrades to a MISS (run the body), never a
-        // crash and never a false HIT — the cache can only ever cause an
-        // unnecessary re-run, not a stale PASS.
-        let verdict: ValidateResult;
-        try {
-          verdict = await validate(stored, snapshot, {
-            replayQuery: (q: QueryFact) =>
-              gitGrepList(
-                snapshot.root,
-                q.grepArg,
-                q.fixed,
-                q.pathspecs,
-                snapshot.treeHash,
-              ),
-          });
-          // fail-open contract: any validation error (grep replay spawn failure, malformed snapshot) degrades to a cache MISS (the body runs and re-verifies), which can never produce a false HIT; propagating would abort the whole check run
-        } catch (err) {
-          verdict = {
-            hit: false,
-            reason: `validate threw (fail-open → run): ${String(err)}`,
-          };
-        }
-        if (verdict.hit) {
-          if (shadow)
-            observations.push({
-              line: `shadow: ${check.id} input-keyed HIT`,
-              stream: "stdout",
-            });
-          return {
-            check,
-            result: { ok: true } as CheckResult,
-            durationMs: Math.round(performance.now() - wallStart),
-            wallStart,
-            cached: true,
-            observations,
-          };
-        }
-        if (shadow)
-          observations.push({
-            line: `shadow: ${check.id} input-keyed MISS — ${verdict.reason}`,
-            stream: "stdout",
-          });
-      }
-      // MISS → run under a fresh recording view, capturing the read-set. The
-      // check's `ctx.repo()` records into the same view, so what it lists and
-      // reads through it is part of what a later HIT replays. Its set is this
-      // same snapshot's (one memoized load), which `recordingRepo` requires.
-      const view = snapshot.createRecordingView();
-      const recordingCtx = { ...ctx, repo: recordingRepo(repo, view) };
-      const result = await withScanView(treeHash, view, () =>
-        runBody(check, recordingCtx),
-      );
-      const durationMs = Math.round(performance.now() - wallStart);
-      if (result.ok) cache.recordReadSet(check.id, sig, view.readSet());
-      return {
-        check,
-        result,
-        durationMs,
-        wallStart,
-        cached: false,
-        observations,
-      };
-    }
-
-    // LEGACY whole-tree path (unchanged). Narrow inline (not via a stored
-    // boolean) so TS sees cache/treeHash/sig as non-null in the guarded branch.
-    if (
-      cache !== null &&
-      treeHash !== null &&
-      sig !== null &&
-      cache.has(check.id, treeHash, sig)
-    ) {
-      // A cache hit runs nothing, so it observes nothing.
-      return {
-        check,
-        result: { ok: true } as CheckResult,
-        durationMs: Math.round(performance.now() - wallStart),
-        wallStart,
-        cached: true,
-        observations,
-      };
-    }
-    const result = await withScanView(treeHash, null, () =>
-      runBody(check, ctx),
-    );
-    const durationMs = Math.round(performance.now() - wallStart);
-    // Cache PASSES only — failures must always re-run with full output.
-    if (cache !== null && treeHash !== null && sig !== null && result.ok) {
-      cache.record(check.id, treeHash, sig);
-    }
-    return {
+    const settled = (result: CheckResult, cached: boolean): CheckOutcome => ({
       check,
       result,
-      durationMs,
+      durationMs: Math.round(performance.now() - wallStart),
       wallStart,
-      cached: false,
+      cached,
+      sharedFrom: null,
       observations,
+    });
+
+    // Which cache this check is keyed in, decided ONCE so the lookup and the
+    // miss path below can never disagree about it.
+    //
+    // INPUT-KEYED (validate-by-replay): selected GENERICALLY on the
+    // `inputKeyed` flag — the runner never names check ids. Live: nine checks
+    // set the flag today, so this branch runs on every check pass. A boolean
+    // `true` uses record-then-replay; the `"declared"` variant (opaque checks)
+    // is not wired yet and falls through to the legacy path until its stage
+    // lands. LEGACY: the whole-tree slot. NONE: no cache (`--no-cache`, no tree
+    // hash, or a check whose signature opts out) — the body just runs.
+    const mode =
+      cache === null || treeHash === null || sig === null
+        ? ({ kind: "none" } as const)
+        : snapshot !== null && check.inputKeyed === true
+          ? ({
+              kind: "input-keyed",
+              cache,
+              treeHash,
+              sig,
+              snapshot,
+            } as const)
+          : ({ kind: "legacy", cache, treeHash, sig } as const);
+
+    // The cache lookup: the hit's outcome, or null on a miss. Called first,
+    // and again by a check that joined a run whose pass that run recorded.
+    const lookup = async (): Promise<CheckOutcome | null> => {
+      if (mode.kind === "none") return null;
+      if (mode.kind === "legacy") {
+        // A cache hit runs nothing, so it observes nothing.
+        return mode.cache.has(check.id, mode.treeHash, mode.sig)
+          ? settled({ ok: true }, true)
+          : null;
+      }
+      const { snapshot: snap } = mode;
+      const stored = mode.cache.loadReadSet(check.id, mode.sig);
+      if (stored === null) return null;
+      // Replay a recorded `git grep -l` query against the CURRENT snapshot
+      // tree — called by `validate` ONLY when a query's pathspec fingerprint
+      // changed (the cheap in-memory gate runs first). Re-runs the SAME grep
+      // plumbing `readCandidates` used (via the shared `gitGrepList`), over
+      // the fresh tree, so a brand-new matching file is seen (H9).
+      //
+      // FAIL-OPEN: any error thrown by validate (a grep-replay spawn failure,
+      // a malformed snapshot) degrades to a MISS (run the body), never a
+      // crash and never a false HIT — the cache can only ever cause an
+      // unnecessary re-run, not a stale PASS.
+      let verdict: ValidateResult;
+      try {
+        verdict = await validate(stored, snap, {
+          replayQuery: (q: QueryFact) =>
+            gitGrepList(
+              snap.root,
+              q.grepArg,
+              q.fixed,
+              q.pathspecs,
+              snap.treeHash,
+            ),
+        });
+        // fail-open contract: any validation error (grep replay spawn failure, malformed snapshot) degrades to a cache MISS (the body runs and re-verifies), which can never produce a false HIT; propagating would abort the whole check run
+      } catch (err) {
+        verdict = {
+          hit: false,
+          reason: `validate threw (fail-open → run): ${String(err)}`,
+        };
+      }
+      if (shadow)
+        observations.push({
+          line: verdict.hit
+            ? `shadow: ${check.id} input-keyed HIT`
+            : `shadow: ${check.id} input-keyed MISS — ${verdict.reason}`,
+          stream: "stdout",
+        });
+      return verdict.hit ? settled({ ok: true }, true) : null;
     };
+
+    // The miss path: run the body, and record a PASS. Failures are never
+    // cached — they must always re-run with full output.
+    const runMiss = async (): Promise<CheckOutcome> => {
+      if (mode.kind === "input-keyed") {
+        // Run under a fresh recording view, capturing the read-set. The
+        // check's `ctx.repo()` records into the same view, so what it lists
+        // and reads through it is part of what a later HIT replays. Its set is
+        // this same snapshot's (one memoized load), which `recordingRepo`
+        // requires.
+        const view = mode.snapshot.createRecordingView();
+        const recordingCtx = { ...ctx, repo: recordingRepo(repo, view) };
+        const result = await withScanView(mode.treeHash, view, () =>
+          runBody(check, recordingCtx),
+        );
+        const outcome = settled(result, false);
+        if (result.ok)
+          mode.cache.recordReadSet(check.id, mode.sig, view.readSet());
+        return outcome;
+      }
+      const result = await withScanView(treeHash, null, () =>
+        runBody(check, ctx),
+      );
+      const outcome = settled(result, false);
+      if (mode.kind === "legacy" && result.ok)
+        mode.cache.record(check.id, mode.treeHash, mode.sig);
+      return outcome;
+    };
+
+    const hit = await lookup();
+    if (hit !== null) return hit;
+    // No cache, no flight: `--no-cache` means "really run", and a check with
+    // no key has nothing to coalesce on.
+    if (mode.kind === "none") return await runMiss();
+    // A MISS: run it at most once across every concurrent check run on the
+    // host asking for the same (check, sig, tree) — see `check-flight.ts`.
+    return await runCheckFlight({
+      check,
+      dir: checkFlightDir(),
+      sig: mode.sig,
+      treeHash: mode.treeHash,
+      runId: progress.runId,
+      wallStart,
+      observations,
+      slot,
+      lookup,
+      run: runMiss,
+      onJoin: (leaderId) => progress.checkJoined(check.id, leaderId),
+      onJoinEnd: (adopted) => progress.checkJoinEnded(check.id, adopted),
+    });
   };
 
   // How many checks run at once. Resolved HERE, after the filters, because the
@@ -704,102 +736,104 @@ export async function runChecks(
   let results: CheckOutcome[];
   try {
     results = await Promise.all(
-      selected.map((check) => {
-        // Written by the gate's `onWait` hook at the moment this check is
-        // admitted, i.e. strictly before the body below runs. 0 when a slot was
-        // already free.
-        let queuedMs = 0;
-        return gate.run(
-          async () => {
-            // FIRST: wait for this check's own event-loop turn. Without it every
-            // admitted check started on a MICROTASK (the gate grants through a
-            // resolved promise), so ~100 checks ran their synchronous start-up —
-            // `cacheSignature()`, then `run()` up to its first `await` — back to
-            // back, before any timer or I/O callback could run: the thread
-            // watch's tick, a heartbeat, another check's socket.
-            //
-            // A microtask yield (`await Promise.resolve()`) would change
-            // nothing: microtasks drain before the loop moves on. Nor would a
-            // plain `await yieldMacrotask()` here: every check would queue its
-            // yield for the SAME turn and resume in one batch. The turn queue
-            // chains them, so a full loop turn runs between one check's
-            // start-up and the next.
-            //
-            // Ahead of `wallStart`, so the wait for a turn is neither queue
-            // (`queuedMs`) nor work (`durationMs`); both keep their meaning.
-            await startTurn();
-            // INSIDE the gate, both of them, and that placement is the entire
-            // point of the change rather than an incidental detail.
-            //
-            // `wallStart` used to be taken at `.map` time — before this callback
-            // could possibly run — so under an unbounded wave every recorded
-            // `durationMs` was the wave's own length rather than the check's
-            // cost. That is how twelve unrelated checks came to "cost" 260s each,
-            // and it would come back verbatim if this line drifted back outside:
-            // the queue would simply move from the wave into every duration.
-            //
-            // `checkStarted` follows it for the reader's sake: `--status` names a
-            // hang as `started − ended`, so "started" has to keep meaning
-            // "running". A queued check is neither, and is derived instead
-            // (`CheckRunProgress.queued`).
-            const wallStart = performance.now();
-            progress.checkStarted(check.id);
-            const observations: CheckObservation[] = [];
-            let outcome: CheckOutcome | undefined;
-            try {
-              outcome = await runOne(check, wallStart, observations);
-              return outcome;
-            } catch (err) {
-              // A check that throws FAILS ITSELF; it does not abort the run.
-              // Its throw used to reject this `Promise.all`, and the outer catch
-              // then ended the whole run with only `run aborted: Error: …` — the
-              // check was never named, and every other check's verdict was lost.
-              // On 2026-09-10, `fork-schema-drift`'s Postgres connect timeout did
-              // exactly that to whole runs. Converted here, the throw is a fatal
-              // FAIL that keeps the stack: it reaches the progress `end` record
-              // and the transcript through the `finally` below, and the console
-              // through the ordinary print loop, like any other failure. Nothing
-              // is swallowed — the run still fails, just with a name on it. (This
-              // also catches the per-check cache bookkeeping around the body; the
-              // stack says which threw.)
-              outcome = thrownOutcome(check, err, {
-                wallStart,
-                durationMs: Math.round(performance.now() - wallStart),
-                observations,
+      selected.map(async (check) => {
+        // The check's slot in the gate, held as a lease rather than through a
+        // `gate.run` wrap: a check that joins another run's in-flight check
+        // gives it back for the wait and re-takes it before doing work
+        // (`check-flight.ts` — holding it through the wait would park a
+        // `--jobs 1` run behind another run's check). Released when the check
+        // settles, whatever it did with it in between.
+        const slot = gateSlot(gate);
+        // The wait to be admitted, ahead of the body; 0 when a slot was free.
+        const queuedMs = await slot.acquire();
+        try {
+          // FIRST: wait for this check's own event-loop turn. Without it every
+          // admitted check started on a MICROTASK (the gate grants through a
+          // resolved promise), so ~100 checks ran their synchronous start-up —
+          // `cacheSignature()`, then `run()` up to its first `await` — back to
+          // back, before any timer or I/O callback could run: the thread
+          // watch's tick, a heartbeat, another check's socket.
+          //
+          // A microtask yield (`await Promise.resolve()`) would change
+          // nothing: microtasks drain before the loop moves on. Nor would a
+          // plain `await yieldMacrotask()` here: every check would queue its
+          // yield for the SAME turn and resume in one batch. The turn queue
+          // chains them, so a full loop turn runs between one check's
+          // start-up and the next.
+          //
+          // Ahead of `wallStart`, so the wait for a turn is neither queue
+          // (`queuedMs`) nor work (`durationMs`); both keep their meaning.
+          await startTurn();
+          // INSIDE the gate, both of them, and that placement is the entire
+          // point of the change rather than an incidental detail.
+          //
+          // `wallStart` used to be taken at `.map` time — before this callback
+          // could possibly run — so under an unbounded wave every recorded
+          // `durationMs` was the wave's own length rather than the check's
+          // cost. That is how twelve unrelated checks came to "cost" 260s each,
+          // and it would come back verbatim if this line drifted back outside:
+          // the queue would simply move from the wave into every duration.
+          //
+          // `checkStarted` follows it for the reader's sake: `--status` names a
+          // hang as `started − ended`, so "started" has to keep meaning
+          // "running". A queued check is neither, and is derived instead
+          // (`CheckRunProgress.queued`).
+          const wallStart = performance.now();
+          progress.checkStarted(check.id);
+          const observations: CheckObservation[] = [];
+          let outcome: CheckOutcome | undefined;
+          try {
+            outcome = await runOne(check, wallStart, observations, slot);
+            return outcome;
+          } catch (err) {
+            // A check that throws FAILS ITSELF; it does not abort the run.
+            // Its throw used to reject this `Promise.all`, and the outer catch
+            // then ended the whole run with only `run aborted: Error: …` — the
+            // check was never named, and every other check's verdict was lost.
+            // On 2026-09-10, `fork-schema-drift`'s Postgres connect timeout did
+            // exactly that to whole runs. Converted here, the throw is a fatal
+            // FAIL that keeps the stack: it reaches the progress `end` record
+            // and the transcript through the `finally` below, and the console
+            // through the ordinary print loop, like any other failure. Nothing
+            // is swallowed — the run still fails, just with a name on it. (This
+            // also catches the per-check cache bookkeeping around the body; the
+            // stack says which threw.)
+            outcome = thrownOutcome(check, err, {
+              wallStart,
+              durationMs: Math.round(performance.now() - wallStart),
+              observations,
+            });
+            return outcome;
+          } finally {
+            // In a `finally` so the end is recorded on every path, a thrown
+            // check included — a check that never records its end would
+            // masquerade as the hang we are hunting.
+            progress.checkEnded(
+              check.id,
+              Math.round(performance.now() - wallStart),
+              outcome?.result.ok ?? false,
+              outcome?.cached ?? false,
+              Math.round(queuedMs),
+              outcome?.sharedFrom ?? null,
+            );
+            // The transcript is written as each check SETTLES, not from the print
+            // loop below — the loop runs after `Promise.all`, which a hung or
+            // killed run reaches never. A check that threw has an outcome too
+            // (the catch above built it); `outcome` is unset only if the runner
+            // itself failed, and the outer catch reports that.
+            if (outcome) {
+              transcript?.record({
+                checkId: check.id,
+                result: outcome.result,
+                cached: outcome.cached,
+                sharedFrom: outcome.sharedFrom,
+                observations: outcome.observations,
               });
-              return outcome;
-            } finally {
-              // In a `finally` so the end is recorded on every path, a thrown
-              // check included — a check that never records its end would
-              // masquerade as the hang we are hunting.
-              progress.checkEnded(
-                check.id,
-                Math.round(performance.now() - wallStart),
-                outcome?.result.ok ?? false,
-                outcome?.cached ?? false,
-                Math.round(queuedMs),
-              );
-              // The transcript is written as each check SETTLES, not from the print
-              // loop below — the loop runs after `Promise.all`, which a hung or
-              // killed run reaches never. A check that threw has an outcome too
-              // (the catch above built it); `outcome` is unset only if the runner
-              // itself failed, and the outer catch reports that.
-              if (outcome) {
-                transcript?.record({
-                  checkId: check.id,
-                  result: outcome.result,
-                  cached: outcome.cached,
-                  observations: outcome.observations,
-                });
-              }
             }
-          },
-          {
-            onWait: (waitMs) => {
-              queuedMs = waitMs;
-            },
-          },
-        );
+          }
+        } finally {
+          slot.release();
+        }
       }),
     );
   } catch (err) {
@@ -873,11 +907,12 @@ export async function runChecks(
     durationMs,
     wallStart,
     cached,
+    sharedFrom,
     observations,
   } of results) {
     options?.onCheckDone?.(check.id, durationMs, wallStart);
     if (result.ok) {
-      log(`• ${check.id} ... ok${cached ? " (cached)" : ""}`, "stdout");
+      log(`• ${check.id} ... ok${provenance(cached, sharedFrom)}`, "stdout");
       emitObservations(observations);
     } else if (result.inconclusive) {
       // Environmental, non-fatal outcome: NOT a pass and NOT a hard failure.
@@ -893,7 +928,7 @@ export async function runChecks(
       emitDetail(check, result);
     } else {
       allOk = false;
-      log(`• ${check.id} ... FAIL`, "stdout");
+      log(`• ${check.id} ... FAIL${provenance(false, sharedFrom)}`, "stdout");
       emitObservations(observations);
       emitDetail(check, result);
     }

@@ -9,6 +9,7 @@ import type {
   OpSummary,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
+import type { FlightLeader } from "@plugins/packages/plugins/single-flight/core";
 import { withDirectOp, type DirectOpDeps } from "./direct-op";
 
 // Pure-logic tests of the direct-op lifecycle: every seam injected (no real
@@ -48,10 +49,30 @@ function terminalOf(records: OpEvent[]): OpSummary | undefined {
   return last?.e === "completed" ? last.summary : undefined;
 }
 
-function makeHarness(opts: { inherited?: Grant; slug?: string } = {}) {
+/**
+ * How the injected single-flight behaves. `lead`: the key is free, so the
+ * caller leads (and what it publishes is captured). `join`: an identical run
+ * is in flight and publishes `outcome`. `join-then-lead`: the caller waits on
+ * a leader whose verdict it cannot adopt, then leads. `busy`: (nested) the key
+ * is held, so `tryLead` refuses.
+ */
+type FlightScript =
+  | { kind: "lead" }
+  | { kind: "join"; outcome: "success" | "failed" }
+  | { kind: "join-then-lead" }
+  | { kind: "busy" };
+
+const LEADER: FlightLeader = { id: "leader-op", pid: 4242, startedAt: 0 };
+
+function makeHarness(
+  opts: { inherited?: Grant; slug?: string; flight?: FlightScript } = {},
+) {
   const events: string[] = [];
   const records: OpEvent[] = [];
   const exitHandlers: (() => void)[] = [];
+  const published: unknown[] = [];
+  const flightKeys: string[] = [];
+  const script = opts.flight ?? { kind: "lead" };
   const slug = asNamespace(opts.slug ?? "wt-a");
   const deps: DirectOpDeps = {
     inheritedGrant: () => opts.inherited,
@@ -105,8 +126,32 @@ function makeHarness(opts: { inherited?: Grant; slug?: string } = {}) {
     },
     // `_slug` above: the stubs record the op, not the slug — every call in a
     // run carries the same one, asserted once through `predecessor:<slug>`.
+    singleFlight: (async (o, lead) => {
+      flightKeys.push(o.key);
+      events.push("flight");
+      const publish = (v: unknown) => published.push(v);
+      if (script.kind === "join") {
+        o.onJoin?.(LEADER);
+        // Only what the schema accepts is ever adopted.
+        const verdict = o.schema.parse({ outcome: script.outcome });
+        if (!o.adoptable(verdict)) throw new Error("expected adoptable");
+        return { role: "joined", leader: LEADER, verdict };
+      }
+      if (script.kind === "join-then-lead") o.onJoin?.(null);
+      return { role: "led", result: await lead(publish) };
+    }) as DirectOpDeps["singleFlight"],
+    tryLead: (async (o, lead) => {
+      flightKeys.push(o.key);
+      events.push("try-lead");
+      if (script.kind === "busy") return { role: "busy" };
+      return {
+        role: "led",
+        result: await lead((v: unknown) => published.push(v)),
+      };
+    }) as DirectOpDeps["tryLead"],
+    log: (line) => events.push(`log-line:${line.slice(0, 20)}`),
   };
-  return { deps, events, records, exitHandlers };
+  return { deps, events, records, exitHandlers, published, flightKeys };
 }
 
 describe("withDirectOp — top-level path", () => {
@@ -242,5 +287,137 @@ describe("withDirectOp — nested path (a parent's grant in the environment)", (
     expect(h.events).toEqual(["lane:background"]);
     expect(h.records).toEqual([]);
     expect(h.exitHandlers).toEqual([]);
+  });
+});
+
+describe("withDirectOp — run-level single-flight (opts.flight)", () => {
+  const adoptInto = (seen: string[]) => ({
+    key: "same-work",
+    adopt: (
+      j: { outcome: "success" | "failed"; leader: FlightLeader },
+      ctx: { opId: string },
+    ) => {
+      seen.push(`adopt:${j.outcome}:${j.leader.id}:${ctx.opId.length > 0}`);
+      return j.outcome;
+    },
+  });
+
+  test("a joiner never takes a grant: it waits `in-flight` and completes with the leader's outcome", async () => {
+    const h = makeHarness({ flight: { kind: "join", outcome: "failed" } });
+    const seen: string[] = [];
+    const outcome = await withDirectOp(
+      "check",
+      { max: 4, flight: adoptInto(seen) },
+      async () => {
+        throw new Error("a joiner must not run the body");
+      },
+      h.deps,
+    );
+    expect(outcome).toBe("failed");
+    expect(seen).toEqual(["adopt:failed:leader-op:true"]);
+    // Still an op (marker + requested + terminal), but no acquire at all.
+    expect(h.events.some((e) => e.startsWith("acquire:"))).toBe(false);
+    expect(h.events).toContain("marker:check:publish");
+    expect(h.events).toContain("log:requested");
+    expect(h.events.slice(-2)).toEqual([
+      "log:completed",
+      "marker:check:release",
+    ]);
+    // The kind is prepended to the caller's key.
+    expect(h.flightKeys).toEqual(["check\nsame-work"]);
+
+    const completed = terminalOf(h.records);
+    expect(completed?.outcome).toBe("failed");
+    expect(completed?.waits).toHaveLength(1);
+    expect(completed?.waits[0]).toMatchObject({
+      kind: "in-flight",
+      reason: "check leader-op",
+      result: "acquired",
+    });
+    // A joiner was never granted anything.
+    expect(h.records.map((r) => r.e)).not.toContain("granted");
+  });
+
+  test("a leader runs under its grant and publishes its outcome as the shared verdict", async () => {
+    const h = makeHarness({ flight: { kind: "lead" } });
+    const seen: string[] = [];
+    const outcome = await withDirectOp(
+      "test",
+      { max: 2, flight: adoptInto(seen) },
+      async () => "success",
+      h.deps,
+    );
+    expect(outcome).toBe("success");
+    expect(seen).toEqual([]);
+    expect(h.published).toEqual([{ outcome: "success" }]);
+    // The flight is entered BEFORE the grant is asked for.
+    expect(h.events.indexOf("flight")).toBeLessThan(
+      h.events.indexOf("acquire:background:2"),
+    );
+  });
+
+  test("an `error` outcome is not a verdict: nothing is published", async () => {
+    const h = makeHarness({ flight: { kind: "lead" } });
+    await withDirectOp(
+      "check",
+      { max: 1, flight: adoptInto([]) },
+      async () => "error",
+      h.deps,
+    );
+    expect(h.published).toEqual([]);
+  });
+
+  test("a join that cannot adopt closes its `in-flight` wait and leads", async () => {
+    const h = makeHarness({ flight: { kind: "join-then-lead" } });
+    const outcome = await withDirectOp(
+      "check",
+      { max: 1, flight: adoptInto([]) },
+      async () => "success",
+      h.deps,
+    );
+    expect(outcome).toBe("success");
+    expect(h.events).toContain("acquire:background:1");
+    const waits = terminalOf(h.records)?.waits ?? [];
+    expect(waits.map((w) => [w.kind, w.result])).toEqual([
+      ["in-flight", "aborted"],
+      ["host-grant", "acquired"],
+    ]);
+    expect(waits[0]?.reason).toBe("check (starting)");
+  });
+
+  test("a nested op never waits: busy → it runs unshared on the inherited grant", async () => {
+    const inherited = fakeGrant(3, "interactive");
+    const h = makeHarness({ inherited, flight: { kind: "busy" } });
+    let ran = false;
+    const outcome = await withDirectOp(
+      "check",
+      { max: 9, flight: adoptInto([]) },
+      async (grant) => {
+        expect(grant).toBe(inherited);
+        ran = true;
+        return "success";
+      },
+      h.deps,
+    );
+    expect(outcome).toBe("success");
+    expect(ran).toBe(true);
+    expect(h.events).toContain("try-lead");
+    expect(h.events).not.toContain("flight");
+    expect(h.published).toEqual([]);
+  });
+
+  test("a nested op leads when the key is free, so a top-level duplicate can join it", async () => {
+    const h = makeHarness({
+      inherited: fakeGrant(1, "background"),
+      flight: { kind: "lead" },
+    });
+    await withDirectOp(
+      "check",
+      { max: 1, flight: adoptInto([]) },
+      async () => "failed",
+      h.deps,
+    );
+    expect(h.events).toContain("try-lead");
+    expect(h.published).toEqual([{ outcome: "failed" }]);
   });
 });

@@ -30,12 +30,15 @@ function isSlotHeld(slotsDir: string, i: number): boolean {
   }
 }
 
-// The `flock-wait.ts` child script, resolved the same way the module resolves it.
-// Tests spawn it directly to stand in for an out-of-process slot holder.
+// The `flock-wait.ts` child script `waitForFlock` spawns (it lives in
+// `packages/flock`). Tests spawn it directly to stand in for an out-of-process
+// slot holder.
 const FLOCK_WAIT_PATH = join(
   import.meta.dir,
   "..",
   "..",
+  "..",
+  "flock",
   "scripts",
   "flock-wait.ts",
 );
@@ -555,7 +558,7 @@ function spawnHolder(lockFile: string) {
     stdin: "pipe",
     stdout: "pipe",
     stderr: "inherit",
-    env: { ...process.env, HOST_SEM_LOCK_FILE: lockFile },
+    env: { ...process.env, FLOCK_WAIT_FILE: lockFile },
   });
 }
 
@@ -649,7 +652,7 @@ test("a fan-out child is not orphaned when its parent is SIGKILLed", async () =>
   const script = `
     const child = Bun.spawn([process.execPath, "--smol", process.env.FW_PATH], {
       stdin: "pipe", stdout: "inherit", stderr: "inherit",
-      env: { ...process.env, HOST_SEM_LOCK_FILE: process.env.FW_LOCK },
+      env: { ...process.env, FLOCK_WAIT_FILE: process.env.FW_LOCK },
     });
     console.log(JSON.stringify({ childPid: child.pid }));
     await new Promise(() => {});

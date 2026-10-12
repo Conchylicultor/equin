@@ -1,5 +1,13 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "fs";
 import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "fs";
+import {
+  pruneWorktreeTestArtifacts,
   worktreeArtifacts,
   worktreeDataDir,
 } from "@plugins/infra/plugins/paths/core";
@@ -30,8 +38,9 @@ export interface TestRunnerOutcome {
 }
 
 /**
- * This checkout's last `./singularity test`, at `worktreeArtifacts.testStatus`.
- * Written when the run starts and again when it ends; see that path's doc.
+ * One `./singularity test` run's record, at `worktreeArtifacts.testStatus(slug,
+ * opId)`. Written when the run starts and again when it ends; see that path's
+ * doc for why it is keyed by the run's `opId`.
  */
 export interface TestStatus {
   opId: string;
@@ -41,19 +50,35 @@ export interface TestStatus {
   status: "running" | "passed" | "failed";
   finishedAt: string | null;
   runners: TestRunnerOutcome[];
+  /**
+   * Set when this run did not run the tests itself but JOINED an identical
+   * run already in flight (same test files, same tree) and adopted its verdict:
+   * the leader's `opId`. `runners` is then the leader's, copied.
+   */
+  adoptedFrom?: string;
 }
 
+/**
+ * Write `status` to its run's record (atomically: temp + rename). A write that
+ * CREATES a record (the run's first) also trims the family to the newest
+ * `TEST_ARTIFACTS_RETENTION` — writing a new set is what prunes old ones.
+ */
 export function writeTestStatus(name: Namespace, status: TestStatus): void {
   mkdirSync(worktreeDataDir(name), { recursive: true });
-  const path = worktreeArtifacts.testStatus(name);
+  const path = worktreeArtifacts.testStatus(name, status.opId);
+  const fresh = !existsSync(path);
   const tmp = `${path}.tmp.${process.pid}`;
   writeFileSync(tmp, JSON.stringify(status, null, 2) + "\n");
   renameSync(tmp, path);
+  if (fresh) pruneWorktreeTestArtifacts(name);
 }
 
-/** The last run's status, or `null` when this checkout has never run tests. */
-export function readTestStatus(name: Namespace): TestStatus | null {
-  const path = worktreeArtifacts.testStatus(name);
+/** One run's record by its `opId`; `null` when that run wrote none (it never started, or was pruned). */
+export function readTestStatus(
+  name: Namespace,
+  opId: string,
+): TestStatus | null {
+  const path = worktreeArtifacts.testStatus(name, opId);
   let raw: string;
   try {
     raw = readFileSync(path, "utf8");
@@ -62,4 +87,48 @@ export function readTestStatus(name: Namespace): TestStatus | null {
     throw err;
   }
   return JSON.parse(raw) as TestStatus;
+}
+
+/**
+ * The record of the newest run (by `startedAt`) in this checkout, or `null`
+ * when it has none. For a caller that spawned `./singularity test` and so never
+ * learned the run's `opId` (the deps upgrade gates); anything holding an
+ * `opId` reads that run with `readTestStatus`.
+ */
+export function readLatestTestStatus(name: Namespace): TestStatus | null {
+  const dir = worktreeDataDir(name);
+  let entries: string[];
+  try {
+    entries = readdirSync(dir);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+  let latest: TestStatus | null = null;
+  for (const entry of entries) {
+    const m = /^test-status-(.+)\.json$/.exec(entry);
+    if (!m?.[1]) continue;
+    const status = readTestStatus(name, m[1]);
+    if (status && (latest === null || status.startedAt > latest.startedAt))
+      latest = status;
+  }
+  return latest;
+}
+
+/**
+ * The failure summary of one run's record, as indented lines: what `await`
+ * prints under a finished test op, and what a run that joined an in-flight
+ * identical run prints for the verdict it adopted — one renderer, so the two
+ * cannot disagree. Empty when nothing failed and nothing was adopted.
+ */
+export function testFailureLines(status: TestStatus): string[] {
+  const lines: string[] = [];
+  if (status.adoptedFrom !== undefined)
+    lines.push(`  adopted the verdict of in-flight run ${status.adoptedFrom}`);
+  const failures = status.runners.flatMap((r) => r.failures);
+  if (failures.length > 0) {
+    lines.push(`  ${failures.length} failing:`);
+    lines.push(...failures.slice(0, 10).map((f) => `    ${f}`));
+  }
+  return lines;
 }
