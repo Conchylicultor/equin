@@ -1023,7 +1023,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `apps/chord/trainer`
           - Exemptions:
             - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
-        - **`shell`** — The Chord app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the trainer's pane (whose header carries the app launcher) is shown, and the app's own dark-only theme (the mockup's onyx blacks, the seven chord colours and the outside-the-scale grey as the chord-palette tokens, Schibsted Grotesk and Bodoni Moda), which the chord app selects.
+        - **`shell`** — The Chord app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the trainer's pane (whose header carries the app launcher) is shown, and the app's own dark-only theme (the mockup's onyx blacks, the seven chord colours and the neutral grey as the chord-palette tokens, Schibsted Grotesk and Bodoni Moda), which the chord app selects.
           - Web:
             - Contributes:
               - `Apps.App` "Chord" → `ChordLayout`
@@ -1398,7 +1398,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/theory.romanNumeral`
               - `integrations/hooktheory.HookpadMode`
               - `integrations/hooktheory.hookpadTonicPc`
-              - `music/chord-box.scaleDegree`
+              - `music/chord-box.rootReading`
               - `music/chord-box.ScaleDegree`
             - Exports (types):
               - `ChordDigit`
@@ -6678,6 +6678,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/score.Note`
               - `apps/sonata/score.Score`
               - `apps/sonata/score.scoreEndBeat`
+              - `music/chord-box.MAJOR_SCALE`
+              - `music/chord-box.rootReading`
             - Exports (types):
               - `ChordDisplayMode`
               - `ChordMatch`
@@ -23852,7 +23854,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`music`** — Umbrella for music building blocks shared across apps, knowing pitch classes and strings only: the chord box (a chord's degree colour, numeral and tile).
   - Plugins:
-    - **`chord-box`** — The chord box: <ChordBox> (a frame painted in the colour of the root's degree in its key's scale — filled tile, given or empty — holding its numeral and name, with a full-bleed hit button behind the content and now / selected states), <ChordNumeral> (the Roman numeral in the display serif, its mark raised in the sans), chordToneStyle / chordColour (the degree's --chord-N colour and tile depth as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour, with .chord-caption for a reading under a numeral (V/V, I/3) in the paint's own ink. Knows degrees and strings only, so any app can draw a chord the same way.
+    - **`chord-box`** — The chord box: <ChordBox> (a frame painted in the colour of its numeral's number — filled tile, given or empty — holding its numeral and name, with a full-bleed hit button behind the content and now / selected states), <ChordNumeral> (the Roman numeral in the display serif, its mark raised in the sans), chordToneStyle / chordColour (the degree's --chord-N colour and tile depth as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour, with .chord-caption for a reading under a numeral (V/V, I/3) in the paint's own ink. Knows degrees and strings only, so any app can draw a chord the same way.
       - Web:
         - Uses:
           - `primitives/css/overlay.Overlay`
@@ -23877,11 +23879,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/chord/vocabulary`
           - `apps/sonata/chord-chart`
           - `apps/sonata/rich/readout-keyboard`
+          - `apps/sonata/theory`
       - Core:
         - Exports (types):
-          - `KeyMode`
+          - `Accidental`
+          - `RootReading`
           - `ScaleDegree`
-        - Exports (values): `scaleDegree`
+        - Exports (values):
+          - `MAJOR_SCALE`
+          - `rootReading`
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
@@ -38643,7 +38649,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `ChartTokenValues`
             - Exports (values): `chartGroup`
-        - **`chord-palette`** — Chord colour token group: --chord-1…7 (one colour per scale degree, the tonic first) and --chord-outside (a root outside the scale), with their customizer section.
+        - **`chord-palette`** — Chord colour token group: --chord-1…7 (one colour per Roman numeral's number, I … VII, ♭VII sharing VII's) and --chord-outside (a chord with no key), with their customizer section.
           - Web:
             - Contributes:
               - `ThemeEngine.TokenGroup` "Chord colours"

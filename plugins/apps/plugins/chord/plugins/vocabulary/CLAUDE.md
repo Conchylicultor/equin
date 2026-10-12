@@ -7,11 +7,11 @@ What the Chord trainer says about a chord token (`"7:4-3-3/1"`, see
 ```ts
 // core/ — pure
 chordLabel(token)        → { numeral, suffix, figure, text }   // "V" "" "65" "V65"
-chordDegree(token)       → 0..6 | null                          // major-scale degree of the root
-chordFunction(token)     → "tonic" | "subdominant" | "dominant" | null
+chordDegree(token)       → 0..6                                 // the numeral's number (♭VII → 6): the chord's colour
+chordFunction(token)     → "tonic" | "subdominant" | "dominant" | null  // null for a chromatic root
 inversionReading(token)  → "I/3" | "V7/4" | null                // root-position chord over its bass degree
 appliedReading(token, scale) → "V/V" | "V7/IV" | "vii°7/V" | null // a foreign dominant, by its target
-chordDigit(token)        → "1".."7"                             // the root's LETTER degree: ♭VII → 7
+chordDigit(token)        → "1".."7"                             // chordDegree + 1: ♭VII → 7
 chordKeyPlan(unlocked)   → { digit, tokens[] }[]                // digits ascending, tokens in unlock order
 pickPage(tokens, page)   → { numbers, pager }                   // the second stroke, paged past seven
 chordVoicing(token, tonicPc) → MIDI notes, ascending            // the chord itself
@@ -58,9 +58,12 @@ The stack is matched against Sonata's `CHORD_TEMPLATES` exactly.
   inversion past the top (a seventh with no 5th, in third inversion) puts the
   top tone in the bass. `chordVoicing` reads it the same way.
 
-`chordDegree` and friends read only the root against the major scale; the
-function families follow the mockup (I iii vi tonic, ii IV subdominant, V vii
-dominant).
+`chordDegree` and friends read only the root, through `music/chord-box`'s
+`rootReading` — the one reading Sonata's numerals and every chord box use: the
+major scale in every mode, a chromatic root keeping its numeral's number (♭VII
+is VII's colour). So a token looks the same in a major song and a minor one.
+The function families follow the mockup (I iii vi tonic, ii IV subdominant, V
+vii dominant); a chromatic root has none.
 
 ## The song's key, and a chord's name in it
 
@@ -102,10 +105,9 @@ Naming is per KEY, not per chord's own spelling: ♭VI in C reads `A♭`, not `G
 
 ## Keys
 
-`chordDigit` is the **letter** degree — the accidental never changes the key, so
-♭VII is on the 7 and ♯IV on the 4, and every chord has one. (`chordDegree` has
-nothing to say about a root outside the major scale, which is why the keys do
-not read it.) `chordKeyPlan` groups the unlocked chords by digit, so a digit
+`chordDigit` is the numeral's number (`chordDegree`) — the accidental never
+changes the key, so ♭VII is on the 7 and ♯IV on the 4, every chord has one, and
+a chord's key and its colour always agree. `chordKeyPlan` groups the unlocked chords by digit, so a digit
 several chords share can light them numbered and take a second key to pick one.
 
 `pickPage` is that second stroke. With seven chords or fewer on a digit there is
@@ -209,7 +211,7 @@ surface.
     - `apps/sonata/theory.romanNumeral`
     - `integrations/hooktheory.HookpadMode`
     - `integrations/hooktheory.hookpadTonicPc`
-    - `music/chord-box.scaleDegree`
+    - `music/chord-box.rootReading`
     - `music/chord-box.ScaleDegree`
   - Exports (types):
     - `ChordDigit`

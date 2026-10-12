@@ -21,6 +21,8 @@
     - `apps/sonata/score.Note`
     - `apps/sonata/score.Score`
     - `apps/sonata/score.scoreEndBeat`
+    - `music/chord-box.MAJOR_SCALE`
+    - `music/chord-box.rootReading`
   - Exports (types):
     - `ChordDisplayMode`
     - `ChordMatch`

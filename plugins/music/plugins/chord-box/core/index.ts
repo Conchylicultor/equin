@@ -1,2 +1,2 @@
-export { scaleDegree } from "./degree";
-export type { KeyMode, ScaleDegree } from "./degree";
+export { MAJOR_SCALE, rootReading } from "./degree";
+export type { Accidental, RootReading, ScaleDegree } from "./degree";

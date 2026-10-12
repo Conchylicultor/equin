@@ -168,7 +168,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`music`** — Umbrella for music building blocks shared across apps, knowing pitch classes and strings only: the chord box (a chord's degree colour, numeral and tile).
   - Plugins:
-    - **`chord-box`** — The chord box: <ChordBox> (a frame painted in the colour of the root's degree in its key's scale — filled tile, given or empty — holding its numeral and name, with a full-bleed hit button behind the…
+    - **`chord-box`** — The chord box: <ChordBox> (a frame painted in the colour of its numeral's number — filled tile, given or empty — holding its numeral and name, with a full-bleed hit button behind the content and now…
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:

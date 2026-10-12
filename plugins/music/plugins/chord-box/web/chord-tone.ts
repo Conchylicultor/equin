@@ -4,22 +4,21 @@ import "./chord-box.css";
 
 /**
  * How deep each degree's solid tile is: the share of the chord colour kept
- * when it is mixed toward black in OKLCH (degrees 1 … 7, the tonic first). Each hue is deepened until
+ * when it is mixed toward black in OKLCH (I … VII). Each hue is deepened until
  * the light numeral on it reads, gold least of all.
  */
 const TILE_DEPTH = ["76%", "70%", "76%", "72%", "74%", "76%", "72%"] as const;
 
-/** A root outside the scale: the palette's neutral chord grey. */
-const OUTSIDE_SCALE = { colour: "var(--chord-outside)", depth: "74%" };
+/** No key to read the root against: the palette's neutral chord grey. */
+const NO_KEY = { colour: "var(--chord-outside)", depth: "74%" };
 
 /**
  * A degree's chord colour as a CSS value: `var(--chord-1)` … `var(--chord-7)`
- * (degrees 1 … 7, the tonic first), or `var(--chord-outside)` for `null`, a root outside the scale.
+ * (I … VII, by the numeral's number: ♭VII is VII's colour), or
+ * `var(--chord-outside)` for `null`, a chord with no key.
  */
 export function chordColour(degree: ScaleDegree | null): string {
-  return degree === null
-    ? OUTSIDE_SCALE.colour
-    : `var(--chord-${String(degree + 1)})`;
+  return degree === null ? NO_KEY.colour : `var(--chord-${String(degree + 1)})`;
 }
 
 /**
@@ -33,6 +32,6 @@ export function chordToneStyle(
 ): React.CSSProperties {
   return {
     "--fn": chordColour(degree),
-    "--fn-depth": degree === null ? OUTSIDE_SCALE.depth : TILE_DEPTH[degree],
+    "--fn-depth": degree === null ? NO_KEY.depth : TILE_DEPTH[degree],
   } as React.CSSProperties;
 }

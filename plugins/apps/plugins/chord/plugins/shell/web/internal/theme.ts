@@ -60,9 +60,9 @@ const colorPalette = colorPaletteGroup.fragment(
 );
 
 /**
- * The chord colours ("classic"), one per scale degree: chord-1…7 are I, ii,
- * iii, IV, V, vi, vii°, and chord-outside the neutral grey of a chord whose
- * root is outside the major scale. The most common chords sit on the most
+ * The chord colours ("classic"), one per numeral's number: chord-1…7 are I …
+ * VII (♭VII wearing VII's), and chord-outside the neutral grey of a chord
+ * with no colour (Rare). The most common chords sit on the most
  * distant hues — I orange, IV sage, V blue, vi violet — then ii gold, iii
  * rose, vii teal. The deep tile a filled answer sits on and the numeral on it
  * are derived from these in CSS (`color-mix`, `music/chord-box`), as in the

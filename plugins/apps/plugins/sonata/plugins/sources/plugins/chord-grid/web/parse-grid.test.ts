@@ -191,9 +191,9 @@ describe("parseGrid — the key: directive", () => {
     expect(symbols("KEY: A I")).toEqual(["A"]);
   });
 
-  it("reads degrees off the natural-minor scale in a minor key", () => {
-    // A minor: i iv VI V — VI is F, not F#.
-    expect(symbols("key: Am\ni iv VI V")).toEqual(["Am", "Dm", "F", "E"]);
+  it("reads degrees off the major scale in a minor key too", () => {
+    // A minor: i iv ♭VI V — ♭VI is F, as the numeral is read back.
+    expect(symbols("key: Am\ni iv bVI V")).toEqual(["Am", "Dm", "F", "E"]);
   });
 
   it("consumes no bar", () => {

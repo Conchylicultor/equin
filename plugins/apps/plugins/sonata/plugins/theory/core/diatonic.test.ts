@@ -76,11 +76,11 @@ describe("diatonicChords", () => {
     expect(chords.map((d) => d.numeral)).toEqual([
       "i",
       "ii°",
-      "III",
+      "♭III",
       "iv",
       "v",
-      "VI",
-      "VII",
+      "♭VI",
+      "♭VII",
     ]);
   });
 

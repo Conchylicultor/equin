@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Chord colour token group: --chord-1…7 (one colour per scale degree, the tonic first) and --chord-outside (a root outside the scale), with their customizer section.
+- Description: Chord colour token group: --chord-1…7 (one colour per Roman numeral's number, I … VII, ♭VII sharing VII's) and --chord-outside (a chord with no key), with their customizer section.
 - Web:
   - Contributes:
     - `ThemeEngine.TokenGroup` "Chord colours"

@@ -39,7 +39,7 @@ export interface ChordBoxHit {
 }
 
 export interface ChordBoxProps extends Passthrough<HTMLDivElement> {
-  /** The root's scale degree in its key, which paints the box; `null` paints the outside-the-scale grey. */
+  /** The numeral's number (`rootReading`'s degree), which paints the box; `null` (no key) paints grey. */
   degree: ScaleDegree | null;
   /**
    * `filled` — the solid tile; `given` — the chord printed dimmed and flat

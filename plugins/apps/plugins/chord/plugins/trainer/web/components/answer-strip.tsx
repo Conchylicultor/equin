@@ -229,7 +229,7 @@ function AnswerBox({
     <ChordBox
       // Its paint follows its state: the quiet tint for a given box, the tile
       // once filled, the ghost while it waits for an answer. Rare has no chord
-      // colour: it paints the outside-the-scale grey.
+      // colour: it paints the neutral grey.
       degree={shown === null || shown === "rare" ? null : chordDegree(shown)}
       state={!asked ? "given" : shown !== null ? "filled" : "empty"}
       selected={selected}

@@ -16,9 +16,12 @@
  * silently rot.
  *
  * The numeral is derived purely from the chord root's semitone interval above
- * the tonic, resolved through a fixed per-mode table of conventional readings —
- * NOT from the key speller — so a lowered-sixth chord reads the conventional
- * "♭VI" rather than the speller's enharmonic "♯V". The chord *quality* then only
+ * the tonic, read against the MAJOR scale in every key with the conventional
+ * chromatic readings (`music/chord-box`'s `rootReading`, which the chord box's
+ * colour reads too) — NOT from the key speller, so a lowered-sixth chord reads
+ * "♭VI" rather than the speller's enharmonic "♯V". A minor key is no exception:
+ * B minor reads i ii° ♭III iv v ♭VI ♭VII, so a chord over a tonic has one
+ * numeral whatever the song's mode. The chord *quality* then only
  * decides the numeral's case (upper = major family, lower = minor/diminished), a
  * quality mark (° dim, ø half-dim, + aug), and a seventh/extension figure.
  *
@@ -30,6 +33,10 @@
  */
 
 import {
+  MAJOR_SCALE,
+  rootReading,
+} from "@plugins/music/plugins/chord-box/core";
+import {
   makeKeySpeller,
   type ChordData,
   type KeySignature,
@@ -37,70 +44,12 @@ import {
 import { applyModifierTail } from "./chord-body";
 import { formatChordSymbol, formatSpelledChordSymbol } from "./chords";
 import { tonicPc } from "./key-detect";
-import { scaleOf } from "./scale";
 
 /** Roman-numeral glyph per 1-based diatonic degree. */
 const NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII"] as const;
 
 /** Reduce any integer to a pitch-class in [0, 12). */
 const pc12 = (pc: number): number => ((pc % 12) + 12) % 12;
-
-/** A degree reading: which numeral (1-based) and its chromatic accidental. */
-interface Degree {
-  /** 1-based diatonic degree → `NUMERALS[n - 1]`. */
-  n: number;
-  /** Chromatic offset from the diatonic degree: -1 = ♭, +1 = ♯, 0 = natural. */
-  acc?: -1 | 1;
-}
-
-/**
- * Semitone interval above the tonic → conventional Roman degree, in a MAJOR key
- * — the inverse of the forward degree model (`scaleOf`, `degree + accidental →
- * interval`) that `parseRomanNumeral` reads, picking one conventional spelling
- * per chromatic interval; `roman.test.ts` asserts the two agree, so the numeral
- * round-trip is total.
- *
- * Diatonic degrees (0,2,4,5,7,9,11) read bare; chromatic roots take the
- * conventional pop/jazz reading — the raised fourth (♯IV, the tritone that
- * pulls to V) sharp, the borrowed thirds/sixths/sevenths (♭III ♭VI ♭VII) and the
- * Neapolitan (♭II) flat.
- */
-const MAJOR_DEGREES: readonly Degree[] = [
-  { n: 1 }, //  0  I
-  { n: 2, acc: -1 }, //  1  ♭II
-  { n: 2 }, //  2  II
-  { n: 3, acc: -1 }, //  3  ♭III
-  { n: 3 }, //  4  III
-  { n: 4 }, //  5  IV
-  { n: 4, acc: 1 }, //  6  ♯IV
-  { n: 5 }, //  7  V
-  { n: 6, acc: -1 }, //  8  ♭VI
-  { n: 6 }, //  9  VI
-  { n: 7, acc: -1 }, // 10  ♭VII
-  { n: 7 }, // 11  VII
-];
-
-/**
- * Semitone interval above the tonic → conventional Roman degree, in a MINOR key.
- * The diatonic (natural-minor) degrees (0,2,3,5,7,8,10) read bare — so the minor
- * third, sixth and seventh are the plain III / VI / VII of the key — and the
- * chromatic degrees take the conventional readings (the raised leading tone ♯VII,
- * the raised sixth ♯VI of melodic minor, the ♯IV / Neapolitan ♭II).
- */
-const MINOR_DEGREES: readonly Degree[] = [
-  { n: 1 }, //  0  i
-  { n: 2, acc: -1 }, //  1  ♭II
-  { n: 2 }, //  2  ii
-  { n: 3 }, //  3  III
-  { n: 3, acc: 1 }, //  4  ♯III
-  { n: 4 }, //  5  iv
-  { n: 4, acc: 1 }, //  6  ♯iv
-  { n: 5 }, //  7  v
-  { n: 6 }, //  8  VI
-  { n: 6, acc: 1 }, //  9  ♯vi
-  { n: 7 }, // 10  VII
-  { n: 7, acc: 1 }, // 11  ♯vii (leading tone)
-];
 
 /** How a chord quality cases and decorates its numeral. */
 interface RomanStyle {
@@ -145,12 +94,6 @@ const STYLE: Record<string, RomanStyle> = {
   six9: { lower: false, figure: "6/9" },
 };
 
-/** The degree reading of `root` in `key`: its numeral and chromatic accidental. */
-function degreeOf(root: number, key: KeySignature): Degree {
-  const interval = pc12(root - tonicPc(key.tonic));
-  return (key.mode === "major" ? MAJOR_DEGREES : MINOR_DEGREES)[interval]!;
-}
-
 /**
  * The Roman-numeral label for `chord` in `key` split in two, as a numeral is
  * typeset: `numeral` (the accidental and the cased degree — `I`, `ii`, `♭VII`)
@@ -165,10 +108,13 @@ export function romanNumeralParts(
   const style = STYLE[chord.quality];
   if (!style) return null;
 
-  const degree = degreeOf(chord.root, key);
-  const base = NUMERALS[degree.n - 1]!;
+  const { degree, accidental: acc } = rootReading(
+    chord.root,
+    tonicPc(key.tonic),
+  );
+  const base = NUMERALS[degree]!;
   const numeral = style.lower ? base.toLowerCase() : base;
-  const accidental = degree.acc === undefined ? "" : degree.acc < 0 ? "♭" : "♯";
+  const accidental = acc === 0 ? "" : acc < 0 ? "♭" : "♯";
 
   return {
     numeral: accidental + numeral,
@@ -314,9 +260,9 @@ function resolveHead(lower: boolean, tail: string): ResolvedHead | null {
  * minor, `"V7"` in F major → C7, `"♭VII"` in C major → B♭ major, `"iiø7"` → a
  * half-diminished ii, `"V7♭9"` → an altered dominant.
  *
- * The root is the numeral's diatonic degree in the key's scale (natural minor
- * for a minor key, so `VI` in A minor is F — not F♯) shifted by the leading
- * accidental; the base quality is whatever `romanNumeral` would have rendered as
+ * The root is the numeral's degree on the MAJOR scale above the tonic, in a
+ * minor key too (so `♭VI` in A minor is F, and `VI` is F♯), shifted by the
+ * leading accidental; the base quality is whatever `romanNumeral` would have rendered as
  * this case + mark + figure, and any trailing alterations (`♭9`, `♯5`, `sus4`,
  * `add9`, …) are realised by the same modifier grammar letter-name chords use,
  * so the numeral side and the letter side accept the same chord vocabulary.
@@ -359,7 +305,7 @@ export function parseRomanNumeral(
 
   const accText = m[1]!;
   const acc = accText === "" ? 0 : accText === "♯" || accText === "#" ? 1 : -1;
-  const root = pc12(tonicPc(key.tonic) + scaleOf(key.mode)[n - 1]! + acc);
+  const root = pc12(tonicPc(key.tonic) + MAJOR_SCALE[n - 1]! + acc);
 
   const { quality } = head;
   const symbol = formatChordSymbol({ root, quality }) + tail.modSuffix;

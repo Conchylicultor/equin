@@ -41,7 +41,7 @@ exactly this (`plugins/apps/plugins/website/plugins/shell/web/internal/theme.ts`
 - Sub-plugins:
   - **`categorical`** — Categorical color palette token group: the categorical-1…10 series colors and their customizer section.
   - **`chart`** — Chart color token group: the chart-1…5 ramp and its customizer section.
-  - **`chord-palette`** — Chord colour token group: --chord-1…7 (one colour per scale degree, the tonic first) and --chord-outside (a root outside the scale), with their customizer section.
+  - **`chord-palette`** — Chord colour token group: --chord-1…7 (one colour per Roman numeral's number, I … VII, ♭VII sharing VII's) and --chord-outside (a chord with no key), with their customizer section.
   - **`color-adjust`** — Customizer section for a theme's color adjustment — the hue / saturation / lightness shift applied to every color it paints — with "Fill from…" shortcuts.
   - **`color-palette`** — Color palette token group (surfaces, text, accents, status colors) with its customizer section.
   - **`density`** — Density token group (padding intents, control heights, the spacing ramp) with its customizer section and "Fill from…" shortcuts.

@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-music-chord-box",
-  "description": "The chord box: a chord drawn as a tile in its scale degree's colour (the chord-palette tokens), with its Roman numeral in the display serif and its name. scaleDegree reads the degree off a root, a tonic and the key's mode (major, or natural minor).",
+  "description": "The chord box: a chord drawn as a tile in its scale degree's colour (the chord-palette tokens), with its Roman numeral in the display serif and its name. rootReading reads a root against its tonic — the major scale in every key, chromatic roots as ♭II ♭III ♯IV ♭VI ♭VII — giving the numeral's number (the colour) and its accidental.",
   "private": true,
   "version": "0.0.1"
 }

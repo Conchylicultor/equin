@@ -22,15 +22,16 @@ describe("chord degree and function", () => {
     });
   }
 
-  it("has none for a root outside the major scale", () => {
-    for (const text of [
-      "10:4-3/0",
-      "3:4-3/0",
-      "1:4-3/0",
-      "6:3-3/0",
-      "8:4-3/0",
-    ]) {
-      expect(chordDegree(token(text))).toBeNull();
+  it("reads a chromatic root as its numeral's number, with no function", () => {
+    const cases: [string, ScaleDegree][] = [
+      ["10:4-3/0", 6], // ♭VII
+      ["3:4-3/0", 2], // ♭III
+      ["1:4-3/0", 1], // ♭II
+      ["6:3-3/0", 3], // ♯iv°
+      ["8:4-3/0", 5], // ♭VI
+    ];
+    for (const [text, degree] of cases) {
+      expect(chordDegree(token(text))).toBe(degree);
       expect(chordFunction(token(text))).toBeNull();
     }
   });

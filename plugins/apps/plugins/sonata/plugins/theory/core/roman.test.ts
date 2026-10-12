@@ -27,16 +27,17 @@ describe("romanNumeral — major-key diatonic triads", () => {
   }
 });
 
-describe("romanNumeral — natural-minor diatonic triads", () => {
-  // A minor diatonic: i ii° III iv v VI VII
+describe("romanNumeral — natural-minor triads read against the major scale", () => {
+  // A minor diatonic: i ii° ♭III iv v ♭VI ♭VII — one numeral per chord over a
+  // tonic, whatever the mode.
   const cases: [number, string, string][] = [
     [9, "min", "i"],
     [11, "dim", "ii°"],
-    [0, "maj", "III"],
+    [0, "maj", "♭III"],
     [2, "min", "iv"],
     [4, "min", "v"],
-    [5, "maj", "VI"],
-    [7, "maj", "VII"],
+    [5, "maj", "♭VI"],
+    [7, "maj", "♭VII"],
   ];
   for (const [root, quality, expected] of cases) {
     it(`${expected} (root ${root}, ${quality})`, () => {
@@ -59,7 +60,7 @@ describe("romanNumeral — sevenths carry the figure", () => {
     expect(romanNumeral(chord(11, "halfdim7"), C_MAJOR)).toBe("viiø7");
   });
   it("vii°7 (fully diminished, minor key leading tone)", () => {
-    expect(romanNumeral(chord(8, "dim7"), A_MINOR)).toBe("♯vii°7");
+    expect(romanNumeral(chord(8, "dim7"), A_MINOR)).toBe("vii°7");
   });
 });
 
@@ -88,7 +89,7 @@ describe("romanNumeral — function is key-relative", () => {
       "IV",
     );
     expect(romanNumeral(chord(0, "maj"), { tonic: "E", mode: "minor" })).toBe(
-      "VI",
+      "♭VI",
     );
   });
   it("respects an accidental tonic (V in F♯ major)", () => {
@@ -136,9 +137,10 @@ describe("parseRomanNumeral — major-key diatonic triads", () => {
   }
 });
 
-describe("parseRomanNumeral — degrees follow the key's scale", () => {
-  it("VI in A minor is F (natural minor), not F♯", () => {
-    expect(parseRomanNumeral("VI", A_MINOR)).toMatchObject({ root: 5 });
+describe("parseRomanNumeral — degrees are read on the major scale", () => {
+  it("♭VI in A minor is F, and VI is F♯", () => {
+    expect(parseRomanNumeral("♭VI", A_MINOR)).toMatchObject({ root: 5 });
+    expect(parseRomanNumeral("VI", A_MINOR)).toMatchObject({ root: 6 });
   });
   it("vi in C major is A minor", () => {
     expect(parseRomanNumeral("vi", C_MAJOR)!.symbol).toBe("Am");

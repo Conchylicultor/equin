@@ -35,8 +35,9 @@ is what you can type:
   `b`/`#` (and parentheses) work: `V7b9` = `V7(♭9)`.
 - **A leading `♭`/`♯` chromaticizes the degree**: `♭VII`, `♭VI`, `♯iv°`. ASCII
   `bVII` and `#IV` work too — `#` is only ever a sharp.
-- **Degrees are the key's own scale.** In a minor key `VI` is the natural-minor
-  sixth (F in A minor), matching how the numeral is read back.
+- **Degrees are read on the major scale, in every key.** In A minor F is `♭VI`
+  (and `VI` is F♯), matching how the numeral is read back — one numeral per
+  chord over a tonic, whatever the mode (`music/chord-box`'s `rootReading`).
 - **Letter names never consult the key**, so `C ii7 F# V` mixes both freely — no
   numeral begins with a note letter, so the two vocabularies cannot collide.
 
