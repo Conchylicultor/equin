@@ -85,9 +85,10 @@ the field schema the `decode` arm needs.
 `resolveFieldStorage` runs SYNCHRONOUSLY at module-eval inside `defineEntity`
 (drizzle `pgTable(...)` needs the column builders eagerly) — BEFORE the boot-time
 `collectContributions` pass populates the live registry. So the `Fields.Storage`
-token is a self-registering wrapper that records its builder
-into a module-level **eager index** the instant a contribution is DECLARED; the
-resolvers read `live ?? eager`.
+token records each contribution into a module-level **eager index** the instant
+it is DECLARED — through the token's own `project`, never a wrapper, so every
+read (`getContributions`, `getContributionsIfCollected`, `from`) is the real
+token's; the resolvers read `live ?? eager`.
 
 For the eager index to be populated, every capability barrel must have been
 evaluated. That is done by static side-effect imports (the `eager.generated`

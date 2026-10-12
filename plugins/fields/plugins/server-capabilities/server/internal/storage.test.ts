@@ -1,6 +1,6 @@
 import { test, expect } from "bun:test";
 import { z } from "zod";
-import { integer, text } from "drizzle-orm/pg-core";
+import { boolean, integer, text } from "drizzle-orm/pg-core";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import { defineFieldType } from "@plugins/fields/core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
@@ -58,4 +58,28 @@ test("resolveFieldStorage carries which arm a type contributed", () => {
   // A decoding arm is CALLED with the field's schema — that argument is the
   // whole point of the second arm.
   expect(narrowed?.decode?.("c", z.enum(["a", "b"]))).toBeDefined();
+});
+
+test("Fields.Storage is the contribution token itself — every read exists", () => {
+  const contribution = Fields.Storage({ type: fakeType, build });
+  // `from` is a read no wrapper ever re-attached: it answers because the token
+  // is not wrapped, so a read added to the token's type is there at runtime.
+  const [declared] = Fields.Storage.from([{ contributions: [contribution] }]);
+  expect(declared?.type.id).toBe("__storage_test__");
+  expect(declared?.build).toBe(build);
+});
+
+test("declaring a contribution records it before any collect", () => {
+  const lateType = defineFieldType<number>("__storage_test_eager__");
+  Fields.Storage({ type: lateType, build });
+  // The live registry (collected by earlier tests) has no such type, so this
+  // answer comes from the eager index the token's `project` writes.
+  expect(resolveFieldStorage("__storage_test_eager__")?.build).toBe(build);
+});
+
+test("a builder whose column holds another type does not compile", () => {
+  const booleanColumn = (name: string): StorageColumnFor<boolean> =>
+    boolean(name);
+  // @ts-expect-error — a `number` type cannot hand back a `boolean` column.
+  Fields.Storage({ type: fakeType, build: booleanColumn });
 });

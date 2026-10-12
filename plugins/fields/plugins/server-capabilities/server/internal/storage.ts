@@ -1,6 +1,7 @@
 import {
   defineServerContribution,
   type ServerContribution,
+  type ServerContributionToken,
 } from "@plugins/framework/plugins/server-core/core";
 import type { ColumnBuilderBaseConfig, ColumnDataType } from "drizzle-orm";
 import type { PgColumnBuilderBase } from "drizzle-orm/pg-core";
@@ -54,56 +55,56 @@ export type FieldStorageContribution<B = unknown> = { type: FieldType<B> } & (
 
 // Eager, additive index of every field-storage contribution, populated the
 // instant a `Fields.Storage(...)` contribution is DECLARED (barrel module-eval)
-// — see the wrapper below. It is a fallback consulted AFTER the live registry,
-// so it stays available in the windows where `collectContributions` has not run
-// yet: the drizzle-kit codegen subprocess (never boots) and the boot loader pass
-// (evals `tables.ts` before `collectContributions`). The capability barrels are
-// pulled in eagerly by the `fields/server-capabilities-loader` plugin's
-// `eager.generated` manifest, which every eval-time consumer of `resolveField*`
-// imports for side-effect — so every contribution self-registers here before any
-// `defineEntity` body runs, with NO filesystem scan (a `readdirSync` of the
-// source tree resolves to a nonexistent `/plugins` inside a `bun --compile`
-// release binary). This library plugin is a graph SINK: it never imports a
-// capability barrel, so no import cycle can form through it.
+// — by the token's own `project`, below. It is a fallback consulted AFTER the
+// live registry, so it stays available in the windows where
+// `collectContributions` has not run yet: the drizzle-kit codegen subprocess
+// (never boots) and the boot loader pass (evals `tables.ts` before
+// `collectContributions`). The capability barrels are pulled in eagerly by the
+// `fields/server-capabilities-loader` plugin's `eager.generated` manifest, which
+// every eval-time consumer of `resolveField*` imports for side-effect — so every
+// contribution self-registers here before any `defineEntity` body runs, with NO
+// filesystem scan (a `readdirSync` of the source tree resolves to a nonexistent
+// `/plugins` inside a `bun --compile` release binary). This library plugin is a
+// graph SINK: it never imports a capability barrel, so no import cycle can form
+// through it.
 const eager = new Map<string, FieldStorageContribution>();
 
-const storageToken = defineServerContribution<FieldStorageContribution>(
-  "fields.storage",
-  { docLabel: (p) => p.type.id },
-);
+// DECLARING a contribution records it in the eager index through the token's
+// `project` — the token call itself never touches the live registry (that only
+// happens in `collectContributions` at boot), so this is the sole mechanism that
+// makes contributions resolvable in the pre-collect eval window. The token is
+// never wrapped: every read (`getContributions`, `getContributionsIfCollected`,
+// `from`) is the token's own.
+const storageToken = defineServerContribution<
+  FieldStorageContribution,
+  FieldStorageContribution
+>("fields.storage", {
+  docLabel: (p) => p.type.id,
+  project: (props) => {
+    eager.set(props.type.id, props);
+    return props;
+  },
+});
 
-/** The `Fields.Storage` token. Generic in `B` so the value type is inferred from
- *  the `type` token and both arms are checked against it. */
-export interface FieldStorageToken {
+type StorageTokenReads = ServerContributionToken<FieldStorageContribution>;
+
+/** The `Fields.Storage` token: every read of the underlying token, with its call
+ *  made generic in `B` so the value type is inferred from the `type` token and
+ *  both arms are checked against it. The reads are `Pick`ed (a mapped type
+ *  drops the token's own `(input: FieldStorageContribution)` call), so the
+ *  generic call is the ONLY call — a non-generic fallback overload would accept
+ *  a mismatched contribution the generic one rejects. */
+export interface FieldStorageToken extends Pick<
+  StorageTokenReads,
+  keyof StorageTokenReads
+> {
   <B>(props: FieldStorageContribution<B>): ServerContribution;
-  getContributions(): (FieldStorageContribution & {
-    _pluginId?: string;
-    _pluginDescription?: string;
-  })[];
-  getContributionsIfCollected():
-    | (FieldStorageContribution & {
-        _pluginId?: string;
-        _pluginDescription?: string;
-      })[]
-    | undefined;
 }
 
-// Wrap the raw contribution token so DECLARING a contribution also records it in
-// the eager index. The token call itself never touches the live registry — that
-// only happens in `collectContributions` at boot — so this wrapper is the sole
-// mechanism that makes contributions resolvable in the pre-collect eval window.
-// `getContributions` is carried through unchanged so the live-first resolver
-// still reads the collected registry.
-const StorageToken = Object.assign(
-  <B>(props: FieldStorageContribution<B>) => {
-    eager.set(props.type.id, props as FieldStorageContribution);
-    return storageToken(props as FieldStorageContribution);
-  },
-  {
-    getContributions: storageToken.getContributions,
-    getContributionsIfCollected: storageToken.getContributionsIfCollected,
-  },
-) as unknown as FieldStorageToken;
+// Narrows only the call: `B` is erased at runtime, so the token already takes
+// any `FieldStorageContribution<B>`. The reads are the token's own, typed from
+// its own `ServerContributionToken` — nothing here re-attaches them by hand.
+const StorageToken = storageToken as FieldStorageToken;
 
 export const Fields = {
   /** Per-type DB column. Contribute `{ type, build }` for a type whose column
