@@ -19,6 +19,7 @@ function entry(
     persisted: false,
     positionAgeMs: null,
     notifyStats: { hand: 0, feed: 0, producer: 0 },
+    freshness: null,
     ...over,
   });
 }

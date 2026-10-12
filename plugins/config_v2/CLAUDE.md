@@ -369,6 +369,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `acknowledgeConflictByPath`
     - `auditUserConfigOrphans`
     - `ConfigV2`
+    - `configValuesServed`
     - `deleteOverrideByPath`
     - `deleteScope`
     - `forkConfig`
@@ -382,6 +383,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `getScopedDescriptors`
     - `hasFieldStorageProvider`
     - `mergeConflictByPath`
+    - `onConfigDirChange`
     - `registerFieldStorageProvider`
     - `removeDescriptorScope`
     - `resetConfigByPath`
@@ -390,12 +392,12 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `watchConfig`
   - Register: `defineFileWatcher('config_v2.config-files')`
   - Resources:
-    - `config-v2.conflict-locations` (push)
-    - `config-v2.conflicts` (push)
-    - `config-v2.modified-counts` (push)
-    - `config-v2.scopes` (push)
-    - `config-v2.tiers` (push)
-    - `config-v2.values` (push)
+    - `config-v2.conflict-locations` (push, notified)
+    - `config-v2.conflicts` (push, notified)
+    - `config-v2.modified-counts` (push, notified)
+    - `config-v2.scopes` (push, notified)
+    - `config-v2.tiers` (push, notified)
+    - `config-v2.values` (push, notified)
 - Core:
   - Uses:
     - `fields.fieldsToZodObject`

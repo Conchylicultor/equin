@@ -187,7 +187,7 @@ back.
     - `conversations/transcript-watcher.watchTranscript`
     - `infra/git/git-read-cache.createSignedMemo`
     - `network/live.serveValue`
-  - Resources: `jsonl-events` (push)
+  - Resources: `jsonl-events` (push, notified)
 - Core:
   - Uses:
     - `conversations/transcript-watcher.JsonlEventSchema`
@@ -198,6 +198,8 @@ back.
 - Cross-plugin:
   - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×38
+- Exemptions:
+  - Exempts itself from: `no-db-backed-notify` — `server/internal/jsonl-events-resource.ts` (debt)
 - Sub-plugins:
   - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
   - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.

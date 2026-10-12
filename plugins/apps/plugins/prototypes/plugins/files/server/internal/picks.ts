@@ -46,6 +46,7 @@ function prototypeExists(name: string): boolean {
  */
 export const prototypePicksServed = serveValue(prototypePicks, {
   source: "external",
+  changes: "notified",
   loader: async ({ name }) => {
     if (!prototypeExists(name)) {
       throw new Error(`prototypes.picks: no such prototype: ${name}`);

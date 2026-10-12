@@ -33,6 +33,7 @@ export type {
   ServedExternalQueryValue,
   ServedExternalValue,
   ServedPagedValue,
+  ServedSilentPagedValue,
   ServedValue,
 } from "./internal/serve-value";
 export type {

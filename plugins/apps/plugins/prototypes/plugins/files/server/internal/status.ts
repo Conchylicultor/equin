@@ -39,6 +39,7 @@ function prototypeExists(name: string): boolean {
  */
 export const prototypeStatusesServed = serveValue(prototypeStatuses, {
   source: "external",
+  changes: "notified",
   loader: async () => store().readAll(),
 });
 

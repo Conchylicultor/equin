@@ -121,8 +121,8 @@ reads against one total, so the pair has no spelling.
 "First N of total" there) and `useMetricDetailsTotal(selector)` (pending until
 known, never 0) are `useLive` reads — the query names its metric, and the
 server resolves the source. Unknown ids, splits and params, a bad range, and details on a metric
-without them are a `MetricQueryError` — a `ResourceRefusal` — naming the
-problem: the card's error arm shows that message (`refused`), and nothing is
+without them are a `MetricQueryError` — a `ResourceRefusal` with the code
+both reads declare (`refusals: ["invalid-query"]`) — naming the problem: the card's error arm shows that message (`refused`), and nothing is
 reported as a server failure.
 
 ## Boards

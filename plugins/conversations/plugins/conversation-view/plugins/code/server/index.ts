@@ -1,6 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { editedFilesServed } from "./internal/edited-files-resource";
-import { editedFilesWatcher } from "./internal/watch-edited-files";
 
 export { getEditedFiles } from "./internal/get-edited-files";
 export { editedFilesServed } from "./internal/edited-files-resource";
@@ -10,5 +9,4 @@ export default {
   description:
     "Tracks edited files in the conversation's worktree via the live-state primitive.",
   contributions: [...editedFilesServed.declare],
-  register: [editedFilesWatcher],
 } satisfies ServerPluginDefinition;

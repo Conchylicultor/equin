@@ -12,6 +12,7 @@ import type { ConfigV2SecretMeta } from "../../core";
 // descriptor's path after every save / clear.
 export const configSecretMetaServed = serveValue(configSecretMeta, {
   source: "external",
+  changes: "notified",
   loader: async ({ path }) => {
     const allDescriptors = getAllDescriptors();
     const entry = allDescriptors.find(([p]) => p === path);

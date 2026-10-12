@@ -26,6 +26,7 @@ function refOf({ by, key }: { by: string; key: string }): SubagentRef {
 
 export const subagentTranscriptServed = serveValue(subagentTranscript, {
   source: "external",
+  changes: "notified",
   loader: ({ id, ...ref }) =>
     subagentTranscriptMemo.get(transcriptMemoKey(id, refOf(ref))),
   revalidate: ({ id, ...ref }) =>

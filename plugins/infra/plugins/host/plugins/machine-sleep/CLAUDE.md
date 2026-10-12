@@ -33,7 +33,7 @@ reaches the browser within one tick.
   - Contributes: `resource.declare` "machine.sleep"
   - Uses: `network/live.serveValue`
   - Exports (values): `publishSleepReading`
-  - Resources: `machine.sleep` (push)
+  - Resources: `machine.sleep` (push, notified)
 - Web:
   - Uses:
     - `network/live.useLive`

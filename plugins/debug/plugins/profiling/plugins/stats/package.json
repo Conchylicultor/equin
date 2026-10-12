@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-debug-profiling-stats",
-  "private": true,
-  "version": "0.0.1",
-  "description": "Stats endpoint profiling for the Gantt debug pane."
-}

@@ -15,6 +15,7 @@ const flushNotifier = createFlushNotifier<LatencyWindow>();
 
 export const latencySummaryServed = serveValue(latencySummary, {
   source: "external",
+  changes: "notified",
   loader: ({ window }) => loadLatencySummary(window),
   whileSubscribed: ({ window }, notify) =>
     flushNotifier.subscribe(window, notify),

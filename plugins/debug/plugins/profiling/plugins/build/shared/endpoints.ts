@@ -11,14 +11,6 @@ const SpanSchema = z.object({
   maxRssBytes: z.number().optional(),
 });
 
-export const getBuildProfiling = defineEndpoint({
-  route: "GET /api/debug/profiling/build",
-  response: z.object({
-    spans: z.array(SpanSchema),
-    totalMs: z.number(),
-  }),
-});
-
 export const getBuildRunProfileByWorktree = defineEndpoint({
   route: "GET /api/debug/profiling/build/:worktree/:buildId",
   response: z.object({

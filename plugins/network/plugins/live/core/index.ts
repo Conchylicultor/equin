@@ -34,6 +34,11 @@ export type {
   LiveQuerySchema,
 } from "./internal/query-value";
 export type {
+  LiveBytesBrand,
+  LiveBytesParamValueSpec,
+  LiveBytesQueryValueSpec,
+  LiveBytesSpecBase,
+  LiveBytesTypedParamValueSpec,
   LiveCentralValueSpec,
   LiveKeyDirection,
   LivePagedKey,
@@ -49,6 +54,10 @@ export type {
   LiveTypedValueParams,
   LiveQueryValue,
   LiveQueryValueSpec,
+  LiveRefusals,
+  LiveRefusalsBrand,
+  LiveSnapshotBrand,
+  LiveTooLarge,
   LiveValue,
   LiveValueOrigin,
   LiveValueParamParsers,

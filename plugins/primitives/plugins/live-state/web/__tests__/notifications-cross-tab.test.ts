@@ -98,8 +98,8 @@ describe("NotificationsClient — cross-tab (H6)", () => {
     const { hub, qcB, clientA, clientB, tabA, s1 } = await elect();
     expect(clientB.debugSnapshot().transport.worktree.attachedTabs).toBe(2);
 
-    clientA.observe("k", {}, undefined, pushSchema);
-    clientB.observe("k", {}, undefined, pushSchema);
+    clientA.observe("k", {}, undefined, { schema: pushSchema });
+    clientB.observe("k", {}, undefined, { schema: pushSchema });
     await flush();
     expect(subFrames(s1, "k")).toHaveLength(2); // both tabs' subs on S1
     s1.serverSend({
@@ -158,8 +158,8 @@ describe("NotificationsClient — cross-tab (H6)", () => {
     clients.push(clientB);
     await flush();
 
-    clientA.observe("kA", {}, undefined, pushSchema);
-    clientB.observe("kB", {}, undefined, pushSchema);
+    clientA.observe("kA", {}, undefined, { schema: pushSchema });
+    clientB.observe("kB", {}, undefined, { schema: pushSchema });
     await flush(); // both subs reach S1
 
     // Drop + reconnect: the worker reopens; the new connection makes BOTH
@@ -189,7 +189,7 @@ describe("NotificationsClient — cross-tab (H6)", () => {
     // whose version never moves again); tab B then opens the same surface with a
     // fresh sub and an empty cache while A's replay is being answered.
     const { hub, qcA, qcB, clientA, clientB, s1 } = await elect();
-    clientA.observe("k", {}, undefined, pushSchema);
+    clientA.observe("k", {}, undefined, { schema: pushSchema });
     s1.serverSend({
       kind: "sub-ack",
       key: "k",
@@ -201,7 +201,7 @@ describe("NotificationsClient — cross-tab (H6)", () => {
     await flush(); // drain that ack's rx broadcast while B still holds no sub
     expect(qcB.getQueryData(["k"])).toBeUndefined();
 
-    clientB.observe("k", {}, undefined, pushSchema);
+    clientB.observe("k", {}, undefined, { schema: pushSchema });
     await flush(); // both subs reach S1; its ack is in flight
     expect(hub.server.openSockets()).toHaveLength(1);
 
@@ -238,8 +238,8 @@ describe("NotificationsClient — cross-tab (H6)", () => {
   test("H6b: one server frame fans out to BOTH tabs' caches", async () => {
     const { hub, qcA, qcB, clientA, clientB, s1 } = await elect();
     // Both tabs subscribe k through the single shared socket.
-    clientA.observe("k", {}, undefined, pushSchema);
-    clientB.observe("k", {}, undefined, pushSchema);
+    clientA.observe("k", {}, undefined, { schema: pushSchema });
+    clientB.observe("k", {}, undefined, { schema: pushSchema });
     await flush(); // both subs reach S1
     expect(subFrames(s1, "k")).toHaveLength(2);
     expect(hub.server.openSockets()).toHaveLength(1);

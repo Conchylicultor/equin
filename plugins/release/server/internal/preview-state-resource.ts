@@ -33,5 +33,6 @@ function snapshot(): Record<string, Preview> {
 // way to push a change is the served value's own `notify()`.
 export const releasePreviewsServed = serveValue(releasePreviews, {
   source: "external",
+  changes: "notified",
   loader: () => snapshot(),
 });

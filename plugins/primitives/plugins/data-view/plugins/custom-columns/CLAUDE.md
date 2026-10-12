@@ -135,7 +135,7 @@ how the caller obtained it.
   - DB schema: `plugins/primitives/plugins/data-view/plugins/custom-columns/server/internal/tables.ts`
   - Exports (values): `_dataViewCustomValues`
   - Resources:
-    - `data-view-custom-column-defs` (push)
+    - `data-view-custom-column-defs` (push, notified)
     - `data-view-custom-values` (push, unbounded: one DataView surface's custom-column cells, indexed client-side onto every rendered row; the key is the composite (dataViewId, rowKey, columnId), so no single-id :rows read fits)
   - Routes:
     - `POST /api/data-view/custom-values`

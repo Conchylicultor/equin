@@ -29,6 +29,7 @@ export const mapsBrowserConfigWatcher = defineFileWatcher({
 // lives only while a tab is subscribed, so an idle backend holds none.
 export const mapsBrowserConfigServed = serveValue(mapsBrowserConfig, {
   source: "external",
+  changes: "notified",
   loader: () => readBrowserConfig(),
   whileSubscribed: async (_params, notify) => {
     // Subscribing to a missing directory fails; creating it is free.

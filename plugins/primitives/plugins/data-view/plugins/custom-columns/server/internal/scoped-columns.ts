@@ -47,6 +47,7 @@ function readOf(def: CustomColumnDef): ScopedMemberRead {
 /** Served from the config; notified by `watchScopedDefinitions` when a watched surface's definitions change. */
 export const customColumnDefsServed = serveValue(customColumnDefs, {
   source: "external",
+  changes: "notified",
   loader: ({ dataViewId }) => defsOf(dataViewId),
 });
 

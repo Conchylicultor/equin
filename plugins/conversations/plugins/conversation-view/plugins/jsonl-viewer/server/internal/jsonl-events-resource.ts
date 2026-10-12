@@ -15,6 +15,7 @@ import {
 // binding.
 export const jsonlEventsServed = serveValue(jsonlEvents, {
   source: "external",
+  changes: "notified",
   // The ETag and the value are produced by ONE authority: `jsonlEventsMemo` is a
   // `createSignedMemo` binding `transcriptChainSignature` to `readJsonlEventsFromChain`
   // at its single declaration site, both over the chain `resolveConversationTranscriptPaths`

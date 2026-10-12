@@ -105,6 +105,7 @@ async function loadQueuePulse(): Promise<QueuePulse> {
 // that load already sees `pulseNotify` and arms its timer.
 export const queuePulseServed = serveValue(queuePulse, {
   source: "external",
+  changes: "notified",
   loader: loadQueuePulse,
   throttleMs: 1000,
   whileSubscribed: (_params, notify) => {

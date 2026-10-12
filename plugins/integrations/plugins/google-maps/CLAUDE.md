@@ -144,7 +144,7 @@ over:
   - Exports (types): `MapsKeyResult`
   - Exports (values): `getMapsKey`
   - Register: `defineFileWatcher('google-maps.browser-config')`
-  - Resources: `google-maps.browser-config` (push)
+  - Resources: `google-maps.browser-config` (push, notified)
   - Routes:
     - `POST /api/google-maps/browser-config`
     - `DELETE /api/google-maps/browser-config`

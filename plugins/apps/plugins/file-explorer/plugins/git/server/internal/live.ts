@@ -1,11 +1,5 @@
-import { resolve } from "node:path";
-import {
-  defineFileWatcher,
-  type FileChangeEvent,
-} from "@plugins/infra/plugins/file-watcher/server";
+import { acquireCheckoutWatch } from "@plugins/infra/plugins/git/plugins/checkout-watch/server";
 import { serveValue } from "@plugins/network/plugins/live/server";
-import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { runGit } from "@plugins/primitives/plugins/commit-list/server";
 import { fileExplorerGitStatus, type GitStatus } from "../../shared/resources";
 import {
   indexGitStatus,
@@ -15,23 +9,6 @@ import {
 import { assertCheckoutRoot } from "./checkout";
 import { gitStatusMemo } from "./status";
 
-/** Open only while a browser shows a folder of the checkout (see below). */
-export const gitStatusWatcher = defineFileWatcher({
-  name: "file-explorer.git-status",
-  description:
-    "While the file explorer shows a folder inside a git checkout, watches the checkout and its git dir so a save, a stage or a commit updates its git badges at once.",
-  debounceMs: 300,
-  ceilingMs: 3000,
-  // Relative to each watched dir. Object writes always come with an index or
-  // ref change, and other worktrees' git dirs are theirs.
-  ignore: [
-    "**/node_modules/**",
-    ".git/objects/**",
-    ".git/logs/**",
-    ".git/worktrees/**",
-  ],
-});
-
 /**
  * The last status served per root, indexed — so a change inside a folder git
  * ignores (a build writing `.cache/`, another worktree under `.claude/`) is
@@ -40,26 +17,14 @@ export const gitStatusWatcher = defineFileWatcher({
 const lastIndex = new Map<string, GitStatusIndex>();
 
 /**
- * Whether a change can move the status. Inside the checkout, an ignored path
- * cannot (its own appearance aside, which a later change reconciles); in the
- * git dir, everything can.
+ * Whether a working-tree change can move the status: one in a path git ignores
+ * cannot (its own appearance aside, which a later change reconciles). A git-dir
+ * change always can.
  */
-function matters(root: string, event: FileChangeEvent): boolean {
-  const rel = relativeTo(root, event.path);
-  if (rel === null || rel === ".git" || rel.startsWith(".git/")) return true;
+function matters(root: string, path: string): boolean {
+  const rel = relativeTo(root, path);
+  if (rel === null) return true;
   return !(lastIndex.get(root)?.isIgnored(rel) ?? false);
-}
-
-/** The git dirs to watch beside `root`: a linked worktree keeps them elsewhere. */
-async function gitDirsOutside(root: string): Promise<string[]> {
-  const out = await runGit(
-    ["rev-parse", "--path-format=absolute", "--git-dir", "--git-common-dir"],
-    root,
-  );
-  const [gitDir = "", commonDir = ""] = out.split("\n");
-  return [gitDir, resolve(commonDir, "refs")].filter(
-    (dir) => dir !== "" && relativeTo(root, dir) === null,
-  );
 }
 
 async function loadGitStatus({ root }: { root: string }): Promise<GitStatus> {
@@ -72,11 +37,13 @@ async function loadGitStatus({ root }: { root: string }): Promise<GitStatus> {
 /**
  * A checkout's git status, pushed. The truth is the working tree and the git
  * dir, written by any process (an editor, an agent, `git commit`), so the push
- * comes from a watcher on both for as long as anyone is subscribed — never a
+ * comes from the checkout watch (working tree + git dir, shared with every
+ * other reader of the checkout) for as long as anyone is subscribed — never a
  * poll. External, and bounded by what changed in the checkout.
  */
 export const gitStatusServed = serveValue(fileExplorerGitStatus, {
   source: "external",
+  changes: "notified",
   loader: loadGitStatus,
   revalidate: async ({ root }) => {
     await assertCheckoutRoot(root);
@@ -84,17 +51,15 @@ export const gitStatusServed = serveValue(fileExplorerGitStatus, {
   },
   whileSubscribed: async ({ root }, notify) => {
     await assertCheckoutRoot(root);
-    const watcher = await gitStatusWatcher.start({
-      dirs: [root, ...(await gitDirsOutside(root))],
-      label: root,
-      onChange: (events) => {
-        if (events.some((e) => matters(root, e))) notify();
-      },
+    const release = await acquireCheckoutWatch(root, (changes) => {
+      if (changes.some((c) => c.area === "git" || matters(root, c.path))) {
+        notify();
+      }
     });
     return () => {
       lastIndex.delete(root);
       gitStatusMemo.evict(root);
-      void runTracked("file-explorer-git:watcher-stop", () => watcher.stop());
+      release();
     };
   },
 });

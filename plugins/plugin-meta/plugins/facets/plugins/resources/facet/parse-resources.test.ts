@@ -8,6 +8,7 @@ import {
   type FileBindings,
   type SourceFile,
 } from "./parse-resources";
+import { resourceModeLabel } from "../core";
 
 const NOTHING_IMPORTED = () => null;
 const file = (
@@ -173,10 +174,20 @@ describe("buildDescriptorIndex", () => {
       });
       export const pushed = liveValue("pushed", { schema: S, load: "push" });
       export const nested = liveValue("nested", { schema: z.object({ load: "on-demand" }) });
+      export const heap = liveValue("heap", { schema: S, load: "snapshot" });
+      export const file = liveValue("file", { bytes: true, params: ["path"] });
     `;
     const index = buildDescriptorIndex([file(src)], { ownerPlugin: false });
     expect(index.get("editedFiles")).toEqual([
       { key: "edited-files", keyed: false, membership: null, onDemand: true },
+    ]);
+    // A snapshot is on-demand too.
+    expect(index.get("heap")).toEqual([
+      { key: "heap", keyed: false, membership: null, onDemand: true },
+    ]);
+    // A bytes value is always on demand.
+    expect(index.get("file")).toEqual([
+      { key: "file", keyed: false, membership: null, onDemand: true },
     ]);
     expect(index.get("pushed")).toEqual([
       { key: "pushed", keyed: false, membership: null },
@@ -558,6 +569,65 @@ describe("resolveRegisterCall", () => {
     expect(parseRegisterCalls([central], new Map(), resolveAuthCore)).toEqual([
       { key: "auth-state", mode: "push", source: "external" },
     ]);
+  });
+
+  it("reads an external serveValue's declared freshness (`changes`), at the options' own depth", () => {
+    const valueIndex = new Map<string, DescriptorInfo[]>([
+      ["v", [{ key: "v", keyed: false, membership: null }]],
+      ["s", [{ key: "s", keyed: false, membership: null, onDemand: true }]],
+    ]);
+    const read = (name: string, opts: string) =>
+      resolveRegisterCall(
+        "serveValue",
+        `${name}, ${opts}`,
+        bound(name),
+        valueIndex,
+        where,
+        NOTHING_IMPORTED,
+      );
+    expect(
+      read(
+        "v",
+        `{ source: "external", changes: "notified", loader: () => ({ changes: { fixed: 1 } }) }`,
+      ),
+    ).toEqual([
+      { key: "v", mode: "push", source: "external", changes: "notified" },
+    ]);
+    expect(
+      read(
+        "v",
+        `{
+          source: "external",
+          changes: { fixed: { reason: "a contribution registry" } },
+          loader,
+        }`,
+      ),
+    ).toEqual([
+      { key: "v", mode: "push", source: "external", changes: "fixed" },
+    ]);
+    expect(
+      read(
+        "s",
+        `{ source: "external", changes: { snapshot: { reason: "a heap stat" } }, loader }`,
+      ),
+    ).toEqual([
+      { key: "s", mode: "invalidate", source: "external", changes: "snapshot" },
+    ]);
+    expect(() =>
+      read("v", `{ source: "external", changes: CHANGES, loader }`),
+    ).toThrow("`changes:` is not one the docs facet can read");
+    expect(() =>
+      read("v", `{ source: "external", changes: { forever: {} }, loader }`),
+    ).toThrow("`changes:` is not one the docs facet can read");
+  });
+
+  it("labels a resource's freshness after its mode", () => {
+    expect(
+      resourceModeLabel({ key: "k", mode: "push", changes: "fixed" }),
+    ).toBe("push, fixed");
+    expect(
+      resourceModeLabel({ key: "k", mode: "invalidate", changes: "snapshot" }),
+    ).toBe("invalidate, snapshot");
   });
 
   it("reads a non-keyed descriptor's mode from its serverOpts", () => {

@@ -7,6 +7,7 @@ import {
   discoverCollectedDirsIn,
   renderCollectedDirRegistry,
   collectedDirRegistryPath,
+  committedRegistryBundle,
   collectEntriesWithDeps,
   buildRegistryGenContext,
   formatGenerated,
@@ -73,9 +74,10 @@ const check: Check = {
         content: await renderCollectedDirRegistry({
           ctx,
           def,
-          // The committed registries ARE the `singularity` composition's
-          // registries — the same argument `generatePluginRegistry` passes.
-          bundle: ctx.mainBundle,
+          // The same set `generatePluginRegistry` renders with: the
+          // `singularity` composition's closure, or every plugin for a
+          // `checkout`-membership dir.
+          bundle: committedRegistryBundle(ctx, def),
         }),
       });
       if (actual === expected) continue;
@@ -91,7 +93,7 @@ const check: Check = {
       const { entries } = await collectEntriesWithDeps(
         ctx,
         def.dir,
-        ctx.mainBundle,
+        committedRegistryBundle(ctx, def),
       );
       const rendered = new Set(entries.map((e) => e.id));
       const carried = registryIds(actual);

@@ -92,7 +92,7 @@ describe("useResource — pushed and on-demand descriptors", () => {
       onDemand.key,
       {},
       undefined,
-      onDemand.schema,
+      onDemand,
       "fallback",
     );
   });

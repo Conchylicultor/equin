@@ -16,10 +16,15 @@ function loadHostAccount(): Promise<HostAccount> {
 }
 
 // External: the truth is the OS account database, which no change feed
-// observes — and which never changes under a running process, so nothing ever
-// calls `notify()`. Pushed (the `liveValue` default): one small value, the same
-// for every tab.
+// observes — and which never changes under a running process, so the value is
+// `fixed` (no `notify`). Pushed (the `liveValue` default): one small value, the
+// same for every tab.
 export const hostAccountServed = serveValue(hostAccount, {
   source: "external",
+  changes: {
+    fixed: {
+      reason: "the OS account a process runs as never changes while it runs",
+    },
+  },
   loader: loadHostAccount,
 });

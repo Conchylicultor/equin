@@ -12,12 +12,18 @@ import { manifestHash, spriteFor } from "./sprites";
 const RESIDENT: readonly SpriteKey[] = [...DEFAULT_STYLE_KEYS, BRANDS_SPRITE];
 
 /**
- * The resident sprites. External with no `notify`: they are a pure function of
+ * The resident sprites. External and `fixed` (no `notify`): a pure function of
  * the manifest compiled into this process and the installed icon sets, so the
  * first load is the only one.
  */
 export const residentSpritesServed = serveValue(residentSprites, {
   source: "external",
+  changes: {
+    fixed: {
+      reason:
+        "a pure function of the manifest compiled into this process and the installed icon sets",
+    },
+  },
   loader: async () => ({
     manifestHash,
     sprites: Object.fromEntries(

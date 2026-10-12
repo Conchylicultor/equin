@@ -69,6 +69,7 @@ function record(status: ClaudeCodeStatus): void {
 // dot.
 export const claudeCodeStatusServed = serveValue(claudeCodeStatus, {
   source: "external",
+  changes: "notified",
   loader: () => (last ? Promise.resolve(last.status) : probe()),
 });
 

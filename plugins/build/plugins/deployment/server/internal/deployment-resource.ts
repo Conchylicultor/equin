@@ -26,6 +26,7 @@ import { deploymentEtag, readDeploymentState } from "./read-deployment";
  */
 export const deploymentServed = serveValue(deployment, {
   source: "external",
+  changes: "notified",
   recomputeOn: [refHeadServed],
   loader: async () => readDeploymentState(),
   revalidate: async () => deploymentEtag(),

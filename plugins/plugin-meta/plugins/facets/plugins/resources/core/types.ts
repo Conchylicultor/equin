@@ -27,7 +27,17 @@ export interface ResourceDef {
    * listed so it stays visible.
    */
   unbounded?: string;
+  /**
+   * How an external `serveValue`'s answer changes — its declared `changes`:
+   * `"notified"` (something notifies it), or the arm of `{ immutable }` /
+   * `{ fixed }` / `{ snapshot }` (nothing ever does, and the declaration says
+   * why that is honest). Absent for a db value and every other register call.
+   */
+  changes?: ResourceChanges;
 }
+
+/** The freshness arms an external value declares (`LiveValueChanges`). */
+export type ResourceChanges = "notified" | "immutable" | "fixed" | "snapshot";
 
 export interface ResourceFacetData {
   server: ResourceDef[];

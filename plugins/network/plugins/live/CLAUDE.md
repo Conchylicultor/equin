@@ -6,6 +6,18 @@ the base `where`: `research/2026-09-25-global-live-bell-filter-groupby-preload.m
 the filter language: `research/2026-09-25-global-unified-filter-language.md`).
 **The default for a new DB-backed collection, and for a new value.**
 
+## Design rule — grow `useLive`, don't add APIs
+
+- A new way to read server data is an **option on `liveValue` /
+  `liveCollection` that `useLive` reads** (overloaded by the descriptor's
+  type) — never a new hook or a new read function.
+- A new hook needs a recorded reason in the research doc that introduced it
+  ("`useLive` cannot express X because …").
+- Existing exceptions: `useLiveRow` and `useLiveScroll` are pending
+  unification into `useLive` (follow-up `task-1791751944-3ej507`, after the
+  endpoint-reads migration — `research/2026-10-11-global-endpoint-reads-onto-live.md`);
+  `optimistic-mutation`'s `useOptimisticResource` is a read+write hook.
+
 ## Usage
 
 ```ts
@@ -920,7 +932,7 @@ export const configValues = liveValue("config-v2.values", {
 
 // server/ — serve
 export const unreadServed = serveValue(notificationsUnread, {
-  source: "db",                          // or "external" (then .notify(params?))
+  source: "db",                          // or "external" + `changes` (below)
   loader: countUnread,                   // (params: P) => Promise<T> | T
 });
 // contributions: [...unreadServed.declare]
@@ -928,14 +940,25 @@ export const unreadServed = serveValue(notificationsUnread, {
 // server/ — a param'd preload names its boot tuples
 export const configValuesServed = serveValue(configValues, {
   source: "external",
+  changes: "notified",                   // → configValuesServed.notify(params)
   loader: ({ path, scopeId }) => resolve(path, scopeId),
   preloadParams: () => [{ path: "a" }, { path: "a", scopeId: "app:x" }],
 });
+
+// a value re-measured only when a reader asks (a debug inspector, a heap stat)
+export const heapStats = liveValue("heap.stats", { schema: HeapStatsSchema, load: "snapshot" });
+serveValue(heapStats, {
+  source: "external",
+  changes: { snapshot: { reason: "a point-in-time measure of this process" } },
+  loader: measureHeap,
+});
+useLive(heapStats).refresh();            // the Refresh button: re-measure now
 
 // web/ — read
 useLive(notificationsUnread);            // ResourceResult<T>
 useLive(pluginChanges, { conversationId });  // params required iff declared
 useLive(pluginChanges, id === null ? null : { conversationId: id });  // no subject yet: skipped, pending
+useLive(folderListing, expanded.map((dir) => ({ dir })));  // MANY tuples → one result per entry
 ```
 
 - **Declare.** The key is a positional string literal (the scanners read it).
@@ -992,6 +1015,31 @@ useLive(pluginChanges, id === null ? null : { conversationId: id });  // no subj
   server picks its mode from it and `useResource` enables the HTTP read from
   it. Declared once, they cannot disagree (when `load` was a serve option the
   client waited forever for a sub-ack value the server never sent).
+  `"snapshot"` is on-demand AND never told of a change: re-measured only when a
+  reader asks. The descriptor is `load: "on-demand"` branded `snapshot: true`
+  (`LiveSnapshotBrand` — every other declaration's type says `snapshot?:
+  undefined`); its `serveValue` must declare `changes: { snapshot }` (tsc, and
+  a throw), and its `useLive` result adds `refresh()`. Never beside `preload`
+  or `paged` (tsc, and a throw).
+- **Bytes — `bytes: true`.** A binary payload (a file's bytes, an image):
+  `liveValue(key, { bytes: true, params | query, maxBytes?, refusals? })`
+  takes no `schema` (the payload is an `ArrayBuffer`, checked as one on both
+  ends) and is always `load: "on-demand"`. The descriptor carries `bytes:
+  true` (`LiveBytesBrand`), read by the runtime and the client alike: the
+  HTTP read answers `application/octet-stream` — the body IS the value, and
+  the JSON envelope's `version` / `epoch` / `watermark` ride response headers
+  (`resource-protocol`'s `resourceBytesHeaders` / `parseResourceBytesHeaders`),
+  so the client's stale-drop and cross-boot guards work unchanged; the WS
+  sub-ack carries no value and runs no loader (the client answers it with
+  the HTTP read); `revalidate` / ETag / 304 work as for any value. tsc
+  refuses `bytes` beside `load: "push"` / `"snapshot"`, `preload`, `paged`,
+  `origin: "central"` and a `schema`, and its `serveValue` with `source:
+  "db"` (`BytesPairing`) — each also a throw for an untyped caller. The
+  loader answers an `ArrayBuffer` (a `Uint8Array` is refused by the schema:
+  return `buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)`
+  for a pooled Buffer). `maxBytes` bounds it server-side: a larger answer is
+  refused `"too-large"`, a code declaring `maxBytes` adds to `refusals`, so
+  the reader's error arm types it. `useLive` answers `ResourceResult<ArrayBuffer>`.
 - **Preload.** `"boot"`: hydrated by the boot snapshot before first paint
   (settled on the first render), the owning plugin pinned eager, and a
   DB-backed param-less one L2-persisted. A parameterized one is an ENUMERATED
@@ -1010,22 +1058,40 @@ useLive(pluginChanges, id === null ? null : { conversationId: id });  // no subj
     to any table it read recomputes every subscribed tuple (full recompute, no
     scope policy — a keyed payload is a collection). No `notify`, at runtime
     too.
-  - `"external"`: truth outside Postgres; the served value has `notify(params?)`.
+  - `"external"`: truth outside Postgres. It must declare **`changes`** — how
+    its answer changes (`LiveValueChanges`, tsc; a throw for an untyped
+    caller), so a value nobody tells of a change cannot be written without
+    saying why that is honest:
+    - `"notified"` — something calls `served.notify(params?)`, or
+      `whileSubscribed` / a `recomputeOn` upstream does. The ONLY arm with
+      `notify`, `whileSubscribed`, `recomputeOn` and `throttleMs`.
+    - `{ immutable: { reason } }` — a tuple's answer can never change
+      (sha-keyed, a terminal run's artifact).
+    - `{ fixed: { reason } }` — constant for the process lifetime (a
+      contribution registry, the OS account, a third-party answer with no
+      change signal): `metrics.catalog`, `host-account`, `icons.resident-sprites`.
+    - `{ snapshot: { reason } }` — the value is declared `load: "snapshot"`
+      (paired both ways, tsc); no `revalidate`, so every HTTP read runs the
+      loader (the runtime's HTTP path has no version short-circuit) and the
+      read's `refresh()` re-measures. Never on a paged value.
+    The three silent arms return a served value with no `notify` (tsc, and at
+    runtime). The served value records `changes`; the runtime carries it as a
+    `freshness` label the read-set debug pane lists per key.
   - **The bound rule is a type:** a `"db"` value whose type is an array or a
     string-indexed record must pass `unbounded: { reason }` (recorded on the
     served value and shown in the docs), and nothing else may. An external
     array is bounded by the process holding it.
-  - Returns `ServedValue` = the runtime `Resource` + `source` + `unbounded?` +
-    `keys` (`[key]`) + `declare` (a 1-tuple — spread it like a collection's);
-    the external arm adds `notify`. `compileValue` is the same derivation
+  - Returns `ServedValue` = the runtime `Resource` + `source` + `changes?` +
+    `unbounded?` + `keys` (`[key]`) + `declare` (a 1-tuple — spread it like a
+    collection's); a `"notified"` external value adds `notify`. `compileValue` is the same derivation
     without registering, and `shared/compile-value.ts`'s `registerValue`
     registers it on any runtime (tests use their own).
-  - **`throttleMs`** (both arms): at most one flush per window — the first
+  - **`throttleMs`** (db, and external `"notified"`): at most one flush per window — the first
     change arms a trailing timer later changes do not re-arm (the runtime's
     `debounceMs`, which was always a throttle). A flush already happening
     drains it early.
-  - **`recomputeOn: [served, { value: served, params: (up) => P }]`** (both
-    arms): upstream served values whose change recomputes this one. A bare
+  - **`recomputeOn: [served, { value: served, params: (up) => P }]`** (db, and
+    external `"notified"`; an upstream is a `"notified"` value): upstream served values whose change recomputes this one. A bare
     served value recomputes **every currently-subscribed tuple** of this value
     (the runtime's `toSubscribed` edge — it tracks them, so the hand-kept
     "active set" filled by `onFirstSubscribe` is gone); a param-less value
@@ -1047,15 +1113,29 @@ useLive(pluginChanges, id === null ? null : { conversationId: id });  // no subj
     a stop and the next start, and nothing needs to: the runtime opens every
     subscription span with a fresh version, so a tab reconnecting after the gap
     never gets `up-to-date` for a value it read before it (`resource-runtime/CLAUDE.md`).
-  - **`revalidate`** (both arms): the ETag signature, passed through
+  - **`revalidate`** (both arms, never a snapshot): the ETag signature, passed through
     (read path only; co-produce it with the loader, e.g. `createSignedMemo`).
-  - **A refused question is `ResourceRefusal`.** A loader that cannot answer
-    well-formed params as asked (an unknown id, an empty range) throws
-    `ResourceRefusal` (`packages/resource-protocol`; subclass it per domain).
-    The reader's error arm is `kind: "refused"` with the server's message
-    (`ResourceErrorInline` shows it, offers no Retry); it is never retried,
-    never counted as a failing read and never reported as a server failure.
-    Anything else a loader throws is `loader-failed`, reported.
+  - **A refused question is a declared refusal.** A loader that cannot answer
+    well-formed params as asked (a missing file, an unknown id, an empty
+    range) throws a `ResourceRefusal` (`packages/resource-protocol`) whose
+    `code` the `liveValue` declares — `refusals: z.enum(["missing", "denied"])`
+    or the same as a const list (`["missing", "too-large"]`), on any form
+    (params, typed params, typed-query, paged). The declaration then carries
+    `refuse(code, message)`, the refusal to throw with its code typed
+    (`throw fileText.refuse("missing", "no such file")`; a value that declares
+    none has no `refuse` — tsc); a domain may subclass instead
+    (`MetricQueryError`, code `invalid-query`). Wire: HTTP 422 `{ reason:
+    "refused", code, detail }`, WS `sub-error { reason: "refused", code,
+    message }`. The reader's error arm is `kind: "refused"` with `error.code`
+    typed by the declaration (`useLive`'s result is `ResourceResult<T, C>`), so
+    a surface branches on `refused`/`missing` apart from a real failure;
+    `ResourceErrorInline` shows the message and offers no Retry; it is never
+    retried, never counted as a failing read and never reported as a server
+    failure. Both ends check the code: the runtime turns an undeclared one into
+    `loader-failed` (reported), and the client reads an undeclared one — the
+    server's declaration is not its bundle's — as a `contract-mismatch`
+    (`client-outdated`, verdict `skew`). Anything else a loader throws is
+    `loader-failed`, reported.
   - Not spelled: `ackChannel` (an optimistic reader asks for acks on its own
     subscription), a read-side `select`, row-scoped `recomputeOn` edges (an
     upstream's change recomputes whole tuples) — see
@@ -1068,7 +1148,9 @@ useLive(pluginChanges, id === null ? null : { conversationId: id });  // no subj
   `declare`. Each `serveValue` rejects the other origin's value (tsc). Both
   compile options through `shared/compile-value.ts`, so they cannot drift.
 - **Read.** `useLive(value, params?)` → `ResourceResult<T>` (it delegates to
-  `useResource`, which canonicalizes the params). A value with no
+  `useResource`, which canonicalizes the params); a `load: "snapshot"` value's
+  is `LiveSnapshotResult<T>` — the same plus `refresh()` (its HTTP refetch:
+  the re-measure), typed only there. A value with no
   placeholder makes no HTTP fetch on mount — the WS sub-ack fills it (the
   query stays disabled until a value lands; `refetch()` still works).
   - **No subject yet — `useLive(value, null)`** (a param'd value only — tsc):
@@ -1082,6 +1164,21 @@ useLive(pluginChanges, id === null ? null : { conversationId: id });  // no subj
     (`{ id: x ?? "" }`), subscribed a real tuple the server loaded for nothing;
     the `live/no-sentinel-param` lint rejects it at a `useLive` /
     `useLiveRow` call.
+  - **Many tuples — `useLive(value, [p1, p2, …])`** (a param'd value; a
+    typed-query value takes `[q1, q2, …]`, each encoded to its one tuple):
+    `readonly ResourceResult<T, C>[]`, one result per entry IN ORDER, each
+    exactly the single read's (a snapshot value's adds `refresh()`), for a
+    dynamic set — a tree's expanded folders, a peek per row. A `null` entry is
+    a skip (`loading`, nothing read). Read through live-state's `useResources`:
+    the set moves by DIFF, so a tuple kept across a change (moved, or with
+    others added or removed around it) stays subscribed, keeps its settled
+    result and its `data` identity; the same tuple listed twice (an absent
+    optional param spelled either way) is read once. An object is always the
+    single-tuple form and an array the list form, so they never overlap: a
+    param-less value has no list form (tsc), a paged value reads one question
+    (tsc, and a throw), and a typed-query value's question schema may not be
+    a list itself (`z.array` / `z.tuple`, through wrappers and unions — the
+    declaration throws). Pinned by `web/__tests__/use-live-list.test.tsx`.
 
 ## Typed-query values — `liveValue(key, { query })`
 
@@ -1099,6 +1196,7 @@ export const metricQuery = liveValue("metrics.query", {
 // server/ — every hook takes the DECODED question
 export const metricQueryServed = serveValue(metricQuery, {
   source: "external",
+  changes: "notified",
   loader: (q) => runQuery(q),
   whileSubscribed: (q, notify) => watch(q.metric, notify),
 });
@@ -1165,14 +1263,29 @@ worker (`framework/tooling/exempt`), so a stale one cannot linger.
 **Request/response reads — lint `live/no-endpoint-read`.** In `web/` code
 (tests out of scope) it flags `useEndpoint`, `useEndpointResource`, TanStack's
 `useQuery` / `useInfiniteQuery` / `useSuspenseQuery` (and their
-`Suspense*` / `useQueries` siblings) — resolved like the rule above — and a
-`fetchEndpoint(...)` call inside a `queryFn` property. A server read is a
-`liveValue` (`params`, a typed `query`, or `paged`) or a `liveCollection`, read
-with `useLive`; an imperative `fetchEndpoint` (a mutation, a handler) is a
-write and is not flagged. Sanctioned: the substrate that defines or wraps these
-hooks (`infra/endpoints`, `primitives/live-state`, `network/live`,
-`primitives/cursor-pagination`). Every other current site is a file-level
-`debt` entry (task-1791560308-woqgfi) in its plugin's `exempt/index.ts`
+`Suspense*` / `useQueries` siblings) — resolved like the rule above — a
+`fetchEndpoint(...)` call inside a `queryFn` property, and three hidden reads
+(research/2026-10-11-global-endpoint-reads-onto-live.md P0.2):
+
+- a `fetchEndpoint` of a **GET** endpoint, or a `readNdjson` stream over a GET
+  route, that runs as a read — in render, in a hook body, in
+  `useEffect` / `useLayoutEffect` / `useMemo`, or in a named function one of
+  those calls (a `useCallback` refresh an effect runs, a module helper). GET-ness
+  is the endpoint's literal `route` type, read by the type checker; a route type
+  that is not a literal counts as a GET. A call in an `on*` handler, a
+  `mutationFn` or an event-registrar callback is an action and is not flagged;
+  a function that escapes the file (stored in an object, passed as a non-`on*`
+  prop, returned, exported) is unflagged — a one-file lint cannot see where it
+  runs;
+- `invalidateQueries` / `refetchQueries` over an endpoint read's query key
+  (`endpointQueryKey(...)` or the raw `["endpoint", …]` spelling).
+
+A server read is a `liveValue` (`params`, a typed `query`, or `paged`) or a
+`liveCollection`, read with `useLive`; an imperative `fetchEndpoint` (a
+mutation, a handler) is a write and is not flagged. Sanctioned: the substrate
+that defines or wraps these hooks (`infra/endpoints`, `primitives/live-state`,
+`network/live`). Every other current site is a file-level `debt` entry
+(task-1791560308-woqgfi) in its plugin's `exempt/index.ts`
 (`./singularity exempt list --rule live/no-endpoint-read --debt`): migrate,
 never add one.
 
@@ -1258,6 +1371,7 @@ never add one.
     - `LivePagesQuery`
     - `LivePagesResult`
     - `LiveRowResult`
+    - `LiveSnapshotResult`
     - `LiveValuePagesOptions`
     - `PagesTruncation`
     - `VisibleRange`
@@ -1293,6 +1407,7 @@ never add one.
     - `ServedLookupCollection`
     - `ServedPagedValue`
     - `ServedScopedColumns`
+    - `ServedSilentPagedValue`
     - `ServedValue`
     - `ServePagedValueOptions`
     - `ServeUnionOptions`
@@ -1324,6 +1439,7 @@ never add one.
     - `network/live/filter.LIST_MAX`
     - `packages/canonical-params.canonicalJson`
     - `packages/resource-protocol.ResourceContractError`
+    - `packages/resource-protocol.ResourceRefusal`
     - `primitives/live-state.PointParams`
     - `primitives/live-state.registerResourceDescriptor`
     - `primitives/live-state.ResourceDescriptor`
@@ -1339,6 +1455,11 @@ never add one.
     - `LiveArms`
     - `LiveArmsCollection`
     - `LiveArmsSpec`
+    - `LiveBytesBrand`
+    - `LiveBytesParamValueSpec`
+    - `LiveBytesQueryValueSpec`
+    - `LiveBytesSpecBase`
+    - `LiveBytesTypedParamValueSpec`
     - `LiveCentralValueSpec`
     - `LiveCollection`
     - `LiveCollectionOf`
@@ -1396,12 +1517,16 @@ never add one.
     - `LiveQuerySchema`
     - `LiveQueryValue`
     - `LiveQueryValueSpec`
+    - `LiveRefusals`
+    - `LiveRefusalsBrand`
     - `LiveReservedColumn`
     - `LiveRowSchema`
     - `LiveRowsCollection`
     - `LiveScopedColumns`
     - `LiveScrollCollection`
+    - `LiveSnapshotBrand`
     - `LiveSortDirection`
+    - `LiveTooLarge`
     - `LiveTypedParamValueSpec`
     - `LiveTypedValueParams`
     - `LiveValue`
@@ -1497,35 +1622,42 @@ never add one.
     - `debug/heap-snapshot` (1 debt)
     - `debug/live-state-churn/emit` (1 debt)
     - `debug/live-state-health` (1 debt)
+    - `debug/logs` (1 debt)
     - `debug/memory` (1 debt)
     - `debug/profiling/boot` (1 debt)
-    - `debug/profiling/build` (2 debt)
+    - `debug/profiling/build` (1 debt)
     - `debug/profiling/runtime` (1 debt)
-    - `debug/profiling/stats` (1 debt)
     - `debug/read-set` (1 debt)
+    - `debug/slow-ops/cluster` (1 debt)
     - `debug/slow-ops/pane` (1 debt)
+    - `debug/timeline` (1 debt)
     - `debug/trace/pane` (2 debt)
+    - `debug/worktree-cleanup` (1 debt)
     - `framework/central-core` (0 debt)
     - `framework/resource-runtime` (0 debt)
     - `framework/server-core` (0 debt)
     - `history/dialog` (1 debt)
     - `infra/claude-cli` (1 debt)
     - `infra/endpoints` (0 debt)
+    - `infra/events-test` (1 debt)
     - `infra/query-resource` (0 debt)
     - `network/live` (0 debt)
-    - `page/place` (1 debt)
+    - `page/bookmark` (1 debt)
+    - `page/place` (2 debt)
     - `plugin-meta/composition` (1 debt)
+    - `plugin-meta/plugin-health` (1 debt)
     - `plugin-meta/plugin-view` (1 debt)
     - `plugin-meta/plugin-view/file-tree` (1 debt)
-    - `primitives/cursor-pagination` (0 debt)
     - `primitives/data-view` (0 debt)
-    - `primitives/diff-view` (1 debt)
+    - `primitives/diff-view` (3 debt)
     - `primitives/file-viewer` (3 debt)
     - `primitives/file-viewer/image` (1 debt)
     - `primitives/folder-picker` (1 debt)
     - `primitives/live-state` (0 debt)
     - `primitives/optimistic-mutation` (0 debt)
     - `review/code-review` (1 debt)
+    - `review/plugin-changes` (1 debt)
+    - `screenshot` (1 debt)
     - `search/quick-find` (1 debt)
     - `stats/commits` (4 debt)
     - `stats/cost` (8 debt)
@@ -1535,7 +1667,8 @@ never add one.
     - `tasks/task-attachments` (1 debt)
     - `tasks/task-category` (1 debt)
     - `tasks/task-events` (1 debt)
-    - `ui/theme-engine/saved-themes` (1 debt)
+    - `ui/icons/sprites` (1 debt)
+    - `ui/theme-engine/saved-themes` (2 debt)
     - `ui/tweakcn/community-browser` (1 debt)
 - Central:
   - Exports (types):

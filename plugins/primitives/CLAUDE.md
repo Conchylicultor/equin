@@ -27,7 +27,7 @@ relatives under an umbrella.
   - **`commit-list`** — Reusable commit row rendering and git log types. Git log parser, `git diff -z` name-status / numstat parsers, the runGit invocation and commit row types for reuse across plugins.
   - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
   - **`css`** [exempt] [49 sub-plugins] — Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
-  - **`cursor-pagination`** [exempt] — Cursor-pagination primitive: the error-gated useInfiniteScroll observer + InfiniteScrollFooter (load-more spinner / Retry / sentinel), the useCursorPagination keyset wrapper (frozen-cursor +…
+  - **`cursor-pagination`** — Cursor-pagination primitive: the error-gated useInfiniteScroll observer + InfiniteScrollFooter (load-more spinner / Retry / sentinel), and the ScrollSentinel component. The pages themselves come…
   - **`data-table`** — Sortable/filterable flex-layout data table primitive.
   - **`data-view`** [test helpers] [exempt] — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
     - Plugins:

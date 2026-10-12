@@ -71,6 +71,7 @@ export function editedFilesSignatureFor(
 
 export const editedFilesServed = serveValue(editedFiles, {
   source: "external",
+  changes: "notified",
   loader: ({ id }) => loadEditedFilesFor(id),
   // The ETag and the value are produced by ONE authority: `editedFilesMemo` is a
   // `createSignedMemo` binding `editedFilesSignature` (here) to `computeEditedFiles`
@@ -94,19 +95,10 @@ export const editedFilesServed = serveValue(editedFiles, {
   // signature/value pair for a real determinate state — never a fresh ETag over a
   // stale value.
   revalidate: ({ id }) => editedFilesSignatureFor(id),
-  // Watch the worktree while the conversation is on screen. The watcher's first
-  // callback reports the state the subscriber is already loading, so it is not a
-  // change.
+  // Watch the worktree (and its git dir) while the conversation is on screen.
   whileSubscribed: async ({ id }, notify) => {
     const wt = await worktreeFor(id);
     if (!wt) return () => {};
-    let first = true;
-    return watchEditedFiles(wt, () => {
-      if (first) {
-        first = false;
-        return;
-      }
-      notify();
-    });
+    return watchEditedFiles(wt, notify);
   },
 });

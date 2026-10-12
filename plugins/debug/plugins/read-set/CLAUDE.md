@@ -52,6 +52,11 @@ Sections, in render order:
   - **Routed** (folded), **External** (only the external entries with no
     legacy reach — those really are reached only by their own `notify()`) and
     **Unbound** — listed by key.
+- **D — Declared freshness** — every external value's `changes` (the runtime's
+  `freshness` label, set by `network/live`'s `serveValue`): `notified`, or
+  `snapshot` / `fixed` / `immutable` with the author's reason, never-told arms
+  first. `null` (not listed) for a db entry or a resource not served through
+  `network/live`.
 
 A caveat notes that read-sets cover only loaders that have run since boot (or
 were seeded from a persisted row), and that direct `notify()` sites are not

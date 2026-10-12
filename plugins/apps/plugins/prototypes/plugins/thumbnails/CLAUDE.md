@@ -162,7 +162,7 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
   - Register:
     - `defineJob('prototypes.render-thumbnail')`
     - `defineJob('prototypes.sweep-thumbnails')`
-  - Resources: `prototypes.thumbnails` (push)
+  - Resources: `prototypes.thumbnails` (push, notified)
 - Web:
   - Uses:
     - `network/live.useLive`

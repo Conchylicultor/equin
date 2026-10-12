@@ -264,14 +264,17 @@ export function useResourceAcks<P extends ResourceParams = ResourceParams>(
 // result is a tsc error (a `null`-typed field would catch nothing, since `null`
 // is assignable to `Error | null`).
 //
-export type ResourceResult<T> =
+// `C` is the refusal codes the read's declaration lists (a `liveValue`'s
+// `refusals`): a `refused` error's `code` is one of them. Reads that are never
+// refused leave it at `string`.
+export type ResourceResult<T, C extends string = string> =
   | {
       status: "loading";
       refetch: () => Promise<void>;
     }
   | {
       status: "error";
-      error: ResourceError;
+      error: ResourceError<C>;
       /** The last value the server vouched for, if one ever landed. */
       stale?: T;
       refetch: () => Promise<void>;
@@ -371,7 +374,7 @@ function tupleQueryOptions<T, P extends ResourceParams>(
   resource: ResourceDescriptor<T, P>,
   p: ResourceParams,
 ): TupleQueryOptions<T> {
-  const { key, origin, schema } = resource;
+  const { key, origin } = resource;
   return {
     queryKey: queryKeyFor(key, p),
     // THE single HTTP write path: version-guarded, shared with the cold-start
@@ -379,7 +382,7 @@ function tupleQueryOptions<T, P extends ResourceParams>(
     // fallback and the invalidate-mode post-invalidate refetch; the sub-ack
     // normally fills the cache so this rarely runs. Errors propagate to `q.error`.
     queryFn: () =>
-      notifications.fetchOverHttp(key, p, origin, schema, "fallback"),
+      notifications.fetchOverHttp(key, p, origin, resource, "fallback"),
     // Until its first value the query has no data (there is no placeholder),
     // sits at `dataUpdatedAt === 0`, and reads `pending`. React Query would
     // fetch such a query on mount (a query with no data always loads), but the
@@ -554,7 +557,7 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   const startRef = useRef<number | null>(null);
   const reportedRef = useRef(false);
 
-  const schema = resource.schema;
+  const { schema, refusals, bytes } = resource;
   const select = options?.select;
   const gate = options?.gate === true;
 
@@ -565,9 +568,9 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   useEffect(() => {
     if (skipped) return;
     startRef.current = performance.now();
-    notifications.observe(key, p, origin, schema, keyOf);
+    notifications.observe(key, p, origin, { schema, refusals, bytes }, keyOf);
     return () => notifications.unobserve(key, p, origin);
-  }, [notifications, key, origin, schema, keyOf, skipped, p]);
+  }, [notifications, key, origin, schema, refusals, bytes, keyOf, skipped, p]);
 
   // A skipped read's key is per resource key (never shared across descriptors,
   // whose options differ) and can never collide with a params tuple.
@@ -686,19 +689,28 @@ interface TupleState {
 }
 
 /**
- * `useQueries`' `combine`: each query's read state as plain data. Stable (module
- * level), so React Query re-runs it only when a query's result changed, and its
- * structural sharing keeps an unchanged tuple's state — and its `data` — the
- * same object.
+ * `useQueries`' `combine`: each query's read state as plain data, KEYED BY ITS
+ * TUPLE (`tupleKeys[i]` names `results[i]`). React Query structurally shares
+ * the combined result with the previous one, so an unchanged tuple's state —
+ * and its `data` — stays the same object, and a combine that changed nothing
+ * notifies no one. Keyed, not positional: sharing an ARRAY pairs entries by
+ * index, so after a reorder, or a tuple added or removed before another, it
+ * merges one tuple's previous data into another's and hands out a deep COPY —
+ * a kept tuple's data would lose its identity on every list change.
  */
 function combineTuples(
   results: readonly QueryObserverResult<unknown>[],
-): TupleState[] {
-  return results.map((q) => ({
-    hasValue: q.dataUpdatedAt !== 0,
-    data: q.data,
-    error: q.error,
-  }));
+  tupleKeys: readonly string[],
+): Record<string, TupleState> {
+  const byTuple: Record<string, TupleState> = {};
+  results.forEach((q, i) => {
+    byTuple[tupleKeys[i]!] = {
+      hasValue: q.dataUpdatedAt !== 0,
+      data: q.data,
+      error: q.error,
+    };
+  });
+  return byTuple;
 }
 
 /**
@@ -768,7 +780,7 @@ export function useResources<T, P extends ResourceParams = ResourceParams>(
     throw new Error("useResources must be used within a NotificationsProvider");
   }
   const queryClient = useQueryClient();
-  const { key, origin, schema } = resource;
+  const { key, origin, schema, refusals, bytes } = resource;
   const keyOf = resource.keyed?.keyOf;
   // Canonical tuples (see `canonicalParams`), one identity per canonical list.
   const listJson = JSON.stringify(
@@ -815,7 +827,14 @@ export function useResources<T, P extends ResourceParams = ResourceParams>(
       entered.add(k);
       if (!startedRef.current.has(k))
         startedRef.current.set(k, performance.now());
-      notifications.observe(key, p, origin, schema, keyOf, derivations?.[i]);
+      notifications.observe(
+        key,
+        p,
+        origin,
+        { schema, refusals, bytes },
+        keyOf,
+        derivations?.[i],
+      );
     });
     for (const [k, p] of prev) {
       if (!next.has(k)) notifications.unobserve(key, p, origin, release);
@@ -831,6 +850,8 @@ export function useResources<T, P extends ResourceParams = ResourceParams>(
     tupleKeys,
     release,
     derivations,
+    refusals,
+    bytes,
   ]);
   useEffect(
     () => () => {
@@ -842,10 +863,21 @@ export function useResources<T, P extends ResourceParams = ResourceParams>(
     [notifications, key, origin],
   );
 
-  const states = useQueries({
+  // Stable per tuple list, so React Query re-runs it only when a query's
+  // result (or the list) changed.
+  const combine = useCallback(
+    (results: readonly QueryObserverResult<unknown>[]) =>
+      combineTuples(results, tupleKeys),
+    [tupleKeys],
+  );
+  const byTuple = useQueries({
     queries: list.map((p) => tupleQueryOptions(notifications, resource, p)),
-    combine: combineTuples,
+    combine,
   });
+  const states = useMemo(
+    () => tupleKeys.map((k) => byTuple[k]!),
+    [byTuple, tupleKeys],
+  );
 
   // Tuples with no value yet: counted as pending mounts, and — before the
   // transport was ever ready — primed over HTTP once each, as `useResource`
@@ -901,37 +933,64 @@ export function useResources<T, P extends ResourceParams = ResourceParams>(
     });
   }, [notifications, key, list, tupleKeys, states]);
 
-  return useMemo(
+  // One result object per tuple STATE and apply position: the combine shares
+  // each tuple's state keyed by tuple (an unchanged tuple keeps its
+  // TupleState object), so a tuple whose read did not move returns the very
+  // result — and `refetch` — it returned before, and a memoized per-tuple
+  // child does not re-render because ANOTHER tuple of the list changed. The
+  // entry also records the `appliedSeq` it was built at: an apply that left
+  // the value deep-equal (so the same TupleState) still moves the tuple's
+  // `appliedSeq`, which a paged read's dedup ranks rows by, so the result is
+  // rebuilt then. A state object belongs to one tuple of one resource on one
+  // client (another key, list entry or client is another combine path, so
+  // another object), so the cache needs no reset.
+  const [byState] = useState(
     () =>
-      states.map((st, i): ResourceTupleResult<T> => {
-        const queryKey = queryKeyFor(key, list[i]!);
-        // Read beside the value it describes: the apply that wrote this
-        // tuple's value bumped it before the render this value reaches.
-        const appliedSeq = notifications.appliedSeq(key, list[i]!, origin);
-        // A manual refetch ignores `enabled`, as `useResource`'s does.
-        const refetch = () =>
-          (
-            queryClient
-              .getQueryCache()
-              .find({ queryKey, exact: true })
-              ?.fetch() ?? Promise.resolve()
-          ).then(() => {});
-        // The same three states, in the same precedence, as `useResource`.
-        if (st.error !== null) {
-          const error = toResourceError(st.error);
-          return st.hasValue
-            ? {
-                status: "error",
-                error,
-                stale: st.data as T,
-                refetch,
-                appliedSeq,
-              }
-            : { status: "error", error, refetch, appliedSeq };
-        }
-        if (!st.hasValue) return { status: "loading", refetch, appliedSeq };
-        return { status: "ready", data: st.data as T, refetch, appliedSeq };
-      }),
-    [states, list, key, queryClient, notifications, origin],
+      new WeakMap<
+        TupleState,
+        { appliedSeq: number; result: ResourceTupleResult<T> }
+      >(),
   );
+  return useMemo(() => {
+    return states.map((st, i): ResourceTupleResult<T> => {
+      // Read beside the value it describes: the apply that wrote this
+      // tuple's value bumped it before the render this value reaches.
+      const appliedSeq = notifications.appliedSeq(key, list[i]!, origin);
+      const cached = byState.get(st);
+      if (cached !== undefined && cached.appliedSeq === appliedSeq)
+        return cached.result;
+      const queryKey = queryKeyFor(key, list[i]!);
+      // A manual refetch ignores `enabled` and starts a NEW read even while
+      // one is in flight (`cancelRefetch`), as `useResource`'s `q.refetch()`
+      // does — a snapshot's `refresh()` must re-measure now, not hand back a
+      // measurement started before the click.
+      const refetch = () =>
+        (
+          queryClient
+            .getQueryCache()
+            .find({ queryKey, exact: true })
+            ?.fetch(undefined, { cancelRefetch: true }) ?? Promise.resolve()
+        ).then(() => {});
+      // The same three states, in the same precedence, as `useResource`.
+      let result: ResourceTupleResult<T>;
+      if (st.error !== null) {
+        const error = toResourceError(st.error);
+        result = st.hasValue
+          ? {
+              status: "error",
+              error,
+              stale: st.data as T,
+              refetch,
+              appliedSeq,
+            }
+          : { status: "error", error, refetch, appliedSeq };
+      } else if (!st.hasValue) {
+        result = { status: "loading", refetch, appliedSeq };
+      } else {
+        result = { status: "ready", data: st.data as T, refetch, appliedSeq };
+      }
+      byState.set(st, { appliedSeq, result });
+      return result;
+    });
+  }, [states, list, key, queryClient, notifications, origin, byState]);
 }

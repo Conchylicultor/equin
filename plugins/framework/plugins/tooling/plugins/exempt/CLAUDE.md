@@ -39,7 +39,12 @@ export default [
   violation tracked for removal; it names its `task`.
 
 The folder is a leaf (`LEAF_FOLDERS`, row `exempt: ["core"]`), collected by
-`defineCollectedDir("exempt")` into `core/exempt.generated.ts`.
+`defineCollectedDir("exempt", { membership: "checkout" })` into
+`core/exempt.generated.ts`. `checkout` membership means the registry lists every
+plugin on disk, including the ones the `singularity` composition excludes,
+because lint rules and checks scan every plugin. The set a rule can be exempted
+on must be the set it scans, or a violation in an excluded plugin
+(`review/plugin-changes`) has no way to be exempted.
 
 ## Rule owners declare scope, never consumers
 

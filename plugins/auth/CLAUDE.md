@@ -180,7 +180,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `listProviders`
     - `registerAuthProvider`
   - Register: `defineTimer('auth.refresh')`
-  - Resources: `auth-state` (push)
+  - Resources: `auth-state` (push, notified)
   - Routes:
     - `GET /api/auth/start/:provider`
     - `GET /api/auth/callback/:provider`

@@ -109,6 +109,7 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `jobs:no-raw-addjob` — `server/internal/cron-dedup.ts` (sanctioned)
     - `endpoints:no-raw-json-handlers` — `server/internal` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+    - `live/no-endpoint-read` — `web/components/events-test-view.tsx` (debt)
 - Shared:
   - Exports (types):
     - `DeleteTargetingBody`

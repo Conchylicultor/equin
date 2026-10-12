@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useState } from "react";
 import { z } from "zod";
+import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import {
   useResource,
+  useResources,
   type PagedResourceResult,
   type ResourceDescriptor,
   type ResourceError,
@@ -59,7 +61,39 @@ import { withoutWindowFields } from "./window-fields";
  * `maxLimit`), and a grow that FAILS is the error arm with the window it grew
  * from as `stale`.
  */
-export type LiveListResult<Row> = PagedResourceResult<Row>;
+export type LiveListResult<Row, C extends string = string> = PagedResourceResult<
+  Row,
+  C
+>;
+
+/**
+ * A read of a value declared `load: "snapshot"`: its result plus `refresh()`
+ * — re-measure NOW. A snapshot is never told of a change, so this is the only
+ * way its answer moves: an HTTP read that always runs the loader (the server
+ * keeps no `revalidate` for it). Typed only on a snapshot read — a value that
+ * is kept live has nothing to refresh.
+ */
+export type LiveSnapshotResult<T, C extends string = string> = ResourceResult<
+  T,
+  C
+> & {
+  refresh: () => Promise<void>;
+};
+
+/**
+ * The refusal codes a value declares (`liveValue`'s `refusals`), as the
+ * parameter side of a value overload infers them: a read's `refused` error
+ * carries one (`error.code`), typed by the declaration. `never` for a value
+ * that declares none — it is never refused.
+ */
+interface RefusalsDecl<C extends string> {
+  refusals?: readonly C[];
+}
+
+/** The brand a snapshot declaration carries (see `LiveSnapshotBrand`). */
+interface SnapshotDecl {
+  snapshot: true;
+}
 
 /** An explicit id set. Rows come back for the ids that exist; no filter applies. */
 export interface LiveIdsQuery {
@@ -193,6 +227,33 @@ type LiveValueArgs<P> = string extends keyof P
     ? []
     : [params: P | null];
 
+/**
+ * A value's tuple LIST (`useLive(v, [p1, p2, …])`): the params of a param'd
+ * value, each `null` for a tuple with no subject yet (skipped). `never` for a
+ * param-less value — it has one tuple, read with `useLive(v)`.
+ */
+type LiveValueParamsList<P> = string extends keyof P
+  ? never
+  : [keyof P] extends [never]
+    ? never
+    : readonly (P | null)[];
+
+/**
+ * A typed-query value's question LIST — never for a question that is itself
+ * an array (the declaration refuses one too: it would read as a list).
+ */
+type LiveQueryList<QIn> = QIn extends readonly unknown[]
+  ? never
+  : readonly (QIn | null)[];
+
+/**
+ * One tuple's read in a list read: a snapshot value's adds `refresh()`, as its
+ * single read does. `V` is the declaration as passed (its brand decides).
+ */
+type LiveValueRead<V, T, C extends string> = V extends SnapshotDecl
+  ? LiveSnapshotResult<T, C>
+  : ResourceResult<T, C>;
+
 // The window overload comes FIRST: an argument like `where: or(...)` is a
 // generic call TypeScript checks once, against the first overload's contextual
 // type — so that type must be the collection's own `LiveWhere` for the tree's
@@ -276,6 +337,39 @@ export function useLive<Row>(
  *   `null` read left spinning.
  */
 /**
+ * - `useLive(value, [p1, p2, …])` / `useLive(queryValue, [q1, q2, …])` — MANY
+ *   tuples of one value (a dynamic set: the expanded folders of a tree, a peek
+ *   per row): an ARRAY of params (or of questions) → one result per entry, in
+ *   order, each exactly the single read's (`ResourceResult<T, C>`, plus
+ *   `refresh()` for a snapshot value). A `null` entry is a skip — `loading`,
+ *   nothing read — like `useLive(v, null)`. The set moves by diff: a tuple
+ *   kept across a change (moved, or with others added or removed around it)
+ *   stays subscribed and keeps its settled result; the same tuple listed twice
+ *   is read once. An object is always the single-tuple form, so the two never
+ *   overlap; a param-less value has no list form. These overloads sit
+ *   before every single value overload, so a call matching none is still
+ *   reported against the last one — the plain single read.
+ */
+export function useLive<
+  T,
+  Q,
+  QIn,
+  C extends string = never,
+  V extends object = object,
+>(
+  value: LiveQueryValue<T, Q, QIn, LiveValueOrigin> & RefusalsDecl<C> & V,
+  queries: LiveQueryList<NoInfer<QIn>>,
+): readonly LiveValueRead<V, T, C>[];
+export function useLive<
+  T,
+  P extends Record<string, string>,
+  C extends string = never,
+  V extends object = object,
+>(
+  value: LivePlainValue<T, P, LiveValueOrigin> & RefusalsDecl<C> & V,
+  params: LiveValueParamsList<NoInfer<P>>,
+): readonly LiveValueRead<V, T, C>[];
+/**
  * - `useLive(pagedValue, query, { viewport, resetKey? })` — a key-range-paged
  *   value (`liveValue(key, { query, paged })`) read like a scroll collection
  *   under a viewport: `LivePagesResult<Item>`, no depth limit. `null` for
@@ -285,16 +379,18 @@ export function useLive<Row>(
  *   0's (a preview) and the step `loadMore()` grows by. `null` reads nothing.
  *   The per-question meta sibling is `useLive(pagedValue.meta, query)`.
  */
-export function useLive<Item, Meta, Q, QIn>(
-  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin> | null,
+export function useLive<Item, Meta, Q, QIn, C extends string = never>(
+  value:
+    | (LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin> & RefusalsDecl<C>)
+    | null,
   query: NoInfer<QIn> | null,
   options: LivePagesOptions,
-): LivePagesResult<Item>;
-export function useLive<Item, Meta, Q, QIn>(
-  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin>,
+): LivePagesResult<Item, C>;
+export function useLive<Item, Meta, Q, QIn, C extends string = never>(
+  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin> & RefusalsDecl<C>,
   query: NoInfer<QIn> | null,
   options?: LiveValuePagesOptions,
-): LiveListResult<Item>;
+): LiveListResult<Item, C>;
 /**
  * - `useLive(queryValue, query)` — a typed-query value
  *   (`liveValue(key, { query })`): the question is the schema's INPUT, encoded
@@ -302,16 +398,38 @@ export function useLive<Item, Meta, Q, QIn>(
  *   nothing (pending), as for a param'd value; a changed question is a new
  *   tuple and shows loading.
  */
-export function useLive<T, Q, QIn>(
-  value: LiveQueryValue<T, Q, QIn, LiveValueOrigin>,
+export function useLive<T, Q, QIn, C extends string = never>(
+  value: LiveQueryValue<T, Q, QIn, LiveValueOrigin> &
+    SnapshotDecl &
+    RefusalsDecl<C>,
   query: NoInfer<QIn> | null,
-): ResourceResult<T>;
-export function useLive<T, P extends Record<string, string>>(
-  value: LivePlainValue<T, P, LiveValueOrigin>,
+): LiveSnapshotResult<T, C>;
+export function useLive<T, Q, QIn, C extends string = never>(
+  value: LiveQueryValue<T, Q, QIn, LiveValueOrigin> & RefusalsDecl<C>,
+  query: NoInfer<QIn> | null,
+): ResourceResult<T, C>;
+/**
+ * - A value declared `load: "snapshot"` (plain or typed-query) reads the same
+ *   way, and its result adds `refresh()` — see {@link LiveSnapshotResult}.
+ */
+export function useLive<
+  T,
+  P extends Record<string, string>,
+  C extends string = never,
+>(
+  value: LivePlainValue<T, P, LiveValueOrigin> & SnapshotDecl & RefusalsDecl<C>,
+  ...params: LiveValueArgs<NoInfer<P>>
+): LiveSnapshotResult<T, C>;
+export function useLive<
+  T,
+  P extends Record<string, string>,
+  C extends string = never,
+>(
+  value: LivePlainValue<T, P, LiveValueOrigin> & RefusalsDecl<C>,
   // `NoInfer`: `P` is the declaration's — a `{ path } | null` argument must not
   // narrow it past a declared optional param.
   ...params: LiveValueArgs<NoInfer<P>>
-): ResourceResult<T>;
+): ResourceResult<T, C>;
 export function useLive<Row, F, S extends string>(
   source:
     | null
@@ -328,10 +446,14 @@ export function useLive<Row, F, S extends string>(
     | LiveIdsQuery
     | LiveAllSelect<Row, unknown>
     | Record<string, string>
+    | readonly unknown[]
     | null,
   options?: LivePagesOptions | LiveValuePagesOptions,
 ):
-  LiveListResult<unknown> | ResourceResult<unknown> | LivePagesResult<unknown> {
+  | LiveListResult<unknown>
+  | ResourceResult<unknown>
+  | readonly ResourceResult<unknown>[]
+  | LivePagesResult<unknown> {
   // Which read this call is. Every branch below calls a different set of
   // hooks, so a call site must ask the same kind on every render: a
   // declaration never changes kind (it is a module-level const), and a call
@@ -373,17 +495,32 @@ export function useLive<Row, F, S extends string>(
         query as unknown,
         options as LiveValuePagesOptions | undefined,
       );
-    case "query-value":
-      return useQueryValue(
+    case "query-value": {
+      const read = useQueryValue(
         source as LiveQueryValue<unknown, unknown, unknown, LiveValueOrigin>,
         query as unknown,
       );
-    case "value":
+      // A declaration is a snapshot or not for good: the branch is fixed too.
+      return isSnapshot(source!) ? useSnapshotRead(read) : read;
+    }
+    case "value": {
       // `null` is the substrate's skip; `useResource` canonicalizes the params
       // (an absent optional one is one tuple however it is spelled).
-      return useResource(
+      const read = useResource(
         source as LiveValue<unknown, Record<string, string>, LiveValueOrigin>,
         query as Record<string, string> | null | undefined,
+      );
+      return isSnapshot(source!) ? useSnapshotRead(read) : read;
+    }
+    case "query-value-list":
+      return useQueryValueList(
+        source as LiveQueryValue<unknown, unknown, unknown, LiveValueOrigin>,
+        query as readonly unknown[],
+      );
+    case "value-list":
+      return useValueList(
+        source as LiveValue<unknown, Record<string, string>, LiveValueOrigin>,
+        query as readonly (Record<string, string> | null)[],
       );
     case "all":
       return useAll(
@@ -412,6 +549,8 @@ const READ_KIND = {
   "value-pages": "paged value (its pages every one live, no viewport)",
   "query-value": "typed-query value",
   value: "value",
+  "query-value-list": "list of typed-query value tuples",
+  "value-list": "list of value tuples",
   all: "whole `all` set",
   "all-pages": "window read (its pages every one live, no viewport)",
   collection: "window, grouping or id set",
@@ -432,9 +571,22 @@ function readKindOf(
   if (source === null) return "count";
   if ("live" in source) {
     const decl = source as {
+      key: string;
       query?: unknown;
       paged?: unknown;
     };
+    // A list of tuples (an array is never a single tuple: params are a
+    // record, and a question schema may not be a list — the declaration
+    // refuses one).
+    if (Array.isArray(query)) {
+      if (decl.query === undefined) return "value-list";
+      if (decl.paged !== undefined) {
+        throw new Error(
+          `useLive("${decl.key}"): a paged value reads one question — a list of questions is not a paged read.`,
+        );
+      }
+      return "query-value-list";
+    }
     if (decl.query === undefined) return "value";
     return decl.paged === undefined ? "query-value" : "value-pages";
   }
@@ -462,6 +614,21 @@ function keyOf(source: object | null): string {
   return source === null ? "null" : String((source as { key?: unknown }).key);
 }
 
+/** Whether a value declaration is branded `load: "snapshot"`. */
+function isSnapshot(decl: object): boolean {
+  return (decl as { snapshot?: true }).snapshot === true;
+}
+
+/**
+ * A snapshot read: the read plus `refresh()` — its own `refetch`, which for an
+ * on-demand descriptor is an HTTP read, and for a snapshot one the server
+ * always answers by running the loader. Keeps its identity until the read
+ * changes, like every `useLive` result.
+ */
+function useSnapshotRead<T>(read: ResourceResult<T>): LiveSnapshotResult<T> {
+  return useMemo(() => ({ ...read, refresh: read.refetch }), [read]);
+}
+
 /**
  * A typed-query value: the question encoded through the declaration's own
  * codec (the one its params gate and serve half decode with) — memoized on
@@ -474,6 +641,103 @@ function useQueryValue<T, Q, QIn>(
   const q = query === null ? null : value.query.encode(query).q;
   const params = useMemo(() => (q === null ? null : { q }), [q]);
   return useResource(value, params);
+}
+
+/** A skipped tuple of a list read: loading, nothing read, nothing to refetch. */
+const SKIPPED_TUPLE: ResourceResult<never> = {
+  status: "loading",
+  refetch: () => Promise.resolve(),
+};
+
+/** A tuple's identity for dedupe: its canonical params, keys sorted. */
+function tupleIdentity(p: Record<string, string>): string {
+  return JSON.stringify(
+    Object.keys(p)
+      .sort()
+      .map((k) => [k, p[k]]),
+  );
+}
+
+/**
+ * Many tuples of one value (`useLive(v, [p1, p2, …])`): each non-null entry
+ * canonicalized (an absent optional param is one tuple however it is
+ * spelled), the distinct tuples read ONCE each through live-state's
+ * `useResources` — subscribed by diff, so a tuple kept across a list change is
+ * never re-subscribed and keeps its settled state — and the results handed
+ * back per entry, in order; a `null` entry is {@link SKIPPED_TUPLE}. A
+ * snapshot value's results add `refresh()`, as its single read does. The
+ * returned array keeps its identity until an entry's result changes.
+ */
+function useValueList(
+  value: LiveValue<unknown, Record<string, string>, LiveValueOrigin>,
+  list: readonly (Record<string, string> | null)[],
+): readonly (ResourceResult<unknown> | LiveSnapshotResult<unknown>)[] {
+  const listJson = JSON.stringify(
+    list.map((p) =>
+      p === null ? null : canonicalParams(p, value.optionalParams),
+    ),
+  );
+  const plan = useMemo(() => {
+    const entries = JSON.parse(listJson) as (Record<string, string> | null)[];
+    const index = new Map<string, number>();
+    const distinct: Record<string, string>[] = [];
+    const slots = entries.map((p) => {
+      if (p === null) return -1;
+      const id = tupleIdentity(p);
+      let i = index.get(id);
+      if (i === undefined) {
+        i = distinct.length;
+        index.set(id, i);
+        distinct.push(p);
+      }
+      return i;
+    });
+    return { distinct, slots };
+  }, [listJson]);
+  const results = useResources(value, plan.distinct);
+  const snapshot = isSnapshot(value);
+  // One `refresh` wrapper per tuple RESULT: `useResources` keeps an unchanged
+  // tuple's result object, so the wrapper is kept with it and a tuple whose
+  // read did not move hands back the object it handed back before.
+  const [withRefresh] = useState(
+    () => new WeakMap<ResourceResult<unknown>, LiveSnapshotResult<unknown>>(),
+  );
+  return useMemo(() => {
+    const reads = results.map(
+      (r): ResourceResult<unknown> | LiveSnapshotResult<unknown> => {
+        if (!snapshot) return r;
+        let read = withRefresh.get(r);
+        if (read === undefined) {
+          read = { ...r, refresh: r.refetch };
+          withRefresh.set(r, read);
+        }
+        return read;
+      },
+    );
+    return plan.slots.map((i) => (i === -1 ? SKIPPED_TUPLE : reads[i]!));
+  }, [plan, results, snapshot, withRefresh]);
+}
+
+/**
+ * Many questions of one typed-query value (`useLive(v, [q1, q2, …])`): each
+ * encoded through the declaration's codec to its one tuple (`null` stays a
+ * skip), then read as {@link useValueList} reads a tuple list.
+ */
+function useQueryValueList<T, Q, QIn>(
+  value: LiveQueryValue<T, Q, QIn, LiveValueOrigin>,
+  queries: readonly unknown[],
+): readonly ResourceResult<unknown>[] {
+  const tuples = queries.map((q) =>
+    q === null ? null : value.query.encode(q as QIn),
+  );
+  return useValueList(
+    value as unknown as LiveValue<
+      unknown,
+      Record<string, string>,
+      LiveValueOrigin
+    >,
+    tuples,
+  );
 }
 
 /**

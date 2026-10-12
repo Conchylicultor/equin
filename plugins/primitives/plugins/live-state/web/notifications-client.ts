@@ -13,7 +13,7 @@ import {
 } from "@plugins/primitives/plugins/networking/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
-import type { ResourceOrigin } from "../core";
+import type { ResourceDescriptor, ResourceOrigin } from "../core";
 import { mergeKeyedDelta } from "./keyed-delta-merge";
 import { noteResourceWatermark } from "./watermark-registry";
 import { noteResourceTxAcks } from "./tx-ack-registry";
@@ -22,6 +22,7 @@ import { updateDelayReportSink } from "./update-delay-reporter";
 import {
   BUILD_GRAPH_HEADER,
   DEV_BUILD,
+  parseResourceBytesHeaders,
   parseResourceHttpErrorBody,
   type ContractVerdict,
   type SubErrorReason,
@@ -41,6 +42,19 @@ import {
 // live in a dependency-free module so `resource-error.ts` can classify them
 // without importing this whole client.
 export { ResourceHttpError, ResourceStaleReadError };
+
+/**
+ * How the client reads one resource's answers: the payload `schema` every
+ * value is parsed through, the `refusals` it may be refused with (absent ⇒
+ * none), and whether it is a `bytes` value (an `ArrayBuffer` read as
+ * `application/octet-stream`, its envelope in response headers). Its
+ * declaration's — a `ResourceDescriptor` is one — so a read and the server it
+ * reads from are checked against ONE declaration.
+ */
+export type ResourceRead<T> = Pick<
+  ResourceDescriptor<T>,
+  "schema" | "refusals" | "bytes"
+>;
 
 /**
  * The build graph this tab's bundle was built from — sent on every `sub` /
@@ -287,7 +301,8 @@ type ServerMsg =
       id?: number;
       key: string;
       params: ResourceParams;
-      value: unknown;
+      /** Absent for a bytes read (`ResourceRead.bytes`): its value is read over HTTP. */
+      value?: unknown;
       version: number;
       etag?: string;
       epoch?: string;
@@ -379,6 +394,8 @@ type ServerMsg =
       params: ResourceParams;
       reason: SubErrorReason;
       verdict?: ContractVerdict;
+      /** On `refused`: the refusal's code (the HTTP fallback carries it too). */
+      code?: string;
       /** On `refused`: the refusal's message (the HTTP fallback carries it too). */
       message?: string;
     }
@@ -580,12 +597,14 @@ export class NotificationsClient {
   private channels: Partial<Record<SocketKind, SocketChannel>> = {};
   private nextMsgId = 1;
   /**
-   * key → Zod schema. Registered on every observe() call from useResource.
-   * Used in applyUpdate to parse WS payloads before they hit the cache.
-   * Last-write-wins is fine: the same key always pairs to the same schema
-   * (resources are singletons defined at module scope).
+   * key → how its answers are read (schema + declared refusals). Registered on
+   * every observe() call from useResource. Used in applyUpdate to parse WS
+   * payloads before they hit the cache, and by the HTTP reads a sub-error or
+   * the cold-start prime starts. Last-write-wins is fine: the same key always
+   * pairs to the same declaration (resources are singletons defined at module
+   * scope).
    */
-  private schemas = new Map<string, ZodParser<unknown>>();
+  private reads = new Map<string, ResourceRead<unknown>>();
   /**
    * key → row-identity fn for keyed resources. Registered alongside the schema
    * in observe(). Used by applyDelta to key prior cache rows when merging a
@@ -1119,11 +1138,11 @@ export class NotificationsClient {
     key: string,
     params: ResourceParams = {},
     origin?: ResourceOrigin,
-    schema?: ZodParser<unknown>,
+    read?: ResourceRead<unknown>,
     keyOf?: (row: unknown) => string,
     derive?: ResourceDerivation,
   ): void {
-    if (schema) this.schemas.set(key, schema);
+    if (read) this.reads.set(key, read);
     if (keyOf) this.keyedKeyOf.set(key, keyOf);
     const kind = socketKindFor(origin);
     // The ONLY path that may lazily create a channel: the first central-origin
@@ -1456,9 +1475,10 @@ export class NotificationsClient {
     key: string,
     params: ResourceParams,
     origin: ResourceOrigin | undefined,
-    schema: ZodParser<T>,
+    read: ResourceRead<T>,
     source: "prime" | "fallback",
   ): Promise<T> {
+    const { schema } = read;
     const channel = this.channels[socketKindFor(origin)];
     const entry = channel?.subs.get(`${key}\0${paramsKey(params)}`);
     const serverEpoch = channel?.serverEpoch;
@@ -1499,6 +1519,27 @@ export class NotificationsClient {
       // the error names WHY — and so a contract refusal reaches the Reload
       // advice even when no WS sub-error did (the socket was down).
       const errBody = parseResourceHttpErrorBody(await readJsonBody(res));
+      // A refusal must carry a code this read declares. The server only sends
+      // codes ITS declaration lists (the runtime turns any other into a
+      // failure), so a code this tab's does not list means the two bundles
+      // declare the resource differently: a contract mismatch, the tab out of
+      // date — never a refusal the surface would branch on with no type for.
+      if (
+        errBody?.reason === "refused" &&
+        (errBody.code === undefined ||
+          !(read.refusals ?? []).includes(errBody.code))
+      ) {
+        noteContractRefusal(key, "contract-mismatch", "skew");
+        throw new ResourceHttpError(
+          key,
+          res.status,
+          "contract-mismatch",
+          "skew",
+          `refused with ${errBody.code === undefined ? "no code" : `code "${errBody.code}"`}, ` +
+            `which this tab's declaration does not list ` +
+            `(${JSON.stringify(read.refusals ?? [])}): ${errBody.detail ?? ""}`,
+        );
+      }
       noteContractRefusal(key, errBody?.reason, errBody?.verdict);
       throw new ResourceHttpError(
         key,
@@ -1506,14 +1547,27 @@ export class NotificationsClient {
         errBody?.reason,
         errBody?.verdict,
         errBody?.detail,
+        errBody?.code,
       );
     }
-    const body = (await res.json()) as {
+    // A bytes read's body IS the value; its envelope rides the headers
+    // (`parseResourceBytesHeaders` throws on a response that is not one).
+    const body: {
       value: unknown;
       version: number;
       epoch?: string;
       watermark?: string;
-    };
+    } = read.bytes
+      ? {
+          ...parseResourceBytesHeaders(key, res.headers),
+          value: await res.arrayBuffer(),
+        }
+      : ((await res.json()) as {
+          value: unknown;
+          version: number;
+          epoch?: string;
+          watermark?: string;
+        });
     this.noteHttpEtag(key, params, origin, res.headers.get("ETag"));
 
     // Epoch-aware version guard (see doc comment). Compute the adopt/drop decision
@@ -1645,10 +1699,10 @@ export class NotificationsClient {
       `${key}\0${paramsKey(params)}`,
     );
     if (!entry) return; // observe() must have created the sub
-    const schema = this.schemas.get(key);
-    if (!schema) return;
+    const read = this.reads.get(key);
+    if (!read) return;
     try {
-      await this.fetchOverHttp(key, params, origin, schema, "prime");
+      await this.fetchOverHttp(key, params, origin, read, "prime");
     } catch (err) {
       if (
         err instanceof TypeError ||
@@ -1949,7 +2003,7 @@ export class NotificationsClient {
       // the server answered the question, with "cannot be asked like that".
       if (msg.reason === "refused") {
         console.info(
-          `[notifications] sub-error key=${msg.key} reason=refused: ${msg.message ?? ""}`,
+          `[notifications] sub-error key=${msg.key} reason=refused code=${msg.code ?? ""}: ${msg.message ?? ""}`,
         );
       } else if (msg.verdict === "skew") {
         console.warn(
@@ -2150,6 +2204,15 @@ export class NotificationsClient {
       this.applyDerived(entry, msg.key, msg.params);
       return;
     }
+    // A bytes value's sub-ack carries no value (an ArrayBuffer never rides a
+    // JSON frame): it opened the tuple's tracking span — version and epoch are
+    // adopted above — and the value is read over HTTP now, so it is no older
+    // than the span (an in-flight mount read is superseded, never applied
+    // twice). Its `update` never comes: a bytes value is invalidate-only.
+    if (msg.kind === "sub-ack" && this.reads.get(msg.key)?.bytes === true) {
+      this.applyInvalidate(msg.key, msg.params);
+      return;
+    }
     if (msg.kind === "sub-ack" || msg.kind === "update") {
       // A value-carrying sub-ack answers a derivation too: the server loaded.
       if (msg.kind === "sub-ack") entry.derivation = undefined;
@@ -2206,7 +2269,7 @@ export class NotificationsClient {
     // Invariant: handleServerMessage only reaches here for a (key) this tab
     // observes, and observe() registers the schema alongside the sub entry — so
     // a missing schema means that contract was violated.
-    const schema = this.schemas.get(key);
+    const schema = this.reads.get(key)?.schema;
     if (!schema) {
       throw new Error(
         `[notifications] no schema registered for key="${key}". ` +
@@ -2301,7 +2364,7 @@ export class NotificationsClient {
       this.forceFullResub(channel, entry, key, params);
       return;
     }
-    const schema = this.schemas.get(key);
+    const schema = this.reads.get(key)?.schema;
     if (!schema) {
       throw new Error(
         `[notifications] no schema registered for key="${key}". ` +
@@ -2383,8 +2446,8 @@ export class NotificationsClient {
     key: string,
     params: ResourceParams,
   ): void {
-    const schema = this.schemas.get(key);
-    if (!schema) {
+    const read = this.reads.get(key);
+    if (!read) {
       // A held sub always registered its schema in observe(), with the entry.
       throw new Error(
         `[notifications] no schema registered for key="${key}" on sub-error.`,
@@ -2394,8 +2457,7 @@ export class NotificationsClient {
       channel === this.channels.central ? "central" : undefined;
     void this.queryClient.prefetchQuery({
       queryKey: queryKeyFor(key, params),
-      queryFn: () =>
-        this.fetchOverHttp(key, params, origin, schema, "fallback"),
+      queryFn: () => this.fetchOverHttp(key, params, origin, read, "fallback"),
       staleTime: 0,
     });
   }

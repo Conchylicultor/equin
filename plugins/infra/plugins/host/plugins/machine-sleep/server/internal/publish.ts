@@ -12,6 +12,7 @@ const publisher = createSleepPublisher(readSleepClock, () =>
 // liveValue default): one small value, the same for every tab.
 export const machineSleepServed = serveValue(machineSleep, {
   source: "external",
+  changes: "notified",
   loader: () => publisher.current(),
 });
 

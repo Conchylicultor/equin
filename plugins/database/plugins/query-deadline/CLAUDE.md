@@ -189,7 +189,7 @@ effect with no timer to fire again.
   - Exports (values):
     - `abandonCapKind`
     - `queryDeadlineKind`
-  - Resources: `db-query-deadlines` (push)
+  - Resources: `db-query-deadlines` (push, notified)
 - Core:
   - Uses:
     - `database/connection.DB_CALL_PHASES`

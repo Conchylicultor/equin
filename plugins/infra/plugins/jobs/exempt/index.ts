@@ -37,4 +37,11 @@ export default [
     reason:
       "Phase-1 baseline of the unified prefixed ids: this table's `id` primary key names no id kind yet. Declare the kind (`defineIdKind`) and key the table with `idColumn` / `idKindField` (or `externalIdColumn` for an id minted elsewhere) in its migration phase, then delete this entry.",
   },
+  {
+    rule: "no-db-backed-notify",
+    paths: ["server/internal/resources.ts"],
+    kind: "sanctioned",
+    reason:
+      "`jobs-list` reads graphile-worker's own tables (`graphile_worker.*`), a schema the DB change feed deliberately leaves out (only `public` gets triggers), so the feed can never invalidate it; the queue-activity signal (`onQueueActivity`) notifies it instead.",
+  },
 ] satisfies Exemptions;

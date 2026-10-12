@@ -647,7 +647,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `job-runs` (keyed, window)
     - `job-runs:groups` (push)
     - `job-runs:rows` (keyed, point)
-    - `jobs-list` (invalidate)
+    - `jobs-list` (invalidate, notified)
   - Routes:
     - `GET /api/jobs`
     - `GET /api/jobs/dead`
@@ -723,6 +723,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `jobs:no-raw-addjob` — `server/internal/enqueue-deadline.test.ts` (sanctioned)
     - `jobs:no-raw-addjob:task-literal` — `core/hold.ts`, `check/index.ts` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+    - `no-db-backed-notify` — `server/internal/resources.ts` (sanctioned)
 - Test helpers:
   - Server: `@plugins/infra/plugins/jobs/server/testing`
     - `installQueueSchema` — Install (or bring up to date) graphile-worker's own schema on the database `connectionString` names, plus this plugin's superseded-row trigger on graphile's job table.

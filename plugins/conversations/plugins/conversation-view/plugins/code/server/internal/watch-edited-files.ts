@@ -1,187 +1,133 @@
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
-  defineFileWatcher,
-  type FileWatcher,
-} from "@plugins/infra/plugins/file-watcher/server";
-import type { EditedFile } from "../../core/protocol";
+  acquireCheckoutWatch,
+  type CheckoutChange,
+} from "@plugins/infra/plugins/git/plugins/checkout-watch/server";
+import { createRefcountHub } from "@plugins/packages/plugins/refcount-hub/core";
+import { WorktreeGoneError } from "@plugins/primitives/plugins/commit-list/server";
 import { computeEditedFiles } from "./compute-edited-files";
 import { editedFilesSignature } from "./edited-files-signature";
 import { getEditedFiles } from "./get-edited-files";
 import { evictEditedFiles, primeEditedFiles } from "./edited-files-cache";
 
-// One instance per watched worktree (a room), labelled by its path. The events
-// themselves are never read — any change batch triggers one recompute, batched
-// for 200 ms and forced at least every 2 s while changes keep coming.
-export const editedFilesWatcher = defineFileWatcher({
-  name: "conversation-view.edited-files",
-  description:
-    "Watches an open conversation's worktree and recomputes its list of edited files when anything outside build output and dependencies changes.",
-  debounceMs: 200,
-  ceilingMs: 2000,
-  ignore: [
-    "**/.git/**",
-    "**/node_modules/**",
-    "**/dist/**",
-    "**/build/**",
-    "**/.next/**",
-    "**/.turbo/**",
-    "**/.cache/**",
-    "**/coverage/**",
-  ],
-});
+// One room per watched worktree, however many conversations show it, over the
+// shared checkout watch: the working tree AND the git dir, since the list moves
+// on a `git add` (untracked → added), and on a `main` advance or rebase (the
+// merge-base). Any change batch outside build output triggers one recompute;
+// the checkout watch batches them.
 
-type Listener = (files: EditedFile[]) => void;
+/** Folders a build writes: their churn never moves the edited-files list. */
+const BUILD_OUTPUT = new Set([
+  "dist",
+  "build",
+  ".next",
+  ".turbo",
+  ".cache",
+  "coverage",
+]);
+
+function isBuildOutput(worktreePath: string, change: CheckoutChange): boolean {
+  if (change.area === "git") return false;
+  const rel = change.path.slice(worktreePath.length + 1);
+  return rel.split("/").some((segment) => BUILD_OUTPUT.has(segment));
+}
 
 interface Room {
   worktreePath: string;
-  watcher: FileWatcher | null;
-  opening: Promise<void> | null;
-  serialized: string;
-  // null = never successfully computed. A git-failed initial load must NOT
-  // manufacture an empty list here — an empty `[]` is a legitimate "no edits"
-  // value a new subscriber would absorb as truth. While null, new subscribers
-  // are handed nothing and fall back to the resource loader (which throws on a
-  // git failure — stale-safe). Only a real successful compute sets this.
-  lastFiles: EditedFile[] | null;
-  subscribers: Set<Listener>;
+  // The last list the room computed, serialized; null = never computed. A
+  // recompute that lands on the same list notifies nobody.
+  serialized: string | null;
+  closed: boolean;
 }
 
-const rooms = new Map<string, Room>();
-
-export function watchEditedFiles(
-  worktreePath: string,
-  onChange: Listener,
-): () => void {
-  let room = rooms.get(worktreePath);
-  if (!room) {
-    room = {
-      worktreePath,
-      watcher: null,
-      opening: null,
-      serialized: "",
-      lastFiles: null,
-      subscribers: new Set(),
-    };
-    rooms.set(worktreePath, room);
-    const created = room;
-    void runTracked("watch-edited-files:open", () => openRoom(created));
-  } else if (room.lastFiles !== null) {
-    // Fire the new subscriber with the last known list on next tick — but ONLY if
-    // we have a real, successfully-computed list. If the room has never computed
-    // (initial load failed / still in flight), we hand the new subscriber nothing;
-    // the resource loader is the source of truth and throws on a git failure.
-    const snapshot = room.lastFiles;
-    queueMicrotask(() => {
-      if (room!.subscribers.has(onChange)) onChange(snapshot);
-    });
-  }
-  room.subscribers.add(onChange);
-
+const rooms = createRefcountHub<void>(async (worktreePath, emit) => {
+  const room: Room = { worktreePath, serialized: null, closed: false };
+  const release = await acquireCheckoutWatch(worktreePath, (changes) => {
+    if (changes.every((c) => isBuildOutput(worktreePath, c))) return;
+    void runTracked("watch-edited-files:recompute", () =>
+      recompute(room, emit),
+    );
+  });
+  void runTracked("watch-edited-files:baseline", () => baseline(room));
   return () => {
-    const r = rooms.get(worktreePath);
-    if (!r) return;
-    r.subscribers.delete(onChange);
-    if (r.subscribers.size === 0) closeRoom(r);
+    room.closed = true;
+    // Drop the memo entry with the last subscriber (pure lifecycle cleanup); a
+    // re-subscribe repopulates it via the baseline's read-through. A recompute
+    // still in flight across this evict is harmless: it write-backs
+    // {contentSig, value}, and any later reader probes the CURRENT content
+    // signature, so a surviving entry is served only if it genuinely matches.
+    evictEditedFiles(worktreePath);
+    release();
   };
+});
+
+/**
+ * Hear the worktree's edited-files list change until the returned stop runs.
+ * Resolves once the watch is live. A worktree that is gone has nothing to
+ * watch (the loader answers it `unresolved`), so it resolves to a no-op stop.
+ */
+export async function watchEditedFiles(
+  worktreePath: string,
+  onChange: () => void,
+): Promise<() => void> {
+  const hold = rooms.acquire(worktreePath, onChange);
+  try {
+    await hold.ready;
+  } catch (err) {
+    if (!(err instanceof WorktreeGoneError)) throw err;
+    return () => {};
+  }
+  return hold.release;
 }
 
-async function openRoom(room: Room): Promise<void> {
+/**
+ * The list the subscribers already hold, so the first change that lands on it
+ * notifies nobody. Read THROUGH the memo, without priming: the memo probes its
+ * own content signature and caches under it, and its single-flight collapses
+ * this read with the subscriber's concurrent loader read into one git batch.
+ */
+async function baseline(room: Room): Promise<void> {
   try {
-    // Initial load reads THROUGH the memo, and does NOT prime. The memo probes its
-    // own content signature and caches under it, so a read-through already leaves
-    // the cache correctly populated — and it keeps the embedded single-flight that
-    // collapses the first-subscribe race with a concurrent resource-loader read
-    // into one git batch. Direct-compute-then-prime here would double the
-    // first-subscribe cost for no correctness gain.
-    //
-    // (`recompute` below still computes directly, because a watcher that read its
-    // own cache could fan out a value it never re-derived — see there.)
-    const files = await getEditedFiles(room.worktreePath);
-    room.lastFiles = files;
-    room.serialized = JSON.stringify(files);
-    fanOut(room, files);
-    // eslint-disable-next-line promise-safety/no-bare-catch
+    const serialized = JSON.stringify(await getEditedFiles(room.worktreePath));
+    // A recompute that landed first holds a newer list.
+    if (room.serialized === null) room.serialized = serialized;
   } catch (err) {
-    console.error("[watch-edited-files] initial load failed", err);
-  }
-
-  try {
-    const watcher = await editedFilesWatcher.start({
-      dirs: [room.worktreePath],
-      label: room.worktreePath,
-      onChange: () => {
-        void runTracked("watch-edited-files:recompute", () => recompute(room));
-      },
-    });
-    // The last subscriber may have left while the watch was opening: this room
-    // is already closed, so nothing else would ever stop it.
-    if (rooms.get(room.worktreePath) !== room) {
-      await watcher.stop();
-      return;
-    }
-    room.watcher = watcher;
-    // eslint-disable-next-line promise-safety/no-bare-catch
-  } catch (err) {
-    console.error("[watch-edited-files] failed to open watcher", err);
+    // Gone: the loader answers it, and a recompute will notify.
+    if (!(err instanceof WorktreeGoneError)) throw err;
   }
 }
 
-async function recompute(room: Room): Promise<void> {
-  if (!rooms.has(room.worktreePath)) return;
+async function recompute(room: Room, emit: () => void): Promise<void> {
+  let serialized: string;
   try {
-    // Direct (un-memoized) compute: the watcher must never read its own cache. A
-    // memo hit here could be ≤1 event stale (the mid-flight joiner contract), and
-    // the watcher FANS THAT OUT — with no further filesystem event, nothing would
-    // ever correct it.
+    // Direct (un-memoized) compute: the watcher must never read its own cache.
+    // A memo hit here could be ≤1 event stale (the mid-flight joiner contract),
+    // and the watcher FANS THAT OUT — with no further filesystem event, nothing
+    // would ever correct it.
     //
-    // Ordering contract (the memo's `prime` precondition): capture the signature
-    // BEFORE the compute. A change landing mid-compute then leaves the stored
-    // signature older than the value it labels, so the next `get` probes a newer
-    // signature, misses, and recomputes. That over-invalidates by one needless
-    // recompute; it can never serve a torn value under a matching signature.
-    // Capturing it after would invert the skew — the entry would claim a snapshot
-    // newer than its value and every subsequent `get` would hit it.
+    // Ordering contract (the memo's `prime` precondition): capture the
+    // signature BEFORE the compute. A change landing mid-compute then leaves
+    // the stored signature older than the value it labels, so the next `get`
+    // probes a newer signature, misses, and recomputes. That over-invalidates
+    // by one needless recompute; it can never serve a torn value under a
+    // matching signature.
     //
-    // The prime stays BEFORE the unchanged-JSON early return, so the memo always
-    // holds the freshly-confirmed list under the freshly-probed signature; the
-    // early return only skips the fanOut.
+    // The prime stays BEFORE the unchanged-JSON early return, so the memo
+    // always holds the freshly-confirmed list under the freshly-probed
+    // signature; the early return only skips the notify.
     const signature = await editedFilesSignature(room.worktreePath);
     const files = await computeEditedFiles(room.worktreePath);
-    const serialized = JSON.stringify(files);
+    serialized = JSON.stringify(files);
     primeEditedFiles(room.worktreePath, signature, files);
-    if (serialized === room.serialized) return;
-    room.serialized = serialized;
-    room.lastFiles = files;
-    fanOut(room, files);
-    // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
-    console.error("[watch-edited-files] recompute failed", err);
+    if (!(err instanceof WorktreeGoneError)) throw err;
+    // Reaped while watched: the readers refetch and get `unresolved`.
+    evictEditedFiles(room.worktreePath);
+    emit();
+    return;
   }
-}
-
-function fanOut(room: Room, files: EditedFile[]): void {
-  for (const listener of room.subscribers) {
-    try {
-      listener(files);
-      // eslint-disable-next-line promise-safety/no-bare-catch
-    } catch (err) {
-      console.error("[watch-edited-files] listener threw", err);
-    }
-  }
-}
-
-function closeRoom(room: Room): void {
-  rooms.delete(room.worktreePath);
-  // Drop the memo entry on the last subscriber (pure lifecycle cleanup); a
-  // re-subscribe repopulates it via openRoom's read-through. A recompute still in
-  // flight across this evict is harmless: it write-backs {contentSig, value}, and
-  // any later reader probes the CURRENT content signature, so a surviving entry is
-  // served only if it genuinely matches git state.
-  evictEditedFiles(room.worktreePath);
-  if (room.watcher) {
-    // eslint-disable-next-line promise-safety/no-bare-catch, detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget watcher cleanup
-    void room.watcher.stop().catch((err: unknown) => {
-      console.error("[watch-edited-files] unsubscribe failed", err);
-    });
-  }
+  // The last subscriber may have left mid-compute.
+  if (room.closed || serialized === room.serialized) return;
+  room.serialized = serialized;
+  emit();
 }

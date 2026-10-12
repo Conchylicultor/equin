@@ -4,6 +4,7 @@ import {
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { CONFIG_DIR } from "./config-dir";
+import { notifyConfigDirChange } from "./config-dir-change";
 import type { Disposable } from "../../core";
 
 // No reconcile (no `reconcileMs`, so no timer). One re-fired EVERY watched
@@ -45,6 +46,7 @@ export async function initConfigWatcher(): Promise<void> {
       for (const p of paths) {
         if (watchers.has(p)) notifyWatchers(p);
       }
+      if (events.length > 0) notifyConfigDirChange();
     },
   });
 }

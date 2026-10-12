@@ -55,7 +55,7 @@ the durable emit that follows.
   - Register:
     - `defineTriggerEvent('git.refAdvanced')`
     - `defineFileWatcher('git-watcher.refs')`
-  - Resources: `git-watcher.refHead` (push)
+  - Resources: `git-watcher.refHead` (push, notified)
 - Core:
   - Uses: `network/live.liveValue`
   - Exports (types): `RefHead`

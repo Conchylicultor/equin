@@ -28,9 +28,10 @@ export type ResourceStatus = "loading" | "error" | "ready";
  *                       down, a stale body raced a newer one). Retry heals it.
  * - `refused`         — the server cannot answer the question as asked (the
  *                       loader threw a `ResourceRefusal`: an unknown id, an
- *                       empty range). The message is the server's own,
- *                       written for the reader; retrying the same question
- *                       gets the same answer, so none is offered.
+ *                       empty range), with a `code` the read declares. The
+ *                       message is the server's own, written for the reader;
+ *                       retrying the same question gets the same answer, so
+ *                       none is offered.
  */
 export type ResourceErrorKind =
   "loader-failed" | "not-found" | "client-outdated" | "transport" | "refused";
@@ -40,14 +41,28 @@ export type ResourceErrorKind =
  * existing `error.message` / `instanceof Error` read keeps working; `kind` is
  * what a surface branches on, `cause` the raw thrown value (an HTTP error, a
  * `TypeError` from `fetch`, a schema error) for logs and debugging.
+ *
+ * `code` is the refusal's code, present exactly when `kind` is `"refused"` —
+ * one of the codes the read's declaration lists (`refusals`). `C` is that
+ * list as a type (a `liveValue` read's `useLive` result carries it), so a
+ * surface branches on a typed code — `error.kind === "refused" &&
+ * error.code === "missing"` — apart from a real failure.
  */
-export class ResourceError extends Error {
+export class ResourceError<C extends string = string> extends Error {
   constructor(
     public readonly kind: ResourceErrorKind,
     message: string,
     public override readonly cause: unknown,
+    /** The refusal's code: given iff `kind` is `"refused"`. */
+    public readonly code?: C,
   ) {
     super(message);
+    if ((kind === "refused") !== (code !== undefined)) {
+      throw new Error(
+        `ResourceError: a refusal carries a code and nothing else does ` +
+          `(kind "${kind}", code ${JSON.stringify(code)}).`,
+      );
+    }
     this.name = "ResourceError";
   }
 }

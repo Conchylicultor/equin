@@ -18,7 +18,7 @@ import {
   CollapsibleTrigger,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { resourcesReadSetEndpoint } from "../../shared/endpoints";
-import type { ResourceReadSet } from "../../shared/schema";
+import type { ResourceFreshness, ResourceReadSet } from "../../shared/schema";
 import {
   computeCeiling,
   type Ceiling,
@@ -47,6 +47,8 @@ import {
 //       bases, FULL loads per base write and persistence (external ones
 //       tagged); every routed `full` route with its reason; routed drift; the
 //       routed, pure-external and unbound keys.
+//   D — declared freshness (`resources[].freshness`): every external value's
+//       `changes` — notified, or immutable / fixed / snapshot with its reason.
 
 interface TableEntry {
   table: string;
@@ -108,6 +110,33 @@ function buildNotifyEntries(resources: ResourceReadSet[]): NotifyEntry[] {
     });
 }
 
+interface FreshnessEntry {
+  key: string;
+  freshness: ResourceFreshness;
+}
+
+/** The order the freshness section lists its arms in: the never-told ones first. */
+const FRESHNESS_ORDER: readonly ResourceFreshness["kind"][] = [
+  "snapshot",
+  "fixed",
+  "immutable",
+  "notified",
+];
+
+/** Every resource with a declared freshness, grouped by arm (see `FRESHNESS_ORDER`), then by key. */
+function buildFreshnessEntries(resources: ResourceReadSet[]): FreshnessEntry[] {
+  const entries: FreshnessEntry[] = [];
+  for (const r of resources) {
+    if (r.freshness !== null)
+      entries.push({ key: r.key, freshness: r.freshness });
+  }
+  return entries.sort(
+    (a, b) =>
+      FRESHNESS_ORDER.indexOf(a.freshness.kind) -
+        FRESHNESS_ORDER.indexOf(b.freshness.kind) || a.key.localeCompare(b.key),
+  );
+}
+
 export function ReadSetView(): ReactElement {
   /* eslint-disable polling-safety/no-refetch-interval -- inspects the live-state runtime itself; a resource of its own read set would perturb what it measures */
   const { data } = useEndpoint(
@@ -122,6 +151,10 @@ export function ReadSetView(): ReactElement {
   const ceiling = useMemo(() => computeCeiling(resources), [resources]);
   const notifyEntries = useMemo(
     () => buildNotifyEntries(resources),
+    [resources],
+  );
+  const freshnessEntries = useMemo(
+    () => buildFreshnessEntries(resources),
     [resources],
   );
 
@@ -140,6 +173,7 @@ export function ReadSetView(): ReactElement {
         <NotifyProvenanceSection entries={notifyEntries} />
         <CapturedIndexSection entries={captured} />
         <CeilingSection ceiling={ceiling} />
+        <FreshnessSection entries={freshnessEntries} />
       </Stack>
     </Scroll>
   );
@@ -543,6 +577,59 @@ function KeyListSection({
     <Stack gap="sm">
       {label("div")}
       {body}
+    </Stack>
+  );
+}
+
+// ── Section D: declared freshness (external values' `changes`) ─────────────
+
+/**
+ * Every external value's declared `changes`: the arm as a badge, and — for a
+ * value that is never told of a change — the author's reason why that is
+ * honest.
+ */
+function FreshnessSection({
+  entries,
+}: {
+  entries: FreshnessEntry[];
+}): ReactElement {
+  return (
+    <Stack as="section" gap="sm">
+      <SectionLabel>
+        Declared freshness — external values{" "}
+        <span className="opacity-60">{entries.length}</span>
+      </SectionLabel>
+      {entries.length === 0 ? (
+        <Text variant="caption" tone="muted">
+          No external value declares its freshness.
+        </Text>
+      ) : (
+        <Stack gap="2xs">
+          {entries.map((e) => (
+            <Stack
+              key={e.key}
+              direction="row"
+              gap="sm"
+              align="baseline"
+              justify="between"
+            >
+              <Cluster gap="2xs">
+                <Text variant="caption" className="font-mono">
+                  {e.key}
+                </Text>
+                <Badge variant="muted" mono>
+                  {e.freshness.kind}
+                </Badge>
+              </Cluster>
+              {e.freshness.reason !== undefined ? (
+                <Text as="span" variant="caption" tone="muted">
+                  {e.freshness.reason}
+                </Text>
+              ) : null}
+            </Stack>
+          ))}
+        </Stack>
+      )}
     </Stack>
   );
 }

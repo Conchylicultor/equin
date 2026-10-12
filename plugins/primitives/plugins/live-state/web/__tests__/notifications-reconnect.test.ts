@@ -111,7 +111,7 @@ describe("NotificationsClient — reconnect + resync", () => {
 
   test("H1: frames lost during the reopen gap are recovered by one sub-batch replay converging", async () => {
     const { client, hub, socket, qc } = await setup();
-    client.observe("k", {}, undefined, pushSchema);
+    client.observe("k", {}, undefined, { schema: pushSchema });
     await flush();
     socket.serverSend({
       kind: "sub-ack",
@@ -162,7 +162,8 @@ describe("NotificationsClient — reconnect + resync", () => {
   test("H1b: the replay is a single complete sub-batch with per-sub version echoes + the known epoch, baselines reset at send", async () => {
     const { client, hub, socket } = await setup();
     const keys = Array.from({ length: 8 }, (_, i) => `k${i}`);
-    for (const k of keys) client.observe(k, {}, undefined, pushSchema);
+    for (const k of keys)
+      client.observe(k, {}, undefined, { schema: pushSchema });
     await flush();
     expect(subFrames(socket)).toHaveLength(8); // fresh observes are single subs
 
@@ -211,7 +212,7 @@ describe("NotificationsClient — reconnect + resync", () => {
     // moves. `kept` is the control: same replay, value still cached.
     const { client, hub, socket, qc } = await setup();
     for (const k of ["gcd", "kept"])
-      client.observe(k, {}, undefined, pushSchema);
+      client.observe(k, {}, undefined, { schema: pushSchema });
     await flush();
     for (const k of ["gcd", "kept"]) {
       socket.serverSend({
@@ -257,7 +258,8 @@ describe("NotificationsClient — reconnect + resync", () => {
   test("H2: a server restart resets version counters — the batch echoes the OLD epoch, lower-version sub-acks APPLY, and the new epoch is re-learned", async () => {
     const { client, hub, socket, qc } = await setup();
     const keys = ["k0", "k1", "k2"];
-    for (const k of keys) client.observe(k, {}, undefined, pushSchema);
+    for (const k of keys)
+      client.observe(k, {}, undefined, { schema: pushSchema });
     for (const k of keys) {
       socket.serverSend({
         kind: "sub-ack",
@@ -312,7 +314,7 @@ describe("NotificationsClient — reconnect + resync", () => {
   test("same-boot reconnect: an up-to-date-batch adopts versions and keeps every cached value", async () => {
     const { client, hub, socket, qc } = await setup();
     for (const k of ["a", "b"]) {
-      client.observe(k, {}, undefined, pushSchema);
+      client.observe(k, {}, undefined, { schema: pushSchema });
       await flush();
       socket.serverSend({
         kind: "sub-ack",
@@ -372,7 +374,7 @@ describe("NotificationsClient — reconnect + resync", () => {
 
   test("H7: a lost intermediate level-state frame still converges on the next full frame", async () => {
     const { client, socket, qc } = await setup();
-    client.observe("k", {}, undefined, pushSchema);
+    client.observe("k", {}, undefined, { schema: pushSchema });
     await flush();
     socket.serverSend({
       kind: "sub-ack",
@@ -399,7 +401,7 @@ describe("NotificationsClient — reconnect + resync", () => {
 
   test("H7: probeMissedUpdates surfaces a silently-missed gap end-to-end over the batch replay", async () => {
     const { client, socket, qc } = await setup();
-    client.observe("k", {}, undefined, pushSchema);
+    client.observe("k", {}, undefined, { schema: pushSchema });
     await flush();
     socket.serverSend({
       kind: "sub-ack",
@@ -457,7 +459,7 @@ describe("NotificationsClient — reconnect + resync", () => {
     // the new socket every tuple opens a fresh tracking span at a HIGHER
     // version even though nothing changed — a re-baseline, not a dropped frame.
     const { client, hub, socket, qc } = await setup();
-    client.observe("k", {}, undefined, pushSchema);
+    client.observe("k", {}, undefined, { schema: pushSchema });
     await flush();
     socket.serverSend({
       kind: "sub-ack",

@@ -41,11 +41,13 @@ export {
 } from "./internal/registry";
 export type { ConfigWriteOpts } from "./internal/registry";
 export {
+  configValuesServed,
   getAllDescriptors,
   getConfigScopeIds,
   getScopedDescriptors,
 } from "./internal/resource";
 export { auditUserConfigOrphans } from "./internal/orphan-audit";
+export { onConfigDirChange } from "./internal/config-dir-change";
 export {
   forkScope,
   deleteScope,

@@ -274,7 +274,8 @@ This is the single most important coding principle:
   must state `unbounded: { reason }` (tsc). Read both with `useLive` / `useLiveRow`. The old
   spellings that still exist (`defineResource`, `useResource`, …) remain only as the
   substrate the unified API compiles to; the
-  `live/no-legacy-resource-spelling` lint rejects them elsewhere — never copy one as precedent. See
+  `live/no-legacy-resource-spelling` lint rejects them elsewhere — never copy one as precedent. A
+  new way to read server data is an option `useLive` reads, never a new hook (its Design rule). See
   `plugins/network/plugins/live/CLAUDE.md`.
 - **Collections of domain records are DataViews.** Rendering a homogeneous set of domain records (rows from DB / live-state / config) is a `data-view` surface (`views={["list"]}` minimum — search/filter/sort/groupBy/item-actions come free), never a hand-rolled `.map()` of `<Row>`. `Row`+map is only for transient chrome (menus, pickers, tab strips), annotated `// eslint-disable-next-line data-view/no-adhoc-row-list -- <reason>` (ESLint: `no-adhoc-row-list`). See `plugins/primitives/plugins/data-view/CLAUDE.md` and `research/2026-07-17-global-data-view-adoption-guardrail.md`.
 - **Fix the structural issue, not the specific instance.** When something breaks, take a step back and ask why it was possible in the first place. A targeted fix in one call site leaves the rest exposed.

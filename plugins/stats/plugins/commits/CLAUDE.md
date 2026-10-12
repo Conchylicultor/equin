@@ -64,7 +64,6 @@
     - `stats/pushes`
     - `stats/responsiveness`
     - `stats/tasks`
-  - Endpoint callers: `stats`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/components/commits-category-charts.tsx`, `web/components/cumulative-chart.tsx`, `web/components/lines-charts.tsx`, `web/components/rate-chart.tsx` (debt)
 - Shared:

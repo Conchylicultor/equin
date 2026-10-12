@@ -56,7 +56,7 @@ The **secret** type's config capability, spanning all four runtimes:
     - `infra/secrets.getSecretMetadata`
     - `infra/secrets.setSecret`
     - `network/live.serveValue`
-  - Resources: `config-v2.secret-meta` (push)
+  - Resources: `config-v2.secret-meta` (push, notified)
 - Central:
   - Uses: `infra/secrets.getSecret`
   - Exports (values): `readSecretConfig`

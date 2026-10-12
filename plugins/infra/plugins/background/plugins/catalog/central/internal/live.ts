@@ -28,6 +28,7 @@ export const backgroundCentralCatalogServed = serveValue(
   backgroundCentralCatalog,
   {
     source: "external",
+    changes: "notified",
     loader: () => loadCatalog(assertCentral),
     throttleMs: CATALOG_THROTTLE_MS,
   },
@@ -38,6 +39,7 @@ export const backgroundCentralRecentRunsServed = serveValue(
   backgroundCentralRecentRuns,
   {
     source: "external",
+    changes: "notified",
     loader: loadRecentRuns,
     throttleMs: RECENT_RUNS_THROTTLE_MS,
   },

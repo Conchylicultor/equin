@@ -1,0 +1,5 @@
+{
+  "name": "@singularity/plugin-infra-git-checkout-watch",
+  "private": true,
+  "version": "0.0.1"
+}

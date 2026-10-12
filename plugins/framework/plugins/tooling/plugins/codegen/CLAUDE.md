@@ -88,6 +88,7 @@ rather than reading as "not preloaded". A factory's own declaration
     - `collectIconManifest`
     - `collectImportGraph`
     - `collectTokenGroupVars`
+    - `committedRegistryBundle`
     - `compositionRegistryFileName`
     - `compositionRegistryPath`
     - `computeEagerTier`

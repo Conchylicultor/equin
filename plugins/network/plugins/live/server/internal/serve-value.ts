@@ -17,10 +17,15 @@ import {
   registerPagedOf,
   registerValueOf,
   type AnyServeOptions,
+  type BytesPairing,
   type ExternalServed,
+  type LiveValueChanges,
+  type PagedChanges,
+  type ServedFor,
   type ServedValueBase,
   type ServePagedValueOptions,
   type ServeValueOptions,
+  type SnapshotPairing,
 } from "../../shared/compile-value";
 
 // `serveValue` — the server half of a worktree `liveValue`. It declares WHERE the
@@ -34,8 +39,10 @@ import {
 //   subscribed tuple (a FULL recompute — no scope policy: a value is one
 //   payload, a keyed payload is a collection). There is no `notify`.
 // - `source: "external"` — the truth lives outside Postgres (git, files, an
-//   in-memory registry), which no change feed can see: the served value has
-//   `notify(params?)`, and nothing else does.
+//   in-memory registry), which no change feed can see. It must declare how its
+//   answer changes (`changes`, `LiveValueChanges`): `"notified"` — the served
+//   value has `notify(params?)`, and nothing else does — or an immutable,
+//   fixed or snapshot answer, with its reason and no `notify`.
 //
 // The options (`throttleMs`, `recomputeOn`, `whileSubscribed`, `revalidate`, …)
 // compile in `../../shared/compile-value`, shared with the central `serveValue`.
@@ -74,13 +81,20 @@ export type ServedExternalQueryValue<T, Q> = ServedValue<T, LiveQueryParams> & {
  * key:meta]` when declared `paged.meta`) — spread `declare` like a
  * collection's.
  */
-export type ServedPagedValue<Item, Q> = ServedValueBase<
+export type ServedPagedValue<Item, Q> = ServedSilentPagedValue<Item> & {
+  notify(query: Q): void;
+};
+
+/**
+ * A served paged value declared `changes: { immutable | fixed }`: nothing may
+ * tell it of a change, so it has no `notify`.
+ */
+export type ServedSilentPagedValue<Item> = ServedValueBase<
   Item[],
   LivePagedParams
 > & {
   source: "external";
   declare: ReturnType<typeof ResourceContribution.Declare>[];
-  notify(query: Q): void;
 };
 
 /** Any other worktree value: its `serveValue` takes no `preloadParams`. */
@@ -113,6 +127,7 @@ interface PreloadParamsOption<P> {
  *
  * export const refHeadServed = serveValue(refHead, {
  *   source: "external",
+ *   changes: "notified",                  // or { immutable | fixed | snapshot: { reason } }
  *   loader: ({ refName }) => readRefHead(refName),
  *   throttleMs: 300,
  * });
@@ -129,11 +144,13 @@ interface PreloadParamsOption<P> {
  * ```ts
  * export const metricQueryServed = serveValue(metricQuery, {
  *   source: "external",
+ *   changes: "notified",
  *   loader: (q) => runQuery(q),
  *   whileSubscribed: (q, notify) => watch(q.metric, notify),
  * });
  * export const detailsServed = serveValue(metricDetails, {
  *   source: "external",
+ *   changes: "notified",
  *   loader: (q, range) => details(q, range),
  *   meta: (q) => ({ total: count(q) }),
  * });
@@ -145,17 +162,20 @@ export function serveValue<
   Q,
   QIn,
   const R extends readonly ExternalServed[] = [],
+  C extends PagedChanges = "notified",
 >(
   value: LivePagedValue<Item, Meta, Q, QIn>,
-  opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R>,
-): ServedPagedValue<Item, Q>;
+  opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R, C>,
+): ServedFor<C, ServedPagedValue<Item, Q>, ServedSilentPagedValue<Item>>;
 export function serveValue<
   T,
   Q,
   QIn,
   const R extends readonly ExternalServed[] = [],
 >(
-  value: LiveQueryValue<T, Q, QIn>,
+  value: LiveQueryValue<T, Q, QIn> &
+    SnapshotPairing<"notified"> &
+    BytesPairing<"db">,
   opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "db", R>,
 ): ServedValue<T, LiveQueryParams>;
 export function serveValue<
@@ -163,10 +183,15 @@ export function serveValue<
   Q,
   QIn,
   const R extends readonly ExternalServed[] = [],
+  C extends LiveValueChanges = "notified",
 >(
-  value: LiveQueryValue<T, Q, QIn>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "external", R>,
-): ServedExternalQueryValue<T, Q>;
+  value: LiveQueryValue<T, Q, QIn> & SnapshotPairing<C>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "external", R, C>,
+): ServedFor<
+  C,
+  ServedExternalQueryValue<T, Q>,
+  ServedValue<T, LiveQueryParams>
+>;
 export function serveValue<
   T,
   P extends Record<string, string>,
@@ -180,17 +205,18 @@ export function serveValue<
   T,
   P extends Record<string, string>,
   const R extends readonly ExternalServed[] = [],
+  C extends LiveValueChanges = "notified",
 >(
-  value: LivePreloadedParamValue<T, P>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R> &
+  value: LivePreloadedParamValue<T, P> & SnapshotPairing<C>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R, C> &
     PreloadParamsOption<NoInfer<P>>,
-): ServedExternalValue<T, P>;
+): ServedFor<C, ServedExternalValue<T, P>, ServedValue<T, P>>;
 export function serveValue<
   T,
   P extends Record<string, string>,
   const R extends readonly ExternalServed[] = [],
 >(
-  value: PlainValue<T, P>,
+  value: PlainValue<T, P> & SnapshotPairing<"notified"> & BytesPairing<"db">,
   opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R> & {
     preloadParams?: never;
   },
@@ -199,12 +225,13 @@ export function serveValue<
   T,
   P extends Record<string, string>,
   const R extends readonly ExternalServed[] = [],
+  C extends LiveValueChanges = "notified",
 >(
-  value: PlainValue<T, P>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R> & {
+  value: PlainValue<T, P> & SnapshotPairing<C>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R, C> & {
     preloadParams?: never;
   },
-): ServedExternalValue<T, P>;
+): ServedFor<C, ServedExternalValue<T, P>, ServedValue<T, P>>;
 export function serveValue<T, P extends Record<string, string>>(
   value:
     | (LiveValue<T, P> & {
@@ -220,7 +247,8 @@ export function serveValue<T, P extends Record<string, string>>(
 ):
   | ServedValue<T, P>
   | ServedExternalValue<T, P>
-  | ServedPagedValue<unknown, unknown> {
+  | ServedPagedValue<unknown, unknown>
+  | ServedSilentPagedValue<unknown> {
   // A paged value's pages are the one keyed value (a keyed window each).
   if (value.keyed !== undefined) {
     return servePaged(
@@ -284,6 +312,7 @@ export function serveValue<T, P extends Record<string, string>>(
     ...(resource.preload !== undefined ? { preload: resource.preload } : {}),
     load: (params: P) => resource.load(params),
     source: opts.source,
+    ...(compiled.changes !== undefined ? { changes: compiled.changes } : {}),
     ...(compiled.unbounded !== undefined
       ? { unbounded: compiled.unbounded }
       : {}),
@@ -299,7 +328,7 @@ export function serveValue<T, P extends Record<string, string>>(
       }),
     ] as [ReturnType<typeof ResourceContribution.Declare>],
   };
-  if ("notify" in resource && compiled.external) {
+  if ("notify" in resource && compiled.changes === "notified") {
     const queried = value.query !== undefined;
     const served: ServedExternalValue<T, P> = {
       ...base,
@@ -319,7 +348,8 @@ export function serveValue<T, P extends Record<string, string>>(
   }
   // A fresh object rather than the runtime's own: that one carries a working
   // `notify` its type merely hides, and a Postgres-backed value is driven by the
-  // change feed alone — so the db arm has no `notify`, at runtime too.
+  // change feed alone — so the db arm has no `notify`, at runtime too; nor has
+  // an immutable, fixed or snapshot external value (no change signal).
   const served: ServedValue<T, P> = base;
   return served;
 }
@@ -331,7 +361,7 @@ export function serveValue<T, P extends Record<string, string>>(
 function servePaged(
   value: LivePagedValue<unknown, unknown, unknown, unknown>,
   opts: AnyServeOptions & { preloadParams?: unknown },
-): ServedPagedValue<unknown, unknown> {
+): ServedPagedValue<unknown, unknown> | ServedSilentPagedValue<unknown> {
   if (opts.preloadParams !== undefined) {
     // Unreachable from typed code (a paged value is never preloaded).
     throw new Error(
@@ -354,14 +384,20 @@ function servePaged(
           }),
         ]),
   ];
-  return {
+  const base: ServedSilentPagedValue<unknown> = {
     key: resource.key,
     mode: resource.mode,
     schema: resource.schema,
     load: (params: LivePagedParams) => resource.load(params),
     source: "external",
+    ...(compiled.changes !== undefined ? { changes: compiled.changes } : {}),
     keys: [value.key, ...(meta === null ? [] : [meta.resource.key])],
     declare: declarations,
+  };
+  // Only a `"notified"` value is told of a change (see `serveValue`).
+  if (compiled.changes !== "notified") return base;
+  return {
+    ...base,
     notify(query: unknown) {
       for (const tuple of compiled.tuplesOf(query)) resource.notify(tuple);
       if (meta === null) return;

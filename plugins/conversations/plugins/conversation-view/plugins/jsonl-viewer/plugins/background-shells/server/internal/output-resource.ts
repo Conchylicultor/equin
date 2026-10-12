@@ -64,6 +64,7 @@ async function outputFileOf(
 
 export const shellOutputServed = serveValue(shellOutput, {
   source: "external",
+  changes: "notified",
   loader: async ({ id, shellId }): Promise<ShellOutput> => {
     const outputFile = await outputFileOf(id, shellId);
     if (outputFile === null) return { kind: "unknown-shell" };

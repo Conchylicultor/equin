@@ -31,7 +31,7 @@ names git. Plan: `research/2026-10-02-apps-file-explorer-git-and-code-explorer-r
 
 ## Plugin reference
 
-- Description: Git awareness for the file explorer: inside a git checkout the tree gains a git status badge (M / A / D / R / C / ?, a dot on a folder holding changes; pending until the status is known) and a Changed vs main filter field, ignored files hide behind a Show ignored files toggle, and a changed file's preview gets its git context (the Diff tab). Git awareness for the file explorer, server half: which checkout holds a folder (GET /api/file-explorer/git/checkout, git rev-parse) and the checkout's status as the file-explorer.git-status live value — each path's status vs HEAD and vs the main merge-base, untracked and ignored folders collapsed — memoized behind a content signature and pushed from a file watcher on the checkout and its git dir while subscribed.
+- Description: Git awareness for the file explorer: inside a git checkout the tree gains a git status badge (M / A / D / R / C / ?, a dot on a folder holding changes; pending until the status is known) and a Changed vs main filter field, ignored files hide behind a Show ignored files toggle, and a changed file's preview gets its git context (the Diff tab). Git awareness for the file explorer, server half: which checkout holds a folder (GET /api/file-explorer/git/checkout, git rev-parse) and the checkout's status as the file-explorer.git-status live value — each path's status vs HEAD and vs the main merge-base, untracked and ignored folders collapsed — memoized behind a content signature and pushed from the shared checkout watch (infra/git/checkout-watch: working tree + git dir) while subscribed.
 - Web:
   - Contributes:
     - `FileBrowserSlots.Fields` "git" → `GitFields`
@@ -51,8 +51,7 @@ names git. Plan: `research/2026-10-02-apps-file-explorer-git-and-code-explorer-r
   - Contributes: `resource.declare` "file-explorer.git-status"
   - Uses:
     - `infra/endpoints.implement`
-    - `infra/file-watcher.defineFileWatcher`
-    - `infra/file-watcher.FileChangeEvent`
+    - `infra/git/checkout-watch.acquireCheckoutWatch`
     - `infra/git/git-read-cache.createSignedMemo`
     - `infra/host/host-read-pool.withHeavyReadSlot`
     - `network/live.serveValue`
@@ -60,8 +59,7 @@ names git. Plan: `research/2026-10-02-apps-file-explorer-git-and-code-explorer-r
     - `primitives/commit-list.parseDiffNameStatusZ`
     - `primitives/commit-list.runGit`
     - `primitives/commit-list.tryRunGit`
-  - Register: `defineFileWatcher('file-explorer.git-status')`
-  - Resources: `file-explorer.git-status` (push)
+  - Resources: `file-explorer.git-status` (push, notified)
   - Routes: `GET /api/file-explorer/git/checkout`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-git.ts` (debt)

@@ -1,11 +1,12 @@
+import { createRefcountHub } from "@plugins/packages/plugins/refcount-hub/core";
 import type { SourceImpl } from "./contribution";
 
 // What makes a source's numbers stale is the source's own `changes` (a change
 // feed, a git ref, a refresh job), and every served query and drill-down page
 // of the source must hear it. One `changes` subscription per source, however
-// many tuples watch it: the first `acquire` starts it, each change fans out to
-// every acquirer's `notify`, and the last release stops it — so nothing
-// watches a source no tab reads.
+// many tuples watch it (the refcount hub): the first `acquire` starts it, each
+// change fans out to every acquirer's `notify`, and the last release stops it
+// — so nothing watches a source no tab reads.
 
 export interface SourceWatch {
   /**
@@ -16,43 +17,21 @@ export interface SourceWatch {
   acquire(sourceId: string, notify: () => void): () => void;
 }
 
-interface Watched {
-  listeners: Set<() => void>;
-  stop: () => void;
-}
-
 /** A hub over the sources `sourceOf` resolves (it throws on an unknown id). */
 export function createSourceWatch(
   sourceOf: (sourceId: string) => SourceImpl,
 ): SourceWatch {
-  const watched = new Map<string, Watched>();
+  const hub = createRefcountHub<void>((sourceId, emit) => {
+    const { changes } = sourceOf(sourceId);
+    // `acquire` below never opens a source without `changes`.
+    if (changes === undefined)
+      throw new Error(`source ${sourceId} has no changes`);
+    return changes(() => emit());
+  });
   return {
     acquire(sourceId, notify) {
-      let w = watched.get(sourceId);
-      if (w === undefined) {
-        const { changes } = sourceOf(sourceId);
-        if (changes === undefined) return () => {};
-        const listeners = new Set<() => void>();
-        const stop = changes(() => {
-          // A copy: a listener's notify may release (and so mutate) the set.
-          for (const listener of [...listeners]) listener();
-        });
-        w = { listeners, stop };
-        watched.set(sourceId, w);
-      }
-      const held = w;
-      // One entry per acquire, so the same notify acquired twice is two holds.
-      const listener = () => notify();
-      held.listeners.add(listener);
-      let released = false;
-      return () => {
-        if (released) return;
-        released = true;
-        held.listeners.delete(listener);
-        if (held.listeners.size > 0) return;
-        watched.delete(sourceId);
-        held.stop();
-      };
+      if (sourceOf(sourceId).changes === undefined) return () => {};
+      return hub.acquire(sourceId, () => notify()).release;
     },
   };
 }

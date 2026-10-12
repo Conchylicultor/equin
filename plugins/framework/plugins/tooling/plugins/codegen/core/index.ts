@@ -29,6 +29,7 @@ export {
 // unreachable from those runtimes while looking available.
 export {
   collectedDirRegistryPath,
+  committedRegistryBundle,
   collectedDirNamedCompositionRegistryPath,
   compositionRegistryFileName,
   compositionRegistryPath,

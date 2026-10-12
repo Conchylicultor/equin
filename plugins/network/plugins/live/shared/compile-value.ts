@@ -19,6 +19,7 @@ import {
   type LivePlainValue,
   type LiveQueryParams,
   type LiveQueryValue,
+  type LiveSnapshotBrand,
   type LiveValue,
   type LiveValueOrigin,
 } from "@plugins/network/plugins/live/core";
@@ -72,6 +73,55 @@ import { compareRowKeys, inRange } from "./key-order";
 /** Where a value's truth lives: Postgres (change feed) or anything else (`notify`). */
 export type LiveValueSource = "db" | "external";
 
+/**
+ * How an EXTERNAL value's answer changes — required on the external arm (a db
+ * value's freshness is the change feed's), so a value that is never told of a
+ * change cannot be written without saying why that is honest:
+ *
+ * - `"notified"` — something calls `served.notify(...)`, or `whileSubscribed`
+ *   (or a `recomputeOn` upstream) does. The only arm with `notify`,
+ *   `whileSubscribed`, `recomputeOn` and `throttleMs`.
+ * - `{ immutable: { reason } }` — a tuple's answer can never change (sha-keyed,
+ *   a terminal run's artifact).
+ * - `{ fixed: { reason } }` — constant for the process lifetime (a
+ *   contribution registry, a catalog read once, a third-party answer with no
+ *   change signal).
+ * - `{ snapshot: { reason } }` — re-measured only when a reader asks: the
+ *   value is declared `load: "snapshot"` (tsc pairs the two), every HTTP read
+ *   runs the loader (no `revalidate`), and the read's `refresh()` is the
+ *   Refresh button.
+ */
+export type LiveValueChanges =
+  | "notified"
+  | { immutable: { reason: string } }
+  | { fixed: { reason: string } }
+  | { snapshot: { reason: string } };
+
+/** A `changes` naming no change signal: the served value has no `notify`. */
+export type LiveUnnotifiedChanges = Exclude<LiveValueChanges, "notified">;
+
+/** True (as a type) when `C` is the snapshot arm. */
+type IsSnapshot<C> = [C] extends [{ snapshot: unknown }] ? true : false;
+
+/**
+ * The declaration a `changes` takes: a snapshot value for `{ snapshot }`, any
+ * other for every other arm (see `LiveSnapshotBrand`). The db arm takes the
+ * non-snapshot one (`SnapshotPairing<"notified">`).
+ */
+export type SnapshotPairing<C> = LiveSnapshotBrand<
+  IsSnapshot<C> extends true ? "snapshot" : "push"
+>;
+
+/**
+ * The declaration a `source` takes: a db value never a bytes one (a Postgres
+ * row is not a binary payload, and the change feed's recompute is a push) —
+ * a bytes value's `bytes: true` is not assignable to `bytes?: undefined`; an
+ * external value takes either.
+ */
+export type BytesPairing<Src extends LiveValueSource> = Src extends "db"
+  ? { bytes?: undefined }
+  : unknown;
+
 /** Stops what a `whileSubscribed` start began. */
 export type StopFn = () => void;
 
@@ -84,11 +134,22 @@ export type ServedValueBase<T, P extends Record<string, string>> = Resource<
   P
 > & {
   source: LiveValueSource;
+  /** The external arm's declared freshness (see {@link LiveValueChanges}); absent on a db value. */
+  changes?: LiveValueChanges;
   /** The collection-shaped value's recorded reason (db arm only). */
   unbounded?: { reason: string };
   /** `[key]` — symmetric with `ServedCollection.keys`. */
   keys: string[];
 };
+
+/**
+ * What an external `serveValue` returns for `changes: C`: the `Notified` form
+ * (with `notify`) for `"notified"`, the `Silent` one (none — nothing may tell
+ * an immutable, fixed or snapshot value of a change) for every other arm.
+ */
+export type ServedFor<C, Notified, Silent> = [C] extends ["notified"]
+  ? Notified
+  : Silent;
 
 /**
  * A served value that can be a `recomputeOn` upstream: an EXTERNAL one — told
@@ -149,36 +210,67 @@ type BoundArm<Src extends LiveValueSource, T> = Src extends "db"
   : { unbounded?: never };
 
 /**
- * `whileSubscribed` per arm: an external value is handed `notify` for the
- * subscribed tuple; a db value is driven by the change feed alone, so its hook
- * takes the params only (a second parameter is a tsc error).
+ * The change-signal options of a db value: driven by the change feed alone, so
+ * its `whileSubscribed` takes the params only (a second parameter is a tsc
+ * error), and it declares no `changes`.
  */
-type WhileSubscribedArm<Src extends LiveValueSource, P> = Src extends "external"
-  ? {
-      /**
-       * Start something for as long as a tuple has a subscriber (a watcher);
-       * return what stops it. `notify` recomputes THIS tuple. Runs on the
-       * tuple's first subscriber; its stop runs on the last unsubscribe —
-       * after the start resolves, if the unsubscribe comes first.
-       */
-      whileSubscribed?: (
-        params: P,
-        notify: () => void,
-      ) => StopFn | Promise<StopFn>;
-    }
+interface DbChangeHooks<S, R extends readonly ExternalServed[]> {
+  changes?: never;
+  throttleMs?: number;
+  recomputeOn?: RecomputeOn<R, S>;
+  /**
+   * Start something for as long as a tuple has a subscriber (a memo's
+   * lifetime); return what stops it. No `notify`: a db value is driven by
+   * the change feed alone.
+   */
+  whileSubscribed?: (params: S) => StopFn | Promise<StopFn>;
+}
+
+/** The change-signal options of a `changes: "notified"` external value. */
+interface NotifiedHooks<S, R extends readonly ExternalServed[]> {
+  throttleMs?: number;
+  recomputeOn?: RecomputeOn<R, S>;
+  /**
+   * Start something for as long as a tuple has a subscriber (a watcher);
+   * return what stops it. `notify` recomputes THIS tuple. Runs on the
+   * tuple's first subscriber; its stop runs on the last unsubscribe —
+   * after the start resolves, if the unsubscribe comes first.
+   */
+  whileSubscribed?: (params: S, notify: () => void) => StopFn | Promise<StopFn>;
+}
+
+/**
+ * An immutable / fixed / snapshot value has no change signal, so nothing that
+ * reacts to one may be spelled beside it (tsc; a throw for an untyped caller).
+ */
+interface NoChangeHooks {
+  throttleMs?: never;
+  recomputeOn?: never;
+  whileSubscribed?: never;
+}
+
+/**
+ * `changes` and the hooks it admits, per arm: a db value declares none; an
+ * external one must (`C`, inferred from the call), and only `"notified"`
+ * admits `whileSubscribed` / `recomputeOn` / `throttleMs`.
+ */
+type ChangesArm<
+  Src extends LiveValueSource,
+  S,
+  R extends readonly ExternalServed[],
+  C extends LiveValueChanges,
+> = Src extends "db"
+  ? DbChangeHooks<S, R>
   : {
-      /**
-       * Start something for as long as a tuple has a subscriber (a memo's
-       * lifetime); return what stops it. No `notify`: a db value is driven by
-       * the change feed alone.
-       */
-      whileSubscribed?: (params: P) => StopFn | Promise<StopFn>;
-    };
+      /** How this value's answer changes — see {@link LiveValueChanges}. Required. */
+      changes: C;
+    } & ([C] extends ["notified"] ? NotifiedHooks<S, R> : NoChangeHooks);
 
 /**
  * The options every served value takes, over `S` — the SUBJECT its hooks are
  * handed: the params tuple of a plain value, the decoded question of a
- * typed-query or paged one — and `L`, its loader.
+ * typed-query or paged one — `L`, its loader, and `C`, its declared
+ * `changes` (external arm).
  */
 type ServeOptionsBase<
   T,
@@ -186,38 +278,30 @@ type ServeOptionsBase<
   Src extends LiveValueSource,
   R extends readonly ExternalServed[],
   L,
+  C extends LiveValueChanges,
 > = {
   /** Where the value's truth lives (see the header). Required. */
   source: Src;
   /** Read the value for one tuple. Parsed against the declaration's schema. */
   loader: L;
-  /**
-   * Flush this value at most once per window (ms): the first change arms a
-   * trailing timer that later changes do not re-arm, so a burst (a rebase
-   * rewriting a ref) costs one recompute. A flush already happening for
-   * another resource drains it early.
-   */
-  throttleMs?: number;
-  /**
-   * Upstream served values whose change recomputes this one — see
-   * {@link RecomputeEntry}.
-   */
-  recomputeOn?: RecomputeOn<R, S>;
 } & BoundArm<Src, T> &
-  WhileSubscribedArm<Src, S>;
+  ChangesArm<Src, S, R, C>;
 
 export type ServeValueOptions<
   T,
   P,
   Src extends LiveValueSource,
   R extends readonly ExternalServed[] = [],
-> = ServeOptionsBase<T, P, Src, R, (params: P) => Promise<T> | T> & {
+  C extends LiveValueChanges = "notified",
+> = ServeOptionsBase<T, P, Src, R, (params: P) => Promise<T> | T, C> & {
   /**
    * Conditional-revalidation signature (an ETag): a cheap over-approximation
    * of "did the value change?" the read path compares before running the
-   * loader. Read path only.
+   * loader. Read path only. Never on a snapshot: its every read re-measures.
    */
-  revalidate?: (params: P) => Promise<string>;
+  revalidate?: IsSnapshot<C> extends true
+    ? never
+    : (params: P) => Promise<string>;
 };
 
 /**
@@ -236,12 +320,14 @@ export type ServePagedValueOptions<
   Meta,
   Q,
   R extends readonly ExternalServed[] = [],
+  C extends PagedChanges = "notified",
 > = ServeOptionsBase<
   Item[],
   Q,
   "external",
   R,
-  (query: Q, range: LiveKeyRange) => Promise<readonly Item[]> | readonly Item[]
+  (query: Q, range: LiveKeyRange) => Promise<readonly Item[]> | readonly Item[],
+  C
 > & { revalidate?: never } & MetaOption<Meta, Q>;
 
 /** `meta` exactly when the declaration has `paged.meta`. */
@@ -251,6 +337,9 @@ type MetaOption<Meta, Q> = [Meta] extends [undefined]
       /** The question's per-question fact (a total), served as `value.meta`. */
       meta: (query: Q) => Promise<Meta> | Meta;
     };
+
+/** A paged value's `changes`: never a snapshot (a paged value is never `load: "snapshot"`). */
+export type PagedChanges = Exclude<LiveValueChanges, { snapshot: unknown }>;
 
 /**
  * A value's two-arg runtime options: never routed (`reach`) — a value's
@@ -266,6 +355,8 @@ type ValueOptions<T, P extends Record<string, string>> = ServerResourceOptions<
 export interface CompiledValue<T, P extends Record<string, string>, S = P> {
   options: ValueOptions<T, P>;
   external: boolean;
+  /** The external arm's declared `changes`; absent on a db value. */
+  changes?: LiveValueChanges;
   unbounded?: { reason: string };
   /**
    * The wire tuples a change to `subject` recomputes: the params themselves
@@ -499,6 +590,44 @@ export function pageRowsOf(
 }
 
 /**
+ * A bytes value's declared `maxBytes`, enforced on its loader: a payload past
+ * it is refused `"too-large"` (the declaration's own `refuse`, which declaring
+ * `maxBytes` added the code to) rather than shipped. Every other loader is
+ * returned as is; a non-`ArrayBuffer` answer is left to the schema, which
+ * refuses it loudly.
+ */
+function boundedBytes<T, P extends Record<string, string>>(
+  value: LiveValue<T, P, LiveValueOrigin>,
+  loader: (params: P) => Promise<T> | T,
+): (params: P) => Promise<T> | T {
+  const decl = value as {
+    bytes?: true;
+    maxBytes?: number;
+    refuse?: (code: string, message: string) => Error;
+  };
+  const max = decl.maxBytes;
+  if (decl.bytes !== true || max === undefined) return loader;
+  const refuse = decl.refuse;
+  if (refuse === undefined) {
+    // Unreachable: `liveValue` adds `"too-large"` with `maxBytes`.
+    throw new Error(
+      `serveValue("${value.key}"): maxBytes without a declared "too-large" refusal.`,
+    );
+  }
+  return async (params) => {
+    const payload = await loader(params);
+    const size = (payload as { byteLength?: unknown }).byteLength;
+    if (typeof size === "number" && size > max) {
+      throw refuse(
+        "too-large",
+        `${size} bytes is over the ${max}-byte limit of "${value.key}".`,
+      );
+    }
+    return payload;
+  };
+}
+
+/**
  * Derive the runtime options for a value without registering it — so a test
  * can register them on its own `createResourceRuntime` (the
  * `compileCollection` pattern; `registerValue` does both). A typed-query value
@@ -512,11 +641,12 @@ export function compileValue<
   Src extends LiveValueSource,
   O extends LiveValueOrigin,
   const R extends readonly ExternalServed[] = [],
+  C extends LiveValueChanges = "notified",
 >(
-  value: LivePlainValue<T, P, O>,
+  value: LivePlainValue<T, P, O> & SnapshotPairing<C> & BytesPairing<Src>,
   // `NoInfer`: `T` / `P` come from the declaration alone — a loader returning
   // `{}` must not widen `T` past the bound rule.
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, Src, R>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, Src, R, C>,
 ): CompiledValue<T, P> {
   return compileValueOf<T, P, P>(value, opts as AnyServeOptions);
 }
@@ -529,9 +659,10 @@ export function compileQueryValue<
   Src extends LiveValueSource,
   O extends LiveValueOrigin,
   const R extends readonly ExternalServed[] = [],
+  C extends LiveValueChanges = "notified",
 >(
-  value: LiveQueryValue<T, Q, QIn, O>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, Src, R>,
+  value: LiveQueryValue<T, Q, QIn, O> & SnapshotPairing<C> & BytesPairing<Src>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, Src, R, C>,
 ): CompiledValue<T, LiveQueryParams, Q> {
   return compileValueOf<T, LiveQueryParams, Q>(value, opts as AnyServeOptions);
 }
@@ -557,9 +688,10 @@ export function compilePagedValue<
   QIn,
   O extends LiveValueOrigin,
   const R extends readonly ExternalServed[] = [],
+  C extends PagedChanges = "notified",
 >(
   value: LivePagedValue<Item, Meta, Q, QIn, O>,
-  opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R>,
+  opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R, C>,
 ): CompiledPagedValue<Item, Meta, Q> {
   return compilePagedOf(
     value as unknown as LivePagedValue<
@@ -588,6 +720,10 @@ function compilePagedOf(
         `a paged Postgres list is a liveCollection.`,
     );
   }
+  const changes = checkChanges(value, opts);
+  // A label the runtime's `_debug` payload shows per key (read-set pane).
+  const freshness =
+    changes !== undefined ? { freshness: freshnessOf(changes) } : {};
   const stray = (["revalidate", "unbounded"] as const).filter(
     (f) => opts[f] !== undefined,
   );
@@ -724,8 +860,10 @@ function compilePagedOf(
       ...(opts.throttleMs !== undefined ? { debounceMs: opts.throttleMs } : {}),
       ...(pagesDependsOn.length > 0 ? { dependsOn: pagesDependsOn } : {}),
       ...pageLifecycle,
+      ...freshness,
     },
     external: true,
+    ...(changes !== undefined ? { changes } : {}),
     tuplesOf: (subject) => pageSubjects.tuplesOf(subject),
     bindNotify(fn) {
       notifyPage = fn;
@@ -761,8 +899,10 @@ function compilePagedOf(
           enter(q, () => metaHeld.add(q)),
         onLastUnsubscribe: ({ q }: LiveQueryParams) =>
           leave(q, () => metaHeld.delete(q)),
+        ...freshness,
       },
       external: true,
+      ...(changes !== undefined ? { changes } : {}),
       tuplesOf: (subject) => metaSubjects.tuplesOf(subject),
       bindNotify(fn) {
         notifyMeta = fn;
@@ -789,10 +929,19 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
     );
   }
   const external = opts.source === "external";
+  const changes = checkChanges(value, opts);
   if ((value as { paged?: unknown }).paged !== undefined) {
     // Unreachable from typed code: a paged value compiles through `compilePagedValue`.
     throw new Error(
       `serveValue("${value.key}"): a paged value compiles through compilePagedValue.`,
+    );
+  }
+  const bytes = (value as { bytes?: true }).bytes === true;
+  if (bytes && !external) {
+    // Unreachable from typed code (`BytesPairing`).
+    throw new Error(
+      `serveValue("${value.key}"): a bytes value is served \`source: "external"\` — ` +
+        `a Postgres row is not a binary payload.`,
     );
   }
   const subjects = subjectsOf<P, S>(value);
@@ -828,7 +977,10 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
     subjects,
   );
 
-  const loader = loaderOf(value, opts.loader as (...args: never[]) => unknown);
+  const loader = boundedBytes(
+    value,
+    loaderOf(value, opts.loader as (...args: never[]) => unknown),
+  );
   const revalidate = opts.revalidate as
     ((subject: S) => Promise<string>) | undefined;
   return {
@@ -851,8 +1003,11 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
             }
           : { revalidate: (params: P) => revalidate(subjects.of(params)) }),
       ...lifecycle,
+      // A label the runtime's `_debug` payload shows per key (read-set pane).
+      ...(changes !== undefined ? { freshness: freshnessOf(changes) } : {}),
     },
     external,
+    ...(changes !== undefined ? { changes } : {}),
     ...(unbounded !== undefined ? { unbounded } : {}),
     tuplesOf: (subject) => subjects.tuplesOf(subject),
     bindNotify(fn) {
@@ -861,9 +1016,119 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
   };
 }
 
+/** `changes` as the runtime's debug label: its arm and, off `"notified"`, its reason. */
+function freshnessOf(changes: LiveValueChanges): {
+  kind: "notified" | "immutable" | "fixed" | "snapshot";
+  reason?: string;
+} {
+  if (changes === "notified") return { kind: "notified" };
+  const kind = changesKind(changes);
+  const reason = (changes as Record<string, { reason: string }>)[kind]!.reason;
+  return { kind, reason };
+}
+
+/** The arm a `changes` names (`"notified"`, or the one key of its object form). */
+function changesKind(
+  changes: LiveValueChanges,
+): "notified" | "immutable" | "fixed" | "snapshot" {
+  if (changes === "notified") return "notified";
+  if ("immutable" in changes) return "immutable";
+  if ("fixed" in changes) return "fixed";
+  return "snapshot";
+}
+
+/**
+ * Everything tsc pairs about `changes`, checked again for an untyped caller —
+ * and the one check tsc cannot make (a blank reason). Returns the declared
+ * `changes` (absent on the db arm).
+ *
+ * - a db value declares none; an external one must;
+ * - `{ immutable | fixed | snapshot }` names exactly one arm, with a reason;
+ * - only `"notified"` takes `whileSubscribed` / `recomputeOn` / `throttleMs`;
+ * - `{ snapshot }` ⇔ the value is declared `load: "snapshot"`, and a snapshot
+ *   takes no `revalidate` — its every HTTP read runs the loader.
+ */
+function checkChanges(
+  value: { key: string; snapshot?: true },
+  opts: AnyServeOptions,
+): LiveValueChanges | undefined {
+  const where = `serveValue("${value.key}")`;
+  const changes = opts.changes;
+  if (opts.source !== "external") {
+    if (changes !== undefined) {
+      throw new Error(
+        `${where}: \`changes\` is the external arm's — a db value is told of ` +
+          `every change by the change feed.`,
+      );
+    }
+    if (value.snapshot === true) {
+      throw new Error(
+        `${where}: a \`load: "snapshot"\` value is served \`source: ` +
+          `"external"\` with \`changes: { snapshot: { reason } }\`.`,
+      );
+    }
+    return undefined;
+  }
+  if (changes === undefined) {
+    throw new Error(
+      `${where}: an external value must declare \`changes\` — "notified", ` +
+        `or { immutable | fixed | snapshot: { reason } }.`,
+    );
+  }
+  if (changes !== "notified") {
+    const arms = Object.keys(changes);
+    const arm = arms[0];
+    const reason = (
+      changes as Record<string, { reason?: unknown } | undefined>
+    )[arm ?? ""]?.reason;
+    if (
+      arms.length !== 1 ||
+      (arm !== "immutable" && arm !== "fixed" && arm !== "snapshot") ||
+      typeof reason !== "string"
+    ) {
+      throw new Error(
+        `${where}: \`changes\` ${JSON.stringify(changes)} is not "notified" ` +
+          `or one of { immutable | fixed | snapshot: { reason } }.`,
+      );
+    }
+    if (reason.trim() === "") {
+      throw new Error(
+        `${where}: \`changes.${arm}.reason\` is empty — say why this value ` +
+          `is never told of a change.`,
+      );
+    }
+    const hooks = (
+      ["whileSubscribed", "recomputeOn", "throttleMs"] as const
+    ).filter((h) => opts[h] !== undefined);
+    if (hooks.length > 0) {
+      throw new Error(
+        `${where}: \`${hooks.join("`, `")}\` reacts to a change signal, and a ` +
+          `\`changes: { ${arm} }\` value has none — declare \`changes: "notified"\`.`,
+      );
+    }
+  }
+  const snapshot = changes !== "notified" && "snapshot" in changes;
+  if (snapshot !== (value.snapshot === true)) {
+    throw new Error(
+      snapshot
+        ? `${where}: \`changes: { snapshot }\` needs the value declared ` +
+            `\`load: "snapshot"\` — the client reads it over HTTP, on demand.`
+        : `${where}: a \`load: "snapshot"\` value declares ` +
+            `\`changes: { snapshot: { reason } }\`.`,
+    );
+  }
+  if (snapshot && opts.revalidate !== undefined) {
+    throw new Error(
+      `${where}: a snapshot takes no \`revalidate\` — every read re-measures.`,
+    );
+  }
+  return changes;
+}
+
 /** The options of any form, erased — the implementation signatures' view. */
 export interface AnyServeOptions {
   source: LiveValueSource;
+  changes?: LiveValueChanges;
   loader: unknown;
   meta?: unknown;
   throttleMs?: number;
@@ -916,10 +1181,11 @@ export function registerValue<
   O extends LiveValueOrigin,
   Src extends LiveValueSource,
   const R extends readonly ExternalServed[] = [],
+  C extends LiveValueChanges = "notified",
 >(
   runtime: ValueRuntime,
-  value: LivePlainValue<T, P, O>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, Src, R>,
+  value: LivePlainValue<T, P, O> & SnapshotPairing<C> & BytesPairing<Src>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, Src, R, C>,
 ): Registered<T, P> {
   return registerValueOf<T, P, P>(runtime, value, opts as AnyServeOptions);
 }
@@ -932,10 +1198,11 @@ export function registerQueryValue<
   O extends LiveValueOrigin,
   Src extends LiveValueSource,
   const R extends readonly ExternalServed[] = [],
+  C extends LiveValueChanges = "notified",
 >(
   runtime: ValueRuntime,
-  value: LiveQueryValue<T, Q, QIn, O>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, Src, R>,
+  value: LiveQueryValue<T, Q, QIn, O> & SnapshotPairing<C> & BytesPairing<Src>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, Src, R, C>,
 ): Registered<T, LiveQueryParams, Q> {
   return registerValueOf<T, LiveQueryParams, Q>(
     runtime,
@@ -952,10 +1219,11 @@ export function registerPagedValue<
   QIn,
   O extends LiveValueOrigin,
   const R extends readonly ExternalServed[] = [],
+  C extends PagedChanges = "notified",
 >(
   runtime: ValueRuntime,
   value: LivePagedValue<Item, Meta, Q, QIn, O>,
-  opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R>,
+  opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R, C>,
 ): RegisteredPaged<Item, Meta, Q> {
   return registerPagedOf(
     runtime,

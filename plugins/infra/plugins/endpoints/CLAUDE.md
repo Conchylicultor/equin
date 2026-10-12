@@ -51,7 +51,7 @@ await mutateAsync({ id }, { body: { name: "new" } });
 
 Use `fetchEndpoint` for imperative fetches outside React. Non-2xx responses throw `EndpointError(status, body)`.
 
-**Endpoints are for writes, and for reads sanctioned to stay request/response.** A server read a surface renders is a live resource — a `liveValue` (`params`, a typed `query`, or cursor-`paged`) or a `liveCollection`, read with `useLive` (`plugins/network/plugins/live/CLAUDE.md`). The `live/no-endpoint-read` lint flags, in `web/` code, `useEndpoint`, `useEndpointResource`, TanStack's `useQuery` family, and `fetchEndpoint` inside a `queryFn`; imperative `fetchEndpoint` (a mutation, a handler) is untouched. The read hooks below remain for the existing sites — the rule's debt burndown (`./singularity exempt list --rule live/no-endpoint-read --debt`) — never for new code.
+**Endpoints are for writes, and for reads sanctioned to stay request/response.** A server read a surface renders is a live resource — a `liveValue` (`params`, a typed `query`, or cursor-`paged`) or a `liveCollection`, read with `useLive` (`plugins/network/plugins/live/CLAUDE.md`). The `live/no-endpoint-read` lint flags, in `web/` code, `useEndpoint`, `useEndpointResource`, TanStack's `useQuery` family, `fetchEndpoint` inside a `queryFn`, a GET `fetchEndpoint` / `readNdjson` that render, a hook or an effect runs, and `invalidateQueries` / `refetchQueries` over an endpoint read's key; imperative `fetchEndpoint` (a mutation, a handler) is untouched. The read hooks below remain for the existing sites — the rule's debt burndown (`./singularity exempt list --rule live/no-endpoint-read --debt`) — never for new code.
 
 **A read that a surface renders is a `ResourceResult`, not React Query's own result** (whose `isPending` / `isError` let a surface read `data ?? []` without asking which state it is in). From `@plugins/primitives/plugins/live-state/web` (live-state sits downstream of endpoints, so the adapters live there):
 
@@ -215,10 +215,10 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `isCodec`
     - `multipart`
 - Cross-plugin:
-  - Imported by: 227 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 226 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×59
     - `conversations` ×26
-    - `debug` ×26
+    - `debug` ×25
     - `infra` ×17
     - `tasks` ×17
     - `page` ×14

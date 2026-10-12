@@ -7,4 +7,12 @@ export default [
     kind: "sanctioned",
     reason: "400/404 guards emitted before an NDJSON stream response.",
   },
+  {
+    rule: "live/no-endpoint-read",
+    paths: ["web/components/worktree-cleanup-panel.tsx"],
+    kind: "debt",
+    task: "task-1791560308-woqgfi",
+    reason:
+      "A request/response server read (a GET fetchEndpoint or NDJSON stream an effect, a hook or a function they call runs) not yet moved onto a liveValue or liveCollection read with useLive.",
+  },
 ] satisfies Exemptions;

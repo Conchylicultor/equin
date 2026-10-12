@@ -34,16 +34,33 @@ export function toResourceError(raw: unknown): ResourceError {
 }
 
 function classify(raw: unknown): ResourceError {
-  const { kind, message } = kindOf(raw);
-  return new ResourceError(kind, message, raw);
+  const { kind, message, code } = kindOf(raw);
+  return new ResourceError(kind, message, raw, code);
 }
 
-function kindOf(raw: unknown): { kind: ResourceErrorKind; message: string } {
+const OUTDATED = {
+  kind: "client-outdated",
+  message: "This tab is out of date — reload to load this.",
+} as const;
+
+function kindOf(raw: unknown): {
+  kind: ResourceErrorKind;
+  message: string;
+  code?: string;
+} {
   if (raw instanceof ResourceHttpError) {
     // A refusal is the server's answer, written for the reader: its message
-    // IS the error's.
+    // IS the error's, and its code what a surface branches on.
+    // `fetchOverHttp` turns a refusal whose code the read does not declare
+    // into a `contract-mismatch`, so a code-less one here is that same
+    // mismatch, built some other way: the tab does not speak the answer.
     if (raw.reason === "refused") {
-      return { kind: "refused", message: raw.detail ?? raw.message };
+      if (raw.code === undefined) return OUTDATED;
+      return {
+        kind: "refused",
+        message: raw.detail ?? raw.message,
+        code: raw.code,
+      };
     }
     // A contract refusal means this bundle does not speak the resource's
     // contract. Unless the server can prove both run the SAME build (then the
@@ -51,12 +68,7 @@ function kindOf(raw: unknown): { kind: ResourceErrorKind; message: string } {
     // tab is out of date: a dev bundle's `unknown` verdict is fixed by a
     // reload too.
     if (raw.reason === "contract-mismatch" || raw.reason === "unknown-key") {
-      if (raw.verdict !== "same-build") {
-        return {
-          kind: "client-outdated",
-          message: "This tab is out of date — reload to load this.",
-        };
-      }
+      if (raw.verdict !== "same-build") return OUTDATED;
       return raw.reason === "unknown-key"
         ? { kind: "not-found", message: raw.message }
         : { kind: "loader-failed", message: raw.message };
@@ -73,12 +85,7 @@ function kindOf(raw: unknown): { kind: ResourceErrorKind; message: string } {
   }
   // A value this bundle's schema rejects: the server's shape moved under an
   // open tab (or a real schema bug — the cause says which). Reload is the fix.
-  if (raw instanceof ZodError) {
-    return {
-      kind: "client-outdated",
-      message: "This tab is out of date — reload to load this.",
-    };
-  }
+  if (raw instanceof ZodError) return OUTDATED;
   // `fetch` rejects with a `TypeError` when the request never got an answer.
   if (raw instanceof TypeError) {
     return { kind: "transport", message: `Network error: ${raw.message}` };

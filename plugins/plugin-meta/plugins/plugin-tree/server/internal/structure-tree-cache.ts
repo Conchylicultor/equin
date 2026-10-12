@@ -9,6 +9,7 @@ import {
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/server";
+import { createTreeChangeSignal } from "./tree-change-signal";
 
 // Cached, watcher-invalidated plugin-tree accessors.
 //
@@ -17,10 +18,16 @@ import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/server";
 // structure-only and cached here. Caching is legitimate: it coalesces necessary,
 // cheap structural work, not the eliminated facet walk.
 //
-// Invalidation is a single monotonic `generation` counter, bumped by ONE lazy
-// @parcel watcher on `PLUGINS_DIR`: any plugin add / remove / edit fires an event
-// → generation++ → the memo signature moves → the next `get` rebuilds. Between
-// changes every call is a pure cache hit doing zero fs work.
+// Invalidation is a single monotonic generation (`treeChange`), bumped by ONE
+// lazy @parcel watcher on `PLUGINS_DIR`: any plugin add / remove / edit fires an
+// event → the generation moves → the memo signature moves → the next `get`
+// rebuilds. Between changes every call is a pure cache hit doing zero fs work.
+// The same bump is exported as a change signal (`onPluginTreeChanged`, plus
+// `pluginTreeGeneration` as a `revalidate` ETag) for live values over the tree.
+//
+// The watcher is armed BEFORE any tree is built (every accessor awaits it): a
+// tree handed out before the watcher was listening could miss the change that
+// made it stale, and nothing would ever move the generation for it.
 //
 // The memo's embedded single-flight coalesces the post-boot subscribe herd (every
 // live-state resource re-subscribing at once) onto ONE build — the many concurrent
@@ -34,17 +41,51 @@ export const pluginsDirWatcher = defineFileWatcher({
   ignore: ["**/.git/**", "**/node_modules/**", "**/dist/**", "**/build/**"],
 });
 
-let generation = 0;
+const treeChange = createTreeChangeSignal();
 let watcherStarted: Promise<FileWatcher> | null = null;
 
-function ensureWatcher(): Promise<FileWatcher> {
+async function ensureWatcher(): Promise<void> {
   watcherStarted ??= pluginsDirWatcher.start({
     dirs: [PLUGINS_DIR],
     onChange: (events) => {
-      if (events.length > 0) generation++;
+      if (events.length > 0) treeChange.bump();
     },
   });
-  return watcherStarted;
+  const starting = watcherStarted;
+  try {
+    await starting;
+  } catch (err) {
+    // Not cached: the next read tries to arm it again instead of failing
+    // forever. Only this attempt is forgotten — never a newer one.
+    if (watcherStarted === starting) watcherStarted = null;
+    throw err;
+  }
+}
+
+/**
+ * Hear every change the plugins-dir watcher sees (a plugin added, removed or
+ * any file under `plugins/` edited). Returns the unsubscribe.
+ *
+ * Registering does not arm the watcher — the first tree read (or
+ * {@link pluginTreeGeneration}) does, and it is armed before that read builds
+ * anything. So a process that never handed out a tree hears nothing, and has
+ * nothing that could be stale. Listeners run synchronously on the watcher's
+ * batch: keep them cheap (a `notify`), and expect one call per batch, not per
+ * file.
+ */
+export function onPluginTreeChanged(listener: () => void): () => void {
+  return treeChange.on(listener);
+}
+
+/**
+ * The tree's current generation as an opaque token — a `revalidate` ETag for a
+ * value derived from the tree: equal tokens mean the watcher saw no change in
+ * between, and tokens from two processes never match. Arms the watcher first,
+ * so a token is never minted for a tree nothing is watching.
+ */
+export async function pluginTreeGeneration(): Promise<string> {
+  await ensureWatcher();
+  return treeChange.token();
 }
 
 // Structure-only tree (facets OFF) — the hot path.
@@ -58,22 +99,20 @@ const facetsMemo = createGitStateMemo<PluginTree>({
   name: "plugin-tree.facets",
 });
 
-export function getStructureTreeCached(): Promise<PluginTree> {
-  // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- idempotent watcher-start guard; returns immediately once armed, the tree build is separately memoized
-  void ensureWatcher();
+export async function getStructureTreeCached(): Promise<PluginTree> {
+  await ensureWatcher();
   return structureMemo.get(
     PLUGINS_DIR,
-    () => Promise.resolve(String(generation)),
+    () => Promise.resolve(treeChange.token()),
     () => withHeavyReadSlot(() => buildPluginTree(PLUGINS_DIR)),
   );
 }
 
-export function getFacetsTreeCached(): Promise<PluginTree> {
-  // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- idempotent watcher-start guard; returns immediately once armed, the tree build is separately memoized
-  void ensureWatcher();
+export async function getFacetsTreeCached(): Promise<PluginTree> {
+  await ensureWatcher();
   return facetsMemo.get(
     PLUGINS_DIR,
-    () => Promise.resolve(String(generation)),
+    () => Promise.resolve(treeChange.token()),
     () =>
       withHeavyReadSlot(() =>
         buildPluginTree(PLUGINS_DIR, { skipBarrelImport: true, facets: true }),

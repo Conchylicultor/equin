@@ -19,7 +19,8 @@ type WireParams = Record<string, string>;
  * - `refused` — the loader threw a `ResourceRefusal`: the params are well
  *   formed, but the question cannot be answered as asked (an unknown id, an
  *   empty range). Expected and caller-caused — never a server fault, never
- *   reported — and it carries a user-readable message.
+ *   reported — and it carries a `code` the resource declares (its
+ *   `refusals`) and a user-readable message.
  */
 export type SubErrorReason =
   | "unknown-key"
@@ -49,19 +50,23 @@ export interface SubErrorFrame {
   reason: SubErrorReason;
   /** Present on `contract-mismatch` and `unknown-key` — both are what skew looks like. */
   verdict?: ContractVerdict;
+  /** Present on `refused`: the refusal's declared code (`ResourceRefusal.code`). */
+  code?: string;
   /** Present on `refused`: the refusal's user-readable message. */
   message?: string;
 }
 
 /**
  * The JSON body of a failed `GET /api/resources/:key` (404 unknown key, 409
- * contract mismatch, 422 refused — `detail` its message —, 500 loader
- * failure), so the client's error carries a typed reason instead of a bare
- * status.
+ * contract mismatch, 422 refused — `code` its declared code, `detail` its
+ * message —, 500 loader failure), so the client's error carries a typed
+ * reason instead of a bare status.
  */
 export interface ResourceHttpErrorBody {
   reason: SubErrorReason;
   verdict?: ContractVerdict;
+  /** On `refused`: the refusal's declared code. */
+  code?: string;
   detail?: string;
 }
 
@@ -92,16 +97,27 @@ export class ResourceContractError extends Error {
 
 /**
  * An EXPECTED, caller-caused refusal a loader throws: the params are well
- * formed, but the question cannot be answered as asked (a metric id no source
- * contributes, an interval that ends before it starts). The runtime sends its
- * `message` to the reader — `refused` on the HTTP read (422, `detail`) and the
- * `sub-error` frame (`message`) — and does NOT report it as a server failure.
- * Anything else a loader throws stays `loader-failed`, reported. Subclass it
- * for a domain's refusals (`MetricQueryError`).
+ * formed, but the question cannot be answered as asked (a file that is not
+ * there, a metric id no source contributes, an interval that ends before it
+ * starts). `code` says which refusal it is — one of the codes the resource
+ * declares (a `liveValue`'s `refusals`), so a reader can branch on it — and
+ * `message` is written for the reader. The runtime sends both — `refused` on
+ * the HTTP read (422, `code` + `detail`) and the `sub-error` frame (`code` +
+ * `message`) — and does NOT report it as a server failure. A code the
+ * resource does not declare is a server bug: the runtime turns it into
+ * `loader-failed`, reported, like anything else a loader throws. Thrown
+ * through a declaration's typed `refuse(code, message)`, or subclassed for a
+ * domain's refusals (`MetricQueryError`).
  */
 export class ResourceRefusal extends Error {
-  constructor(message: string) {
+  constructor(
+    public readonly code: string,
+    message: string,
+  ) {
     super(message);
+    if (code === "") {
+      throw new Error(`ResourceRefusal: an empty code (message: ${message})`);
+    }
     this.name = "ResourceRefusal";
   }
 }
@@ -151,13 +167,85 @@ export function parseResourceHttpErrorBody(
   raw: unknown,
 ): ResourceHttpErrorBody | undefined {
   if (typeof raw !== "object" || raw === null) return undefined;
-  const { reason, verdict, detail } = raw as Record<string, unknown>;
+  const { reason, verdict, code, detail } = raw as Record<string, unknown>;
   if (typeof reason !== "string" || !REASONS.has(reason)) return undefined;
   return {
     reason: reason as SubErrorReason,
     ...(typeof verdict === "string" && VERDICTS.has(verdict)
       ? { verdict: verdict as ContractVerdict }
       : {}),
+    ...(typeof code === "string" ? { code } : {}),
     ...(typeof detail === "string" ? { detail } : {}),
   };
+}
+
+/** The content type of a BYTES resource's HTTP read (a `liveValue` declared `bytes: true`). */
+export const RESOURCE_BYTES_CONTENT_TYPE = "application/octet-stream";
+
+/**
+ * The response headers a BYTES read's envelope rides in. A JSON read wraps its
+ * value as `{ value, version, epoch, watermark? }`; a bytes read's body IS the
+ * value, so the rest of that envelope — what the client's version guard
+ * (stale-drop, cross-boot) needs — moves here.
+ */
+export const RESOURCE_BYTES_HEADERS = {
+  version: "x-resource-version",
+  epoch: "x-resource-epoch",
+  watermark: "x-resource-watermark",
+} as const;
+
+/** The envelope of a resource HTTP read, without its value. */
+export interface ResourceReadEnvelope {
+  /** The tuple's server version (a per-boot counter) the value is no newer than. */
+  version: number;
+  /** The server boot the version belongs to. */
+  epoch: string;
+  /** The commit watermark the value reflects, when the read captured one. */
+  watermark?: string;
+}
+
+/** A bytes read's envelope as its response headers (see {@link RESOURCE_BYTES_HEADERS}). */
+export function resourceBytesHeaders(
+  envelope: ResourceReadEnvelope,
+): Record<string, string> {
+  return {
+    "content-type": RESOURCE_BYTES_CONTENT_TYPE,
+    [RESOURCE_BYTES_HEADERS.version]: String(envelope.version),
+    [RESOURCE_BYTES_HEADERS.epoch]: envelope.epoch,
+    ...(envelope.watermark !== undefined
+      ? { [RESOURCE_BYTES_HEADERS.watermark]: envelope.watermark }
+      : {}),
+  };
+}
+
+/**
+ * Read a bytes read's envelope back from its response headers. Throws when
+ * the response is not one — another content type (a server serving the key as
+ * JSON: the two ends declare it differently), or a missing / malformed
+ * version or epoch — since a value with no version cannot pass the guard.
+ */
+export function parseResourceBytesHeaders(
+  key: string,
+  headers: { get(name: string): string | null },
+): ResourceReadEnvelope {
+  const contentType = headers.get("content-type");
+  if (contentType?.split(";")[0]?.trim() !== RESOURCE_BYTES_CONTENT_TYPE) {
+    throw new Error(
+      `resource "${key}": a bytes read answered content-type ` +
+        `${JSON.stringify(contentType)}, not ${RESOURCE_BYTES_CONTENT_TYPE}.`,
+    );
+  }
+  const rawVersion = headers.get(RESOURCE_BYTES_HEADERS.version);
+  const version =
+    rawVersion !== null && /^\d+$/.test(rawVersion) ? Number(rawVersion) : NaN;
+  const epoch = headers.get(RESOURCE_BYTES_HEADERS.epoch);
+  if (!Number.isSafeInteger(version) || !epoch) {
+    throw new Error(
+      `resource "${key}": a bytes read carries no valid envelope ` +
+        `(${RESOURCE_BYTES_HEADERS.version}: ${JSON.stringify(rawVersion)}, ` +
+        `${RESOURCE_BYTES_HEADERS.epoch}: ${JSON.stringify(epoch)}).`,
+    );
+  }
+  const watermark = headers.get(RESOURCE_BYTES_HEADERS.watermark);
+  return { version, epoch, ...(watermark !== null ? { watermark } : {}) };
 }

@@ -133,7 +133,11 @@ const frames: RecordedFrame[] = [];
 let seq = 0;
 
 function serveDefs() {
-  return serveValue(defs, { source: "external", loader: () => defsVersion });
+  return serveValue(defs, {
+    source: "external",
+    changes: "notified",
+    loader: () => defsVersion,
+  });
 }
 
 const handler = notificationsWsHandler as unknown as {

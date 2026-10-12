@@ -95,6 +95,7 @@ async function loadCatalog(): Promise<AutomationEntry[]> {
  */
 export const automationsCatalogServed = serveValue(automationsCatalog, {
   source: "external",
+  changes: "notified",
   loader: loadCatalog,
   throttleMs: 1000,
 });

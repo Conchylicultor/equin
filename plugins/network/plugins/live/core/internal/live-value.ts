@@ -1,6 +1,9 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
-import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
+import {
+  ResourceContractError,
+  ResourceRefusal,
+} from "@plugins/packages/plugins/resource-protocol/core";
 import {
   registerResourceDescriptor,
   type ResourceDescriptor,
@@ -104,7 +107,10 @@ type LiveValueBase<
   T,
   P extends Record<string, string>,
   O extends LiveValueOrigin,
-> = Omit<ResourceDescriptor<T, P>, "keyed" | "preload" | "origin" | "load"> &
+> = Omit<
+  ResourceDescriptor<T, P>,
+  "keyed" | "preload" | "origin" | "load" | "bytes"
+> &
   OriginField<O> & {
     live: "value";
     /**
@@ -115,7 +121,10 @@ type LiveValueBase<
     params: readonly (keyof P & string)[];
     /** Absent ⇒ loaded on first mount (the declaration's `"none"`). */
     preload?: ResourcePreload;
-    /** Absent ⇒ pushed (the declaration's `"push"`). See {@link LiveValueLoad}. */
+    /**
+     * Absent ⇒ pushed (the declaration's `"push"`). A `"snapshot"` declaration
+     * is `"on-demand"` here, branded `snapshot: true` (see {@link LiveSnapshotBrand}).
+     */
     load?: "on-demand";
   };
 
@@ -136,23 +145,82 @@ export type LiveValue<
  * How a value reaches the tab. `"push"` (the default): the server recomputes a
  * changed value and pushes it. `"on-demand"`: the server skips the loader in
  * the shared flush, sends an `invalidate`, and each subscribed tab refetches
- * over HTTP — for a slow loader kept out of the flush cycle.
+ * over HTTP — for a slow loader kept out of the flush cycle. `"snapshot"`:
+ * on-demand AND re-measured only when a reader asks — nothing notifies it,
+ * every HTTP read runs the loader (no `revalidate`), and `useLive`'s result
+ * carries `refresh()` (the Refresh button). Its `serveValue` must declare
+ * `changes: { snapshot: { reason } }` (tsc), and nothing else may.
  */
-export type LiveValueLoad = "push" | "on-demand";
+export type LiveValueLoad = "push" | "on-demand" | "snapshot";
+
+/** The loads a form that cannot be a snapshot takes (a preloaded or paged value). */
+type LiveStreamLoad = Exclude<LiveValueLoad, "snapshot">;
+
+/**
+ * The brand a value declared `load: "snapshot"` carries — a real field on the
+ * descriptor (`snapshot: true`), read by `serveValue`'s pairing throw. Every
+ * other declaration's type says `snapshot?: undefined`, so neither is
+ * assignable where the other is asked: `serveValue`'s `changes: { snapshot }`
+ * takes only a snapshot value, every other `changes` only a non-snapshot one,
+ * and only a snapshot read's `useLive` result has `refresh()`.
+ */
+export type LiveSnapshotBrand<L> = [L] extends ["snapshot"]
+  ? { snapshot: true }
+  : { snapshot?: undefined };
+
+/**
+ * The refusal codes a value declares — the expected, caller-caused answers
+ * "this cannot be answered as asked" its loader may give instead of a value
+ * (`ResourceRefusal`): a zod enum (`z.enum(["missing", "denied"])`) or the
+ * same codes as a const list (`["missing", "denied", "too-large"]`). The
+ * loader throws one through the declaration's typed `refuse(code, message)`;
+ * a reader's `useLive` error arm is `kind: "refused"` with `code` typed by
+ * this list. Both ends check it: the runtime turns a refusal with an
+ * undeclared code into a server failure, and the client reads one as a
+ * contract mismatch (its bundle does not know the code).
+ */
+export type LiveRefusals<C extends string> =
+  z.ZodEnum<[C, ...C[]]> | readonly [C, ...C[]];
+
+/** The `refusals` field every `liveValue` form takes (see {@link LiveRefusals}). */
+export interface LiveRefusalsSpec<C extends string> {
+  refusals?: LiveRefusals<C>;
+}
+
+/**
+ * What a value's declared refusals add to its descriptor: the codes (read by
+ * the runtime and the client) and `refuse(code, message)` — the
+ * `ResourceRefusal` to throw from the loader, its code typed by the
+ * declaration (`throw fileText.refuse("missing", "no such file")`). A value
+ * that declares none has neither, so it cannot be refused (tsc).
+ */
+export type LiveRefusalsBrand<C extends string> = [C] extends [never]
+  ? { refusals?: undefined; refuse?: undefined }
+  : {
+      refusals: readonly C[];
+      /** The refusal to throw from the loader — `code` one of the declared ones. */
+      refuse(code: C, message: string): ResourceRefusal;
+    };
 
 /** A param-less value: may be preloaded. */
-export interface LiveValueSpec<T> {
+export interface LiveValueSpec<T, L extends LiveValueLoad = LiveValueLoad> {
   /** A typed-query value — see {@link LiveQueryValueSpec}. */
   query?: undefined;
+  /** A bytes value — see {@link LiveBytesSpecBase}. */
+  bytes?: undefined;
   /** A paged value — see {@link LivePagedValueSpec}. */
   paged?: undefined;
   /** The payload's wire schema — every push and HTTP read parses through it. */
   schema: ZodParser<T>;
   params?: undefined;
-  /** Default `"none"` (see {@link LivePreload}). */
-  preload?: LivePreload;
+  /**
+   * Default `"none"` (see {@link LivePreload}). Never beside `load:
+   * "snapshot"`: a snapshot is measured when a reader asks, and boot asks
+   * nothing.
+   */
+  preload?: [L] extends ["snapshot"] ? "none" : LivePreload;
   /** Default `"push"` (see {@link LiveValueLoad}). */
-  load?: LiveValueLoad;
+  load?: L;
   /** A worktree value (the default) — see {@link LiveCentralValueSpec}. */
   origin?: undefined;
 }
@@ -162,16 +230,21 @@ export interface LiveValueSpec<T> {
  * `network/live/central`). Never preloaded: the boot snapshot is a worktree
  * backend's read, and it cannot load a central key.
  */
-export interface LiveCentralValueSpec<T> {
+export interface LiveCentralValueSpec<
+  T,
+  L extends LiveValueLoad = LiveValueLoad,
+> {
   /** A typed-query value — see {@link LiveQueryValueSpec}. */
   query?: undefined;
+  /** A bytes value — see {@link LiveBytesSpecBase}. */
+  bytes?: undefined;
   /** A paged value — see {@link LivePagedValueSpec}. */
   paged?: undefined;
   schema: ZodParser<T>;
   params?: undefined;
   preload?: never;
   /** Default `"push"` (see {@link LiveValueLoad}). */
-  load?: LiveValueLoad;
+  load?: L;
   origin: "central";
 }
 
@@ -179,9 +252,15 @@ export interface LiveCentralValueSpec<T> {
  * A parameterized value, not preloaded (see {@link LivePreloadedParamValueSpec}
  * for one that is).
  */
-export interface LiveParamValueSpec<T, N extends readonly string[]> {
+export interface LiveParamValueSpec<
+  T,
+  N extends readonly string[],
+  L extends LiveValueLoad = LiveValueLoad,
+> {
   /** A typed-query value — see {@link LiveQueryValueSpec}. */
   query?: undefined;
+  /** A bytes value — see {@link LiveBytesSpecBase}. */
+  bytes?: undefined;
   /** A paged value — see {@link LivePagedValueSpec}. */
   paged?: undefined;
   schema: ZodParser<T>;
@@ -192,7 +271,7 @@ export interface LiveParamValueSpec<T, N extends readonly string[]> {
   params: N;
   preload?: never;
   /** Default `"push"` (see {@link LiveValueLoad}). */
-  load?: LiveValueLoad;
+  load?: L;
   /** `"central"`: served by the central runtime (see {@link LiveValueOrigin}). */
   origin?: "central";
 }
@@ -209,14 +288,16 @@ export interface LiveParamValueSpec<T, N extends readonly string[]> {
 export interface LivePreloadedParamValueSpec<T, N extends readonly string[]> {
   /** A typed-query value — see {@link LiveQueryValueSpec}. */
   query?: undefined;
+  /** A bytes value — see {@link LiveBytesSpecBase}. */
+  bytes?: undefined;
   /** A paged value — see {@link LivePagedValueSpec}. */
   paged?: undefined;
   schema: ZodParser<T>;
   /** As on {@link LiveParamValueSpec}. */
   params: N;
   preload: ResourcePreload;
-  /** Default `"push"` (see {@link LiveValueLoad}). */
-  load?: LiveValueLoad;
+  /** Default `"push"`; never `"snapshot"` (see {@link LiveValueLoad}). */
+  load?: LiveStreamLoad;
   origin?: undefined;
 }
 
@@ -226,9 +307,15 @@ export interface LivePreloadedParamValueSpec<T, N extends readonly string[]> {
  * type (`{ window: "1h" | "24h" | "7d" }`), and the runtime gate parses every
  * arriving tuple through the parsers.
  */
-export interface LiveTypedParamValueSpec<T, R extends LiveValueParamParsers> {
+export interface LiveTypedParamValueSpec<
+  T,
+  R extends LiveValueParamParsers,
+  L extends LiveValueLoad = LiveValueLoad,
+> {
   /** A typed-query value — see {@link LiveQueryValueSpec}. */
   query?: undefined;
+  /** A bytes value — see {@link LiveBytesSpecBase}. */
+  bytes?: undefined;
   /** A paged value — see {@link LivePagedValueSpec}. */
   paged?: undefined;
   schema: ZodParser<T>;
@@ -236,7 +323,7 @@ export interface LiveTypedParamValueSpec<T, R extends LiveValueParamParsers> {
   params: R;
   preload?: never;
   /** Default `"push"` (see {@link LiveValueLoad}). */
-  load?: LiveValueLoad;
+  load?: L;
   /** `"central"`: served by the central runtime (see {@link LiveValueOrigin}). */
   origin?: "central";
 }
@@ -260,15 +347,23 @@ export type LivePreloadedParamValue<
  * `./query-value.ts`). Mutually exclusive with `params`; never preloaded (it
  * has no default tuple). A central one is allowed, as for `params`.
  */
-export interface LiveQueryValueSpec<T, Q, QIn, O extends LiveValueOrigin> {
+export interface LiveQueryValueSpec<
+  T,
+  Q,
+  QIn,
+  O extends LiveValueOrigin,
+  L extends LiveValueLoad = LiveValueLoad,
+> {
   schema: ZodParser<T>;
   /** The question's schema — its input is what `useLive` takes, its output what the loader gets. */
   query: LiveQuerySchema<Q, QIn>;
   params?: never;
   preload?: never;
   paged?: undefined;
+  /** A bytes value — see {@link LiveBytesSpecBase}. */
+  bytes?: undefined;
   /** Default `"push"` (see {@link LiveValueLoad}). */
-  load?: LiveValueLoad;
+  load?: L;
   /** `"central"`: served by the central runtime (see {@link LiveValueOrigin}). */
   origin?: O;
 }
@@ -337,6 +432,8 @@ export interface LivePagedValueSpec<
   schema?: never;
   query: LiveQuerySchema<Q, QIn>;
   paged: LivePagedSpec<Item, Meta>;
+  /** Never bytes: a page is JSON (its items, cursor and meta). */
+  bytes?: undefined;
   params?: never;
   preload?: never;
   /**
@@ -363,6 +460,79 @@ type AnyPagedValueSpec = LivePagedValueSpec<
   LiveValueOrigin
 >;
 
+/**
+ * A BYTES value — a binary payload (a file's bytes, an image): no `schema`
+ * (the payload is an `ArrayBuffer`, checked as one on both ends), always read
+ * on demand over HTTP, where the server answers `application/octet-stream`
+ * (the envelope a JSON read carries rides response headers). Its tuple is
+ * `params` (a name list or typed parsers) or a typed `query`. Everything that
+ * would put the payload in a frame or a boot snapshot is refused (tsc, and a
+ * throw for an untyped caller): `load: "push"` / `"snapshot"`, `preload`,
+ * `paged`, `origin: "central"`; and its `serveValue` is `source: "external"`
+ * only — a Postgres row is not a binary payload.
+ *
+ * `maxBytes` bounds it: a loader answering more is refused server-side with
+ * the code `"too-large"`, which the declaration adds to its `refusals` (so
+ * the reader's error arm types it).
+ */
+export interface LiveBytesSpecBase<M extends number | undefined> {
+  bytes: true;
+  /** Derived: an `ArrayBuffer`. */
+  schema?: never;
+  /** The largest payload a loader may answer, in bytes — past it, `"too-large"`. */
+  maxBytes?: M;
+  /** Always `"on-demand"` (the default here): a bytes value never rides the socket. */
+  load?: "on-demand";
+  preload?: never;
+  paged?: never;
+  /** A worktree value only. */
+  origin?: never;
+}
+
+/** A bytes value keyed by declared param names (see {@link LiveParamValueSpec}). */
+export interface LiveBytesParamValueSpec<
+  N extends readonly string[],
+  M extends number | undefined,
+> extends LiveBytesSpecBase<M> {
+  params: N;
+  query?: undefined;
+}
+
+/** A bytes value keyed by typed params (see {@link LiveTypedParamValueSpec}). */
+export interface LiveBytesTypedParamValueSpec<
+  R extends LiveValueParamParsers,
+  M extends number | undefined,
+> extends LiveBytesSpecBase<M> {
+  params: R;
+  query?: undefined;
+}
+
+/** A bytes value whose tuple is a typed question (see {@link LiveQueryValueSpec}). */
+export interface LiveBytesQueryValueSpec<
+  Q,
+  QIn,
+  M extends number | undefined,
+> extends LiveBytesSpecBase<M> {
+  query: LiveQuerySchema<Q, QIn>;
+  params?: never;
+}
+
+/**
+ * What a bytes declaration's descriptor carries beside its `ArrayBuffer`
+ * payload: the `bytes` brand the server's response and the client's read both
+ * key on, its forced on-demand load, and its declared `maxBytes`. Every other
+ * value's type has no `bytes`, so a `serveValue` arm that cannot serve bytes
+ * (`source: "db"`) refuses one by asking `bytes?: undefined`.
+ */
+export interface LiveBytesBrand {
+  bytes: true;
+  load: "on-demand";
+  maxBytes?: number;
+}
+
+/** The refusal a declared `maxBytes` adds: `"too-large"` (none without one). */
+export type LiveTooLarge<M> = [M] extends [number] ? "too-large" : never;
+
 /** A declared typed-query value: a {@link LiveValue} over `{ q }` that carries its codec. */
 export type LiveQueryValue<
   T,
@@ -385,7 +555,8 @@ export type LivePagedValue<
   Q,
   QIn = Q,
   O extends LiveValueOrigin = "worktree",
-> = LivePagedPages<Item, Q, QIn, O> & LivePagedMeta<Meta, Q, QIn, O>;
+  C extends string = never,
+> = LivePagedPages<Item, Q, QIn, O> & LivePagedMeta<Meta, Q, QIn, O, C>;
 
 /**
  * A paged value without its meta sibling — what a read of its pages needs,
@@ -423,11 +594,15 @@ export type LivePagedPages<
  * question — `useLive(v.meta, query)`), refreshed by the same `notify(q)`;
  * absent when the declaration has no `paged.meta`.
  */
-type LivePagedMeta<Meta, Q, QIn, O extends LiveValueOrigin> = [Meta] extends [
-  undefined,
-]
+type LivePagedMeta<
+  Meta,
+  Q,
+  QIn,
+  O extends LiveValueOrigin,
+  C extends string = never,
+> = [Meta] extends [undefined]
   ? { meta?: undefined }
-  : { meta: LiveQueryValue<Meta, Q, QIn, O> };
+  : { meta: LiveQueryValue<Meta, Q, QIn, O> & LiveRefusalsBrand<C> };
 
 /**
  * A value read by a params tuple — neither a typed-query nor a paged one. The
@@ -494,73 +669,219 @@ export type LivePlainValue<
  *   },
  * });
  * ```
+ *
+ * A binary payload is `bytes: true` — no schema (an `ArrayBuffer`), read on
+ * demand as `application/octet-stream` (see {@link LiveBytesSpecBase}):
+ *
+ * ```ts
+ * export const fileBytes = liveValue("file-viewer.bytes", {
+ *   bytes: true,
+ *   params: ["path"],
+ *   maxBytes: 64 * 1024 * 1024,      // past it: refused "too-large"
+ *   refusals: ["missing", "denied"], // → "missing" | "denied" | "too-large"
+ * });
+ * ```
  */
+export function liveValue<
+  const N extends readonly [string, ...string[]],
+  M extends number | undefined = undefined,
+  C extends string = never,
+>(
+  key: string,
+  spec: LiveBytesParamValueSpec<N, M> & LiveRefusalsSpec<C>,
+): LiveValue<ArrayBuffer, LiveValueParams<N>> &
+  LiveBytesBrand &
+  LiveSnapshotBrand<"push"> &
+  LiveRefusalsBrand<C | LiveTooLarge<M>>;
+export function liveValue<
+  const R extends LiveValueParamParsers,
+  M extends number | undefined = undefined,
+  C extends string = never,
+>(
+  key: string,
+  spec: LiveBytesTypedParamValueSpec<R, M> &
+    LiteralParamNames<R> &
+    LiveRefusalsSpec<C>,
+): LiveValue<ArrayBuffer, LiveTypedValueParams<R>> &
+  LiveBytesBrand &
+  LiveSnapshotBrand<"push"> &
+  LiveRefusalsBrand<C | LiveTooLarge<M>>;
+export function liveValue<
+  Q,
+  QIn,
+  M extends number | undefined = undefined,
+  C extends string = never,
+>(
+  key: string,
+  spec: LiveBytesQueryValueSpec<Q, QIn, M> & LiveRefusalsSpec<C>,
+): LiveQueryValue<ArrayBuffer, Q, QIn> &
+  LiveBytesBrand &
+  LiveSnapshotBrand<"push"> &
+  LiveRefusalsBrand<C | LiveTooLarge<M>>;
 export function liveValue<
   Item,
   Meta,
   Q,
   QIn,
   O extends LiveValueOrigin = "worktree",
+  C extends string = never,
 >(
   key: string,
   spec: LivePagedValueSpec<Item, Meta, Q, QIn, O> & {
     paged: { meta: ZodParser<Meta> };
-  },
-): LivePagedValue<Item, Meta, Q, QIn, O>;
-export function liveValue<Item, Q, QIn, O extends LiveValueOrigin = "worktree">(
+  } & LiveRefusalsSpec<C>,
+): LivePagedValue<Item, Meta, Q, QIn, O, C> &
+  LiveSnapshotBrand<"push"> &
+  LiveRefusalsBrand<C>;
+export function liveValue<
+  Item,
+  Q,
+  QIn,
+  O extends LiveValueOrigin = "worktree",
+  C extends string = never,
+>(
   key: string,
   spec: LivePagedValueSpec<Item, undefined, Q, QIn, O> & {
     paged: { meta?: undefined };
-  },
-): LivePagedValue<Item, undefined, Q, QIn, O>;
-export function liveValue<T, Q, QIn, O extends LiveValueOrigin = "worktree">(
+  } & LiveRefusalsSpec<C>,
+): LivePagedValue<Item, undefined, Q, QIn, O> &
+  LiveSnapshotBrand<"push"> &
+  LiveRefusalsBrand<C>;
+export function liveValue<
+  T,
+  Q,
+  QIn,
+  O extends LiveValueOrigin = "worktree",
+  const L extends LiveValueLoad = "push",
+  C extends string = never,
+>(
   key: string,
-  spec: LiveQueryValueSpec<T, Q, QIn, O>,
-): LiveQueryValue<T, Q, QIn, O>;
-export function liveValue<T>(
+  spec: LiveQueryValueSpec<T, Q, QIn, O, L> & LiveRefusalsSpec<C>,
+): LiveQueryValue<T, Q, QIn, O> & LiveSnapshotBrand<L> & LiveRefusalsBrand<C>;
+export function liveValue<
+  T,
+  const L extends LiveValueLoad = "push",
+  C extends string = never,
+>(
   key: string,
-  spec: LiveCentralValueSpec<T>,
-): LiveValue<T, Record<string, never>, "central">;
-export function liveValue<T>(
+  spec: LiveCentralValueSpec<T, L> & LiveRefusalsSpec<C>,
+): LiveValue<T, Record<string, never>, "central"> &
+  LiveSnapshotBrand<L> &
+  LiveRefusalsBrand<C>;
+export function liveValue<
+  T,
+  const L extends LiveValueLoad = "push",
+  C extends string = never,
+>(
   key: string,
-  spec: LiveValueSpec<T>,
-): LiveValue<T, Record<string, never>>;
-export function liveValue<T, const N extends readonly [string, ...string[]]>(
+  spec: LiveValueSpec<T, L> & LiveRefusalsSpec<C>,
+): LiveValue<T, Record<string, never>> &
+  LiveSnapshotBrand<L> &
+  LiveRefusalsBrand<C>;
+export function liveValue<
+  T,
+  const N extends readonly [string, ...string[]],
+  C extends string = never,
+>(
   key: string,
-  spec: LivePreloadedParamValueSpec<T, N>,
-): LivePreloadedParamValue<T, LiveValueParams<N>>;
-export function liveValue<T, const N extends readonly [string, ...string[]]>(
+  spec: LivePreloadedParamValueSpec<T, N> & LiveRefusalsSpec<C>,
+): LivePreloadedParamValue<T, LiveValueParams<N>> &
+  LiveSnapshotBrand<"push"> &
+  LiveRefusalsBrand<C>;
+export function liveValue<
+  T,
+  const N extends readonly [string, ...string[]],
+  const L extends LiveValueLoad = "push",
+  C extends string = never,
+>(
   key: string,
-  spec: LiveParamValueSpec<T, N> & { origin: "central" },
-): LiveValue<T, LiveValueParams<N>, "central">;
-export function liveValue<T, const N extends readonly [string, ...string[]]>(
-  key: string,
-  spec: LiveParamValueSpec<T, N> & { origin?: undefined },
-): LiveValue<T, LiveValueParams<N>>;
-export function liveValue<T, const R extends LiveValueParamParsers>(
-  key: string,
-  spec: LiveTypedParamValueSpec<T, R> & {
+  spec: LiveParamValueSpec<T, N, L> & {
     origin: "central";
-  } & LiteralParamNames<R>,
-): LiveValue<T, LiveTypedValueParams<R>, "central">;
-export function liveValue<T, const R extends LiveValueParamParsers>(
+  } & LiveRefusalsSpec<C>,
+): LiveValue<T, LiveValueParams<N>, "central"> &
+  LiveSnapshotBrand<L> &
+  LiveRefusalsBrand<C>;
+export function liveValue<
+  T,
+  const N extends readonly [string, ...string[]],
+  const L extends LiveValueLoad = "push",
+  C extends string = never,
+>(
   key: string,
-  spec: LiveTypedParamValueSpec<T, R> & {
+  spec: LiveParamValueSpec<T, N, L> & {
     origin?: undefined;
-  } & LiteralParamNames<R>,
-): LiveValue<T, LiveTypedValueParams<R>>;
+  } & LiveRefusalsSpec<C>,
+): LiveValue<T, LiveValueParams<N>> &
+  LiveSnapshotBrand<L> &
+  LiveRefusalsBrand<C>;
+export function liveValue<
+  T,
+  const R extends LiveValueParamParsers,
+  const L extends LiveValueLoad = "push",
+  C extends string = never,
+>(
+  key: string,
+  spec: LiveTypedParamValueSpec<T, R, L> & {
+    origin: "central";
+  } & LiteralParamNames<R> &
+    LiveRefusalsSpec<C>,
+): LiveValue<T, LiveTypedValueParams<R>, "central"> &
+  LiveSnapshotBrand<L> &
+  LiveRefusalsBrand<C>;
+export function liveValue<
+  T,
+  const R extends LiveValueParamParsers,
+  const L extends LiveValueLoad = "push",
+  C extends string = never,
+>(
+  key: string,
+  spec: LiveTypedParamValueSpec<T, R, L> & {
+    origin?: undefined;
+  } & LiteralParamNames<R> &
+    LiveRefusalsSpec<C>,
+): LiveValue<T, LiveTypedValueParams<R>> &
+  LiveSnapshotBrand<L> &
+  LiveRefusalsBrand<C>;
 export function liveValue<T>(
   key: string,
-  spec:
+  spec: (
     | LiveValueSpec<T>
     | LiveCentralValueSpec<T>
     | LiveParamValueSpec<T, readonly string[]>
     | LivePreloadedParamValueSpec<T, readonly string[]>
     | LiveTypedParamValueSpec<T, LiveValueParamParsers>
     | LiveQueryValueSpec<T, unknown, unknown, LiveValueOrigin>
-    | AnyPagedValueSpec,
+    | AnyPagedValueSpec
+    | LiveBytesParamValueSpec<readonly string[], number | undefined>
+    | LiveBytesTypedParamValueSpec<LiveValueParamParsers, number | undefined>
+    | LiveBytesQueryValueSpec<unknown, unknown, number | undefined>
+  ) &
+    LiveRefusalsSpec<string>,
 ): DeclaredValue<T> {
-  if (spec.query !== undefined) return queryValue(key, spec);
+  const { spec: s, fields: bytes } = bytesSpec<T>(key, spec);
+  return plainOrQueryValue(key, s, bytes);
+}
+
+/** Every non-bytes spec form, erased — what a bytes spec is normalized into. */
+type JsonValueSpec<T> = (
+  | LiveValueSpec<T>
+  | LiveCentralValueSpec<T>
+  | LiveParamValueSpec<T, readonly string[]>
+  | LivePreloadedParamValueSpec<T, readonly string[]>
+  | LiveTypedParamValueSpec<T, LiveValueParamParsers>
+  | LiveQueryValueSpec<T, unknown, unknown, LiveValueOrigin>
+  | AnyPagedValueSpec
+) &
+  LiveRefusalsSpec<string>;
+
+/** {@link liveValue}'s body, over a spec whose bytes form is normalized (see {@link bytesSpec}). */
+function plainOrQueryValue<T>(
+  key: string,
+  spec: JsonValueSpec<T>,
+  bytes: BytesFields,
+): DeclaredValue<T> {
+  checkSnapshotSpec(key, spec);
+  if (spec.query !== undefined) return queryValue(key, spec, bytes);
   // A name list (`["id", "scopeId?"]`) or a typed record of parsers.
   const declared = spec.params ?? [];
   const { params, optionalParams, parsers } = isParamNameList(declared)
@@ -599,7 +920,9 @@ export function liveValue<T>(
             : { preloadsParams: true as const }),
         }
       : {}),
-    ...(spec.load === "on-demand" ? { load: "on-demand" as const } : {}),
+    ...loadFields(spec.load),
+    ...refusalFields(key, spec.refusals),
+    ...bytes,
   };
   registerResourceDescriptor(value as ResourceDescriptor<unknown>);
   return value;
@@ -610,6 +933,175 @@ type DeclaredValue<T> =
   | LiveValue<T, Record<string, string>, LiveValueOrigin>
   | LivePagedPages<unknown, unknown, unknown, LiveValueOrigin>;
 
+/** The payload check of every bytes value, on both ends: an `ArrayBuffer` (realm-safe). */
+const LIVE_BYTES_SCHEMA: ZodParser<ArrayBuffer> = z.custom<ArrayBuffer>(
+  (v) => Object.prototype.toString.call(v) === "[object ArrayBuffer]",
+  { message: "a bytes value is an ArrayBuffer" },
+);
+
+/** The descriptor fields a bytes declaration adds (none for any other). */
+type BytesFields = { bytes?: true; maxBytes?: number };
+
+/**
+ * Normalize a bytes declaration into the plain / typed-query form it is built
+ * as — its derived schema (`ArrayBuffer`), `load: "on-demand"`, and its
+ * refusals plus `"too-large"` when it declares `maxBytes` — and return the
+ * descriptor fields it adds. Throws on every combination tsc refuses, for an
+ * untyped caller. Any other spec passes through unchanged.
+ */
+function bytesSpec<T>(
+  key: string,
+  spec: { bytes?: unknown } & LiveRefusalsSpec<string>,
+): {
+  spec: JsonValueSpec<T>;
+  fields: BytesFields;
+} {
+  const plain = spec as JsonValueSpec<T>;
+  if (spec.bytes === undefined) return { spec: plain, fields: {} };
+  const where = `liveValue("${key}")`;
+  if (spec.bytes !== true) {
+    throw new Error(`${where}: \`bytes\` is \`true\` or absent.`);
+  }
+  const b = spec as LiveBytesSpecBase<number | undefined> & {
+    params?: unknown;
+    query?: unknown;
+    load?: unknown;
+    preload?: unknown;
+    origin?: unknown;
+  };
+  const refused = [
+    b.schema !== undefined && "`schema` (a bytes payload is an ArrayBuffer)",
+    b.load !== undefined &&
+      b.load !== "on-demand" &&
+      `\`load: ${JSON.stringify(b.load)}\` (a bytes value is read on demand)`,
+    b.preload !== undefined &&
+      b.preload !== "none" &&
+      "`preload` (a boot snapshot is JSON)",
+    b.paged !== undefined && "`paged` (a page is JSON)",
+    b.origin !== undefined && "`origin` (a bytes value is a worktree one)",
+    b.params === undefined &&
+      b.query === undefined &&
+      "no `params` or `query` (a bytes value names what it reads)",
+  ].filter((r): r is string => r !== false);
+  if (refused.length > 0) {
+    throw new Error(`${where}: a bytes value refuses ${refused.join("; ")}.`);
+  }
+  const { maxBytes } = b;
+  if (
+    maxBytes !== undefined &&
+    (!Number.isSafeInteger(maxBytes) || maxBytes < 1)
+  ) {
+    throw new Error(
+      `${where}: maxBytes ${maxBytes} is not a positive integer.`,
+    );
+  }
+  const declared: readonly string[] | undefined =
+    spec.refusals === undefined
+      ? undefined
+      : Array.isArray(spec.refusals)
+        ? (spec.refusals as readonly string[])
+        : (spec.refusals as z.ZodEnum<[string, ...string[]]>).options;
+  // `maxBytes` declares the refusal it is enforced by (once, if also listed).
+  const refusals =
+    maxBytes === undefined
+      ? declared
+      : [...(declared ?? []).filter((c) => c !== "too-large"), "too-large"];
+  const normalized = {
+    ...spec,
+    bytes: undefined,
+    maxBytes: undefined,
+    schema: LIVE_BYTES_SCHEMA,
+    load: "on-demand" as const,
+    ...(refusals !== undefined
+      ? { refusals: refusals as unknown as LiveRefusals<string> }
+      : {}),
+  };
+  return {
+    spec: normalized as unknown as JsonValueSpec<T>,
+    fields: { bytes: true, ...(maxBytes !== undefined ? { maxBytes } : {}) },
+  };
+}
+
+/**
+ * The descriptor fields declared `refusals` set: the codes, as a list (a zod
+ * enum's `options`), and `refuse` — the `ResourceRefusal` a loader throws,
+ * refusing an undeclared code at the throw site for an untyped caller (the
+ * runtime would turn it into a server failure anyway). Throws on a
+ * declaration tsc cannot reject: an empty list, an empty code, a duplicate.
+ */
+function refusalFields(
+  key: string,
+  refusals: LiveRefusals<string> | undefined,
+): {
+  refusals?: readonly string[];
+  refuse?: (code: string, message: string) => ResourceRefusal;
+} {
+  if (refusals === undefined) return {};
+  const codes: readonly string[] = Array.isArray(refusals)
+    ? [...(refusals as readonly string[])]
+    : (refusals as z.ZodEnum<[string, ...string[]]>).options;
+  if (
+    codes.length === 0 ||
+    codes.some((c) => typeof c !== "string" || c === "") ||
+    new Set(codes).size !== codes.length
+  ) {
+    throw new Error(
+      `liveValue("${key}"): bad \`refusals\` ${JSON.stringify(codes)} — a ` +
+        `non-empty list of unique, non-empty codes (or omit it).`,
+    );
+  }
+  return {
+    refusals: codes,
+    refuse: (code, message) => {
+      if (!codes.includes(code)) {
+        throw new Error(
+          `liveValue("${key}").refuse: "${code}" is not a declared refusal ` +
+            `(${JSON.stringify(codes)}).`,
+        );
+      }
+      return new ResourceRefusal(code, message);
+    },
+  };
+}
+
+/**
+ * The descriptor fields a declared `load` sets: `"on-demand"` and
+ * `"snapshot"` are both read over HTTP (`load: "on-demand"` — the field the
+ * client and the server's mode read), and a snapshot is also branded
+ * (`snapshot: true` — see {@link LiveSnapshotBrand}).
+ */
+function loadFields(load: LiveValueLoad | undefined): {
+  load?: "on-demand";
+  snapshot?: true;
+} {
+  if (load === "snapshot") return { load: "on-demand", snapshot: true };
+  if (load === "on-demand") return { load: "on-demand" };
+  return {};
+}
+
+/**
+ * The snapshot combinations tsc refuses, for an untyped caller: a snapshot is
+ * measured when a reader asks, so it is never preloaded (boot asks nothing)
+ * and never paged (a page chain is kept live by `notify`).
+ */
+function checkSnapshotSpec(
+  key: string,
+  spec: { load?: LiveValueLoad; preload?: unknown; paged?: unknown },
+): void {
+  if (spec.load !== "snapshot") return;
+  if (spec.preload !== undefined && spec.preload !== "none") {
+    throw new Error(
+      `liveValue("${key}"): a \`load: "snapshot"\` value cannot be preloaded — ` +
+        `a snapshot is measured when a reader asks.`,
+    );
+  }
+  if (spec.paged !== undefined) {
+    throw new Error(
+      `liveValue("${key}"): a paged value cannot be \`load: "snapshot"\`.`,
+    );
+  }
+}
+
 /**
  * The typed-query and paged forms: `params` derived from the codec (`["q"]`,
  * or `["q", "limit", "after", "until"]` with the cuts optional), the gate the
@@ -618,9 +1110,12 @@ type DeclaredValue<T> =
  */
 function queryValue<T>(
   key: string,
-  spec:
+  spec: (
     | LiveQueryValueSpec<T, unknown, unknown, LiveValueOrigin>
-    | AnyPagedValueSpec,
+    | AnyPagedValueSpec
+  ) &
+    LiveRefusalsSpec<string>,
+  bytes: BytesFields,
 ): DeclaredValue<T> {
   // Unreachable from typed code (each is `never` beside `query`).
   const stray = (["params", "preload"] as const).filter(
@@ -637,11 +1132,22 @@ function queryValue<T>(
     key,
     live: "value" as const,
     ...(spec.origin === "central" ? { origin: "central" as const } : {}),
-    ...(spec.load === "on-demand" ? { load: "on-demand" as const } : {}),
+    ...loadFields(spec.load),
+    ...refusalFields(key, spec.refusals),
+    ...bytes,
   };
   let value: DeclaredValue<T>;
   if (spec.paged === undefined) {
     const s = spec as LiveQueryValueSpec<T, unknown, unknown, LiveValueOrigin>;
+    const list = listQuestionKind(s.query, new Set());
+    if (list !== undefined) {
+      throw new Error(
+        `liveValue("${key}"): the question schema may be a list (${list}) — ` +
+          `\`useLive(v, [q1, q2])\` reads a LIST of questions, so a question ` +
+          `that is itself an array would be read as one. Wrap it in an object ` +
+          `(\`z.object({ items: z.array(…) })\`).`,
+      );
+    }
     const query = liveQueryCodec(key, s.query);
     value = {
       ...common,
@@ -652,7 +1158,11 @@ function queryValue<T>(
       query,
     } as LiveValue<T, Record<string, string>, LiveValueOrigin>;
   } else {
-    value = pagedValue(key, spec as AnyPagedValueSpec, common);
+    value = pagedValue(
+      key,
+      spec as AnyPagedValueSpec & LiveRefusalsSpec<string>,
+      common,
+    );
   }
   registerResourceDescriptor(value as ResourceDescriptor<unknown>);
   return value;
@@ -661,12 +1171,14 @@ function queryValue<T>(
 /** A paged value's declaration, checked: its codec, its derived page schema and its meta sibling. */
 function pagedValue(
   key: string,
-  s: AnyPagedValueSpec,
+  s: AnyPagedValueSpec & LiveRefusalsSpec<string>,
   common: {
     key: string;
     live: "value";
     origin?: "central";
     load?: "on-demand";
+    refusals?: readonly string[];
+    refuse?: (code: string, message: string) => ResourceRefusal;
   },
 ): LivePagedValue<unknown, unknown, unknown, unknown, LiveValueOrigin> {
   if ((s as { schema?: unknown }).schema !== undefined) {
@@ -741,7 +1253,10 @@ function pagedValue(
             schema: meta,
             query: s.query,
             ...(common.origin !== undefined ? { origin: common.origin } : {}),
-          }),
+            // The meta loader answers the same question, so it refuses it
+            // with the same codes as the pages.
+            ...(s.refusals !== undefined ? { refusals: s.refusals } : {}),
+          }, {}),
   } as unknown as LivePagedValue<
     unknown,
     unknown,
@@ -826,6 +1341,55 @@ function checkParamParsers(
     }
   }
   return parsers;
+}
+
+/** The zod kinds whose input is a JS array. */
+const LIST_KINDS: ReadonlySet<string> = new Set(["ZodArray", "ZodTuple"]);
+
+/**
+ * The list kind a question schema's INPUT may take, or undefined: the schema
+ * itself, then through every wrapper that passes its input on (optional,
+ * nullable, default, catch, effects, branded, readonly, a pipeline's `in`)
+ * and every union option. An object's fields are not walked — an object is
+ * never an array, whatever it holds.
+ */
+function listQuestionKind(
+  schema: unknown,
+  seen: Set<unknown>,
+): string | undefined {
+  const typeName = zodTypeName(schema);
+  if (typeName === undefined || seen.has(schema)) return undefined;
+  seen.add(schema);
+  if (LIST_KINDS.has(typeName)) return typeName;
+  const def = (schema as { _def: Record<string, unknown> })._def;
+  const next: unknown[] = [];
+  switch (typeName) {
+    case "ZodOptional":
+    case "ZodNullable":
+    case "ZodDefault":
+    case "ZodCatch":
+    case "ZodReadonly":
+      next.push(def.innerType);
+      break;
+    case "ZodEffects":
+      next.push(def.schema);
+      break;
+    case "ZodBranded":
+      next.push(def.type);
+      break;
+    case "ZodPipeline":
+      next.push(def.in);
+      break;
+    case "ZodUnion":
+    case "ZodDiscriminatedUnion":
+      next.push(...(def.options as readonly unknown[]));
+      break;
+  }
+  for (const n of next) {
+    const found = listQuestionKind(n, seen);
+    if (found !== undefined) return found;
+  }
+  return undefined;
 }
 
 /** A schema's zod type name (`_def.typeName`), or undefined for a non-schema. */

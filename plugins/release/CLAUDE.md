@@ -451,11 +451,11 @@ remote is built here.
     - `defineSupervisedJob('release.run.supervised')`
     - `defineDaemon('release.preview')`
   - Resources:
-    - `release.candidate` (push)
+    - `release.candidate` (push, notified)
     - `release.history` (keyed, window)
     - `release.history:groups` (push)
     - `release.history:rows` (keyed, point)
-    - `release.previews` (push)
+    - `release.previews` (push, notified)
     - `release.runs:rows` (keyed, point)
   - Routes:
     - `POST /api/release`

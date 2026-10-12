@@ -20,6 +20,8 @@ export class ResourceHttpError extends Error {
     public readonly verdict?: ContractVerdict,
     /** The server's detail — on `refused`, the refusal's user-readable message. */
     public readonly detail?: string,
+    /** On `refused`: the refusal's code, one the read's declaration lists. */
+    public readonly code?: string,
   ) {
     super(
       `Resource ${key} fetch failed: ${status}${reason !== undefined ? ` (${reason}${verdict !== undefined ? `, ${verdict}` : ""})` : ""}`,

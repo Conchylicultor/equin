@@ -43,6 +43,7 @@ export function readStatusValue(): SentinelStatusValue {
 
 export const sentinelStatusServed = serveValue(sentinelStatus, {
   source: "external",
+  changes: "notified",
   loader: () => readStatusValue(),
 });
 
@@ -69,6 +70,7 @@ export function readVitalsValue(
 // seams, and the loader is handed the (empty) params tuple.
 export const sentinelVitalsServed = serveValue(sentinelVitals, {
   source: "external",
+  changes: "notified",
   loader: () => readVitalsValue(),
 });
 

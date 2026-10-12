@@ -86,12 +86,12 @@ export interface LivePagesOptions {
 }
 
 /** A page's read failing under rows that stay on screen. */
-export interface LivePageError {
+export interface LivePageError<C extends string = string> {
   /** The failing read's identity — unique among the result's errors (a React key). */
   key: string;
   /** The last row before the failing page; `null` = it is the head. */
   afterRowId: string | null;
-  error: ResourceError;
+  error: ResourceError<C>;
   /**
    * Paging is stopped on it — the last page's own read, or a failure that
    * holds the read short of its end — so it belongs where paging stopped (a
@@ -122,9 +122,9 @@ export interface LivePagePlaceholder {
  * good: a failure under rows already shown is a `pageErrors` entry, never the
  * error arm.
  */
-export type LivePagesResult<Row> =
+export type LivePagesResult<Row, C extends string = string> =
   | { status: "loading" }
-  | { status: "error"; error: ResourceError; refetch: () => Promise<void> }
+  | { status: "error"; error: ResourceError<C>; refetch: () => Promise<void> }
   | {
       status: "ready";
       rows: readonly Row[];
@@ -137,7 +137,7 @@ export type LivePagesResult<Row> =
       loadMore: () => void;
       /** The last page is full and cannot be paged past (an over-long sort key). */
       truncated: false | { reason: PagesTruncation };
-      pageErrors: readonly LivePageError[];
+      pageErrors: readonly LivePageError<C>[];
       /**
        * The pages drawn as placeholders: those before `rows` and those after
        * — never between two rows. Empty until the read is scrolled past the

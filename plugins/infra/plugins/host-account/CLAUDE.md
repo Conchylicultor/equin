@@ -46,7 +46,7 @@ be a claim about the user that then reverses itself.
 - Server:
   - Contributes: `resource.declare` "host-account"
   - Uses: `network/live.serveValue`
-  - Resources: `host-account` (push)
+  - Resources: `host-account` (push, fixed)
 - Web:
   - Uses: `network/live.useLive`
   - Exports (values): `useHostAccount`

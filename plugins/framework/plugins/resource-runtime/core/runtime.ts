@@ -9,6 +9,7 @@ import {
   ResourceContractError,
   ResourceRefusal,
   contractVerdict,
+  resourceBytesHeaders,
   type ContractVerdict,
   type ResourceHttpErrorBody,
   type SubErrorFrame,
@@ -247,6 +248,13 @@ type MembershipRecord =
     }
   | { kind: "point"; idsOf: (params: ResourceParams) => readonly string[] };
 
+/** A resource's declared freshness — see `ResourceDefinition.freshness`. */
+export interface ResourceFreshness {
+  kind: "notified" | "immutable" | "fixed" | "snapshot";
+  /** Why the value is never told of a change (absent for `"notified"`). */
+  reason?: string;
+}
+
 export interface ResourceDefinition<
   T,
   P extends ResourceParams = ResourceParams,
@@ -428,6 +436,13 @@ export interface ResourceDefinition<
    */
   authorize?: (params: P) => boolean | Promise<boolean>;
   /**
+   * The declared freshness of an external value (`network/live`'s `changes`):
+   * how its answer changes — told by `notify`, never (immutable / fixed), or
+   * only when a reader asks (snapshot). A label only: the runtime does not act
+   * on it; the `_debug` payload shows it per key.
+   */
+  freshness?: ResourceFreshness;
+  /**
    * The params gate — see `ResourceContract.validateParams`. Required on the
    * two-arg form (the contract carries it); optional only on the flat
    * `defineResource({...})` form, which predates it and declares no param
@@ -455,6 +470,25 @@ export interface ResourceDefinition<
    * (`packages/canonical-params`).
    */
   optionalParams?: readonly string[];
+  /**
+   * The refusal codes the loader may throw (`ResourceRefusal.code`), declared
+   * once on the shared client descriptor (a `liveValue`'s `refusals`) so the
+   * client can type and check them too. A refusal with any other code is a
+   * server bug: `timedLoad` turns it into a plain failure (`loader-failed`,
+   * reported), so only a declared code ever reaches the wire. Absent ⇒ none.
+   */
+  refusals?: readonly string[];
+  /**
+   * A BYTES resource, declared once on the shared client descriptor (a
+   * `liveValue`'s `bytes: true`): the value is an `ArrayBuffer` (its schema
+   * checks that), so it never rides a JSON frame. The HTTP read answers it as
+   * `application/octet-stream`, the body the value itself and the envelope
+   * (version, epoch, watermark) in response headers (`resource-protocol`'s
+   * `resourceBytesHeaders`); a sub-ack carries no value and runs no loader —
+   * the client answers it with that HTTP read. Mode `invalidate` only (a
+   * throw otherwise). Absent ⇒ a JSON value.
+   */
+  bytes?: true;
 }
 
 /**
@@ -616,6 +650,10 @@ export interface ResourceContract<
   preload?: "boot" | "boot-and-keep";
   /** Optional param names — see `ResourceDefinition.optionalParams`. */
   optionalParams?: readonly string[];
+  /** Declared refusal codes — see `ResourceDefinition.refusals`. */
+  refusals?: readonly string[];
+  /** A bytes value — see `ResourceDefinition.bytes`. */
+  bytes?: true;
   /**
    * The params gate, declared once on the shared descriptor: throws
    * `ResourceContractError` when a subscription's wire params do not match
@@ -663,6 +701,8 @@ interface ServerResourceOptionsBase<
   revalidate?: ResourceDefinition<T, P>["revalidate"];
   /** Deferred subscription-authorization seam — see `ResourceDefinition.authorize`. */
   authorize?: ResourceDefinition<T, P>["authorize"];
+  /** Declared freshness, a `_debug` label — see `ResourceDefinition.freshness`. */
+  freshness?: ResourceFreshness;
   /**
    * The server's own params gate, REPLACING the contract's — only for a
    * resource whose server serves more than the shared descriptor can declare
@@ -765,6 +805,8 @@ function contractToDefinition<T, P extends ResourceParams>(
     ...(contract.optionalParams !== undefined
       ? { optionalParams: contract.optionalParams }
       : {}),
+    ...(contract.refusals !== undefined ? { refusals: contract.refusals } : {}),
+    ...(contract.bytes === true ? { bytes: true as const } : {}),
     loader: opts.loader,
     dependsOn: opts.dependsOn,
     scopedMembership: opts.scopedMembership,
@@ -779,6 +821,7 @@ function contractToDefinition<T, P extends ResourceParams>(
     onLastUnsubscribe: opts.onLastUnsubscribe,
     revalidate: opts.revalidate,
     authorize: opts.authorize,
+    ...(opts.freshness !== undefined ? { freshness: opts.freshness } : {}),
     validateParams: opts.validateParams ?? contract.validateParams,
   };
 }
@@ -1008,6 +1051,10 @@ interface RegistryEntry {
   mode: ResourceMode;
   /** Optional param names — see `ResourceDefinition.optionalParams`. */
   optionalParams?: readonly string[];
+  /** Declared refusal codes — see `ResourceDefinition.refusals`. */
+  refusals?: readonly string[];
+  /** A bytes value — see `ResourceDefinition.bytes`. */
+  bytes?: true;
   /**
    * True when declared via `defineExternalResource` — the resource's truth lives
    * outside Postgres, so a hand-`notify()` is legitimate. The backstop check
@@ -1015,6 +1062,8 @@ interface RegistryEntry {
    * Surfaced in the `_debug` payload.
    */
   externalSource?: boolean;
+  /** Declared freshness (`ResourceDefinition.freshness`) — surfaced in `_debug`. */
+  freshness?: ResourceFreshness;
   /** Payload schema. The loader output is parsed against it in `timedLoad`. */
   schema: ZodParser<unknown>;
   loader: (
@@ -1216,6 +1265,21 @@ type ServerFrame =
       version: number;
       epoch: string;
       derived: { id: string };
+    }
+  // A BYTES resource's sub-ack (`ResourceDefinition.bytes`): no value — an
+  // ArrayBuffer never rides a JSON frame — so no etag or watermark either
+  // (each describes a value). The client reads the value over HTTP.
+  | {
+      kind: "sub-ack";
+      id?: number;
+      key: string;
+      params: ResourceParams;
+      value?: never;
+      version: number;
+      etag?: never;
+      watermark?: never;
+      epoch: string;
+      derived?: never;
     };
 
 /**
@@ -2176,7 +2240,9 @@ export function createResourceRuntime(
   // so it is logged, never reported.
   function reportLoaderError(context: string, err: unknown): void {
     if (err instanceof ResourceRefusal) {
-      console.info(`[resources] ${context}: refused — ${err.message}`);
+      console.info(
+        `[resources] ${context}: refused (${err.code}) — ${err.message}`,
+      );
       return;
     }
     console.error(`[resources] ${context}`, err);
@@ -2371,7 +2437,8 @@ export function createResourceRuntime(
     params: ResourceParams,
     ctx?: { affectedIds: readonly string[] },
   ): Promise<unknown> {
-    const run = async () => entry.schema.parse(await entry.loader(params, ctx));
+    const run = async () =>
+      entry.schema.parse(await declaredLoad(entry, params, ctx));
     let load: Promise<unknown>;
     if (opts.wrapLoad) {
       const info: LoadInfo = {};
@@ -2384,6 +2451,34 @@ export function createResourceRuntime(
     return entry.routing && opts.lastReadSet
       ? load.then(checkRouteDrift(entry))
       : load;
+  }
+
+  // The loader, with one rule on what it may throw: a `ResourceRefusal` must
+  // carry a code the resource declares (`ResourceDefinition.refusals`) — the
+  // client types and checks the code against the same declaration. Any other
+  // code is a server bug, so it becomes a plain failure here (`loader-failed`,
+  // reported, the refusal as `cause`) and never reaches the wire as `refused`.
+  async function declaredLoad(
+    entry: RegistryEntry,
+    params: ResourceParams,
+    ctx?: { affectedIds: readonly string[] },
+  ): Promise<unknown> {
+    try {
+      return await entry.loader(params, ctx);
+    } catch (err) {
+      if (
+        err instanceof ResourceRefusal &&
+        !(entry.refusals ?? []).includes(err.code)
+      ) {
+        throw new Error(
+          `resource "${entry.key}": the loader refused with code "${err.code}", ` +
+            `which the resource does not declare (refusals: ` +
+            `${JSON.stringify(entry.refusals ?? [])}) — ${err.message}`,
+          { cause: err },
+        );
+      }
+      throw err;
+    }
   }
 
   // A8 — the drift guard. A routed entry is reached ONLY through its routes, so a
@@ -3125,6 +3220,14 @@ export function createResourceRuntime(
         `defineResource: mode "keyed" requires a keyOf for key "${def.key}"`,
       );
     }
+    // A bytes value never rides a frame, so its only delivery is `invalidate`
+    // (a push would serialize an ArrayBuffer as `{}`). A deferred placeholder
+    // is checked at its bind instead (its stand-in mode is `push`).
+    if (def.bytes === true && mode !== "invalidate" && !placeholder) {
+      throw new Error(
+        `defineResource: a bytes resource is mode "invalidate" — "${def.key}" was declared ${mode}`,
+      );
+    }
     // D37: a legacy scope key a cast smuggled through would do nothing at all.
     refuseLegacyScopeKeys(
       externalSource ? "defineExternalResource" : "defineResource",
@@ -3386,7 +3489,10 @@ export function createResourceRuntime(
       ...(def.optionalParams !== undefined
         ? { optionalParams: def.optionalParams }
         : {}),
+      ...(def.refusals !== undefined ? { refusals: def.refusals } : {}),
+      ...(def.bytes === true ? { bytes: true as const } : {}),
       externalSource,
+      ...(def.freshness !== undefined ? { freshness: def.freshness } : {}),
       schema: def.schema as ZodParser<unknown>,
       loader: def.loader as (
         params: ResourceParams,
@@ -3473,6 +3579,10 @@ export function createResourceRuntime(
         ...(contract.optionalParams !== undefined
           ? { optionalParams: contract.optionalParams }
           : {}),
+        ...(contract.refusals !== undefined
+          ? { refusals: contract.refusals }
+          : {}),
+        ...(contract.bytes === true ? { bytes: true as const } : {}),
         // The contract's gate until the bind hands the server's own.
         validateParams: contract.validateParams,
         loader: unbound,
@@ -5274,6 +5384,23 @@ export function createResourceRuntime(
         } catch (err) {
           if (evictOnContractError(entry, params, err)) continue;
           reportLoaderError(`loader failed for ${entry.key}`, err);
+          // A declared refusal is an ANSWER, not a failure: the value moved into
+          // a state the reader must see (the file it reads was deleted →
+          // `missing`). Tell every holder, as the sub-ack read does; the
+          // client's sub-error handler then reads over HTTP and surfaces the
+          // typed refusal (422) with the last value as `stale`. `declaredLoad`
+          // already turned an undeclared code into a plain Error, so only a
+          // declared one reaches here as a ResourceRefusal.
+          if (err instanceof ResourceRefusal) {
+            broadcastJson(subs, {
+              kind: "sub-error",
+              key: entry.key,
+              params,
+              reason: "refused",
+              code: err.code,
+              message: err.message,
+            });
+          }
           // Skip sending and cascading on loader failure — otherwise we'd
           // invalidate downstream state based on a torn read. Never persist on
           // the failure path. No ack either — a failed recompute never proved
@@ -5929,6 +6056,23 @@ export function createResourceRuntime(
       return;
     }
 
+    // A BYTES value never rides a frame (it is an ArrayBuffer, and a frame is
+    // JSON): its sub-ack carries no value, runs no loader, and stamps no etag
+    // or watermark — both describe a value, and this frame ships none. It still
+    // opens the tuple's ack bookkeeping (version, epoch); the client answers it
+    // by reading the value over HTTP (`handleResourceHttp`'s octet-stream body).
+    if (entry.bytes === true) {
+      sendJson(state.ws, {
+        kind: "sub-ack",
+        id,
+        key,
+        params,
+        version,
+        epoch: bootEpoch,
+      });
+      return;
+    }
+
     let value: unknown;
     let etag: string | undefined;
     let watermark: string | undefined;
@@ -5956,6 +6100,7 @@ export function createResourceRuntime(
               key,
               params,
               reason: "refused",
+              code: err.code,
               message: err.message,
             }
           : { kind: "sub-error", id, key, params, reason: "loader-failed" },
@@ -6452,7 +6597,11 @@ export function createResourceRuntime(
       }
       reportLoaderError(`loader failed for ${key}`, err);
       if (err instanceof ResourceRefusal) {
-        return httpError(422, { reason: "refused", detail: err.message });
+        return httpError(422, {
+          reason: "refused",
+          code: err.code,
+          detail: err.message,
+        });
       }
       return httpError(500, { reason: "loader-failed" });
     }
@@ -6469,6 +6618,21 @@ export function createResourceRuntime(
     // flight) → OMIT the header; the client then sends no If-None-Match next time
     // and gets a full body.
     if (etag !== undefined) headers["ETag"] = etag;
+    // A BYTES value's body IS the value (`application/octet-stream`); the rest of
+    // the envelope below — version, epoch, watermark, which the client's guard
+    // needs exactly as for a JSON body — rides response headers instead.
+    if (entry.bytes === true) {
+      return new Response(value as ArrayBuffer, {
+        headers: {
+          ...headers,
+          ...resourceBytesHeaders({
+            version,
+            epoch: bootEpoch,
+            ...(watermark !== undefined ? { watermark } : {}),
+          }),
+        },
+      });
+    }
     // The body carries `epoch: bootEpoch` so the client can compare its cached
     // `entry.version` cross-boot: per-boot in-memory version counters are only
     // comparable within one boot, so an epoch-less strict-`<` guard dropped a
@@ -6541,6 +6705,7 @@ export function createResourceRuntime(
       deriveFallbacks: Partial<Record<DeriveRefusal, number>>;
       subTabs: Record<string, number>;
       externalSource: boolean;
+      freshness: ResourceFreshness | null;
       definition?: string | null;
       lastReplaceAt?: number | null;
       lastFloorAt?: number | null;
@@ -6652,6 +6817,9 @@ export function createResourceRuntime(
         // `no-db-backed-notify` check reads this to forbid a DB-reading loader on
         // an external resource.
         externalSource: entry.externalSource ?? false,
+        // The declared freshness of an external value (`null`: none declared —
+        // a db entry, or a resource not served through `network/live`).
+        freshness: entry.freshness ?? null,
         // L2 bookkeeping, for a persisted key only: its definition (A18), when
         // this process last replaced / floor-wrote its row, and the row's
         // `position_at` as last known (epoch ms; null = never in this process).

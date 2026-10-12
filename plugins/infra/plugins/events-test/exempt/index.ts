@@ -23,4 +23,12 @@ export default [
     reason:
       "A trigger table built by infra/events' defineTriggerEvent, whose shared column set (events/server/internal/base-columns.ts) keys every *_triggers table by a bare uuid. Phase 6 of the unified prefixed ids keys them all at once (uuid -> text + a declared kind) in that one file; delete this entry then.",
   },
+  {
+    rule: "live/no-endpoint-read",
+    paths: ["web/components/events-test-view.tsx"],
+    kind: "debt",
+    task: "task-1791560308-woqgfi",
+    reason:
+      "A request/response server read (a GET fetchEndpoint or NDJSON stream an effect, a hook or a function they call runs) not yet moved onto a liveValue or liveCollection read with useLive.",
+  },
 ] satisfies Exemptions;

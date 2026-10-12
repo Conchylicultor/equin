@@ -35,6 +35,7 @@ export function getModelCatalog(): ModelCatalog {
  */
 export const modelCatalogServed = serveValue(modelCatalog, {
   source: "external",
+  changes: "notified",
   loader: () => getModelCatalog(),
 });
 

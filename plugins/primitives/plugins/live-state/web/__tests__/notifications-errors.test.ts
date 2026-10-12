@@ -118,7 +118,7 @@ describe("NotificationsClient — failing reads", () => {
 
   test("an up-to-date reply clears a sticky error without rewriting the data", async () => {
     const { hub, qc, client, socket } = await setup();
-    client.observe("k", {}, undefined, schema);
+    client.observe("k", {}, undefined, { schema });
     await subAck(socket, "k");
     const observer = watch(qc, "k", () =>
       Promise.reject(new ResourceHttpError("k", 500, "loader-failed")),
@@ -152,8 +152,8 @@ describe("NotificationsClient — failing reads", () => {
 
   test("online and visible refetch only the reads in error", async () => {
     const { qc, client, socket } = await setup();
-    client.observe("bad", {}, undefined, schema);
-    client.observe("good", {}, undefined, schema);
+    client.observe("bad", {}, undefined, { schema });
+    client.observe("good", {}, undefined, { schema });
     await subAck(socket, "bad");
     await subAck(socket, "good");
     const badFn = vi.fn(() => Promise.reject(new TypeError("offline")));
@@ -184,7 +184,7 @@ describe("NotificationsClient — failing reads", () => {
 
   test("a retry that succeeds clears the failure", async () => {
     const { qc, client, socket } = await setup();
-    client.observe("k", {}, undefined, schema);
+    client.observe("k", {}, undefined, { schema });
     await subAck(socket, "k");
     let fail = true;
     const observer = watch(qc, "k", () =>
@@ -203,7 +203,7 @@ describe("NotificationsClient — failing reads", () => {
 
   test("the sink fires once per failure episode, however many observers, and re-arms after it clears", async () => {
     const { qc, client, socket } = await setup();
-    client.observe("k", {}, undefined, schema);
+    client.observe("k", {}, undefined, { schema });
     await subAck(socket, "k");
     const fn = () =>
       Promise.reject(new ResourceHttpError("k", 500, "loader-failed"));

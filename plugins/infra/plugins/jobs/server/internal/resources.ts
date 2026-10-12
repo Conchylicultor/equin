@@ -213,6 +213,7 @@ export const jobRunsServed = serveCollection(jobRuns, {
 // by runners in ANOTHER process against the same database.
 export const jobsListServed = serveValue(jobsList, {
   source: "external",
+  changes: "notified",
   loader: () => loadJobsList(500),
   throttleMs: 1000,
   whileSubscribed: (_params, notify) => onQueueActivity(notify),

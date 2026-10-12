@@ -30,8 +30,8 @@ that settles would stop retrying and would render as a permanent answer.
 - Server:
   - Contributes: `resource.declare` "edited-files"
   - Uses:
-    - `infra/file-watcher.defineFileWatcher`
-    - `infra/file-watcher.FileWatcher`
+    - `infra/git/checkout-watch.acquireCheckoutWatch`
+    - `infra/git/checkout-watch.CheckoutChange`
     - `infra/git/git-read-cache.createSignedMemo`
     - `infra/host/host-read-pool.withHeavyReadSlot`
     - `network/live.serveValue`
@@ -44,8 +44,7 @@ that settles would stop retrying and would render as a permanent answer.
     - `editedFilesServed`
     - `editedFilesSignature`
     - `getEditedFiles`
-  - Register: `defineFileWatcher('conversation-view.edited-files')`
-  - Resources: `edited-files` (invalidate)
+  - Resources: `edited-files` (invalidate, notified)
 - Web:
   - Uses: `network/live.useLive`
   - Exports (values):
@@ -73,6 +72,8 @@ that settles would stop retrying and would render as a permanent answer.
     - `review/code-review`
     - `review/plugin-changes`
     - `review/plugin-changes/file-changes`
+- Exemptions:
+  - Exempts itself from: `no-db-backed-notify` — `server/internal/edited-files-resource.ts` (debt)
 - Sub-plugins:
   - **`file-pane`** — Hosts the file-peek pane: a checkout file opened from a conversation (chat file links, review, commits), shown through primitives/file-viewer with the conversation's edited-file status as context.
 

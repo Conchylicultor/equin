@@ -44,6 +44,7 @@ function store(): HistoryStore {
  */
 export const prototypeHistoryServed = serveValue(prototypeHistory, {
   source: "external",
+  changes: "notified",
   loader: async ({ name }) => {
     if (!protoIdKind.is(name)) {
       throw new Error(`prototypes.history: not a prototype id: ${name}`);

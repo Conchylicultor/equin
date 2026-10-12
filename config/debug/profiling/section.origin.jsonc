@@ -1,4 +1,4 @@
-// @hash a008d981d6b1
+// @hash a77f3a20088f
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,9 +8,7 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "debug.profiling.boot:boot",
-    "debug.profiling.build:build",
     "debug.profiling.ops:ops",
-    "debug.profiling.runtime:runtime",
-    "debug.profiling.stats:stats"
+    "debug.profiling.runtime:runtime"
   ]
 }

@@ -161,7 +161,7 @@ state rather than the previous window's numbers.
     - `defineJob('retention.latency_ledger_host_minute')`
     - `defineJob('retention.latency_ledger_thread_minute')`
     - `defineJob('retention.latency_ledger_interaction')`
-  - Resources: `latency-ledger.summary` (invalidate)
+  - Resources: `latency-ledger.summary` (invalidate, notified)
   - Routes: `POST /api/latency-ledger/client`
 - Core:
   - Uses:

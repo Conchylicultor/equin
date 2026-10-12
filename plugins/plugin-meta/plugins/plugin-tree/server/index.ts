@@ -5,6 +5,8 @@ import { pluginTreeWarmup } from "./internal/warmup";
 export {
   getStructureTreeCached,
   getFacetsTreeCached,
+  onPluginTreeChanged,
+  pluginTreeGeneration,
 } from "./internal/structure-tree-cache";
 
 export default {

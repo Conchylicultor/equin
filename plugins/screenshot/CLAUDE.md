@@ -44,6 +44,8 @@
     - `POST /api/screenshots/:id/file`
 - Cross-plugin:
   - Imported by: `screenshot/draw-on-app`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/screenshot-view.tsx` (debt)
 - Shared:
   - Exports (values):
     - `createScreenshot`

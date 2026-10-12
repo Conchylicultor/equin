@@ -64,6 +64,17 @@ export const policySchema = z.enum([
   "unbound",
 ]);
 
+/**
+ * An external value's declared freshness (`network/live`'s `changes`): told by
+ * `notify` (`notified`), never told because its answer cannot change
+ * (`immutable`, `fixed`), or re-measured only when a reader asks
+ * (`snapshot`) — the last three with the author's reason.
+ */
+export const freshnessSchema = z.object({
+  kind: z.enum(["notified", "immutable", "fixed", "snapshot"]),
+  reason: z.string().optional(),
+});
+
 export const resourceReadSetSchema = z.object({
   key: z.string(),
   /** What this entry is — see `policySchema`. */
@@ -99,6 +110,8 @@ export const resourceReadSetSchema = z.object({
   positionAgeMs: z.number().nullable(),
   /** Notify provenance counters (hand-called vs DB-change-feed-derived). */
   notifyStats: notifyStatsSchema,
+  /** The declared freshness; `null` = none declared (a db entry, or one not served through `network/live`). */
+  freshness: freshnessSchema.nullable(),
 });
 
 export const resourcesReadSetSchema = z.object({
@@ -106,6 +119,7 @@ export const resourcesReadSetSchema = z.object({
 });
 
 export type NotifyStats = z.infer<typeof notifyStatsSchema>;
+export type ResourceFreshness = z.infer<typeof freshnessSchema>;
 export type ResourcePolicy = z.infer<typeof policySchema>;
 export type ResourceReadSet = z.infer<typeof resourceReadSetSchema>;
 export type ResourceRoute = z.infer<typeof routeSchema>;

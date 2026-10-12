@@ -231,7 +231,7 @@ convergence mechanisms all missing it) and the design.
     - `readDeployment`
     - `readDeploymentState`
     - `serverPin`
-  - Resources: `build.deployment` (push)
+  - Resources: `build.deployment` (push, notified)
   - Routes: `GET /api/build/chain-from`
 - Web:
   - Uses:

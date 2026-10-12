@@ -10,5 +10,6 @@ import { listPrototypeMetas } from "./list";
  */
 export const prototypesListServed = serveValue(prototypesList, {
   source: "external",
+  changes: "notified",
   loader: async () => listPrototypeMetas(),
 });

@@ -2,5 +2,5 @@
   "name": "@singularity/plugin-debug-profiling-build",
   "private": true,
   "version": "0.0.1",
-  "description": "Build step profiling for the Gantt debug pane."
+  "description": "Build step profiling: the Gantt detail pane of one build run."
 }

@@ -149,6 +149,7 @@ describe("compileValue", () => {
     const h = harness();
     const compiled = compileValue(v, {
       source: "external",
+      changes: "notified",
       loader: ({ id }) => ({ n: id === "a" ? n : -1 }),
     });
     expect(compiled.external).toBe(true);
@@ -201,7 +202,11 @@ describe("compileValue", () => {
         unbounded: { reason: "r" },
       });
       // An in-memory array is bounded by the process that holds it.
-      compileValue(names, { source: "external", loader: () => [] });
+      compileValue(names, {
+        source: "external",
+        changes: "notified",
+        loader: () => [],
+      });
       compileValue(count, {
         source: "db",
         loader: () => ({ n: 0 }),
@@ -210,6 +215,7 @@ describe("compileValue", () => {
       });
       compileValue(names, {
         source: "external",
+        changes: "notified",
         loader: () => [],
         // @ts-expect-error — nor on an external one
         unbounded: { reason: "r" },
@@ -253,7 +259,11 @@ describe("serveValue", () => {
     // Never called — the assertion is the `@ts-expect-error`.
     const typeOnly = () =>
       // @ts-expect-error — a central value is served by network/live/central
-      serveValue(central, { source: "external", loader: () => ({ n: 1 }) });
+      serveValue(central, {
+        source: "external",
+        changes: "notified",
+        loader: () => ({ n: 1 }),
+      });
     expect(typeof typeOnly).toBe("function");
   });
 
@@ -264,6 +274,7 @@ describe("serveValue", () => {
     });
     const served = serveValue(v, {
       source: "external",
+      changes: "notified",
       loader: () => ({ n: 1 }),
     });
     expect(served.mode).toBe("invalidate");
@@ -283,18 +294,24 @@ describe("serveValue", () => {
     // Never called — the assertion is the `@ts-expect-error`.
     const typeOnly = () =>
       // @ts-expect-error — `preloadParams` is required for a param'd preloaded value
-      serveValue(v, { source: "external", loader: () => ({ n: 1 }) });
+      serveValue(v, {
+        source: "external",
+        changes: "notified",
+        loader: () => ({ n: 1 }),
+      });
     expect(typeof typeOnly).toBe("function");
     // …and an untyped caller is refused at serve time.
     expect(() =>
       (serveValue as (v: unknown, o: unknown) => unknown)(v, {
         source: "external",
+        changes: "notified",
         loader: () => ({ n: 1 }),
       }),
     ).toThrow(/must pass `preloadParams`/);
 
     const served = serveValue(v, {
       source: "external",
+      changes: "notified",
       loader: ({ scopeId }) => {
         if (scopeId === "broken") throw new Error("boom");
         return { n: scopeId === undefined ? 0 : 1 };
@@ -336,6 +353,7 @@ describe("serveValue", () => {
     const typeOnly = () =>
       serveValue(v, {
         source: "external",
+        changes: "notified",
         loader: () => ({ n: 1 }),
         // @ts-expect-error — only a param'd value declared `preload` names boot tuples
         preloadParams: () => [{ id: "a" }],
@@ -344,6 +362,7 @@ describe("serveValue", () => {
     expect(() =>
       (serveValue as (v: unknown, o: unknown) => unknown)(v, {
         source: "external",
+        changes: "notified",
         loader: () => ({ n: 1 }),
         preloadParams: () => [{ id: "a" }],
       }),
@@ -358,6 +377,7 @@ describe("serveValue", () => {
     let n = 0;
     const served = serveValue(v, {
       source: "external",
+      changes: "notified",
       loader: () => ({ n: n++ }),
     });
     const frames: Frame[] = [];

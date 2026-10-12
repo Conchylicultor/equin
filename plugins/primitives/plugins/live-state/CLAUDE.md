@@ -92,7 +92,13 @@ and yields the same `ResourceResult` states, in list order. No `select`, no
 a list moved by diff.
 The subscription set moves by DIFF: a tuple kept across a list change is never
 unobserved and re-observed (its socket subscription would lapse), and a removed
-tuple is released after the new ones are observed.
+tuple is released after the new ones are observed. Its read states are
+structurally shared KEYED BY TUPLE (the `combine` returns a record, not an
+array), so a kept tuple's `data` stays the cache's own object across a reorder,
+a grow or a shrink — positional sharing would pair it with another tuple's
+previous data and hand out a deep copy. Pinned by
+`web/__tests__/use-resources.test.tsx`. network/live's
+`useLive(value, [p1, p2, …])` is its value-level reader.
 
 - **`{ release: "now" }`** — a tuple dropped from the list while the hook stays
   mounted is unsubscribed at once (`unobserve(…, "now")`: the WS `unsub` goes
@@ -351,7 +357,8 @@ TS type and runtime shape therefore cannot drift; types that don't survive
 ## One version-guarded HTTP write path (`fetchOverHttp`)
 
 Every HTTP resource-cache write goes through the **single** method
-`NotificationsClient.fetchOverHttp(key, params, origin, schema, source)` — its
+`NotificationsClient.fetchOverHttp(key, params, origin, read, source)` (`read`:
+the declaration's `schema` + `refusals` — a descriptor is one) — its
 doc-comment is the detailed spec; this section is the decision table. Callers:
 `useResource`'s `queryFn` (`source: "fallback"`, errors propagate to `q.error`)
 and the cold-start prime `primeFromHttp` (`source: "prime"`, fire-and-forget —
@@ -362,6 +369,15 @@ cached value (freshly applied, or retained on a `304`/stale drop) so React
 Query's `queryFn` contract holds with no separate render path. Pinned by
 `web/__tests__/notifications-http-fetch.test.ts` (11 cases). Design:
 `research/2026-07-02-converge-http-resource-writes-version-guard.md`.
+
+**A bytes read** (`ResourceDescriptor.bytes`, a `liveValue` declared `bytes:
+true`) takes the same path: the body is read with `arrayBuffer()` and the
+envelope (`version`, `epoch`, `watermark`) from the response headers
+(`resource-protocol`'s `parseResourceBytesHeaders`, which throws on a JSON
+answer), then the same guard and schema parse. Its WS sub-ack carries no
+value, so `handleServerMessage` adopts the ack's version / epoch and then
+invalidates the tuple — the HTTP read is its value, read no older than the
+tracking span the ack opened.
 
 **Both fetches are `cache: "no-store"`, deliberately** — the browser HTTP cache
 must never store or transparently 304-revalidate a resource body, or a
@@ -657,7 +673,7 @@ is the opt-in `stale` on the `error` arm, never what a `.data` read reaches.
 | `not-found` | a 404 (or `unknown-key` on the same build) | a bug |
 | `loader-failed` | any other HTTP failure, a `same-build` contract mismatch, anything else thrown | retry, else a bug |
 | `transport` | `fetch`'s `TypeError`, a lost version race (`ResourceStaleReadError`) | retry heals it |
-| `refused` | a loader's `ResourceRefusal` (`packages/resource-protocol`): HTTP 422 `refused`, its `detail` the message | none — the message IS the answer (an unknown id, an empty range); `ResourceErrorInline` offers no Retry, it is never retried, never counted as failing (health row), never reported |
+| `refused` | a loader's `ResourceRefusal` (`packages/resource-protocol`): HTTP 422 `refused`, its `code` one the read declares (`ResourceDescriptor.refusals`) — on `error.code`, typed by `ResourceResult<T, C>` — and its `detail` the message. A refusal whose code the read does not declare (or with none) is a `contract-mismatch` instead (`fetchOverHttp`: the server only sends its own declared codes, so this bundle declares the resource differently — `client-outdated`, marked `skew`) | none — the message IS the answer (an unknown id, an empty range); `ResourceErrorInline` offers no Retry, it is never retried, never counted as failing (health row), never reported |
 
 There is no boolean that lumps loading and error together: `status` is the only
 state a result carries, and neither the loading arm nor the ready arm has an

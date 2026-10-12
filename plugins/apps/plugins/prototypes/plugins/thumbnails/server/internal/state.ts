@@ -18,6 +18,7 @@ const states = new Map<string, ThumbnailState>();
  */
 export const prototypeThumbnailsServed = serveValue(prototypeThumbnails, {
   source: "external",
+  changes: "notified",
   loader: () => Object.fromEntries(states),
 });
 

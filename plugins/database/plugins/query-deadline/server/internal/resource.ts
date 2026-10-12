@@ -17,5 +17,6 @@ export const deadlineHitRing = createHitRing(QUERY_DEADLINE_RING_CAPACITY);
 // behind it. The "stalled right now" case is the Connection row's job.
 export const dbQueryDeadlinesServed = serveValue(dbQueryDeadlines, {
   source: "external",
+  changes: "notified",
   loader: () => ({ hits: deadlineHitRing.snapshot() }),
 });

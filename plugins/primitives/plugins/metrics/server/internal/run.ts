@@ -3,6 +3,8 @@ import {
   InvalidRangeError,
   evaluateBreakdown,
   evaluateMetric,
+  metricDetails,
+  metricQuery,
   parseParams,
   type DetailsSelector,
   type DrillItem,
@@ -20,15 +22,20 @@ import type { MetricRegistry } from "./registry";
 // drill-down on a metric without one — is a `MetricQueryError` naming it;
 // anything past validation that throws is a provider bug, rethrown as is.
 
+/** The refusal code both metric reads declare (`refusals` in `core/live.ts`). */
+const INVALID_QUERY =
+  "invalid-query" satisfies (typeof metricQuery.refusals)[number] &
+    (typeof metricDetails.refusals)[number];
+
 /**
  * A question the registry cannot answer as asked (an unknown id, split or
- * param; a bad range). A `ResourceRefusal`: the reader is shown the message
- * (the read's `refused` error arm), and it is never reported as a server
- * failure.
+ * param; a bad range). A `ResourceRefusal` with the code both metric reads
+ * declare (`invalid-query`): the reader is shown the message (the read's
+ * `refused` error arm), and it is never reported as a server failure.
  */
 export class MetricQueryError extends ResourceRefusal {
   constructor(message: string) {
-    super(message);
+    super(INVALID_QUERY, message);
     this.name = "MetricQueryError";
   }
 }

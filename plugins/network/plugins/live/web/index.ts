@@ -17,6 +17,7 @@ export type {
   LiveIdsQuery,
   LiveListResult,
   LiveRowResult,
+  LiveSnapshotResult,
 } from "./internal/use-live";
 
 export default {

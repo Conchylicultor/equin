@@ -334,8 +334,8 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `defineFileWatcher('sentinel.status')`
     - `defineDaemon('sentinel.worker')`
   - Resources:
-    - `sentinel.status` (push)
-    - `sentinel.vitals` (push)
+    - `sentinel.status` (push, notified)
+    - `sentinel.vitals` (push, notified)
 - Core:
   - Uses:
     - `config_v2.defineConfig`

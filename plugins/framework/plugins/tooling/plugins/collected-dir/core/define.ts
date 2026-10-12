@@ -16,13 +16,35 @@
 
 import type { PluginFolder } from "@plugins/framework/plugins/plugin-id/core";
 
+/**
+ * Which plugins a collected dir's committed registry lists.
+ *
+ * - `"composition"` (the default): the `singularity` composition's closure —
+ *   what the app ships. Every runtime registry (web, server, check, lint, …) is
+ *   this: an excluded plugin's contribution must not load.
+ * - `"checkout"`: every plugin the checkout declares, excluded ones included.
+ *   For a registry that describes SOURCE rather than the app — one whose
+ *   consumers (checks, lint rules) scan every plugin on disk, so its set must
+ *   be the scanned set. `exempt/` is the case: a check that scans an excluded
+ *   plugin's file must be able to read that plugin's own exemption of it.
+ */
+export type CollectedDirMembership = "composition" | "checkout";
+
 export interface CollectedDirDef {
   readonly dir: PluginFolder;
+  readonly membership: CollectedDirMembership;
   readonly _brand: "CollectedDirDef";
 }
 
-export function defineCollectedDir(dir: PluginFolder): CollectedDirDef {
-  return { dir, _brand: "CollectedDirDef" };
+export function defineCollectedDir(
+  dir: PluginFolder,
+  options?: { membership: CollectedDirMembership },
+): CollectedDirDef {
+  return {
+    dir,
+    membership: options?.membership ?? "composition",
+    _brand: "CollectedDirDef",
+  };
 }
 
 export function isCollectedDirDef(value: unknown): value is CollectedDirDef {

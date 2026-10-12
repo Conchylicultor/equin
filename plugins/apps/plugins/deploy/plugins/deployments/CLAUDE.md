@@ -475,7 +475,7 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `deploy.run-history` (keyed, window)
     - `deploy.run-history:groups` (push)
     - `deploy.run-history:rows` (keyed, point)
-    - `deploy.runs` (push)
+    - `deploy.runs` (push, notified)
   - Routes:
     - `GET /api/deploy/deployments`
     - `POST /api/deploy/deployments`

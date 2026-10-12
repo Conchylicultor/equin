@@ -30,6 +30,12 @@ const THROTTLE_MS = 1000;
 export function catalogOptions(registry: () => MetricRegistry) {
   return {
     source: "external" as const,
+    changes: {
+      fixed: {
+        reason:
+          "the metric sources are plugin contributions, registered once per process",
+      },
+    },
     loader: (): Catalog => registry().catalog,
   };
 }
@@ -56,6 +62,7 @@ export function queryOptions(
 ) {
   return {
     source: "external" as const,
+    changes: "notified" as const,
     loader: (query: MetricQuery): Promise<MetricResult> =>
       runQuery(registry(), query, new Date()),
     throttleMs: THROTTLE_MS,
@@ -70,6 +77,7 @@ export function detailsOptions(
 ) {
   return {
     source: "external" as const,
+    changes: "notified" as const,
     loader: (
       selector: DetailsSelector,
       range: LiveKeyRange,

@@ -43,6 +43,7 @@ export const depsCacheWatcher = defineFileWatcher({
  */
 export const depsStatesServed = serveValue(depsStates, {
   source: "external",
+  changes: "notified",
   loader: loadDepRows,
   whileSubscribed: async (_params, notify) => {
     const watcher = await depsCacheWatcher.start({

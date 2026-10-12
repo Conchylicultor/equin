@@ -71,6 +71,8 @@ dynamic value.
   - Exports (values):
     - `getFacetsTreeCached`
     - `getStructureTreeCached`
+    - `onPluginTreeChanged`
+    - `pluginTreeGeneration`
   - Register:
     - `defineWarmup('plugin-tree.trees')`
     - `defineFileWatcher('plugin-tree.plugins-dir')`

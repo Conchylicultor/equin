@@ -4,6 +4,7 @@ import { readSha } from "./read-sha";
 
 export const refHeadServed = serveValue(refHead, {
   source: "external",
+  changes: "notified",
   // A rebase rewrites refs/heads/main many times in quick succession; the
   // watcher notifies per distinct sha, cascading to build.deployment +
   // commitDelta/commitsGraph (git subprocesses) in every worktree. A fixed-window

@@ -90,6 +90,7 @@ function upstream(runtime: ReturnType<typeof createResourceRuntime>) {
   const v = liveValue(key("ref"), { schema: Sha, params: ["refName"] });
   const { resource } = registerValue(runtime, v, {
     source: "external",
+    changes: "notified",
     loader: () => ({ sha: "s" }),
   });
   const served = {
@@ -109,6 +110,7 @@ describe("throttleMs", () => {
     let loads = 0;
     const { resource } = registerValue(h.runtime, v, {
       source: "external",
+      changes: "notified",
       throttleMs: 40,
       loader: () => ({ n: ++loads }),
     });
@@ -134,6 +136,7 @@ describe("recomputeOn", () => {
     const loaded: string[] = [];
     registerValue(h.runtime, v, {
       source: "external",
+      changes: "notified",
       recomputeOn: [ref],
       loader: ({ id }) => {
         loaded.push(id);
@@ -159,6 +162,7 @@ describe("recomputeOn", () => {
     let loads = 0;
     registerValue(h.runtime, v, {
       source: "external",
+      changes: "notified",
       recomputeOn: [ref],
       loader: () => ({ n: ++loads }),
     });
@@ -175,6 +179,7 @@ describe("recomputeOn", () => {
     const loaded: string[] = [];
     registerValue(h.runtime, v, {
       source: "external",
+      changes: "notified",
       recomputeOn: [
         { value: ref, params: ({ refName }) => ({ branch: refName }) },
       ],
@@ -201,6 +206,7 @@ describe("recomputeOn", () => {
     const typeOnly = () => {
       compileValue(v, {
         source: "external",
+        changes: "notified",
         loader: () => ({ n: 0 }),
         recomputeOn: [
           // @ts-expect-error — the upstream has `refName`, not `id`
@@ -209,6 +215,7 @@ describe("recomputeOn", () => {
       });
       compileValue(v, {
         source: "external",
+        changes: "notified",
         loader: () => ({ n: 0 }),
         recomputeOn: [
           // @ts-expect-error — must return THIS value's params
@@ -248,6 +255,7 @@ describe("recomputeOn — only an external upstream (T15)", () => {
     const typeOnly = () => {
       compileValue(v, {
         source: "external",
+        changes: "notified",
         loader: () => ({ n: 0 }),
         // @ts-expect-error — a db value has no `notify`: not an upstream
         recomputeOn: [db],
@@ -327,6 +335,7 @@ describe("whileSubscribed", () => {
     let n = 1;
     registerValue(h.runtime, v, {
       source: "external",
+      changes: "notified",
       loader: () => ({ n }),
       whileSubscribed: (_params, notify) => {
         fire = notify;
@@ -350,6 +359,7 @@ describe("whileSubscribed", () => {
     let resolveStart: ((stop: StopFn) => void) | undefined;
     const compiled = compileValue(v, {
       source: "external",
+      changes: "notified",
       loader: () => ({ n: 1 }),
       whileSubscribed: ({ id }) =>
         new Promise<StopFn>((resolve) => {
@@ -403,6 +413,7 @@ describe("revalidate", () => {
     const revalidate = () => Promise.resolve("etag");
     const compiled = compileValue(v, {
       source: "external",
+      changes: "notified",
       loader: () => ({ n: 0 }),
       revalidate,
     });
@@ -421,6 +432,7 @@ describe("typed-query values", () => {
     let n = 1;
     const { resource, compiled } = registerQueryValue(h.runtime, v, {
       source: "external",
+      changes: "notified",
       loader: (q) => {
         seen.push(q);
         return { n: n * q.days };
@@ -457,12 +469,14 @@ describe("typed-query values", () => {
     const typeOnly = () =>
       compileQueryValue(v, {
         source: "external",
+        changes: "notified",
         // `days` is defaulted: present on the output.
         loader: (q) => ({ n: q.days }),
       });
     const typeOnly2 = () =>
       compileQueryValue(v, {
         source: "external",
+        changes: "notified",
         // @ts-expect-error — the loader is handed the question, not `{ q }`
         loader: (p: { q: string }) => ({ n: p.q.length }),
       });
@@ -509,6 +523,7 @@ describe("paged values", () => {
     const asks: unknown[] = [];
     registerPagedValue(h.runtime, v, {
       source: "external",
+      changes: "notified",
       loader: (q, range) => {
         asks.push([q, range]);
         return range.after === null
@@ -596,6 +611,7 @@ describe("paged values", () => {
     });
     const compiled = compilePagedValue(v, {
       source: "external",
+      changes: "notified",
       loader: (_q, range) => answer(range) as Item[],
     });
     const params = v.query.encode({ metric: "m" }, page('["5","e"]', null));
@@ -612,6 +628,7 @@ describe("paged values", () => {
     const long = "x".repeat(LIVE_ROW_KEY_MAX_BYTES);
     const compiled = compilePagedValue(v, {
       source: "external",
+      changes: "notified",
       loader: () => [
         { id: "a", at: long },
         { id: "b", at: "short" },
@@ -631,6 +648,7 @@ describe("paged values", () => {
     const v = pagedValue("paged-meta");
     const { meta } = registerPagedValue(h.runtime, v, {
       source: "external",
+      changes: "notified",
       loader: () => [],
       meta: (q) => ({ total: q.metric.length }),
     });
@@ -647,6 +665,7 @@ describe("paged values", () => {
     const v = bareValue("paged-window");
     const compiled = compilePagedValue(v, {
       source: "external",
+      changes: "notified",
       loader: () => [],
     });
     const { membership } = compiled.options;
@@ -669,6 +688,7 @@ describe("paged values", () => {
     let loads = 0;
     const { resource, compiled, meta } = registerPagedValue(h.runtime, v, {
       source: "external",
+      changes: "notified",
       // A fresh answer each load (an unchanged one pushes nothing).
       loader: (_q, range) => [
         { id: `n${++loads}`, at: range.after === null ? "9" : "1" },
@@ -709,6 +729,7 @@ describe("paged values", () => {
     let loads = 0;
     registerPagedValue(h.runtime, v, {
       source: "external",
+      changes: "notified",
       // A fresh answer each load (an unchanged one pushes nothing).
       loader: (_q, range) => [
         { id: `n${++loads}`, at: range.after === null ? "9" : "1" },
@@ -751,6 +772,7 @@ describe("paged values", () => {
     let resolveStart: ((stop: StopFn) => void) | undefined;
     const compiled = compilePagedValue(v, {
       source: "external",
+      changes: "notified",
       loader: () => [],
       meta: () => ({ total: 0 }),
       whileSubscribed: (q) =>
@@ -786,12 +808,14 @@ describe("paged values", () => {
     expect(() =>
       compilePagedValue(pagedValue("paged-no-meta"), {
         source: "external",
+        changes: "notified",
         loader: () => [],
       } as never),
     ).toThrow(/serve it with `meta\(query\)`/);
     expect(() =>
       compilePagedValue(bareValue("paged-stray-meta"), {
         source: "external",
+        changes: "notified",
         loader: () => [],
         meta: () => ({}),
       } as never),
@@ -808,11 +832,13 @@ describe("paged values", () => {
       });
       compilePagedValue(v, {
         source: "external",
+        changes: "notified",
         // @ts-expect-error — the cursor page is gone: a loader answers its range's items
         loader: () => ({ items: [], nextCursor: null }),
       });
       compilePagedValue(pagedValue("t-paged-meta"), {
         source: "external",
+        changes: "notified",
         loader: () => [],
         // @ts-expect-error — the meta answers its declared schema
         meta: () => ({ count: 1 }),
@@ -820,6 +846,7 @@ describe("paged values", () => {
       // @ts-expect-error — declared `paged.meta`, the meta is served
       compilePagedValue(pagedValue("t-paged-no-meta"), {
         source: "external",
+        changes: "notified",
         loader: () => [],
       });
     };

@@ -303,15 +303,16 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `resource.declare` "build.history:groups"
     - `resource.declare` "build.history:rows"
     - `trigger` "build.run"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/paths` ×4
     - `config_v2` ×3
     - `build/deployment` ×2
     - `build/run-ledger` ×2
     - `infra/endpoints` ×2
-    - `infra/paths` ×2
     - `database.db`
     - `ids.IdKinds`
     - `infra/events.Trigger`
+    - `infra/file-watcher.defineFileWatcher`
     - `infra/git/git-watcher.refAdvanced`
     - `infra/jobs/supervised-job.defineSupervisedJob`
     - `infra/jobs.defineJob`
@@ -320,11 +321,13 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `primitives/log-channels.Log`
     - `shell/notifications.recordNotification`
     - `tasks/task-category.TaskCategory`
+  - Exports (values): `onRunTerminal`
   - Register:
     - `defineJob('build.run')`
     - `defineJob('build.run.debounced')`
     - `defineJob('build.composition-tick')`
     - `defineSupervisedJob('build.run.supervised')`
+    - `defineFileWatcher('build.run-terminal')`
   - Resources:
     - `build.history` (keyed, window)
     - `build.history:groups` (push)

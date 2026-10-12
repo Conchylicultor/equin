@@ -306,7 +306,7 @@ torch.
   - Register:
     - `defineSupervisedJob('deps.install')`
     - `defineFileWatcher('deps.cache')`
-  - Resources: `deps.states` (push)
+  - Resources: `deps.states` (push, notified)
   - Routes:
     - `POST /api/deps/install`
     - `POST /api/deps/remove`

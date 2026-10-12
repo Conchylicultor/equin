@@ -17,7 +17,7 @@ import {
 const kindOf = (raw: unknown) => toResourceError(raw).kind;
 
 describe("toResourceError", () => {
-  test("a refusal is `refused`, its message the server's own", () => {
+  test("a refusal is `refused`, its code and message the server's own", () => {
     const e = toResourceError(
       new ResourceHttpError(
         "k",
@@ -25,10 +25,28 @@ describe("toResourceError", () => {
         "refused",
         undefined,
         'unknown metric "x"',
+        "unknown-metric",
       ),
     );
     expect(e.kind).toBe("refused");
+    expect(e.code).toBe("unknown-metric");
     expect(e.message).toBe('unknown metric "x"');
+  });
+
+  test("a refusal with no code is the tab out of date, never a code-less refusal", () => {
+    const e = toResourceError(
+      new ResourceHttpError("k", 422, "refused", undefined, "x"),
+    );
+    expect(e.kind).toBe("client-outdated");
+    expect(e.code).toBeUndefined();
+  });
+
+  test("only a refusal carries a code", () => {
+    expect(() => new ResourceError("refused", "x", null)).toThrow(/code/);
+    expect(
+      () => new ResourceError("loader-failed", "x", null, "missing"),
+    ).toThrow(/code/);
+    expect(new ResourceError("loader-failed", "x", null).code).toBeUndefined();
   });
 
   test("a contract refusal is client-outdated unless both sides run the same build", () => {

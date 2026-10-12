@@ -20,8 +20,7 @@ composes primitives.
   loading / no-match / error states are explicit; a `409` (Gmail not connected)
   surfaces its message.
 - **Pagination** (`internal/use-mail-search.ts`) — Gmail returns an opaque
-  `nextPageToken` (not a keyset cursor derived from an item), so this can't use
-  the `useCursorPagination` wrapper. But it **does** consume the shared
+  `nextPageToken` (not a keyset cursor derived from an item). It consumes the shared
   `useInfiniteScroll` primitive (from `primitives/cursor-pagination`): a
   `useInfiniteQuery` keyed by the query accumulates pages, and `useInfiniteScroll`
   owns the error-gated `IntersectionObserver`, exposed as a `scroll` handle. The

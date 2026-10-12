@@ -20,6 +20,7 @@ import { resolveActivityTargets, scanActivity } from "./activity-scan";
 // `load: "on-demand"` too.
 export const subagentActivityServed = serveValue(subagentActivity, {
   source: "external",
+  changes: "notified",
   loader: ({ id }) => subagentActivityMemo.get(id),
   revalidate: ({ id }) => subagentActivityMemo.signature(id),
   // Watch the conversation's `subagents/` directories while a card is on

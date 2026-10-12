@@ -105,6 +105,29 @@ function collectedDirCandidates(
 
 // First positional string argument of a `defineCollectedDir("<dir>")` call.
 const FIRST_STRING_ARG_RE = /^\s*["']([^"']+)["']/;
+// The optional second argument, `{ membership: "<m>" }`, spelled literally —
+// anything else after the first argument throws (see `membershipOf`).
+const MEMBERSHIP_ARG_RE =
+  /^\s*,\s*\{\s*membership\s*:\s*["'](composition|checkout)["']\s*,?\s*\}\s*,?\s*$/;
+
+/**
+ * The membership the call's text declares. The marker is read by regex, so a
+ * second argument this cannot read literally (an identifier, a spread) would
+ * otherwise silently mean "composition" — it throws instead, naming the file.
+ */
+function membershipOf(
+  rel: string,
+  rest: string,
+): CollectedDirDef["membership"] {
+  if (rest.trim() === "" || rest.trim() === ",") return "composition";
+  const m = MEMBERSHIP_ARG_RE.exec(rest);
+  if (!m) {
+    throw new Error(
+      `${rel}: defineCollectedDir's second argument must be the literal \`{ membership: "composition" | "checkout" }\` — codegen reads the marker by its text. Got: ${rest.trim()}`,
+    );
+  }
+  return m[1] as CollectedDirDef["membership"];
+}
 
 const PLUGIN_FOLDER_SET: ReadonlySet<string> = new Set(PLUGIN_FOLDERS);
 const isPluginFolder = (name: string): name is PluginFolder =>
@@ -140,6 +163,7 @@ function collectedDirsFrom(
       }
       out.push({
         dir,
+        membership: membershipOf(rel, call.argsText.slice(arg[0].length)),
         _brand: "CollectedDirDef",
         ownerDir: join(pluginsRoot, pluginPath),
       });
@@ -659,6 +683,21 @@ export async function renderCollectedDirRegistry(opts: {
 
 // ── Public API ─────────────────────────────────────────────────────
 
+/**
+ * The plugin set `def`'s COMMITTED registry lists: the `singularity`
+ * composition's closure for a `composition` dir, every plugin the checkout
+ * declares for a `checkout` one (see `CollectedDirMembership`). The one answer
+ * the generator and `plugins-registry-in-sync` both render with.
+ */
+export function committedRegistryBundle(
+  ctx: RegistryGenContext,
+  def: DiscoveredCollectedDir,
+): Set<string> {
+  return def.membership === "checkout"
+    ? new Set([...ctx.tree.byDir.values()].map((n) => n.id))
+    : ctx.mainBundle;
+}
+
 export function collectedDirRegistryPath(def: DiscoveredCollectedDir): string {
   return join(def.ownerDir, "core", `${def.dir}.generated.ts`);
 }
@@ -675,13 +714,14 @@ export async function generatePluginRegistry(opts: {
   for (const def of defs) {
     await writeGenerated({
       file: collectedDirRegistryPath(def),
-      // The committed registries ARE the `singularity` composition's registries
-      // — `compositionRegistryFileName` says so, and this is where that is made
-      // true rather than merely asserted afterwards.
+      // The committed runtime registries ARE the `singularity` composition's
+      // registries — `compositionRegistryFileName` says so, and this is where
+      // that is made true rather than merely asserted afterwards. A `checkout`
+      // dir (source metadata, e.g. `exempt`) lists every plugin instead.
       content: await renderCollectedDirRegistry({
         ctx,
         def,
-        bundle: ctx.mainBundle,
+        bundle: committedRegistryBundle(ctx, def),
       }),
     });
   }

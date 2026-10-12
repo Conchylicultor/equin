@@ -78,13 +78,14 @@ moved (see `apps/prototypes/files`).
 
 ## Plugin reference
 
-- Description: defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry.
+- Description: defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope.
 - Cross-plugin:
   - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×6
-    - `infra` ×5
-    - `apps` ×3
+    - `infra` ×6
+    - `conversations` ×5
+    - `apps` ×2
     - `debug` ×2
+    - `build`
     - `config_v2`
     - `framework/cli/await`
     - `integrations/google-maps`
@@ -96,6 +97,9 @@ moved (see `apps/prototypes/files`).
     - `watcher-safety/no-direct-parcel-watcher` — `shared` (sanctioned)
 - Server:
   - Exports (types):
+    - `DirWatchRelease`
+    - `DirWatchRequest`
+    - `DirWatchScope`
     - `FileChangeEvent`
     - `FileWatcher`
     - `FileWatcherBatch`
@@ -107,12 +111,14 @@ moved (see `apps/prototypes/files`).
     - `ServerFileWatcherSpec`
     - `WatcherBackend`
   - Exports (values):
+    - `acquireDirWatch`
     - `BATCH_SAMPLE_MAX`
     - `defineFileWatcher`
     - `fileWatcherRecentRuns`
     - `listFileWatchers`
     - `onWatcherActivity`
     - `WRITES_WHILE_OPEN_MAX_ENTRIES`
+  - Register: `defineFileWatcher('file-watcher.dirs')`
 - Cli:
   - Exports (types):
     - `FileWatcher`

@@ -70,6 +70,7 @@ relative specifier inside this leaf would resolve against the wrong module.
 - Core:
   - Exports (types):
     - `CollectedDirDef`
+    - `CollectedDirMembership`
     - `CollectedEntry`
     - `LoadCollectedDirOptions`
   - Exports (values):

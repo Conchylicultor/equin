@@ -8,6 +8,7 @@ import {
   maskSource,
   matchBracket,
   lineAt,
+  parseBoolField,
   parseStringField,
   parseStaticCallId,
   unresolvableCallIdMessage,
@@ -19,7 +20,7 @@ import {
   mintsOf,
   type ResourceMembership,
 } from "@plugins/framework/plugins/tooling/plugins/resource-vocabulary/core";
-import type { ResourceDef, ResourceFacetData } from "../core";
+import type { ResourceChanges, ResourceDef, ResourceFacetData } from "../core";
 
 // A resource's identity (`key`), keyed-ness and bounded membership are declared
 // at a DESCRIPTOR FACTORY call — `liveValue("key", …)`, `liveCollection("key",
@@ -174,7 +175,8 @@ export function buildDescriptorIndex(
 /**
  * Whether a declaration's spec object (the first `{ … }` of its args — the key
  * is a string literal, masked, so its text can never open one) sets
- * `load: "on-demand"` at its own depth. THROWS on a non-literal `load:`: it
+ * `load: "on-demand"` (or `"snapshot"`), or `bytes: true` (always on demand),
+ * at its own depth. THROWS on a non-literal `load:`: it
  * decides what the docs say the resource is.
  */
 function declaresOnDemand(
@@ -184,6 +186,8 @@ function declaresOnDemand(
   const masked = maskSource(argsText);
   const body = objectBodyAt(argsText, masked, masked.indexOf("{"));
   if (body === null) return false;
+  // A bytes value is always on demand, whatever it says of `load`.
+  if (parseBoolField(body, "bytes", { depth0: true })) return true;
   const f = parseStringField(body, "load", { depth0: true });
   if (f.kind === "dynamic") {
     throw new Error(
@@ -192,7 +196,10 @@ function declaresOnDemand(
         "source text; write the literal at the declaration.",
     );
   }
-  return f.kind === "value" && f.value === "on-demand";
+  // `"snapshot"` is on-demand too (re-measured when a reader asks).
+  return (
+    f.kind === "value" && (f.value === "on-demand" || f.value === "snapshot")
+  );
 }
 
 /**
@@ -442,6 +449,8 @@ function servedValueDef(
   const source = literal(optsBody, "source");
   if (source === "db" || source === "external") def.source = source;
   const bodyMasked = maskSource(optsBody);
+  const changes = declaredChanges(optsBody, bodyMasked, where);
+  if (changes !== undefined) def.changes = changes;
   const unbounded = /\bunbounded\s*:\s*\{/g;
   let m: RegExpExecArray | null;
   while ((m = unbounded.exec(bodyMasked))) {
@@ -453,6 +462,47 @@ function servedValueDef(
     break;
   }
   return def;
+}
+
+const CHANGES_ARMS = ["immutable", "fixed", "snapshot"] as const;
+
+/**
+ * The options object's own `changes:` (depth 0 of its body): the literal
+ * `"notified"`, or the one key of an inline `{ immutable | fixed | snapshot:
+ * … }`. Undefined when absent (a db value). THROWS on anything else — an
+ * identifier, a spread, another key — because it decides what the docs say
+ * about the value's freshness.
+ */
+function declaredChanges(
+  optsBody: string,
+  bodyMasked: string,
+  where: { file: string; line: number },
+): ResourceChanges | undefined {
+  const re = /\bchanges\s*:\s*/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(bodyMasked))) {
+    if (depthAt(bodyMasked, m.index) !== 0) continue;
+    const at = m.index + m[0].length;
+    if (bodyMasked[at] === "{") {
+      const inner = objectBodyAt(optsBody, bodyMasked, at);
+      const arm =
+        inner === null
+          ? null
+          : /^\s*([A-Za-z_$][\w$]*)\s*:/.exec(maskSource(inner));
+      const name = arm?.[1];
+      const known = CHANGES_ARMS.find((a) => a === name);
+      if (known !== undefined) return known;
+    } else {
+      const f = parseStringField(optsBody, "changes", { depth0: true });
+      if (f.kind === "value" && f.value === "notified") return "notified";
+    }
+    throw new Error(
+      `${where.file}:${where.line}: serveValue(…) \`changes:\` is not one the docs ` +
+        'facet can read — write the literal `"notified"` or an inline ' +
+        "`{ immutable | fixed | snapshot: { reason } }` at the call site.",
+    );
+  }
+  return undefined;
 }
 
 /** The text strictly inside the `{ … }` opening at `open` (from the ORIGINAL), or null. */

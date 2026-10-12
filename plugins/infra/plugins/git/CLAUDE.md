@@ -11,8 +11,9 @@ Reach for:
 |---|---|
 | To be told when `refs/heads/main` or this worktree's own branch advances | `git-watcher` |
 | To skip an expensive git read while nothing it depends on has changed | `git-read-cache` |
+| To hear every change to one checkout (working tree + its git dir, wherever it lives) while a value is read | `checkout-watch` |
 
-The two are usually used together. The watcher hands you a SHA it already holds in
+`git-watcher` and `git-read-cache` are usually used together. The watcher hands you a SHA it already holds in
 memory, and that SHA is exactly the kind of cheap signature the memo wants — so the
 storm path becomes mostly memo hits doing no git work at all.
 
@@ -31,6 +32,7 @@ it is.
 
 - Description: Umbrella for the two plugins that answer 'has git state moved, and must I read it again?': the ref watcher that reports every advance, and the signature-keyed memo that skips a gated recompute when a cheap probe says nothing changed.
 - Sub-plugins:
+  - **`checkout-watch`** — The checkout watch hub: acquireCheckoutWatch(root, onChange) hears every change that can move a git checkout's state — its working tree and its git dir (HEAD, index, refs; a linked worktree's git…
   - **`git-read-cache`** — Git-state-keyed result memos: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree. createGitStateMemo takes signature/compute per call…
   - **`git-watcher`** — Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. On every advance it notifies the git-watcher.refHead live value, runs the registered in-process…
   - **`remotes`** — May this checkout publish, and where does it receive from? — the write-access probe (`git push --dry-run`, classified into denied / no-credentials / unreachable rather than one 'no'), its…

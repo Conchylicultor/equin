@@ -112,6 +112,7 @@ function resolveRedactedConfig(
 // together with the conflicts and tiers of the same tuple.
 export const configValuesServed = serveValue(configValues, {
   source: "external",
+  changes: "notified",
   loader: whenRegistryReady(({ path, scopeId }) => {
     const descriptor = descriptorByPath.get(path);
     if (!descriptor || !configGetter) {
@@ -327,6 +328,7 @@ function derivedDescriptorConflict(
 // change moves, so no writer can move one and forget the others.
 export const configConflictServed = serveValue(configConflict, {
   source: "external",
+  changes: "notified",
   loader: whenRegistryReady(({ path, scopeId }) =>
     derivedDescriptorConflict(path, scopeId),
   ),
@@ -338,6 +340,7 @@ export const configConflictServed = serveValue(configConflict, {
 // map is also the client's list of server-registered paths.
 export const configScopesServed = serveValue(configScopes, {
   source: "external",
+  changes: "notified",
   loader: whenRegistryReady((): ConfigV2ScopesMap =>
     Object.fromEntries(
       [...descriptorByPath.keys()].map((path) => [
@@ -416,6 +419,7 @@ export const configConflictLocationsServed = serveValue(
   configConflictLocations,
   {
     source: "external",
+    changes: "notified",
     loader: whenRegistryReady(() => {
       const out: ConfigV2ConflictMap = {};
       for (const storePath of descriptorByPath.keys()) {
@@ -486,6 +490,7 @@ function computeModifiedCount(storePath: string): number {
 // descriptors that actually have a user override do the diff.
 export const configModifiedCountsServed = serveValue(configModifiedCounts, {
   source: "external",
+  changes: "notified",
   loader: whenRegistryReady(() => {
     const out: ConfigV2ModifiedCounts = {};
     for (const storePath of descriptorByPath.keys()) {
@@ -650,6 +655,7 @@ function computeTiers(path: string, scopeId?: string): ConfigV2Tiers {
 // Notified in lock-step with the document, exactly like `configConflictServed`.
 export const configTiersServed = serveValue(configTiers, {
   source: "external",
+  changes: "notified",
   loader: whenRegistryReady(({ path, scopeId }) => computeTiers(path, scopeId)),
 });
 

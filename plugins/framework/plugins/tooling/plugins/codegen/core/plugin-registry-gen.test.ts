@@ -24,6 +24,7 @@ import {
   collectedDirNamedCompositionRegistryPath,
   compositionRegistryFileName,
   compositionRegistryPath,
+  committedRegistryBundle,
   discoverCollectedDirs,
   discoverCollectedDirsIn,
   listNamedCompositionRegistries,
@@ -94,6 +95,42 @@ test("discovery ignores commented/stringified markers but finds real calls", asy
   // Only the genuine call is discovered; the comment- and string-embedded
   // markers must not produce phantom collected dirs.
   expect(sortedDirs(await discoverCollectedDirsIn(repo))).toEqual(["check"]);
+});
+
+test("discovery reads a literal membership argument, and throws on one it cannot read", async () => {
+  const defs = await discoverCollectedDirsIn(
+    memRepo("/repo", {
+      [pj("a/core/index.ts")]: 'defineCollectedDir("check");',
+      [pj("b/core/index.ts")]:
+        'defineCollectedDir("exempt", {\n  membership: "checkout",\n});',
+      [pj("c/core/index.ts")]:
+        "defineCollectedDir('lint', { membership: 'composition' });",
+    }),
+  );
+  expect(
+    defs
+      .map((d) => [d.dir, d.membership])
+      .sort(([a], [b]) => a!.localeCompare(b!)),
+  ).toEqual([
+    ["check", "composition"],
+    ["exempt", "checkout"],
+    ["lint", "composition"],
+  ]);
+
+  // A second argument the regex reader cannot see through would otherwise
+  // silently mean "composition".
+  const refused = await discoverCollectedDirsIn(
+    memRepo("/repo", {
+      [pj("d/core/index.ts")]: 'defineCollectedDir("exempt", OPTS);',
+    }),
+  ).then(
+    () => null,
+    (err: unknown) => err,
+  );
+  expect(refused).toBeInstanceOf(Error);
+  expect((refused as Error).message).toContain(
+    "second argument must be the literal",
+  );
 });
 
 test("discovery reads only core files at a plugin position whose core has a barrel", async () => {
@@ -218,6 +255,7 @@ test("the snapshot front answers from a tree build's snapshot alone", () => {
 test("per-name registry path renders and round-trips through parse", () => {
   const def: DiscoveredCollectedDir = {
     dir: "web",
+    membership: "composition",
     _brand: "CollectedDirDef",
     ownerDir: "/repo/plugins/framework/plugins/web-sdk",
   };
@@ -251,6 +289,7 @@ test("per-name registry path renders and round-trips through parse", () => {
 test("the main composition resolves to the committed registry, every other to a filtered one", () => {
   const def: DiscoveredCollectedDir = {
     dir: "server",
+    membership: "composition",
     _brand: "CollectedDirDef",
     ownerDir: "/repo/plugins/framework/plugins/server-core",
   };
@@ -412,7 +451,12 @@ function bundleFixture(): {
   };
   return {
     ctx,
-    def: { dir: "web", _brand: "CollectedDirDef", ownerDir: pluginsRoot },
+    def: {
+      dir: "web",
+      membership: "composition",
+      _brand: "CollectedDirDef",
+      ownerDir: pluginsRoot,
+    },
   };
 }
 
@@ -430,6 +474,24 @@ test("a bundle carrying every id renders every entry, with its deps", async () =
   expect(rendered).toMatch(/id: "gamma".*dependsOn: \[\]/);
   // Exactly one emitted entry per plugin — no duplicates, nothing dropped.
   expect(rendered.match(/^ {2}\{ pluginPath:/gm)).toHaveLength(3);
+});
+
+test("the committed bundle is main's closure for a composition dir, every plugin for a checkout dir", () => {
+  const { ctx, def } = bundleFixture();
+  const narrowed: RegistryGenContext = {
+    ...ctx,
+    mainBundle: new Set([...ctx.mainBundle].filter((id) => id === "alpha")),
+  };
+  expect([...committedRegistryBundle(narrowed, def)]).toEqual(["alpha"]);
+  expect(
+    [
+      ...committedRegistryBundle(narrowed, {
+        ...def,
+        dir: "exempt",
+        membership: "checkout",
+      }),
+    ].sort(),
+  ).toEqual(["alpha", "beta", "gamma"]);
 });
 
 test("a bundle missing one id differs by exactly that entry, and prunes the dep on it", async () => {

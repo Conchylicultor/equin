@@ -64,6 +64,7 @@ const runs = new Map<string, DeployRun>();
 
 export const deployRunsServed = serveValue(deployRuns, {
   source: "external",
+  changes: "notified",
   loader: () => Object.fromEntries(runs),
 });
 

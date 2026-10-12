@@ -17,4 +17,12 @@ export default [
     reason:
       "A request/response server read (useEndpoint / useEndpointResource / TanStack useQuery family / fetchEndpoint in a queryFn) not yet moved onto a liveValue or liveCollection read with useLive.",
   },
+  {
+    rule: "live/no-endpoint-read",
+    paths: ["web/use-edit-theme.ts"],
+    kind: "debt",
+    task: "task-1791560308-woqgfi",
+    reason:
+      "A manual invalidateQueries / refetchQueries over an endpoint read's query key — refreshing a request/response read by hand — not yet replaced by a liveValue or liveCollection read with useLive.",
+  },
 ] satisfies Exemptions;

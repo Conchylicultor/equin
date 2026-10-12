@@ -1,1 +1,0 @@
-export { getBuildProfiling } from "./endpoints";

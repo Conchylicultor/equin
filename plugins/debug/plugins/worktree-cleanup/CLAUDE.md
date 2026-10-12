@@ -116,7 +116,9 @@ the panel until it is given something to say.
     - `POST /api/debug/worktrees/bulk-delete`
     - `DELETE /api/debug/worktrees/:id`
 - Exemptions:
-  - Exempts itself from: `endpoints:no-raw-json-handlers` — `server/internal/handle-delete.ts` (sanctioned)
+  - Exempts itself from:
+    - `endpoints:no-raw-json-handlers` — `server/internal/handle-delete.ts` (sanctioned)
+    - `live/no-endpoint-read` — `web/components/worktree-cleanup-panel.tsx` (debt)
 - Shared:
   - Exports (types): `BulkDeleteWorktreesBody`
   - Exports (values):

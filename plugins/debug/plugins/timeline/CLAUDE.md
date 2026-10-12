@@ -183,6 +183,8 @@ curl -s 'http://<wt>.localhost:9000/api/debug/timeline?fromMs=…&toMs=…'
     - `primitives/log-channels.readChannelJson`
   - Register: `mcpTool('get_timeline')`
   - Routes: `GET /api/debug/timeline`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-timeline-stream.ts` (debt)
 - Core:
   - Exports (types):
     - `TimelineEvent`

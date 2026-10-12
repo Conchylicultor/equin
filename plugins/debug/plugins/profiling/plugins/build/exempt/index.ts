@@ -3,10 +3,7 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "live/no-endpoint-read",
-    paths: [
-      "web/components/build-detail.tsx",
-      "web/components/build-section.tsx",
-    ],
+    paths: ["web/components/build-detail.tsx"],
     kind: "debt",
     task: "task-1791560308-woqgfi",
     reason:

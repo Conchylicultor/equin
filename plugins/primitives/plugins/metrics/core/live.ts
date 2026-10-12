@@ -28,6 +28,8 @@ export const metricQuery = liveValue("metrics.query", {
   schema: MetricResultSchema,
   query: MetricQuerySchema,
   load: "on-demand",
+  // An unknown id, split or param, a bad range (`MetricQueryError`).
+  refusals: ["invalid-query"],
 });
 
 /** A drill-down's page size: page 0 of a read with no `limit` of its own, and its step. */
@@ -53,4 +55,6 @@ export const metricDetails = liveValue("metrics.details", {
     maxLimit: DRILL_MAX,
     meta: DrillMetaSchema,
   },
+  // An unknown id, interval or split, a metric with no details (`MetricQueryError`).
+  refusals: ["invalid-query"],
 });

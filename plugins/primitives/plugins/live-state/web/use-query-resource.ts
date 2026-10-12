@@ -56,10 +56,10 @@ export interface ResourcePaging {
  * handles. A load-more that FAILS is the error arm, with what was already
  * held as `stale` — the items the user was looking at, never a spinner.
  */
-export type PagedResourceResult<Item> =
-  | Extract<ResourceResult<Item[]>, { status: "loading" }>
-  | Extract<ResourceResult<Item[]>, { status: "error" }>
-  | (Extract<ResourceResult<Item[]>, { status: "ready" }> & ResourcePaging);
+export type PagedResourceResult<Item, C extends string = string> =
+  | Extract<ResourceResult<Item[], C>, { status: "loading" }>
+  | Extract<ResourceResult<Item[], C>, { status: "error" }>
+  | (Extract<ResourceResult<Item[], C>, { status: "ready" }> & ResourcePaging);
 
 /** A local async load (a TanStack query) as a `ResourceResult`. */
 export function useQueryResource<

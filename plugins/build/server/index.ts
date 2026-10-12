@@ -13,6 +13,7 @@ import { buildRunDebouncedJob } from "./internal/build-run-debounced-job";
 import { compositionTickJob } from "./internal/composition-tick-job";
 import { reconcileDeployment } from "./internal/reconcile";
 import { buildHistoryServed } from "./internal/build-history-resource";
+import { buildRunTerminalWatcher } from "./internal/run-terminal";
 import { buildConfig } from "../shared";
 import {
   triggerBuildEndpoint,
@@ -21,6 +22,8 @@ import {
 import { BUILD_CATEGORY_ID } from "../core/task-category";
 import { IdKinds } from "@plugins/ids/server";
 import { buildRunIdKind } from "@plugins/build/plugins/run-ledger/core";
+
+export { onRunTerminal } from "./internal/run-terminal";
 
 export default {
   contributions: [
@@ -43,7 +46,13 @@ export default {
   // supervised-run kind — and both must be registered: the primitive's own
   // `onReady` reconciler loops the registered set of kinds, so a kind that never
   // lands here would start runs nothing ever closes.
-  register: [buildRunJob, buildRunDebouncedJob, compositionTickJob, buildJob],
+  register: [
+    buildRunJob,
+    buildRunDebouncedJob,
+    compositionTickJob,
+    buildJob,
+    buildRunTerminalWatcher,
+  ],
   onReady: async () => {
     // Unfinished `build_runs` rows are no longer reconciled here, and neither is
     // the boot re-adoption of a build that outlived the backend it restarted:

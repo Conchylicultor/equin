@@ -81,7 +81,7 @@ A push's review is not live: it reads `GET /api/review/plugin-changes` once.
     - `primitives/commit-list.runGit`
     - `tasks/tasks-core.getConversation`
     - `tasks/tasks-core.listPushesByPushId`
-  - Resources: `review.plugin-changes` (push)
+  - Resources: `review.plugin-changes` (push, notified)
   - Routes: `GET /api/review/plugin-changes`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
@@ -109,6 +109,10 @@ A push's review is not live: it reads `GET /api/review/plugin-changes` once.
     - `plugin-meta/facets/structure/render-diff`
     - `review/plugin-changes/api-changes`
     - `review/plugin-changes/file-changes`
+- Exemptions:
+  - Exempts itself from:
+    - `no-db-backed-notify` — `server/internal/plugin-changes-resource.ts` (debt)
+    - `live/no-endpoint-read` — `web/use-plugin-changes.ts` (debt)
 - Sub-plugins:
   - **`api-changes`** (excluded) — API surface diff section for per-plugin review cards.
   - **`file-changes`** (excluded) — File-level diff section for per-plugin review cards.

@@ -496,10 +496,10 @@ for the `checkpoints` plugin's end-of-turn job.
     - `readPrototypeTitle`
   - Register: `defineFileWatcher('prototypes-files.tree')`
   - Resources:
-    - `prototypes.history` (push)
-    - `prototypes.list` (push)
-    - `prototypes.picks` (push)
-    - `prototypes.statuses` (push)
+    - `prototypes.history` (push, notified)
+    - `prototypes.list` (push, notified)
+    - `prototypes.picks` (push, notified)
+    - `prototypes.statuses` (push, notified)
   - Routes:
     - `GET /api/prototypes`
     - `POST /api/prototypes`

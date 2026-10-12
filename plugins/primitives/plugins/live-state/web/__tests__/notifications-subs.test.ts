@@ -112,7 +112,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
   test("H4: observe/unobserve ×10 collapses to exactly one sub; one unsub after the keep-alive window", async () => {
     const { client, socket } = await setup();
     for (let i = 0; i < 10; i++) {
-      client.observe("k", {}, undefined, pushSchema);
+      client.observe("k", {}, undefined, { schema: pushSchema });
       client.unobserve("k", {});
       await flush();
     }
@@ -129,7 +129,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
 
   test("H4b: the keep-alive teardown fires only after the FULL window", async () => {
     const { client, socket } = await setup();
-    client.observe("k", {}, undefined, pushSchema);
+    client.observe("k", {}, undefined, { schema: pushSchema });
     client.unobserve("k", {});
     await flush();
 
@@ -225,7 +225,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
 
   test("delta-no-base → forced resub: cache untouched, etag cleared, a version-less full sub sent, recovery ack at the SAME version applies (BUG A)", async () => {
     const { client, socket, qc } = await setup();
-    client.observe("rk", {}, undefined, keyedSchema, keyOf);
+    client.observe("rk", {}, undefined, { schema: keyedSchema }, keyOf);
     await flush();
     // Stamp an etag on the sub with NO cached base (a sub whose value never
     // landed) so the recovery-clears-etag behavior is observable.
@@ -267,7 +267,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
 
   test("no vouched base: a scoped delta before this tab's sub-ack → forced resub, never a false partial list", async () => {
     const { client, socket, qc } = await setup();
-    client.observe("rk", {}, undefined, keyedSchema, keyOf);
+    client.observe("rk", {}, undefined, { schema: keyedSchema }, keyOf);
     await flush();
     // Nothing server-vouched yet: the tuple's query holds no value.
     const before = subFrames(socket, "rk").length;
@@ -306,7 +306,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
 
   test("delta-drift → forced resub: an order id resolvable from neither upserts nor base ⇒ cache unchanged, etag cleared, resub, recovery applies (BUG A)", async () => {
     const { client, socket, qc } = await setup();
-    client.observe("rk", {}, undefined, keyedSchema, keyOf);
+    client.observe("rk", {}, undefined, { schema: keyedSchema }, keyOf);
     await flush();
     // Seed a base + etag via a full sub-ack.
     socket.serverSend({
@@ -375,7 +375,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     socket.open();
     await flush();
 
-    client.observe("k", {}, undefined, pushSchema);
+    client.observe("k", {}, undefined, { schema: pushSchema });
     await flush();
     expect(subFrames(socket, "k")[0]!.tabId).toBe("tab-X");
 
@@ -409,7 +409,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     socket.open();
     await flush();
 
-    client.observe("k", {}, undefined, pushSchema);
+    client.observe("k", {}, undefined, { schema: pushSchema });
     await flush();
     const holder = subFrames(socket, "k")[0]!.tabId;
     expect(holder).toBeTypeOf("string");
@@ -428,7 +428,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     test("asked before the sub: the sub frame itself carries acks: true, no separate flip", async () => {
       const { client, socket } = await setup();
       const release = client.requestAcks("ak", { id: "1" });
-      client.observe("ak", { id: "1" }, undefined, pushSchema);
+      client.observe("ak", { id: "1" }, undefined, { schema: pushSchema });
       await flush();
       expect(subFrames(socket, "ak")[0]).toMatchObject({ acks: true });
       expect(subAcksFrames(socket)).toHaveLength(0);
@@ -445,7 +445,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
 
     test("OR across this tab's readers: one flip on at the first, one flip off after the last", async () => {
       const { client, socket } = await setup();
-      client.observe("ak", {}, undefined, pushSchema);
+      client.observe("ak", {}, undefined, { schema: pushSchema });
       await flush();
       expect("acks" in subFrames(socket, "ak")[0]!).toBe(false);
       const a = client.requestAcks("ak", {});
@@ -471,15 +471,15 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     test("a tuple's request never leaks onto another tuple's sub", async () => {
       const { client, socket } = await setup();
       client.requestAcks("ak", { id: "1" });
-      client.observe("ak", { id: "2" }, undefined, pushSchema);
+      client.observe("ak", { id: "2" }, undefined, { schema: pushSchema });
       await flush();
       expect("acks" in subFrames(socket, "ak")[0]!).toBe(false);
     });
 
     test("the reconnect replay restates the flag per entry", async () => {
       const { hub, client, socket } = await setup();
-      client.observe("ak", {}, undefined, pushSchema);
-      client.observe("plain", {}, undefined, pushSchema);
+      client.observe("ak", {}, undefined, { schema: pushSchema });
+      client.observe("plain", {}, undefined, { schema: pushSchema });
       client.requestAcks("ak", {});
       await flush();
       socket.serverClose();
@@ -499,7 +499,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
 
   test("version guard: a frame with version ≤ the applied version is dropped; a strictly-greater one applies", async () => {
     const { client, socket, qc } = await setup();
-    client.observe("k", {}, undefined, pushSchema);
+    client.observe("k", {}, undefined, { schema: pushSchema });
     await flush();
     socket.serverSend({
       kind: "sub-ack",
@@ -555,7 +555,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
   test("sub-error with params for a held sub → fetches exactly that query key", async () => {
     const { client, socket, qc } = await setup();
     const fetchQuery = vi.spyOn(qc, "prefetchQuery").mockResolvedValue();
-    client.observe("k", { id: "c1" }, undefined, pushSchema);
+    client.observe("k", { id: "c1" }, undefined, { schema: pushSchema });
     await flush();
 
     socket.serverSend({
@@ -598,7 +598,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
       const { client, socket, qc } = await setup();
       const fetchQuery = vi.spyOn(qc, "prefetchQuery").mockResolvedValue();
       const store = renderHook(() => useResourceContractMismatches());
-      client.observe("hist", { limit: "5" }, undefined, pushSchema);
+      client.observe("hist", { limit: "5" }, undefined, { schema: pushSchema });
       await flush();
       socket.serverSend({
         kind: "sub-error",
@@ -618,7 +618,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     test("a loader-failed sub-error is the server's own failure: the store stays empty", async () => {
       const { client, socket } = await setup();
       const store = renderHook(() => useResourceContractMismatches());
-      client.observe("k2", {}, undefined, pushSchema);
+      client.observe("k2", {}, undefined, { schema: pushSchema });
       await flush();
       socket.serverSend({
         kind: "sub-error",
@@ -635,7 +635,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
       vi.stubEnv("VITE_BUILD_GRAPH", "graph-x");
       try {
         const { client, socket, hub } = await setup();
-        client.observe("b1", {}, undefined, pushSchema);
+        client.observe("b1", {}, undefined, { schema: pushSchema });
         await flush();
         expect(subFrames(socket, "b1")[0]!.build).toBe("graph-x");
         // Reconnect → the replay is one sub-batch, which names the build too.
@@ -656,7 +656,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
   test("legacy params-less sub-error frame → dropped safely (no throw, no fetch)", async () => {
     const { client, socket, qc } = await setup();
     const fetchQuery = vi.spyOn(qc, "prefetchQuery");
-    client.observe("k", { id: "c1" }, undefined, pushSchema);
+    client.observe("k", { id: "c1" }, undefined, { schema: pushSchema });
     await flush();
     // A pre-upgrade server omits `params`; the client computes paramsKey({}) which
     // cannot match the non-empty-params sub → safe drop, never a throw.
@@ -678,7 +678,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
   describe("watermark registry adoption", () => {
     test("watermark-carrying frames populate the registry before the cache write; adoption is monotonic (BigInt, not string order)", async () => {
       const { socket, qc, client } = await setup();
-      client.observe("wm-a", {}, undefined, pushSchema);
+      client.observe("wm-a", {}, undefined, { schema: pushSchema });
       await flush();
 
       // sub-ack carries the floor.
@@ -733,7 +733,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
 
     test("a watermark-less scoped delta applies but leaves the stored floor untouched; a FULL delta's watermark adopts", async () => {
       const { socket, qc, client } = await setup();
-      client.observe("wm-k", {}, undefined, keyedSchema, keyOf);
+      client.observe("wm-k", {}, undefined, { schema: keyedSchema }, keyOf);
       await flush();
       socket.serverSend({
         kind: "sub-ack",
@@ -781,7 +781,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
 
     test("a version-guard-dropped frame does NOT adopt its watermark", async () => {
       const { socket, qc, client } = await setup();
-      client.observe("wm-d", {}, undefined, pushSchema);
+      client.observe("wm-d", {}, undefined, { schema: pushSchema });
       await flush();
       socket.serverSend({
         kind: "sub-ack",
@@ -811,7 +811,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
 
     test("a standalone ack frame is gated on the local sub; noted with NO version adoption and NO cache write", async () => {
       const { socket, qc, client } = await setup();
-      client.observe("ack-a", {}, undefined, pushSchema);
+      client.observe("ack-a", {}, undefined, { schema: pushSchema });
       await flush();
 
       // Version-less standalone ack for a held sub: acks noted, nothing else —
@@ -844,7 +844,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
 
     test("delta acks are noted BEFORE setQueryData — a QueryCache listener reads them synchronously", async () => {
       const { socket, qc, client } = await setup();
-      client.observe("ack-k", {}, undefined, keyedSchema, keyOf);
+      client.observe("ack-k", {}, undefined, { schema: keyedSchema }, keyOf);
       await flush();
       socket.serverSend({
         kind: "sub-ack",
@@ -891,7 +891,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
 
     test("a delta that dead-ends in a forced resub (no base) does NOT note its acks", async () => {
       const { socket, qc, client } = await setup();
-      client.observe("ack-nb", {}, undefined, keyedSchema, keyOf);
+      client.observe("ack-nb", {}, undefined, { schema: keyedSchema }, keyOf);
       await flush();
 
       // FULL delta with ackTx but no cached base: the client resubs and must
@@ -915,7 +915,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
 
     test("a delta that cannot apply (no base → forced resub) does NOT adopt its watermark", async () => {
       const { socket, qc, client } = await setup();
-      client.observe("wm-nb", {}, undefined, keyedSchema, keyOf);
+      client.observe("wm-nb", {}, undefined, { schema: keyedSchema }, keyOf);
       await flush();
 
       // FULL delta with a watermark but no cached base: the client resubs and

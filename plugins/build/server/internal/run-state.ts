@@ -16,6 +16,7 @@ import {
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { deploymentServed } from "@plugins/build/plugins/deployment/server";
 import { reconcileDeployment } from "./reconcile";
+import { announceRunTerminal } from "./run-terminal";
 import {
   buildRunIdKind,
   type BuildRunId,
@@ -152,6 +153,12 @@ export async function closeBuildRow(
         isNull(_buildRuns.finishedAt),
       ),
     );
+  // The close rule decided this run ENDED (its marker, or an empty process
+  // group after a hard kill), so nothing is left to write any artifact of it —
+  // the `onRunTerminal` edge for this backend. Usually a repeat of the marker
+  // watcher's announcement; the one it alone reaches is the hard kill, which
+  // leaves no marker to watch.
+  announceRunTerminal(buildId);
 }
 
 /**
@@ -226,6 +233,10 @@ export async function onBuildEnded(buildId: string): Promise<void> {
   // No row means the ledger no longer has this build — a hand-deleted row, or a
   // retention sweep. Nothing to describe; the reconcile below still runs.
   if (row !== undefined) await notifyBuildFinished(buildId, row);
+
+  // The workflow's own observation that the run ended — the `onRunTerminal`
+  // edge for a hard-killed run no reconciler in this process was tracking.
+  announceRunTerminal(buildId);
 
   // The dist has been republished and the ledger row is closed, so the
   // deployment description has changed on both axes it can change on.

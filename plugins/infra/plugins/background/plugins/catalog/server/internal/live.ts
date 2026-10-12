@@ -15,6 +15,7 @@ import { BackgroundTriggerSource, annotateTrigger } from "./trigger-source";
  */
 export const backgroundCatalogServed = serveValue(backgroundCatalog, {
   source: "external",
+  changes: "notified",
   loader: () => {
     const sources = BackgroundTriggerSource.getContributions();
     return loadCatalog((e) => annotateTrigger(e, sources));
@@ -25,6 +26,7 @@ export const backgroundCatalogServed = serveValue(backgroundCatalog, {
 /** One entry's recent runs, pushed on its provider's change signal. */
 export const backgroundRecentRunsServed = serveValue(backgroundRecentRuns, {
   source: "external",
+  changes: "notified",
   loader: loadRecentRuns,
   throttleMs: RECENT_RUNS_THROTTLE_MS,
 });

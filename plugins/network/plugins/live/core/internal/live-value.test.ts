@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
-import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
+import {
+  ResourceContractError,
+  ResourceRefusal,
+} from "@plugins/packages/plugins/resource-protocol/core";
 import { liveValue } from "./live-value";
 
 const S = z.object({ n: z.number() });
@@ -297,6 +300,67 @@ describe("liveValue", () => {
           params: { n: z.number() },
         });
       expect(typeof typeOnly).toBe("function");
+    });
+  });
+
+  describe("refusals", () => {
+    test("a zod enum or a const list: the descriptor lists the codes, and refuse() mints the refusal", () => {
+      const viaEnum = liveValue("test.live-value.refusals-enum", {
+        schema: S,
+        params: ["path"],
+        refusals: z.enum(["missing", "denied"]),
+      });
+      expect(viaEnum.refusals).toEqual(["missing", "denied"]);
+      const viaList = liveValue("test.live-value.refusals-list", {
+        schema: S,
+        refusals: ["missing", "too-large"],
+      });
+      expect(viaList.refusals).toEqual(["missing", "too-large"]);
+      const err = viaList.refuse("too-large", "over 5 MB");
+      expect(err).toBeInstanceOf(ResourceRefusal);
+      expect(err.code).toBe("too-large");
+      expect(err.message).toBe("over 5 MB");
+    });
+
+    test("every form takes them — a typed-query and a paged value too", () => {
+      const q = liveValue("test.live-value.refusals-query", {
+        schema: S,
+        query: z.object({ id: z.string() }),
+        refusals: ["missing"],
+      });
+      expect(q.refusals).toEqual(["missing"]);
+      const paged = liveValue("test.live-value.refusals-paged", {
+        query: z.object({ id: z.string() }),
+        paged: { item: z.object({ id: z.string() }), id: "id", limit: 10 },
+        refusals: ["missing"],
+      });
+      expect(paged.refusals).toEqual(["missing"]);
+    });
+
+    test("none declared: no codes and no refuse", () => {
+      const v = liveValue("test.live-value.refusals-none", { schema: S });
+      expect(v.refusals).toBeUndefined();
+      expect(v.refuse).toBeUndefined();
+    });
+
+    test("refused at declaration: an empty list, an empty code, a duplicate", () => {
+      for (const refusals of [[], [""], ["a", "a"]]) {
+        expect(() =>
+          liveValue("test.live-value.refusals-bad", {
+            schema: S,
+            refusals: refusals as unknown as readonly [string, ...string[]],
+          }),
+        ).toThrow(/refusals/);
+      }
+    });
+
+    test("refuse() refuses an undeclared code for an untyped caller", () => {
+      const v = liveValue("test.live-value.refusals-untyped", {
+        schema: S,
+        refusals: ["missing"],
+      });
+      const refuse = v.refuse as (code: string, message: string) => unknown;
+      expect(() => refuse("gone", "x")).toThrow(/not a declared refusal/);
     });
   });
 });

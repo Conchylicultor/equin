@@ -89,8 +89,8 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
     - `BackgroundTriggerSource`
     - `defineBackgroundKind`
   - Resources:
-    - `background.catalog` (push)
-    - `background.recent-runs` (push)
+    - `background.catalog` (push, notified)
+    - `background.recent-runs` (push, notified)
   - Routes: `POST /api/background/run-now`
 - Central:
   - Uses: `network/live.serveValue`
@@ -99,8 +99,8 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
     - `BackgroundKindSpec`
   - Exports (values): `defineBackgroundKind`
   - Resources:
-    - `background.central-catalog` (push)
-    - `background.central-recent-runs` (push)
+    - `background.central-catalog` (push, notified)
+    - `background.central-recent-runs` (push, notified)
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`

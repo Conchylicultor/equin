@@ -67,6 +67,17 @@ export interface ResourceDescriptor<
    */
   load?: "on-demand";
   /**
+   * A BYTES resource (a `liveValue` declared `bytes: true`): its value is an
+   * `ArrayBuffer`, read over HTTP as `application/octet-stream` — the body is
+   * the value, and the version / epoch / watermark the JSON envelope carries
+   * ride response headers instead (`resource-protocol`'s
+   * `RESOURCE_BYTES_HEADERS`). Always `load: "on-demand"`: a value never rides
+   * the socket, and its sub-ack carries none — the client answers it by
+   * reading over HTTP. Declared here, once, so the server's response and the
+   * client's read cannot disagree. Absent ⇒ a JSON value.
+   */
+  bytes?: true;
+  /**
    * The param names that may be absent (a `liveValue`'s `"scopeId?"`). An
    * optional param is present iff it is a non-empty string: `canonicalParams`
    * drops an `undefined` or `""` one, wherever params enter the substrate, so
@@ -74,6 +85,16 @@ export interface ResourceDescriptor<
    * one tuple. Absent ⇒ every declared param is required.
    */
   optionalParams?: readonly string[];
+  /**
+   * The codes the server may refuse a read with (`ResourceRefusal.code`,
+   * `@plugins/packages/plugins/resource-protocol/core`) — a `liveValue`'s
+   * `refusals`. One declaration both ends read: the runtime turns a refusal
+   * with any other code into a server failure, and the client reads a refused
+   * answer whose code is not here as a contract mismatch (this tab's bundle
+   * does not know the code), so a read's `refused` error only ever carries a
+   * declared code. Absent ⇒ none: the read is never refused.
+   */
+  refusals?: readonly string[];
   /**
    * Default params tuple boot paths use when a caller names none — e.g. a
    * `liveCollection`'s window (its window descriptor sets it to the encoded

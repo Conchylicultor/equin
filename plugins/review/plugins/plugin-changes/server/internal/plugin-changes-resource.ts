@@ -49,6 +49,7 @@ async function computeWorktreePluginChanges(
 //   refName (same reasoning as commits-graph).
 export const pluginChangesServed = serveValue(pluginChanges, {
   source: "external",
+  changes: "notified",
   loader: ({ conversationId }) => computeWorktreePluginChanges(conversationId),
   // Coalesce rapid-fire git changes (frequent agent commits): at most one
   // recompute per 3 s window — a trailing window a later change does not

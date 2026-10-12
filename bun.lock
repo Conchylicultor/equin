@@ -2274,10 +2274,6 @@
       "name": "@singularity/plugin-debug-profiling-runtime",
       "version": "0.0.1",
     },
-    "plugins/debug/plugins/profiling/plugins/stats": {
-      "name": "@singularity/plugin-debug-profiling-stats",
-      "version": "0.0.1",
-    },
     "plugins/debug/plugins/queue": {
       "name": "@singularity/plugin-debug-queue",
       "version": "0.0.1",
@@ -3476,6 +3472,10 @@
       "name": "@singularity/plugin-infra-git",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/git/plugins/checkout-watch": {
+      "name": "@singularity/plugin-infra-git-checkout-watch",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/git/plugins/git-read-cache": {
       "name": "@singularity/plugin-infra-git-git-read-cache",
       "version": "0.0.1",
@@ -3788,6 +3788,10 @@
     },
     "plugins/packages/plugins/macrotask-yield": {
       "name": "@singularity/plugin-packages-macrotask-yield",
+      "version": "0.0.1",
+    },
+    "plugins/packages/plugins/refcount-hub": {
+      "name": "@singularity/plugin-packages-refcount-hub",
       "version": "0.0.1",
     },
     "plugins/packages/plugins/resource-protocol": {
@@ -7575,8 +7579,6 @@
 
     "@singularity/plugin-debug-profiling-runtime": ["@singularity/plugin-debug-profiling-runtime@workspace:plugins/debug/plugins/profiling/plugins/runtime"],
 
-    "@singularity/plugin-debug-profiling-stats": ["@singularity/plugin-debug-profiling-stats@workspace:plugins/debug/plugins/profiling/plugins/stats"],
-
     "@singularity/plugin-debug-queue": ["@singularity/plugin-debug-queue@workspace:plugins/debug/plugins/queue"],
 
     "@singularity/plugin-debug-queue-health": ["@singularity/plugin-debug-queue-health@workspace:plugins/debug/plugins/queue-health"],
@@ -8149,6 +8151,8 @@
 
     "@singularity/plugin-infra-git": ["@singularity/plugin-infra-git@workspace:plugins/infra/plugins/git"],
 
+    "@singularity/plugin-infra-git-checkout-watch": ["@singularity/plugin-infra-git-checkout-watch@workspace:plugins/infra/plugins/git/plugins/checkout-watch"],
+
     "@singularity/plugin-infra-git-git-read-cache": ["@singularity/plugin-infra-git-git-read-cache@workspace:plugins/infra/plugins/git/plugins/git-read-cache"],
 
     "@singularity/plugin-infra-git-git-watcher": ["@singularity/plugin-infra-git-git-watcher@workspace:plugins/infra/plugins/git/plugins/git-watcher"],
@@ -8294,6 +8298,8 @@
     "@singularity/plugin-packages-inflight": ["@singularity/plugin-packages-inflight@workspace:plugins/packages/plugins/inflight"],
 
     "@singularity/plugin-packages-macrotask-yield": ["@singularity/plugin-packages-macrotask-yield@workspace:plugins/packages/plugins/macrotask-yield"],
+
+    "@singularity/plugin-packages-refcount-hub": ["@singularity/plugin-packages-refcount-hub@workspace:plugins/packages/plugins/refcount-hub"],
 
     "@singularity/plugin-packages-resource-protocol": ["@singularity/plugin-packages-resource-protocol@workspace:plugins/packages/plugins/resource-protocol"],
 

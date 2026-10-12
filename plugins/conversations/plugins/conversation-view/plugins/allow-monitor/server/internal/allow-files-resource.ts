@@ -1,29 +1,13 @@
-import { basename, dirname, join } from "path";
+import { basename, join } from "path";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
-  defineFileWatcher,
-  type FileWatcher,
+  acquireDirWatch,
+  type DirWatchRelease,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { BYPASS_TOKENS } from "@plugins/framework/plugins/tooling/plugins/guards/core";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { allowFiles, type AllowFiles } from "../../shared";
-
-// Subtrees whose churn can never be a bypass file (those sit at the worktree
-// root), kept out of the watch so a build or install does not wake it.
-const IGNORE = [
-  "**/.git/**",
-  "**/node_modules/**",
-  "**/dist/**",
-  "**/build/**",
-];
-
-export const allowFilesWatcher = defineFileWatcher({
-  name: "conversation-view.allow-files",
-  description:
-    "Watches an open conversation's worktree and refreshes its bypass-permission indicator when an allow file appears or disappears at the worktree root.",
-  ignore: IGNORE,
-});
 
 async function loadAllowFiles(conversationId: string): Promise<AllowFiles> {
   const conversation = await getConversation(conversationId);
@@ -38,45 +22,46 @@ async function loadAllowFiles(conversationId: string): Promise<AllowFiles> {
   return { allowFiles: present.filter((name) => name !== null) };
 }
 
+// The bypass files sit at the worktree root, so a children-scope watch of it
+// is all this needs. It goes through the shared dir hub, so it rides the
+// checkout watch edited-files / git-status already hold on the same worktree
+// rather than opening a second native watch over it.
 async function watchAllowFiles(
   conversationId: string,
   notify: () => void,
-): Promise<FileWatcher | null> {
+): Promise<DirWatchRelease | null> {
   const conversation = await getConversation(conversationId);
   const worktreePath = conversation?.worktreePath;
   if (!worktreePath) return null;
-  const watcher = await allowFilesWatcher.start({
-    dirs: [worktreePath],
-    label: conversationId,
+  const release = await acquireDirWatch({
+    dir: worktreePath,
+    scope: "children",
     onChange: (events) => {
-      const touched = events.some(
-        (e) =>
-          dirname(e.path) === worktreePath &&
-          BYPASS_TOKENS.includes(basename(e.path)),
-      );
-      if (touched) notify();
+      if (events.some((e) => BYPASS_TOKENS.includes(basename(e.path))))
+        notify();
     },
   });
   // A file created between the first load and the watch starting produced no
   // event; one re-read closes that gap.
   notify();
-  return watcher;
+  return release;
 }
 
 export const allowFilesServed = serveValue(allowFiles, {
   source: "external",
+  changes: "notified",
   loader: ({ id }) => loadAllowFiles(id),
-  // One watcher per watched conversation, for as long as it has a subscriber.
-  // The start stays SYNC: an async start is awaited on the subscribe path, so
-  // it would hold the sub-ack behind the watch opening on the worktree root.
-  // The watcher is instead held as a promise (`start()` is async), and
-  // the stop chains on it — the last subscriber can leave before it resolves.
+  // One hub watch per watched conversation, for as long as it has a
+  // subscriber. The start stays SYNC: an async start is awaited on the
+  // subscribe path, so it would hold the sub-ack behind the watch opening on
+  // the worktree root. The watch is instead held as a promise, and the release
+  // chains on it — the last subscriber can leave before it resolves.
   whileSubscribed: ({ id }, notify) => {
-    const watcher = watchAllowFiles(id, notify);
+    const watch = watchAllowFiles(id, notify);
     return () => {
       void runTracked("allow-files:unwatch", async () => {
-        const w = await watcher;
-        await w?.stop();
+        const release = await watch;
+        release?.();
       });
     };
   },

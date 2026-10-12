@@ -9,6 +9,7 @@ let changes = 0;
 /** The tick non-DB sources bump; nothing but {@link savedIconSpritesServed} reads it. */
 export const savedIconsChangedServed = serveValue(savedIconsChanged, {
   source: "external",
+  changes: "notified",
   loader: () => changes,
 });
 

@@ -243,6 +243,7 @@ describe("a refused question", () => {
     expect(res.status).toBe(422);
     expect(await res.json()).toEqual({
       reason: "refused",
+      code: "invalid-query",
       detail: 'unknown metric "fake.nope"',
     });
     expect(reported).toEqual([]);

@@ -97,7 +97,7 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
     - `onClaudeCodeProbed`
     - `onClaudeCodeReady`
     - `requireClaudeBin`
-  - Resources: `claude-code-status` (push)
+  - Resources: `claude-code-status` (push, notified)
   - Routes: `POST /api/claude-code/recheck`
 - Core:
   - Uses:

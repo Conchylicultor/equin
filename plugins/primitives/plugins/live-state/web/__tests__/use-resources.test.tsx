@@ -225,6 +225,83 @@ describe("useResources", () => {
     expect(pendingMountSnapshot().pending - before).toBe(1);
   });
 
+  it("a kept tuple's data keeps its identity across a reorder, a grow and a shrink", async () => {
+    const d = descriptor();
+    const client = makeClient();
+    client.setQueryData(queryKeyFor(d.key, tuple("a")), [1]);
+    client.setQueryData(queryKeyFor(d.key, tuple("b")), [2]);
+    const { result, rerender } = renderHook(
+      ({ list }: { list: { n: string }[] }) => useResources(d, list),
+      {
+        wrapper: wrapperFor(client),
+        initialProps: { list: [tuple("a"), tuple("b")] },
+      },
+    );
+    spyNotifications();
+    const dataOf = (i: number) => {
+      const r = result.current[i]!;
+      return r.status === "ready" ? r.data : undefined;
+    };
+    await waitFor(() => expect(dataOf(1)).toEqual([2]));
+    const a = dataOf(0);
+    const b = dataOf(1);
+    // Reorder: positional sharing would merge a's data into b's slot.
+    rerender({ list: [tuple("b"), tuple("a")] });
+    expect(dataOf(0)).toBe(b);
+    expect(dataOf(1)).toBe(a);
+    // Grow before them, then shrink: still the cache's own objects.
+    rerender({ list: [tuple("c"), tuple("b"), tuple("a")] });
+    expect(result.current[0]!.status).toBe("loading");
+    expect(dataOf(1)).toBe(b);
+    expect(dataOf(2)).toBe(a);
+    rerender({ list: [tuple("a")] });
+    expect(dataOf(0)).toBe(a);
+  });
+
+  it("an unchanged tuple keeps its result object when another tuple changes", async () => {
+    const d = descriptor();
+    const client = makeClient();
+    client.setQueryData(queryKeyFor(d.key, tuple("a")), [1]);
+    client.setQueryData(queryKeyFor(d.key, tuple("b")), [2]);
+    const { result } = renderHook(
+      () => useResources(d, [tuple("a"), tuple("b")]),
+      { wrapper: wrapperFor(client) },
+    );
+    spyNotifications();
+    await waitFor(() => expect(result.current[1]!.status).toBe("ready"));
+    const a = result.current[0]!;
+    const b = result.current[1]!;
+    act(() => {
+      client.setQueryData(queryKeyFor(d.key, tuple("b")), [3]);
+    });
+    await waitFor(() => {
+      const r = result.current[1]!;
+      expect(r.status === "ready" ? r.data : undefined).toEqual([3]);
+    });
+    // a did not move: the same result, so the same `refetch`.
+    expect(result.current[0]).toBe(a);
+    expect(result.current[1]).not.toBe(b);
+  });
+
+  it("refetch starts a new read even while one is in flight", async () => {
+    const d = descriptor();
+    const client = makeClient();
+    client.setQueryData(queryKeyFor(d.key, tuple("a")), [1]);
+    const { result } = renderHook(() => useResources(d, [tuple("a")]), {
+      wrapper: wrapperFor(client),
+    });
+    const { notifications } = spyNotifications();
+    await waitFor(() => expect(result.current[0]!.status).toBe("ready"));
+    let reads = 0;
+    vi.spyOn(notifications, "fetchOverHttp").mockImplementation(() => {
+      reads++;
+      return new Promise(() => {});
+    });
+    void result.current[0]!.refetch();
+    void result.current[0]!.refetch();
+    await waitFor(() => expect(reads).toBe(2));
+  });
+
   it("reports each tuple's mount→settle once, when its own value lands", async () => {
     const d = descriptor();
     const reports: SlowResourceInfo[] = [];

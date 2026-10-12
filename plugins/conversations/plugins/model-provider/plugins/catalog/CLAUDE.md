@@ -38,7 +38,7 @@ The host-global model catalog — which model versions this machine knows, which
   - Register:
     - `defineJob('models.discover')`
     - `defineFileWatcher('model-provider.catalog')`
-  - Resources: `model-provider.catalog` (push)
+  - Resources: `model-provider.catalog` (push, notified)
 - Cross-plugin:
   - Imported by:
     - `conversations`

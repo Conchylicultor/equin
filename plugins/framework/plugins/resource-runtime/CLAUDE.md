@@ -884,15 +884,41 @@ after a deploy, a tab still running the previous bundle. Only the flat
 
 ## Refusals — `ResourceRefusal`
 
-A loader throws `ResourceRefusal` (`packages/resource-protocol`) for an
-EXPECTED, caller-caused refusal: well-formed params, a question that cannot be
-answered as asked (an unknown metric id, an empty interval). It is not a server
-failure: `reportLoaderError` only logs it (`console.info`, never
-`opts.reportError`), the sub-ack read sends `sub-error reason:"refused"` with
-the refusal's `message`, and the HTTP read answers 422 `{ reason: "refused",
-detail }`. The client surfaces the message as the read's error (kind
-`refused`), so `ResourceErrorInline` shows it. Any other loader throw is
-unchanged: `loader-failed`, reported. Pinned by `runtime-refusal.test.ts`.
+A loader throws `ResourceRefusal(code, message)` (`packages/resource-protocol`)
+for an EXPECTED, caller-caused refusal: well-formed params, a question that
+cannot be answered as asked (a missing file, an unknown metric id, an empty
+interval). `code` must be one the resource declares — `refusals` on the
+contract (a `liveValue`'s `refusals`), threaded onto the entry like
+`optionalParams`. It is not a server failure: `reportLoaderError` only logs it
+(`console.info`, never `opts.reportError`), the sub-ack read sends `sub-error
+reason:"refused"` with the refusal's `code` and `message`, and the HTTP read
+answers 422 `{ reason: "refused", code, detail }`. The client surfaces it as
+the read's error (kind `refused`, its `code` typed by the declaration), so
+`ResourceErrorInline` shows the message. A refusal whose code the resource does
+not declare is a server bug: `timedLoad`'s `declaredLoad` turns it into a plain
+`Error` (the refusal as `cause`) — `loader-failed`, reported — so only a
+declared code ever reaches the wire. Any other loader throw is unchanged:
+`loader-failed`, reported. Pinned by `runtime-refusal.test.ts`.
+
+## Bytes resources — `bytes: true`
+
+A contract may declare `bytes: true` (a `liveValue`'s `bytes`, threaded onto
+the entry like `refusals`): its value is an `ArrayBuffer` (the schema checks
+it) and never rides a JSON frame. So, for such an entry:
+
+- **HTTP** answers `application/octet-stream`, the body the value itself; the
+  envelope a JSON body carries (`version`, `epoch`, `watermark`) moves to
+  response headers (`resource-protocol`'s `resourceBytesHeaders`), read back
+  by the client's `fetchOverHttp` for the same guards. ETag, the 304 and
+  `no-store` are unchanged.
+- **WS** — the sub-ack carries no value, no etag and no watermark (each
+  describes a value it does not carry) and runs no loader; it still reports
+  the tuple's version and the boot epoch. The client answers it with the HTTP
+  read. A notify sends `invalidate` frames only.
+- **Mode `invalidate` only** — `buildEntry` throws otherwise (a push would
+  serialize the buffer as `{}`).
+
+Pinned by `runtime-bytes.test.ts`.
 
 ## Profiling seams (all optional; central binds none)
 
@@ -1012,6 +1038,7 @@ and those plugins' `CLAUDE.md`.
     - `packages/resource-protocol.BUILD_GRAPH_HEADER`
     - `packages/resource-protocol.contractVerdict`
     - `packages/resource-protocol.ContractVerdict`
+    - `packages/resource-protocol.resourceBytesHeaders`
     - `packages/resource-protocol.ResourceContractError`
     - `packages/resource-protocol.ResourceHttpErrorBody`
     - `packages/resource-protocol.ResourceRefusal`

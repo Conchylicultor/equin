@@ -46,6 +46,7 @@ const observer = createCandidateObserver({
 
 export const releaseCandidateServed = serveValue(releaseCandidate, {
   source: "external",
+  changes: "notified",
   recomputeOn: [refHeadServed],
   loader: (pair) => observer.get(pair),
   revalidate: (pair) => observer.signature(pair),

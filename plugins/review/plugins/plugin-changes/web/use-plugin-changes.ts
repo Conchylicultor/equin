@@ -1,4 +1,3 @@
-// eslint-disable-next-line live/no-endpoint-read -- debt: task-1791560308-woqgfi (plugin excluded from the composition, so exempt/ manifests are not loaded)
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
