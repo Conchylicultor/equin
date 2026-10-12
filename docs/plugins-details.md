@@ -4401,13 +4401,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `ui/icons.Icon`
-        - **`shell`** — The Places app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the map's index pane is shown.
+        - **`shell`** — The Places app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the map's index pane is shown, and the app's own light-only theme, which the places app selects.
           - Web:
-            - Contributes: `Apps.App` "Places" → `PlacesLayout`
+            - Contributes:
+              - `Apps.App` "Places" → `PlacesLayout`
+              - `ThemeEngine.Theme` "Places"
             - Uses:
               - `apps-core.Apps`
               - `layouts/full-pane.FullPane`
               - `primitives/app-shell.AppShellLayout`
+              - `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `placesApp`
@@ -38732,9 +38735,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.SubTheme`
           - `ThemeEngine.FixedTheme`
           - `ThemeEngine.ThemeSource`
-        - Slot contributors: 36 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Slot contributors: 37 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ThemeEngine.TokenGroup` ×16
-          - `ThemeEngine.Theme` ×7
+          - `ThemeEngine.Theme` ×8
           - `ThemeEngine.VariantGroup` ×7
           - `ThemeEngine.SubTheme` ×3
           - `ThemeEngine.ThemeSource` ×2
@@ -38825,6 +38828,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineTheme`
           - `defineTokenGroup`
           - `isBuiltInThemeId`
+          - `lightOnly`
           - `mergeGroupValues`
           - `NEUTRAL_COLOR_ADJUSTMENT`
           - `resolveFixedTheme`
@@ -38835,9 +38839,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TokenGroupFragmentsSchema`
           - `tokenGroupMatchesSearch`
       - Cross-plugin:
-        - Imported by: 37 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Imported by: 38 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui` ×26
-          - `apps` ×8
+          - `apps` ×9
           - `apps-core` ×2
           - `reports/theme-resolution`
       - Plugins:

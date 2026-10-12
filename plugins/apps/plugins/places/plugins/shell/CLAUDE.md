@@ -4,13 +4,16 @@
 
 ## Plugin reference
 
-- Description: The Places app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the map's index pane is shown.
+- Description: The Places app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the map's index pane is shown, and the app's own light-only theme, which the places app selects.
 - Web:
-  - Contributes: `Apps.App` "Places" → `PlacesLayout`
+  - Contributes:
+    - `Apps.App` "Places" → `PlacesLayout`
+    - `ThemeEngine.Theme` "Places"
   - Uses:
     - `apps-core.Apps`
     - `layouts/full-pane.FullPane`
     - `primitives/app-shell.AppShellLayout`
+    - `ui/theme-engine.ThemeEngine`
 - Core:
   - Uses: `primitives/pane.defineApp`
   - Exports (values): `placesApp`

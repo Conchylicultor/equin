@@ -154,9 +154,9 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `ThemeEngine.SubTheme`
     - `ThemeEngine.FixedTheme`
     - `ThemeEngine.ThemeSource`
-  - Slot contributors: 36 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 37 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `ThemeEngine.TokenGroup` ×16
-    - `ThemeEngine.Theme` ×7
+    - `ThemeEngine.Theme` ×8
     - `ThemeEngine.VariantGroup` ×7
     - `ThemeEngine.SubTheme` ×3
     - `ThemeEngine.ThemeSource` ×2
@@ -247,6 +247,7 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `defineTheme`
     - `defineTokenGroup`
     - `isBuiltInThemeId`
+    - `lightOnly`
     - `mergeGroupValues`
     - `NEUTRAL_COLOR_ADJUSTMENT`
     - `resolveFixedTheme`
@@ -257,9 +258,9 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `TokenGroupFragmentsSchema`
     - `tokenGroupMatchesSearch`
 - Cross-plugin:
-  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui` ×26
-    - `apps` ×8
+    - `apps` ×9
     - `apps-core` ×2
     - `reports/theme-resolution`
 - Sub-plugins:

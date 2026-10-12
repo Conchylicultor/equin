@@ -1,0 +1,14 @@
+// @hash 229102bb7c88
+{
+  // Places paints its own theme, `places`, contributed by the Places shell
+  // (`plugins/apps/plugins/places/plugins/shell/web/internal/theme.ts`) — never
+  // the desktop's runtime choice. It is light only: the map's tiles are light
+  // whatever the mode, so the app around them is too, even under a dark
+  // desktop.
+  //
+  // `colorMode` is deliberately absent: light/dark is a single global setting
+  // today (`COLOR_MODE_SCOPE_ID` in `theme-engine/web/use-color-mode.ts`), so a
+  // value here would claim something that is not true. The theme is light only
+  // by writing the same values for both modes instead.
+  "theme": "places"
+}

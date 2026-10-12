@@ -117,3 +117,18 @@ export function tokenGroupMatchesSearch(
     return label.toLowerCase().includes(q) || cssVar.toLowerCase().includes(q);
   });
 }
+
+/**
+ * The group's LIGHT schema defaults, worn in both color modes — the fragment a
+ * light-only theme names for every group with a `darkDefault`, so the dark
+ * switch cannot reach it. Derived from the schema, so it follows the defaults
+ * as they change instead of freezing a copy of them.
+ */
+export function lightOnly<T extends TokenGroupSchema>(
+  group: TokenGroupDescriptor<T>,
+): TokenGroupFragment<T> {
+  const light = Object.fromEntries(
+    Object.entries(group.schema).map(([key, field]) => [key, field.default]),
+  ) as TokenValues<T>;
+  return { groupId: group.id, light, dark: light };
+}

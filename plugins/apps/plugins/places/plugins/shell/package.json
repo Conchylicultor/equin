@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-apps-places-shell",
-  "description": "The Places app's identity (defineApp: id, name, base path, icon), its rail entry and frame (the sidebar-less app shell around the full-pane renderer).",
+  "description": "The Places app's identity (defineApp: id, name, base path, icon), its rail entry and frame (the sidebar-less app shell around the full-pane renderer), and its light-only theme.",
   "private": true,
   "version": "0.0.1"
 }
