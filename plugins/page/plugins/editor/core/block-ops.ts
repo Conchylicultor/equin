@@ -279,6 +279,31 @@ export type BlockOp =
       siblingType?: string;
       /** The tail's `data` — split's `tailData` (`BlockHandle.dataOnSplit`). */
       tailData?: unknown;
+    }
+  /**
+   * Delete an editor-owned text span that crosses blocks — from mid-line A to
+   * mid-line C — as ONE op, so one gesture is one undo entry and one server
+   * transaction (three ops — truncate A, delete the middle, merge C — would let
+   * another client observe, and a failure leave, a half-applied edit).
+   *
+   * The lines BETWEEN A and C are deliberately not a parameter: the reducer
+   * derives them as the visible lines strictly between the two, so a client
+   * cannot name a set that disagrees with the forest (`applyDeleteSpan`).
+   */
+  | {
+      kind: "deleteSpan";
+      /** A — the line the span starts in. Keeps its id, receives the join. */
+      targetId: string;
+      /** C — the line the span ends in. Merged into A and trashed. */
+      sourceId: string;
+      /**
+       * A's LIVE runs after the delete: A's text before the span joined to C's
+       * text after it (`joinAroundSpan`). The whole result rather than C's
+       * tail alone, because only the client knows where in A the span starts —
+       * a tail alone would be appended to A's ENTIRE (lagged) projection.
+       * Required, for `splice`'s reason: only a live editor issues it.
+       */
+      runs: RichText;
     };
 
 /**
@@ -458,6 +483,12 @@ export const BlockOpSchema: ZodParser<BlockOp> = z.discriminatedUnion("kind", [
     tailId: z.string(),
     siblingType: z.string().optional(),
     tailData: z.unknown().optional(),
+  }),
+  z.object({
+    kind: z.literal("deleteSpan"),
+    targetId: z.string(),
+    sourceId: z.string(),
+    runs: z.array(TextRunSchema),
   }),
 ]);
 
@@ -981,6 +1012,10 @@ export function opNamedIds(op: BlockOp): string[] {
       // — named whether or not the reducer uses them, which is sound: a named
       // id the reducer did not write only widens the op's target set.
       return [op.blockId, ...op.forest.map((n) => n.id), op.tailId];
+    case "deleteSpan":
+      // The two ends. The lines between them are the reducer's to derive (and
+      // the measured diff reports them), exactly as merge's target is.
+      return [op.targetId, op.sourceId];
   }
 }
 
@@ -1040,6 +1075,8 @@ function applyOp(
       return applyDuplicate(blocks, op);
     case "splice":
       return planSplice(blocks, op, ctx)?.blocks ?? blocks;
+    case "deleteSpan":
+      return applyDeleteSpan(blocks, op, anchorTypes, textBearingTypes);
   }
 }
 
@@ -1317,9 +1354,10 @@ export interface SpliceCaret {
  *
  * Step by step, `[before, after] = splitRuns(op.runs, op.position)`:
  *
- *  1. **Head.** A leading plain paragraph (the `defaultTextType`, no children —
- *     nothing else has an inline form) merges into the origin: its text becomes
- *     `before + head`, and it leaves the forest.
+ *  1. **Head.** A leading plain paragraph (the `defaultTextType` — nothing
+ *     else has an inline form) merges into the origin: its text becomes
+ *     `before + head`, and it leaves the forest. Lines nested under it become
+ *     the origin's first children, so a partial copy's nesting survives.
  *  2. **Text only.** Nothing left: the origin reads `before + head + after` and
  *     that is the whole op — a single-paragraph paste is a text edit.
  *  3. **Consume an empty origin.** Textless (empty `before`, no head merged), of
@@ -1329,11 +1367,14 @@ export interface SpliceCaret {
  *  4. **Body.** The rest lands where a split would put its tail
  *     (`splitSlot`): as the origin's next siblings, or — at the END of a line
  *     with visible children, where Enter nests — as its first children.
- *  5. **Tail.** A non-empty `after` goes to the end of the last root when that
- *     root is a childless plain paragraph, else onto a tail line `op.tailId` of
- *     split's type and data (`siblingType` / `tailData`). The line holding it
- *     adopts the origin's visible children, exactly as split's tail does, so
- *     the text after the point keeps the lines that followed it.
+ *  5. **Tail.** A non-empty `after` goes to the end of the forest's LAST LINE
+ *     (its last root's deepest last descendant, or the merged head's) when that
+ *     line is a plain paragraph, at whatever depth — so a multi-line partial
+ *     copy pasted mid-line joins at BOTH ends (`zz|zz` + `aa` › `bb` gives
+ *     `zzaa` › `bbzz`). Else it goes onto a tail line `op.tailId` of split's
+ *     type and data (`siblingType` / `tailData`). The root holding it adopts the
+ *     origin's visible children after its own, as split's tail does, so the
+ *     text after the point keeps the lines that followed it.
  *
  * Refusals are split's (no origin, a page row, an anchor, a text-less row) —
  * and paste's missing anchor is the first of them, since the origin IS the
@@ -1367,20 +1408,23 @@ export function planSplice(
     return planWholeLines(revealed, block, op, ctx);
   const [before, after] = splitRuns(op.runs, op.position);
 
-  const isPlainParagraph = (node: IdentifiedBlock | undefined): boolean =>
+  const isPlain = (node: IdentifiedBlock | undefined): boolean =>
     node !== undefined &&
     ctx.defaultTextType !== undefined &&
-    node.type === ctx.defaultTextType &&
-    node.children.length === 0;
+    node.type === ctx.defaultTextType;
 
-  // 1. Head.
+  // 1. Head. The forest's first LINE joins the caret's line when it has an
+  // inline form (a plain paragraph) — whatever hangs under it: a partial copy
+  // whose first line had nested lines below it keeps them, nested under the
+  // line it joined (`headChildren`).
   const [first, ...others] = op.forest;
-  const headMerged = isPlainParagraph(first);
+  const headMerged = isPlain(first);
+  const headChildren = headMerged ? first!.children : [];
   const rest = headMerged ? others : op.forest;
   const headLine = headMerged ? mergeRuns(before, runsOfNode(first!)) : before;
 
   // 2. Text only.
-  if (rest.length === 0) {
+  if (rest.length === 0 && headChildren.length === 0) {
     return {
       blocks: replace(revealed, withRuns(block, mergeRuns(headLine, after))),
       caret: { blockId: block.id, offset: runsLength(headLine) },
@@ -1405,28 +1449,33 @@ export function planSplice(
     atEnd && visibleChildrenOf(revealed, block, isAnchor).length > 0;
   const slot = splitSlot(revealed, block, asChild, isAnchor);
 
-  // 5. Tail.
-  let roots: IdentifiedBlock[];
+  // 5. Tail. The forest's LAST LINE — its last root's deepest last descendant,
+  // or the merged head's when no root follows it — takes the text after the
+  // point when it is a plain paragraph (a last line has no children), whatever
+  // its depth: so a partial copy pasted mid-line joins at BOTH ends, its
+  // middle lines keeping their relative nesting. Else a tail line is minted
+  // after the roots, of split's type and data.
+  const lastRoot = rest[rest.length - 1];
+  const end = lastLineOf(lastRoot ?? first!);
+  let roots: IdentifiedBlock[] = rest;
   let caret: SpliceCaret;
-  let tailLineId: string | null = null;
-  const last = rest[rest.length - 1]!;
+  // The ROOT whose subtree now ends with the text after the point: the origin's
+  // visible children (the lines that followed the caret's line) move under it,
+  // after its own children, exactly as split's tail adopts them. Null when the
+  // last line sits under the ORIGIN (a merged head with no roots after it): the
+  // origin's own children already follow it there.
+  let holderId: string | null = lastRoot?.id ?? null;
+  let headKids = headChildren;
   if (atEnd) {
-    roots = rest;
-    const end = lastLineOf(last);
     caret = { blockId: end.id, offset: runsLength(runsOfNode(end)) };
-  } else if (isPlainParagraph(last)) {
-    const lastRuns = runsOfNode(last);
-    roots = [
-      ...rest.slice(0, -1),
-      {
-        ...last,
-        data: { ...asObject(last.data), text: mergeRuns(lastRuns, after) },
-        // It may adopt the origin's children below — which it must show.
-        expanded: true,
-      },
-    ];
-    tailLineId = last.id;
-    caret = { blockId: last.id, offset: runsLength(lastRuns) };
+  } else if (isPlain(end)) {
+    const endRuns = runsOfNode(end);
+    const joined = mergeRuns(endRuns, after);
+    roots = withLineText(rest, end.id, joined);
+    // The merged head's own nested lines hold the last line when no root
+    // follows the head.
+    headKids = withLineText(headChildren, end.id, joined);
+    caret = { blockId: end.id, offset: runsLength(endRuns) };
   } else {
     const tailType = op.siblingType ?? block.type;
     roots = [
@@ -1439,27 +1488,101 @@ export function planSplice(
         children: [],
       },
     ];
-    tailLineId = op.tailId;
+    holderId = op.tailId;
     caret = { blockId: op.tailId, offset: 0 };
   }
-
   let next = consumed
     ? remove(revealed, [block.id])
     : replace(revealed, {
         ...withRuns(block, headLine),
-        expanded: asChild ? true : block.expanded,
+        expanded: asChild || headKids.length > 0 ? true : block.expanded,
       });
-  const { nodes } = planForestInsert({
-    pageId: block.pageId,
-    parentId: slot.parentId,
-    rootRanks: Rank.nBetween(slot.prev, slot.next, roots.length),
-    forest: roots,
-  });
-  next = [...next, ...nodes];
+  // A merged head's children become the origin's FIRST children — the lines
+  // right below the line they hung under. In the nesting slot they share it
+  // with the roots (one rank window, head children first).
+  const firstChild = childrenOf(revealed, block.id)[0] ?? null;
+  if (headKids.length > 0 && !asChild) {
+    next = [
+      ...next,
+      ...planForestInsert({
+        pageId: block.pageId,
+        parentId: block.id,
+        rootRanks: Rank.nBetween(
+          null,
+          firstChild ? Rank.from(firstChild.rank) : null,
+          headKids.length,
+        ),
+        forest: headKids,
+      }).nodes,
+    ];
+  }
+  const slotted = asChild ? [...headKids, ...roots] : roots;
+  if (slotted.length > 0) {
+    next = [
+      ...next,
+      ...planForestInsert({
+        pageId: block.pageId,
+        parentId: slot.parentId,
+        rootRanks: Rank.nBetween(slot.prev, slot.next, slotted.length),
+        forest: slotted,
+      }).nodes,
+    ];
+  }
   // `adopted` is non-empty only off the `asChild` arm with visible children,
-  // i.e. with text after the point — which is exactly when a tail line exists.
-  if (tailLineId !== null) next = adoptInto(next, slot.adopted, tailLineId);
+  // i.e. with text after the point.
+  if (holderId !== null && !atEnd)
+    next = adoptAfterChildren(next, slot.adopted, holderId);
   return { blocks: next, caret };
+}
+
+/**
+ * `forest` with the line `lineId` (anywhere in it) re-texted to `runs` — and,
+ * since it may adopt the origin's children, shown expanded.
+ */
+function withLineText(
+  forest: IdentifiedBlock[],
+  lineId: string,
+  runs: RichText,
+): IdentifiedBlock[] {
+  return forest.map((node) =>
+    node.id === lineId
+      ? {
+          ...node,
+          data: { ...asObject(node.data), text: runs },
+          expanded: true,
+        }
+      : { ...node, children: withLineText(node.children, lineId, runs) },
+  );
+}
+
+/**
+ * Reparent `adopted` under `holderId`, AFTER its existing children. A holder
+ * with no children of its own keeps their rank strings byte-for-byte (split's
+ * `adoptInto`); one with children gets fresh ranks past its last child, since
+ * the two sibling sets' ranks were never comparable.
+ */
+function adoptAfterChildren(
+  blocks: BlockNode[],
+  adopted: readonly BlockNode[],
+  holderId: string,
+): BlockNode[] {
+  if (adopted.length === 0) return blocks;
+  const own = childrenOf(blocks, holderId);
+  if (own.length === 0) return adoptInto(blocks, adopted, holderId);
+  const ranks = Rank.nBetween(
+    Rank.from(own[own.length - 1]!.rank),
+    null,
+    adopted.length,
+  );
+  let next = blocks;
+  adopted.forEach((child, i) => {
+    next = replace(next, {
+      ...child,
+      parentId: holderId,
+      rank: ranks[i]!.toJSON(),
+    });
+  });
+  return next;
 }
 
 /**
@@ -1553,10 +1676,28 @@ function applyMerge(
   // Concatenate runs into prev (coalescing the seam). `op.runs` is the live
   // merging runs on the live path; `runsOfNode` (lagged projection) is only the
   // pure reducer's fallback basis (tests / non-live).
-  let mergedPrev = withRuns(
+  return mergeInto(
+    blocks,
+    block,
     prev,
     mergeRuns(runsOfNode(prev), op.runs ?? runsOfNode(block)),
   );
+}
+
+/**
+ * Fold `block` into `prev`, the line directly above it: `prev` takes `runs`
+ * (the joined text) and adopts `block`'s children, and `block` is removed.
+ * THE merge rule, shared by `merge` and `deleteSpan`'s final step, so the two
+ * gestures that join two lines cannot place adopted children differently.
+ * Refusals are the caller's — this assumes `prev` can hold text.
+ */
+function mergeInto(
+  blocks: BlockNode[],
+  block: BlockNode,
+  prev: BlockNode,
+  runs: RichText,
+): BlockNode[] {
+  let mergedPrev = withRuns(prev, runs);
 
   // Adopt the block's children under prev, order-preserving. The general rule is
   // that adopted children occupy the visible position the merged block occupied:
@@ -1603,6 +1744,87 @@ function applyMerge(
   });
 
   return remove(next, [block.id]);
+}
+
+/**
+ * Delete the text span from inside `targetId` (A) to inside `sourceId` (C) —
+ * see the op's doc. Derived entirely from the forest it is applied to, so both
+ * runtimes reach the same rows from the same op:
+ *
+ * 1. **The lines strictly between A and C** are the visible lines
+ *    `nextVisibleLine` walks from A before reaching C. Each is trashed with its
+ *    subtree (a selected block carries its children) — EXCEPT C's ancestors.
+ *    Those are fully covered too, but deleting one would delete C, so a plain
+ *    ancestor is UNWRAPPED (`applyUnwrap`): its own line goes, its remaining
+ *    children (C's branch and whatever follows it, uncovered) are lifted into
+ *    its slot. No line the span did not cover is ever destroyed — a non-ancestor
+ *    between A and C has every visible descendant between A and C too.
+ *    A container ANCHOR ancestor is kept: it renders no line of its own, so the
+ *    span covered only its first lines, not the box. The empty-anchor prune
+ *    removes it if C was the last thing in it.
+ * 2. **C is merged into A** with merge's rule (`mergeInto`): A keeps its id and
+ *    takes `op.runs`, C's children take C's place, C is trashed. When C still
+ *    sits in a kept anchor, "C's place" is inside that box (C is unwrapped
+ *    there) — appending them under A would move them out of the box, past its
+ *    remaining lines.
+ * 3. **Refusals** are merge's, on both ends: neither may be a page row, a
+ *    container anchor or a text-less type, and C must come after A. The client
+ *    never issues a refused one (`normalizeSpan` widens such a span to
+ *    blocks), so a refusal here means the forest moved under the op.
+ */
+function applyDeleteSpan(
+  blocks: BlockNode[],
+  op: Extract<BlockOp, { kind: "deleteSpan" }>,
+  anchorTypes: ReadonlySet<string>,
+  textBearingTypes: ReadonlySet<string> | undefined,
+): BlockNode[] {
+  const target = byId(blocks, op.targetId);
+  const source = byId(blocks, op.sourceId);
+  if (!target || !source || target.id === source.id) return blocks;
+  const mergeable = (n: BlockNode): boolean =>
+    n.type !== PAGE_BLOCK_TYPE &&
+    !anchorTypes.has(n.type) &&
+    // Presence-gated, as in `applyMerge`.
+    (!textBearingTypes || textBearingTypes.has(n.type));
+  if (!mergeable(target) || !mergeable(source)) return blocks;
+
+  const isAnchor = anchorOf(anchorTypes);
+  const between: BlockNode[] = [];
+  let cur = nextVisibleLine(blocks, target, isAnchor);
+  while (cur && cur.id !== source.id) {
+    between.push(cur);
+    cur = nextVisibleLine(blocks, cur, isAnchor);
+  }
+  // C is not below A (or not visible at all): not a span this forest has.
+  if (!cur) return blocks;
+
+  const sourceAncestors = new Set<string>();
+  for (let p = source.parentId; p !== null;) {
+    sourceAncestors.add(p);
+    p = byId(blocks, p)?.parentId ?? null;
+  }
+  const doomed = new Set(
+    between
+      .filter((n) => !sourceAncestors.has(n.id))
+      .flatMap((n) => subtreeIds(blocks, n.id)),
+  );
+  let next = remove(blocks, doomed);
+  // Innermost first (`between` is document order, so ancestors come outermost
+  // first): each unwrap lifts what is left of one level into the level above.
+  for (const n of [...between].reverse()) {
+    if (sourceAncestors.has(n.id) && !anchorTypes.has(n.type))
+      next = applyUnwrap(next, { kind: "unwrap", blockId: n.id });
+  }
+
+  const src = byId(next, source.id)!;
+  const tgt = byId(next, target.id)!;
+  const keptBox =
+    src.parentId !== null &&
+    src.parentId !== tgt.id &&
+    between.some((n) => n.id === src.parentId);
+  if (!keptBox) return mergeInto(next, src, tgt, op.runs);
+  next = applyUnwrap(next, { kind: "unwrap", blockId: src.id });
+  return replace(next, withRuns(tgt, op.runs));
 }
 
 /**

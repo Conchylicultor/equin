@@ -10,10 +10,14 @@
 //   selection bar             -> 0 selected, 0 highlighted rows
 //   clipboard after Cmd+C     -> "" (empty)
 //
-// The fix promotes the gesture at the boundary: the browser keeps the drag while it
-// stays inside the origin block, and the moment the pointer leaves that row the
-// editor takes over and applies a whole-BLOCK range (Notion's model), which the
-// existing block-selection clipboard path already serializes as indented markdown.
+// The fix takes the gesture over at the boundary: the browser keeps the drag while
+// it stays inside the origin block, and the moment the pointer leaves that row the
+// editor turns it into an EDITOR-OWNED text span with partial ends, painted through
+// the CSS Custom Highlight API (no native selection can cross editing hosts). Its
+// first iteration promoted to a whole-BLOCK range instead; that is now one Escape
+// away, and still copies as indented markdown through the block-selection path.
+// The span's own semantics (Delete, undo, dragging back) are
+// `cross-block-span-verify.ts`'s.
 //
 // Usage: bun plugins/page/plugins/editor/e2e/cross-block-text-selection-verify.ts [--url <deploy>]
 import {
@@ -96,7 +100,17 @@ await withBrowser(async (h) => {
     0,
   );
 
-  // 2. Crossing a block boundary promotes to a full block range.
+  // The text the editor's span paints, one string per Range ([] when none). An
+  // end landing past a short line's last character paints nothing on that line
+  // (an empty range is not drawn), so the assertions read the MIDDLE line, which
+  // any span from block 1 to block 3 covers whole.
+  const painted = (): Promise<string[]> =>
+    page.evaluate(() => {
+      const h = CSS.highlights.get("page-text-span");
+      return h ? [...h].map((range) => range.toString()) : [];
+    });
+
+  // 2. Crossing a block boundary makes an editor-owned text span over all three.
   await page.mouse.move(a.x + a.width * 0.4, a.y + a.height / 2);
   await page.mouse.down();
   await page.mouse.move(a.x + a.width * 0.6, a.y + a.height / 2, { steps: 5 });
@@ -104,13 +118,47 @@ await withBrowser(async (h) => {
   await page.mouse.up();
   await page.waitForTimeout(500);
 
-  r.eq("crossing blocks selects all three", await selectedCount(), 3);
-  r.eq("all three rows are highlighted", await highlightedLines(page), 3);
+  r.eq(
+    "crossing blocks paints a span covering the middle line whole",
+    (await painted()).includes("Bravo bullet"),
+    true,
+  );
+  r.eq("…and selects no block whole", (await selectedCount()) ?? 0, 0);
+  r.eq("…so no row band is drawn", await highlightedLines(page), 0);
   const promoted = await readSelection();
   r.eq("no text caret is left parked in a block", promoted.text, "");
 
-  // 3. The promoted range copies as markdown, prefixes and nesting intact — the
-  //    already-built block-selection clipboard path, reached by the new gesture.
+  // A span copies as a PARTIAL forest: exactly the painted text, each line
+  // keeping its block's prefix and nesting — never the touched blocks whole.
+  // The heading line holds only what the span painted on it (the drag starts
+  // wherever 40% of the row lands, possibly past the text's end), and the end
+  // line only up to the span's end.
+  const spanText = await painted();
+  const headingPart = spanText.length === 3 ? spanText[0]! : "";
+  const endPart = spanText.at(-1)!;
+  await page.evaluate(() => navigator.clipboard.writeText("sentinel"));
+  await page.keyboard.press("ControlOrMeta+c");
+  await page.waitForTimeout(300);
+  const spanClip = (
+    await page.evaluate(() => navigator.clipboard.readText())
+  ).split("\n");
+  console.log("span clipboard:\n---\n" + spanClip.join("\n") + "\n---");
+  r.eq(
+    "Cmd+C over a span writes its partial markdown, line by line",
+    spanClip.map((line) => line.trimEnd()),
+    [
+      `# ${headingPart}`.trimEnd(),
+      "* Bravo bullet",
+      `  * ${endPart}`.trimEnd(),
+    ],
+  );
+
+  // 3. Escape climbs to the touched blocks, whole — which copies as markdown,
+  //    prefixes and nesting intact, through the block-selection clipboard path.
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(300);
+  r.eq("Escape turns the span into all three blocks", await selectedCount(), 3);
+  r.eq("all three rows are highlighted", await highlightedLines(page), 3);
   await page.keyboard.press("ControlOrMeta+c");
   await page.waitForTimeout(500);
   const clip = await page.evaluate(() => navigator.clipboard.readText());
@@ -134,17 +182,20 @@ await withBrowser(async (h) => {
     true,
   );
 
-  // 4. An upward drag promotes the same way (setRange slices either direction).
+  // 4. An upward drag makes the same span (`normalizeSpan` orders either way).
+  await page.keyboard.press("Escape"); // drop the block selection first
+  await page.waitForTimeout(400);
   await page.mouse.move(c.x + c.width * 0.5, c.y + c.height / 2);
   await page.mouse.down();
   await page.mouse.move(a.x + a.width * 0.4, a.y + a.height / 2, { steps: 20 });
   await page.mouse.up();
   await page.waitForTimeout(500);
   r.eq(
-    "an upward cross-block drag selects all three",
-    await selectedCount(),
-    3,
+    "an upward cross-block drag paints the same span",
+    (await painted()).includes("Bravo bullet"),
+    true,
   );
+  r.eq("…and selects no block whole", (await selectedCount()) ?? 0, 0);
 
   await r.finish();
 });

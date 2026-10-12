@@ -3825,6 +3825,87 @@ describe("splice", () => {
     expect(textById(out, "P2")).toBe("bbar");
   });
 
+  test("a NESTED partial copy pasted mid-line joins at both ends (the reported case)", () => {
+    // Copied `aa[aa` › `bb]bb`; pasted at `zz|zz`. Notion / Google Docs: the
+    // first fragment joins the head, the last the tail, nesting kept.
+    const blocks = [para("A", "zzzz")];
+    const op = splice("A", "zzzz", 2, [plain("P1", "aa", [plain("C", "bb")])]);
+    const out = run(blocks, op, ctx);
+    expect(ids(out, "PAGE")).toEqual(["A"]);
+    expect(textById(out, "A")).toBe("zzaa");
+    expect(ids(out, "A")).toEqual(["C"]);
+    expect(textById(out, "C")).toBe("bbzz");
+    expect(out.some((b) => b.id === "P1" || b.id === "TAIL")).toBe(false);
+    expect(planSplice(blocks, op, ctx)!.caret).toEqual({
+      blockId: "C",
+      offset: 2,
+    });
+  });
+
+  test("a partial copy ending one level deeper under a LATER root joins its tail there", () => {
+    // `x[1` / `2` › `3]y` at `ab|cd`: line 1 joins the head, `2` lands after
+    // it, `3` keeps its nesting under `2` and takes `cd`.
+    const blocks = [para("A", "abcd")];
+    const op = splice("A", "abcd", 2, [
+      plain("P1", "1"),
+      plain("P2", "2", [plain("C", "3")]),
+    ]);
+    const out = run(blocks, op, ctx);
+    expect(ids(out, "PAGE")).toEqual(["A", "P2"]);
+    expect(textById(out, "A")).toBe("ab1");
+    expect(ids(out, "P2")).toEqual(["C"]);
+    expect(textById(out, "C")).toBe("3cd");
+  });
+
+  test("the origin's children follow the joined last line, after the holder's own", () => {
+    const blocks = [
+      para("A", "abcd"),
+      mk("K", "A", a, { type: PLAIN, text: "kid", pageId: "PAGE" }),
+    ];
+    const out = run(
+      blocks,
+      splice("A", "abcd", 2, [
+        plain("P1", "1"),
+        plain("P2", "2", [plain("C", "3")]),
+      ]),
+      ctx,
+    );
+    expect(ids(out, "A")).toEqual([]);
+    expect(ids(out, "P2")).toEqual(["C", "K"]);
+  });
+
+  test("a merged head's nested lines sit ABOVE the origin's own children", () => {
+    const blocks = [
+      para("A", "abcd"),
+      mk("K", "A", a, { type: PLAIN, text: "kid", pageId: "PAGE" }),
+    ];
+    const out = run(
+      blocks,
+      splice("A", "abcd", 2, [plain("P1", "1", [plain("C", "2")])]),
+      ctx,
+    );
+    expect(textById(out, "A")).toBe("ab1");
+    expect(ids(out, "A")).toEqual(["C", "K"]);
+    expect(textById(out, "C")).toBe("2cd");
+  });
+
+  test("whole blocks (granularity `blocks`) never join — unchanged", () => {
+    const blocks = [para("A", "zzzz")];
+    const out = run(
+      blocks,
+      {
+        ...splice("A", "zzzz", 2, [plain("P1", "aa", [plain("C", "bb")])]),
+        granularity: "blocks",
+      },
+      ctx,
+    );
+    expect(textById(out, "A")).toBe("zzzz");
+    expect(ids(out, "PAGE")).toEqual(["A", "P1"]);
+    expect(ids(out, "P1")).toEqual(["C"]);
+    expect(textById(out, "P1")).toBe("aa");
+    expect(textById(out, "C")).toBe("bb");
+  });
+
   test("the caret lands at the end of the LAST line of a nested last root", () => {
     const blocks = [para("A", "")];
     const op = splice("A", "", 0, [

@@ -44,6 +44,7 @@ import {
   namesField,
   hasTextKey,
   rowDataOf,
+  joinAroundSpan,
   type Block,
   type BlockNode,
   type BlockOp,
@@ -54,6 +55,7 @@ import {
   type RichText,
   type RowData,
   type SerializedBlock,
+  type SpanPoint,
 } from "../core";
 import {
   applyBlockRuns,
@@ -77,7 +79,11 @@ import { serializeForest } from "./serialize-blocks";
 import { claimCutPages, markCutsPasted } from "./internal/cut-claims";
 import { landCaret, landCaretAtOwnEdge } from "./internal/caret-landing";
 import { createCaretAuthority } from "./internal/caret-authority";
-import type { BlockFocusHandle } from "./internal/caret-authority";
+import type {
+  BlockFocusHandle,
+  BlockTextReads,
+  FlightInput,
+} from "./internal/caret-authority";
 import type {
   CaretLandOptions,
   CaretSurface,
@@ -108,6 +114,7 @@ const OP_LABELS: Record<BlockOp["kind"], string> = {
   paste: "Paste blocks",
   duplicate: "Duplicate blocks",
   splice: "Paste",
+  deleteSpan: "Delete text",
 };
 
 /**
@@ -159,6 +166,9 @@ function opFocusId(
       // line, or the minted tail). A refused splice plans nothing and is never
       // recorded, so its null is never read.
       return planSplice(toNodes(before), op, ctx)?.caret.blockId ?? null;
+    case "deleteSpan":
+      // The join lives in the span's start line, which keeps its id.
+      return op.targetId;
   }
 }
 
@@ -326,6 +336,16 @@ const EMPTY_PATCH: BlockPatch = { creates: [], updates: [], deleteIds: [] };
  * replays every `after`. Text before patch on undo, patch before text on redo,
  * so a doc edit always runs while its row exists.
  */
+/** `BlockEditorContextValue.splice`'s arguments. */
+interface SpliceArgs {
+  blockId: string;
+  position: number;
+  runs: RichText;
+  blocks: SerializedBlock[];
+  /** What the forest was copied as — see `ForestGranularity`. */
+  granularity: ForestGranularity;
+}
+
 interface RecordEntryArgs {
   label: string;
   /** The block the user was on; undo/redo restore focus there (see `derivePatchEntry`). */
@@ -603,6 +623,51 @@ interface BlockEditorContextValue {
     x: number,
     y: number,
   ) => { position: number; runs: RichText } | null;
+  /**
+   * The text reads of `blockId`'s MOUNTED text surface — what an editor-owned
+   * span across blocks is built from (the anchor and head under the pointer,
+   * the live text) and painted with (DOM Ranges, update notifications). Null
+   * when no text editor is mounted for it. Reads only: nothing here edits
+   * content or places a caret, so the surface can hold it freely.
+   */
+  textReadsOf: (blockId: string) => BlockTextReads | null;
+  /**
+   * Delete the text span `[from, to)` — `from` and `to` in visible order, as
+   * `normalizeSpan` hands them out — and land the caret at the join.
+   *
+   * Inside one block it is a text edit of that block (one doc entry). Across
+   * blocks it is ONE `deleteSpan` op: the start line keeps its head and takes
+   * the end line's tail, everything between goes, in one undo entry and one
+   * server transaction (see `applyDeleteSpan` for which lines go and which are
+   * lifted).
+   */
+  deleteSpan: (
+    from: SpanPoint,
+    to: SpanPoint,
+    /**
+     * What REPLACES the span (typing over it). One typed CHARACTER is part of
+     * the span's own edit — its result is head + character + tail, so one op
+     * and ONE undo step, as typing over a selection inside one block is one
+     * run. Anything else (Enter, a key) is replayed at the join once the caret
+     * lands there, through the caret authority's flight buffer
+     * (`landWithInput`) — the one path buffered input takes into a block.
+     */
+    input?: readonly FlightInput[],
+  ) => void;
+  /**
+   * Replace the text span `[from, to)` with a pasted forest — a paste while a
+   * span is selected. The span is deleted and the forest SPLICED at the join
+   * (`planSplice`, `granularity` deciding as for any caret paste), as ONE undo
+   * entry: a paste that creates no line is the span's own edit with the pasted
+   * text in its result (one `deleteSpan` op, or a text edit inside one block);
+   * one that creates lines is the `deleteSpan` op then the `splice` op,
+   * predicted in sequence and recorded as a single entry over both.
+   */
+  replaceSpan: (
+    from: SpanPoint,
+    to: SpanPoint,
+    insert: { blocks: SerializedBlock[]; granularity: ForestGranularity },
+  ) => void;
   /**
    * Create a block of the given type at the end of the page and focus it
    * once the live resource re-renders the list.
@@ -1799,27 +1864,16 @@ export function BlockEditorProviderInner({
   // origin's full text together.
   //
   // MUST stay below `dispatchOp`'s helpers — it closes over them.
-  const splice = useCallback(
-    (args: {
-      blockId: string;
-      position: number;
-      runs: RichText;
-      blocks: SerializedBlock[];
-      granularity: ForestGranularity;
-    }) => {
-      // The zoom root's next siblings are outside the view, so a splice there
-      // would be refused whole by the backstop. It keeps the root's own rule
-      // instead — the forest lands as the root's first children, the text
-      // stays where it is — rather than dropping the user's paste on the floor.
-      if (args.blockId === scope.rootId) {
-        paste({ blocks: args.blocks, afterId: args.blockId });
-        return;
-      }
-      const before = rowsRef.current;
-      const origin = before.find((b) => b.id === args.blockId);
-      if (!origin) return;
+  //
+  // The op is planned by `planSpliceOn` — against the CURRENT rows here, and
+  // against what a span delete leaves in `replaceSpan` — so the tail's type and
+  // data are resolved in one place for both.
+  const planSpliceOn = useCallback(
+    (base: Block[], args: SpliceArgs) => {
+      const origin = base.find((b) => b.id === args.blockId);
+      if (!origin) return null;
       const forest = prepareForest(args.blocks);
-      if (forest.length === 0) return;
+      if (forest.length === 0) return null;
       // The tail's type and data, resolved HERE where block handles are
       // visible — split's `siblingType` / `tailData` rule, read off the same
       // handle fields the keystroke resolver reads (`splitInto`,
@@ -1843,8 +1897,26 @@ export function BlockEditorProviderInner({
         siblingType,
         tailData,
       };
-      const plan = planSplice(toNodes(before), op, opCtx);
-      if (!plan) return;
+      const plan = planSplice(toNodes(base), op, opCtx);
+      return plan ? { op, plan } : null;
+    },
+    [prepareForest, blockHandles, opCtx],
+  );
+
+  const splice = useCallback(
+    (args: SpliceArgs) => {
+      // The zoom root's next siblings are outside the view, so a splice there
+      // would be refused whole by the backstop. It keeps the root's own rule
+      // instead — the forest lands as the root's first children, the text
+      // stays where it is — rather than dropping the user's paste on the floor.
+      if (args.blockId === scope.rootId) {
+        paste({ blocks: args.blocks, afterId: args.blockId });
+        return;
+      }
+      const before = rowsRef.current;
+      const planned = planSpliceOn(before, args);
+      if (!planned) return;
+      const { op, plan } = planned;
       const { caret } = plan;
       const beforeIds = new Set(before.map((b) => b.id));
       const originRow = plan.blocks.find((b) => b.id === args.blockId);
@@ -1909,8 +1981,7 @@ export function BlockEditorProviderInner({
     [
       scope,
       paste,
-      prepareForest,
-      blockHandles,
+      planSpliceOn,
       opCtx,
       recordDocEdit,
       focusBlock,
@@ -2289,6 +2360,234 @@ export function BlockEditorProviderInner({
       isAnchorNode,
       authority,
       admitsRows,
+    ],
+  );
+
+  // ---- Editor-owned text span: delete / type over / paste over ------------
+  //
+  // The live runs of a span END. `normalizeSpan` only makes a span over lines
+  // whose text surface is mounted (`textReadsOf`), so a missing one is a broken
+  // invariant, never a case to route around.
+  const spanEndRuns = useCallback(
+    (id: string): RichText => {
+      const read = authority.surgeryOf(id)?.readRuns;
+      if (!read) {
+        throw new Error(
+          `text span: block "${id}" has no mounted text surface to read`,
+        );
+      }
+      return read();
+    },
+    [authority],
+  );
+
+  // Land the caret at a span's join — plainly, or replaying the keys that
+  // replaced the span (`landWithInput`: a flight whose buffer starts with them,
+  // so everything typed before the landing queues behind them). Queued one
+  // microtask, behind the binding's relay of the doc splice that made the
+  // join, so the offset resolves against the joined text.
+  const landAtJoin = useCallback(
+    (blockId: string, offset: number, input?: readonly FlightInput[]) => {
+      queueMicrotask(() => {
+        if (!input || input.length === 0) {
+          focusBlock(blockId, offset);
+          return;
+        }
+        authority.landWithInput(
+          blockId,
+          (handle, land) => {
+            if (handle.focusOffset) handle.focusOffset(offset, land);
+            else handle.focus(land);
+          },
+          input,
+        );
+      });
+    },
+    [authority, focusBlock],
+  );
+
+  // The span's text edit: the start line's content becomes `runs` (its head,
+  // whatever replaces the span, the end line's tail) and — across blocks — the
+  // lines after it up to the end line go, as ONE `deleteSpan` op. Modelled on
+  // `mergeBlock`: the doc half lands FIRST, inside the owner's `untracked`
+  // scope, and the op is dispatched only once it has, so a throwing splice
+  // leaves every line intact. ONE entry: the patch pair plus the start line's
+  // runs edit, so one Cmd+Z restores the removed lines (their docs survive the
+  // trash) AND the start line's text. Inside one block it is that runs edit
+  // alone. Never inside a Lexical command (the container's keydown and
+  // clipboard handlers issue it), so nothing defers the doc splice.
+  //
+  // False when the reducer refuses the op (the forest moved under the span):
+  // nothing changed, nothing was recorded.
+  const commitSpanEdit = useCallback(
+    (from: SpanPoint, to: SpanPoint, runs: RichText, label: string) => {
+      const owner = spliceOwnerOf(from.blockId);
+      const fromBefore = owner.runsNow();
+      const before = rowsRef.current;
+      const runsEdits = runsEqual(fromBefore, runs)
+        ? []
+        : [{ blockId: from.blockId, before: fromBefore, after: runs }];
+      if (from.blockId === to.blockId) {
+        if (runsEdits.length === 0) return true;
+        owner.untracked(() => spliceOpenBlockDoc(owner, runs));
+        recordEntry({
+          label,
+          focusId: from.blockId,
+          before,
+          after: before,
+          runsEdits,
+        });
+        return true;
+      }
+      const op: BlockOp = {
+        kind: "deleteSpan",
+        targetId: from.blockId,
+        sourceId: to.blockId,
+        runs,
+      };
+      const { after, written, vars } = predictOp(op, before, opCtx);
+      if (written.length === 0) return false;
+      if (!admitsRows(before, after)) return false;
+      owner.untracked(() => spliceOpenBlockDoc(owner, runs));
+      advanceRows(after);
+      const entryId = newHistoryEntryId();
+      store.dispatch(vars, dropRejectedEntry(entryId));
+      recordEntry({
+        label,
+        focusId: from.blockId,
+        before,
+        after,
+        id: entryId,
+        runsEdits,
+      });
+      return true;
+    },
+    [opCtx, admitsRows, advanceRows, store, dropRejectedEntry, recordEntry],
+  );
+
+  // See the context field.
+  const deleteSpan = useCallback(
+    (from: SpanPoint, to: SpanPoint, input?: readonly FlightInput[]) => {
+      const fromRuns = spanEndRuns(from.blockId);
+      const joinAt = Math.min(from.offset, runsLength(fromRuns));
+      const toRuns =
+        from.blockId === to.blockId ? fromRuns : spanEndRuns(to.blockId);
+      const only = input?.length === 1 ? input[0] : undefined;
+      const typed = only?.kind === "text" ? only.text : undefined;
+      const joined = joinAroundSpan(
+        fromRuns,
+        from.offset,
+        toRuns,
+        to.offset,
+        typed,
+      );
+      const label = typed === undefined ? OP_LABELS.deleteSpan : "Type";
+      // A refused span changes nothing, and the caret stays where it is.
+      if (!commitSpanEdit(from, to, joined, label)) return;
+      if (typed !== undefined) landAtJoin(from.blockId, joinAt + typed.length);
+      else landAtJoin(from.blockId, joinAt, input);
+    },
+    [spanEndRuns, commitSpanEdit, landAtJoin],
+  );
+
+  // See the context field. The splice is planned against the rows the span's
+  // delete LEAVES (both predicted before anything is dispatched), so the two
+  // ops reach the store in issue order and fold exactly as predicted — and the
+  // entry brackets the whole gesture: before the delete, after the splice.
+  const replaceSpan = useCallback(
+    (
+      from: SpanPoint,
+      to: SpanPoint,
+      insert: { blocks: SerializedBlock[]; granularity: ForestGranularity },
+    ) => {
+      const fromRuns = spanEndRuns(from.blockId);
+      const joinAt = Math.min(from.offset, runsLength(fromRuns));
+      const toRuns =
+        from.blockId === to.blockId ? fromRuns : spanEndRuns(to.blockId);
+      const joined = joinAroundSpan(fromRuns, from.offset, toRuns, to.offset);
+      const args: SpliceArgs = {
+        blockId: from.blockId,
+        position: joinAt,
+        runs: joined,
+        ...insert,
+      };
+      // On the zoom root a splice is a paste BELOW it (its next siblings are
+      // outside the view), not one at the join — so the span goes as a step of
+      // its own and the paste keeps the root's rule. Two entries; rare.
+      if (from.blockId === scope.rootId) {
+        if (commitSpanEdit(from, to, joined, OP_LABELS.deleteSpan))
+          splice(args);
+        return;
+      }
+      const before = rowsRef.current;
+      let first: ReturnType<typeof predictOp> | null = null;
+      if (from.blockId !== to.blockId) {
+        const del: BlockOp = {
+          kind: "deleteSpan",
+          targetId: from.blockId,
+          sourceId: to.blockId,
+          runs: joined,
+        };
+        first = predictOp(del, before, opCtx);
+        if (first.written.length === 0) return;
+      }
+      const base = first?.after ?? before;
+      const planned = planSpliceOn(base, args);
+      if (!planned) return;
+      const { op, plan } = planned;
+      const originRow = plan.blocks.find((b) => b.id === from.blockId);
+      const baseIds = new Set(base.map((b) => b.id));
+
+      // A paste that creates no line is a TEXT edit of the join line: the
+      // span's own edit with the pasted text in its result — one op at most.
+      if (originRow && plan.blocks.every((b) => baseIds.has(b.id))) {
+        if (commitSpanEdit(from, to, runsOfNode(originRow), OP_LABELS.splice))
+          landAtJoin(plan.caret.blockId, plan.caret.offset);
+        return;
+      }
+
+      const second = predictOp(op, base, opCtx);
+      if (second.written.length === 0) return;
+      if (!admitsRows(before, second.after)) return;
+      const owner = spliceOwnerOf(from.blockId);
+      const fromBefore = owner.runsNow();
+      // A CONSUMED join line (an empty plain paragraph the forest replaced)
+      // has no text to edit: its row goes, and its doc — untouched — is what
+      // undo binds the restored row to.
+      const target = originRow ? runsOfNode(originRow) : null;
+      if (target) owner.untracked(() => spliceOpenBlockDoc(owner, target));
+      advanceRows(second.after);
+      const entryId = newHistoryEntryId();
+      if (first) store.dispatch(first.vars, dropRejectedEntry(entryId));
+      store.dispatch(second.vars, dropRejectedEntry(entryId));
+      // The line the caret lands on is one the splice CREATED: a claim.
+      focusBlock(plan.caret.blockId, plan.caret.offset, { scroll: true });
+      recordEntry({
+        label: OP_LABELS.splice,
+        focusId: plan.caret.blockId,
+        before,
+        after: second.after,
+        id: entryId,
+        runsEdits:
+          target === null || runsEqual(fromBefore, target)
+            ? []
+            : [{ blockId: from.blockId, before: fromBefore, after: target }],
+      });
+    },
+    [
+      spanEndRuns,
+      scope,
+      commitSpanEdit,
+      splice,
+      opCtx,
+      planSpliceOn,
+      landAtJoin,
+      admitsRows,
+      advanceRows,
+      store,
+      dropRejectedEntry,
+      focusBlock,
+      recordEntry,
     ],
   );
 
@@ -2713,6 +3012,9 @@ export function BlockEditorProviderInner({
       paste,
       splice,
       insertionPointAt,
+      textReadsOf: authority.surgeryOf,
+      deleteSpan,
+      replaceSpan,
       insert,
       insertFirst,
       projectText,
@@ -2759,6 +3061,8 @@ export function BlockEditorProviderInner({
       paste,
       splice,
       insertionPointAt,
+      deleteSpan,
+      replaceSpan,
       insert,
       insertFirst,
       projectText,

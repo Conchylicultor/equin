@@ -25410,6 +25410,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SerializedBlock`
           - `SetPageKindBody`
           - `SoftBreaks`
+          - `SpanLines`
+          - `SpanPoint`
+          - `SpanSelection`
           - `SpliceCaret`
           - `TagLine`
           - `TextBearingSchema`
@@ -25453,6 +25456,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `inDocumentOrder`
           - `INLINE_SYNTAXES`
           - `isEmptyPatch`
+          - `joinAroundSpan`
           - `listBlocks`
           - `listPages`
           - `MARK_ORDER`
@@ -25470,6 +25474,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namesField`
           - `newBlockId`
           - `nextVisibleLine`
+          - `normalizeSpan`
           - `opNamedIds`
           - `PAGE_BLOCK_TYPE`
           - `PAGE_BLOCKS_TRASH_SOURCE`
@@ -25515,6 +25520,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SetPageKindBodySchema`
           - `sortMarks`
           - `splitRuns`
+          - `stepTextOffset`
           - `textBlockSchema`
           - `textDataSchema`
           - `textOf`

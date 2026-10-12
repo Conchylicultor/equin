@@ -146,6 +146,9 @@ export {
 
 export { $spliceRunsInto } from "./runs-splice";
 
+export { normalizeSpan, joinAroundSpan, stepTextOffset } from "./text-span";
+export type { SpanPoint, SpanLines, SpanSelection } from "./text-span";
+
 export { runsToXmlText, xmlTextToRuns, xmlTextContentLength } from "./runs-yjs";
 
 export { blockIdKind, newBlockId } from "./block-id";

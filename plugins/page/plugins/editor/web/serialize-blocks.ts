@@ -1,5 +1,31 @@
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { PAGE_BLOCK_TYPE, type Block, type IdentifiedBlock } from "../core";
+import {
+  PAGE_BLOCK_TYPE,
+  type Block,
+  type IdentifiedBlock,
+  type RichText,
+} from "../core";
+
+/**
+ * How a PARTIAL copy narrows the forest — an editor-owned text span, which
+ * covers some lines whole and its two end lines in part.
+ */
+export interface SerializeForestOptions {
+  /**
+   * Runs to write in place of a block's `data.text`: the span's end lines
+   * sliced, and every covered text line's LIVE runs (the row's `data.text` is a
+   * projection that trails the doc by ~1s, so a copy right after typing would
+   * otherwise carry the pre-keystroke text).
+   */
+  runsOverride?: ReadonlyMap<string, RichText>;
+  /**
+   * Descendants left out of the forest: the visible lines the span does NOT
+   * cover that sit under a covered root (a parent's later children, after the
+   * span's end). A row nobody excluded still travels with its root — a
+   * collapsed child included, exactly as in a whole-block copy.
+   */
+  exclude?: ReadonlySet<string>;
+}
 
 /**
  * Build a portable `IdentifiedBlock[]` for `rootIds` and their descendants from
@@ -25,6 +51,7 @@ import { PAGE_BLOCK_TYPE, type Block, type IdentifiedBlock } from "../core";
 export function serializeForest(
   rows: readonly Block[],
   rootIds: readonly string[],
+  { runsOverride, exclude }: SerializeForestOptions = {},
 ): IdentifiedBlock[] {
   const childrenOf = new Map<string | null, Block[]>();
   for (const r of rows) {
@@ -36,13 +63,15 @@ export function serializeForest(
 
   const build = (block: Block): IdentifiedBlock => {
     const children = (childrenOf.get(block.id) ?? [])
-      .slice()
+      .filter((c) => !exclude?.has(c.id))
       .sort((a, b) => Rank.compare(a.rank, b.rank))
       .map(build);
     return {
       id: block.id,
       type: block.type,
-      data: block.data,
+      data: runsOverride?.has(block.id)
+        ? { ...(block.data as object), text: runsOverride.get(block.id) }
+        : block.data,
       expanded: block.expanded,
       children,
       ...(block.type === PAGE_BLOCK_TYPE

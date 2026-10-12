@@ -13,19 +13,23 @@ export const BLOCKS_MIME = "application/x-singularity-blocks+json";
  * That is a fact about the COPY, so the copy states it and the payload carries
  * it; a paste door cannot recover it from the forest's shape (one copied
  * paragraph and one pasted line of text parse to the same node). `"blocks"` is
- * every writer today — the block-selection copy and the bare-caret whole-block
- * copy, both through `writeForestToClipboard`; a text-range copy is the
- * BROWSER's and writes no `BLOCKS_MIME` at all. `"text"` is the arm a future
- * writer copying a text range structurally would state.
+ * the block-selection copy and the bare-caret whole-block copy; `"text"` is the
+ * copy of an editor-owned text SPAN, whose ends are partial lines — so its
+ * paste splices into the caret's line (Notion's model). All three go through
+ * `writeForestToClipboard`. A text-range copy INSIDE one block is the
+ * BROWSER's and writes no `BLOCKS_MIME` at all.
  */
 export interface BlocksPayload {
   granularity: ForestGranularity;
   forest: SerializedBlock[];
 }
 
-/** Encode a whole-block copy — the one granularity anything writes today. */
-export function encodeBlocksPayload(forest: SerializedBlock[]): string {
-  const payload: BlocksPayload = { granularity: "blocks", forest };
+/** Encode a copied forest with what it was copied AS (see {@link BlocksPayload}). */
+export function encodeBlocksPayload(
+  forest: SerializedBlock[],
+  granularity: ForestGranularity,
+): string {
+  const payload: BlocksPayload = { granularity, forest };
   return JSON.stringify(payload);
 }
 

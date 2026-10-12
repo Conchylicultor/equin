@@ -650,6 +650,15 @@ function opEffect(
     }
     case "merge":
       return { kind: "remove", ids: [op.blockId] };
+    case "deleteSpan": {
+      // Every row the span removed — its end line and the lines between —
+      // measured off the reducer's own output, since the op names only C.
+      const afterIds = new Set(after.map((b) => b.id));
+      return {
+        kind: "remove",
+        ids: before.filter((b) => !afterIds.has(b.id)).map((b) => b.id),
+      };
+    }
     case "delete":
       return { kind: "remove", ids: op.blockIds };
     case "unwrap": {

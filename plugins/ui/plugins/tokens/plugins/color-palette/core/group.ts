@@ -315,6 +315,19 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
     default: "currentColor",
     label: "Toolbar icons",
   },
+  // Selected TEXT: the fill behind a text selection — the browser's own
+  // (`::selection`) and an editor-painted one (the page editor's cross-block
+  // span, `::highlight(page-text-span)`) alike. ONE token for both, so a
+  // native selection and a painted one cannot be told apart where they meet.
+  // Clearly blue in both schemes — a selection must read as one at a glance,
+  // which a faint primary tint over a dark background did not — and
+  // translucent, so a selection over a tinted surface (a callout, a code
+  // background) still shows the surface through it.
+  textSelection: {
+    default: "oklch(0.62 0.16 250 / 0.35)",
+    darkDefault: "oklch(0.62 0.16 255 / 0.5)",
+    label: "Text selection",
+  },
 });
 
 export type ColorPaletteTokenValues = {

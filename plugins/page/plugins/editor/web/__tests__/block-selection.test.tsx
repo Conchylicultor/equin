@@ -14,8 +14,11 @@ import {
   useBlockSelection,
   BLOCK_LIST_ARIA,
   type BlockSelectionActions,
+  type TextSpan,
 } from "../internal/use-block-selection";
 import type { VisibleBlock } from "../internal/selection-closure";
+import type { SpanMotion } from "../internal/span-motion";
+import type { SpanSelection } from "../../core";
 
 // The announcement channel is a module-level writer into a page-global live
 // region, so the way to observe it from a hook test is to own the module — the
@@ -55,8 +58,20 @@ const NESTED: VisibleBlock[] = [
   { id: "b4", depth: 0 },
 ];
 
+/** What the last `extendSpan` click answered (the executor's "claimed?"). */
+let extendResult: boolean | undefined;
+
 /** What the harness's blocks are called when the selection speaks their name. */
 const describeBlock = (id: string) => `Text: ${id} body`;
+
+/** A span drawn UPWARD from mid-`b3` to mid-`b2`, as `normalizeSpan` returns it. */
+const SPAN: TextSpan = {
+  kind: "text",
+  anchor: { blockId: "b3", offset: 2 },
+  head: { blockId: "b2", offset: 1 },
+  from: { blockId: "b2", offset: 1 },
+  to: { blockId: "b3", offset: 2 },
+};
 
 /** Every announcement made since the last reset, in order. */
 const spoken = () => announced.mock.calls.map(([message]) => message);
@@ -118,14 +133,21 @@ function Surface({
   // the whole selection, which is what the closure tests assert on.
   const roots = useMemo(() => [...selectedIds], [selectedIds]);
 
-  const { containerRef, control, clearSelection, onKeyDown, onFocusCapture } =
-    useBlockSelection({
-      visible,
-      roots,
-      focusedBlockId: null,
-      describeBlock,
-      actions,
-    });
+  const {
+    containerRef,
+    control,
+    clearSelection,
+    onKeyDown,
+    onFocusCapture,
+    textSpan,
+    setTextSpan,
+  } = useBlockSelection({
+    visible,
+    roots,
+    focusedBlockId: null,
+    describeBlock,
+    actions,
+  });
 
   return (
     <>
@@ -135,6 +157,42 @@ function Surface({
           caret going back into a block), so a clear that reaches the hook while
           nothing is selected is a real path, not a contrived one. */}
       <button data-testid="clear" type="button" onClick={clearSelection} />
+      {/* Stand in for the keyboard plugin's `extendSpan` executor: Shift+Down
+          on b2's last line with the native anchor at 3, and Shift+Up on the
+          first line of the first block. */}
+      <button
+        data-testid="extend-b2"
+        type="button"
+        onClick={() => {
+          extendResult = control.extendSpan("b2", 3, "down", 0);
+        }}
+      />
+      <button
+        data-testid="extend-b3"
+        type="button"
+        onClick={() => {
+          extendResult = control.extendSpan("b3", 2, "down", 0);
+        }}
+      />
+      <button
+        data-testid="extend-b1-up"
+        type="button"
+        onClick={() => {
+          extendResult = control.extendSpan("b1", 0, "up", 0);
+        }}
+      />
+      {/* Stands in for the pointer gesture that builds a span (block-editor's
+          promotion); the span itself is what `normalizeSpan` would hand it. */}
+      <button
+        data-testid="span"
+        type="button"
+        onClick={() => setTextSpan(SPAN)}
+      />
+      <div data-testid="text-span">
+        {textSpan
+          ? `${textSpan.from.blockId}:${textSpan.from.offset}-${textSpan.to.blockId}:${textSpan.to.offset}`
+          : ""}
+      </div>
       {/* The editor's own container ARIA, from the one value the real surface
           spreads too — so the role assertions below test what the block list
           actually claims to be, not what this harness happened to type. */}
@@ -156,14 +214,58 @@ function Surface({
   );
 }
 
+/**
+ * A stand-in for the surface's span motion: every block holds five
+ * characters, laid out one line each, except `b4`, which has no text — so a
+ * span reaching it widens to blocks, as `normalizeSpan` does for a text-less
+ * line. Enough geometry for the hook's keyboard policy; the real motion's
+ * geometry is the e2e's (`e2e/cross-block-span-verify.ts`).
+ */
+const LEN = 5;
+const ORDER = IDS as readonly string[];
+const fakeSpanMotion: SpanMotion = {
+  enter: (blockId, dir) => {
+    const i =
+      ORDER.indexOf(blockId) + (dir === "up" || dir === "left" ? -1 : 1);
+    const next = ORDER[i];
+    if (next === undefined) return null;
+    return { blockId: next, offset: dir === "left" || dir === "up" ? LEN : 0 };
+  },
+  step: (head, dir) => {
+    const back = dir === "left" || dir === "up";
+    const offset = head.offset + (back ? -1 : 1);
+    if (offset >= 0 && offset <= LEN)
+      return { head: { ...head, offset }, x: 7 };
+    const next = ORDER[ORDER.indexOf(head.blockId) + (back ? -1 : 1)];
+    if (next === undefined) return null;
+    return { head: { blockId: next, offset: back ? LEN : 0 }, x: 7 };
+  },
+  normalize: (anchor, head): SpanSelection => {
+    if (anchor.blockId === "b4" || head.blockId === "b4")
+      return { kind: "blocks", anchor: anchor.blockId, head: head.blockId };
+    const a = ORDER.indexOf(anchor.blockId);
+    const h = ORDER.indexOf(head.blockId);
+    const forward = a < h || (a === h && anchor.offset <= head.offset);
+    return {
+      kind: "text",
+      anchor,
+      head,
+      from: forward ? anchor : head,
+      to: forward ? head : anchor,
+    };
+  },
+};
+
 function setup(visible: VisibleBlock[] = FLAT) {
   const actions: BlockSelectionActions = {
+    spanMotion: fakeSpanMotion,
     indent: vi.fn(),
     outdent: vi.fn(),
     remove: vi.fn(),
     duplicate: vi.fn(),
     focusBlock: vi.fn(),
     moveSelection: vi.fn(),
+    deleteSpan: vi.fn(),
   };
   const view = render(
     <MultiSelectProvider orderedIds={visible.map((v) => v.id)}>
@@ -178,6 +280,8 @@ function setup(visible: VisibleBlock[] = FLAT) {
     clear: el("clear"),
     block: (id: string) => el(`block-${id}`),
     count: () => Number(el("count").textContent),
+    span: () => el("text-span").textContent,
+    makeSpan: () => fireEvent.click(el("span")),
     selected: () => el("selected").textContent,
   };
 }
@@ -494,5 +598,154 @@ describe("a selected block brings its children with it", () => {
     expect(spoken()).toEqual([
       "Text: b1 body, block 1 of 4, 3 blocks selected",
     ]);
+  });
+});
+
+/**
+ * The selection is a union — nothing, a block range, or an editor-owned text
+ * span — and each arm's setter retires the other.
+ */
+describe("the selection union: a text span", () => {
+  it("a span holds the keyboard on the container and selects no block", () => {
+    const t = setup();
+    t.makeSpan();
+
+    expect(t.span()).toBe("b2:1-b3:2");
+    expect(t.count()).toBe(0);
+    expect(document.activeElement).toBe(t.container);
+    expect(spoken()).toEqual(["Text selected"]);
+  });
+
+  it("Escape climbs to the blocks the span touches", () => {
+    const t = setup();
+    t.makeSpan();
+
+    fireEvent.keyDown(t.container, { key: "Escape" });
+
+    expect(t.span()).toBe("");
+    expect(t.selected()).toBe("b2,b3");
+  });
+
+  it("Delete deletes the span's ordered ends and leaves span mode", () => {
+    const t = setup();
+    t.makeSpan();
+
+    fireEvent.keyDown(t.container, { key: "Delete" });
+
+    expect(t.actions.deleteSpan).toHaveBeenCalledWith(SPAN.from, SPAN.to);
+    expect(t.actions.remove).not.toHaveBeenCalled();
+    expect(t.span()).toBe("");
+  });
+
+  it("a plain arrow collapses the span to the end it points at", () => {
+    const t = setup();
+    t.makeSpan();
+
+    fireEvent.keyDown(t.container, { key: "ArrowRight" });
+
+    expect(t.actions.focusBlock).toHaveBeenCalledWith("b3", 2);
+    expect(t.span()).toBe("");
+  });
+
+  it("a block range replaces the span, and a span replaces the range", () => {
+    const t = inSelectionMode("b1");
+    t.makeSpan();
+    expect(t.count()).toBe(0);
+    expect(t.span()).toBe("b2:1-b3:2");
+
+    fireEvent.keyDown(t.block("b4"), { key: "Escape" });
+    expect(t.span()).toBe("");
+    expect(t.selected()).toBe("b4");
+  });
+
+  it("focusing into a block drops the span", () => {
+    const t = setup();
+    t.makeSpan();
+
+    fireEvent.focus(t.block("b1"));
+
+    expect(t.span()).toBe("");
+  });
+
+  it("a printable key types OVER the span: deleted, the key replayed at the join", () => {
+    const t = setup();
+    t.makeSpan();
+
+    fireEvent.keyDown(t.container, { key: "x" });
+
+    expect(t.actions.deleteSpan).toHaveBeenCalledWith(SPAN.from, SPAN.to, [
+      { kind: "text", text: "x" },
+    ]);
+    expect(t.span()).toBe("");
+  });
+
+  it("Enter types over the span as a key (it splits at the join)", () => {
+    const t = setup();
+    t.makeSpan();
+
+    fireEvent.keyDown(t.container, { key: "Enter" });
+
+    expect(t.actions.deleteSpan).toHaveBeenCalledWith(SPAN.from, SPAN.to, [
+      { kind: "key", key: "Enter", shift: false },
+    ]);
+  });
+
+  it("a shortcut is not typing: Cmd+B leaves the span alone", () => {
+    const t = setup();
+    t.makeSpan();
+
+    fireEvent.keyDown(t.container, { key: "b", metaKey: true });
+
+    expect(t.actions.deleteSpan).not.toHaveBeenCalled();
+    expect(t.span()).toBe("b2:1-b3:2");
+  });
+
+  it("Shift+Arrow moves the HEAD, keeping the anchor", () => {
+    const t = setup();
+    t.makeSpan();
+
+    // The span was drawn upward: anchor b3:2, head b2:1. Shift+Left grows it.
+    fireEvent.keyDown(t.container, { key: "ArrowLeft", shiftKey: true });
+    expect(t.span()).toBe("b2:0-b3:2");
+    // …and across the line's edge into the line above.
+    fireEvent.keyDown(t.container, { key: "ArrowLeft", shiftKey: true });
+    expect(t.span()).toBe("b1:5-b3:2");
+  });
+
+  it("a head stepping back onto its anchor is a caret again", () => {
+    const t = setup();
+    t.makeSpan();
+    // b2:1 → b2:5 is 4 steps, the line break 1, b3:0 → b3:2 2: seven.
+    for (let i = 0; i < 7; i += 1)
+      fireEvent.keyDown(t.container, { key: "ArrowRight", shiftKey: true });
+
+    expect(t.span()).toBe("");
+    expect(t.actions.focusBlock).toHaveBeenLastCalledWith("b3", 2);
+  });
+});
+
+describe("Shift+Arrow out of a block's text draws a span", () => {
+  it("anchored where the native selection was, its head in the next line", () => {
+    const t = setup();
+    // The keyboard plugin's `extendSpan` executor, called through the control.
+    fireEvent.click(t.view.getByTestId("extend-b2"));
+    expect(extendResult).toBe(true);
+    expect(t.span()).toBe("b2:3-b3:0");
+    expect(document.activeElement).toBe(t.container);
+  });
+
+  it("widens to blocks when the next line cannot end a span", () => {
+    const t = setup();
+    fireEvent.click(t.view.getByTestId("extend-b3"));
+    expect(extendResult).toBe(true);
+    expect(t.span()).toBe("");
+    expect(t.selected()).toBe("b3,b4");
+  });
+
+  it("is not claimed when there is no line that way", () => {
+    const t = setup();
+    fireEvent.click(t.view.getByTestId("extend-b1-up"));
+    expect(extendResult).toBe(false);
+    expect(t.span()).toBe("");
   });
 });

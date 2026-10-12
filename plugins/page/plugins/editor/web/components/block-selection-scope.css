@@ -33,3 +33,20 @@
 .block-list-editing-selectable input {
   user-select: text;
 }
+
+/*
+ * Selected text, native or painted, is ONE colour: the theme's `--text-selection`
+ * (color-palette). The browser's own selection inside an editing host and the
+ * editor-owned TEXT span (`text-span-highlight.tsx`, the CSS Custom Highlight
+ * API — no editing host can hold a native selection that leaves it) wear the
+ * same fill, so a user cannot see where the native selection inside the origin
+ * block stops and the painted span begins. Never a local tint: a selection
+ * colour belongs to the theme, and two spellings of it would drift.
+ */
+.block-list-editing-selectable ::selection {
+  background-color: var(--text-selection);
+}
+
+::highlight(page-text-span) {
+  background-color: var(--text-selection);
+}

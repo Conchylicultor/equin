@@ -2,6 +2,7 @@ import {
   newBlockId,
   serializeForestToMarkdown,
   type BlockHandle,
+  type ForestGranularity,
   type IdentifiedBlock,
 } from "../../core";
 import { blockTextProtectedSpans } from "./block-text-extensions";
@@ -22,11 +23,12 @@ import { BLOCKS_MIME, encodeBlocksPayload } from "./transfer";
  * unit-tested with no Lexical in the loader (`clipboard.test.ts`), and the
  * protected-span registry read below pulls the whole block-text extension set in.
  *
- * Both surfaces that copy blocks call it — the block-selection container
- * (`block-editor.tsx`) and the collapsed-caret copy inside one block
- * (`block-forest-copy-plugin.tsx`) — so the two produce byte-identical
- * clipboard payloads by construction, not by two mirrored implementations
- * happening to agree.
+ * Every surface that copies blocks calls it — the block-selection container
+ * and its text-span copy (`block-editor.tsx`), and the collapsed-caret copy
+ * inside one block (`block-forest-copy-plugin.tsx`) — so they produce
+ * byte-identical clipboard payloads by construction, not by mirrored
+ * implementations happening to agree. `granularity` is the one thing they
+ * differ in: `"blocks"` for whole blocks, `"text"` for a span.
  *
  * `gesture` is what a paste of a sub-page later hinges on: a CUT stamps one
  * fresh `cutId` on every page node, so the first paste of it moves those pages
@@ -38,11 +40,13 @@ export function writeForestToClipboard(
   forest: IdentifiedBlock[],
   handles: BlockHandle<unknown>[],
   gesture: "copy" | "cut",
+  granularity: ForestGranularity,
 ): void {
   const payload = gesture === "cut" ? withCutId(forest, newBlockId()) : forest;
-  // Both callers copy WHOLE blocks, so the payload says so: a paste of it lands
-  // whole lines, never merged into the text at a caret (`decodeBlocksPayload`).
-  clipboardData.setData(BLOCKS_MIME, encodeBlocksPayload(payload));
+  // What the forest was copied AS rides on the payload: whole blocks paste as
+  // whole lines, never merged into the text at a caret, while a text span's
+  // partial lines splice into it (`decodeBlocksPayload`, `planSplice`).
+  clipboardData.setData(BLOCKS_MIME, encodeBlocksPayload(payload, granularity));
   clipboardData.setData(
     "text/plain",
     serializeForestToMarkdown(forest, {

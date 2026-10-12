@@ -138,7 +138,7 @@ describe("the BLOCKS_MIME payload envelope", () => {
   ];
 
   test("what we write round-trips as whole blocks", () => {
-    expect(decodeBlocksPayload(encodeBlocksPayload(forest))).toEqual({
+    expect(decodeBlocksPayload(encodeBlocksPayload(forest, "blocks"))).toEqual({
       ok: true,
       granularity: "blocks",
       forest,

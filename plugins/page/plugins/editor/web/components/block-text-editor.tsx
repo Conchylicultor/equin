@@ -57,7 +57,9 @@ import {
 import { isValidLinkUrl } from "../internal/link-url";
 import { BLOCK_INSET } from "../internal/page-column";
 import {
+  linearDomRange,
   linearOffsetAtPoint,
+  nativeAnchorLinearOffset,
   placeCaretAtBoundary,
   placeCaretAtColumn,
   placeCaretAtOffset,
@@ -368,6 +370,25 @@ export function BlockTextEditor({
       offsetAtPoint: (x: number, y: number) => {
         const ed = lexicalEditorRef.current;
         return ed ? linearOffsetAtPoint(ed, x, y) : null;
+      },
+      // The three reads an editor-owned text span is built and painted from
+      // (`block-editor.tsx`, `text-span-highlight.tsx`). None selects anything.
+      nativeAnchorOffset: () => {
+        const ed = lexicalEditorRef.current;
+        return ed ? nativeAnchorLinearOffset(ed) : null;
+      },
+      domRangeOf: (from: number, to: number) => {
+        const ed = lexicalEditorRef.current;
+        return ed ? linearDomRange(ed, from, to) : null;
+      },
+      onTextUpdate: (listener: () => void) => {
+        const ed = lexicalEditorRef.current;
+        if (!ed) {
+          throw new Error(
+            `block ${block.id}: onTextUpdate on a handle whose editor is not mounted`,
+          );
+        }
+        return ed.registerUpdateListener(() => listener());
       },
     });
   }, [block.id, registerFocusHandle]);

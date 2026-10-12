@@ -9,6 +9,7 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
+import { flushSync } from "react-dom";
 
 import {
   DndContext,
@@ -59,11 +60,17 @@ import {
   plainOf,
   runsLength,
   runsOfNode,
+  normalizeSpan,
+  splitRuns,
+  PAGE_BLOCK_TYPE,
   type Block,
   type BlockNode,
   type ForestGranularity,
+  type IdentifiedBlock,
   type RichText,
   type SerializedBlock,
+  type SpanLines,
+  type SpanPoint,
 } from "../../core";
 import { fromNodes, toNodes } from "../internal/optimistic-block-ops";
 import { liveRunsOf } from "../internal/live-runs";
@@ -86,15 +93,18 @@ import {
 } from "../internal/block-content-scope";
 import { useAnchorTypes, useBlockHandles } from "../internal/block-handles";
 import { serializeForest } from "../serialize-blocks";
+import { createSpanMotion } from "../internal/span-motion";
 import { SelectionControlProvider } from "../selection-control";
 import {
   useBlockSelection,
   BLOCK_LIST_ARIA,
   type BlockSelectionActions,
+  type TextSpan,
 } from "../internal/use-block-selection";
 import { BlockRow } from "./block-row";
 import { FrameFoot } from "./frame-foot";
 import { SelectionBands } from "./selection-bands";
+import { TextSpanHighlight, type SpanLinePaint } from "./text-span-highlight";
 import {
   BLOCK_GUTTER,
   blockContentLeft,
@@ -630,6 +640,9 @@ function SelectionLayer({
     attachContainer,
     scope,
     admits,
+    textReadsOf,
+    deleteSpan,
+    replaceSpan,
   } = useBlockEditor();
   const { selectedIds } = useMultiSelect();
   // ONE `type → handle` view of the `Editor.Block` registry (`useBlockHandles`),
@@ -771,6 +784,53 @@ function SelectionLayer({
     [bulkMove, rowsRef, selectedRef, isAnchorNodeRef],
   );
 
+  // ---- Editor-owned text span: the lines it is built over -----------------
+  //
+  // Can this line be a span END — a line `deleteSpan` can merge into or away?
+  // Text-bearing, and neither a page row nor a container anchor: exactly the
+  // reducer's refusals, read off the same registry the op context comes from.
+  const isSpanEndType = useCallback(
+    (type: string) =>
+      type !== PAGE_BLOCK_TYPE &&
+      !anchorTypes.has(type) &&
+      handleMap.get(type)?.acceptsText === true,
+    [anchorTypes, handleMap],
+  );
+  // The block list as `normalizeSpan` reads it. `textOf` reads the line's LIVE
+  // text through its mounted editor — a line with no mounted text surface
+  // cannot be an end (there is nothing to cut), so it widens the span.
+  const spanLines = useCallback(
+    (): SpanLines => ({
+      order: flat.map((f) => ({ id: f.block.id, group: f.block.pageId })),
+      textOf: (id) => {
+        const block = flat.find((f) => f.block.id === id)?.block;
+        if (!block || !isSpanEndType(block.type)) return null;
+        const read = textReadsOf(id)?.readRuns;
+        return read ? plainOf(read()) : null;
+      },
+      tokenPatterns: blockTextProtectedSpans(),
+    }),
+    [flat, isSpanEndType, textReadsOf],
+  );
+  // How the KEYBOARD moves a span (Shift+Arrow): over the same lines, through
+  // the same text reads. A container anchor with visible children paints no
+  // line (its first line is its first child's), so a step passes over it.
+  const spanMotion = useMemo(() => {
+    const silent = new Set(
+      flat
+        .filter(
+          (f) =>
+            anchorTypes.has(f.block.type) && f.firstVisibleChildType !== null,
+        )
+        .map((f) => f.block.id),
+    );
+    return createSpanMotion({
+      ...spanLines(),
+      paintsLine: (id) => !silent.has(id),
+      readsOf: textReadsOf,
+    });
+  }, [flat, anchorTypes, spanLines, textReadsOf]);
+
   // ---- Block-selection mode (range state, container focus + keyboard) -------
 
   const selectionActions = useMemo<BlockSelectionActions>(
@@ -781,6 +841,8 @@ function SelectionLayer({
       duplicate: bulkDuplicate,
       focusBlock,
       moveSelection,
+      deleteSpan,
+      spanMotion,
     }),
     [
       indentBlocks,
@@ -789,6 +851,8 @@ function SelectionLayer({
       bulkDuplicate,
       focusBlock,
       moveSelection,
+      deleteSpan,
+      spanMotion,
     ],
   );
 
@@ -823,6 +887,8 @@ function SelectionLayer({
     containerRef,
     control: selectionControl,
     applyRange,
+    textSpan,
+    setTextSpan,
     clearSelection,
     focusContainer,
     onKeyDown,
@@ -855,11 +921,187 @@ function SelectionLayer({
   // originates inside the container) and a raw DOM `ClipboardEvent` caught at the
   // document — which is how the selection bar's button copies, since it renders
   // outside the container and its event never reaches `onCopy` below.
+  const textSpanRef = useLatestRef(textSpan);
+
+  /**
+   * The forest a text span copies as: the lines it covers, its START line
+   * from the span's start offset on and its END line up to the span's end
+   * offset, every covered line's text read LIVE (`readRuns` — the row's
+   * `data.text` trails the doc by ~1s). Roots are resolved as a block
+   * selection of the covered lines (`blockSelectionRoots`), so nesting
+   * survives; a visible line under a covered root that the span does NOT
+   * cover (a parent's children after the span's end) is left out, while a
+   * covered line's hidden (collapsed) children travel with it, as in any copy.
+   * A container the span only ENTERS (an ancestor of its end line) is not a
+   * root of its own — the span covered its first lines, not the box.
+   *
+   * Inside one block it is just the substring: one plain paragraph (the
+   * registry's `defaultText` type), so its paste is inline anywhere.
+   */
+  const spanForest = useCallback(
+    (span: TextSpan): IdentifiedBlock[] => {
+      const { from, to } = span;
+      const live = (id: string): RichText | null =>
+        textReadsOf(id)?.readRuns?.() ?? null;
+      const endRuns = (id: string): RichText => {
+        const runs = live(id);
+        if (runs === null) {
+          throw new Error(
+            `text span copy: block "${id}" has no mounted text surface`,
+          );
+        }
+        return runs;
+      };
+      if (from.blockId === to.blockId) {
+        const runs = splitRuns(
+          splitRuns(endRuns(from.blockId), to.offset)[0],
+          from.offset,
+        )[1];
+        const paragraph = defaultTextHandle(handles);
+        const own = rowsRef.current.find((b) => b.id === from.blockId);
+        const type = paragraph?.type ?? own?.type;
+        if (type === undefined) return [];
+        return [
+          {
+            id: from.blockId,
+            type,
+            data: { ...(paragraph?.empty?.() ?? {}), text: runs },
+            expanded: true,
+            children: [],
+          },
+        ];
+      }
+      const lo = flat.findIndex((f) => f.block.id === from.blockId);
+      const hi = flat.findIndex((f) => f.block.id === to.blockId);
+      if (lo === -1 || hi === -1) return [];
+      const enteredBoxes = new Set<string>();
+      const parentOf = new Map(flat.map((f) => [f.block.id, f.block.parentId]));
+      for (let p = parentOf.get(to.blockId); p != null; p = parentOf.get(p)) {
+        if (
+          anchorTypes.has(flat.find((f) => f.block.id === p)?.block.type ?? "")
+        )
+          enteredBoxes.add(p);
+      }
+      const covered = new Set<string>();
+      const runsOverride = new Map<string, RichText>();
+      for (let i = lo; i <= hi; i += 1) {
+        const id = flat[i]!.block.id;
+        if (!enteredBoxes.has(id)) covered.add(id);
+        const runs = live(id);
+        if (runs !== null) runsOverride.set(id, runs);
+      }
+      runsOverride.set(
+        from.blockId,
+        splitRuns(endRuns(from.blockId), from.offset)[1],
+      );
+      runsOverride.set(
+        to.blockId,
+        splitRuns(endRuns(to.blockId), to.offset)[0],
+      );
+      const exclude = new Set(
+        flat.filter((_, i) => i < lo || i > hi).map((f) => f.block.id),
+      );
+      const roots = blockSelectionRoots(
+        toNodes(rowsRef.current),
+        covered,
+        isAnchorNodeRef.current,
+      );
+      return serializeForest(rowsRef.current, roots, { runsOverride, exclude });
+    },
+    [textReadsOf, handles, flat, anchorTypes, rowsRef, isAnchorNodeRef],
+  );
+
+  /**
+   * A paste while a text span is selected REPLACES the span, as a paste over
+   * a native selection does: classified by the one transfer door with
+   * `inline: true` (the span's start IS an insertion point), then
+   * `replaceSpan` — the span deleted and the forest spliced at the join, as
+   * one undo entry. Single-line text has no Lexical host to land natively in
+   * (the container holds the keyboard), so it is parsed into its one paragraph
+   * and spliced like any other text.
+   *
+   * A pasted FILE lands as its block right after the join line, the span
+   * deleted first — two entries, the file's upload being its own write.
+   */
+  const pasteOverSpan = useCallback(
+    (e: React.ClipboardEvent, span: TextSpan) => {
+      const picked = allowAttachments
+        ? resolvePastedBlock(e.clipboardData)
+        : null;
+      const text = readTransferText(e.clipboardData);
+      const decision = decideTransfer({
+        isFile: picked !== null,
+        blocksJson: e.clipboardData.getData(BLOCKS_MIME),
+        text,
+        inline: true,
+      });
+      if (decision.kind === "file") {
+        e.preventDefault();
+        const { file, handler } = picked!;
+        clearSelection();
+        deleteSpan(span.from, span.to);
+        void (async () => {
+          const data = await handler.build(file);
+          paste({
+            blocks: [
+              { type: handler.type, data, expanded: false, children: [] },
+            ],
+            afterId: span.from.blockId,
+          });
+        })();
+        return;
+      }
+      let blocks: SerializedBlock[];
+      let granularity: ForestGranularity = "text";
+      if (decision.kind === "forest") {
+        const payload = decodeBlocksPayload(decision.json);
+        if (!payload.ok) return;
+        blocks = payload.forest;
+        granularity = payload.granularity;
+      } else {
+        blocks = parseMarkdownToForest(
+          decision.kind === "markdown" ? decision.text : text,
+          {
+            handles,
+            protectedSpans: blockTextProtectedSpans(),
+            // Foreign text, as at every paste door.
+            blankLines: "separator",
+            emptyBlocks: "blank-line",
+            softBreaks: "newline",
+          },
+        );
+      }
+      // Nothing to paste: never swallow the event for nothing.
+      if (!Array.isArray(blocks) || blocks.length === 0) return;
+      e.preventDefault();
+      clearSelection();
+      replaceSpan(span.from, span.to, { blocks, granularity });
+    },
+    [allowAttachments, handles, paste, clearSelection, deleteSpan, replaceSpan],
+  );
+
   const writeClipboard = useCallback(
     (
       e: { clipboardData: DataTransfer | null; preventDefault: () => void },
       gesture: "copy" | "cut",
     ) => {
+      // A TEXT span copies as a PARTIAL forest — its two end lines sliced at
+      // the span's offsets — written as `"text"`, so a paste of it splices
+      // into the caret's line instead of landing as whole blocks.
+      const span = textSpanRef.current;
+      if (span !== null) {
+        const clipboardData = e.clipboardData;
+        if (clipboardData === null) return false;
+        writeForestToClipboard(
+          clipboardData,
+          spanForest(span),
+          handles,
+          gesture,
+          "text",
+        );
+        e.preventDefault();
+        return true;
+      }
       const roots = blockSelectionRoots(
         toNodes(rowsRef.current),
         selectedRef.current,
@@ -869,15 +1111,17 @@ function SelectionLayer({
       const clipboardData = e.clipboardData;
       if (clipboardData === null) return false;
       const forest = serializeForest(rowsRef.current, roots);
-      writeForestToClipboard(clipboardData, forest, handles, gesture);
+      writeForestToClipboard(clipboardData, forest, handles, gesture, "blocks");
       e.preventDefault();
       return true;
     },
-    [handles],
+    [handles, spanForest],
   );
 
   const onCopy = useCallback(
     (e: React.ClipboardEvent) => {
+      // Already written by a block's own editor (its copy plugin): see onPaste.
+      if (e.defaultPrevented) return;
       if (document.activeElement !== containerRef.current) return;
       writeClipboard(e, "copy");
     },
@@ -886,13 +1130,29 @@ function SelectionLayer({
 
   const onCut = useCallback(
     (e: React.ClipboardEvent) => {
+      // Already handled by a block's own editor: see onPaste.
+      if (e.defaultPrevented) return;
       if (document.activeElement !== containerRef.current) return;
-      if (writeClipboard(e, "cut")) {
-        bulkDelete([...selectedRef.current]);
+      // Read BEFORE the write: the span is what the cut removes.
+      const span = textSpanRef.current;
+      if (!writeClipboard(e, "cut")) return;
+      if (span !== null) {
+        // Copy, then the span's own delete — one entry, the caret at the join.
         clearSelection();
+        deleteSpan(span.from, span.to);
+        return;
       }
+      bulkDelete([...selectedRef.current]);
+      clearSelection();
     },
-    [writeClipboard, bulkDelete, clearSelection, containerRef],
+    [
+      writeClipboard,
+      bulkDelete,
+      clearSelection,
+      containerRef,
+      textSpanRef,
+      deleteSpan,
+    ],
   );
 
   /**
@@ -941,7 +1201,20 @@ function SelectionLayer({
 
   const onPaste = useCallback(
     (e: React.ClipboardEvent) => {
+      // A paste a block's own editor already handled (`BlockForestPastePlugin`
+      // splices and prevents the default) is not the container's. The
+      // activeElement test below cannot say so on its own: the splice it ran
+      // may CLAIM the caret for the line it created (the caret authority
+      // focuses this container mid-dispatch), so by the time the event bubbles
+      // here the container "holds focus" — and used to paste the same forest
+      // a second time, as whole blocks after the caret's line.
+      if (e.defaultPrevented) return;
       if (document.activeElement !== containerRef.current) return;
+      const span = textSpanRef.current;
+      if (span !== null) {
+        pasteOverSpan(e, span);
+        return;
+      }
       // A pasted file (image/video/audio/…) is resolved through the generic
       // registry, so this consumer never names a specific block type. Skipped
       // entirely in the in-memory (non-persisting) mode: there is no server to
@@ -1015,7 +1288,15 @@ function SelectionLayer({
       e.preventDefault();
       paste({ blocks: forest, afterId: afterId() });
     },
-    [handles, paste, focusedBlockId, containerRef, allowAttachments],
+    [
+      handles,
+      paste,
+      focusedBlockId,
+      containerRef,
+      allowAttachments,
+      textSpanRef,
+      pasteOverSpan,
+    ],
   );
 
   // ---- Pointer drag-select (background marquee + cross-block text promotion) --
@@ -1135,6 +1416,47 @@ function SelectionLayer({
     ],
   );
 
+  // ---- Editor-owned text span: the pointer gesture (a text drag past its
+  // origin row). The lines a span is built over are declared above, with the
+  // keyboard's motion over them (`spanLines`, `spanMotion`).
+  //
+  /**
+   * The span's moving end under the pointer at `(x, y)` on row `rowId`. The
+   * point is read where the text IS: a pointer beside the text (the gutter, the
+   * whitespace past a short line) is clamped into the text's own box first, and
+   * above / below it resolves to the line's start / end. A row with no text
+   * surface still answers — `normalizeSpan` widens on it, which is the point.
+   */
+  const spanHeadAt = useCallback(
+    (rowId: string, x: number, y: number, below: boolean): SpanPoint => {
+      const reads = textReadsOf(rowId);
+      const len = reads?.readRuns ? runsLength(reads.readRuns()) : 0;
+      const hit = reads?.offsetAtPoint?.(x, y) ?? null;
+      if (hit !== null || !reads) return { blockId: rowId, offset: hit ?? 0 };
+      const box = reads.domRangeOf?.(0, len)?.getBoundingClientRect();
+      if (box && box.height > 0) {
+        if (y < box.top) return { blockId: rowId, offset: 0 };
+        if (y > box.bottom) return { blockId: rowId, offset: len };
+        const clamped = reads.offsetAtPoint?.(
+          Math.min(Math.max(x, box.left + 1), box.right - 1),
+          Math.min(Math.max(y, box.top + 1), box.bottom - 1),
+        );
+        if (clamped != null) return { blockId: rowId, offset: clamped };
+      }
+      return { blockId: rowId, offset: below ? len : 0 };
+    },
+    [textReadsOf],
+  );
+  /**
+   * The span's fixed end: where the text drag STARTED, read off the origin's
+   * native selection at the moment of promotion (before `focusContainer` drops
+   * it), else off the press point. Null when the origin has no text surface
+   * (a code block's textarea) — the gesture is then a block range, as before.
+   */
+  const spanAnchorRef = useRef<SpanPoint | null>(null);
+  /** The pointer's last viewport x: the auto-scroll clock re-applies with y alone. */
+  const pointerXRef = useRef(0);
+
   /**
    * The ONE per-frame body of a drag-select gesture, at a viewport `clientY`.
    *
@@ -1163,14 +1485,53 @@ function SelectionLayer({
         // Still inside the origin row: the browser's own intra-block
         // selection is the whole feature here. Hands off.
         if (start.id === null || cur === null || cur.id === start.id) return;
+        // The span's anchor, read NOW: the `focusContainer()` below drops the
+        // native selection it lives in.
+        const reads = textReadsOf(start.id);
+        const offset =
+          reads?.nativeAnchorOffset?.() ??
+          reads?.offsetAtPoint?.(start.x, start.y) ??
+          null;
+        spanAnchorRef.current =
+          offset === null ? null : { blockId: start.id, offset };
         textDragPromotedRef.current = true;
-        setTextDragPromoted(true);
+        // COMMITTED NOW, not on the next render: dropping the surface's
+        // `block-list-editing-selectable` exemption is what makes the
+        // browser's still-running drag-selection unable to seat a range in the
+        // origin host. Set through ordinary state it would land a frame later,
+        // and every pointermove before it lets the browser's default action
+        // re-seat a native selection BESIDE the painted span (the two visible
+        // at once). `flushSync` is legal here: this runs from a native
+        // pointermove / scroll listener, never from render. The release below
+        // then drops the one range seated before promotion, and nothing can
+        // seat another for the rest of the gesture.
+        flushSync(() => setTextDragPromoted(true));
+        focusContainer();
       }
-      if (cur && start.id) applyRange(start.id, cur.id);
-      // Every move, not just the promoting one: the pointer is still down and
-      // the browser is still in select-mode, so it re-seats a range in the
-      // origin host given any chance. `select-none` (below) is what stops it
-      // re-arming; this drops whatever it managed to seat before that landed.
+      const anchor = spanAnchorRef.current;
+      if (cur && start.id && anchor === null) applyRange(start.id, cur.id);
+      if (cur && anchor !== null) {
+        // Every move re-reads the head and re-normalizes, so the selection
+        // follows the pointer between the union's arms: a partial span while
+        // both ends are text, the touched blocks whole while the pointer is
+        // over a line that cannot end one. Back inside the origin row it is a
+        // span inside one block — no caret is re-seated (see the CLAUDE.md
+        // section this replaces the one-way rule with).
+        const order = flat.findIndex((f) => f.block.id === cur.id);
+        const below =
+          order > flat.findIndex((f) => f.block.id === anchor.blockId);
+        const sel = normalizeSpan(
+          anchor,
+          spanHeadAt(cur.id, pointerXRef.current, clientY, below),
+          spanLines(),
+        );
+        if (sel.kind === "text") setTextSpan(sel);
+        else if (sel.kind === "blocks") applyRange(sel.anchor, sel.head);
+      }
+      // Every move, not just the promoting one — a backstop, not the
+      // mechanism: the synchronous class drop at promotion is what keeps the
+      // browser from re-seating a range (see above); this drops anything a
+      // path we have not thought of managed to seat.
       //
       // Safe to run at 60fps — which is what an auto-scrolling gesture now does
       // — ONLY because `focusContainer` focuses with `preventScroll: true`
@@ -1216,17 +1577,14 @@ function SelectionLayer({
    * contenteditable EDITING HOST, and a browser clamps a mouse selection to the
    * host it started in — so dragging out of a block does not extend the selection,
    * it COLLAPSES it back to a bare caret, and Cmd+C copies "" (measured in
-   * `e2e/cross-block-text-selection-probe.ts`). There is no partial cross-block
-   * selection to preserve, so at the boundary we take the gesture over and promote
-   * it to a whole-block range: Notion's model, and the one the block-selection
-   * machinery (highlight, markdown clipboard, bulk ops) is already built for.
+   * `e2e/cross-block-text-selection-probe.ts`). So at the boundary we take the
+   * gesture over and make it an EDITOR-OWNED text span (`normalizeSpan`): partial
+   * at both ends, painted by `TextSpanHighlight`, never a native selection.
    *
-   * Promotion is deliberately ONE-WAY. Dragging back into the origin block leaves
-   * that block selected whole rather than re-seating a partial caret: restoring a
-   * caret mid-drag means putting one back into a blurred block, which is exactly
-   * the state `releaseCaret` exists to prevent (an untagged `@lexical/yjs`
-   * reconcile reads it as "the caret didn't move" and reclaims DOM focus with no
-   * user input — see `internal/use-block-selection.ts`).
+   * Dragging back into the origin block keeps a partial span there — a span
+   * inside one block is legal — so no caret is ever re-seated mid-drag, which
+   * would put one back into a blurred block: exactly the state `releaseCaret`
+   * exists to prevent (see `internal/use-block-selection.ts`).
    */
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
@@ -1286,6 +1644,8 @@ function SelectionLayer({
       };
       dragMovedRef.current = false;
       textDragPromotedRef.current = false;
+      spanAnchorRef.current = null;
+      pointerXRef.current = e.clientX;
       // A text press must reach the browser untouched — that IS the intra-block
       // selection. Only the background entry claims the editor up front.
       if (mode === "background") focusContainer();
@@ -1306,6 +1666,7 @@ function SelectionLayer({
         mode === "text" ? textDragPromotedRef.current : dragMovedRef.current;
 
       const onMove = (ev: PointerEvent) => {
+        pointerXRef.current = ev.clientX;
         applySelectionAt(ev.clientY);
         if (engaged()) autoScroll.track(ev.clientY);
       };
@@ -1816,10 +2177,56 @@ function SelectionLayer({
   // The selection highlight, as runs of consecutive selected LINES rather than
   // one box per row — see `internal/selection-bands.ts` for why that is the
   // shape, and `components/selection-bands.tsx` for the look.
+  // A text span paints in two layers. Its TEXT-bearing lines get a Custom
+  // Highlight range each (`TextSpanHighlight`): partial at the two ends, whole
+  // between. A text-LESS line it fully covers (an image, a divider) has no text
+  // to highlight, so it keeps the row band a block selection would give it. A
+  // container the span only enters (an ancestor of its end line) is neither:
+  // `deleteSpan` keeps that box, so nothing may paint it as covered.
+  const spanPaint = useMemo(() => {
+    if (textSpan === null) return null;
+    const { from, to } = textSpan;
+    const lo = flat.findIndex((f) => f.block.id === from.blockId);
+    const hi = flat.findIndex((f) => f.block.id === to.blockId);
+    if (lo === -1 || hi === -1) return null;
+    const parentOf = new Map(flat.map((f) => [f.block.id, f.block.parentId]));
+    const keptBoxes = new Set<string>();
+    for (let p = parentOf.get(to.blockId); p != null; p = parentOf.get(p)) {
+      if (anchorTypes.has(flat.find((f) => f.block.id === p)?.block.type ?? ""))
+        keptBoxes.add(p);
+    }
+    const lines: SpanLinePaint[] = [];
+    const bands = new Set<string>();
+    for (let i = lo; i <= hi; i += 1) {
+      const block = flat[i]!.block;
+      if (keptBoxes.has(block.id)) continue;
+      if (handleMap.get(block.type)?.acceptsText === true) {
+        lines.push({
+          id: block.id,
+          from: i === lo ? from.offset : 0,
+          to: i === hi ? to.offset : null,
+        });
+      } else bands.add(block.id);
+    }
+    return { lines, bands };
+  }, [textSpan, flat, anchorTypes, handleMap]);
+  // The covered set the rows and bands read: the block selection, or — while
+  // a span is live — the text-less lines it fully covers.
+  const painted = spanPaint?.bands ?? selection;
   const selectionBands = useMemo(
-    () => resolveSelectionBands(flat, frameSpans, selection),
-    [flat, frameSpans, selection],
+    () => resolveSelectionBands(flat, frameSpans, painted),
+    [flat, frameSpans, painted],
   );
+  // A span END that leaves the document (another client deleted the line, an
+  // undo removed it) leaves offsets into nothing: the span is gone with it.
+  // Its middle lines vanishing is harmless — the painter skips what is not
+  // rendered and the op derives the lines between afresh.
+  useEffect(() => {
+    if (textSpan === null) return;
+    const has = (id: string) => flat.some((f) => f.block.id === id);
+    if (!has(textSpan.from.blockId) || !has(textSpan.to.blockId))
+      clearSelection();
+  }, [textSpan, flat, clearSelection]);
 
   return (
     <SelectionControlProvider value={selectionControl}>
@@ -2009,6 +2416,12 @@ function SelectionLayer({
                   paints over its frame span, which is what covers a zero-height
                   anchor row's box. */}
                 <SelectionBands bands={selectionBands} />
+                {spanPaint && (
+                  <TextSpanHighlight
+                    lines={spanPaint.lines}
+                    readsOf={textReadsOf}
+                  />
+                )}
                 {flat.map((f, i) => (
                   <RowCell
                     key={f.block.id}
@@ -2022,7 +2435,7 @@ function SelectionLayer({
                       hasVisibleChildren={f.firstVisibleChildType !== null}
                       ordinal={f.ordinal}
                       seat={railSeats[i]!}
-                      isSelected={selection.has(f.block.id)}
+                      isSelected={painted.has(f.block.id)}
                       isDragging={
                         activeId === f.block.id ||
                         (bulkDrag?.subtree.has(f.block.id) ?? false)

@@ -743,7 +743,11 @@ Nothing bounded that window; human typing speed just usually won the race.
 
   A replayed Enter re-enters `split()` and claims the NEXT flight, so the "alpha
   Enter bravo" composition needs no special case.
-- **Only a block that does not exist yet is claimed.** A block that exists but has
+- **Typing over a text span claims too** (`landWithInput`): the key that replaced
+  the span reached the CONTAINER, so it is routed input with no editing host —
+  a flight whose buffer starts with it, to an EXISTING block. It always claims,
+  mounted target or not; the landing is bounded like any flight's.
+- **Only a block that does not exist yet is claimed** (by `land`). A block that exists but has
   no mounted handle (a void row, a collapsed-away editor) is queued best-effort
   WITHOUT taking the keyboard: the caret never moved off the origin, and claiming
   for a landing that may never come would strand the user's typing.
@@ -1682,7 +1686,11 @@ reproduce. See
 The **clipboard** handlers in `block-editor.tsx` deliberately keep the
 `activeElement` check — "does the container own the clipboard right now?" is a
 genuine `activeElement` question, and a `copy` event's target follows the DOM
-selection, not focus.
+selection, not focus. They FIRST decline any event already `defaultPrevented`:
+a caret paste that a block's editor spliced can CLAIM the caret for the line it
+created, which focuses the container mid-dispatch — so `activeElement` alone
+read "the container owns it" and the same forest was pasted a second time, as
+whole blocks (found by `e2e/cross-block-span-verify.ts` phase 11).
 
 The second invariant, and why `focusContainer()` is not just a `.focus()`:
 
@@ -1729,28 +1737,110 @@ that selection explicitly** (`onDragStart`'s non-bulk arm — Notion's model). I
 to be a side effect of the focus steal, so it now has to be said, or a single-block
 drag leaves a stale highlight over blocks the gesture never touched.
 
-### A text drag becomes a block selection at the first boundary
+### A text drag becomes an editor-owned span at the first boundary
 
 `onPointerDown`'s two entry points (background marquee, text) feed one tracking loop:
 
 > A drag starting inside a block's text belongs to the BROWSER until the pointer
-> leaves the origin row; then the editor takes over with a whole-**block** range.
+> leaves the origin row; then the editor takes over with an editor-owned TEXT
+> span — partial at both ends — that it holds, paints and edits itself.
 
-There is nothing to share with the browser: each block is its own contenteditable
-**editing host**, and a selection is clamped to the host it started in — dragging out
-*collapses* it (pre-change baseline recorded in
-`e2e/cross-block-text-selection-verify.ts`: `{collapsed: true, text: ""}`, Cmd+C
-copied `""`). Partial cross-block selection was never given up; it never existed.
+The browser cannot do it: each block is its own contenteditable **editing host**,
+and a selection is clamped to the host it started in — dragging out *collapses* it
+(pre-change baseline recorded in `e2e/cross-block-text-selection-verify.ts`:
+`{collapsed: true, text: ""}`, Cmd+C copied `""`). So the span is the editor's,
+not the browser's. Design: [`research/2026-10-09-page-cross-block-text-selection.md`](../../../../research/2026-10-09-page-cross-block-text-selection.md).
+
+**The selection is a union** (`internal/use-block-selection.ts`): nothing, a block
+range (the multi-select state), or a text span — never two at once, because each
+setter (`applyRange`, `setTextSpan`) retires the other. A span behaves like block
+selection toward the keyboard: the container holds focus and `releaseCaret` drops
+any DOM selection (the span is PAINTED, see below). So the container answers every
+key a selection answers (`onSpanKeyDown`):
+
+- **Escape climbs the ladder** — a span becomes the block range of every block it
+  touches. That is how the whole-block ladder stays reachable from text: Escape
+  (in a block, or on a span) → blocks, then Shift+Arrow extends BLOCKS, exactly as
+  before. Shift+Arrow from text itself now draws a span (below).
+- **Delete / Backspace** delete it (`deleteSpan`, below) and land the caret at the
+  join; a plain arrow collapses it to the end it points at.
+- **Typing over it.** A printable key REPLACES the span: one typed character is
+  part of the span's own edit (`joinAroundSpan(…, typed)`: head + character +
+  tail, the character wearing the marks typing there would), so it is one op and
+  ONE undo step — as typing over a selection inside one block is one typing run.
+  Enter (and Shift+Enter) is replayed at the join through the caret authority's
+  flight buffer (`landWithInput`: a flight whose buffer starts non-empty), so it
+  splits there exactly as a typed Enter does, and anything typed before the caret
+  lands queues behind it. A composition key (an IME's `Process`, a dead key)
+  carries no character: the span is deleted and the caret landed, and the
+  composition starts with the NEXT key — the flight's own documented bound (*The
+  caret authority*), for the same reason (the container is no editing host).
+  Keys typed after the landing are an ordinary typing run, i.e. one more undo step.
+- **Shift+Arrow moves the head**: ±1 caret position left/right (a token or a
+  surrogate pair is one position, `stepTextOffset`; crossing into the neighbouring
+  line at an edge), one visual line up/down at a remembered column (`goalX`,
+  crossing into the neighbour's edge line). A head stepping back onto the anchor
+  is a caret again; a head reaching a line that cannot end a span widens the
+  selection to blocks (`normalizeSpan`), from where the keyboard extends blocks.
+
+**Shift+Arrow off a block's edge draws a span** (`extendSpan`,
+`internal/keystroke-intent.ts`). Shift+Up/Down with the selection's FOCUS on the
+first/last visual line, or Shift+Left/Right with it at the very start/end, and a
+visible line beyond: the native selection cannot leave its editing host, so the
+executor hands the gesture to `SelectionControl.extendSpan` — anchored at the
+native selection's ANCHOR offset (`caret.offset`), its head in the neighbouring
+line (`SpanMotion.enter`: the line's end / start, or the point at the focus's
+column on its last / first visual line). With no line that way the key stays the
+browser's (it extends to the block's own edge). This replaced `selectBlock`, which
+jumped straight to whole blocks; whole blocks are one Escape away (above). The
+caret context carries the focus separately (`CaretContext.focus`) because a range
+grown to the edge by Shift+Arrow has its focus there while its anchor — what
+`offset`/`onTopLine` describe — is still mid-line.
+
+`internal/span-motion.ts` is the keyboard's geometry: pure DOM reads over the
+rendered lines' text surfaces (`domRangeOf` rects for the visual lines and the
+head's point, `offsetAtPoint` for the column hit), handed to `use-block-selection`
+as one `SpanMotion` capability so the hook stays DOM- and registry-free (and
+jsdom-mountable). A container anchor with visible children paints no line, so a
+step passes over it.
+
+**`normalizeSpan` (`core/text-span.ts`) is the ONE constructor of a span**, so its
+properties hold for every span the editor ever holds: ends ordered in visible order;
+both ends text-bearing, mergeable lines (not a page row, a container anchor, a void
+block, or a line with no mounted text surface) of ONE page — anything else widens the
+whole gesture to the touched blocks; offsets clamped into the line and snapped OUTWARD
+off any inline token (`blockTextProtectedSpans()`), so a cut never splits a chip.
+Consumers therefore never re-check an end.
 
 - **Never intercept the text press on the way down** — no `preventDefault`, no
   `focusContainer()`. Until the pointer leaves the row, native intra-block selection
   IS the feature.
-- **Promotion is one-way.** Dragging back leaves the origin selected whole; re-seating
-  a partial caret would park one in a blurred block, the exact state `releaseCaret`
-  exists to prevent.
-- **`select-none` for the rest of the gesture**, not one `releaseCaret`: the pointer is
-  still down, so the browser re-seats a range every frame. The class disarms it; the
-  per-move `focusContainer()` clears what beat it.
+- **The anchor is read at promotion, BEFORE `focusContainer()`** — off the origin's
+  native selection anchor (`nativeAnchorOffset`), which `releaseCaret` is about to
+  drop (falling back to the press point). Read after, it is gone.
+- **The head is re-read on every move** under the pointer (`offsetAtPoint`, which
+  moves no caret; a pointer beside the text is clamped into the text's own box, and
+  above / below it resolves to the line's start / end), then re-normalized. So the
+  selection follows the pointer between the union's arms: a partial span while both
+  ends are text, the touched blocks whole while the pointer sits on a line that
+  cannot end one.
+- **There is no one-way rule any more.** It existed because dragging back into the
+  origin could only be honoured by re-seating a partial caret in a blurred block —
+  the state `releaseCaret` exists to prevent. A span inside ONE block is legal, so
+  the gesture returning to its origin is just a span there: nothing is re-seated.
+- **`select-none` for the rest of the gesture, COMMITTED SYNCHRONOUSLY at promotion**
+  (`flushSync`), not one `releaseCaret`: the pointer is still down, so the browser's
+  drag-selection re-seats a range in the origin host as the default action of every
+  pointermove the class has not yet reached. Through ordinary state it landed a frame
+  late, which showed a native selection BESIDE the painted span. The per-move
+  `focusContainer()` is now only a backstop.
+- **One selection at a time** — a span (or a block range) and a native selection are
+  never visible together: focusing into a block (a click, a double / triple click)
+  clears the span through `onFocusCapture` before the browser's selection paints.
+  `e2e/span-native-selection-verify.ts` A samples `getSelection()` on every pointer
+  step of the drags (down, back into the origin, from a line's edge, upward, held at
+  an auto-scrolling edge, pointerup) and after double / triple clicks.
+- **Copy / cut / paste.** See *A span on the clipboard* below.
 
 **Holding at either viewport edge scrolls the document and keeps the range growing**
 (`useEdgeAutoScroll`, from the scroll-owning `auto-scroll` primitive). Three rules:
@@ -1810,13 +1900,113 @@ leaked on one row and not the next.
   starts NO gesture — a press on block content the editor deliberately leaves
   alone — is the one that leaked the whole-document selection. A press cannot
   start what nothing on the surface allows to start.
-- **The exemption drops for one gesture**, the text drag promoted to a block
-  range (`.block-list-editing-selectable` comes off): the pointer is still down,
-  so the browser re-seats a range in the origin host every frame. That is the
-  same suppression the old one-off `select-none` performed, restated as the
-  absence of an exemption.
+- **The exemption drops for one gesture**, the text drag promoted to an
+  editor-owned span (`.block-list-editing-selectable` comes off): the pointer is
+  still down, so the browser re-seats a range in the origin host every frame.
+  That is the same suppression the old one-off `select-none` performed, restated
+  as the absence of an exemption.
+- **A text span is why this holds for cross-block text too.** A selection
+  spanning blocks is exactly what no editing host can represent, so the editor
+  never asks the browser for one: the span is offsets the editor owns, painted
+  with the Custom Highlight API (next section) — the DOM selection stays empty.
 - **`read-only-view` is deliberately untouched.** It mounts no editing host, so a
   selection spanning its blocks is ordinary document text the user may copy.
+
+### The text span is painted, never native
+
+> A span is OFFSETS (`SpanPoint`: block id + linear offset in the stored-runs
+> basis). DOM `Range`s are derived from them for painting, per paint, and are
+> never the span's state.
+
+`components/text-span-highlight.tsx` paints it through the CSS Custom Highlight API
+(`CSS.highlights`, name `page-text-span`, styled in `block-selection-scope.css`).
+
+> **Selected text is ONE colour, native or painted**: the theme's
+> `--text-selection` (color-palette's `textSelection`), worn by both the
+> browser's `::selection` inside the editing hosts and `::highlight(page-text-span)`.
+> A user must not be able to see where the native selection inside the origin
+> block stops and the painted span starts — which is also why it is a theme
+> token and never a local tint (it used to be the bands' `primary/15`, nearly
+> invisible on a dark background). `e2e/span-native-selection-verify.ts` B
+> compares the two fills pixel-for-pixel in both schemes (with shadows off: the
+> native selection's format toolbar floats right above the line, and its
+> popover shadow darkens the word in dark mode). It paints Ranges across editing hosts with no DOM mutation (which
+would fight Lexical/Yjs reconciliation) and no native selection (which no host can
+hold). One Range per covered TEXT line — `[from, len)` on the start line, whole
+lines between, `[0, to)` on the end line — through the handle's `domRangeOf`, which
+resolves offsets with the caret's own `$resolveLinearOffset`, so a painted end and a
+caret landed at that offset are one DOM position.
+
+- **Clamp on re-resolve.** Each covered line's editor update (`onTextUpdate` — local
+  or a remote collab edit) re-derives the Ranges, and `domRangeOf` clamps into the
+  text the line holds THEN, so a shortened line never leaves a Range past its end.
+  A span END whose line leaves the document clears the selection; a middle line
+  leaving is harmless (the op derives the lines between afresh).
+- **Text-less middle lines keep the row band** (an image, a divider): there is no
+  text to highlight, so `resolveSelectionBands` receives just those ids. A container
+  the span only ENTERS (an ancestor of its end line) is painted neither way —
+  `deleteSpan` keeps that box.
+- **One registry, many painters.** `CSS.highlights` is per document and two page
+  panes are two editors; each painter owns an entry and the registered `Highlight` is
+  their union.
+
+### Deleting a span is ONE op (`deleteSpan`)
+
+`{ kind: "deleteSpan", targetId: A, sourceId: C, runs }` — one undo entry, one server
+transaction (three ops would let another client observe, and a failure leave, a
+half-applied edit). `runs` is A's whole result, head + tail (`joinAroundSpan`), not
+C's tail alone: only the client knows where in A the span starts. The lines between
+are NOT a parameter — `applyDeleteSpan` derives them as the visible lines strictly
+between A and C:
+
+1. each is trashed with its subtree, EXCEPT C's ancestors: a plain ancestor is
+   unwrapped (its line goes, its uncovered children — C's branch and what follows —
+   are lifted into its slot), a container anchor ancestor is KEPT (the span covered
+   its first lines, not the box; the empty-anchor prune drops it if C was its last);
+2. C merges into A by merge's rule (`mergeInto`, shared with `applyMerge`) — or, when
+   C still sits in a kept box, C's children take C's slot inside that box;
+3. merge's refusals on both ends (page row, anchor, text-less type, C not below A).
+
+The executor (`commitSpanEdit` in `block-editor-context.tsx`, behind `deleteSpan`
+and `replaceSpan`) is `mergeBlock`'s shape: predict + zoom check first, then A's doc
+spliced to its result runs inside its owner's `untracked` scope
+(`spliceOpenBlockDoc`), THEN the op dispatched, recorded as ONE entry carrying A's
+runs edit. A span inside one block is no op at all — that runs edit alone, done
+synchronously (not `recordDocEdit`'s deferred one: the container's handlers run
+outside any Lexical update, and the caret's landing must queue BEHIND the edit).
+Either way the caret lands at the join, one microtask later, behind the binding's
+relay of the splice.
+
+### A span on the clipboard
+
+- **Copy writes a PARTIAL forest as `"text"`** (`spanForest` in
+  `block-editor.tsx` → `writeForestToClipboard(…, "text")`): the covered lines,
+  roots resolved as a block selection of them (`blockSelectionRoots`, so nesting
+  survives), the start line from the span's start and the end line up to its end
+  (`serializeForest`'s `runsOverride`), every covered line's text read LIVE
+  (`readRuns` — `data.text` trails the doc by ~1s), and a visible line under a
+  covered root that the span does not cover left out (`exclude`; a covered line's
+  collapsed children still travel, as in any copy). A container the span only
+  ENTERS is not a root of its own. Because the payload says `"text"`, its paste
+  SPLICES into the caret's line (the start line's tail merges into it, Notion's
+  model) instead of landing as whole blocks. The `text/plain` markdown fallback is
+  the same forest. A span inside ONE block copies just the substring, as one plain
+  paragraph (the registry's `defaultText` type) — inline wherever it is pasted.
+- **Cut = copy, then `deleteSpan`.**
+- **Paste over a span REPLACES it** (`pasteOverSpan` → `replaceSpan`), classified by
+  the one transfer door with `inline: true` (single-line text has no Lexical host
+  to land natively in, so it is parsed into its paragraph and spliced too). ONE
+  undo entry: a paste that creates no line is the span's own edit with the pasted
+  text in its result (one `deleteSpan` op — or a text edit inside one block); one
+  that creates lines is the `deleteSpan` op then the `splice` op, the splice
+  PLANNED against the rows the delete leaves (`planSpliceOn`, shared with
+  `splice`), both predicted before either is dispatched, both dispatched under one
+  entry id, and recorded as ONE entry bracketing the gesture (before the delete,
+  after the splice) with A's runs edit. Two server transactions in issue order on
+  the page's one send lane (*B — order*); each is valid alone. On the zoom root the
+  splice is a paste BELOW it, so there the span goes as its own step (two entries).
+  A pasted FILE deletes the span and lands after its start line (two entries: the
+  upload is its own write).
 
 ### A row's pure geometry is background
 
@@ -2447,8 +2637,10 @@ paste's, ids minted client-side. With `[before, after] = splitRuns(runs,
 position)`:
 
 1. **Head.** A leading PLAIN paragraph — `BlockOpContext.defaultTextType`
-   (derived from the registry's `defaultText` handle, never named), no children;
-   nothing else has an inline form — merges into the origin: `before + head`.
+   (derived from the registry's `defaultText` handle, never named); nothing else
+   has an inline form — merges into the origin: `before + head`. Lines nested
+   under it become the origin's first children, so a partial copy's nesting
+   survives.
 2. **Text only.** Nothing left over: the origin reads `before + head + after`.
 3. **Consume an empty origin.** Textless (no `before`, no head merged), plain,
    and childless: the forest takes its slot, so `# Title⏎body` into an empty line
@@ -2456,9 +2648,14 @@ position)`:
 4. **Body.** The rest lands where split puts its tail — `splitSlot`, the one
    placement rule the two ops share: the origin's next siblings, or, at the END of
    a line whose children are visible (where Enter nests), its first children.
-5. **Tail.** A non-empty `after` goes onto the last root when it is a childless
-   plain paragraph, else onto a tail row `tailId` of split's type and data. The
-   line holding it adopts the origin's visible children, as split's tail does.
+5. **Tail.** A non-empty `after` goes onto the forest's LAST LINE (its last
+   root's deepest last descendant, or the merged head's) when that is a plain
+   paragraph, at any depth — so a multi-line partial copy pasted mid-line joins at
+   BOTH ends (`zz|zz` + `aa` › `bb` → `zzaa` › `bbzz`; it used to split the
+   caret's line around whole blocks, because a first or last root WITH children
+   never counted as plain). Else onto a tail row `tailId` of split's type and
+   data. The root holding it adopts the origin's visible children after its own,
+   as split's tail does.
 
 **What the forest was copied AS decides how it meets the line** — the op's
 required `granularity` (`ForestGranularity`), never inferred from the forest's
@@ -4473,6 +4670,9 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `SerializedBlock`
     - `SetPageKindBody`
     - `SoftBreaks`
+    - `SpanLines`
+    - `SpanPoint`
+    - `SpanSelection`
     - `SpliceCaret`
     - `TagLine`
     - `TextBearingSchema`
@@ -4516,6 +4716,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `inDocumentOrder`
     - `INLINE_SYNTAXES`
     - `isEmptyPatch`
+    - `joinAroundSpan`
     - `listBlocks`
     - `listPages`
     - `MARK_ORDER`
@@ -4533,6 +4734,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `namesField`
     - `newBlockId`
     - `nextVisibleLine`
+    - `normalizeSpan`
     - `opNamedIds`
     - `PAGE_BLOCK_TYPE`
     - `PAGE_BLOCKS_TRASH_SOURCE`
@@ -4578,6 +4780,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `SetPageKindBodySchema`
     - `sortMarks`
     - `splitRuns`
+    - `stepTextOffset`
     - `textBlockSchema`
     - `textDataSchema`
     - `textOf`

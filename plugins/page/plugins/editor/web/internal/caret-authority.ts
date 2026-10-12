@@ -69,7 +69,43 @@ export interface BlockTextSurgery {
    * it, and splices there.
    */
   offsetAtPoint?: (x: number, y: number) => number | null;
+  /**
+   * The linear offset of the NATIVE selection's anchor in this block, or null
+   * when it holds no range selection. Read once, when a text drag leaves its
+   * origin row and becomes an editor-owned span — BEFORE the container takes
+   * the keyboard and drops the native selection, which is what makes it the
+   * span's anchor. Reads only.
+   */
+  nativeAnchorOffset?: () => number | null;
+  /**
+   * The DOM `Range` over linear `[from, to)` of this block's text, offsets
+   * clamped into what the editor holds NOW. For PAINTING an editor-owned span
+   * (the CSS Custom Highlight API) — it selects nothing, and a span is never
+   * cached as one: the offsets are the truth, a Range is derived per paint.
+   * Null when the editor has no content to map.
+   */
+  domRangeOf?: (from: number, to: number) => Range | null;
+  /**
+   * Subscribe to every committed update of this block's editor, local or
+   * remote — what keeps a painted span over this block current. Returns the
+   * unsubscribe.
+   */
+  onTextUpdate?: (listener: () => void) => () => void;
 }
+
+/**
+ * The READ half of {@link BlockTextSurgery}: what the block list needs to build
+ * and paint an editor-owned text span across blocks — and nothing that edits
+ * content or places a caret.
+ */
+export type BlockTextReads = Pick<
+  BlockTextSurgery,
+  | "readRuns"
+  | "offsetAtPoint"
+  | "nativeAnchorOffset"
+  | "domRangeOf"
+  | "onTextUpdate"
+>;
 
 /**
  * A block's focus capabilities, registered by its renderer. It is the block-side
@@ -238,6 +274,25 @@ export interface CaretAuthority {
    */
   land: (blockId: string, policy: LandPolicy) => void;
   /**
+   * Land the caret in an EXISTING block and replay `input` there once it is
+   * caret-ready — typing over an editor-owned text span. The key that replaces
+   * the span reached the CONTAINER (a span holds the keyboard there, like a
+   * block selection), so it is input with no editing host to land in: exactly
+   * what a flight buffers. This is a flight whose buffer starts non-empty, and
+   * everything typed before the landing joins the same buffer — so typing over
+   * a span needs no input path of its own, and IME / autocorrect are untouched
+   * once the caret has landed.
+   *
+   * Unlike {@link land} it ALWAYS claims, mounted target or not: the input must
+   * be routed, and a flight is the one owner of routed input. The landing is
+   * bounded exactly as any flight's is (`reconcile`, focus leaving the surface).
+   */
+  landWithInput: (
+    blockId: string,
+    policy: LandPolicy,
+    input: readonly FlightInput[],
+  ) => void;
+  /**
    * Land only if the block's host is mounted right now; `false` means it has no
    * caret host. The empty-background click uses the answer to fall back to
    * selecting the row instead.
@@ -388,7 +443,12 @@ export function createCaretAuthority({
    * Focus first, then `releaseCaret` — the order `focusContainer()` uses, so the
    * blurred origin never sits with a parked caret a reconcile could chase.
    */
-  function claim(blockId: string, policy: LandPolicy, el: HTMLElement): void {
+  function claim(
+    blockId: string,
+    policy: LandPolicy,
+    el: HTMLElement,
+    input: readonly FlightInput[] = [],
+  ): void {
     // A second claim before the first landed means the model caret moved AGAIN.
     // The buffer is undelivered input, and input follows the model — so it goes
     // with it, and the origin stays the block the user actually left.
@@ -396,7 +456,7 @@ export function createCaretAuthority({
       targetId: blockId,
       originId: flight?.originId ?? getOriginId(),
       policy,
-      buffer: flight?.buffer ?? [],
+      buffer: [...(flight?.buffer ?? []), ...input],
       misses: 0,
     };
     queued = null;
@@ -550,6 +610,18 @@ export function createCaretAuthority({
         return;
       }
       claim(blockId, policy, container);
+    },
+
+    landWithInput(blockId, policy, input) {
+      if (container === null) {
+        throw new Error(
+          `caret authority: input for block "${blockId}" with no interaction ` +
+            "surface attached to route it through",
+        );
+      }
+      claim(blockId, policy, container, input);
+      const handle = handles.get(blockId);
+      if (handle) landFlight(handle);
     },
 
     landIfMounted(blockId, policy) {

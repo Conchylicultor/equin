@@ -96,6 +96,29 @@ export interface CaretContext {
    */
   stepLeftBoundary: MarkBoundary | null;
   stepRightBoundary: MarkBoundary | null;
+  /**
+   * The selection's MOVING end — its focus — which is where Shift+Arrow
+   * extends from. The fields above describe the ANCHOR end (`offset` is the
+   * anchor's), which a range's extension never moves; a selection grown to a
+   * block's edge by Shift+Arrow has its focus there while its anchor is still
+   * mid-line. For a collapsed caret the two ends are one point and this
+   * restates the caret.
+   */
+  focus: SelectionFocus;
+}
+
+/** Where a selection's focus sits — see {@link CaretContext.focus}. */
+export interface SelectionFocus {
+  /** Linear offset of the focus (stored-runs basis). */
+  offset: number;
+  /** Structural: the focus is at the block's very start / end. */
+  atStart: boolean;
+  atEnd: boolean;
+  /** Visual: the focus is on the block's first / last visual line. */
+  onTopLine: boolean;
+  onBottomLine: boolean;
+  /** Viewport x (px) of the focus. */
+  x: number;
 }
 
 // --- structural reads -------------------------------------------------------
@@ -342,7 +365,15 @@ export function caretLineRect(): DOMRect | null {
   // `rangeCount === 0` → `getRangeAt(0)` throwing `IndexSizeError`); this read
   // used to carry the first two and not the third.
   const range = selectionRange();
-  if (!range) return null;
+  return range ? rangeLineRect(range) : null;
+}
+
+/**
+ * The line box at the START of `range` — {@link caretLineRect}'s measurement,
+ * for any range (the focus of a selection, built with {@link linearDomRange}),
+ * with the same borrowing rules for a position that paints nothing.
+ */
+function rangeLineRect(range: Range): DOMRect | null {
   const direct = pickEdge(range.getClientRects(), "first");
   if (direct) return direct;
 
@@ -404,6 +435,9 @@ export function readCaretContext(
   const structural = editor.getEditorState().read(
     (): {
       offset: number;
+      focusOffset: number;
+      focusAtStart: boolean;
+      focusAtEnd: boolean;
       collapsed: boolean;
       atStart: boolean;
       atEnd: boolean;
@@ -420,8 +454,14 @@ export function readCaretContext(
       const total = $paragraphsPlainLength();
       const collapsed = selection.isCollapsed();
       const anchor = selection.anchor;
+      const focusOff = collapsed
+        ? off
+        : ($linearOffsetOfPoint(selection.focus) ?? off);
       return {
         offset: off,
+        focusOffset: focusOff,
+        focusAtStart: focusOff === 0,
+        focusAtEnd: focusOff === total,
         collapsed,
         atStart: collapsed && off === 0,
         atEnd: collapsed && off === total,
@@ -443,21 +483,64 @@ export function readCaretContext(
     },
   );
   if (!structural) return null;
+  const { focusOffset, focusAtStart, focusAtEnd, ...anchorSide } = structural;
 
   const root = editor.getRootElement();
   const visual = root ? measureVisualLines(root) : null;
-  if (visual) return { ...structural, ...visual };
   // No measurable caret line box (no root element, or a block with no painted
   // content). Fall back to the STRUCTURAL edges rather than to `true`/`true`:
   // "the caret is on the first visual line" is exactly "the caret is at the
   // start" once there is at most one line, and it is never a claim that the
   // caret is simultaneously on the first AND last line of a block that has
   // several.
-  return {
-    ...structural,
+  const caretSide = visual ?? {
     onTopLine: structural.atStart,
     onBottomLine: structural.atEnd,
     caretX: root?.getBoundingClientRect().left ?? 0,
+  };
+  const focusLines = structural.collapsed
+    ? caretSide
+    : (measureFocusLines(editor, root, focusOffset) ?? {
+        onTopLine: focusAtStart,
+        onBottomLine: focusAtEnd,
+        caretX: caretSide.caretX,
+      });
+  return {
+    ...anchorSide,
+    ...caretSide,
+    focus: {
+      offset: focusOffset,
+      atStart: focusAtStart,
+      atEnd: focusAtEnd,
+      onTopLine: focusLines.onTopLine,
+      onBottomLine: focusLines.onBottomLine,
+      x: focusLines.caretX,
+    },
+  };
+}
+
+/**
+ * {@link measureVisualLines} for a selection's FOCUS rather than its start:
+ * the line box at linear `offset`, measured off a Range built there (the
+ * paint-side resolver, {@link linearDomRange}) — the document selection's own
+ * range starts at whichever end comes first, which for a forward selection is
+ * the anchor.
+ */
+function measureFocusLines(
+  editor: LexicalEditor,
+  root: HTMLElement | null,
+  offset: number,
+): Pick<CaretContext, "onTopLine" | "onBottomLine" | "caretX"> | null {
+  if (!root) return null;
+  const range = linearDomRange(editor, offset, offset);
+  const focus = range ? rangeLineRect(range) : null;
+  if (!focus) return null;
+  const first = edgeLineRect(root, "first");
+  const last = edgeLineRect(root, "last");
+  return {
+    onTopLine: first ? sameLine(focus, first) : true,
+    onBottomLine: last ? sameLine(focus, last) : true,
+    caretX: range?.getClientRects()[0]?.left ?? focus.left,
   };
 }
 
@@ -652,6 +735,82 @@ export function linearOffsetAtPoint(
     point.set(parent.getKey(), index, "element");
     return $linearOffsetOfPoint(point);
   });
+}
+
+/**
+ * The linear offset (stored-runs basis) of the editor's native selection
+ * ANCHOR, or null when it holds no range selection. Reads only.
+ */
+export function nativeAnchorLinearOffset(editor: LexicalEditor): number | null {
+  return editor.read(() => {
+    const selection = $getSelection();
+    if (!$isRangeSelection(selection)) return null;
+    return $linearOffsetOfPoint(selection.anchor);
+  });
+}
+
+/**
+ * The DOM `Range` over linear `[from, to)` of the editor's text, both ends
+ * clamped into the content it holds now — the paint-side dual of
+ * {@link linearOffsetAtPoint}. Reads only: it builds a detached Range and
+ * touches no selection, which is what lets an editor-owned span be painted
+ * across several editing hosts at once (no native selection can).
+ *
+ * Each end resolves through `$resolveLinearOffset`, the SAME resolver the
+ * caret's placement uses, so a painted end and a caret landed at that offset
+ * sit at one DOM position.
+ */
+export function linearDomRange(
+  editor: LexicalEditor,
+  from: number,
+  to: number,
+): Range | null {
+  const root = editor.getRootElement();
+  if (!root) return null;
+  return editor.read(() => {
+    const total = $paragraphsPlainLength();
+    const lo = Math.max(0, Math.min(from, to, total));
+    const hi = Math.max(lo, Math.min(Math.max(from, to), total));
+    const start = $domPointAtLinearOffset(editor, lo);
+    const end = $domPointAtLinearOffset(editor, hi);
+    if (!start || !end) return null;
+    const range = root.ownerDocument.createRange();
+    range.setStart(start.node, start.offset);
+    range.setEnd(end.node, end.offset);
+    return range;
+  });
+}
+
+/** The DOM position of an already-clamped linear `offset`, inside a read. */
+function $domPointAtLinearOffset(
+  editor: LexicalEditor,
+  offset: number,
+): { node: Node; offset: number } | null {
+  const resolved = $resolveLinearOffset(offset);
+  if (resolved === null) return null;
+  if ("emptyParagraph" in resolved) {
+    const el = editor.getElementByKey(resolved.emptyParagraph.getKey());
+    return el ? { node: el, offset: 0 } : null;
+  }
+  const { leaf, leafStart } = resolved;
+  const el = editor.getElementByKey(leaf.getKey());
+  if (!el) return null;
+  if ($isTextNode(leaf)) {
+    // A text node renders as an element (nested once per format tag) around
+    // ONE DOM text node holding its characters.
+    const walker = el.ownerDocument.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const text = walker.nextNode() as Text | null;
+    if (!text) return { node: el, offset: 0 };
+    return {
+      node: text,
+      offset: Math.max(0, Math.min(offset - leafStart, text.length)),
+    };
+  }
+  // An atomic leaf (a chip, a line break): before or after its element.
+  const parent = el.parentNode;
+  if (!parent) return null;
+  const index = Array.prototype.indexOf.call(parent.childNodes, el) as number;
+  return { node: parent, offset: index + (offset > leafStart ? 1 : 0) };
 }
 
 /**

@@ -16,6 +16,19 @@ export interface SelectionControl {
   /** Shift-click: extend the range from the current anchor to this block. */
   extendTo: (blockId: string) => void;
   /**
+   * Shift+Arrow off the edge of `blockId`'s text: draw an editor-owned TEXT
+   * span anchored at `anchorOffset` (the native selection's anchor) with its
+   * head in the neighbouring line — at viewport column `x` for up/down. Widens
+   * to a block range when that line cannot end a span (`normalizeSpan`).
+   * False when there is no line that way, leaving the key to the browser.
+   */
+  extendSpan: (
+    blockId: string,
+    anchorOffset: number,
+    dir: "left" | "right" | "up" | "down",
+    x: number,
+  ) => boolean;
+  /**
    * Leave text editing and select every block on the page — the second press of
    * Cmd+A, once the block has no more text for it to select.
    */

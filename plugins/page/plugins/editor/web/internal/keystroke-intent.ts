@@ -140,7 +140,16 @@ export type KeyIntent =
   | { type: "unmark"; delimiter: DelimiterDeletion }
   | { type: "indent" } // tab
   | { type: "nav"; dir: "up" | "down" | "left" | "right" }
-  | { type: "selectBlock"; extend?: "up" | "down" } // shift+arrow at a visual edge
+  /**
+   * Shift+Arrow off the edge of the block's text (the selection's FOCUS on the
+   * first / last visual line for up / down, at the very start / end for left /
+   * right) with a line beyond it. The native selection cannot leave its
+   * editing host, so the executor turns it into an editor-owned TEXT span:
+   * anchored at the native selection's anchor, its head in the neighbouring
+   * line (`SelectionControl.extendSpan`). With no line that way the key is the
+   * browser's (it extends to the block's own edge, as in any text field).
+   */
+  | { type: "extendSpan"; dir: "up" | "down" | "left" | "right" }
   | { type: "noop" }
   | { type: "passthrough" };
 
@@ -675,20 +684,21 @@ export function resolveKeystroke(
     case "Tab":
       return resolveTab(mods, ctx);
     case "ArrowUp": {
+      // Extending reads the selection's moving end; moving reads the caret.
+      if (mods.shift) return extendSpanFor("up", caret.focus.onTopLine, ctx);
       // Cross blocks only on the true top visual line; otherwise move within.
       if (!caret.onTopLine) return { type: "passthrough" };
-      return mods.shift
-        ? { type: "selectBlock", extend: "up" }
-        : { type: "nav", dir: "up" };
+      return { type: "nav", dir: "up" };
     }
     case "ArrowDown": {
+      if (mods.shift)
+        return extendSpanFor("down", caret.focus.onBottomLine, ctx);
       if (!caret.onBottomLine) return { type: "passthrough" };
-      return mods.shift
-        ? { type: "selectBlock", extend: "down" }
-        : { type: "nav", dir: "down" };
+      return { type: "nav", dir: "down" };
     }
     case "ArrowLeft": {
-      if (mods.shift || !caret.collapsed) return { type: "passthrough" };
+      if (mods.shift) return extendSpanFor("left", caret.focus.atStart, ctx);
+      if (!caret.collapsed) return { type: "passthrough" };
       // A virtual delimiter is crossed BEFORE the block edge is: at
       // `` |`zz` `` the caret is already at the block start, and stepping out of
       // the mark is what the user meant by the first press — leaving the block
@@ -702,7 +712,8 @@ export function resolveKeystroke(
       return { type: "nav", dir: "left" };
     }
     case "ArrowRight": {
-      if (mods.shift || !caret.collapsed) return { type: "passthrough" };
+      if (mods.shift) return extendSpanFor("right", caret.focus.atEnd, ctx);
+      if (!caret.collapsed) return { type: "passthrough" };
       const step = markStepFor(caret, "right");
       if (step) return step;
       const arrive = markArriveFor(caret, "right");
@@ -712,4 +723,26 @@ export function resolveKeystroke(
       return { type: "nav", dir: "right" };
     }
   }
+}
+
+/**
+ * Shift+Arrow: an editor-owned span when the selection's focus is at the
+ * block's edge in `dir` (`atEdge`) AND a visible line lies beyond it; else the
+ * browser's own extension inside the block. Which line that is, and whether it
+ * can end a span, is the executor's — it reads the RENDERED lines, and a line
+ * that cannot end one widens the selection to blocks there.
+ */
+function extendSpanFor(
+  dir: "up" | "down" | "left" | "right",
+  atEdge: boolean,
+  ctx: IntentContext,
+): KeyIntent {
+  if (!atEdge) return { type: "passthrough" };
+  const node = ctx.nodes.find((n) => n.id === ctx.blockId);
+  if (!node) return { type: "passthrough" };
+  const beyond =
+    dir === "up" || dir === "left"
+      ? prevVisibleLine(ctx.nodes, node, ctx.isAnchor)
+      : nextVisibleLine(ctx.nodes, node, ctx.isAnchor);
+  return beyond ? { type: "extendSpan", dir } : { type: "passthrough" };
 }

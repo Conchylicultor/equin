@@ -225,3 +225,24 @@ describe("a sub-page carries its source, not its content", () => {
     expect(text!.id).toMatch(/^block-/);
   });
 });
+
+describe("serializeForest — a partial copy (a text span's)", () => {
+  test("runsOverride replaces a block's text, exclude drops a descendant", () => {
+    const rA = r0;
+    const rows = [
+      mk("A", null, rA, { text: "alpha" }),
+      mk("A1", "A", r0, { text: "child one" }),
+      mk("A2", "A", after(r0), { text: "child two" }),
+    ];
+    const [a] = serializeForest(rows, ["A"], {
+      runsOverride: new Map([
+        ["A", [{ text: "pha" }]],
+        ["A1", [{ text: "chi" }]],
+      ]),
+      exclude: new Set(["A2"]),
+    });
+    expect(a!.data).toEqual({ text: [{ text: "pha" }] });
+    expect(a!.children.map((c) => c.id)).toEqual(["A1"]);
+    expect(a!.children[0]!.data).toEqual({ text: [{ text: "chi" }] });
+  });
+});

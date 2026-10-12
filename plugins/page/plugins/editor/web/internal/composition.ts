@@ -256,6 +256,10 @@ export function resolveOpOwnerPage(
     case "unwrap":
     case "move":
       return rowOwnerPage(rows, op.blockId);
+    // A span is one page's op: `normalizeSpan` widens a span reaching across a
+    // page boundary to a block selection, so its start line names the page.
+    case "deleteSpan":
+      return rowOwnerPage(rows, op.targetId);
     case "indent":
     case "outdent":
       return singleOwnerPage(rows, op.blockIds);

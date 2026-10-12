@@ -1,9 +1,11 @@
-import { useCallback, useMemo, useRef, type RefObject } from "react";
+import { useCallback, useMemo, useRef, useState, type RefObject } from "react";
 import { useMultiSelect } from "@plugins/primitives/plugins/multi-select/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { announce } from "@plugins/primitives/plugins/announce/web";
+import type { SpanPoint, SpanSelection } from "../../core";
 import type { SelectionControl } from "../selection-control";
-import { releaseCaret } from "./caret-authority";
+import { releaseCaret, type FlightInput } from "./caret-authority";
+import type { SpanDir, SpanMotion } from "./span-motion";
 import { rangeWithDescendants, type VisibleBlock } from "./selection-closure";
 
 /**
@@ -37,8 +39,23 @@ export interface BlockSelectionActions {
   remove: (ids: string[]) => void;
   /** Duplicate the selected blocks. */
   duplicate: (ids: string[]) => void;
-  /** Put the caret back into a block's text editor. */
-  focusBlock: (id: string) => void;
+  /**
+   * Put the caret back into a block's text editor — at `offset` when given (a
+   * text span collapsing to one of its ends), else where the block last had it.
+   */
+  focusBlock: (id: string, offset?: number) => void;
+  /**
+   * Delete a text span `[from, to)` (ends in visible order) and land the caret
+   * at the join — `BlockEditorContext.deleteSpan`. `input` is the keystroke
+   * that REPLACED the span (typing over it), replayed at the join.
+   */
+  deleteSpan: (
+    from: SpanPoint,
+    to: SpanPoint,
+    input?: readonly FlightInput[],
+  ) => void;
+  /** How the keyboard moves a span's head (`internal/span-motion.ts`). */
+  spanMotion: SpanMotion;
   /** Nudge the whole selection one slot up/down among its siblings. */
   moveSelection: (dir: "up" | "down") => void;
 }
@@ -75,6 +92,12 @@ export interface BlockSelectionOptions {
 }
 
 /**
+ * An editor-owned text span — the `text` arm of {@link SpanSelection}, which
+ * only `normalizeSpan` constructs.
+ */
+export type TextSpan = Extract<SpanSelection, { kind: "text" }>;
+
+/**
  * DESTRUCTURE this at the call site (`const { containerRef, control, onKeyDown } =
  * useBlockSelection(...)`). The object carries refs, so `react-hooks/refs` reads any
  * later `selection.foo` during render as a ref access. Only the two refs a consumer
@@ -91,6 +114,18 @@ export interface BlockSelection {
   /** The range's head, readable from imperative DOM handlers (clipboard anchoring). */
   headRef: RefObject<string | null>;
   applyRange: (anchor: string, head: string) => void;
+  /**
+   * The live editor-owned text span, or null. The selection is a UNION: a
+   * block range (the multi-select state) OR a text span OR nothing — never
+   * both, because each setter clears the other.
+   */
+  textSpan: TextSpan | null;
+  /**
+   * Make `span` the selection: drops any block range, hands the keyboard to
+   * the container (a span is PAINTED, never a native selection — so no editing
+   * host may keep a caret, exactly as in block-selection mode).
+   */
+  setTextSpan: (span: TextSpan) => void;
   clearSelection: () => void;
   focusContainer: () => void;
   /** Wire onto the container element — see the origin-guard note below. */
@@ -152,6 +187,18 @@ export function useBlockSelection({
    * child.
    */
   const aimedRef = useRef<string | null>(null);
+  /**
+   * The text span, mirrored: STATE so the surface repaints it, a REF so the
+   * event handlers below read the live one without re-subscribing. Written
+   * only through `setTextSpan` / `dropTextSpan`, which keep the two in step.
+   */
+  const [textSpan, setTextSpanState] = useState<TextSpan | null>(null);
+  const textSpanRef = useRef<TextSpan | null>(null);
+  const dropTextSpan = useEventCallback(() => {
+    if (textSpanRef.current === null) return;
+    textSpanRef.current = null;
+    setTextSpanState(null);
+  });
 
   const focusContainer = useCallback(() => {
     const container = containerRef.current;
@@ -192,6 +239,8 @@ export function useBlockSelection({
     // and none of them has to remember to re-derive it. See
     // `rangeWithDescendants` for why the result is still a range.
     const closed = rangeWithDescendants(visible, { anchor, head });
+    // The union's other arm goes: a block range and a text span never coexist.
+    dropTextSpan();
 
     // Only a real range CHANGE is spoken. A marquee drag re-applies the same
     // range once per pointermove and once per animation frame while the pointer
@@ -231,7 +280,9 @@ export function useBlockSelection({
     // the post-delete tidy-up both land here with nothing selected, and "Selection
     // cleared" over an empty selection is a sentence about nothing. The anchor is
     // read BEFORE it is nulled, because nulling it is what makes it false.
-    const hadSelection = anchorRef.current !== null;
+    const hadSelection =
+      anchorRef.current !== null || textSpanRef.current !== null;
+    dropTextSpan();
     anchorRef.current = null;
     headRef.current = null;
     aimedRef.current = null;
@@ -294,6 +345,7 @@ export function useBlockSelection({
    * block, or one whose text is already all selected — the Notion ladder).
    */
   const selectEveryBlock = useEventCallback(() => {
+    dropTextSpan();
     selectAll();
     anchorRef.current = orderedIds[0] ?? null;
     headRef.current = orderedIds[orderedIds.length - 1] ?? null;
@@ -306,16 +358,190 @@ export function useBlockSelection({
     focusContainer();
   });
 
+  /**
+   * The viewport column a run of vertical span steps keeps (Shift+Up/Down), as
+   * a caret's column survives a run of plain Up/Down. Set by those steps only;
+   * any other way of drawing the span forgets it.
+   */
+  const spanGoalXRef = useRef<number | null>(null);
+
+  const setTextSpan = useEventCallback((span: TextSpan) => {
+    spanGoalXRef.current = null;
+    const entering = textSpanRef.current === null;
+    if (anchorRef.current !== null) {
+      anchorRef.current = null;
+      headRef.current = null;
+      aimedRef.current = null;
+      clearAll();
+    }
+    textSpanRef.current = span;
+    setTextSpanState(span);
+    // A drag re-applies the span every pointermove; speak only its arrival.
+    // The extent is painted text, which a screen reader reaches by reading the
+    // blocks themselves — the announcement says the mode changed.
+    if (entering) announce("Text selected");
+    focusContainer();
+  });
+
+  /**
+   * Make a KEYBOARD-drawn selection current — whatever `normalizeSpan` made of
+   * it. A text span keeps the column its vertical steps travel at (`goalX`); a
+   * span that collapsed to nothing (the head stepped back onto the anchor) is
+   * a caret again, landed there; a span `normalize` widened (an end on a
+   * text-less line, or across a page boundary) is that block range.
+   */
+  const applySpanSelection = useEventCallback(
+    (sel: SpanSelection, goalX: number | null) => {
+      if (sel.kind === "none") return;
+      if (sel.kind === "blocks") {
+        applyRange(sel.anchor, sel.head);
+        focusContainer();
+        return;
+      }
+      if (
+        sel.from.blockId === sel.to.blockId &&
+        sel.from.offset === sel.to.offset
+      ) {
+        dropTextSpan();
+        actions.focusBlock(sel.head.blockId, sel.head.offset);
+        return;
+      }
+      setTextSpan(sel);
+      spanGoalXRef.current = goalX;
+    },
+  );
+
+  /**
+   * Shift+Arrow off the edge of a block's text: the native selection cannot
+   * leave its editing host, so the gesture becomes an editor-owned span —
+   * anchored where the native selection was anchored, its head in the
+   * neighbouring line (`SpanMotion.enter`). False when there is no line that
+   * way, and the keystroke is the browser's.
+   */
+  const extendSpan = useEventCallback(
+    (blockId: string, anchorOffset: number, dir: SpanDir, x: number) => {
+      const head = actions.spanMotion.enter(blockId, dir, x);
+      if (head === null) return false;
+      const vertical = dir === "up" || dir === "down";
+      applySpanSelection(
+        actions.spanMotion.normalize({ blockId, offset: anchorOffset }, head),
+        vertical ? x : null,
+      );
+      return true;
+    },
+  );
+
+  /**
+   * The container's keys while a TEXT span is live. The span is the
+   * selection, and the container holds the keyboard for it (no editing host
+   * may keep a caret), so every key a selection answers is answered HERE:
+   *
+   * - Escape climbs the ladder to the touched blocks; Cmd+A selects them all.
+   * - Backspace / Delete delete the span; a printable key or Enter types OVER
+   *   it — the span is deleted and the key replayed at the join through the
+   *   caret authority's flight buffer, the path every buffered key takes.
+   *   A composition key (an IME's `Process`, a dead key) carries no character
+   *   to replay: the span is deleted and the caret landed, and the composition
+   *   begins with the next key in the landed editor (the flight's own known
+   *   bound — see the editor's CLAUDE.md).
+   * - Shift+Arrow moves the head one caret position / one visual line,
+   *   crossing lines; a plain arrow collapses the span to the end it points at.
+   * - Tab is consumed: it must not walk DOM focus out of a live selection.
+   *
+   * Clipboard keys are not here: copy / cut / paste are `ClipboardEvent`s the
+   * surface handles (`block-editor.tsx`).
+   */
+  const onSpanKeyDown = useEventCallback(
+    (e: React.KeyboardEvent, span: TextSpan) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (e.key === "Escape") {
+        // One rung up the ladder: the blocks the span touches, whole.
+        e.preventDefault();
+        applyRange(span.anchor.blockId, span.head.blockId);
+        return;
+      }
+      if (e.key === "Backspace" || e.key === "Delete") {
+        e.preventDefault();
+        // Dropped BEFORE the delete: the executor lands the caret at the join,
+        // and a span left standing would paint over the lines it just removed.
+        dropTextSpan();
+        actions.deleteSpan(span.from, span.to);
+        return;
+      }
+      if (mod && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        selectEveryBlock();
+        return;
+      }
+      if (e.key === "Tab") {
+        e.preventDefault();
+        return;
+      }
+      const dir = arrowDir(e.key);
+      if (dir !== null && !mod) {
+        e.preventDefault();
+        if (!e.shiftKey) {
+          // A plain arrow collapses the span to the end it points at.
+          const end = dir === "left" || dir === "up" ? span.from : span.to;
+          dropTextSpan();
+          actions.focusBlock(end.blockId, end.offset);
+          return;
+        }
+        if (e.altKey) return;
+        const vertical = dir === "up" || dir === "down";
+        const moved = actions.spanMotion.step(
+          span.head,
+          dir,
+          vertical ? spanGoalXRef.current : null,
+        );
+        if (moved === null) return;
+        applySpanSelection(
+          actions.spanMotion.normalize(span.anchor, moved.head),
+          vertical ? moved.x : null,
+        );
+        return;
+      }
+      if (mod) return;
+      const typed: FlightInput | null =
+        e.key === "Enter"
+          ? { kind: "key", key: "Enter", shift: e.shiftKey }
+          : e.key.length === 1
+            ? { kind: "text", text: e.key }
+            : null;
+      if (typed !== null) {
+        e.preventDefault();
+        dropTextSpan();
+        actions.deleteSpan(span.from, span.to, [typed]);
+        return;
+      }
+      if (
+        e.key === "Process" ||
+        e.key === "Dead" ||
+        e.nativeEvent.isComposing
+      ) {
+        dropTextSpan();
+        actions.deleteSpan(span.from, span.to);
+      }
+    },
+  );
+
   // Stable across renders: every member is an event callback or a ref-only helper,
   // so deep children (every `BlockRow`) never re-render because the head moved.
   const control = useMemo<SelectionControl>(
     () => ({
       enterSelectionMode,
       extendTo,
+      extendSpan,
       selectAll: selectEveryBlock,
       clear: clearSelection,
     }),
-    [enterSelectionMode, extendTo, selectEveryBlock, clearSelection],
+    [
+      enterSelectionMode,
+      extendTo,
+      extendSpan,
+      selectEveryBlock,
+      clearSelection,
+    ],
   );
 
   // ---- Container focus + keyboard policy ------------------------------------
@@ -323,12 +549,21 @@ export function useBlockSelection({
   const onFocusCapture = useEventCallback((e: React.FocusEvent) => {
     // Focusing into a block's editor (clicking to type) drops any block selection.
     // Focusing the container itself (entering selection mode) doesn't.
-    if (e.target !== containerRef.current && isActive) clearSelection();
+    if (
+      e.target !== containerRef.current &&
+      (isActive || textSpanRef.current !== null)
+    )
+      clearSelection();
   });
 
   const onKeyDown = useEventCallback((e: React.KeyboardEvent) => {
     // The origin guard. Not `document.activeElement` — see the note above.
     if (e.target !== containerRef.current) return;
+    const span = textSpanRef.current;
+    if (span !== null) {
+      onSpanKeyDown(e, span);
+      return;
+    }
     if (!isActive) return;
     const mod = e.metaKey || e.ctrlKey;
 
@@ -405,9 +640,27 @@ export function useBlockSelection({
     control,
     headRef,
     applyRange,
+    textSpan,
+    setTextSpan,
     clearSelection,
     focusContainer,
     onKeyDown,
     onFocusCapture,
   };
+}
+
+/** The direction an arrow key names, or null for any other key. */
+function arrowDir(key: string): SpanDir | null {
+  switch (key) {
+    case "ArrowLeft":
+      return "left";
+    case "ArrowRight":
+      return "right";
+    case "ArrowUp":
+      return "up";
+    case "ArrowDown":
+      return "down";
+    default:
+      return null;
+  }
 }

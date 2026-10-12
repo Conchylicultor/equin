@@ -99,7 +99,7 @@ function ctx(
 }
 
 function caret(over: Partial<CaretContext> = {}): CaretContext {
-  return {
+  const base = {
     offset: 0,
     collapsed: true,
     atStart: false,
@@ -115,6 +115,19 @@ function caret(over: Partial<CaretContext> = {}): CaretContext {
     stepLeftBoundary: null,
     stepRightBoundary: null,
     ...over,
+  };
+  // A collapsed caret IS its own focus, so unless a spec draws a range the
+  // focus restates it.
+  return {
+    ...base,
+    focus: over.focus ?? {
+      offset: base.offset,
+      atStart: base.atStart,
+      atEnd: base.atEnd,
+      onTopLine: base.onTopLine,
+      onBottomLine: base.onBottomLine,
+      x: base.caretX,
+    },
   };
 }
 
@@ -732,12 +745,39 @@ describe("ArrowUp / ArrowDown", () => {
     });
   });
 
-  test("shift+Up on the top line → block selection extending up", () => {
+  test("shift+Up on the top line → a text span into the line above", () => {
     expect(
       resolveKeystroke("ArrowUp", SHIFT, caret({ onTopLine: true }), ctx("B")),
-    ).toEqual({
-      type: "selectBlock",
-      extend: "up",
+    ).toEqual({ type: "extendSpan", dir: "up" });
+  });
+
+  test("shift+Up with no line above → the browser's (extends in-block)", () => {
+    expect(
+      resolveKeystroke("ArrowUp", SHIFT, caret({ onTopLine: true }), ctx("A")),
+    ).toEqual({ type: "passthrough" });
+  });
+
+  test("shift+Up reads the selection's FOCUS, not its anchor", () => {
+    // A range drawn down to the block's last line: its anchor is on the top
+    // line, but extending upward moves the focus, which is not there.
+    const ranged = caret({
+      collapsed: false,
+      onTopLine: true,
+      focus: {
+        offset: 5,
+        atStart: false,
+        atEnd: true,
+        onTopLine: false,
+        onBottomLine: true,
+        x: 0,
+      },
+    });
+    expect(resolveKeystroke("ArrowUp", SHIFT, ranged, ctx("B"))).toEqual({
+      type: "passthrough",
+    });
+    expect(resolveKeystroke("ArrowDown", SHIFT, ranged, ctx("A"))).toEqual({
+      type: "extendSpan",
+      dir: "down",
     });
   });
 
@@ -752,7 +792,7 @@ describe("ArrowUp / ArrowDown", () => {
     ).toEqual({ type: "nav", dir: "down" });
   });
 
-  test("shift+Down on the bottom line → block selection extending down", () => {
+  test("shift+Down on the bottom line → a text span into the line below", () => {
     expect(
       resolveKeystroke(
         "ArrowDown",
@@ -760,7 +800,36 @@ describe("ArrowUp / ArrowDown", () => {
         caret({ onBottomLine: true }),
         ctx("A"),
       ),
-    ).toEqual({ type: "selectBlock", extend: "down" });
+    ).toEqual({ type: "extendSpan", dir: "down" });
+  });
+
+  test("shift+Down with no line below → the browser's", () => {
+    expect(
+      resolveKeystroke(
+        "ArrowDown",
+        SHIFT,
+        caret({ onBottomLine: true }),
+        ctx("B"),
+      ),
+    ).toEqual({ type: "passthrough" });
+  });
+
+  test("shift+Left / shift+Right at the block's edge → a text span", () => {
+    expect(
+      resolveKeystroke("ArrowLeft", SHIFT, caret({ atStart: true }), ctx("B")),
+    ).toEqual({ type: "extendSpan", dir: "left" });
+    expect(
+      resolveKeystroke("ArrowRight", SHIFT, caret({ atEnd: true }), ctx("A")),
+    ).toEqual({ type: "extendSpan", dir: "right" });
+  });
+
+  test("shift+Left / shift+Right inside the text → the browser's", () => {
+    expect(
+      resolveKeystroke("ArrowLeft", SHIFT, caret({ offset: 2 }), ctx("B")),
+    ).toEqual({ type: "passthrough" });
+    expect(
+      resolveKeystroke("ArrowRight", SHIFT, caret({ offset: 2 }), ctx("A")),
+    ).toEqual({ type: "passthrough" });
   });
 });
 
@@ -787,9 +856,9 @@ describe("ArrowLeft / ArrowRight", () => {
     ).toEqual({ type: "passthrough" });
   });
 
-  test("shift+Left → passthrough (native selection)", () => {
+  test("shift+Left at the start of the FIRST line → passthrough (native)", () => {
     expect(
-      resolveKeystroke("ArrowLeft", SHIFT, caret({ atStart: true }), ctx("B")),
+      resolveKeystroke("ArrowLeft", SHIFT, caret({ atStart: true }), ctx("A")),
     ).toEqual({ type: "passthrough" });
   });
 
@@ -1814,13 +1883,14 @@ describe("mark boundary", () => {
       ).toEqual({ type: "passthrough" });
     });
 
-    test("shift+Arrow is native selection, boundary or not", () => {
+    test("shift+Arrow never takes the mark stop, boundary or not", () => {
+      // On the LAST line, so no span can be drawn either: the browser's.
       expect(
         resolveKeystroke(
           "ArrowRight",
           SHIFT,
           caret({ atEnd: true, boundary: atBlockEnd }),
-          ctx("A"),
+          ctx("B"),
         ),
       ).toEqual({ type: "passthrough" });
     });

@@ -90,7 +90,7 @@ export function BlockForestCopyPlugin({ block, editor }: BlockTextPluginProps) {
       // The row is gone from under the caret (a concurrent delete): decline
       // rather than write an empty clipboard over what the user had.
       if (forest.length === 0) return false;
-      writeForestToClipboard(clipboardData, forest, handles, gesture);
+      writeForestToClipboard(clipboardData, forest, handles, gesture, "blocks");
       event.preventDefault();
       return true;
     };

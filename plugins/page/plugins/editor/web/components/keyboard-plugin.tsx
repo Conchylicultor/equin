@@ -248,14 +248,26 @@ export function KeyboardPlugin({
           event.preventDefault();
           api.navigate(intent.dir, caret);
           return true;
-        case "selectBlock":
-          if (!selectionRef.current) return false;
+        case "extendSpan": {
+          // The native selection cannot leave this editing host, so the editor
+          // takes the gesture over: a span anchored where the native selection
+          // is anchored (`caret.offset` is the ANCHOR's offset), its head in
+          // the neighbouring line at the focus's column. Not consumed when the
+          // surface finds no line that way — the browser extends in-block.
+          const selection = selectionRef.current;
+          if (!selection) return false;
+          if (
+            !selection.extendSpan(
+              blockIdRef.current,
+              caret.offset,
+              intent.dir,
+              caret.focus.x,
+            )
+          )
+            return false;
           event.preventDefault();
-          selectionRef.current.enterSelectionMode(
-            blockIdRef.current,
-            intent.extend,
-          );
           return true;
+        }
       }
     }
 
