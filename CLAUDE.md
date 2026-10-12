@@ -261,6 +261,7 @@ This is the single most important coding principle:
 
 ---
 
+- **Search and reuse existing concepts and APIs, rather than introducing new ones.** Before adding a type, hook, helper, slot, config key, table or term, search for one that already expresses it.
 - **Group related plugins under an umbrella.** For 2+ related plugins, prefer an umbrella parent (`plugins/<umbrella>/plugins/<child>/`) over flat top-level entries. This keeps `plugins/` readable as semantic categories rather than an unbounded flat list. The umbrella doesn't need to re-export children's APIs — each sub-plugin owns its barrel.
 - **Before adding a plugin to `infra/` or `primitives/`, ask whether it belongs under a more specific umbrella** — it usually does. Do not add new top-level plugins to either folder; nest under an existing sub-umbrella instead.
 - **No polling — use push-based mechanisms.** Never use `setInterval`/`setTimeout` loops to check for changes. Use file watchers, DB `LISTEN/NOTIFY`, WebSocket messages, a live resource (`network/live`), or the `events`/`jobs` plugin. If the upstream source has no change signal, use a `defineJob` with a schedule (not an in-process timer) and document why.
