@@ -120,3 +120,11 @@ export const groovePresetsConfig = defineConfig({
 /** One saved groove preset, as stored (its list `id` is stable). */
 export type GroovePreset =
   (typeof groovePresetsConfig.defaults)["presets"][number];
+
+/**
+ * The built-in preset a saved row started as — by its stable id — or `null`
+ * for one the user created. What "Reset" restores after the row was saved over.
+ */
+export function seedGroovePreset(id: string) {
+  return SEED_GROOVE_PRESETS.find((p) => p.id === id) ?? null;
+}

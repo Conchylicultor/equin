@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { arrayMove } from "@plugins/primitives/plugins/sortable-list/web";
 import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
@@ -20,6 +21,8 @@ export interface GroovePresetsController {
   /** Overwrite preset `id`'s content with `from`'s (its name is kept). */
   update: (id: string, from: GrooveFields) => void;
   remove: (id: string) => void;
+  /** Move preset `id` to where preset `overId` stands (a drag-and-drop drop). */
+  move: (id: string, overId: string) => void;
 }
 
 /** A new preset's stable list id — minted client-side so the optimistic row
@@ -133,6 +136,22 @@ export function useGroovePresets(): ResourceResult<GroovePresetsController> {
     [commit],
   );
 
+  const move = useCallback(
+    (id: string, overId: string) => {
+      commit((prev) => {
+        const from = prev.findIndex((p) => p.id === id);
+        const to = prev.findIndex((p) => p.id === overId);
+        if (from === -1 || to === -1) {
+          throw new Error(
+            `useGroovePresets: cannot move "${id}" onto "${overId}"`,
+          );
+        }
+        return arrayMove([...prev], from, to);
+      });
+    },
+    [commit],
+  );
+
   return useMemo(
     () =>
       mapResource(config, (data) => ({
@@ -140,7 +159,8 @@ export function useGroovePresets(): ResourceResult<GroovePresetsController> {
         save,
         update,
         remove,
+        move,
       })),
-    [config, overlay, save, update, remove],
+    [config, overlay, save, update, remove, move],
   );
 }

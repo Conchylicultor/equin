@@ -23,6 +23,7 @@ primitive rather than wiring `useSortable` by hand.
 - Cross-plugin:
   - Imported by:
     - `apps-core/tab-bar`
+    - `apps/sonata/rich/rhythm-controls`
     - `fields/list/config`
     - `layouts/miller`
     - `primitives/collapsible-wrap`

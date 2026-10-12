@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   Button,
+  cn,
   Input,
   SingleLineProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -15,6 +16,10 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import {
+  SortableItem,
+  SortableList,
+} from "@plugins/primitives/plugins/sortable-list/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
@@ -23,7 +28,10 @@ import {
   presetGroove,
   type GrooveFields,
 } from "../../shared/groove";
-import type { GroovePreset } from "../../shared/groove-presets";
+import {
+  seedGroovePreset,
+  type GroovePreset,
+} from "../../shared/groove-presets";
 import {
   useGroovePresets,
   type GroovePresetsController,
@@ -33,14 +41,17 @@ import type { GrooveState } from "../use-groove";
 const grooveIcon = symbol("graphic-eq");
 const openIcon = symbol("keyboard-arrow-down");
 const deleteIcon = symbol("close");
+const resetIcon = symbol("restart-alt");
 
 /**
  * The groove preset picker: a full-width button naming the preset the song's
  * groove was applied from ("Custom" when none, or when that preset has since
  * been deleted), marked "edited" — with a Save that writes the changes back
  * into it — once the groove no longer sounds like it (`grooveEquals`). The
- * button opens the preset menu: Apply a preset (both hands at once), delete
- * one, or save the current groove as a new one.
+ * button opens the preset menu: Apply a preset (both hands at once), drag a row
+ * to reorder the list, reset a built-in preset that was saved over back to its
+ * original settings, delete one, or save the current groove as a new one. The
+ * song's preset is the menu's highlighted row.
  *
  * The presets are `loading` until the config is known — a loading bar, never
  * the seeds standing in for the user's own list.
@@ -77,7 +88,7 @@ function fieldsOf(groove: GrooveState): GrooveFields {
 
 function PresetPicker({
   groove,
-  presets: { presets, save, update, remove },
+  presets: { presets, save, update, remove, move },
 }: {
   groove: GrooveState;
   presets: GroovePresetsController;
@@ -101,6 +112,15 @@ function PresetPicker({
     // This song's groove came from it: it is now from no preset.
     if (p.id === groove.presetId) {
       groove.commit({ ...fields, presetId: null }, groove.enabled);
+    }
+  };
+
+  // Restore a built-in preset saved over. A song in step with it follows it
+  // back; a song with its own unsaved edits keeps them.
+  const reset = (p: GroovePreset, seed: GroovePreset) => {
+    update(p.id, { ...seed, presetId: p.id });
+    if (p.id === selected?.id && !edited) {
+      groove.commit(presetGroove(seed), groove.enabled);
     }
   };
 
@@ -146,25 +166,55 @@ function PresetPicker({
             {presets.length === 0 ? (
               <ControlPanel.Empty>No saved presets yet.</ControlPanel.Empty>
             ) : (
-              presets.map((p) => (
-                <ControlPanel.Row
-                  key={p.id}
-                  select="check"
-                  indicator="trailing"
-                  checked={p.id === selected?.id}
-                  trailing={grooveSummary(p)}
-                  onSelect={() => apply(p)}
-                  actions={
-                    <IconButton
-                      icon={deleteIcon}
-                      label={`Delete preset “${p.name}”`}
-                      onClick={() => del(p)}
-                    />
-                  }
-                >
-                  {p.name}
-                </ControlPanel.Row>
-              ))
+              <SortableList
+                items={presets.map((p) => p.id)}
+                orientation="vertical"
+                onMove={move}
+              >
+                {presets.map((p) => {
+                  // A built-in preset whose saved content has left its seed.
+                  const seed = seedGroovePreset(p.id);
+                  const overwritten = seed !== null && !grooveEquals(p, seed);
+                  return (
+                    // The whole row drags (past the sensor's 4px threshold, so
+                    // a click still applies); the row actions' pointerdown
+                    // guard keeps a press on them from starting one.
+                    <SortableItem
+                      key={p.id}
+                      id={p.id}
+                      className={({ isDragging }) =>
+                        cn(isDragging && "opacity-40")
+                      }
+                    >
+                      {() => (
+                        <ControlPanel.Row
+                          selected={p.id === selected?.id}
+                          trailing={grooveSummary(p)}
+                          onSelect={() => apply(p)}
+                          actions={
+                            <>
+                              {overwritten && (
+                                <IconButton
+                                  icon={resetIcon}
+                                  label={`Reset “${p.name}” to its original settings`}
+                                  onClick={() => reset(p, seed)}
+                                />
+                              )}
+                              <IconButton
+                                icon={deleteIcon}
+                                label={`Delete preset “${p.name}”`}
+                                onClick={() => del(p)}
+                              />
+                            </>
+                          }
+                        >
+                          {p.name}
+                        </ControlPanel.Row>
+                      )}
+                    </SortableItem>
+                  );
+                })}
+              </SortableList>
             )}
           </ControlPanel.Section>
           <ControlPanel.Footer>

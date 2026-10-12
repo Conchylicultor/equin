@@ -6021,12 +6021,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `ConfigV2.WebRegister` "groove-presets"
                   - `SonataDocument.SongSetting` "rhythm-sync" → `RhythmObserver`
-                - Uses: 45 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md)
-                  - `primitives/css/ui-kit` ×9
+                - Uses: 49 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md)
+                  - `primitives/css/ui-kit` ×10
                   - `apps/sonata/document` ×7
                   - `primitives/live-state` ×6
                   - `apps/sonata/primitives/rhythm-circle` ×3
                   - `config_v2` ×3
+                  - `primitives/sortable-list` ×3
                   - `apps/sonata/session` ×2
                   - `primitives/css/control-panel` ×2
                   - `infra/endpoints.useEndpointMutation`
@@ -33502,6 +33503,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps-core/tab-bar`
+          - `apps/sonata/rich/rhythm-controls`
           - `fields/list/config`
           - `layouts/miller`
           - `primitives/collapsible-wrap`

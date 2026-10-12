@@ -179,12 +179,21 @@ export type ControlPanelRowProps = ControlPanelRowExplanation &
         select?: never;
         checked?: never;
         indicator?: never;
+        /**
+         * "This is the current one" as a persistent FILL — the `--selected`
+         * tier `css/row`'s `selected` paints, so a hover (`--hover-fill`) and
+         * the current row read apart. For a single-choice list whose current
+         * row needs no mark (a preset menu). Excluded from the check / radio /
+         * switch arms: a row is current by fill OR by mark, never both.
+         */
+        selected?: boolean;
       })
     | (ControlPanelRowCommon & {
         select: "check" | "radio";
         checked: boolean;
         indicator?: "leading";
         icon?: never;
+        selected?: never;
       })
     | (ControlPanelRowCommon & {
         select: "check" | "radio";
@@ -192,6 +201,7 @@ export type ControlPanelRowProps = ControlPanelRowExplanation &
         /** The mark moves to the trailing cell; the leading cell holds `icon`. */
         indicator: "trailing";
         icon?: React.ReactNode;
+        selected?: never;
       })
     | (ControlPanelRowCommon & {
         select: "switch";
@@ -199,6 +209,7 @@ export type ControlPanelRowProps = ControlPanelRowExplanation &
         icon?: React.ReactNode;
         actions?: never;
         indicator?: never;
+        selected?: never;
       })
   );
 
@@ -276,6 +287,7 @@ export function ControlPanelRow({
   select,
   checked,
   indicator = "leading",
+  selected,
   handle,
   handleProps,
   trailing,
@@ -398,7 +410,11 @@ export function ControlPanelRow({
     // the shared one — so a row reached by Tab or arrow lights exactly like a
     // dropdown row under the arrow keys, one indicator in every menu rather
     // than a fill in one surface and a ring in the other.
-    interactive && "hover:menu-row-lit",
+    // A `selected` row keeps its own fill under the pointer: the current row
+    // never reads as merely hovered.
+    selected
+      ? "bg-selected text-accent-foreground"
+      : interactive && "hover:menu-row-lit",
     // WHO is focused differs between the two constructions, and each spelling
     // is inert on the other path. `focus-visible:` is the box itself, which a
     // `<div>` box can never satisfy; the `has-[…]` form is the select element —
@@ -426,9 +442,11 @@ export function ControlPanelRow({
   // `role="menu"` ancestor, and a control panel is a labelled group of sections,
   // not a menu. Only the interactive hosts carry it — a display-only `<div>` row
   // showing an indicator is not a control.
-  const selection = select
+  const selection: SelectionAttrs | undefined = select
     ? { role: SELECT_ROLE[select], "aria-checked": checked ?? false }
-    : undefined;
+    : selected
+      ? { "aria-current": "true" }
+      : undefined;
 
   // The danger tone is the shared menu row's destructive tone, keyed on the
   // same attribute a dropdown item carries, so its text, icons and highlight
@@ -698,10 +716,9 @@ function SelectRegion({
  * inner region on the actions path. Named types rather than inferred ones so
  * both spreads typecheck as JSX attributes instead of as an index signature.
  */
-type SelectionAttrs = {
-  role: "checkbox" | "radio" | "switch";
-  "aria-checked": boolean;
-};
+type SelectionAttrs =
+  | { role: "checkbox" | "radio" | "switch"; "aria-checked": boolean }
+  | { "aria-current": "true" };
 type DescribedAttrs = { "aria-describedby": string };
 
 const SELECT_ROLE: Record<

@@ -86,8 +86,12 @@ with the playhead.
 - **The picker.** A full-width button naming the selected preset ("Custom" for
   none or a dangling id), marked `edited` with a ghost Save (`update`) while
   the groove differs from it. Its menu (a `ControlPanelPopover`): one row per
-  preset — name, `grooveSummary`, a check on the selected one, a hover-revealed
-  delete (deleting this song's own preset commits `presetId: null`) — and a
+  preset, the whole row draggable to reorder the list (`move`) — name,
+  `grooveSummary`, the selected one highlighted (`ControlPanel.Row selected`),
+  hover-revealed actions: a Reset on a built-in preset whose saved content has
+  left its seed (`seedGroovePreset`; derived, never stored — restores the seed,
+  and re-applies it to a song still in step with the preset) and a delete
+  (deleting this song's own preset commits `presetId: null`) — and a
   footer "Save current as a preset…" that turns into a name field + Save
   (`save`, then commit the new id). Apply commits `presetGroove(p)`.
 - **Pure helpers** (`shared/groove.ts`, tested): `grooveEquals` compares what a
@@ -124,12 +128,13 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
   - Contributes:
     - `ConfigV2.WebRegister` "groove-presets"
     - `SonataDocument.SongSetting` "rhythm-sync" → `RhythmObserver`
-  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×9
+  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×10
     - `apps/sonata/document` ×7
     - `primitives/live-state` ×6
     - `apps/sonata/primitives/rhythm-circle` ×3
     - `config_v2` ×3
+    - `primitives/sortable-list` ×3
     - `apps/sonata/session` ×2
     - `primitives/css/control-panel` ×2
     - `infra/endpoints.useEndpointMutation`

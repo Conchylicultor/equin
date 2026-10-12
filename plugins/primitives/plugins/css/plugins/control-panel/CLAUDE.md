@@ -533,6 +533,13 @@ dropdown row under the arrow keys — no focus ring. A panel opened beside a liv
 caret (the page editor's block menu) passes `keepFocus`: the row selects on
 press without taking focus, and Enter / Space still select.
 
+`Row selected` (the plain arm only — no `select`) marks the CURRENT row of a
+single-choice list with a persistent fill instead of a mark: the `--selected`
+tier `css/row`'s `selected` paints (`bg-selected text-accent-foreground`,
+`aria-current`), which a theme sets apart from `--hover-fill`, so "current"
+and "hovered" stay two looks. It is excluded from the check / radio / switch
+arms at the type level — a row is current by fill or by mark, never both.
+
 One more opt-in shape, default unchanged: `Row indicator="trailing"` on a check / radio row
 draws the mark after the value so the leading cell holds a real `icon` — role
 and `aria-checked` unchanged. A row with a visible `description` reads as a
