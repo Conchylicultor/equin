@@ -465,3 +465,54 @@ Integration verdicts: `./singularity check` is green except for `web-artifacts:m
   - `events-core/source-runs-oracle` and `page/editor/doc-rank` (seed 3) fail only when every file shares one bun process, because resource keys are registered twice (`events.source-runs`, `release.history`). The plugin-tree barrel import in `page/editor/core/markdown.test.ts` loads every server barrel. Both pass in isolation.
 - Every headless run records a `browser-rejection` "Failed to fetch" crash from `debug.slow-ops` `flush`, unrelated to B1.
 - Not driven live: report-investigations scope, claude-cli calls, run events, deployment chain, release logs, block-locations, file-explorer places and home, and the task-category registry. Each was checked through check/test/build and `_debug` only.
+
+## Result (B2)
+
+Three external values, each `"notified"` by plugin-tree's `onPluginTreeChanged` and `revalidate`d by `pluginTreeGeneration()`, so an unchanged tree answers 304. Every B2 reader now reads them through `useLive`. All three endpoints and their handlers are deleted.
+
+| Site | Value | Outcome |
+| --- | --- | --- |
+| `plugin-meta/plugin-view/web/panes.tsx` (title + body) | `plugin-view.facets-tree` | `useLive`; Loading arm, `ResourceErrorInline`; debt manifest deleted |
+| `plugin-view/plugins/file-tree/.../file-tree-section.tsx` | `plugin-view.facets-tree` | `useLive`; debt manifest deleted |
+| `plugin-meta/composition/web/internal/hooks.ts` (4 hooks) | `composition.data` | `useLive`; graph deserialized once per value identity; debt manifest deleted |
+| `apps/studio/explorer/.../explorer-view.tsx` | `plugin-view.tree` | `useLive`; debt manifest deleted |
+| `apps/studio/contributions/.../contributions-view.tsx` | `plugin-view.facets-tree` | `useLive`; split into a loader view and an inner `ContributionsTables`; debt manifest deleted |
+| `apps/studio/compositions/closure-tree/.../closure-tree-section.tsx` | `plugin-view.tree` | `useLive`; the `data!` assertion is gone; debt manifest deleted |
+| `active-data/plugin-link/web/internal/use-plugin-claim.ts` | `plugin-view.tree` | `useLive`; pending → `claimPending()`, error → `declined(...)` as before |
+| `active-data/plugin-link/web/panes.tsx` | `plugin-view.facets-tree` | already read the shared tree; its duplicate `findNode` and loading/error body are now folded into plugin-view's one reader, `PluginDetailForId` / `usePluginDisplayName` (review fix); debt manifest deleted |
+| `config_v2/settings/web/components/config-nav.tsx` | `plugin-view.tree` | `useLive` feeding `foldResource`; path removed from the settings manifest (its other 3 paths are B3) |
+| `getPluginTree`, `getPluginFacetsTree`, `getCompositionData` | — | deleted, with `tree-handler.ts`, `facets-handler.ts`, `data-handler.ts` and their `httpRoutes` |
+
+### Deviations (B2)
+- All three values carry `throttleMs: 2_000` (`plugin-view.tree` since the review fixes). Every edit under `plugins/` moves the generation, and each re-read rebuilds every facet, about 4.4 s per load in `_debug`'s `loaderStats.maxMs`.
+- Contributions' tab and filter state now live in the inner component, so they reset if the read goes to its error arm and comes back.
+- The error copy is `ResourceErrorInline`'s standard text with a retry, in place of the old `String(error)`.
+
+### Verification (B2)
+- `./singularity check` passed after the build. Its only failure before the build was `web-artifacts:map-in-sync` (stale dist).
+- `./singularity build` passed (build-1791805365-zq8ji0).
+- Tests on plugin-view, composition, plugin-tree, facets/exports, plugin-link, config_v2/settings, apps/studio and network/live: 577 bun and 100 vitest, 0 fail.
+- Screenshots of the live deploy:
+  - Studio Plugin explorer: the tree, 1376 plugins.
+  - Studio Contributions: 1125 contributions, with every tab count filled.
+  - Composition `agent-manager` with Closure expanded: the tree renders.
+  - `plugin-meta.plugin-view` detail pane: facet counts shown (Depends on 104, Used by 53, Exports 15). With Files expanded, the file tree lists core, plugins, server, web and the root files.
+  - Settings → Config nav: the plugin tree with config rows.
+- Freshness, driven with the pane open and no reload (0 navigations): a dummy plugin folder `plugin-meta/plugins/zz-fresh-probe` was added and plugin-view's web barrel description edited.
+  - Within 20 s the pane showed the new description (facets tree) and the tree listed `zz-fresh-probe` (structure tree).
+  - After the revert both disappeared.
+  - The tab re-read `plugin-view.tree`, `plugin-view.facets-tree` and `composition.data` on each change.
+- `/api/resources/_debug`: all three keys report `policy: external`, `freshness: {kind: "notified"}`, `notifyStats.hand: 3`.
+
+### Review fixes (B2)
+- **Loading/failure/empty collapse in `useCompositionData`** (two findings): it now returns `{ data: ResourceResult<CompositionGraph>, manifests }` (`mapResource` over the read, deserialized once per value). `allIdsOf`, `graphFor`, `NO_IDS`, `isLoading`, `allIds: []` and `graph: null` are gone. `AppExclusions` gained a `failed` arm (`{error, refetch}`), as `CompositionInclusion` already had. Callers render each state: `graph-view` (Loading / `ResourceErrorInline` block), `entry-points-section` (Loading / inline error instead of an empty picker), `compositions-list` (Loading / block error), the explorer's `excluded-badge` (an icon error with Retry instead of a pending block that never ends), and `compositions/web/panes.tsx` (`data.status === "loading"`).
+- **`plugin-view.tree` throttle**: `throttleMs: 2_000`, like the faceted values, so a build or a burst of saves re-ships the ~1.4k-node tree at most once per window per tab. The optional structural-hash `revalidate` was not done: it would need the structure build on every revalidate, which is what the loader already costs. The docs now say "an unchanged watcher *generation* answers 304" rather than "an unchanged tree".
+- **Exemption manifests read stale after an edit**: `readManifest` moved to `facets/exemptions/facet/read-manifest.ts` and evicts `require.cache` before each `require`, so a rebuilt faceted tree sees an edited `exempt/index.ts` without a restart. New `read-manifest.test.ts` writes a manifest, reads it, rewrites it, and asserts the second read sees the edit.
+- **Stale docs/comments naming deleted endpoints/files**: closure `CLAUDE.md` (the engine runs in the `plugin-view.tree` / `composition.data` loaders), plugin-tree `warmup.ts` (the cold `composition.data` / `plugin-view.facets-tree` read; the old slow-op name kept as historical), `manifest-map.ts` (`core/data.ts`'s schema), `hooks.ts` (the `compositionData` value), `use-plugin-claim.ts` ("a failed tree read").
+- **plugin-link pane folding**: plugin-view/web exports one reader, `PluginDetailForId({pluginId})` (loading / `ResourceErrorInline` / `PluginDetail`) and `usePluginDisplayName(pluginId)`. Both `pluginViewPane` and plugin-link's `pluginConvSidePane` host it. The duplicate `findNode` and body are deleted.
+- **`compositionDataSchema`** is no longer exported from composition's core barrel. It stays module-local in `core/data.ts`.
+- Verification: `./singularity build` passed (build-1791806718-irzmtd, checks included; the first standalone check failed only on prettier, a `no-ready-negation` hit in the new hooks code (fixed with a per-arm switch), and generated/dist drift the build regenerates). Tests on exemptions, composition, plugin-view, plugin-tree, plugin-link and apps/studio: 52 bun pass, 0 fail. Re-screenshotted the live deploy: Plugin Graph focused on `plugin-meta.composition` (canvas renders, +396 hidden); the Compositions list; `agent-manager` with Entry points expanded (`agent-manager.**` chip, Add); the explorer (1376 plugins, Not-in-the-app badges on `render-diff` rows); and the `plugin-meta.plugin-view` detail pane through `PluginDetailForId` (Depends on 104, Used by 53, Exports 17).
+
+### Open (B2)
+- The plugin-link chip and pane were not driven live, because no conversation with a plugin chip was at hand. They are covered only by type-check and tests (17 pass).
+- `./singularity exempt list --rule live/no-endpoint-read --debt`: **77** exemptions remain, all debt, and none of them is a B2 site.

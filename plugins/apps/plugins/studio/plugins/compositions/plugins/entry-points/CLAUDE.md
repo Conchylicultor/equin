@@ -48,6 +48,8 @@ composition: reading those entry points is exactly why someone opens the row.
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/search.SearchInput`
     - `ui/icons.Icon`

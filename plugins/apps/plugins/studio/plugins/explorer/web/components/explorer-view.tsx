@@ -1,7 +1,8 @@
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
-import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import { pluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -9,34 +10,32 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { PluginTree } from "./plugin-tree";
 
 export function ExplorerView() {
-  const { data: treeData, isLoading, error } = useEndpoint(getPluginTree, {});
+  const tree = useLive(pluginTree);
 
   const openPane = useOpenPane();
   const selectedId = pluginViewPane.useRouteEntry()?.params.pluginId ?? null;
 
-  if (isLoading) {
+  if (tree.status === "loading") {
     return (
       <Center axis="both" className="h-full">
         <Loading label="Loading plugin tree…" />
       </Center>
     );
   }
-  if (error) {
+  if (tree.status === "error") {
     return (
       <Center axis="both" className="h-full p-2xl">
-        <Stack gap="sm" align="center" className="text-center">
-          <Text variant="body" className="font-medium text-foreground">
-            Failed to load plugin tree
-          </Text>
-          <Text variant="body" tone="muted">
-            {String(error)}
-          </Text>
-        </Stack>
+        <ResourceErrorInline
+          variant="block"
+          subject="the plugin tree"
+          error={tree.error}
+          refetch={tree.refetch}
+        />
       </Center>
     );
   }
 
-  const { plugins, totals } = treeData!;
+  const { plugins, totals } = tree.data;
 
   // PaneChrome owns the single scroll. The stats band scrolls with the content
   // (not sticky) so it doesn't collide with the tree's own sticky DataView

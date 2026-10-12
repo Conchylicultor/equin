@@ -1,8 +1,9 @@
 import { useEffect, useMemo } from "react";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
-  useEndpointResource,
+  mapResource,
   type ResourceError,
+  type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import {
   deserializeEdgeGraph,
@@ -17,7 +18,7 @@ import {
 } from "@plugins/plugin-meta/plugins/closure/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import {
-  getCompositionData,
+  compositionData,
   manifestItemToManifest,
   type CompositionData,
   type CompositionManifestItem,
@@ -33,45 +34,78 @@ import {
 } from "./store";
 import { useManifestItems } from "./manifests";
 
-export interface CompositionDataResult {
-  graph: EdgeGraph | null;
-  manifests: CompositionManifest[];
+/** The settled composition data: the deserialized edge graph and every plugin id. */
+export interface CompositionGraph {
+  graph: EdgeGraph;
   allIds: PluginId[];
-  isLoading: boolean;
 }
 
-// Deserialize the graph EXACTLY ONCE per fetched response, shared across every
-// caller (the membership band runs in hundreds of tree rows at once — they must
-// not each deserialize the whole graph). Keyed on the raw response object identity,
-// which TanStack Query keeps stable across renders for one cache entry.
-let lastResponse: CompositionData | null = null;
-let lastGraph: EdgeGraph | null = null;
+export interface CompositionDataResult {
+  /**
+   * The `compositionData` read itself — loading, failed or ready — so a caller
+   * renders "not known yet" and "could not be read" as states rather than as an
+   * empty id list or a missing graph.
+   */
+  data: ResourceResult<CompositionGraph>;
+  /** From the `compositions` config, independent of the graph read. */
+  manifests: CompositionManifest[];
+}
 
-function graphFor(data: CompositionData | undefined): EdgeGraph | null {
-  if (!data) return null;
-  if (data === lastResponse) return lastGraph;
-  lastResponse = data;
-  lastGraph = deserializeEdgeGraph(data.graph);
+// Deserialize the graph EXACTLY ONCE per fetched value, shared across every
+// caller (the membership band runs in hundreds of tree rows at once — they must
+// not each deserialize the whole graph). Keyed on the value's object identity,
+// which the live read keeps stable across renders until the value changes.
+let lastValue: CompositionData | null = null;
+let lastGraph: CompositionGraph | null = null;
+
+function deserialized(data: CompositionData): CompositionGraph {
+  if (data === lastValue && lastGraph) return lastGraph;
+  lastValue = data;
+  lastGraph = { graph: deserializeEdgeGraph(data.graph), allIds: data.allIds };
   return lastGraph;
+}
+
+/** The read with its value deserialized (module-cached, see {@link deserialized}). */
+function useCompositionGraph(): ResourceResult<CompositionGraph> {
+  return mapResource(useLive(compositionData), deserialized);
+}
+
+/**
+ * The graph to publish into the active-composition store: the ready value, or
+ * — after a failed re-read — the stale one still held. `null` means "nothing to
+ * publish" (the store keeps what it has); it is never rendered as an answer, as
+ * every surface reads the read's own state.
+ */
+function graphToPublish(
+  read: ResourceResult<CompositionGraph>,
+): EdgeGraph | null {
+  switch (read.status) {
+    case "loading":
+      return null;
+    case "error":
+      return read.stale?.graph ?? null;
+    case "ready":
+      return read.data.graph;
+  }
 }
 
 /**
  * Fetch the closure data and rehydrate it. The serialized graph is deserialized
- * exactly once per response (module-cached, see {@link graphFor}) and published into
- * the active-composition store so the membership recompute can read it. Manifests
- * are sourced from the `compositions` config_v2 config (not the endpoint) and
- * mapped to the engine's `CompositionManifest[]` (dropping `id`). Safe to
- * call from many components — `useEndpoint` (TanStack Query) dedupes the network
- * request and the deserialize is shared.
+ * exactly once per value (module-cached, see {@link deserialized}) and published
+ * into the active-composition store so the membership recompute can read it.
+ * Manifests are sourced from the `compositions` config_v2 config (not the
+ * `compositionData` value) and mapped to the engine's `CompositionManifest[]`
+ * (dropping `id`). Safe to call from many components — the live read dedupes
+ * the network request and the deserialize is shared.
  */
 export function useCompositionData(): CompositionDataResult {
-  const { data, isLoading } = useEndpoint(getCompositionData, {});
-  const graph = graphFor(data);
+  const data = useCompositionGraph();
+  const graph = graphToPublish(data);
   const items = useManifestItems();
   const manifests = useMemo(() => items.map(manifestItemToManifest), [items]);
 
   // Publish the deserialized graph into the store so the band / detail sections
-  // resolve membership against it. `graph` is module-cache-stable per response, so
+  // resolve membership against it. `graph` is module-cache-stable per value, so
   // this fires once per fetch.
   useEffect(() => {
     if (graph) setGraph(graph);
@@ -84,12 +118,7 @@ export function useCompositionData(): CompositionDataResult {
     setRegistry(manifests);
   }, [manifests]);
 
-  return {
-    graph,
-    manifests,
-    allIds: data?.allIds ?? [],
-    isLoading,
-  };
+  return { data, manifests };
 }
 
 /**
@@ -105,7 +134,7 @@ export function useCompositionData(): CompositionDataResult {
  *
  * **Derived here rather than shipped.** The answer is a pure function of the
  * edge graph and the composition manifests, and the client already holds both —
- * the graph from `getCompositionData`, the manifests from the `compositions`
+ * the graph from the `compositionData` live value, the manifests from the `compositions`
  * config. A `disabledIds`-style wire field would be a SECOND spelling of a
  * computation the engine already owns, free to drift from it the moment the
  * negative pass changes; deriving it means the badge and the codegen that emits
@@ -122,10 +151,12 @@ export function useCompositionData(): CompositionDataResult {
  * The `pending` arm is a state to render, not an absence to collapse: before the
  * graph arrives nothing is known about any plugin, and answering with an empty
  * `excluded` would assert that every plugin ships — a claim that then reverses
- * itself.
+ * itself. Likewise `failed` is rendered with its Retry, never left as a
+ * `pending` that never ends.
  */
 export type AppExclusions =
   | { kind: "pending" }
+  | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> }
   | {
       kind: "ready";
       /** Every id outside main's bundle — excluded on purpose or by cascade. */
@@ -139,9 +170,9 @@ const PENDING_EXCLUSIONS: AppExclusions = { kind: "pending" };
 // Resolved ONCE per (graph, manifest-config) pair rather than per caller: the
 // explorer badge asks this question from every row of a tree of ~900, and
 // resolving main's whole closure per row would be that many full closures per
-// render. Both inputs are reference-stable — the graph per fetched response (see
-// `graphFor`), the items array per config document — so identity is the whole
-// cache key, the same shape `graphFor` uses one screen up.
+// render. Both inputs are reference-stable — the graph per fetched value (see
+// `deserialized`), the items array per config document — so identity is the
+// whole cache key, the same shape `deserialized` uses one screen up.
 let exclusionsForGraph: EdgeGraph | null = null;
 let exclusionsForItems: CompositionManifestItem[] | null = null;
 let exclusionsCache: AppExclusions | null = null;
@@ -178,8 +209,7 @@ function appExclusions(
   );
   const excluded = new Set<PluginId>();
   // Every tree node is a key in each adjacency map, so this is the full id set
-  // without the endpoint's `allIds` (which not every caller of this hook fetches
-  // the payload for).
+  // without reaching for the value's `allIds`.
   for (const id of graph.hardForward.keys()) {
     if (!bundle.has(id)) excluded.add(id);
   }
@@ -190,14 +220,19 @@ function appExclusions(
   return exclusionsCache;
 }
 
-/** See {@link AppExclusions}. Shares the `useEndpoint` cache entry with the other
+/** See {@link AppExclusions}. Shares the live read with the other
  *  composition-data consumers, so calling it from every tree row costs one fetch. */
 export function useAppExclusions(): AppExclusions {
-  const { data } = useEndpoint(getCompositionData, {});
-  const graph = graphFor(data);
+  const read = useCompositionGraph();
   const items = useManifestItems();
-  if (!graph) return PENDING_EXCLUSIONS;
-  return appExclusions(graph, items);
+  switch (read.status) {
+    case "loading":
+      return PENDING_EXCLUSIONS;
+    case "error":
+      return { kind: "failed", error: read.error, refetch: read.refetch };
+    case "ready":
+      return appExclusions(read.data.graph, items);
+  }
 }
 
 /**
@@ -207,8 +242,7 @@ export function useAppExclusions(): AppExclusions {
  * resolve. The network request and deserialize are shared with `useCompositionData`.
  */
 export function useEnsureCompositionData(): void {
-  const { data } = useEndpoint(getCompositionData, {});
-  const graph = graphFor(data);
+  const graph = graphToPublish(useCompositionGraph());
   useEffect(() => {
     if (graph) setGraph(graph);
   }, [graph]);
@@ -310,15 +344,13 @@ export function useCompositionIncludes(
   name: string | null,
   pluginId: PluginId,
 ): CompositionInclusion {
-  const read = useEndpointResource(getCompositionData, {});
+  const read = useCompositionGraph();
   const items = useManifestItems();
   if (name === null) return PENDING_INCLUSION;
   if (read.status === "loading") return PENDING_INCLUSION;
   if (read.status === "error")
     return { kind: "failed", error: read.error, refetch: read.refetch };
-  const graph = graphFor(read.data);
-  if (!graph) return PENDING_INCLUSION;
-  const bundle = bundleOf(graph, items, name);
+  const bundle = bundleOf(read.data.graph, items, name);
   if (!bundle) return { kind: "unknown-composition" };
   return { kind: "ready", included: bundle.has(pluginId) };
 }

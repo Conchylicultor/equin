@@ -13,7 +13,7 @@ import { createTreeChangeSignal } from "./tree-change-signal";
 
 // Cached, watcher-invalidated plugin-tree accessors.
 //
-// The hot path (`GET /api/plugin-view/tree`, chip mounts, Settings config-nav)
+// The hot path (the `plugin-view.tree` live value: chip mounts, Settings config-nav)
 // only ever wants the cheap structural skeleton — never facets — so it is served
 // structure-only and cached here. Caching is legitimate: it coalesces necessary,
 // cheap structural work, not the eliminated facet walk.

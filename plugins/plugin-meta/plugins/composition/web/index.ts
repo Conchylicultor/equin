@@ -13,6 +13,7 @@ export {
 export type {
   AppExclusions,
   CompositionDataResult,
+  CompositionGraph,
   CompositionInclusion,
   ImpactResult,
 } from "./internal/hooks";

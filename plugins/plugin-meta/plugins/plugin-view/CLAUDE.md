@@ -5,8 +5,15 @@ description, runtimes, sub-plugins, and source path. Other plugins open this
 pane by importing `pluginViewPane` from `@plugins/plugin-meta/plugins/plugin-view/web`
 and calling `pluginViewPane.open({ pluginId: "<hierarchyId>" })`.
 
-Also owns the tree data endpoint and the shared `PluginNode` type used by
-sibling plugins (e.g. publish's tree component).
+Also owns the plugin tree data and the shared `PluginNode` type used by
+sibling plugins (e.g. publish's tree component). The tree is two live values
+(`core/values.ts`), read with `useLive`: `pluginTree` (`plugin-view.tree`,
+structure only) and `pluginFacetsTree` (`plugin-view.facets-tree`, every facet
+extracted — the heavy build). Both are on-demand external values
+`"notified"` by plugin-tree's `onPluginTreeChanged` while a tab holds them,
+throttled 2 s (a build or a burst of saves re-reads at most once per window),
+and ETagged by `pluginTreeGeneration()`, so an unchanged generation answers 304. There
+is no request/response endpoint for either tree.
 
 ## Contributing a section
 
@@ -46,7 +53,7 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `pluginViewPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "plugin-view"
   - Uses:
-    - `infra/endpoints.useEndpoint`
+    - `network/live.useLive`
     - `primitives/breadcrumb.Breadcrumb`
     - `primitives/collapsible.Collapsible`
     - `primitives/collapsible.CollapsibleChevron`
@@ -59,6 +66,7 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/detail-sections.defineDetailSections`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
@@ -72,38 +80,43 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
   - Exports (values):
     - `ConsumerList`
     - `PluginDetail`
+    - `PluginDetailForId`
     - `PluginLink`
     - `pluginViewPane`
     - `PluginViewSlots`
     - `RUNTIME_COLORS`
     - `SectionCount`
     - `SubHeading`
+    - `usePluginDisplayName`
 - Server:
+  - Contributes:
+    - `resource.declare` "plugin-view.facets-tree"
+    - `resource.declare` "plugin-view.tree"
   - Uses:
-    - `infra/endpoints.implement`
+    - `network/live.serveValue`
     - `plugin-meta/plugin-tree.getFacetsTreeCached`
     - `plugin-meta/plugin-tree.getStructureTreeCached`
-  - Routes:
-    - `GET /api/plugin-view/tree`
-    - `GET /api/plugin-view/facets-tree`
+    - `plugin-meta/plugin-tree.onPluginTreeChanged`
+    - `plugin-meta/plugin-tree.pluginTreeGeneration`
+  - Resources:
+    - `plugin-view.facets-tree` (invalidate, notified)
+    - `plugin-view.tree` (invalidate, notified)
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`
+  - Uses: `network/live.liveValue`
   - Exports (types):
     - `PluginNode`
     - `PluginTreePayload`
   - Exports (values):
-    - `getPluginFacetsTree`
-    - `getPluginTree`
+    - `pluginFacetsTree`
+    - `pluginTree`
 - Cross-plugin:
   - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta` ×19
     - `apps` ×2
     - `active-data/plugin-link`
-- Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/panes.tsx` (debt)
 - Sub-plugins:
   - **`dependencies`** — Deduped cargo-tree-style dependency trees in the plugin detail pane: 'Depends on' (recursive forward deps) and 'Used by' (recursive reverse dependents), each marking soft slot-contributions and…
-  - **`file-tree`** [exempt] — File tree explorer for the plugin's own files in the plugin detail pane.
+  - **`file-tree`** — File tree explorer for the plugin's own files in the plugin detail pane.
   - **`inclusion`** — Composition-membership section in the plugin detail pane: state badge, why-included edge path, select/prune impact, and a pin-as-root affordance.
   - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
   - **`source-path`** — Displays the plugin's source path in the plugin detail pane.

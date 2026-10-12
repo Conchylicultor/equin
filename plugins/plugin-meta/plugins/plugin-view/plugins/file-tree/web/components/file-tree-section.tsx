@@ -1,14 +1,11 @@
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/web";
-import { getPluginFacetsTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import { pluginFacetsTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { FileBrowser } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
-import {
-  getEndpointErrorMessage,
-  useEndpoint,
-} from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 
 // Sentinel resolving to the current running server's own worktree root.
@@ -18,13 +15,20 @@ export function FileTreeSection({ node }: { node: PluginNode }) {
   // The pane that renders this section already holds the tree, so this is a
   // cache hit: it carries the absolute `plugins/` folder the node paths are
   // relative to — this checkout's.
-  const tree = useEndpoint(getPluginFacetsTree, {});
+  const tree = useLive(pluginFacetsTree);
   const openPane = useOpenPane();
 
-  if (tree.isError) {
-    return <Placeholder>{getEndpointErrorMessage(tree.error)}</Placeholder>;
+  if (tree.status === "loading") return <Loading variant="rows" />;
+  if (tree.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the plugin tree"
+        error={tree.error}
+        refetch={tree.refetch}
+      />
+    );
   }
-  if (!tree.data) return <Loading variant="rows" />;
   const { pluginsRoot } = tree.data;
   const pluginDir = `${pluginsRoot}/${node.path}`;
 

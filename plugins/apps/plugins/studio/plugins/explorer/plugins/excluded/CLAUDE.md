@@ -48,6 +48,7 @@ usually a plugin that ships perfectly well.
   - Uses:
     - `apps/studio/explorer.Explorer`
     - `plugin-meta/composition.useAppExclusions`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
 

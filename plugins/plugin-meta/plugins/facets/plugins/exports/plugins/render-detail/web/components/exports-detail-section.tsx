@@ -34,7 +34,7 @@ const RUNTIMES: readonly ExportRuntime[] = RUNTIME_FOLDERS;
 type SymbolCategory = "type" | "hook" | "component" | "value";
 
 // Derives the presentation category from a symbol's name + kind.
-// Ported from plugin-view's tree-handler.ts — the facet stores only
+// Ported from plugin-view's former tree handler — the facet stores only
 // { name, kind, consumers } and leaves presentation to the renderer.
 function categorize(name: string, kind: "type" | "value"): SymbolCategory {
   if (kind === "type") return "type";

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
-import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { PluginNode, PluginTreePayload } from "./types";
 
@@ -34,14 +33,4 @@ export const pluginTreePayloadSchema: ZodParser<PluginTreePayload> = z.object({
     loadBearing: z.number(),
     umbrellas: z.number(),
   }),
-});
-
-export const getPluginTree = defineEndpoint({
-  route: "GET /api/plugin-view/tree",
-  response: pluginTreePayloadSchema,
-});
-
-export const getPluginFacetsTree = defineEndpoint({
-  route: "GET /api/plugin-view/facets-tree",
-  response: pluginTreePayloadSchema,
 });

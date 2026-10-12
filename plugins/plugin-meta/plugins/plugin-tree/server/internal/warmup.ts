@@ -8,7 +8,8 @@ import {
 // facets build is ~5s of pure CPU (every plugin × every facet extractor) and
 // both memos die with the process, so on main — which restarts on every deploy —
 // the first Studio/plugin-view request of each process paid the whole build
-// synchronously (slow-op: GET /api/composition/data, 5–42s per cold hit).
+// synchronously (the first `composition.data` / `plugin-view.facets-tree` live
+// read; formerly slow-op GET /api/composition/data, 5–42s per cold hit).
 // Pre-building here moves that cost off the interactive path into the drain's
 // throttled post-boot window. `host` scope: worktree backends skip it — their
 // Studio surfaces are rarely opened, and N×-worktree boots would multiply a 5s

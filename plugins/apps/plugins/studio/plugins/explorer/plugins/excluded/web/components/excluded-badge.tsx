@@ -1,4 +1,5 @@
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useAppExclusions } from "@plugins/plugin-meta/plugins/composition/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -35,6 +36,18 @@ export function ExcludedBadge({ node }: { node: PluginNode }) {
       <span aria-hidden>
         <Loading variant="block" className="size-3.5 rounded-full" />
       </span>
+    );
+  }
+  // A failed graph read is not "ships": the row says it could not tell, with
+  // the read's Retry, rather than a pending block that never resolves.
+  if (exclusions.kind === "failed") {
+    return (
+      <ResourceErrorInline
+        variant="icon"
+        subject="whether the app ships this plugin"
+        error={exclusions.error}
+        refetch={exclusions.refetch}
+      />
     );
   }
   if (!exclusions.excluded.has(node.id)) return null;

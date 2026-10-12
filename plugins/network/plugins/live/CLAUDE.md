@@ -1559,16 +1559,17 @@ never add one.
     - `liveValue`
     - `scopedLiveColumns`
 - Cross-plugin:
-  - Imported by: 200 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×59
+  - Imported by: 207 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×62
     - `conversations` ×35
     - `tasks` ×26
-    - `active-data` ×11
+    - `active-data` ×12
     - `infra` ×11
     - `page` ×10
     - `debug` ×9
     - `build` ×6
     - `primitives` ×5
+    - `plugin-meta` ×4
     - `auth` ×3
     - `code-explorer` ×3
     - `review` ×3
@@ -1581,7 +1582,6 @@ never add one.
     - `database/query-deadline`
     - `fields/secret/config`
     - `integrations/google-maps`
-    - `plugin-meta/plugin-health`
     - `reports`
     - `runs`
     - `shell/notifications`
@@ -1592,7 +1592,6 @@ never add one.
     - `live/no-legacy-resource-spelling` — `.` (sanctioned)
     - `live/no-endpoint-read` — `web` (sanctioned)
   - Exempted by:
-    - `active-data/plugin-link` (2 debt)
     - `apps-core/surface/floating/wallpaper` (1 debt)
     - `apps/deploy/analytics/dashboard` (1 debt)
     - `apps/file-explorer/browser` (4 debt)
@@ -1600,9 +1599,6 @@ never add one.
     - `apps/file-explorer/places` (2 debt)
     - `apps/mail/reading-pane` (1 debt)
     - `apps/mail/search` (1 debt)
-    - `apps/studio/compositions/closure-tree` (1 debt)
-    - `apps/studio/contributions` (1 debt)
-    - `apps/studio/explorer` (1 debt)
     - `build/build-commits` (1 debt)
     - `build/build-fix` (1 debt)
     - `build/build-info` (1 debt)
@@ -1610,7 +1606,7 @@ never add one.
     - `build/build-profiling` (1 debt)
     - `build/serve-composition` (1 debt)
     - `code-explorer/file-resolve` (1 debt)
-    - `config_v2/settings` (4 debt)
+    - `config_v2/settings` (3 debt)
     - `debug/broadcasts` (1 debt)
     - `debug/config-orphans` (2 debt)
     - `debug/health-monitor` (1 debt)
@@ -1637,10 +1633,7 @@ never add one.
     - `network/live` (0 debt)
     - `page/bookmark` (1 debt)
     - `page/place` (2 debt)
-    - `plugin-meta/composition` (1 debt)
     - `plugin-meta/plugin-health` (1 debt)
-    - `plugin-meta/plugin-view` (1 debt)
-    - `plugin-meta/plugin-view/file-tree` (1 debt)
     - `primitives/data-view` (0 debt)
     - `primitives/diff-view` (3 debt)
     - `primitives/file-viewer` (3 debt)

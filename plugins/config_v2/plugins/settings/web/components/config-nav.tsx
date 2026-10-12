@@ -1,13 +1,14 @@
 import {
   foldResource,
   useCombinedResources,
-  useEndpointResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useCallback, useMemo } from "react";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
-import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import {
+  pluginTree,
+  type PluginNode,
+} from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import type { ConfigRegistration } from "@plugins/config_v2/web";
 import { configModifiedCounts } from "@plugins/config_v2/core";
@@ -44,7 +45,7 @@ export function ConfigNav() {
   const registrations = useConfigRegistrations();
   const openPane = useOpenPane();
 
-  const treeRes = useEndpointResource(getPluginTree, {});
+  const treeRes = useLive(pluginTree);
   // Rows are built only for a ready tree; `readiness` (below) renders the
   // loading and failed states, so neither ever reaches the view as a value.
   const payload = foldResource(treeRes, {

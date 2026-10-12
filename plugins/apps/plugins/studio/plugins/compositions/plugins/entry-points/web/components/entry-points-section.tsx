@@ -1,5 +1,7 @@
 import type { ReactElement } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   useActiveComposition,
   useCompositionData,
@@ -10,13 +12,27 @@ import { EntryEditor } from "./entry-editor";
 /** Section host for the entry-point editor. */
 export function EntryPointsSection({ id }: { id: string }): ReactElement {
   const draft = useActiveComposition();
-  const { allIds } = useCompositionData();
+  const { data } = useCompositionData();
 
   if (!draft) {
     return (
       <Text variant="caption" tone="muted">
         No active composition.
       </Text>
+    );
+  }
+
+  // The picker searches every plugin id: until the graph's read settles there is
+  // no candidate list to search, which is a state — not an empty one.
+  if (data.status === "loading") return <Loading variant="text" />;
+  if (data.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the plugin ids"
+        error={data.error}
+        refetch={data.refetch}
+      />
     );
   }
 
@@ -28,7 +44,7 @@ export function EntryPointsSection({ id }: { id: string }): ReactElement {
   return (
     <EntryEditor
       draft={draft}
-      allIds={allIds}
+      allIds={data.data.allIds}
       editable={!isCommittedSourceComposition(id)}
     />
   );

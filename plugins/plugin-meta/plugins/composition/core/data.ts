@@ -1,14 +1,14 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
-import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type {
   Edge,
   SerializedEdgeGraph,
 } from "@plugins/plugin-meta/plugins/closure/core";
 
-// PluginId is a branded string; over the wire it is just a string. Like
-// `pluginTreePayloadSchema` in plugin-view, we validate shape (string) not brand.
+// PluginId is a branded string; over the wire it is just a string. Like the plugin
+// tree's schema in plugin-view, we validate shape (string) not brand.
 const pluginIdSchema = z.custom<PluginId>((v) => typeof v === "string");
 const idList = z.array(pluginIdSchema);
 const adjacency = z.record(z.string(), idList);
@@ -33,25 +33,26 @@ export interface CompositionData {
   allIds: PluginId[];
 }
 
-export const compositionDataSchema: ZodParser<CompositionData> = z.object({
+const compositionDataSchema: ZodParser<CompositionData> = z.object({
   graph: serializedEdgeGraphSchema,
   allIds: idList,
 });
 
 /**
- * Ships the code-derived structure Studio needs to run the closure engine
+ * The code-derived structure Studio needs to run the closure engine
  * client-side: the classified {@link SerializedEdgeGraph} and the full set of
- * plugin ids. The graph is built + classified once per server process (it is an
- * expensive tree build), so this is a read-only introspection endpoint, not a
- * live resource. Composition **manifests** are user data and live in the
- * `compositions` config_v2 config — read client-side, not on this endpoint.
+ * plugin ids. Derived from plugin-tree's faceted build of `plugins/` (an
+ * expensive tree build, cached there), so it is read on demand and told to read
+ * again when the plugins folder changes. Composition **manifests** are user
+ * data and live in the `compositions` config_v2 config — read client-side, not
+ * in this value.
  *
  * Membership answers are deliberately absent from the payload, including "which
  * plugins are not in the app". They are a pure function of this graph plus those
  * manifests, both of which the client holds, so a wire field would be a second
  * spelling of the same answer that can drift from the one the engine computes.
  */
-export const getCompositionData = defineEndpoint({
-  route: "GET /api/composition/data",
-  response: compositionDataSchema,
+export const compositionData = liveValue("composition.data", {
+  schema: compositionDataSchema,
+  load: "on-demand",
 });

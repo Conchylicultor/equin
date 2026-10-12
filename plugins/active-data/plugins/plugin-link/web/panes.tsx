@@ -1,19 +1,13 @@
-import { useMemo } from "react";
 import {
   Pane,
   PaneChrome,
   defineRoute,
 } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
-  PluginDetail,
-  type PluginNode,
+  PluginDetailForId,
+  usePluginDisplayName,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
-import { getPluginFacetsTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 
 export const pluginConvSidePane = Pane.define({
   route: defineRoute({
@@ -28,49 +22,20 @@ export const pluginConvSidePane = Pane.define({
   title: { useText: usePluginConvSideTitle, fallback: (p) => p.pluginId },
 });
 
-function indexNodes(nodes: PluginNode[], map = new Map<string, PluginNode>()) {
-  for (const node of nodes) {
-    map.set(node.id, node);
-    indexNodes(node.children, map);
-  }
-  return map;
-}
-
 /** The plugin's display name from the facets tree, or undefined while it loads. */
 function usePluginConvSideTitle({
   pluginId,
 }: {
   pluginId: string;
 }): string | undefined {
-  const { data } = useEndpoint(getPluginFacetsTree, {});
-  if (!data) return undefined;
-  return indexNodes(data.plugins).get(pluginId)?.name ?? pluginId;
+  return usePluginDisplayName(pluginId);
 }
 
 function PluginConvSideBody() {
   const { pluginId } = pluginConvSidePane.useParams();
-  const { data, isLoading, error } = useEndpoint(getPluginFacetsTree, {});
-
-  const node = useMemo(
-    () => (data ? (indexNodes(data.plugins).get(pluginId) ?? null) : null),
-    [data, pluginId],
-  );
-
   return (
     <PaneChrome pane={pluginConvSidePane}>
-      {isLoading ? (
-        <Center className="h-full">
-          <Loading />
-        </Center>
-      ) : error ? (
-        <Center className="h-full p-2xl">
-          <Text as="div" variant="body" tone="muted">
-            {String(error)}
-          </Text>
-        </Center>
-      ) : (
-        <PluginDetail node={node} />
-      )}
+      <PluginDetailForId pluginId={pluginId} />
     </PaneChrome>
   );
 }

@@ -11,33 +11,14 @@ import {
   readIfExists,
   walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 import {
-  type DeclaredExemption,
   type ExemptedBy,
   type ExemptionsData,
   exemptionsFacetDef,
 } from "../core";
+import { readManifest } from "./read-manifest";
 
 // ── Helpers ────────────────────────────────────────────────────────────
-
-/**
- * The plugin's manifest, imported (not text-scanned): a manifest is plain data
- * whose only imports are types, so it loads synchronously and its entries are
- * exactly what the loader (`loadExemptions`) sees — no second parser to drift.
- * A manifest that fails to load throws; `exempt:manifests-valid` is the
- * authority on validity, this facet only reports what loaded.
- */
-function readManifest(dir: string): DeclaredExemption[] {
-  const file = join(dir, "exempt", "index.ts");
-  if (!existsSync(file)) return [];
-  const mod = require(file) as { default?: Exemptions };
-  return (mod.default ?? []).map((e) => ({
-    rule: e.rule,
-    paths: [...e.paths],
-    kind: e.kind,
-  }));
-}
 
 /** The ESLint namespace of this plugin's `lint/index.ts` contribution. */
 function lintNamespace(dir: string): string | undefined {

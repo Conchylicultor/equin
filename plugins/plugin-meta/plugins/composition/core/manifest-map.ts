@@ -17,8 +17,8 @@ export type CompositionManifestItem =
  * being the declared serve mode) and present a stored config item
  * as the engine's {@link CompositionManifest}. The id arrays are stored as plain
  * `string[]` (config_v2's string-list field), so we cast at the config boundary
- * to the branded `PluginId[]` exactly like `endpoints.ts` validates the wire
- * shape — that the ids resolve to real plugins is the `composition-closure`
+ * to the branded `PluginId[]` exactly like `core/data.ts`'s schema validates
+ * the wire shape — that the ids resolve to real plugins is the `composition-closure`
  * check's job. `extends` carries through verbatim (composition names, resolved by
  * `flattenManifest` before closure).
  */

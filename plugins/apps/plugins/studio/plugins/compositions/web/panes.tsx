@@ -35,8 +35,9 @@ export const compositionsPane = Pane.define({
 
 function useResolveComposition({ id }: { id: string }): ResolveResult {
   const items = useManifestItems();
-  const { isLoading } = useCompositionData();
-  if (isLoading && items.length === 0) return { status: "pending" };
+  const { data } = useCompositionData();
+  if (data.status === "loading" && items.length === 0)
+    return { status: "pending" };
   return { status: items.some((it) => it.id === id) ? "found" : "missing" };
 }
 

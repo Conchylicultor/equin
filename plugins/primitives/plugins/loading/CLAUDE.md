@@ -62,7 +62,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
   - Exports (values): `Loading`
 - Cross-plugin:
   - Imported by: 183 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×61
+    - `apps` ×62
     - `ui` ×19
     - `primitives` ×17
     - `conversations` ×16
@@ -72,8 +72,8 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `build` ×4
     - `plugin-meta` ×4
     - `review` ×4
-    - `active-data` ×3
     - `auth` ×3
+    - `active-data` ×2
     - `apps-core` ×2
     - `integrations` ×2
     - `map` ×2

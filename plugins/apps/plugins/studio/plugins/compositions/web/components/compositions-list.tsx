@@ -6,6 +6,7 @@ import {
   Inset,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   DataView,
@@ -52,7 +53,7 @@ const COMPOSITIONS_VIEW = defineDataView("studio.compositions");
  * because they act on the whole set rather than on the selected composition.
  */
 export function CompositionsList(): ReactElement {
-  const { isLoading } = useCompositionData();
+  const { data } = useCompositionData();
   const items = useManifestItems();
   const { save } = useManifestActions();
   const { setMode } = useServeComposition();
@@ -92,8 +93,15 @@ export function CompositionsList(): ReactElement {
           </Button>
         </Stack>
 
-        {isLoading ? (
+        {data.status === "loading" ? (
           <Loading variant="text" />
+        ) : data.status === "error" ? (
+          <ResourceErrorInline
+            variant="block"
+            subject="the composition graph"
+            error={data.error}
+            refetch={data.refetch}
+          />
         ) : (
           <CompositionsDataView
             items={items}

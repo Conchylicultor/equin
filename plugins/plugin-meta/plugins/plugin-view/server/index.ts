@@ -1,13 +1,10 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { handleTree } from "./internal/tree-handler";
-import { handleFacetsTree } from "./internal/facets-handler";
-import { getPluginTree, getPluginFacetsTree } from "../core/endpoints";
+import { pluginFacetsTreeServed, pluginTreeServed } from "./internal/live";
 
 export default {
-  description:
-    "Serves the plugin tree data for the plugin-view pane.",
-  httpRoutes: {
-    [getPluginTree.route]: handleTree,
-    [getPluginFacetsTree.route]: handleFacetsTree,
-  },
+  description: "Serves the plugin tree data for the plugin-view pane.",
+  contributions: [
+    ...pluginTreeServed.declare,
+    ...pluginFacetsTreeServed.declare,
+  ],
 } satisfies ServerPluginDefinition;

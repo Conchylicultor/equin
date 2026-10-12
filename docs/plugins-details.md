@@ -313,21 +313,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data.codeTag`
           - `active-data.declined`
           - `conversations/conversation-view.conversationPane`
-          - `infra/endpoints.useEndpoint`
-          - `plugin-meta/plugin-view.PluginDetail`
-          - `plugin-meta/plugin-view.PluginNode`
+          - `network/live.useLive`
+          - `plugin-meta/plugin-view.PluginDetailForId`
           - `plugin-meta/plugin-view.pluginViewPane`
-          - `primitives/css/center.Center`
+          - `plugin-meta/plugin-view.usePluginDisplayName`
           - `primitives/css/link-chip.LinkChip`
-          - `primitives/css/text.Text`
-          - `primitives/loading.Loading`
           - `primitives/pane.defineRoute`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/pane.useOpenPane`
           - `ui/icons.Icon`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-plugin-claim.ts`, `web/panes.tsx` (debt)
     - **`prototype`** — Renders raw `proto-<id>` strings inline as clickable chips (the generic id chip: the mock's title) that open the mock in the prototype-detail pane, and presents the prototype id kind to the id registry. Models emit the bare id, no tag wrapping needed. The prototype id chip's server half (idChipServer): resolves a `proto-<id>` to its prototype's title for the id registry and for model-read text (so a task description holding the id is titled after the mock), and registers the page-editor inline token so a page block holding the chip stays agent-readable.
       - Web:
         - Contributes:
@@ -7148,7 +7143,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "compositions"
               - `item-actions` "delete" → `DeleteAction`
               - `Studio.Sidebar` "Compositions"
-            - Uses: 35 symbols — full list in [`plugins/apps/plugins/studio/plugins/compositions/REFERENCE.md`](../plugins/apps/plugins/studio/plugins/compositions/REFERENCE.md)
+            - Uses: 36 symbols — full list in [`plugins/apps/plugins/studio/plugins/compositions/REFERENCE.md`](../plugins/apps/plugins/studio/plugins/compositions/REFERENCE.md)
               - `plugin-meta/composition` ×8
               - `primitives/pane` ×5
               - `primitives/data-view` ×3
@@ -7165,6 +7160,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/icon-button.IconButton`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
             - Exports (values):
@@ -7192,16 +7188,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `apps/studio/compositions.CompositionDetail`
                   - `apps/studio/explorer.PluginTree`
-                  - `infra/endpoints.useEndpoint`
+                  - `network/live.useLive`
                   - `plugin-meta/plugin-view.pluginViewPane`
                   - `primitives/css/scroll.Scroll`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.Text`
                   - `primitives/data-view.defineDataView`
+                  - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
                   - `primitives/pane.useOpenPane`
-              - Exemptions:
-                - Exempts itself from: `live/no-endpoint-read` — `web/components/closure-tree-section.tsx` (debt)
             - **`contributors`** — Contributor selection section in the composition detail pane: toggle the available frontier with per-chip impact cost.
               - Web:
                 - Contributes: `CompositionDetail.Section` "Contributors" → `ContributorsSection`
@@ -7253,6 +7246,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/ui-kit.Button`
                   - `primitives/css/ui-kit.ControlSizeProvider`
                   - `primitives/icon-button.IconButton`
+                  - `primitives/live-state.ResourceErrorInline`
+                  - `primitives/loading.Loading`
                   - `primitives/overlay/popover.InlinePopover`
                   - `primitives/search.SearchInput`
                   - `ui/icons.Icon`
@@ -7372,12 +7367,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Pane.Register` "contributions"
               - `Studio.Sidebar` "Contributions"
-            - Uses:
+            - Uses: 21 symbols — full list in [`plugins/apps/plugins/studio/plugins/contributions/REFERENCE.md`](../plugins/apps/plugins/studio/plugins/contributions/REFERENCE.md)
+              - `primitives/pane` ×4
+              - `plugin-meta/contributions-table` ×3
               - `apps/studio/shell.Studio`
-              - `infra/endpoints.useEndpoint`
-              - `plugin-meta/contributions-table.Contributions`
-              - `plugin-meta/contributions-table.ContributionsRowClick`
-              - `plugin-meta/contributions-table.FacetTableEntry`
+              - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
               - `primitives/css/column.Column`
@@ -7386,15 +7380,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/data-table.DataTable`
               - `primitives/filter-chips.FilterChip`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
-              - `primitives/pane.defineRoute`
-              - `primitives/pane.Pane`
-              - `primitives/pane.PaneChrome`
-              - `primitives/pane.useOpenPane`
               - `primitives/search.SearchInput`
               - `ui/icons.Icon`
-          - Exemptions:
-            - Exempts itself from: `live/no-endpoint-read` — `web/components/contributions-view.tsx` (debt)
           - Plugins:
             - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
               - Web:
@@ -7554,7 +7543,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Studio.Sidebar` "Plugin"
             - Uses:
               - `apps/studio/shell.Studio`
-              - `infra/endpoints.useEndpoint`
+              - `network/live.useLive`
               - `plugin-meta/plugin-view.pluginViewPane`
               - `primitives/css/center.Center`
               - `primitives/css/inline.Inline`
@@ -7565,6 +7554,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.FieldDef`
               - `primitives/data-view.HierarchyConfig`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
@@ -7585,8 +7575,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/studio/explorer/excluded`
               - `apps/studio/explorer/load-bearing`
               - `apps/studio/explorer/membership`
-          - Exemptions:
-            - Exempts itself from: `live/no-endpoint-read` — `web/components/explorer-view.tsx` (debt)
           - Plugins:
             - **`child-count`** — Recursive child count badge in the explorer plugin tree row.
               - Web:
@@ -7604,6 +7592,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `apps/studio/explorer.Explorer`
                   - `plugin-meta/composition.useAppExclusions`
+                  - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
                   - `ui/icons.Icon`
             - **`load-bearing`** — Load-bearing badge in the explorer plugin tree row.
@@ -7643,7 +7632,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Pane.Register` "graph"
               - `Studio.Sidebar` "Plugin Graph"
-            - Uses: 24 symbols — full list in [`plugins/apps/plugins/studio/plugins/graph/REFERENCE.md`](../plugins/apps/plugins/studio/plugins/graph/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/apps/plugins/studio/plugins/graph/REFERENCE.md`](../plugins/apps/plugins/studio/plugins/graph/REFERENCE.md)
               - `plugin-meta/composition` ×4
               - `primitives/pane` ×3
               - `apps/studio/membership-tint` ×2
@@ -7659,6 +7648,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/graph-canvas.GraphCanvas`
               - `primitives/icon-button.IconButton`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/search.SearchInput`
             - Exports (values): `graphCanvasPane`
@@ -10186,10 +10176,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Pane.Register` "config-v2-detail"
           - `Pane.Register` "config-v2-nav"
-        - Uses: 49 symbols — full list in [`plugins/config_v2/plugins/settings/REFERENCE.md`](../plugins/config_v2/plugins/settings/REFERENCE.md)
-          - `primitives/live-state` ×5
+        - Uses: 48 symbols — full list in [`plugins/config_v2/plugins/settings/REFERENCE.md`](../plugins/config_v2/plugins/settings/REFERENCE.md)
           - `config_v2/fields` ×4
           - `primitives/data-view` ×4
+          - `primitives/live-state` ×4
           - `primitives/pane` ×4
           - `infra/endpoints` ×2
           - `primitives/css/ui-kit` ×2
@@ -10266,7 +10256,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2/settings/conflict-agent`
           - `debug/config-orphans`
       - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/components/config-detail.tsx`, `web/components/config-nav.tsx`, `web/components/conflict-diff.tsx`, `web/components/invalid-diff.tsx` (debt)
+        - Exempts itself from: `live/no-endpoint-read` — `web/components/config-detail.tsx`, `web/components/conflict-diff.tsx`, `web/components/invalid-diff.tsx` (debt)
       - Plugins:
         - **`conflict-agent`** — Ask-an-agent button inside the config detail's conflict banners: opens the standard task-draft popover pre-filled with a factual description of the conflict (which fields disagree, and how).
           - Web:
@@ -21407,8 +21397,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isCodec`
           - `multipart`
       - Cross-plugin:
-        - Imported by: 211 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×52
+        - Imported by: 204 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×49
           - `conversations` ×26
           - `debug` ×25
           - `infra` ×16
@@ -21418,18 +21408,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build` ×8
           - `ui` ×6
           - `auth` ×5
-          - `plugin-meta` ×4
           - `stats` ×4
-          - `active-data` ×3
           - `apps-core` ×3
           - `code-explorer` ×3
           - `reports` ×3
+          - `active-data` ×2
           - `config_v2` ×2
           - `history` ×2
           - `integrations` ×2
           - `review` ×2
           - `backup`
           - `database/fork`
+          - `plugin-meta/plugin-health`
           - `release`
           - `screenshot`
           - `search/engine`
@@ -24466,16 +24456,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveValue`
           - `scopedLiveColumns`
       - Cross-plugin:
-        - Imported by: 200 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×59
+        - Imported by: 207 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×62
           - `conversations` ×35
           - `tasks` ×26
-          - `active-data` ×11
+          - `active-data` ×12
           - `infra` ×11
           - `page` ×10
           - `debug` ×9
           - `build` ×6
           - `primitives` ×5
+          - `plugin-meta` ×4
           - `auth` ×3
           - `code-explorer` ×3
           - `review` ×3
@@ -24488,7 +24479,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/query-deadline`
           - `fields/secret/config`
           - `integrations/google-maps`
-          - `plugin-meta/plugin-health`
           - `reports`
           - `runs`
           - `shell/notifications`
@@ -24499,7 +24489,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `live/no-legacy-resource-spelling` — `.` (sanctioned)
           - `live/no-endpoint-read` — `web` (sanctioned)
         - Exempted by:
-          - `active-data/plugin-link` (2 debt)
           - `apps-core/surface/floating/wallpaper` (1 debt)
           - `apps/deploy/analytics/dashboard` (1 debt)
           - `apps/file-explorer/browser` (4 debt)
@@ -24507,9 +24496,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/file-explorer/places` (2 debt)
           - `apps/mail/reading-pane` (1 debt)
           - `apps/mail/search` (1 debt)
-          - `apps/studio/compositions/closure-tree` (1 debt)
-          - `apps/studio/contributions` (1 debt)
-          - `apps/studio/explorer` (1 debt)
           - `build/build-commits` (1 debt)
           - `build/build-fix` (1 debt)
           - `build/build-info` (1 debt)
@@ -24517,7 +24503,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/build-profiling` (1 debt)
           - `build/serve-composition` (1 debt)
           - `code-explorer/file-resolve` (1 debt)
-          - `config_v2/settings` (4 debt)
+          - `config_v2/settings` (3 debt)
           - `debug/broadcasts` (1 debt)
           - `debug/config-orphans` (2 debt)
           - `debug/health-monitor` (1 debt)
@@ -24544,10 +24530,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live` (0 debt)
           - `page/bookmark` (1 debt)
           - `page/place` (2 debt)
-          - `plugin-meta/composition` (1 debt)
           - `plugin-meta/plugin-health` (1 debt)
-          - `plugin-meta/plugin-view` (1 debt)
-          - `plugin-meta/plugin-view/file-tree` (1 debt)
           - `primitives/data-view` (0 debt)
           - `primitives/diff-view` (3 debt)
           - `primitives/file-viewer` (3 debt)
@@ -27321,12 +27304,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
           - `config_v2.useSetConfig`
-          - `infra/endpoints.useEndpoint`
+          - `network/live.useLive`
+          - `primitives/live-state.mapResource`
           - `primitives/live-state.ResourceError`
-          - `primitives/live-state.useEndpointResource`
+          - `primitives/live-state.ResourceResult`
         - Exports (types):
           - `AppExclusions`
           - `CompositionDataResult`
+          - `CompositionGraph`
           - `CompositionInclusion`
           - `DiffState`
           - `ImpactResult`
@@ -27353,12 +27338,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useManifestItemByName`
           - `useManifestItems`
       - Server:
-        - Contributes: `ConfigV2.Register` "compositions"
+        - Contributes:
+          - `ConfigV2.Register` "compositions"
+          - `resource.declare` "composition.data"
         - Uses:
           - `config_v2.ConfigV2`
-          - `infra/endpoints.implement`
+          - `network/live.serveValue`
           - `plugin-meta/plugin-tree.getFacetsTreeCached`
-        - Routes: `GET /api/composition/data`
+          - `plugin-meta/plugin-tree.onPluginTreeChanged`
+          - `plugin-meta/plugin-tree.pluginTreeGeneration`
+        - Resources: `composition.data` (invalidate, notified)
       - Core:
         - Uses:
           - `config_v2.defineConfig`
@@ -27366,10 +27355,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/list/config.listField`
           - `fields/string-list/config.stringListField`
           - `fields/text/config.textField`
-          - `infra/endpoints.defineEndpoint`
           - `infra/namespace.BASE_EXCLUSIONS_ID`
           - `infra/namespace.MAIN_COMPOSITION_ID`
           - `infra/namespace.NAMESPACE_LABEL_RE`
+          - `network/live.liveValue`
         - Exports (types):
           - `CompositionData`
           - `CompositionManifestItem`
@@ -27381,9 +27370,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `assertCompositionName`
           - `assertServableCompositionNamespace`
           - `autoRebuildIntervalMs`
-          - `compositionDataSchema`
+          - `compositionData`
           - `compositionsConfig`
-          - `getCompositionData`
           - `isCommittedSourceComposition`
           - `isServableCompositionId`
           - `isServed`
@@ -27411,8 +27399,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/codegen`
           - `plugin-meta/plugin-view/dependencies`
           - `plugin-meta/plugin-view/inclusion`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/internal/hooks.ts` (debt)
     - **`contributions-table`** — Registry for the Studio Contributions aggregated-table surface: FacetTable + RowClick slots and factories.
       - Web:
         - Slots:
@@ -28187,7 +28173,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pluginViewPane.Actions` ← `primitives.pane`
         - Contributes: `Pane.Register` "plugin-view"
         - Uses:
-          - `infra/endpoints.useEndpoint`
+          - `network/live.useLive`
           - `primitives/breadcrumb.Breadcrumb`
           - `primitives/collapsible.Collapsible`
           - `primitives/collapsible.CollapsibleChevron`
@@ -28200,6 +28186,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/detail-sections.defineDetailSections`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `primitives/pane.defineRoute`
           - `primitives/pane.Pane`
@@ -28213,35 +28200,40 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `ConsumerList`
           - `PluginDetail`
+          - `PluginDetailForId`
           - `PluginLink`
           - `pluginViewPane`
           - `PluginViewSlots`
           - `RUNTIME_COLORS`
           - `SectionCount`
           - `SubHeading`
+          - `usePluginDisplayName`
       - Server:
+        - Contributes:
+          - `resource.declare` "plugin-view.facets-tree"
+          - `resource.declare` "plugin-view.tree"
         - Uses:
-          - `infra/endpoints.implement`
+          - `network/live.serveValue`
           - `plugin-meta/plugin-tree.getFacetsTreeCached`
           - `plugin-meta/plugin-tree.getStructureTreeCached`
-        - Routes:
-          - `GET /api/plugin-view/tree`
-          - `GET /api/plugin-view/facets-tree`
+          - `plugin-meta/plugin-tree.onPluginTreeChanged`
+          - `plugin-meta/plugin-tree.pluginTreeGeneration`
+        - Resources:
+          - `plugin-view.facets-tree` (invalidate, notified)
+          - `plugin-view.tree` (invalidate, notified)
       - Core:
-        - Uses: `infra/endpoints.defineEndpoint`
+        - Uses: `network/live.liveValue`
         - Exports (types):
           - `PluginNode`
           - `PluginTreePayload`
         - Exports (values):
-          - `getPluginFacetsTree`
-          - `getPluginTree`
+          - `pluginFacetsTree`
+          - `pluginTree`
       - Cross-plugin:
         - Imported by: 22 plugins — full list in [`plugins/plugin-meta/plugins/plugin-view/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-view/REFERENCE.md)
           - `plugin-meta` ×19
           - `apps` ×2
           - `active-data/plugin-link`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/panes.tsx` (debt)
       - Plugins:
         - **`dependencies`** — Deduped cargo-tree-style dependency trees in the plugin detail pane: 'Depends on' (recursive forward deps) and 'Used by' (recursive reverse dependents), each marking soft slot-contributions and collapsing DAG diamonds via first-occurrence dedup.
           - Web:
@@ -28270,15 +28262,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `apps/file-explorer/browser.FileBrowser`
               - `conversations/conversation-view/code/file-pane.filePeekPane`
-              - `infra/endpoints.getEndpointErrorMessage`
-              - `infra/endpoints.useEndpoint`
+              - `network/live.useLive`
               - `plugin-meta/plugin-view.PluginViewSlots`
               - `primitives/css/clip.Clip`
-              - `primitives/css/placeholder.Placeholder`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/pane.useOpenPane`
-          - Exemptions:
-            - Exempts itself from: `live/no-endpoint-read` — `web/components/file-tree-section.tsx` (debt)
         - **`inclusion`** — Composition-membership section in the plugin detail pane: state badge, why-included edge path, select/prune impact, and a pin-as-root affordance.
           - Web:
             - Contributes: `PluginViewSlots.Section` "Composition membership" → `InclusionSection`
@@ -28923,7 +28912,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 113 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 112 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×28
               - `primitives` ×25
               - `page` ×18
@@ -28932,12 +28921,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×6
               - `apps-core` ×4
               - `plugin-meta` ×3
-              - `active-data` ×2
               - `fields` ×2
               - `integrations` ×2
               - `map` ×2
               - `shell` ×2
               - `tasks` ×2
+              - `active-data/go`
               - `config_v2/settings`
               - `layouts/route-fallback`
               - `reorder/node-types/header`
@@ -29434,7 +29423,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `PlaceholderProps`
             - Exports (values): `Placeholder`
           - Cross-plugin:
-            - Imported by: 85 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
+            - Imported by: 84 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
               - `apps` ×28
               - `debug` ×19
               - `primitives` ×13
@@ -29447,7 +29436,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `history/dialog`
               - `infra/background/catalog`
               - `map`
-              - `plugin-meta/plugin-view/file-tree`
               - `review/code-review`
               - `search/quick-find`
               - `stats/commits`
@@ -29640,8 +29628,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 390 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×100
+            - Imported by: 389 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×99
               - `conversations` ×61
               - `primitives` ×50
               - `debug` ×34
@@ -29832,8 +29820,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 361 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×95
+            - Imported by: 359 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×94
               - `conversations` ×70
               - `primitives` ×40
               - `debug` ×32
@@ -29845,9 +29833,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core` ×6
               - `stats` ×6
               - `build` ×5
-              - `active-data` ×4
               - `auth` ×4
               - `review` ×4
+              - `active-data` ×3
               - `infra` ×3
               - `integrations` ×3
               - `reorder` ×3
@@ -31990,8 +31978,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 209 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×58
+        - Imported by: 218 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×65
           - `conversations` ×38
           - `ui` ×22
           - `tasks` ×20
@@ -32000,9 +31988,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives` ×9
           - `active-data` ×7
           - `infra` ×6
+          - `plugin-meta` ×5
           - `auth` ×4
           - `build` ×4
-          - `plugin-meta` ×3
           - `review` ×3
           - `config_v2` ×2
           - `integrations` ×2
@@ -32066,7 +32054,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `Loading`
       - Cross-plugin:
         - Imported by: 183 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×61
+          - `apps` ×62
           - `ui` ×19
           - `primitives` ×17
           - `conversations` ×16
@@ -32076,8 +32064,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build` ×4
           - `plugin-meta` ×4
           - `review` ×4
-          - `active-data` ×3
           - `auth` ×3
+          - `active-data` ×2
           - `apps-core` ×2
           - `integrations` ×2
           - `map` ×2

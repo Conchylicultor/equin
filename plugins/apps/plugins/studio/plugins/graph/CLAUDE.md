@@ -11,7 +11,7 @@
   - Contributes:
     - `Pane.Register` "graph"
     - `Studio.Sidebar` "Plugin Graph"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta/composition` ×4
     - `primitives/pane` ×3
     - `apps/studio/membership-tint` ×2
@@ -27,6 +27,7 @@
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/graph-canvas.GraphCanvas`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/search.SearchInput`
   - Exports (values): `graphCanvasPane`

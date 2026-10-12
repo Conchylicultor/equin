@@ -10,6 +10,7 @@ import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
@@ -39,7 +40,7 @@ const DIRECTION_OPTIONS: { id: Direction; label: string }[] = [
 ];
 
 export function GraphView({ paneFocusId }: { paneFocusId?: PluginId }) {
-  const { allIds, isLoading } = useCompositionData();
+  const { data } = useCompositionData();
   const graph = useGraph();
   const membership = useActiveMembership();
   const active = useActiveComposition();
@@ -74,7 +75,21 @@ export function GraphView({ paneFocusId }: { paneFocusId?: PluginId }) {
     return { nodes, edges, hiddenCount: sub.hiddenCount };
   }, [graph, focusId, depth, direction, membership]);
 
-  if (isLoading || !graph) return <Loading variant="spinner" />;
+  if (data.status === "loading") return <Loading variant="spinner" />;
+  if (data.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the composition graph"
+        error={data.error}
+        refetch={data.refetch}
+      />
+    );
+  }
+  // The store's graph is published from this read by an effect, so it lags the
+  // ready arm by one commit.
+  if (!graph) return <Loading variant="spinner" />;
+  const { allIds } = data.data;
 
   // Empty state: prompt + search over allIds to pick a focus node. Clear the
   // query on pick so the toolbar's own search doesn't open pre-filled.

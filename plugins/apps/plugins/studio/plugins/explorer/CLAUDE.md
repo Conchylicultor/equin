@@ -41,7 +41,7 @@ The fold/unfold-this-subtree button is not the explorer's to ship either: the
     - `Studio.Sidebar` "Plugin"
   - Uses:
     - `apps/studio/shell.Studio`
-    - `infra/endpoints.useEndpoint`
+    - `network/live.useLive`
     - `plugin-meta/plugin-view.pluginViewPane`
     - `primitives/css/center.Center`
     - `primitives/css/inline.Inline`
@@ -52,6 +52,7 @@ The fold/unfold-this-subtree button is not the explorer's to ship either: the
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
     - `primitives/data-view.HierarchyConfig`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
@@ -72,8 +73,6 @@ The fold/unfold-this-subtree button is not the explorer's to ship either: the
     - `apps/studio/explorer/excluded`
     - `apps/studio/explorer/load-bearing`
     - `apps/studio/explorer/membership`
-- Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/components/explorer-view.tsx` (debt)
 - Sub-plugins:
   - **`child-count`** — Recursive child count badge in the explorer plugin tree row.
   - **`collapsed`** — Collapsed badge in the explorer plugin tree row.

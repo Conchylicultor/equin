@@ -11,12 +11,11 @@
   - Contributes:
     - `Pane.Register` "contributions"
     - `Studio.Sidebar` "Contributions"
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×4
+    - `plugin-meta/contributions-table` ×3
     - `apps/studio/shell.Studio`
-    - `infra/endpoints.useEndpoint`
-    - `plugin-meta/contributions-table.Contributions`
-    - `plugin-meta/contributions-table.ContributionsRowClick`
-    - `plugin-meta/contributions-table.FacetTableEntry`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
@@ -25,15 +24,10 @@
     - `primitives/css/text.Text`
     - `primitives/data-table.DataTable`
     - `primitives/filter-chips.FilterChip`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.useOpenPane`
     - `primitives/search.SearchInput`
     - `ui/icons.Icon`
-- Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/components/contributions-view.tsx` (debt)
 - Sub-plugins:
   - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
 

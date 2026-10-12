@@ -5,8 +5,9 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { DataTable } from "@plugins/primitives/plugins/data-table/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { getPluginFacetsTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { pluginFacetsTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -36,11 +37,31 @@ function facetEntries(
 }
 
 export function ContributionsView() {
-  const {
-    data: treeData,
-    isLoading,
-    error,
-  } = useEndpoint(getPluginFacetsTree, {});
+  const tree = useLive(pluginFacetsTree);
+
+  if (tree.status === "loading") {
+    return (
+      <Center axis="both" className="h-full">
+        <Loading />
+      </Center>
+    );
+  }
+  if (tree.status === "error") {
+    return (
+      <Center axis="both" className="h-full p-2xl">
+        <ResourceErrorInline
+          variant="block"
+          subject="the plugin tree"
+          error={tree.error}
+          refetch={tree.refetch}
+        />
+      </Center>
+    );
+  }
+  return <ContributionsTables plugins={tree.data.plugins} />;
+}
+
+function ContributionsTables({ plugins }: { plugins: PluginNode[] }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const openPane = useOpenPane();
@@ -60,40 +81,15 @@ export function ContributionsView() {
     return map;
   }, [rowClicks]);
 
-  const plugins = treeData?.plugins ?? null;
-
   // Project every facet's rows once per tree load so tab badges and the active
   // table share the same computation.
   const rowsByFacet = useMemo(() => {
     const map = new Map<string, unknown[]>();
-    if (!plugins) return map;
     for (const table of sortedTables) {
       map.set(table.facetId, table.rows(facetEntries(plugins, table.facetId)));
     }
     return map;
   }, [plugins, sortedTables]);
-
-  if (isLoading) {
-    return (
-      <Center axis="both" className="h-full">
-        <Loading />
-      </Center>
-    );
-  }
-  if (error) {
-    return (
-      <Center axis="both" className="h-full p-2xl">
-        <Stack gap="sm" align="center" className="text-center">
-          <Text variant="body" className="font-medium text-foreground">
-            Failed to load
-          </Text>
-          <Text variant="body" tone="muted">
-            {String(error)}
-          </Text>
-        </Stack>
-      </Center>
-    );
-  }
 
   const activeId = selectedId ?? sortedTables[0]?.facetId ?? null;
   const activeTable = sortedTables.find((t) => t.facetId === activeId) ?? null;

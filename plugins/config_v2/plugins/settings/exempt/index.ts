@@ -5,7 +5,6 @@ export default [
     rule: "live/no-endpoint-read",
     paths: [
       "web/components/config-detail.tsx",
-      "web/components/config-nav.tsx",
       "web/components/conflict-diff.tsx",
       "web/components/invalid-diff.tsx",
     ],

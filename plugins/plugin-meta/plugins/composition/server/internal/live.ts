@@ -2,10 +2,16 @@ import {
   classifyEdges,
   serializeEdgeGraph,
 } from "@plugins/plugin-meta/plugins/closure/core";
-import { getFacetsTreeCached } from "@plugins/plugin-meta/plugins/plugin-tree/server";
-import { getCompositionData } from "@plugins/plugin-meta/plugins/composition/core";
-import { implement } from "@plugins/infra/plugins/endpoints/server";
-import type { CompositionData } from "@plugins/plugin-meta/plugins/composition/core";
+import {
+  getFacetsTreeCached,
+  onPluginTreeChanged,
+  pluginTreeGeneration,
+} from "@plugins/plugin-meta/plugins/plugin-tree/server";
+import { serveValue } from "@plugins/network/plugins/live/server";
+import {
+  compositionData,
+  type CompositionData,
+} from "@plugins/plugin-meta/plugins/composition/core";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 
 // The expensive part is the facets tree build, which plugin-tree already caches
@@ -34,8 +40,17 @@ function deriveCompositionData(tree: PluginTree): CompositionData {
 }
 
 // Manifests are not served here — they are user data stored in the
-// `compositions` config_v2 config and read client-side. This endpoint returns
-// only the code-derived graph structure.
-export const handleCompositionData = implement(getCompositionData, async () => {
-  return deriveCompositionData(await getFacetsTreeCached());
+// `compositions` config_v2 config and read client-side. This value carries only
+// the code-derived graph structure, so its one input is the faceted tree of
+// `plugins/`: told of a change by plugin-tree's watcher (`onPluginTreeChanged`)
+// while a tab holds it, and ETagged by the same generation the tree's memo
+// rebuilds on, so an unchanged tree answers 304. Throttled like the faceted
+// tree itself: each re-read rebuilds every facet.
+export const compositionDataServed = serveValue(compositionData, {
+  source: "external",
+  changes: "notified",
+  loader: async () => deriveCompositionData(await getFacetsTreeCached()),
+  revalidate: () => pluginTreeGeneration(),
+  whileSubscribed: (_params, notify) => onPluginTreeChanged(notify),
+  throttleMs: 2_000,
 });

@@ -1,13 +1,12 @@
 import type { ReactElement } from "react";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { pluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { PluginTree } from "@plugins/apps/plugins/studio/plugins/explorer/web";
 import { defineDataView } from "@plugins/primitives/plugins/data-view/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**, and
@@ -24,21 +23,20 @@ const CLOSURE_TREE_VIEW = defineDataView("studio.compositions.closure-tree");
  * pane seeds — so there is deliberately no tinting logic here.
  */
 export function ClosureTreeSection(): ReactElement {
-  const { data, isLoading, error } = useEndpoint(getPluginTree, {});
+  const tree = useLive(pluginTree);
   const openPane = useOpenPane();
   const selected = pluginViewPane.useRouteEntry()?.params.pluginId ?? null;
 
-  if (isLoading) return <Loading label="Loading plugin tree…" />;
-  if (error) {
+  if (tree.status === "loading")
+    return <Loading label="Loading plugin tree…" />;
+  if (tree.status === "error") {
     return (
-      <Stack gap="2xs">
-        <Text variant="body" className="font-medium text-foreground">
-          Failed to load plugin tree
-        </Text>
-        <Text variant="body" tone="muted">
-          {String(error)}
-        </Text>
-      </Stack>
+      <ResourceErrorInline
+        variant="block"
+        subject="the plugin tree"
+        error={tree.error}
+        refetch={tree.refetch}
+      />
     );
   }
 
@@ -46,7 +44,7 @@ export function ClosureTreeSection(): ReactElement {
   return (
     <Scroll axis="y" className="max-h-[60vh]">
       <PluginTree
-        plugins={data!.plugins}
+        plugins={tree.data.plugins}
         storageKey={CLOSURE_TREE_VIEW}
         selected={selected}
         linkTo={(pluginId) =>
