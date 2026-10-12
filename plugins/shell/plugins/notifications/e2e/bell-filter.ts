@@ -34,6 +34,8 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
+import { openFloatingActionBar } from "@plugins/shell/plugins/global-action-bar/e2e";
+import { notificationIdKind } from "@plugins/shell/plugins/notifications/core";
 import type { Page } from "playwright";
 
 /** Both live-state sockets (worktree + central). */
@@ -87,10 +89,9 @@ await withBrowser(async (h) => {
     await post("/api/notifications/dismiss-all");
     // Oldest first, one at a time: `createdAt` is the server's now(), so the
     // old type ends up strictly outside the newest 200.
-    const stamp = Date.now();
     for (let i = 0; i < OLD_COUNT; i++) {
       await post("/api/notifications", {
-        id: `e2e-bell-old-${stamp}-${i}`,
+        id: notificationIdKind.mint(),
         type: OLD_TYPE,
         title: `${OLD_TYPE} #${i}`,
         description: "seeded by bell-filter.ts",
@@ -99,7 +100,7 @@ await withBrowser(async (h) => {
     }
     for (let i = 0; i < BULK_COUNT; i++) {
       await post("/api/notifications", {
-        id: `e2e-bell-bulk-${stamp}-${i}`,
+        id: notificationIdKind.mint(),
         type: BULK_TYPE,
         title: `${BULK_TYPE} #${i}`,
         description: "seeded by bell-filter.ts",
@@ -159,6 +160,7 @@ await withBrowser(async (h) => {
     await page.evaluate(() => {
       Object.assign(window, { __e2eBell: true });
     });
+    await openFloatingActionBar(page);
     await bell(page).click();
     await page
       .locator('[data-testid="notification-chips"] button')
@@ -256,11 +258,10 @@ await withBrowser(async (h) => {
     }
     r.note(`unread baseline after dismiss-all: ${JSON.stringify(baseline)}`);
     // Oldest first: the counted rows end up strictly behind the fresh info rows.
-    const stamp5 = Date.now();
     const seedN = async (n: number, variant: string, tag: string) => {
       for (let i = 0; i < n; i++) {
         await post("/api/notifications", {
-          id: `e2e-bell-${tag}-${stamp5}-${i}`,
+          id: notificationIdKind.mint(),
           type: `e2e-${tag}`,
           title: `${tag} #${i}`,
           description: "seeded by bell-filter.ts (unread badge)",
@@ -318,6 +319,15 @@ await withBrowser(async (h) => {
       });
     });
     await boot(noWs.page, pathUrl("/"), { settleMs: 1500 });
+    // The bell mounts seconds after boot settles on a loaded host: wait for
+    // the settled label, then read every label recorded on the way there.
+    await noWs.page
+      .getByRole("button", { name: exactLabel })
+      .waitFor({ timeout: LIVE_TIMEOUT_MS })
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.name === "TimeoutError") return;
+        throw err;
+      });
     const labels = (await noWs.page.evaluate(() =>
       Reflect.get(window, "__bellLabels"),
     )) as string[];
@@ -332,7 +342,7 @@ await withBrowser(async (h) => {
     r.eq("…its badge shows 9+", (await badge5.innerText()).trim(), "9+");
     r.ok(
       "…in red (an error is among them)",
-      (await badge5.locator(".bg-destructive").count()) === 1,
+      (await badge5.locator(".bg-destructive-solid").count()) === 1,
     );
     await snap(noWs.page, OUT, "5-unread-no-ws");
     await noWs.context.close();
@@ -348,6 +358,7 @@ await withBrowser(async (h) => {
       ),
       exactLabel,
     );
+    await openFloatingActionBar(page);
     await bell(page).click();
     await page
       .locator('[data-testid="notification-list"]')
