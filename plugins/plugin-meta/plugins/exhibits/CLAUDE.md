@@ -91,7 +91,8 @@ plugin with `exhibits/` and no `web/` fails the build.
   region exhibits.
 - **Debug → Exhibits** (`web/components/exhibits-gallery.tsx`, this plugin):
   every exhibit grouped by id prefix (`exhibitGroupOf`), each at each of its
-  widths (an app exhibit without widths at 360 / 640 / 960), badged by runtime
+  widths (an app exhibit without widths at 360 / 640 / 960) — the width cells
+  wrap onto further lines rather than run past the pane — badged by runtime
   (`isolated` / `region` / `app`) and `geometry` when the harness measures it.
   It replaced the harness's Layout Lab.
 

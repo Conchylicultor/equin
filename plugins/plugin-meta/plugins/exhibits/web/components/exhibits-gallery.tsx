@@ -75,8 +75,14 @@ function ExhibitEntry({ exhibit }: { exhibit: Exhibit }): ReactElement {
           {exhibit.description}
         </Text>
       )}
+      {/*
+        The width cells wrap: a row whose widths sum past the pane continues on
+        the next line, so every cell is in view (a horizontal scroller hid them
+        behind an overlay scrollbar a wheel never reaches). The x-scroll is left
+        only for a single cell wider than the pane itself.
+      */}
       <Scroll axis="x">
-        <Stack direction="row" gap="lg" align="start">
+        <Stack direction="row" gap="lg" align="start" wrap>
           {widthsOf(exhibit).map((width) => (
             <Stack key={width} gap="2xs">
               <Text variant="caption" tone="muted">
