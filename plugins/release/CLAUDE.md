@@ -200,8 +200,12 @@ exactly when the parent survived the run (the case that never needed it) and was
 absent for every genuinely orphaned release (the case it was written for). That
 is why `resolveOrphanExitCode` always fell through to the `-1` sentinel.
 
-`GET /api/release/runs/:id/logs` now reads the supervised run's transcript file,
-which the CHILD writes for every run whatever becomes of it. Two consequences:
+The live value `release.run-logs` (params `{ id }`) reads the supervised run's
+transcript file, which the CHILD writes for every run whatever becomes of it. It
+is served external and `notified` by a dir-hub watch on that file while a tuple
+is read: a live run's transcript grows, the prune can reap a finished one, and a
+terminal run's never changes — so the watch is silent exactly when the answer is
+immutable, with no read of the run row in the loader. Two consequences:
 a **successful** finished run now has a readable log pane (it used to be empty),
 and every line reads as `stdout`, because a supervised child's stdout and stderr
 share one descriptor — the interleaving survives, the classification does not.
@@ -269,8 +273,8 @@ the two endpoints that selected it).
 
 - `@plugins/release/core` — `RELEASE_TARGETS`, `releaseTargetById`,
   `RELEASE_LOG_CHANNEL` (`"release"`), the endpoints
-  (`triggerReleaseEndpoint`, `previewEndpoint`, `stopPreviewEndpoint`,
-  `releaseLogsEndpoint`), and the resources/schemas:
+  (`triggerReleaseEndpoint`, `previewEndpoint`, `stopPreviewEndpoint`), and
+  the resources/schemas:
   - `ReleaseRun`, `releaseRuns` — a lookup-only `liveCollection`
     (`release.runs:rows`) served from `_releaseRuns`, read one run at a time
     with `useLiveRow(releaseRuns, runId)` (`found: false` = no such run). Any
@@ -286,6 +290,10 @@ the two endpoints that selected it).
     `(composition, platform)`, live (see above).
   - `releasePreviews` / `Preview` — the live preview map, read with
     `useLive(releasePreviews)`.
+  - `releaseRunLogs` — `release.run-logs`, params `{ id }`: one run's
+    persisted log (its supervised-run transcript), external `notified` by a
+    watch on the transcript while read; an id that is not one path segment is
+    refused `invalid-id`. It replaced `releaseLogsEndpoint`.
 
 ## Discovery
 
@@ -422,8 +430,9 @@ remote is built here.
     - `resource.declare` "release.history:groups"
     - `resource.declare` "release.history:rows"
     - `resource.declare` "release.previews"
+    - `resource.declare` "release.run-logs"
     - `resource.declare` "release.runs:rows"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `release/bundles` ×6
     - `infra/jobs/supervised-job` ×3
     - `ids` ×2
@@ -433,6 +442,7 @@ remote is built here.
     - `network/live` ×2
     - `database/sql-column.parsedText`
     - `database.db`
+    - `infra/file-watcher.acquireDirWatch`
     - `infra/git/git-read-cache.createSignedMemo`
     - `infra/git/git-watcher.refHeadServed`
     - `infra/spawn/daemon.defineDaemon`
@@ -456,12 +466,12 @@ remote is built here.
     - `release.history:groups` (push)
     - `release.history:rows` (keyed, point)
     - `release.previews` (push, notified)
+    - `release.run-logs` (push, notified)
     - `release.runs:rows` (keyed, point)
   - Routes:
     - `POST /api/release`
     - `POST /api/release/runs/:id/preview`
     - `POST /api/release/runs/:id/preview/stop`
-    - `GET /api/release/runs/:id/logs`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
@@ -499,9 +509,9 @@ remote is built here.
     - `ReleaseCandidateSchema`
     - `releaseHistory`
     - `ReleaseIntentSchema`
-    - `releaseLogsEndpoint`
     - `ReleaseLogsResponseSchema`
     - `releasePreviews`
+    - `releaseRunLogs`
     - `releaseRuns`
     - `ReleaseRunSchema`
     - `releaseTargetById`

@@ -1,7 +1,8 @@
-import type { z } from "zod";
-import { liveCollection } from "@plugins/network/plugins/live/core";
+import { z } from "zod";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
+import { TaskCategoryDefSchema } from "../core";
 
 // One row per categorized task, stored in the `tasks_ext_category`
 // entity-extension table (1:1 per task), which `server/internal/tables.ts`
@@ -43,4 +44,16 @@ export const taskCategories = liveCollection("task-categories", {
     },
   },
   preload: "boot",
+});
+
+// The registered categories (every filing plugin's `TaskCategory`
+// contribution), ordered by `order ?? 0` then id. Fixed for the life of the
+// server process, so served `fixed` (`server/internal/registry.ts`).
+// `boot-and-keep`: hydrated before first paint — the category field is
+// `pending` until both this and `taskCategories` are known, so a
+// category-grouped tasks view would otherwise wait a round trip — and never
+// garbage-collected, since every task-list surface reads it.
+export const taskCategoryRegistry = liveValue("task-category.registry", {
+  schema: z.array(TaskCategoryDefSchema),
+  preload: "boot-and-keep",
 });

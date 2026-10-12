@@ -5,23 +5,9 @@
 ## Plugin reference
 
 - Description: Nested tasks with attempts linking to conversations.
-- Web:
-  - Uses:
-    - `infra/endpoints.fetchEndpoint`
-    - `network/live.useLive`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
-  - Exports (types):
-    - `AutoStartModel`
-    - `TaskPatch`
-  - Exports (values):
-    - `patchTask`
-    - `setAutoStart`
-    - `useActiveDependentCount`
-    - `useTask`
-    - `useTasksById`
 - Server:
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: `resource.declare` "tasks.repo-info"
+  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×15
     - `conversations` ×2
     - `infra/claude-cli/availability` ×2
@@ -38,12 +24,14 @@
     - `infra/paths.GIT`
     - `infra/warmup.defineWarmup`
     - `infra/worktree.ensureMainWorktreeRoot`
+    - `network/live.serveValue`
     - `tasks/task-category.setTaskCategory`
     - `tasks/task-source-url.setTaskSourceUrl`
   - Exports (values): `armTaskAutoStart`
   - Register:
     - `mcpTool('add_task')`
     - `defineWarmup('tasks.auto-start-reconcile')`
+  - Resources: `tasks.repo-info` (invalidate, snapshot)
   - Routes:
     - `GET /api/tasks`
     - `POST /api/tasks`
@@ -58,12 +46,27 @@
     - `POST /api/tasks/:id/dependencies`
     - `DELETE /api/tasks/:id/dependencies/:depId`
     - `POST /api/tasks/:id/deps-move`
-    - `GET /api/repo-info`
+- Web:
+  - Uses:
+    - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
+  - Exports (types):
+    - `AutoStartModel`
+    - `TaskPatch`
+  - Exports (values):
+    - `patchTask`
+    - `setAutoStart`
+    - `useActiveDependentCount`
+    - `useTask`
+    - `useTasksById`
 - Core:
   - Uses:
     - `conversations/model-provider.ModelChoiceSchema`
     - `infra/endpoints.dateString`
     - `infra/endpoints.defineEndpoint`
+    - `network/live.liveValue`
     - `tasks/tasks-core.ConversationSchema`
   - Exports (types):
     - `AddDependencyBody`
@@ -89,7 +92,6 @@
     - `CreateTaskBodySchema`
     - `createTaskChain`
     - `DepsMoveBodySchema`
-    - `getRepoInfo`
     - `getTask`
     - `InsertBetweenBodySchema`
     - `insertTaskBetween`
@@ -101,6 +103,7 @@
     - `MoveTaskBodySchema`
     - `moveTaskInDepsTree`
     - `removeTaskDependency`
+    - `repoInfo`
     - `SetAutoStartBodySchema`
     - `setTaskAutoStart`
     - `TaskChainCardSchema`

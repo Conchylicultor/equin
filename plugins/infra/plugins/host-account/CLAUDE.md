@@ -14,6 +14,13 @@ records none — a fact about the account, never a failed read (a failed read
 throws). `accountFirstName` / `accountInitial` (core) are the one spelling of
 the name to show, derived from the full name, else the login name.
 
+`hostHome` (core) — a sibling `liveValue` keyed `host-account.home`: the
+account's home directory, absolute (`HOME_DIR`, the same one host-fs expands
+`~` against). A separate value, not a field of `hostAccount`, so a surface that
+only needs `~` (the file explorer) never waits on — or fails with — the
+full-name spawn. Read with `useLive(hostHome)` directly — no wrapper hook;
+`fixed` for the same reason.
+
 ## The read
 
 `server/internal/read-account.ts`, through `infra/spawn`'s `spawnCaptured`:
@@ -42,11 +49,17 @@ be a claim about the user that then reverses itself.
 
 ## Plugin reference
 
-- Description: Host account, read: useHostAccount() — the OS account this backend runs as (login name and full name), loading until the value arrives. Host account: serves the host-account value — the OS account this backend runs as (login name, and its full name read once through spawnCaptured: macOS `id -F`, the passwd GECOS field elsewhere).
+- Description: Host account, read: useHostAccount() — the OS account this backend runs as (login name and full name), loading until its value arrives. Its home directory is the hostHome value (core), read with useLive. Host account: serves the host-account value — the OS account this backend runs as (login name, and its full name read once through spawnCaptured: macOS `id -F`, the passwd GECOS field elsewhere) — and its sibling host-account.home, the account's home directory.
 - Server:
-  - Contributes: `resource.declare` "host-account"
-  - Uses: `network/live.serveValue`
-  - Resources: `host-account` (push, fixed)
+  - Contributes:
+    - `resource.declare` "host-account"
+    - `resource.declare` "host-account.home"
+  - Uses:
+    - `infra/paths.HOME_DIR`
+    - `network/live.serveValue`
+  - Resources:
+    - `host-account` (push, fixed)
+    - `host-account.home` (push, fixed)
 - Web:
   - Uses: `network/live.useLive`
   - Exports (values): `useHostAccount`
@@ -58,6 +71,7 @@ be a claim about the user that then reverses itself.
     - `accountInitial`
     - `hostAccount`
     - `HostAccountSchema`
+    - `hostHome`
 - Cross-plugin:
   - Imported by: `apps/pages/shell`
 

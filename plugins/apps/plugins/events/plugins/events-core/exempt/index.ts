@@ -8,12 +8,4 @@ export default [
     reason:
       "`events-repo.ts` IS the funnel — it owns the sighting stamps and write shapes every other writer must route through.",
   },
-  {
-    rule: "live/no-endpoint-read",
-    paths: ["web/internal/hooks.ts"],
-    kind: "debt",
-    task: "task-1791560308-woqgfi",
-    reason:
-      "A request/response server read (useEndpoint / useEndpointResource / TanStack useQuery family / fetchEndpoint in a queryFn) not yet moved onto a liveValue or liveCollection read with useLive.",
-  },
 ] satisfies Exemptions;

@@ -314,10 +314,10 @@ run everywhere.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
-  - Imported by: 54 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 55 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×10
+    - `infra` ×8
     - `build` ×7
-    - `infra` ×7
     - `backup` ×4
     - `conversations` ×4
     - `framework` ×4

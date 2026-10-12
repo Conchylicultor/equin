@@ -51,6 +51,7 @@ for, so a feature plugin can reach the prompt/output that explain that row:
 await runClaudePrint({ tier: "sonnet", prompt,
   source: { name: "events.url-extract", correlationId: ctx.runId, context: { sourceId, url } } });
 
+// ResourceResult<ClaudeCliCallsResult>; pass null until the record is loaded
 const calls = useClaudeCliCalls({ correlationId: run.id, occurredAt: run.startedAt });
 ```
 
@@ -58,7 +59,10 @@ It must be a **globally unique row id** (a UUID): the column is not namespaced b
 `source.name`, so a per-caller ordinal would hand one plugin another's prompts.
 `context` is the Debug pane's label; `correlationId` is the key.
 
-`listClaudeCliCallsFor` (`GET /api/claude-cli/calls`) answers **`calls`** /
+`claudeCliCallsFor` (`core/resources.ts`, a `liveValue` keyed
+`claude-cli.calls-for`, params `correlationId` and an optional ISO
+`occurredAt`; served `source: "db"` over `claude_cli_calls`, so a call recorded
+or trimmed while a reader watches is pushed) answers **`calls`** /
 **`none`** (never called — the right answer for a cache hit that skipped the
 expensive phase) / **`not-retained`** (called, but the log trimmed it). A bare
 `[]` would render "no model call" over a record whose prompt merely aged out.
@@ -94,7 +98,7 @@ Source / Model facets (a grouping of the whole log); `durationMs` and
 (`"ok"` / `"error"`): `claudeCliCallsServed` binds it to the SQL expression
 `error IS NOT NULL` (an `expr` column), so the Status filter and group-by run on
 the server and the field can never disagree with `error`. The list row type is
-`ClaudeCliCallRow` (= `ClaudeCliCall` + `status`); the endpoint and the detail
+`ClaudeCliCallRow` (= `ClaudeCliCall` + `status`); the per-record value and the detail
 block keep taking a plain `ClaudeCliCall`.
 
 ## When NOT to use
@@ -113,6 +117,7 @@ block keep taking a plain `ClaudeCliCall`.
     - `resource.declare` "claude-cli-calls"
     - `resource.declare` "claude-cli-calls:groups"
     - `resource.declare` "claude-cli-calls:rows"
+    - `resource.declare` "claude-cli.calls-for"
     - `fork-data-exclusion` "claude_cli_calls"
   - Uses:
     - `conversations/model-provider/catalog.getModelCatalog`
@@ -122,11 +127,11 @@ block keep taking a plain `ClaudeCliCall`.
     - `infra/claude-cli/availability.ClaudeCodeUnavailableError`
     - `infra/claude-cli/availability.noteClaudeCodeFailure`
     - `infra/claude-cli/availability.requireClaudeBin`
-    - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defaultRandom`
     - `infra/entities.defineEntity`
     - `network/live.serveCollection`
+    - `network/live.serveValue`
   - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
   - Exports (types):
     - `RunClaudePrintInput`
@@ -142,11 +147,11 @@ block keep taking a plain `ClaudeCliCall`.
     - `claude-cli-calls` (keyed, window)
     - `claude-cli-calls:groups` (push)
     - `claude-cli-calls:rows` (keyed, point)
-  - Routes: `GET /api/claude-cli/calls`
+    - `claude-cli.calls-for` (push)
 - Web:
   - Uses:
     - `conversations/model-provider.familyClass`
-    - `infra/endpoints.useEndpoint`
+    - `network/live.useLive`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
@@ -183,8 +188,8 @@ block keep taking a plain `ClaudeCliCall`.
     - `fields/text/config.parsedTextField`
     - `fields/text/config.textField`
     - `fields/uuid/config.uuidField`
-    - `infra/endpoints.defineEndpoint`
     - `network/live.liveCollection`
+    - `network/live.liveValue`
     - `network/live/filter.liveInstant`
     - `network/live/filter.liveNumber`
     - `network/live/filter.liveText`
@@ -197,9 +202,9 @@ block keep taking a plain `ClaudeCliCall`.
     - `claudeCliCallFields`
     - `claudeCliCalls`
     - `ClaudeCliCallSchema`
+    - `claudeCliCallsFor`
     - `ClaudeCliCallsResultSchema`
     - `ClaudeCliCallStatusSchema`
-    - `listClaudeCliCallsFor`
 - Cross-plugin:
   - Imported by:
     - `apps/events/sources/source-detail/runs/model-call`
@@ -211,9 +216,7 @@ block keep taking a plain `ClaudeCliCall`.
     - `tasks/sidequest-autopilot`
     - `tasks/task-title`
 - Exemptions:
-  - Exempts itself from:
-    - `ids:pk-declared` — `server/internal/tables.ts` (debt)
-    - `live/no-endpoint-read` — `web/internal/use-claude-cli-calls.ts` (debt)
+  - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
 - Sub-plugins:
   - **`availability`** — Claude Code availability, shown: the health report's Claude Code row (critical while the CLI is missing or signed out, with the install / sign-in commands and Check again)…
 

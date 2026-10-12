@@ -32,13 +32,6 @@ import { EVENT_CATEGORY_OPTIONS } from "@plugins/apps/plugins/events/plugins/eve
  */
 const RUN_EVENTS_VIEW = defineDataView("events.run-events");
 
-/**
- * How many of the run's events to load. One run is one extraction — tens of
- * events — so this is a guard against a pathological page, not a page size:
- * there is deliberately no "load more", because a run's set is closed.
- */
-const EVENT_LIMIT = 200;
-
 /** Stable identity for the loading render, so the row pipeline does not churn. */
 const EMPTY_EVENTS: RunEvent[] = [];
 
@@ -120,7 +113,7 @@ export function ExtractedEventsSection({
 }: {
   runId: string;
 }): ReactNode {
-  const query = useRunEvents(runId, EVENT_LIMIT);
+  const query = useRunEvents(runId);
   // Only to word the empty state truthfully — an `unchanged` run touching
   // nothing is the cache working, which is a different sentence from an
   // extraction that ran and changed nothing.

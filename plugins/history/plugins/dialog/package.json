@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-history-dialog",
-  "description": "Reusable version-history UI: the useVersionHistory hook and the <VersionHistoryDialog> dialog (preview injected via renderPreview, navigation owned by the host).",
+  "description": "Reusable version-history UI: the <VersionHistoryDialog> dialog — the timeline as a live DataView with a Restore row action, the active version's preview injected via renderPreview, navigation owned by the host.",
   "private": true,
   "version": "0.0.1"
 }

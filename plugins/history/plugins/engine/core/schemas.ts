@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // One stored version of an entity's history. List endpoints return this
-// metadata-only shape (no `snapshot` blob); `getVersion` returns it plus the
+// metadata-only shape (no `snapshot` blob); `historyVersion` (the `history.version` live value) returns it plus the
 // opaque snapshot. The engine is domain-agnostic: `sourceId` names the
 // registered history source (e.g. "pages"), `entityId` is that source's own
 // id for the versioned entity, and the snapshot payload stays opaque
@@ -18,7 +18,7 @@ export const VersionSchema = z.object({
 });
 export type Version = z.infer<typeof VersionSchema>;
 
-// `getVersion` adds the opaque per-source snapshot blob to the metadata.
+// `historyVersion` (the `history.version` live value) adds the opaque per-source snapshot blob to the metadata.
 export const VersionWithSnapshotSchema = VersionSchema.extend({
   snapshot: z.unknown(),
 });

@@ -1,6 +1,6 @@
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { getTableRowCount } from "../../shared/endpoints";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { tableRowCount } from "../../shared/resources";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -15,22 +15,34 @@ export function RowCountSummary({
   tableName: string;
   pluginId: string;
 }) {
-  const { data, isPending, isError } = useEndpoint(getTableRowCount, { tableName }, { staleTime: 60_000 });
+  // A snapshot: the estimate is measured when read, never pushed.
+  const result = useLive(tableRowCount, { tableName });
 
-  if (isPending) {
+  if (result.status === "loading") {
     return <Loading variant="spinner" label="Loading…" />;
   }
 
-  if (isError) {
-    return <Placeholder tone="error">Failed to load row count.</Placeholder>;
+  if (result.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="the row count"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
   }
+
+  const data = result.data;
 
   return (
     <Inline gap="xs">
       <Text as="span" variant="body" className="tabular-nums">
         {data.estimate != null ? data.estimate.toLocaleString() : "—"}
       </Text>
-      <Text as="span" variant="caption" tone="muted">rows (est.)</Text>
+      <Text as="span" variant="caption" tone="muted">
+        rows (est.)
+      </Text>
     </Inline>
   );
 }

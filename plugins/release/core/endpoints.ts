@@ -69,10 +69,3 @@ export const ReleaseLogsResponseSchema = z.object({
 
 export type ReleaseLogLine = z.infer<typeof ReleaseLogLineSchema>;
 export type ReleaseLogsResponse = z.infer<typeof ReleaseLogsResponseSchema>;
-
-// Persisted fallback logs for a finished run (the live `/ws/logs` stream only
-// covers in-flight runs; after it ends the detail pane reads this).
-export const releaseLogsEndpoint = defineEndpoint({
-  route: "GET /api/release/runs/:id/logs",
-  response: ReleaseLogsResponseSchema,
-});

@@ -41,7 +41,7 @@ export interface RunClaudePrintInput {
     context?: Record<string, unknown>;
     /**
      * The domain record this call is being made FOR, so a feature plugin can
-     * later ask "which model calls produced this record?" (`listClaudeCliCallsFor`).
+     * later ask "which model calls produced this record?" (the `claudeCliCallsFor` value, `claude-cli.calls-for`).
      *
      * MUST be a globally unique row id — a UUID / DB row id. The column is NOT
      * namespaced by `source.name`, so a per-caller ordinal ("run-3") would collide

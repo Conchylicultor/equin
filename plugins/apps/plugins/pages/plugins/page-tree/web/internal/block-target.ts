@@ -1,11 +1,11 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
-  getBlockPage,
+  blockLocations,
   pageData,
   pagesTree,
+  PAGE_BLOCK_TYPE,
 } from "@plugins/page/plugins/editor/core";
 import { Editor } from "@plugins/page/plugins/editor/web";
 import { blockDetailPane, pageDetailPane } from "../panes";
@@ -32,55 +32,33 @@ const PENDING: BlockTarget = { kind: "pending" };
 const MISSING: BlockTarget = { kind: "missing" };
 
 /**
- * Resolve a block id in two tiers, which are not interchangeable:
+ * Resolve a block id through `blockLocations` — one live row per id (its type
+ * and nearest page ancestor), for a page and a content block alike, so a page
+ * id and a content-block id cost the same one point read. Live: a trash, a
+ * restore, a cross-page move or a turn-into-page re-answers in place, while a
+ * content edit (the typing projection) moves no column the read holds and
+ * reaches nothing.
  *
- * - `pagesTree` — every `type="page"` row, read by id (`:rows`). A PAGE id
- *   (what a URL and the sidebar expose) is answered from it, with no endpoint
- *   request.
- * - `getBlockPage` — the reverse lookup for a CONTENT block, which the pages
- *   set structurally cannot answer. Fired only on a known miss, so a transcript
- *   full of page ids costs no lookup.
- *
- * Once the lookup has said the id is a CONTENT block, the `:rows` read is
- * dropped (`null`). A point tuple refills every id it holds on any write to
- * that row, member or not — so holding a content block's id would cost a
- * `pages.tree:rows` load per typing projection of that block, for as long as
- * the block pane (or a chip naming it) is open. Dropping it costs nothing: a
- * content block becomes a page only through turn-into-page, and the lookup
- * already answered for this id.
+ * A page row answers with ITSELF (its own `pageId` names the page it sits
+ * under); a content block with its nearest page ancestor; a page-less block at
+ * the forest root is displayed by no page — the same "nothing to open" answer
+ * as an unknown or trashed id.
  */
 export function useBlockTarget(blockId: string): BlockTarget {
-  // The id the lookup has answered as a content block — its `:rows` read is
-  // dropped from then on (see above). Keyed by id, so a new id reads again.
-  const [contentId, setContentId] = useState<string | null>(null);
-  const page = useLiveRow(pagesTree, contentId === blockId ? null : blockId);
-  // `null` until the row read answers (the target then answers from its own
-  // state below); the reverse lookup fires only on a known miss.
-  const isListedPage =
-    page.status === "loading" || page.status === "error" ? null : page.found;
-  const lookup = useEndpoint(
-    getBlockPage,
-    { id: blockId },
-    {
-      enabled: isListedPage === false,
-      // Ids are immutable and a block's page changes only on a cross-page move,
-      // so one lookup per id per session is plenty.
-      staleTime: 5 * 60_000,
-    },
-  );
-
-  if (page.status === "loading") return PENDING;
-  if (page.status === "error") return { kind: "error", error: page.error };
-  if (isListedPage) return { kind: "page", pageId: blockId };
-  if (lookup.isError) return { kind: "error", error: lookup.error };
-  if (lookup.isPending) return PENDING;
-  const found = lookup.data;
-  if (!found.found) return MISSING;
-  if (found.isPage) return { kind: "page", pageId: found.pageId };
-  // React's render-time state adjustment: the next render drops the `:rows`
-  // read, and answers from the lookup alone (`null` reads `found: false`).
-  if (contentId !== blockId) setContentId(blockId);
-  return { kind: "block", pageId: found.pageId, blockId, type: found.type };
+  const location = useLiveRow(blockLocations, blockId);
+  switch (location.status) {
+    case "loading":
+      return PENDING;
+    case "error":
+      return { kind: "error", error: location.error };
+    case "ready": {
+      if (!location.found) return MISSING;
+      const { row } = location;
+      if (row.type === PAGE_BLOCK_TYPE) return { kind: "page", pageId: row.id };
+      if (row.pageId === null) return MISSING;
+      return { kind: "block", pageId: row.pageId, blockId, type: row.type };
+    }
+  }
 }
 
 /**

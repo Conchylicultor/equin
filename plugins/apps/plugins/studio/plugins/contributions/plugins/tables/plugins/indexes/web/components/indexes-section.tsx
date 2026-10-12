@@ -1,7 +1,10 @@
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { getTableIndexes } from "../../shared/endpoints";
-import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { tableIndexes } from "../../shared/resources";
+import {
+  DataTable,
+  type ColumnDef,
+} from "@plugins/primitives/plugins/data-table/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 interface IndexRow {
@@ -36,19 +39,26 @@ export function IndexesSection({
   tableName: string;
   pluginId: string;
 }) {
-  const { data, isLoading, isError } = useEndpoint(getTableIndexes, { tableName }, { staleTime: 60_000 });
+  const result = useLive(tableIndexes, { tableName });
 
-  if (isLoading) {
+  if (result.status === "loading") {
     return <Loading variant="spinner" label="Loading indexes…" />;
   }
 
-  if (isError) {
-    return <Placeholder tone="error">Failed to load indexes.</Placeholder>;
+  if (result.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="indexes"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
   }
 
   return (
     <DataTable
-      data={data?.indexes ?? []}
+      data={result.data.indexes}
       columns={columns}
       rowKey={(row) => row.indexname}
       emptyLabel="No indexes found"

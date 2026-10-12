@@ -4,4 +4,4 @@ export {
   accountInitial,
 } from "./internal/account";
 export type { HostAccount } from "./internal/account";
-export { hostAccount } from "./internal/resources";
+export { hostAccount, hostHome } from "./internal/resources";

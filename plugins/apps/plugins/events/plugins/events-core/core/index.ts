@@ -55,8 +55,6 @@ export {
   updateEventSource,
   deleteEventSource,
   refreshEventSourceNow,
-  listRunEvents,
-  ListRunEventsQuerySchema,
   CreateEventSourceBodySchema,
   type CreateEventSourceBody,
   UpdateEventSourceBodySchema,
@@ -67,7 +65,12 @@ export {
   RefreshAllResultSchema,
   type RefreshAllResult,
 } from "./internal/endpoints";
-export { eventSources, eventSourceRuns } from "./internal/resources";
+export {
+  eventSources,
+  eventSourceRuns,
+  runEvents,
+  RUN_EVENTS_LIMIT,
+} from "./internal/resources";
 export { externalUrl } from "./internal/external-url";
 export {
   eventSourceIdKind,

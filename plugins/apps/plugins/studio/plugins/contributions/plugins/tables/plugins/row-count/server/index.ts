@@ -1,9 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { handleGetRowCount } from "./internal/row-count-handler";
-import { getTableRowCount } from "../shared/endpoints";
+import { tableRowCountServed } from "./internal/served";
 
 export default {
-  httpRoutes: {
-    [getTableRowCount.route]: handleGetRowCount,
-  },
+  contributions: [...tableRowCountServed.declare],
 } satisfies ServerPluginDefinition;

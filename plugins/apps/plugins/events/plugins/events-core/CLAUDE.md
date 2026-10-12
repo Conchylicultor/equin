@@ -43,7 +43,7 @@ the optional web-slot `originUrl(config)`, read back through
 nothing but the registry: the Sources list passes its row, and an events list
 passes the ref the server joined onto each event row (`SourcedEvent`, whose flat
 `sourceType` / `sourceConfig` `sourceRefOf` reads back — the `events.list`
-collection's and `listRunEvents`' rows), so no caller ever looks a `sourceId` up
+collection's and the `events.run-events` value's rows), so no caller ever looks a `sourceId` up
 in the bounded sources window. Either way a surface names no source type. Omit
 `originUrl` for a type that stands for no page (`manual`).
 
@@ -103,8 +103,10 @@ Four `defineEntity` tables, field records in `core/internal/fields.ts`:
   Written by the engine INSIDE the ledger's own transaction, so a run and its
   event list cannot half-exist. Deliberately not a `last_run_id` stamp on
   `events`: a stamp is overwritten by the next run, leaving every older run
-  showing an empty list under counts that say otherwise. Read as
-  `GET /api/events/runs/:runId/events` (the event row + its action, flat).
+  showing an empty list under counts that say otherwise. Read live as the
+  `runEvents` value (`events.run-events`, params `runId`, served `db`, at most
+  `RUN_EVENTS_LIMIT`; the event row + its action, flat) through
+  `useRunEvents(runId)`; an unknown run is refused `missing`, never `[]`.
 
 **All `events` writes go through the repo funnel**, `upsertEvents()` /
 `markEventsDisappeared()` / `reanchorRecurringEvents()` in
@@ -169,7 +171,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `network/live.LiveRowResult`
     - `network/live.useLive`
     - `network/live.useLiveRow`
-    - `primitives/live-state.useEndpointResource`
   - Exports (values):
     - `EventSources`
     - `useCreateEventSource`
@@ -187,6 +188,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `ids.kind` "evrun"
     - `ids.kind` "evs"
     - `ids.kind` "evt"
+    - `resource.declare` "events.run-events"
     - `resource.declare` "events.source-runs"
     - `resource.declare` "events.source-runs:groups"
     - `resource.declare` "events.source-runs:rows"
@@ -201,6 +203,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
     - `network/live.serveCollection`
+    - `network/live.serveValue`
   - DB schema: `plugins/apps/plugins/events/plugins/events-core/server/internal/tables.ts`
   - Exports (types):
     - `EventSourceType`
@@ -232,6 +235,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `updateSource`
     - `upsertEvents`
   - Resources:
+    - `events.run-events` (push, unbounded: one run's closed event set — a single extraction, tens of events — and the loader caps it at RUN_EVENTS_LIMIT rows)
     - `events.source-runs` (keyed, window)
     - `events.source-runs:groups` (push)
     - `events.source-runs:rows` (keyed, point)
@@ -246,29 +250,19 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `DELETE /api/events/sources/:id`
     - `POST /api/events/sources/:id/refresh`
     - `POST /api/events/sources/refresh-all`
-    - `GET /api/events/runs/:runId/events`
 - Core:
-  - Uses:
-    - `apps/events/event-date.EventDate`
-    - `apps/events/event-date.EventDateSchema`
-    - `fields.FieldsRecord`
-    - `fields.fieldsToZodObject`
-    - `fields.nullable`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live/filter` ×4
+    - `fields` ×3
+    - `ids` ×3
+    - `apps/events/event-date` ×2
+    - `fields/text/config` ×2
+    - `network/live` ×2
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
-    - `fields/text/config.enumTextField`
-    - `fields/text/config.textField`
-    - `ids.defineIdKind`
-    - `ids.idKindField`
-    - `ids.IdOf`
     - `infra/endpoints.defineEndpoint`
-    - `network/live.liveCollection`
-    - `network/live/filter.liveBoolean`
-    - `network/live/filter.liveInstant`
-    - `network/live/filter.liveNumber`
-    - `network/live/filter.liveText`
   - Exports (types):
     - `CreateEventSourceBody`
     - `EventCategory`
@@ -319,15 +313,15 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `extractionStatus`
     - `getEventSource`
     - `listEventSources`
-    - `listRunEvents`
-    - `ListRunEventsQuerySchema`
     - `REFRESH_CADENCES`
     - `refreshAllEventSources`
     - `RefreshAllResultSchema`
     - `refreshEventSourceNow`
     - `RefreshSourceResultSchema`
     - `RUN_EVENT_ACTIONS`
+    - `RUN_EVENTS_LIMIT`
     - `RUN_OUTCOMES`
+    - `runEvents`
     - `RunEventSchema`
     - `SOURCE_STATES`
     - `SOURCE_STATUSES`
@@ -357,9 +351,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `apps/events/sources/source-detail/settings`
     - `apps/events/sources/url-extract`
 - Exemptions:
-  - Exempts itself from:
-    - `events/no-raw-events-write` — `server/internal/events-repo.ts` (sanctioned)
-    - `live/no-endpoint-read` — `web/internal/hooks.ts` (debt)
+  - Exempts itself from: `events/no-raw-events-write` — `server/internal/events-repo.ts` (sanctioned)
   - Exempted by: `apps/events/events-core` (0 debt)
 
 <!-- AUTOGENERATED:END -->

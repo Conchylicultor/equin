@@ -3,11 +3,10 @@ import {
   triggerReleaseEndpoint,
   previewEndpoint,
   stopPreviewEndpoint,
-  releaseLogsEndpoint,
 } from "../core/endpoints";
 import { handleRelease } from "./internal/handle-release";
 import { handlePreview, handleStopPreview } from "./internal/handle-preview";
-import { handleReleaseLogs } from "./internal/handle-logs";
+import { releaseRunLogsServed } from "./internal/run-logs-resource";
 import {
   reconcileOrphanPreviews,
   releasePreviewDaemon,
@@ -45,12 +44,12 @@ export default {
     ...releaseHistoryServed.declare,
     ...releaseCandidateServed.declare,
     ...releasePreviewsServed.declare,
+    ...releaseRunLogsServed.declare,
   ],
   httpRoutes: {
     [triggerReleaseEndpoint.route]: handleRelease,
     [previewEndpoint.route]: handlePreview,
     [stopPreviewEndpoint.route]: handleStopPreview,
-    [releaseLogsEndpoint.route]: handleReleaseLogs,
   },
   onReady: async () => {
     // Unfinished release_runs rows are no longer reconciled here: that is the

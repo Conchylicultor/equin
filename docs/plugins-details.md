@@ -2384,7 +2384,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.LiveRowResult`
               - `network/live.useLive`
               - `network/live.useLiveRow`
-              - `primitives/live-state.useEndpointResource`
             - Exports (values):
               - `EventSources`
               - `useCreateEventSource`
@@ -2402,6 +2401,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ids.kind` "evrun"
               - `ids.kind` "evs"
               - `ids.kind` "evt"
+              - `resource.declare` "events.run-events"
               - `resource.declare` "events.source-runs"
               - `resource.declare` "events.source-runs:groups"
               - `resource.declare` "events.source-runs:rows"
@@ -2416,6 +2416,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/entities.defaultNow`
               - `infra/entities.defineEntity`
               - `network/live.serveCollection`
+              - `network/live.serveValue`
             - DB schema: `plugins/apps/plugins/events/plugins/events-core/server/internal/tables.ts`
             - Exports (types):
               - `EventSourceType`
@@ -2447,6 +2448,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `updateSource`
               - `upsertEvents`
             - Resources:
+              - `events.run-events` (push, unbounded: one run's closed event set — a single extraction, tens of events — and the loader caps it at RUN_EVENTS_LIMIT rows)
               - `events.source-runs` (keyed, window)
               - `events.source-runs:groups` (push)
               - `events.source-runs:rows` (keyed, point)
@@ -2461,29 +2463,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DELETE /api/events/sources/:id`
               - `POST /api/events/sources/:id/refresh`
               - `POST /api/events/sources/refresh-all`
-              - `GET /api/events/runs/:runId/events`
           - Core:
-            - Uses:
-              - `apps/events/event-date.EventDate`
-              - `apps/events/event-date.EventDateSchema`
-              - `fields.FieldsRecord`
-              - `fields.fieldsToZodObject`
-              - `fields.nullable`
+            - Uses: 21 symbols — full list in [`plugins/apps/plugins/events/plugins/events-core/REFERENCE.md`](../plugins/apps/plugins/events/plugins/events-core/REFERENCE.md)
+              - `network/live/filter` ×4
+              - `fields` ×3
+              - `ids` ×3
+              - `apps/events/event-date` ×2
+              - `fields/text/config` ×2
+              - `network/live` ×2
               - `fields/bool/config.boolField`
               - `fields/date/config.dateField`
               - `fields/int/config.intField`
               - `fields/json/config.jsonField`
-              - `fields/text/config.enumTextField`
-              - `fields/text/config.textField`
-              - `ids.defineIdKind`
-              - `ids.idKindField`
-              - `ids.IdOf`
               - `infra/endpoints.defineEndpoint`
-              - `network/live.liveCollection`
-              - `network/live/filter.liveBoolean`
-              - `network/live/filter.liveInstant`
-              - `network/live/filter.liveNumber`
-              - `network/live/filter.liveText`
             - Exports (types):
               - `CreateEventSourceBody`
               - `EventCategory`
@@ -2534,15 +2526,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `extractionStatus`
               - `getEventSource`
               - `listEventSources`
-              - `listRunEvents`
-              - `ListRunEventsQuerySchema`
               - `REFRESH_CADENCES`
               - `refreshAllEventSources`
               - `RefreshAllResultSchema`
               - `refreshEventSourceNow`
               - `RefreshSourceResultSchema`
               - `RUN_EVENT_ACTIONS`
+              - `RUN_EVENTS_LIMIT`
               - `RUN_OUTCOMES`
+              - `runEvents`
               - `RunEventSchema`
               - `SOURCE_STATES`
               - `SOURCE_STATUSES`
@@ -2572,9 +2564,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/events/sources/source-detail/settings`
               - `apps/events/sources/url-extract`
           - Exemptions:
-            - Exempts itself from:
-              - `events/no-raw-events-write` — `server/internal/events-repo.ts` (sanctioned)
-              - `live/no-endpoint-read` — `web/internal/hooks.ts` (debt)
+            - Exempts itself from: `events/no-raw-events-write` — `server/internal/events-repo.ts` (sanctioned)
             - Exempted by: `apps/events/events-core` (0 debt)
         - **`reanchor`** — Keeps a recurring event's occurrence columns (starts_at / ends_at / all_day) current as time passes: the hourly re-anchor tick plus the boot pass, so an 'upcoming' filter never drops a series that is still running just because its source has not been re-extracted since the last occurrence.
           - Server:
@@ -2910,11 +2900,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                           - `apps/events/sources/source-detail/runs.EventSourceRunDetail`
                           - `infra/claude-cli.ClaudeCliCallDetail`
                           - `infra/claude-cli.useClaudeCliCalls`
-                          - `infra/endpoints.getEndpointErrorMessage`
                           - `primitives/css/placeholder.Placeholder`
                           - `primitives/css/spacing.Inset`
                           - `primitives/css/spacing.Stack`
                           - `primitives/css/surface.Surface`
+                          - `primitives/live-state.ResourceErrorInline`
                           - `primitives/loading.Loading`
                 - **`schedule`** — Schedule section of the Events source side-pane: the refresh cadence picker, the scheduling on/off switch, and Refresh now — whose discriminated RefreshSourceResult (enqueued / already-running / skipped) is rendered arm by arm rather than collapsed into 'done'.
                   - Web:
@@ -3018,13 +3008,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "files-at"
               - `Pane.Register` "files-home"
               - `ThemeEngine.SubTheme` "Files document"
-            - Uses: 47 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 49 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/css/ui-kit` ×7
               - `primitives/data-view` ×5
               - `primitives/file-viewer` ×5
               - `infra/endpoints` ×4
               - `primitives/pane` ×4
               - `primitives/path-bar` ×2
+              - `network/live.useLive`
               - `primitives/bar.Bar`
               - `primitives/css/center.Center`
               - `primitives/css/column.Column`
@@ -3038,6 +3029,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/theme-boundary.Theme`
               - `primitives/file-type.FileTypeIcon`
               - `primitives/icon-button.IconButton`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/persistent-draft.useDraft`
               - `primitives/scope/dom-scope.defineDomScope`
@@ -3100,7 +3092,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/explorer`
               - `plugin-meta/plugin-view/file-tree`
           - Exemptions:
-            - Exempts itself from: `live/no-endpoint-read` — `web/components/preview-pane.tsx`, `web/internal/folder-peek.ts`, `web/internal/host-path-source.ts`, `web/internal/listings.ts` (debt)
+            - Exempts itself from:
+              - `live/no-endpoint-read` — `web/components/preview-pane.tsx`, `web/internal/folder-peek.ts`, `web/internal/listings.ts` (debt)
+              - `live/no-endpoint-read` — `web/internal/host-path-source.ts` (debt)
         - **`git`** — Git awareness for the file explorer: inside a git checkout the tree gains a git status badge (M / A / D / R / C / ?, a dot on a folder holding changes; pending until the status is known) and a Changed vs main filter field, ignored files hide behind a Show ignored files toggle, and a changed file's preview gets its git context (the Diff tab). Git awareness for the file explorer, server half: which checkout holds a folder (GET /api/file-explorer/git/checkout, git rev-parse) and the checkout's status as the file-explorer.git-status live value — each path's status vs HEAD and vs the main merge-base, untracked and ignored folders collapsed — memoized behind a content signature and pushed from the shared checkout watch (infra/git/checkout-watch: working tree + git dir) while subscribed.
           - Web:
             - Contributes:
@@ -3133,9 +3127,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Routes: `GET /api/file-explorer/git/checkout`
           - Exemptions:
             - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-git.ts` (debt)
-          - Cross-plugin:
-            - Endpoint callers: `places`
-        - **`places`** — The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the Singularity checkout, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Where the file explorer's Singularity place leads: the main checkout's path (GET /api/file-explorer/checkout).
+        - **`places`** — The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the Singularity checkout, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Where the file explorer's Singularity place leads: serves the file-explorer.main-checkout value, the main checkout's path.
           - Web:
             - Contributes:
               - `FileExplorer.Sidebar` "Places" → `PlacesSidebar`
@@ -3155,6 +3147,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/file-explorer/shell.PlacesState`
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useEndpoint`
+              - `network/live.useLive`
               - `primitives/css/clip.Clip`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
@@ -3166,13 +3159,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view.FieldDef`
               - `ui/icons.Icon`
           - Server:
-            - Uses: `infra/endpoints.implement`
-            - Routes: `GET /api/file-explorer/checkout`
-          - Core:
-            - Uses: `infra/endpoints.defineEndpoint`
-            - Exports (values): `fileExplorerCheckout`
+            - Contributes: `resource.declare` "file-explorer.main-checkout"
+            - Uses: `network/live.serveValue`
+            - Resources: `file-explorer.main-checkout` (push, fixed)
           - Exemptions:
-            - Exempts itself from: `live/no-endpoint-read` — `web/components/storage-meter.tsx`, `web/internal/places.ts` (debt)
+            - Exempts itself from:
+              - `live/no-endpoint-read` — `web/components/storage-meter.tsx` (debt)
+              - `live/no-endpoint-read` — `web/internal/places.ts` (debt)
         - **`shell`** — App shell for Files (the file explorer): registers the /files app entry with its outline-folder mark, contributes the app's own theme (files: the prototype's zinc palette, blue accent, Lucide icons and metrics), lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots.
           - Web:
             - Slots:
@@ -3846,7 +3839,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `apps/pages/page-tree.pageDetailPane`
               - `history/dialog.VersionHistoryDialog`
-              - `infra/endpoints.useEndpoint`
               - `network/live.useLive`
               - `network/live.useLiveRow`
               - `page/editor.BLOCK_INSET`
@@ -3885,8 +3877,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineHistorySource('pages')`
               - `defineJob('pages.history.snapshot')`
               - `defineJob('pages.history.schedule')`
-          - Exemptions:
-            - Exempts itself from: `live/no-endpoint-read` — `web/components/page-version-preview.tsx` (debt)
         - **`page-author`** — Page-kind control in the page-detail header: its icon names what the open page is to agents — an ordinary page, an agent page (agents may write all of it) or an instructions page (the human's standing instructions to agents working under the parent page) — and its panel changes the kind, with a Global switch on an instructions page.
           - Web:
             - Contributes: `pageDetailPane.Actions` "page-author" → `PageKindControl`
@@ -3980,17 +3970,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
               - `PageTree.RowActions` "delete" → `DeletePageAction`
               - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-            - Uses: 80 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
+            - Uses: 79 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
               - `primitives/pane` ×9
               - `page/editor` ×7
               - `primitives/data-view` ×5
               - `primitives/css/ui-kit` ×4
-              - `infra/endpoints` ×3
               - `network/live` ×3
               - `page/page-reference` ×3
               - `primitives/live-state` ×3
               - `primitives/overlay/image-viewer` ×3
               - `apps/pages/shell` ×2
+              - `infra/endpoints` ×2
               - `primitives/breadcrumb` ×2
               - `primitives/css/control-panel` ×2
               - `primitives/hover-reveal` ×2
@@ -4064,9 +4054,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/artifacts/page`
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
           - Exemptions:
-            - Exempts itself from:
-              - `endpoints/no-void-fetch-endpoint` — `web/components/pages-sidebar.tsx` (sanctioned)
-              - `live/no-endpoint-read` — `web/internal/block-target.ts` (debt)
+            - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/components/pages-sidebar.tsx` (sanctioned)
         - **`prompt-origin`** — Origin backlink in the task detail: the page a `/prompt`-block-launched task came from, as a clickable chip opening pageDetailPane. Renders nothing when the task has no prompt-block link or the page is gone.
           - Web:
             - Contributes: `TaskDetailSlots.Section` "Origin" → `PromptOriginSection`
@@ -7124,7 +7112,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Contributes: `ReleaseDetail.Section` "Logs" → `ReleaseLogSection`
                     - Uses:
                       - `apps/studio/compositions/release.ReleaseDetail`
-                      - `infra/endpoints.useEndpoint`
+                      - `network/live.useLive`
                       - `network/live.useLiveRow`
                       - `primitives/copy-to-clipboard.CopyButton`
                       - `primitives/css/fill.Fill`
@@ -7136,10 +7124,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/ui-kit.cn`
                       - `primitives/css/ui-kit.ControlSizeProvider`
                       - `primitives/live-state.ResourceErrorInline`
+                      - `primitives/loading.Loading`
                       - `primitives/log-channels.LiveLogChannel`
                       - `shell/notifications.toast`
-                  - Exemptions:
-                    - Exempts itself from: `live/no-endpoint-read` — `web/components/release-log-section.tsx` (debt)
         - **`contributions`** — Central view of all plugin contributions aggregated by type.
           - Web:
             - Slots: `contributions.actions`
@@ -7209,104 +7196,107 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Contributes: `TableDetail.Section` "Columns" → `ColumnsSection`
                     - Uses:
                       - `apps/studio/contributions/tables.TableDetail`
-                      - `infra/endpoints.useEndpoint`
-                      - `primitives/css/placeholder.Placeholder`
+                      - `network/live.useLive`
                       - `primitives/data-table.ColumnDef`
                       - `primitives/data-table.DataTable`
+                      - `primitives/live-state.ResourceErrorInline`
                       - `primitives/loading.Loading`
                   - Server:
+                    - Contributes: `resource.declare` "studio.table-columns"
                     - Uses:
                       - `database.db`
-                      - `infra/endpoints.HttpError`
-                      - `infra/endpoints.implement`
-                    - Routes: `GET /api/studio/tables/:tableName/columns`
+                      - `network/live.serveValue`
+                    - Resources: `studio.table-columns` (push, fixed)
                   - Exemptions:
-                    - Exempts itself from: `live/no-endpoint-read` — `web/components/columns-section.tsx` (debt)
+                    - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
                   - Shared:
-                    - Exports (values): `getTableColumns`
+                    - Exports (values): `tableColumns`
                 - **`foreign-keys`** — FK relationships section (outgoing and incoming) in the table detail view.
                   - Web:
                     - Contributes: `TableDetail.Section` "Foreign Keys" → `ForeignKeysSection`
                     - Uses:
                       - `apps/studio/contributions/tables.TableDetail`
-                      - `infra/endpoints.useEndpoint`
+                      - `network/live.useLive`
                       - `primitives/css/placeholder.Placeholder`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.SectionLabel`
                       - `primitives/data-table.ColumnDef`
                       - `primitives/data-table.DataTable`
+                      - `primitives/live-state.ResourceErrorInline`
                       - `primitives/loading.Loading`
                   - Server:
+                    - Contributes: `resource.declare` "studio.table-foreign-keys"
                     - Uses:
                       - `database.db`
-                      - `infra/endpoints.HttpError`
-                      - `infra/endpoints.implement`
-                    - Routes: `GET /api/studio/tables/:tableName/foreign-keys`
+                      - `network/live.serveValue`
+                    - Resources: `studio.table-foreign-keys` (push, fixed)
                   - Exemptions:
-                    - Exempts itself from: `live/no-endpoint-read` — `web/components/foreign-keys-section.tsx` (debt)
+                    - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
                   - Shared:
-                    - Exports (values): `getTableForeignKeys`
+                    - Exports (values): `tableForeignKeys`
                 - **`indexes`** — Table indexes section in the table detail view.
                   - Web:
                     - Contributes: `TableDetail.Section` "Indexes" → `IndexesSection`
                     - Uses:
                       - `apps/studio/contributions/tables.TableDetail`
-                      - `infra/endpoints.useEndpoint`
-                      - `primitives/css/placeholder.Placeholder`
+                      - `network/live.useLive`
                       - `primitives/data-table.ColumnDef`
                       - `primitives/data-table.DataTable`
+                      - `primitives/live-state.ResourceErrorInline`
                       - `primitives/loading.Loading`
                   - Server:
+                    - Contributes: `resource.declare` "studio.table-indexes"
                     - Uses:
                       - `database.db`
-                      - `infra/endpoints.HttpError`
-                      - `infra/endpoints.implement`
-                    - Routes: `GET /api/studio/tables/:tableName/indexes`
+                      - `network/live.serveValue`
+                    - Resources: `studio.table-indexes` (push, fixed)
                   - Exemptions:
-                    - Exempts itself from: `live/no-endpoint-read` — `web/components/indexes-section.tsx` (debt)
+                    - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
                   - Shared:
-                    - Exports (values): `getTableIndexes`
+                    - Exports (values): `tableIndexes`
                 - **`row-count`** — Live row count section (estimated from pg_stat_user_tables) in the table detail view.
                   - Web:
                     - Contributes: `TableDetail.Section` "Row Count"
                     - Uses:
                       - `apps/studio/contributions/tables.TableDetail`
-                      - `infra/endpoints.useEndpoint`
+                      - `network/live.useLive`
                       - `primitives/css/inline.Inline`
-                      - `primitives/css/placeholder.Placeholder`
                       - `primitives/css/text.Text`
+                      - `primitives/live-state.ResourceErrorInline`
                       - `primitives/loading.Loading`
                   - Server:
+                    - Contributes: `resource.declare` "studio.table-row-count"
                     - Uses:
                       - `database.db`
-                      - `infra/endpoints.HttpError`
-                      - `infra/endpoints.implement`
-                    - Routes: `GET /api/studio/tables/:tableName/row-count`
+                      - `network/live.serveValue`
+                    - Resources: `studio.table-row-count` (invalidate, snapshot)
                   - Exemptions:
-                    - Exempts itself from: `live/no-endpoint-read` — `web/components/row-count-section.tsx` (debt)
+                    - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
                   - Shared:
-                    - Exports (values): `getTableRowCount`
+                    - Exports (values): `tableRowCount`
                 - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
                   - Web:
                     - Contributes: `TableDetail.Section` "Sample Rows" → `SampleRowsSection`
                     - Uses:
                       - `apps/studio/contributions/tables.TableDetail`
-                      - `infra/endpoints.useEndpoint`
-                      - `primitives/css/placeholder.Placeholder`
+                      - `network/live.useLive`
                       - `primitives/css/scroll.Scroll`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/ui-kit.Button`
                       - `primitives/data-table.ColumnDef`
                       - `primitives/data-table.DataTable`
+                      - `primitives/live-state.ResourceErrorInline`
                       - `primitives/loading.Loading`
                   - Server:
+                    - Contributes: `resource.declare` "studio.table-sample-rows"
                     - Uses:
                       - `database.db`
-                      - `infra/endpoints.HttpError`
-                      - `infra/endpoints.implement`
-                    - Routes: `GET /api/studio/tables/:tableName/sample`
+                      - `network/live.serveValue`
+                    - Resources: `studio.table-sample-rows` (invalidate, snapshot)
                   - Exemptions:
-                    - Exempts itself from: `live/no-endpoint-read` — `web/components/sample-rows-section.tsx` (debt)
+                    - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
                   - Shared:
-                    - Exports (values): `getTableSampleRows`
+                    - Exports (values): `tableSampleRows`
         - **`explorer`** — Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.
           - Web:
             - Slots:
@@ -9352,11 +9342,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getBuildRunTermination`
     - **`deployment`** — The client half of the deployment description: `useDeployment()` composes THIS tab's own baked pin in beside the server's two deployable carriers, and `<DeploymentChain/>` renders the four arms — one commit row when converged, the chain with a carrier chip on each carrier's own commit when behind, and the raw pins plus the reason when there is no line to draw. Also eagerly registers the boot-critical build.deployment resource descriptor so boot-snapshot can hydrate it before first paint. The deployment description: this checkout's HEAD (the target) plus a pin per deployable carrier — the backend process and the frontend bundle it serves — and the one derived verdict (converged / behind / diverged / unknown) both the Build button and the auto-build decision read. A leaf: it never imports build/server, so the reconciler that owns triggerBuild can import DOWN into it.
       - Server:
-        - Contributes: `resource.declare` "build.deployment"
+        - Contributes:
+          - `resource.declare` "build.chain-from"
+          - `resource.declare` "build.deployment"
         - Uses:
           - `build/server-build-id.getServerCommit`
           - `build/server-build-id.getServerGraphHash`
-          - `infra/endpoints.implement`
           - `infra/git/git-read-cache.createSignedMemo`
           - `infra/git/git-watcher.refHeadServed`
           - `infra/paths.GIT`
@@ -9372,12 +9363,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readDeployment`
           - `readDeploymentState`
           - `serverPin`
-        - Resources: `build.deployment` (push, notified)
-        - Routes: `GET /api/build/chain-from`
+        - Resources:
+          - `build.chain-from` (push, notified)
+          - `build.deployment` (push, notified)
       - Web:
         - Uses:
           - `conversations/commit-conversation.OpenCommitConversation`
-          - `infra/endpoints.useEndpoint`
           - `network/live.useLive`
           - `primitives/commit-list.CommitRowItem`
           - `primitives/css/badge.Badge`
@@ -9430,8 +9421,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wantsBuild`
       - Cross-plugin:
         - Imported by: `build`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-chain-from.ts` (debt)
     - **`run-ledger`** — Lean build-runs ledger leaf: the build_runs table def + the CLI build-run recorder, importable by the `./singularity build` CLI without the heavy build barrel (which pulls config_v2/notifications).
       - Server:
         - Uses:
@@ -9557,6 +9546,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`code-explorer`** — Worktree-scoped file reads: raw/diff/image content and directory listings by attempt id or the reserved `main` sentinel.
   - Server:
+    - Contributes:
+      - `resource.declare` "code.commit-files"
+      - `resource.declare` "code.commit-info"
     - Uses:
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
@@ -9565,6 +9557,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/paths.GIT`
       - `infra/paths.REPO_ROOT`
       - `infra/worktree.ensureMainWorktreeRoot`
+      - `network/live.serveValue`
       - `primitives/commit-list.LOG_FORMAT`
       - `primitives/commit-list.parseDiffNameStatusZ`
       - `primitives/commit-list.parseDiffNumstatZ`
@@ -9576,6 +9569,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `getRangeFiles`
       - `resolveParentSha`
       - `resolveWorktreePath`
+    - Resources:
+      - `code.commit-files` (push, immutable)
+      - `code.commit-info` (push, immutable)
   - Cross-plugin:
     - Imported by:
       - `code-explorer/file-resolve`
@@ -9588,13 +9584,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.blob`
           - `infra/endpoints.defineEndpoint`
           - `infra/endpoints.interpolatePath`
+          - `network/live.liveValue`
           - `primitives/commit-list.CommitRowSchema`
-          - `primitives/live-state.resolvableSchema`
-        - Exports (types): `CodeDirEntry`
+        - Exports (types):
+          - `CodeDirEntry`
+          - `CommitFiles`
         - Exports (values):
           - `codeImageUrl`
-          - `getCommitFiles`
-          - `getCommitInfo`
+          - `commitFiles`
+          - `CommitFilesSchema`
+          - `commitInfo`
           - `getFileContent`
           - `getFileDiff`
           - `getImageContent`
@@ -9608,8 +9607,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slot contributors: `commitDetailPane.Actions` ← `primitives.pane`
         - Contributes: `Pane.Register` "commit-detail"
         - Uses:
-          - `infra/endpoints.EndpointError`
-          - `infra/endpoints.useEndpoint`
+          - `network/live.useLive`
           - `primitives/collapsible.CollapsibleChevron`
           - `primitives/css/column.Column`
           - `primitives/css/fill.Fill`
@@ -9621,6 +9619,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
           - `primitives/diff-view.DiffOrImageView`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `primitives/pane.defineRoute`
           - `primitives/pane.Pane`
@@ -9633,8 +9632,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `active-data/commit-link`
           - `conversations/conversation-view/commits-graph`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/use-commit-files.ts`, `web/use-commit-info.ts` (debt)
     - **`file-resolve`** — Fuzzy file path resolution via segment-subsequence matching against git ls-files.
       - Web:
         - Uses:
@@ -15005,7 +15002,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `bootMonitorConfig`
       - Cross-plugin:
         - Imported by: `debug/profiling/boot`
-    - **`boot-profile`** — Browser boot profiler Gantt debug page: the request → first-paint timeline plus per-resource wait/work split, with shareable permalinks and a browsable list of saved snapshots. Persists captured browser boot traces under a unique id (POST), serves one snapshot (GET) and a metadata-only list (GET) for the permalink + browse panes, and sweeps snapshots older than 30 days via a scheduled job.
+    - **`boot-profile`** — Browser boot profiler Gantt debug page: the request → first-paint timeline plus per-resource wait/work split, with shareable permalinks and a browsable list of saved snapshots. Persists captured browser boot traces under a unique id (POST), serves the debug.boot-traces metadata-only list and the debug.boot-trace by-id lookup (live collections) for the browse + permalink panes, and sweeps snapshots older than 30 days via a scheduled job.
       - Web:
         - Slots:
           - `debug-boot-profile.actions`
@@ -15021,28 +15018,34 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Pane.Register` "debug-boot-profiles-list"
           - `DebugApp.Sidebar` "Boot Profile"
           - `DebugApp.Sidebar` "Boot Profiles"
-        - Uses: 43 symbols — full list in [`plugins/debug/plugins/boot-profile/REFERENCE.md`](../plugins/debug/plugins/boot-profile/REFERENCE.md)
+        - Uses: 41 symbols — full list in [`plugins/debug/plugins/boot-profile/REFERENCE.md`](../plugins/debug/plugins/boot-profile/REFERENCE.md)
           - `debug/profiling` ×8
           - `primitives/perfs/boot-trace` ×7
-          - `infra/endpoints` ×4
           - `primitives/pane` ×4
+          - `primitives/data-view` ×3
           - `primitives/css/spacing` ×2
           - `primitives/css/text` ×2
           - `primitives/css/ui-kit` ×2
           - `primitives/data-table` ×2
-          - `primitives/data-view` ×2
-          - `primitives/live-state` ×2
           - `apps/debug/shell.DebugApp`
+          - `infra/endpoints.useEndpointMutation`
+          - `network/live.useLiveRow`
           - `primitives/css/center.Center`
           - `primitives/css/column.Column`
           - `primitives/css/placeholder.Placeholder`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `primitives/relative-time.RelativeTime`
           - `shell/notifications.toast`
           - `ui/icons.Icon`
         - Exports (values): `BootProfileGantt`
       - Server:
-        - Contributes: `fork-data-exclusion` "boot_traces"
+        - Contributes:
+          - `resource.declare` "debug.boot-trace:rows"
+          - `resource.declare` "debug.boot-traces"
+          - `resource.declare` "debug.boot-traces:groups"
+          - `resource.declare` "debug.boot-traces:rows"
+          - `fork-data-exclusion` "boot_traces"
         - Uses:
           - `database.db`
           - `database/admin.ExcludeFromFork`
@@ -15052,13 +15055,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities.defaultRandom`
           - `infra/entities.defineEntity`
           - `infra/retention.defineRetention`
+          - `network/live.serveCollection`
         - DB schema: `plugins/debug/plugins/boot-profile/server/internal/tables.ts`
         - Exports (values): `_bootTraces`
         - Register: `defineJob('retention.boot_traces')`
-        - Routes:
-          - `POST /api/boot-traces`
-          - `GET /api/boot-traces/:id`
-          - `GET /api/boot-traces`
+        - Resources:
+          - `debug.boot-trace:rows` (keyed, point)
+          - `debug.boot-traces` (keyed, window)
+          - `debug.boot-traces:groups` (push)
+          - `debug.boot-traces:rows` (keyed, point)
+        - Routes: `POST /api/boot-traces`
       - Core:
         - Uses:
           - `fields.FieldsRecord`
@@ -15067,17 +15073,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/json/config.jsonField`
           - `fields/text/config.textField`
           - `fields/uuid/config.uuidField`
-        - Exports (types): `SavedBootTrace`
+          - `network/live.liveCollection`
+          - `network/live/filter.liveInstant`
+          - `network/live/filter.liveText`
+        - Exports (types):
+          - `BootTraceItem`
+          - `SavedBootTrace`
         - Exports (values):
+          - `bootTrace`
+          - `bootTraces`
           - `BootTraceSchema`
           - `savedBootTraceFields`
           - `SavedBootTraceSchema`
       - Cross-plugin:
         - Imported by: `debug/trace/client-boot`
       - Exemptions:
-        - Exempts itself from:
-          - `ids:pk-declared` — `server/internal/tables.ts` (debt)
-          - `live/no-endpoint-read` — `web/components/boot-profile-detail.tsx`, `web/components/boot-profile-list.tsx` (debt)
+        - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - **`boot-watchdog`** — Boot-wedge report renderer: a one-line Debug → Reports summary for the boot-wedge kind, plus the boot-watchdog budget/lookback config registration. Boot-watchdog monitor: a main-only per-minute scheduled job that sweeps every worktree's boot channel off the shared filesystem and files a deduped boot-wedge report for any backend that never reached its `ready` line within the boot budget — superseded (post-hoc, once) or open (gateway-confirmed wedged-now, re-filed each tick). Structurally main-only: a perWorktree job cannot observe its own wedged boot.
       - Web:
         - Contributes:
@@ -19407,6 +19418,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`no-db-backed-notify`**
               - Exemptions:
                 - Exempted by:
+                  - `apps/studio/contributions/tables/columns` (0 debt)
+                  - `apps/studio/contributions/tables/foreign-keys` (0 debt)
+                  - `apps/studio/contributions/tables/indexes` (0 debt)
+                  - `apps/studio/contributions/tables/row-count` (0 debt)
+                  - `apps/studio/contributions/tables/sample-rows` (0 debt)
                   - `conversations/conversation-view/allow-monitor` (1 debt)
                   - `conversations/conversation-view/code` (1 debt)
                   - `conversations/conversation-view/jsonl-viewer` (1 debt)
@@ -20119,44 +20135,40 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`history`** — Umbrella for the reusable version-history primitive: the domain-agnostic versioning engine substrate (more sub-plugins to follow).
   - Plugins:
-    - **`dialog`** — Reusable version-history UI: the useVersionHistory hook and the <VersionHistoryDialog> dialog (preview injected via renderPreview, navigation owned by the host).
+    - **`dialog`** — Reusable version-history UI: the <VersionHistoryDialog> dialog — the timeline as a live DataView with a Restore row action, the active version's preview injected via renderPreview, navigation owned by the host.
       - Web:
-        - Uses:
-          - `infra/endpoints.useEndpoint`
+        - Slots: `item-actions`
+        - Slot contributors: `item-actions` ← `history.dialog`
+        - Contributes: `item-actions` "restore" → `RestoreVersionAction`
+        - Uses: 26 symbols — full list in [`plugins/history/plugins/dialog/REFERENCE.md`](../plugins/history/plugins/dialog/REFERENCE.md)
+          - `primitives/css/ui-kit` ×6
+          - `primitives/data-view` ×6
+          - `network/live` ×2
+          - `primitives/css/spacing` ×2
+          - `primitives/css/text` ×2
           - `infra/endpoints.useEndpointMutation`
           - `primitives/css/column.Column`
           - `primitives/css/placeholder.Placeholder`
-          - `primitives/css/row.Row`
-          - `primitives/css/spacing.Inset`
-          - `primitives/css/spacing.Stack`
-          - `primitives/css/text.SectionLabel`
-          - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.Button`
-          - `primitives/css/ui-kit.Dialog`
-          - `primitives/css/ui-kit.DialogContent`
-          - `primitives/css/ui-kit.DialogDescription`
-          - `primitives/css/ui-kit.DialogTitle`
-          - `primitives/css/ui-kit.ScrollArea`
           - `primitives/css/yield.yieldClass`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `primitives/relative-time.RelativeTime`
           - `shell/notifications.toast`
-        - Exports (types):
-          - `UseVersionHistoryOptions`
-          - `VersionHistoryDialogProps`
-        - Exports (values):
-          - `useVersionHistory`
-          - `VersionHistoryDialog`
+        - Exports (types): `VersionHistoryDialogProps`
+        - Exports (values): `VersionHistoryDialog`
       - Cross-plugin:
         - Imported by: `apps/pages/history`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-version-history.ts` (debt)
-    - **`engine`** — Registers the version id kind (ver) with the web id registry — the server barrel registers the same kind. Domain-agnostic versioning substrate: the entity_versions table, a defineHistorySource registry, time-bucketed recordVersion + deleteVersions, and list/get/restore endpoints.
+    - **`engine`** — Registers the version id kind (ver) with the web id registry — the server barrel registers the same kind. Domain-agnostic versioning substrate: the entity_versions table, a defineHistorySource registry, time-bucketed recordVersion + deleteVersions, the live history.versions timeline and history.version value, and the restore (plus an e2e-only list) endpoints.
       - Web:
         - Contributes: `IdKinds.Kind` "ver"
         - Uses: `ids.IdKinds`
       - Server:
-        - Contributes: `ids.kind` "ver"
+        - Contributes:
+          - `ids.kind` "ver"
+          - `resource.declare` "history.version"
+          - `resource.declare` "history.versions"
+          - `resource.declare` "history.versions:groups"
+          - `resource.declare` "history.versions:rows"
         - Uses:
           - `database.db`
           - `ids.idColumn`
@@ -20164,6 +20176,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/retention.defineRetention`
+          - `network/live.serveCollection`
+          - `network/live.serveValue`
         - DB schema: `plugins/history/plugins/engine/server/internal/tables.ts`
         - Exports (types): `HistorySource`
         - Exports (values):
@@ -20171,21 +20185,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `deleteVersions`
           - `recordVersion`
         - Register: `defineJob('retention.entity_versions')`
+        - Resources:
+          - `history.version` (push)
+          - `history.versions` (keyed, window)
+          - `history.versions:groups` (push)
+          - `history.versions:rows` (keyed, point)
         - Routes:
           - `GET /api/history/:sourceId/:entityId/versions`
-          - `GET /api/history/:sourceId/:entityId/versions/:versionId`
           - `POST /api/history/:sourceId/:entityId/versions/:versionId/restore`
       - Core:
         - Uses:
           - `ids.defineIdKind`
           - `ids.IdOf`
           - `infra/endpoints.defineEndpoint`
+          - `network/live.liveCollection`
+          - `network/live.liveValue`
+          - `network/live/filter.liveText`
         - Exports (types):
           - `Version`
           - `VersionId`
           - `VersionWithSnapshot`
         - Exports (values):
-          - `getVersion`
+          - `historyVersion`
+          - `historyVersions`
           - `listVersions`
           - `restoreVersion`
           - `versionIdKind`
@@ -20345,18 +20367,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runAssetMirrorPrewarm`
           - `seedAssetMirrorCache`
     - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
-      - Web:
-        - Uses: `infra/endpoints.fetchEndpoint`
-        - Exports (types): `UploadedAttachment`
-        - Exports (values):
-          - `getAttachmentFile`
-          - `uploadAttachment`
       - Server:
+        - Contributes: `resource.declare` "attachments.by-owner"
         - Uses:
           - `database.db`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/jobs.defineJob`
+          - `network/live.serveValue`
           - `primitives/log-channels.Log`
         - DB schema:
           - `plugins/infra/plugins/attachments/server/internal/define-link.ts`
@@ -20369,19 +20387,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `deleteAttachment`
           - `getAttachment`
         - Register: `defineJob('attachments.orphan-sweep')`
+        - Resources: `attachments.by-owner` (push, unbounded: one owner's attachments — the files a person attached to one task or block, a handful, never a growing log)
         - Routes:
           - `POST /api/attachments`
           - `GET /api/attachments/:id`
           - `DELETE /api/attachments/:id`
-          - `GET /api/attachments/by/:ownerType/:id`
+      - Web:
+        - Uses: `infra/endpoints.fetchEndpoint`
+        - Exports (types): `UploadedAttachment`
+        - Exports (values):
+          - `getAttachmentFile`
+          - `uploadAttachment`
       - Core:
         - Uses:
           - `infra/endpoints.dateString`
-          - `infra/endpoints.defineEndpoint`
+          - `network/live.liveValue`
         - Exports (types): `Attachment`
         - Exports (values):
+          - `attachmentsByOwner`
           - `AttachmentSchema`
-          - `listAttachmentsEndpoint`
       - Cross-plugin:
         - Imported by:
           - `apps/mail/attachments`
@@ -20639,6 +20663,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "claude-cli-calls"
           - `resource.declare` "claude-cli-calls:groups"
           - `resource.declare` "claude-cli-calls:rows"
+          - `resource.declare` "claude-cli.calls-for"
           - `fork-data-exclusion` "claude_cli_calls"
         - Uses:
           - `conversations/model-provider/catalog.getModelCatalog`
@@ -20648,11 +20673,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/claude-cli/availability.ClaudeCodeUnavailableError`
           - `infra/claude-cli/availability.noteClaudeCodeFailure`
           - `infra/claude-cli/availability.requireClaudeBin`
-          - `infra/endpoints.implement`
           - `infra/entities.defaultNow`
           - `infra/entities.defaultRandom`
           - `infra/entities.defineEntity`
           - `network/live.serveCollection`
+          - `network/live.serveValue`
         - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
         - Exports (types):
           - `RunClaudePrintInput`
@@ -20668,11 +20693,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `claude-cli-calls` (keyed, window)
           - `claude-cli-calls:groups` (push)
           - `claude-cli-calls:rows` (keyed, point)
-        - Routes: `GET /api/claude-cli/calls`
+          - `claude-cli.calls-for` (push)
       - Web:
         - Uses:
           - `conversations/model-provider.familyClass`
-          - `infra/endpoints.useEndpoint`
+          - `network/live.useLive`
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/badge.Badge`
           - `primitives/css/cluster.Cluster`
@@ -20709,8 +20734,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/text/config.parsedTextField`
           - `fields/text/config.textField`
           - `fields/uuid/config.uuidField`
-          - `infra/endpoints.defineEndpoint`
           - `network/live.liveCollection`
+          - `network/live.liveValue`
           - `network/live/filter.liveInstant`
           - `network/live/filter.liveNumber`
           - `network/live/filter.liveText`
@@ -20723,9 +20748,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `claudeCliCallFields`
           - `claudeCliCalls`
           - `ClaudeCliCallSchema`
+          - `claudeCliCallsFor`
           - `ClaudeCliCallsResultSchema`
           - `ClaudeCliCallStatusSchema`
-          - `listClaudeCliCallsFor`
       - Cross-plugin:
         - Imported by:
           - `apps/events/sources/source-detail/runs/model-call`
@@ -20737,9 +20762,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/sidequest-autopilot`
           - `tasks/task-title`
       - Exemptions:
-        - Exempts itself from:
-          - `ids:pk-declared` — `server/internal/tables.ts` (debt)
-          - `live/no-endpoint-read` — `web/internal/use-claude-cli-calls.ts` (debt)
+        - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
       - Plugins:
         - **`availability`** — Claude Code availability, shown: the health report's Claude Code row (critical while the CLI is missing or signed out, with the install / sign-in commands and Check again), useClaudeCodeLaunchBlock() for launch controls to disable themselves with the fix, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the user's Claude Code CLI is installed and signed in (`claude --version` + `claude auth status --json`, under the agent panes' host env), serves it as the claude-code-status push resource and POST /api/claude-code/recheck, and gives every launch path assertClaudeCodeReady() and requireClaudeBin() — so an agent that cannot run is refused up front with the fix, never started as `command not found`. onClaudeCodeProbed hands every fresh answer to work keyed off the installed CLI's version.
           - Web:
@@ -21109,32 +21132,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isCodec`
           - `multipart`
       - Cross-plugin:
-        - Imported by: 226 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×59
+        - Imported by: 210 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×51
           - `conversations` ×26
           - `debug` ×25
-          - `infra` ×17
-          - `tasks` ×17
+          - `infra` ×16
           - `page` ×14
+          - `tasks` ×13
           - `primitives` ×12
-          - `build` ×9
+          - `build` ×8
           - `ui` ×6
           - `auth` ×5
-          - `code-explorer` ×4
           - `plugin-meta` ×4
           - `stats` ×4
           - `active-data` ×3
           - `apps-core` ×3
+          - `code-explorer` ×3
           - `reports` ×3
           - `config_v2` ×2
           - `history` ×2
           - `integrations` ×2
           - `review` ×2
-          - `search` ×2
           - `backup`
           - `database/fork`
           - `release`
           - `screenshot`
+          - `search/engine`
           - `shell/notifications`
       - Exemptions:
         - Exempts itself from:
@@ -21496,7 +21519,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `sanitizeChannel`
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope.
       - Cross-plugin:
-        - Imported by: 21 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+        - Imported by: 22 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
           - `infra` ×6
           - `conversations` ×5
           - `apps` ×2
@@ -21506,6 +21529,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/await`
           - `integrations/google-maps`
           - `plugin-meta/plugin-tree`
+          - `release`
           - `reports/outbox`
       - Exemptions:
         - Exempts itself from:
@@ -21861,11 +21885,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/op-status`
               - `debug/health-monitor`
               - `debug/profiling/ops`
-    - **`host-account`** — Host account, read: useHostAccount() — the OS account this backend runs as (login name and full name), loading until the value arrives. Host account: serves the host-account value — the OS account this backend runs as (login name, and its full name read once through spawnCaptured: macOS `id -F`, the passwd GECOS field elsewhere).
+    - **`host-account`** — Host account, read: useHostAccount() — the OS account this backend runs as (login name and full name), loading until its value arrives. Its home directory is the hostHome value (core), read with useLive. Host account: serves the host-account value — the OS account this backend runs as (login name, and its full name read once through spawnCaptured: macOS `id -F`, the passwd GECOS field elsewhere) — and its sibling host-account.home, the account's home directory.
       - Server:
-        - Contributes: `resource.declare` "host-account"
-        - Uses: `network/live.serveValue`
-        - Resources: `host-account` (push, fixed)
+        - Contributes:
+          - `resource.declare` "host-account"
+          - `resource.declare` "host-account.home"
+        - Uses:
+          - `infra/paths.HOME_DIR`
+          - `network/live.serveValue`
+        - Resources:
+          - `host-account` (push, fixed)
+          - `host-account.home` (push, fixed)
       - Web:
         - Uses: `network/live.useLive`
         - Exports (values): `useHostAccount`
@@ -21877,6 +21907,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `accountInitial`
           - `hostAccount`
           - `HostAccountSchema`
+          - `hostHome`
       - Cross-plugin:
         - Imported by: `apps/pages/shell`
     - **`host-fs`** — The one host-filesystem API: list / peek / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), and POST open (Open with default app, Reveal in Finder) refused unless the Origin is the app's own *.localhost.
@@ -22574,10 +22605,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 54 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 55 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `debug` ×10
+          - `infra` ×8
           - `build` ×7
-          - `infra` ×7
           - `backup` ×4
           - `conversations` ×4
           - `framework` ×4
@@ -24129,20 +24160,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveValue`
           - `scopedLiveColumns`
       - Cross-plugin:
-        - Imported by: 181 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×51
+        - Imported by: 199 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×58
           - `conversations` ×35
-          - `tasks` ×24
+          - `tasks` ×26
           - `active-data` ×11
-          - `infra` ×10
+          - `infra` ×11
           - `page` ×10
-          - `debug` ×8
+          - `debug` ×9
           - `build` ×6
           - `primitives` ×5
           - `auth` ×3
+          - `code-explorer` ×3
           - `review` ×3
           - `config_v2` ×2
+          - `history` ×2
           - `release` ×2
+          - `search` ×2
           - `apps-core/app-usage`
           - `backup/runs-arm`
           - `database/query-deadline`
@@ -24162,34 +24196,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/plugin-link` (2 debt)
           - `apps-core/surface/floating/wallpaper` (1 debt)
           - `apps/deploy/analytics/dashboard` (1 debt)
-          - `apps/events/events-core` (1 debt)
           - `apps/file-explorer/browser` (4 debt)
           - `apps/file-explorer/git` (1 debt)
           - `apps/file-explorer/places` (2 debt)
           - `apps/mail/reading-pane` (1 debt)
           - `apps/mail/search` (1 debt)
-          - `apps/pages/history` (1 debt)
-          - `apps/pages/page-tree` (1 debt)
           - `apps/studio/compositions/closure-tree` (1 debt)
-          - `apps/studio/compositions/release/release-logs` (1 debt)
           - `apps/studio/contributions` (1 debt)
-          - `apps/studio/contributions/tables/columns` (1 debt)
-          - `apps/studio/contributions/tables/foreign-keys` (1 debt)
-          - `apps/studio/contributions/tables/indexes` (1 debt)
-          - `apps/studio/contributions/tables/row-count` (1 debt)
-          - `apps/studio/contributions/tables/sample-rows` (1 debt)
           - `apps/studio/explorer` (1 debt)
           - `build/build-commits` (1 debt)
           - `build/build-fix` (1 debt)
           - `build/build-info` (1 debt)
           - `build/build-logs` (1 debt)
           - `build/build-profiling` (1 debt)
-          - `build/deployment` (1 debt)
           - `build/serve-composition` (1 debt)
-          - `code-explorer/commit-detail` (2 debt)
           - `code-explorer/file-resolve` (1 debt)
           - `config_v2/settings` (4 debt)
-          - `debug/boot-profile` (2 debt)
           - `debug/broadcasts` (1 debt)
           - `debug/config-orphans` (2 debt)
           - `debug/health-monitor` (1 debt)
@@ -24210,8 +24232,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/central-core` (0 debt)
           - `framework/resource-runtime` (0 debt)
           - `framework/server-core` (0 debt)
-          - `history/dialog` (1 debt)
-          - `infra/claude-cli` (1 debt)
           - `infra/endpoints` (0 debt)
           - `infra/events-test` (1 debt)
           - `infra/query-resource` (0 debt)
@@ -24232,15 +24252,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/code-review` (1 debt)
           - `review/plugin-changes` (1 debt)
           - `screenshot` (1 debt)
-          - `search/quick-find` (1 debt)
           - `stats/commits` (4 debt)
           - `stats/cost` (8 debt)
           - `stats/pushes` (3 debt)
           - `stats/tasks` (2 debt)
-          - `tasks/reports-investigation` (1 debt)
-          - `tasks/task-attachments` (1 debt)
-          - `tasks/task-category` (1 debt)
-          - `tasks/task-events` (1 debt)
           - `ui/icons/sprites` (1 debt)
           - `ui/theme-engine/saved-themes` (2 debt)
           - `ui/tweakcn/community-browser` (1 debt)
@@ -24264,15 +24279,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
           - Cross-plugin:
-            - Imported by: 29 plugins — full list in [`plugins/network/plugins/live/plugins/filter/REFERENCE.md`](../plugins/network/plugins/live/plugins/filter/REFERENCE.md)
+            - Imported by: 31 plugins — full list in [`plugins/network/plugins/live/plugins/filter/REFERENCE.md`](../plugins/network/plugins/live/plugins/filter/REFERENCE.md)
               - `apps` ×10
               - `infra` ×4
               - `conversations` ×3
+              - `debug` ×2
               - `release` ×2
               - `tasks` ×2
               - `backup/runs-arm`
               - `build/runs-arm`
-              - `debug/profiling/op-log/op-store`
+              - `history/engine`
               - `network/live`
               - `primitives/usage-rank`
               - `reports`
@@ -25330,6 +25346,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `ids.kind` "block"
           - `resource.declare` "page-blocks"
+          - `resource.declare` "page.block-locations:rows"
           - `resource.declare` "pages.tree"
           - `resource.declare` "pages.tree:rows"
           - `derived-table` "page_content_edited_at"
@@ -25403,6 +25420,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineTrashSource('page-blocks')`
         - Resources:
           - `page-blocks` (push, unbounded: one page's content forest — the reducer, the optimistic overlay and document order need every block of the page, never a window)
+          - `page.block-locations:rows` (keyed, point)
           - `pages.tree` (keyed)
           - `pages.tree:rows` (keyed, point)
         - Routes:
@@ -25446,6 +25464,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BlockDiff`
           - `BlockFieldChanges`
           - `BlockHandle`
+          - `BlockLocation`
           - `BlockMarkdown`
           - `BlockNode`
           - `BlockOp`
@@ -25500,6 +25519,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `blockAuthorOf`
           - `BlockFieldChangesSchema`
           - `blockIdKind`
+          - `blockLocations`
+          - `BlockLocationSchema`
           - `blockOpContextOf`
           - `BlockOpSchema`
           - `BlockPageSchema`
@@ -29102,8 +29123,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `PlaceholderProps`
             - Exports (values): `Placeholder`
           - Cross-plugin:
-            - Imported by: 87 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
-              - `apps` ×31
+            - Imported by: 83 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
+              - `apps` ×27
               - `debug` ×19
               - `primitives` ×12
               - `page` ×7
@@ -29204,7 +29225,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Row`
               - `SectionHeaderRow`
           - Cross-plugin:
-            - Imported by: 62 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
+            - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
               - `apps` ×15
               - `ui` ×11
               - `page` ×9
@@ -29215,7 +29236,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `code-explorer/file-resolve`
               - `config_v2/settings`
               - `debug/trace/pane`
-              - `history/dialog`
               - `reorder/editor`
               - `search/quick-find`
               - `shell/health-report`
@@ -29309,8 +29329,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 387 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×97
+            - Imported by: 388 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×98
               - `conversations` ×61
               - `primitives` ×50
               - `debug` ×34
@@ -29501,7 +29521,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 358 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 357 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×93
               - `conversations` ×70
               - `primitives` ×40
@@ -29509,7 +29529,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×21
               - `plugin-meta` ×14
               - `ui` ×14
-              - `tasks` ×13
+              - `tasks` ×12
               - `fields` ×8
               - `apps-core` ×6
               - `stats` ×6
@@ -29755,9 +29775,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 395 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 396 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×101
-              - `apps` ×75
+              - `apps` ×76
               - `conversations` ×52
               - `page` ×25
               - `ui` ×23
@@ -29949,8 +29969,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 60 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×52
+        - Contributes: 61 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×53
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
@@ -30125,8 +30145,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowFilter`
           - `useSortController`
       - Server:
-        - Contributes: 54 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×52
+        - Contributes: 55 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×53
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -30249,7 +30269,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `splitFieldSections`
           - `UNGROUPED_FOLD_KEY`
       - Cross-plugin:
-        - Imported by: 81 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 82 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×28
           - `apps` ×19
           - `debug` ×9
@@ -30259,6 +30279,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra` ×2
           - `apps-core/app-launcher`
           - `config_v2/settings`
+          - `history/dialog`
           - `page/links`
           - `runs`
           - `ui/theme-engine/theme-gallery`
@@ -31617,8 +31638,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 200 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×51
+        - Imported by: 208 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×57
           - `conversations` ×38
           - `ui` ×22
           - `tasks` ×20
@@ -31634,10 +31655,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2` ×2
           - `integrations` ×2
           - `reports` ×2
-          - `code-explorer/code-api`
+          - `code-explorer/commit-detail`
           - `fields/secret/config`
           - `framework/web-core`
+          - `history/dialog`
           - `network/live`
+          - `search/quick-find`
           - `shell/notifications`
       - Exemptions:
         - Exempts itself from:
@@ -31690,13 +31713,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LoadingVariant`
         - Exports (values): `Loading`
       - Cross-plugin:
-        - Imported by: 180 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×59
+        - Imported by: 182 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×60
           - `ui` ×19
           - `primitives` ×17
           - `conversations` ×16
           - `debug` ×14
-          - `tasks` ×12
+          - `tasks` ×13
           - `page` ×8
           - `build` ×4
           - `plugin-meta` ×4
@@ -34239,8 +34262,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resource.declare` "release.history:groups"
       - `resource.declare` "release.history:rows"
       - `resource.declare` "release.previews"
+      - `resource.declare` "release.run-logs"
       - `resource.declare` "release.runs:rows"
-    - Uses: 25 symbols — full list in [`plugins/release/REFERENCE.md`](../plugins/release/REFERENCE.md)
+    - Uses: 26 symbols — full list in [`plugins/release/REFERENCE.md`](../plugins/release/REFERENCE.md)
       - `release/bundles` ×6
       - `infra/jobs/supervised-job` ×3
       - `ids` ×2
@@ -34250,6 +34274,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `network/live` ×2
       - `database/sql-column.parsedText`
       - `database.db`
+      - `infra/file-watcher.acquireDirWatch`
       - `infra/git/git-read-cache.createSignedMemo`
       - `infra/git/git-watcher.refHeadServed`
       - `infra/spawn/daemon.defineDaemon`
@@ -34273,12 +34298,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `release.history:groups` (push)
       - `release.history:rows` (keyed, point)
       - `release.previews` (push, notified)
+      - `release.run-logs` (push, notified)
       - `release.runs:rows` (keyed, point)
     - Routes:
       - `POST /api/release`
       - `POST /api/release/runs/:id/preview`
       - `POST /api/release/runs/:id/preview/stop`
-      - `GET /api/release/runs/:id/logs`
   - Core:
     - Uses:
       - `infra/endpoints.defineEndpoint`
@@ -34316,9 +34341,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReleaseCandidateSchema`
       - `releaseHistory`
       - `ReleaseIntentSchema`
-      - `releaseLogsEndpoint`
       - `ReleaseLogsResponseSchema`
       - `releasePreviews`
+      - `releaseRunLogs`
       - `releaseRuns`
       - `ReleaseRunSchema`
       - `releaseTargetById`
@@ -34416,8 +34441,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 240 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×240
+    - Contributes: 241 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×241
     - Uses: 21 symbols — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
       - `reorder/editor` ×5
       - `config_v2` ×3
@@ -34442,8 +34467,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 239 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×239
+    - Contributes: 240 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×240
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -35448,34 +35473,43 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`search`** — Umbrella for the reusable full-text search primitive: the indexed search engine substrate and the reusable quick-find UI.
   - Plugins:
-    - **`engine`** — Domain-agnostic indexed full-text search substrate: search_documents table (tsvector GIN), generic index API, and the GET /api/search endpoint.
+    - **`engine`** — Domain-agnostic indexed full-text search substrate: search_documents table (tsvector GIN), generic index API, the live search.results typed-query value, and the GET /api/search endpoint.
       - Server:
+        - Contributes: `resource.declare` "search.results"
         - Uses:
           - `database.db`
           - `database/sql-column.parsedJson`
           - `infra/endpoints.implement`
+          - `network/live.serveValue`
         - DB schema: `plugins/search/plugins/engine/server/internal/tables.ts`
         - Exports (values):
           - `deleteSearchDocs`
           - `deleteSource`
           - `getSourceDocMetadata`
           - `upsertSearchDocs`
+        - Resources: `search.results` (push, unbounded: the 30 best-ranked hits of one question (LIMIT 30 in the search))
         - Routes: `GET /api/search`
       - Core:
-        - Uses: `infra/endpoints.defineEndpoint`
+        - Uses:
+          - `infra/endpoints.defineEndpoint`
+          - `network/live.liveValue`
         - Exports (types):
           - `SearchDoc`
+          - `SearchQuery`
           - `SearchResult`
         - Exports (values):
+          - `SEARCH_QUERY_MAX`
           - `SearchDocSchema`
           - `searchEndpoint`
+          - `SearchQuerySchema`
+          - `searchResults`
           - `SearchResultSchema`
       - Cross-plugin:
         - Imported by: `apps/pages/content-search`
     - **`quick-find`** — Reusable quick-find search UI: the debounced useSearch hook and the <QuickFindDialog> dialog (navigation injected via onSelect).
       - Web:
         - Uses:
-          - `infra/endpoints.useEndpoint`
+          - `network/live.useLive`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/row.Row`
           - `primitives/css/spacing.Stack`
@@ -35485,6 +35519,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.ScrollArea`
           - `primitives/css/yield.yieldClass`
           - `primitives/dom/scroll-reveal.revealElement`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `primitives/search.SearchInput`
         - Exports (types):
@@ -35495,8 +35531,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSearch`
       - Cross-plugin:
         - Imported by: `apps/pages/content-search`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-search.ts` (debt)
 
 - **`shell`** — Foundational app layout; defines the slots and commands most other plugins extend.
   - Web:
@@ -36079,23 +36113,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getTasksDaily`
 
 - **`tasks`** — Nested tasks with attempts linking to conversations.
-  - Web:
-    - Uses:
-      - `infra/endpoints.fetchEndpoint`
-      - `network/live.useLive`
-      - `primitives/live-state.mapResource`
-      - `primitives/live-state.ResourceResult`
-    - Exports (types):
-      - `AutoStartModel`
-      - `TaskPatch`
-    - Exports (values):
-      - `patchTask`
-      - `setAutoStart`
-      - `useActiveDependentCount`
-      - `useTask`
-      - `useTasksById`
   - Server:
-    - Uses: 40 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
+    - Contributes: `resource.declare` "tasks.repo-info"
+    - Uses: 41 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
       - `tasks/tasks-core` ×15
       - `conversations` ×2
       - `infra/claude-cli/availability` ×2
@@ -36112,12 +36132,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/paths.GIT`
       - `infra/warmup.defineWarmup`
       - `infra/worktree.ensureMainWorktreeRoot`
+      - `network/live.serveValue`
       - `tasks/task-category.setTaskCategory`
       - `tasks/task-source-url.setTaskSourceUrl`
     - Exports (values): `armTaskAutoStart`
     - Register:
       - `mcpTool('add_task')`
       - `defineWarmup('tasks.auto-start-reconcile')`
+    - Resources: `tasks.repo-info` (invalidate, snapshot)
     - Routes:
       - `GET /api/tasks`
       - `POST /api/tasks`
@@ -36132,12 +36154,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `POST /api/tasks/:id/dependencies`
       - `DELETE /api/tasks/:id/dependencies/:depId`
       - `POST /api/tasks/:id/deps-move`
-      - `GET /api/repo-info`
+  - Web:
+    - Uses:
+      - `infra/endpoints.fetchEndpoint`
+      - `network/live.useLive`
+      - `primitives/live-state.mapResource`
+      - `primitives/live-state.ResourceResult`
+    - Exports (types):
+      - `AutoStartModel`
+      - `TaskPatch`
+    - Exports (values):
+      - `patchTask`
+      - `setAutoStart`
+      - `useActiveDependentCount`
+      - `useTask`
+      - `useTasksById`
   - Core:
     - Uses:
       - `conversations/model-provider.ModelChoiceSchema`
       - `infra/endpoints.dateString`
       - `infra/endpoints.defineEndpoint`
+      - `network/live.liveValue`
       - `tasks/tasks-core.ConversationSchema`
     - Exports (types):
       - `AddDependencyBody`
@@ -36163,7 +36200,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `CreateTaskBodySchema`
       - `createTaskChain`
       - `DepsMoveBodySchema`
-      - `getRepoInfo`
       - `getTask`
       - `InsertBetweenBodySchema`
       - `insertTaskBetween`
@@ -36175,6 +36211,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `MoveTaskBodySchema`
       - `moveTaskInDepsTree`
       - `removeTaskDependency`
+      - `repoInfo`
       - `SetAutoStartBodySchema`
       - `setTaskAutoStart`
       - `TaskChainCardSchema`
@@ -36703,10 +36740,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `config_v2.useConfigResult`
           - `config_v2.useSetConfig`
-          - `infra/endpoints.useEndpoint`
+          - `network/live.useLive`
           - `primitives/css/control-panel.ControlPanel`
           - `primitives/css/control-panel.ControlPanelPane`
-          - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Input`
           - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
@@ -36716,8 +36752,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `taskCategory` "reports"
           - `ConfigV2.Register` "report-investigations"
+          - `resource.declare` "report-investigations.scope"
         - Uses:
-          - `infra/endpoints.implement`
+          - `network/live.serveValue`
           - `reports.linkReportsToTask`
           - `reports.renderReportTask`
           - `reports.reportInvestigationSink`
@@ -36733,9 +36770,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core.createTask`
           - `tasks/tasks-core.getTask`
         - Register: `defineAutomation('report-investigations')`
-        - Routes: `GET /api/report-investigations/scope`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/components/report-scope-section.tsx` (debt)
+        - Resources: `report-investigations.scope` (push)
     - **`sidequest-autopilot`** — The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, in total, push policy, model, prompt, triage, stale after, triage prompt) and contributes its sections — Launch list (a DataView of every ready sidequest in launch order, grouped Approved / Proposed by triage / Needs your call / Looks obsolete / Triaging / Excluded; each row expands to triage's context, its one-click question and Re-triage; triage may tick a row, only Approve selected approves), Run until (until you turn it off, or until a date and time after which it turns itself off) and Triage (the switch, stale after, the triage prompt). Declares the Sidequest autopilot automation (launch kind, off by default): while on, it starts agents on the ready sidequests (no attempt, not held, dropped or blocked) a person APPROVED in its launch list — best first by triage's value for size, `concurrency` at a time (default 2), at most `maxLaunches` per turn-on (default 5) — each with the autopilot prompt (triage's context and the person's answer included; never ask, check obsolescence first, stay in scope, push only what the push policy allows, finish with submit_outcome_report). Triage (on by default, main only): each ready sidequest is read once by a read-only Sonnet run (Read / Grep / Glob over the main checkout) — verdict ready / decide / split / obsolete, risk, size, value, areas, a free-form context and at most one one-click question — stored in tasks_ext_sidequest_triage and served as sidequest-autopilot.triage; queued when a task becomes a sidequest or a sidequest becomes ready, backfilled at boot, re-run only by the person's Re-triage. Triage approves nothing. Turns itself off at its `runUntil`.
       - Web:
         - Contributes:
@@ -36813,23 +36848,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Attachments" → `TaskAttachments`
         - Uses:
-          - `infra/endpoints.useEndpoint`
+          - `network/live.useLive`
           - `primitives/css/row.Row`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/loading.Loading`
           - `primitives/overlay/image-viewer.ImageGallery`
           - `primitives/overlay/image-viewer.ViewerThumbnail`
           - `tasks/task-detail.TaskDetailSlots`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/components/task-attachments.tsx` (debt)
-    - **`task-category`** — Per-task category (registry-driven, system-set only): contributes the `category` enum field into the tasks DataView so the task list can group by it. Owns the tasks_ext_category side-table: the per-task category (registry-driven via the TaskCategory contribution, system-set only), its live collection (the whole ordered set, routed and L2-persisted), and the category-list endpoint.
+    - **`task-category`** — Per-task category (registry-driven, system-set only): contributes the `category` enum field into the tasks DataView so the task list can group by it. Owns the tasks_ext_category side-table: the per-task category (registry-driven via the TaskCategory contribution, system-set only), its live collection (the whole ordered set, routed and L2-persisted), and the live category registry (fixed per process).
       - Web:
         - Contributes: `Tasks.Fields` "category" → `CategoryField`
         - Uses:
           - `network/live.useLive`
-          - `primitives/live-state.mapResource`
-          - `primitives/live-state.ResourceResult`
-          - `primitives/live-state.useEndpointResource`
           - `tasks/task-list.Tasks`
         - Exports (types): `TaskCategoryMap`
         - Exports (values):
@@ -36839,12 +36872,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `resource.declare` "task-categories"
           - `resource.declare` "task-categories:rows"
+          - `resource.declare` "task-category.registry"
         - Uses:
           - `database.db`
           - `database.DbExecutor`
-          - `infra/endpoints.implement`
           - `infra/entity-extensions.defineExtension`
           - `network/live.serveCollection`
+          - `network/live.serveValue`
           - `tasks/tasks-core._tasks`
         - DB schema: `plugins/tasks/plugins/task-category/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `tasks_ext_category`)
@@ -36856,13 +36890,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources:
           - `task-categories` (keyed)
           - `task-categories:rows` (keyed, point)
-        - Routes: `GET /api/tasks/categories`
-      - Core:
-        - Uses: `infra/endpoints.defineEndpoint`
-        - Exports (types): `TaskCategoryDef`
-        - Exports (values):
-          - `listTaskCategories`
-          - `TaskCategoryDefSchema`
+          - `task-category.registry` (push, fixed)
       - Cross-plugin:
         - Imported by:
           - `apps/deploy`
@@ -36881,8 +36909,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/reports-investigation`
           - `tasks/task-dependencies`
           - `toolchain`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/hooks.ts` (debt)
+      - Core:
+        - Exports (types): `TaskCategoryDef`
+        - Exports (values): `TaskCategoryDefSchema`
     - **`task-dependencies`** — Both ends of the task's dependency edges in one card: the tasks it runs after and the tasks it blocks, as removable chips, with prerequisite / follow-up add affordances (and a quick-add for the folder task when applicable) in the header.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Dependencies" → `TaskDependencies`
@@ -37128,7 +37157,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `conversations/conversation-ui/row.ConversationRow`
           - `conversations/conversation-view.useConversationOpener`
-          - `infra/endpoints.useEndpoint`
           - `network/live.useLive`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
@@ -37145,8 +37173,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/tasks-core.useTaskAttempts`
           - `ui/icons.Icon`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/components/task-events.tsx` (debt)
     - **`task-graph`** — Renders the dependency-DAG as a card at the foot of a task's detail when the task has dependents or dependencies.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Graph" → `TaskGraph`

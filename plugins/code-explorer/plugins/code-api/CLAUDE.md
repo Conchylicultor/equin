@@ -1,7 +1,9 @@
 # code-api
 
 Typed `defineEndpoint` contracts for the worktree code endpoints (`/api/code/*`:
-file, diff, image, push, commit).
+file, diff, image, push), and the live values the code reads have moved onto
+(`commit-values.ts`: `code.commit-info` / `code.commit-files`, served by
+`code-explorer`).
 
 These contracts live in their own leaf library plugin (no contributions) so both
 sides of the code-viewing relationship can depend on them **downward**, without a
@@ -28,13 +30,16 @@ on the endpoints primitive and `EditedFileSchema` (a pure schema sink in the
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
     - `infra/endpoints.interpolatePath`
+    - `network/live.liveValue`
     - `primitives/commit-list.CommitRowSchema`
-    - `primitives/live-state.resolvableSchema`
-  - Exports (types): `CodeDirEntry`
+  - Exports (types):
+    - `CodeDirEntry`
+    - `CommitFiles`
   - Exports (values):
     - `codeImageUrl`
-    - `getCommitFiles`
-    - `getCommitInfo`
+    - `commitFiles`
+    - `CommitFilesSchema`
+    - `commitInfo`
     - `getFileContent`
     - `getFileDiff`
     - `getImageContent`

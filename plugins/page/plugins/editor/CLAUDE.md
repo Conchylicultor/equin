@@ -105,8 +105,16 @@ schema's `RankSchema` fails the load or refill, so the whole tuple errors
 loudly (the sidebar shows the error) rather than one row sorting anywhere. Readers:
 `useLive(pagesTree)` where they need the whole set (sidebar, `usePageOptions`,
 breadcrumb, delete-action ancestry, Recent pages), `useLiveRow(pagesTree, id)`
-for one page (header, cover, kind control, pane resolvers and titles,
-`useBlockTarget`, the link block, the inline node and the page chips).
+for one page (header, cover, kind control, pane resolvers and titles, the
+link block, the inline node and the page chips).
+
+**`blockLocations`** (`page.block-locations`, lookup-only `:rows`) is the
+reverse lookup `pagesTree` cannot answer: any live block's `{ id, type, pageId }`,
+content blocks included, served over `page_blocks` with `deleted_at IS NULL` as
+its base membership. `useBlockTarget` (page-tree) resolves a bare block id
+through it; only the projected columns route, so a content edit reaches no
+reader. `GET /api/blocks/:id/page` (`getBlockPage`) answers the same question
+over plain HTTP for the page-link e2e script only.
 
 - **Order is `createdAt` because it never moves**: a `doc_rank` re-mint is then
   an in-place refill of the re-minted rows, never an `orderOf`. A surface that
@@ -4516,6 +4524,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
   - Contributes:
     - `ids.kind` "block"
     - `resource.declare` "page-blocks"
+    - `resource.declare` "page.block-locations:rows"
     - `resource.declare` "pages.tree"
     - `resource.declare` "pages.tree:rows"
     - `derived-table` "page_content_edited_at"
@@ -4589,6 +4598,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `defineTrashSource('page-blocks')`
   - Resources:
     - `page-blocks` (push, unbounded: one page's content forest — the reducer, the optimistic overlay and document order need every block of the page, never a window)
+    - `page.block-locations:rows` (keyed, point)
     - `pages.tree` (keyed)
     - `pages.tree:rows` (keyed, point)
   - Routes:
@@ -4632,6 +4642,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `BlockDiff`
     - `BlockFieldChanges`
     - `BlockHandle`
+    - `BlockLocation`
     - `BlockMarkdown`
     - `BlockNode`
     - `BlockOp`
@@ -4686,6 +4697,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `blockAuthorOf`
     - `BlockFieldChangesSchema`
     - `blockIdKind`
+    - `blockLocations`
+    - `BlockLocationSchema`
     - `blockOpContextOf`
     - `BlockOpSchema`
     - `BlockPageSchema`

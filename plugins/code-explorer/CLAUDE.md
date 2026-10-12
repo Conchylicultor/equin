@@ -15,6 +15,9 @@ commit-diff pane in `commit-detail`, fuzzy path resolution in `file-resolve`.
 
 - Description: Worktree-scoped file reads: raw/diff/image content and directory listings by attempt id or the reserved `main` sentinel.
 - Server:
+  - Contributes:
+    - `resource.declare` "code.commit-files"
+    - `resource.declare` "code.commit-info"
   - Uses:
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
@@ -23,6 +26,7 @@ commit-diff pane in `commit-detail`, fuzzy path resolution in `file-resolve`.
     - `infra/paths.GIT`
     - `infra/paths.REPO_ROOT`
     - `infra/worktree.ensureMainWorktreeRoot`
+    - `network/live.serveValue`
     - `primitives/commit-list.LOG_FORMAT`
     - `primitives/commit-list.parseDiffNameStatusZ`
     - `primitives/commit-list.parseDiffNumstatZ`
@@ -34,6 +38,9 @@ commit-diff pane in `commit-detail`, fuzzy path resolution in `file-resolve`.
     - `getRangeFiles`
     - `resolveParentSha`
     - `resolveWorktreePath`
+  - Resources:
+    - `code.commit-files` (push, immutable)
+    - `code.commit-info` (push, immutable)
 - Cross-plugin:
   - Imported by:
     - `code-explorer/file-resolve`

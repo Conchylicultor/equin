@@ -4,7 +4,6 @@ import {
   deleteEventSource,
   getEventSource,
   listEventSources,
-  listRunEvents,
   refreshAllEventSources,
   refreshEventSourceNow,
   updateEventSource,
@@ -13,7 +12,6 @@ import {
   handleCreateSource,
   handleDeleteSource,
   handleGetSource,
-  handleListRunEvents,
   handleListSources,
   handleRefreshAll,
   handleRefreshSource,
@@ -22,6 +20,7 @@ import {
 import {
   eventSourceRunsServed,
   eventSourcesServed,
+  runEventsServed,
 } from "./internal/resources";
 import { IdKinds } from "@plugins/ids/server";
 import { eventSourceIdKind, eventIdKind, eventRunIdKind } from "../core";
@@ -85,7 +84,6 @@ export default {
     [deleteEventSource.route]: handleDeleteSource,
     [refreshEventSourceNow.route]: handleRefreshSource,
     [refreshAllEventSources.route]: handleRefreshAll,
-    [listRunEvents.route]: handleListRunEvents,
   },
   contributions: [
     IdKinds.Kind({ kind: eventSourceIdKind }),
@@ -93,5 +91,6 @@ export default {
     IdKinds.Kind({ kind: eventRunIdKind }),
     ...eventSourcesServed.declare,
     ...eventSourceRunsServed.declare,
+    ...runEventsServed.declare,
   ],
 } satisfies ServerPluginDefinition;

@@ -15,7 +15,11 @@ import { handleTurnIntoPage } from "./internal/handle-turn-into-page";
 import { handleSetPageKind } from "./internal/handle-set-page-kind";
 import { handleApplyBlockOp } from "./internal/handle-apply-block-op";
 import { handlePatchBlocks } from "./internal/handle-patch-blocks";
-import { pagesTreeServed, pageBlocksServed } from "./internal/resources";
+import {
+  blockLocationsServed,
+  pagesTreeServed,
+  pageBlocksServed,
+} from "./internal/resources";
 import { pageContentEditedAt } from "./internal/rollup-spec";
 import {
   restoreTrashedBlocks,
@@ -159,6 +163,7 @@ export default {
   contributions: [
     IdKinds.Kind({ kind: blockIdKind }),
     ...pagesTreeServed.declare,
+    ...blockLocationsServed.declare,
     ...pageBlocksServed.declare,
     // The per-page content edit time `pagesTree`'s `editedAt` reads.
     DerivedTable(pageContentEditedAt),

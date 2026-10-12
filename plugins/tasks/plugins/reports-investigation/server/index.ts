@@ -2,13 +2,12 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { automationConfigRegistration } from "@plugins/tasks/plugins/automations/server";
 import { reportInvestigationsConfig } from "../shared/config";
-import { getReportScope } from "../shared/endpoints";
 import {
   REPORTS_CATEGORY_ID,
   registerReportsInvestigation,
 } from "./internal/register";
 import { reportInvestigationsAutomation } from "./internal/automation";
-import { handleGetReportScope } from "./internal/handle-scope";
+import { reportInvestigationsScopeServed } from "./internal/scope";
 
 export default {
   description:
@@ -16,10 +15,8 @@ export default {
   contributions: [
     TaskCategory({ id: REPORTS_CATEGORY_ID, label: "Reports", order: 4 }),
     automationConfigRegistration(reportInvestigationsConfig),
+    ...reportInvestigationsScopeServed.declare,
   ],
-  httpRoutes: {
-    [getReportScope.route]: handleGetReportScope,
-  },
   register: [reportInvestigationsAutomation],
   onReady: () => {
     registerReportsInvestigation(() => reportInvestigationsAutomation.fire());

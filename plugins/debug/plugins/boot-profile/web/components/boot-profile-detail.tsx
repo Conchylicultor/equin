@@ -1,24 +1,27 @@
 import { type ReactElement } from "react";
-import {
-  useEndpoint,
-  getEndpointErrorMessage,
-  EndpointError,
-} from "@plugins/infra/plugins/endpoints/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { getSavedBootTrace } from "../../shared/endpoints";
+import { bootTrace } from "../../core";
 import { BootProfileGantt } from "./boot-profile-gantt";
 
-// Detail render of a saved snapshot. Loads the full blob by id, then paints it
+// The `id` column is a uuid. A non-uuid id (a hand-typed or stale URL) can name
+// no row — and would make the point read a Postgres cast error — so it is read
+// as nothing: the same graceful not-found as an unknown-but-valid uuid.
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Detail render of a saved snapshot. Reads the full blob by id, then paints it
 // through the SAME pure Gantt as the live capture, with a read-only banner in
 // place of the live controls.
 export function BootProfileDetail({ id }: { id: string }): ReactElement {
-  const { data, error, isLoading } = useEndpoint(getSavedBootTrace, { id });
+  const result = useLiveRow(bootTrace, UUID_RE.test(id) ? id : null);
 
-  if (isLoading) {
+  if (result.status === "loading") {
     return (
       <Center axis="both" className="h-full">
         <Loading />
@@ -26,28 +29,30 @@ export function BootProfileDetail({ id }: { id: string }): ReactElement {
     );
   }
 
-  if (error) {
-    // A 404 (unknown id) is the common case — render a graceful not-found state
-    // rather than the generic error surface.
-    const notFound = error instanceof EndpointError && error.status === 404;
+  if (result.status === "error") {
     return (
       <Center axis="both" className="h-full p-2xl text-center">
-        <Placeholder tone={notFound ? "muted" : "error"}>
-          {notFound
-            ? `No saved boot trace with id "${id}".`
-            : getEndpointErrorMessage(error)}
+        <ResourceErrorInline
+          variant="block"
+          subject="the boot trace"
+          error={result.error}
+          refetch={result.refetch}
+        />
+      </Center>
+    );
+  }
+
+  if (!result.found) {
+    return (
+      <Center axis="both" className="h-full p-2xl text-center">
+        <Placeholder tone="muted">
+          {`No saved boot trace with id "${id}".`}
         </Placeholder>
       </Center>
     );
   }
 
-  if (!data) {
-    return (
-      <Center axis="both" className="h-full">
-        <Loading />
-      </Center>
-    );
-  }
+  const data = result.row;
 
   const banner = (
     // eslint-disable-next-line layout/no-adhoc-layout -- banner strip mirrors the live header strip
@@ -58,7 +63,11 @@ export function BootProfileDetail({ id }: { id: string }): ReactElement {
       <Text as="span" variant="caption" className="text-muted-foreground">
         <RelativeTime date={data.createdAt} />
       </Text>
-      <Text as="span" variant="caption" className="font-mono text-muted-foreground">
+      <Text
+        as="span"
+        variant="caption"
+        className="font-mono text-muted-foreground"
+      >
         · {data.worktree}
       </Text>
     </div>

@@ -3,6 +3,7 @@ import {
   useEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import { hostFsVolume } from "@plugins/infra/plugins/host-fs/core";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useHomeDir } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 import { displayPath } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
 import {
@@ -10,7 +11,7 @@ import {
   type PlacesState,
 } from "@plugins/apps/plugins/file-explorer/plugins/shell/web";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
-import { fileExplorerCheckout } from "../../core";
+import { fileExplorerMainCheckout } from "../../shared/resources";
 
 const homeIcon = symbol("home");
 const downloadsIcon = symbol("download");
@@ -36,22 +37,24 @@ function fixedPlace(
 
 /** The Singularity main checkout — its path is the server's to say. */
 function useSingularityPlace(): PlacesState {
-  const checkout = useEndpoint(fileExplorerCheckout, {});
+  const checkout = useLive(fileExplorerMainCheckout);
   const home = useHomeDir();
   const label = "Singularity";
-  if (checkout.isError) {
+  if (checkout.status === "error") {
     return {
       kind: "failed",
       label,
       icon: folderIcon,
-      message: getEndpointErrorMessage(checkout.error),
+      message: checkout.error.message,
     };
   }
-  if (!checkout.data || home.kind === "pending") return { kind: "pending" };
+  if (checkout.status === "loading" || home.kind === "pending") {
+    return { kind: "pending" };
+  }
   const path =
     home.kind === "ready"
-      ? displayPath(checkout.data.path, home.home)
-      : checkout.data.path;
+      ? displayPath(checkout.data, home.home)
+      : checkout.data;
   return {
     kind: "ready",
     places: [{ id: "singularity", label, path, icon: folderIcon }],

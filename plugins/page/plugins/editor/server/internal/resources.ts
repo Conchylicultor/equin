@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db, type DbExecutor } from "@plugins/database/server";
 import {
@@ -7,11 +7,12 @@ import {
 } from "@plugins/network/plugins/live/server";
 import { Rank, withRank } from "@plugins/primitives/plugins/rank/core";
 import { PAGE_BLOCK_TYPE } from "../../core/schemas";
-import { pagesTree, pageBlocks } from "../../core/resources";
+import { blockLocations, pagesTree, pageBlocks } from "../../core/resources";
 import type { Block, PageRow } from "../../core/schemas";
 import { liveBlocks } from "./live-blocks";
 import { pageEditedAtSql, pageRowsServeOptions } from "./page-rows";
 import { _pageContentEditedAt } from "./rollup-table";
+import { _blocks } from "./tables";
 import { BLOCK_WIRE_COLUMNS } from "./wire-columns";
 
 /**
@@ -132,3 +133,14 @@ export async function readPageEditedAt(
     .limit(1);
   return row ?? null;
 }
+
+// Where any live block lives (`blockLocations`, lookup-only `:rows`): its
+// `id` / `type` / `pageId` bound to `page_blocks` by name. The base membership
+// is the predicate `liveBlocks` writes for every other reader (a routed compile
+// reads the base TABLE, never the subquery), so a trashed block reads not
+// found. The point route reads only the projected columns and `deleted_at`, so
+// a content write (the ~1s typing projection) refills nothing.
+export const blockLocationsServed = serveCollection(blockLocations, {
+  from: _blocks,
+  where: isNull(_blocks.deletedAt),
+});

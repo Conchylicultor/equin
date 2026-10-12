@@ -1,1 +1,1 @@
-export { getTableForeignKeys } from "./endpoints";
+export { tableForeignKeys } from "./resources";

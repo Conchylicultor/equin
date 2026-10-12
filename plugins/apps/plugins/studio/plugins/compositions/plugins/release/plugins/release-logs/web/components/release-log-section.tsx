@@ -2,21 +2,21 @@ import {
   cn,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useMemo, type ReactElement } from "react";
+import type { ReactElement } from "react";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   RELEASE_LOG_CHANNEL,
-  releaseLogsEndpoint,
+  releaseRunLogs,
   releaseRuns,
   type ReleaseLogLine,
 } from "@plugins/release/core";
@@ -28,7 +28,7 @@ const monoLogClass = textVariantClass("code");
 export function ReleaseLogSection({ runId }: { runId: string }): ReactElement {
   const result = useLiveRow(releaseRuns, runId);
 
-  // Live runs stream over `/ws/logs`; finished runs read the persisted fallback.
+  // Live runs stream over `/ws/logs`; finished runs read the persisted log.
   // While the row is still loading we optimistically show the live stream
   // (an early return rather than collapsing it into a fake-empty default —
   // keeps "loading" distinct from "genuinely finished"). A failed read decides
@@ -82,9 +82,25 @@ function LiveLogs(): ReactElement {
 }
 
 function PersistedLogs({ runId }: { runId: string }): ReactElement {
-  const { data } = useEndpoint(releaseLogsEndpoint, { id: runId });
-  const lines = useMemo<ReleaseLogLine[]>(() => data?.lines ?? [], [data]);
+  const result = useLive(releaseRunLogs, { id: runId });
+  switch (result.status) {
+    case "loading":
+      return <Loading variant="rows" count={3} />;
+    case "error":
+      return (
+        <ResourceErrorInline
+          variant="block"
+          subject="the release logs"
+          error={result.error}
+          refetch={result.refetch}
+        />
+      );
+    case "ready":
+      return <LogLines lines={result.data.lines} />;
+  }
+}
 
+function LogLines({ lines }: { lines: ReleaseLogLine[] }): ReactElement {
   return (
     <Stack gap="xs">
       <Line className="pb-xs">

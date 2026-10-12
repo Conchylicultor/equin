@@ -15,8 +15,9 @@ resolver, `useBlockTarget`, what the id opens:
   no endpoint request) — the common case.
 - a **content block** id opens `blockDetailPane` (`block/:blockId`) — that block
   and its nested lines as a page of their own — labelled "<page> › <block
-  type>". `GET /api/blocks/:id/page` is the reverse lookup, fired only on a
-  resource miss, so a transcript full of page links costs no requests at all.
+  type>". Both kinds resolve through one live row each of `page/editor`'s
+  `blockLocations` lookup collection (its type and nearest page), so a chip
+  follows a trash, restore or move in place.
 
 Unresolvable ids (trashed, purged, or a false-positive match in prose) render
 as the plain raw string — the plugin-link precedent: a chip that opens nothing

@@ -24,7 +24,13 @@ export type {
   BlockData,
 } from "./schemas";
 
-export { pagesTree, pageBlocks } from "./resources";
+export {
+  pagesTree,
+  pageBlocks,
+  blockLocations,
+  BlockLocationSchema,
+} from "./resources";
+export type { BlockLocation } from "./resources";
 
 export {
   listPages,

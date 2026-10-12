@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { EventSourceSchema, RunEventSchema } from "./schema";
+import { EventSourceSchema } from "./schema";
 import { REFRESH_CADENCES } from "./vocab";
 
 // Source CRUD + one run's touched-events read. The run ledger itself is the
@@ -117,28 +117,4 @@ export type RefreshAllResult = z.infer<typeof RefreshAllResultSchema>;
 export const refreshAllEventSources = defineEndpoint({
   route: "POST /api/events/sources/refresh-all",
   response: RefreshAllResultSchema,
-});
-
-export const ListRunEventsQuerySchema = z.object({
-  limit: z.coerce.number().int().positive().max(500).optional(),
-});
-
-/**
- * The events one run touched, each with what the run did to it — the detail
- * behind that run's counts.
- *
- * Nested under the run and keyed by the run id alone: the run pane's params are
- * own-only, so a deep-linked run must resolve its whole content from the URL
- * without first learning which source it belongs to (the run row itself is read
- * the same way, through the `events.source-runs` point sibling).
- *
- * A plain bounded list rather than a delegated keyset query (the shape
- * `event-list` uses): one run's set is one extraction — tens of events, closed
- * the moment the run finished — so there is nothing to page through and no
- * window to keep fresh.
- */
-export const listRunEvents = defineEndpoint({
-  route: "GET /api/events/runs/:runId/events",
-  query: ListRunEventsQuerySchema,
-  response: z.array(RunEventSchema),
 });

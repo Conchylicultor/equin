@@ -187,7 +187,13 @@ export function checkoutWorktreeName(root: string): string {
   return basename(root);
 }
 
-export const HOME_DIR = homedir();
+/**
+ * The user's home, in the one spelling every path read derives from: resolved
+ * (no trailing slash, `.`/`..` collapsed), so a non-canonical `$HOME`
+ * (`HOME=/Users/x/`) cannot make the home a browser shortens `~/…` against
+ * disagree with the paths host-fs returns (each one `resolve()`d).
+ */
+export const HOME_DIR = resolve(homedir());
 
 /**
  * The singularity data root, derived AT CALL TIME.

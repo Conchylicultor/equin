@@ -1,5 +1,4 @@
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { useEndpointResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   useLive,
   useLiveRow,
@@ -12,8 +11,8 @@ import {
   eventRunIdKind,
   eventSourceRuns,
   eventSources,
-  listRunEvents,
   refreshAllEventSources,
+  runEvents,
   refreshEventSourceNow,
   updateEventSource,
   type EventSource,
@@ -56,15 +55,11 @@ export function useEventSourceRun(
 
 /**
  * The events one run touched, each with what that run did to it — the detail
- * behind the run row's counts. A plain endpoint read, not live state: a finished
- * run's event set is closed, so there is nothing to keep fresh.
+ * behind the run row's counts (at most `RUN_EVENTS_LIMIT`), live. An unknown
+ * run is the error arm, refused `missing` — never an empty list.
  */
-export function useRunEvents(runId: string, limit?: number) {
-  return useEndpointResource(
-    listRunEvents,
-    { runId },
-    limit === undefined ? undefined : { query: { limit } },
-  );
+export function useRunEvents(runId: string) {
+  return useLive(runEvents, { runId });
 }
 
 /** Create a source. Failures surface through the global mutation toast. */

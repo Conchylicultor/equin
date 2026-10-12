@@ -42,15 +42,19 @@ the same Gantt with no special-casing.
 - **Copy permalink** (live header) persists the current snapshot via
   `POST /api/boot-traces` and copies
   `http://<wt>.localhost:9000/debug/boot-profile/<id>`.
-- `/debug/boot-profile/<id>` (`bootProfileDetailPane`) loads the snapshot via
-  `GET /api/boot-traces/:id` (404 → graceful not-found) and renders it with a
+- `/debug/boot-profile/<id>` (`bootProfileDetailPane`) reads the snapshot with
+  `useLiveRow(bootTrace, id)` — `debug.boot-trace`, a lookup-only live
+  collection over `boot_traces` (a non-uuid id reads nothing: `found: false`,
+  the same graceful not-found as an unknown id) — and renders it with a
   read-only "Saved snapshot · <relative time> · <worktree>" banner.
 - **Boot Profiles** (Debug sidebar → `bootProfileListPane`) lists saved snapshots
-  via `GET /api/boot-traces` (metadata only — no blob) as a **`DataView`**
+  from `debug.boot-traces` — a scroll live collection whose row is the metadata
+  projection (no blob), newest first — as a **`DataView`** live `source`
   (`defineDataView("debug.boot-profiles")`, `views={["list"]}`, worktree/id/when
   fields, newest-first sort authored in
   `config/debug/boot-profile/debug.boot-profiles.jsonc`), each row opening the
-  detail pane. Search/sort/filter come free from the field schema.
+  detail pane. Sort/filter/search (worktree) compile to SQL server-side; a save
+  or the retention sweep reaches both reads through the change feed.
 
 Snapshots are stored in the **worktree's own DB** (the permalink keeps the
 worktree subdomain) in the `boot_traces` table, derived from the single
@@ -65,7 +69,7 @@ unbounded.
 
 ## Plugin reference
 
-- Description: Browser boot profiler Gantt debug page: the request → first-paint timeline plus per-resource wait/work split, with shareable permalinks and a browsable list of saved snapshots. Persists captured browser boot traces under a unique id (POST), serves one snapshot (GET) and a metadata-only list (GET) for the permalink + browse panes, and sweeps snapshots older than 30 days via a scheduled job.
+- Description: Browser boot profiler Gantt debug page: the request → first-paint timeline plus per-resource wait/work split, with shareable permalinks and a browsable list of saved snapshots. Persists captured browser boot traces under a unique id (POST), serves the debug.boot-traces metadata-only list and the debug.boot-trace by-id lookup (live collections) for the browse + permalink panes, and sweeps snapshots older than 30 days via a scheduled job.
 - Web:
   - Slots:
     - `debug-boot-profile.actions`
@@ -81,28 +85,34 @@ unbounded.
     - `Pane.Register` "debug-boot-profiles-list"
     - `DebugApp.Sidebar` "Boot Profile"
     - `DebugApp.Sidebar` "Boot Profiles"
-  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug/profiling` ×8
     - `primitives/perfs/boot-trace` ×7
-    - `infra/endpoints` ×4
     - `primitives/pane` ×4
+    - `primitives/data-view` ×3
     - `primitives/css/spacing` ×2
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/data-table` ×2
-    - `primitives/data-view` ×2
-    - `primitives/live-state` ×2
     - `apps/debug/shell.DebugApp`
+    - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLiveRow`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
     - `shell/notifications.toast`
     - `ui/icons.Icon`
   - Exports (values): `BootProfileGantt`
 - Server:
-  - Contributes: `fork-data-exclusion` "boot_traces"
+  - Contributes:
+    - `resource.declare` "debug.boot-trace:rows"
+    - `resource.declare` "debug.boot-traces"
+    - `resource.declare` "debug.boot-traces:groups"
+    - `resource.declare` "debug.boot-traces:rows"
+    - `fork-data-exclusion` "boot_traces"
   - Uses:
     - `database.db`
     - `database/admin.ExcludeFromFork`
@@ -112,13 +122,16 @@ unbounded.
     - `infra/entities.defaultRandom`
     - `infra/entities.defineEntity`
     - `infra/retention.defineRetention`
+    - `network/live.serveCollection`
   - DB schema: `plugins/debug/plugins/boot-profile/server/internal/tables.ts`
   - Exports (values): `_bootTraces`
   - Register: `defineJob('retention.boot_traces')`
-  - Routes:
-    - `POST /api/boot-traces`
-    - `GET /api/boot-traces/:id`
-    - `GET /api/boot-traces`
+  - Resources:
+    - `debug.boot-trace:rows` (keyed, point)
+    - `debug.boot-traces` (keyed, window)
+    - `debug.boot-traces:groups` (push)
+    - `debug.boot-traces:rows` (keyed, point)
+  - Routes: `POST /api/boot-traces`
 - Core:
   - Uses:
     - `fields.FieldsRecord`
@@ -127,16 +140,21 @@ unbounded.
     - `fields/json/config.jsonField`
     - `fields/text/config.textField`
     - `fields/uuid/config.uuidField`
-  - Exports (types): `SavedBootTrace`
+    - `network/live.liveCollection`
+    - `network/live/filter.liveInstant`
+    - `network/live/filter.liveText`
+  - Exports (types):
+    - `BootTraceItem`
+    - `SavedBootTrace`
   - Exports (values):
+    - `bootTrace`
+    - `bootTraces`
     - `BootTraceSchema`
     - `savedBootTraceFields`
     - `SavedBootTraceSchema`
 - Cross-plugin:
   - Imported by: `debug/trace/client-boot`
 - Exemptions:
-  - Exempts itself from:
-    - `ids:pk-declared` — `server/internal/tables.ts` (debt)
-    - `live/no-endpoint-read` — `web/components/boot-profile-detail.tsx`, `web/components/boot-profile-list.tsx` (debt)
+  - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
 
 <!-- AUTOGENERATED:END -->

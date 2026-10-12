@@ -1,9 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { handleGetColumns } from "./internal/columns-handler";
-import { getTableColumns } from "../shared/endpoints";
+import { tableColumnsServed } from "./internal/served";
 
 export default {
-  httpRoutes: {
-    [getTableColumns.route]: handleGetColumns,
-  },
+  contributions: [...tableColumnsServed.declare],
 } satisfies ServerPluginDefinition;

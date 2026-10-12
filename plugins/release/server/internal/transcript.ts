@@ -1,5 +1,6 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { readFileSync } from "node:fs";
+import { basename } from "node:path";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import type { ReleaseLogLine } from "../../core/endpoints";
 import { RELEASE_RUN_KIND_ID } from "./kind-id";
@@ -38,12 +39,7 @@ import { RELEASE_RUN_KIND_ID } from "./kind-id";
  * has nothing to show.
  */
 export function readReleaseTranscript(releaseId: string): ReleaseLogLine[] {
-  const path = worktreeArtifacts.runTranscript(
-    runtimeNamespace(),
-    RELEASE_RUN_KIND_ID,
-    releaseId,
-  );
-  const text = readIfPresent(path);
+  const text = readIfPresent(releaseTranscriptPath(releaseId));
   if (text === null) return [];
   const lines = text.split("\n");
   // A transcript ends in a newline unless the child died mid-line, so the last
@@ -51,6 +47,31 @@ export function readReleaseTranscript(releaseId: string): ReleaseLogLine[] {
   // most worth keeping, so it is only the empty case that is dropped.
   if (lines.at(-1) === "") lines.pop();
   return lines.map((line) => ({ text: line, stream: "stdout" as const }));
+}
+
+/**
+ * Whether an id can name a transcript: it becomes a filename, so it must be one
+ * non-empty path segment. The live value refuses any other id before it reads
+ * or watches anything.
+ */
+export function isReleaseRunId(releaseId: string): boolean {
+  return releaseId !== "" && basename(releaseId) === releaseId;
+}
+
+/**
+ * Where one release run's transcript lives. The id becomes a filename, so one
+ * that is not a single path segment is refused rather than resolved somewhere
+ * else on disk (callers check `isReleaseRunId` first; this is the backstop).
+ */
+export function releaseTranscriptPath(releaseId: string): string {
+  if (!isReleaseRunId(releaseId)) {
+    throw new Error(`not a release run id: ${JSON.stringify(releaseId)}`);
+  }
+  return worktreeArtifacts.runTranscript(
+    runtimeNamespace(),
+    RELEASE_RUN_KIND_ID,
+    releaseId,
+  );
 }
 
 /** Read a file, or null when it is not there. Any other fs error is a real fault. */

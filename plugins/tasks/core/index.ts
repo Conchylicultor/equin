@@ -12,7 +12,6 @@ export {
   removeTaskDependency,
   moveTask,
   moveTaskInDepsTree,
-  getRepoInfo,
   CreateTaskBodySchema,
   UpdateTaskBodySchema,
   MoveTaskBodySchema,
@@ -50,3 +49,4 @@ export type {
   TaskChainSubmitBody,
   TaskChainSubmitResponse,
 } from "./task-chain-types";
+export { repoInfo } from "./repo-info";

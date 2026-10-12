@@ -90,7 +90,9 @@ export const BlockPageSchema = z.discriminatedUnion("found", [
 export type BlockPage = z.infer<typeof BlockPageSchema>;
 
 // The reverse lookup the `pagesTree` set cannot answer: it carries only
-// `type="page"` rows, so a CONTENT block's id resolves to its page only here.
+// `type="page"` rows. The app reads it live (`blockLocations`, core/resources);
+// this request/response form stays for the page-link e2e script
+// (`active-data/page-link/e2e/page-link-verify.ts`), which reads it over HTTP.
 export const getBlockPage = defineEndpoint({
   route: "GET /api/blocks/:id/page",
   response: BlockPageSchema,

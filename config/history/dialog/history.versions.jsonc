@@ -1,0 +1,14 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "timeline",
+      "name": "Timeline",
+      "icon": "history",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "createdAt", "direction": "desc" }]
+      }
+    }
+  ]
+}

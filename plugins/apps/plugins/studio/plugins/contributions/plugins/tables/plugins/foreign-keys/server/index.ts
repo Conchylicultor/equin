@@ -1,9 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { handleGetForeignKeys } from "./internal/foreign-keys-handler";
-import { getTableForeignKeys } from "../shared/endpoints";
+import { tableForeignKeysServed } from "./internal/served";
 
 export default {
-  httpRoutes: {
-    [getTableForeignKeys.route]: handleGetForeignKeys,
-  },
+  contributions: [...tableForeignKeysServed.declare],
 } satisfies ServerPluginDefinition;

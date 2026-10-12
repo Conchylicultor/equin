@@ -153,6 +153,16 @@ export async function deleteSource(id: string): Promise<void> {
   if (!row) throw new HttpError(404, `Unknown event source: ${id}`);
 }
 
+/** Whether the run exists (not swept by retention, its source not deleted). */
+export async function runExists(runId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: _eventSourceRuns.id })
+    .from(_eventSourceRuns)
+    .where(eq(_eventSourceRuns.id, eventRunIdKind.key(runId)))
+    .limit(1);
+  return row !== undefined;
+}
+
 /** Read one run. Throws 404 rather than returning null. */
 export async function requireRun(runId: string): Promise<EventSourceRun> {
   const [row] = await db

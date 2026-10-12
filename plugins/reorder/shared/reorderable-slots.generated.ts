@@ -208,6 +208,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "debug.trace.pane.trace-detail.actions", pluginId: "debug.trace.pane", configName: "trace-detail.actions" },
   { slotId: "debug.trace.pane.traces.actions", pluginId: "debug.trace.pane", configName: "traces.actions" },
   { slotId: "debug.worktree-cleanup.worktree-cleanup.actions", pluginId: "debug.worktree-cleanup", configName: "worktree-cleanup.actions" },
+  { slotId: "history.dialog.item-actions", pluginId: "history.dialog", configName: "item-actions" },
   { slotId: "infra.background.catalog.background-entry.actions", pluginId: "infra.background.catalog", configName: "background-entry.actions" },
   { slotId: "infra.background.catalog.background.actions", pluginId: "infra.background.catalog", configName: "background.actions" },
   { slotId: "infra.deps.dependencies.actions", pluginId: "infra.deps", configName: "dependencies.actions" },

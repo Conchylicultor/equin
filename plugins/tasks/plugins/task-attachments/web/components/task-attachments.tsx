@@ -1,5 +1,10 @@
-import { listAttachmentsEndpoint } from "@plugins/infra/plugins/attachments/core";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { attachmentsByOwner } from "@plugins/infra/plugins/attachments/core";
+import { useLive } from "@plugins/network/plugins/live/web";
+import {
+  foldResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -13,40 +18,54 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/** How many files this task carries; `0` while the list is still loading. */
-function useAttachmentCount(taskId: string): number {
-  const { data: attachments } = useEndpoint(listAttachmentsEndpoint, {
-    ownerType: "tasks",
-    id: taskId,
-  });
-  return attachments?.length ?? 0;
+/** The task's attachments, live. */
+function useTaskAttachments(taskId: string) {
+  return useLive(attachmentsByOwner, { ownerType: "tasks", id: taskId });
 }
 
-/** A task with no attachments ⇒ the host paints no card at all. */
+/**
+ * A task with no attachments ⇒ the host paints no card at all. Not known yet
+ * paints none either (the card appears once the files are known); a failed
+ * read keeps the card painted so its body renders the failure.
+ */
 export function useAttachmentsAvailable({
   taskId,
 }: {
   taskId: string;
 }): boolean {
-  return useAttachmentCount(taskId) > 0;
+  return foldResource(useTaskAttachments(taskId), {
+    loading: () => false,
+    error: () => true,
+    ready: (list) => list.length > 0,
+  });
 }
 
+/** How many files this task carries; nothing until the count is known. */
 export function TaskAttachmentsCount({ taskId }: { taskId: string }) {
-  const count = useAttachmentCount(taskId);
+  const attachments = useTaskAttachments(taskId);
+  if (attachments.status !== "ready") return null;
   return (
     <Text as="span" variant="caption" tone="muted">
-      {count}
+      {attachments.data.length}
     </Text>
   );
 }
 
 export function TaskAttachments({ taskId }: { taskId: string }) {
-  const { data: attachments } = useEndpoint(listAttachmentsEndpoint, {
-    ownerType: "tasks",
-    id: taskId,
-  });
-
-  if (!attachments || attachments.length === 0) return null;
+  const result = useTaskAttachments(taskId);
+  if (result.status === "loading") return <Loading variant="rows" />;
+  if (result.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the attachments"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
+  }
+  const attachments = result.data;
+  if (attachments.length === 0) return null;
 
   return (
     // The task's images are one ← / → set in the viewer.

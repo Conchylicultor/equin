@@ -1559,20 +1559,23 @@ never add one.
     - `liveValue`
     - `scopedLiveColumns`
 - Cross-plugin:
-  - Imported by: 181 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×51
+  - Imported by: 199 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×58
     - `conversations` ×35
-    - `tasks` ×24
+    - `tasks` ×26
     - `active-data` ×11
-    - `infra` ×10
+    - `infra` ×11
     - `page` ×10
-    - `debug` ×8
+    - `debug` ×9
     - `build` ×6
     - `primitives` ×5
     - `auth` ×3
+    - `code-explorer` ×3
     - `review` ×3
     - `config_v2` ×2
+    - `history` ×2
     - `release` ×2
+    - `search` ×2
     - `apps-core/app-usage`
     - `backup/runs-arm`
     - `database/query-deadline`
@@ -1592,34 +1595,22 @@ never add one.
     - `active-data/plugin-link` (2 debt)
     - `apps-core/surface/floating/wallpaper` (1 debt)
     - `apps/deploy/analytics/dashboard` (1 debt)
-    - `apps/events/events-core` (1 debt)
     - `apps/file-explorer/browser` (4 debt)
     - `apps/file-explorer/git` (1 debt)
     - `apps/file-explorer/places` (2 debt)
     - `apps/mail/reading-pane` (1 debt)
     - `apps/mail/search` (1 debt)
-    - `apps/pages/history` (1 debt)
-    - `apps/pages/page-tree` (1 debt)
     - `apps/studio/compositions/closure-tree` (1 debt)
-    - `apps/studio/compositions/release/release-logs` (1 debt)
     - `apps/studio/contributions` (1 debt)
-    - `apps/studio/contributions/tables/columns` (1 debt)
-    - `apps/studio/contributions/tables/foreign-keys` (1 debt)
-    - `apps/studio/contributions/tables/indexes` (1 debt)
-    - `apps/studio/contributions/tables/row-count` (1 debt)
-    - `apps/studio/contributions/tables/sample-rows` (1 debt)
     - `apps/studio/explorer` (1 debt)
     - `build/build-commits` (1 debt)
     - `build/build-fix` (1 debt)
     - `build/build-info` (1 debt)
     - `build/build-logs` (1 debt)
     - `build/build-profiling` (1 debt)
-    - `build/deployment` (1 debt)
     - `build/serve-composition` (1 debt)
-    - `code-explorer/commit-detail` (2 debt)
     - `code-explorer/file-resolve` (1 debt)
     - `config_v2/settings` (4 debt)
-    - `debug/boot-profile` (2 debt)
     - `debug/broadcasts` (1 debt)
     - `debug/config-orphans` (2 debt)
     - `debug/health-monitor` (1 debt)
@@ -1640,8 +1631,6 @@ never add one.
     - `framework/central-core` (0 debt)
     - `framework/resource-runtime` (0 debt)
     - `framework/server-core` (0 debt)
-    - `history/dialog` (1 debt)
-    - `infra/claude-cli` (1 debt)
     - `infra/endpoints` (0 debt)
     - `infra/events-test` (1 debt)
     - `infra/query-resource` (0 debt)
@@ -1662,15 +1651,10 @@ never add one.
     - `review/code-review` (1 debt)
     - `review/plugin-changes` (1 debt)
     - `screenshot` (1 debt)
-    - `search/quick-find` (1 debt)
     - `stats/commits` (4 debt)
     - `stats/cost` (8 debt)
     - `stats/pushes` (3 debt)
     - `stats/tasks` (2 debt)
-    - `tasks/reports-investigation` (1 debt)
-    - `tasks/task-attachments` (1 debt)
-    - `tasks/task-category` (1 debt)
-    - `tasks/task-events` (1 debt)
     - `ui/icons/sprites` (1 debt)
     - `ui/theme-engine/saved-themes` (2 debt)
     - `ui/tweakcn/community-browser` (1 debt)

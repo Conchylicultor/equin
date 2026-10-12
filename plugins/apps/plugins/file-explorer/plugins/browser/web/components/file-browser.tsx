@@ -27,6 +27,7 @@ import {
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   PathBar,
   type PathTarget,
@@ -110,9 +111,12 @@ export function FileBrowser(props: FileBrowserProps): ReactNode {
   if (home.kind === "pending") return <Loading variant="rows" />;
   if (home.kind === "failed") {
     return (
-      <Placeholder>
-        Could not resolve the home directory: {home.message}
-      </Placeholder>
+      <ResourceErrorInline
+        variant="block"
+        subject="the home directory"
+        error={home.error}
+        refetch={home.refetch}
+      />
     );
   }
   return <FileBrowserReady {...props} home={home.home} />;

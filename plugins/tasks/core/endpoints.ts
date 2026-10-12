@@ -199,12 +199,3 @@ export const moveTaskInDepsTree = defineEndpoint({
   route: "POST /api/tasks/:id/deps-move",
   body: DepsMoveBodySchema,
 });
-
-export const RepoInfoResponseSchema = z.object({
-  githubBase: z.string().nullable(),
-});
-
-export const getRepoInfo = defineEndpoint({
-  route: "GET /api/repo-info",
-  response: RepoInfoResponseSchema,
-});

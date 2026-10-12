@@ -6,6 +6,11 @@
 
 - Exemptions:
   - Exempted by:
+    - `apps/studio/contributions/tables/columns` (0 debt)
+    - `apps/studio/contributions/tables/foreign-keys` (0 debt)
+    - `apps/studio/contributions/tables/indexes` (0 debt)
+    - `apps/studio/contributions/tables/row-count` (0 debt)
+    - `apps/studio/contributions/tables/sample-rows` (0 debt)
     - `conversations/conversation-view/allow-monitor` (1 debt)
     - `conversations/conversation-view/code` (1 debt)
     - `conversations/conversation-view/jsonl-viewer` (1 debt)

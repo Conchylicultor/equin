@@ -1,5 +1,5 @@
 /**
- * The one piece of real logic behind `listClaudeCliCallsFor`: when a correlation
+ * The one piece of real logic behind `claudeCliCallsFor` (`claude-cli.calls-for`): when a correlation
  * id matches NO rows, was a call never made (`none`) or made and since trimmed
  * (`not-retained`)?
  *

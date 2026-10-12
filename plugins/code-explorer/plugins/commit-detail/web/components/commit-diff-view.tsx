@@ -12,7 +12,9 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useCommitFiles } from "../use-commit-files";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { commitFiles } from "@plugins/code-explorer/plugins/code-api/core";
 
 export function CommitDiffView({
   worktree,
@@ -21,16 +23,23 @@ export function CommitDiffView({
   worktree: string;
   sha: string;
 }) {
-  const state = useCommitFiles(worktree, sha);
+  const result = useLive(commitFiles, { worktree, sha });
 
-  if (state.kind === "loading") {
+  if (result.status === "loading") {
     return <Loading />;
   }
-  if (state.kind === "error") {
-    return <Placeholder tone="error">{state.message}</Placeholder>;
+  if (result.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the commit's files"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
   }
 
-  const { files, baseSha, headSha } = state.data;
+  const { files, baseSha, headSha } = result.data;
   return (
     <CommitFileList
       files={files}

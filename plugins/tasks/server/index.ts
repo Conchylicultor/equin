@@ -14,7 +14,7 @@ import {
 } from "./internal/handle-dependencies";
 import { handleInsertBetween } from "./internal/handle-insert-between";
 import { handleDepsMove } from "./internal/handle-deps-move";
-import { handleRepoInfo } from "./internal/handle-repo-info";
+import { repoInfoServed } from "./internal/repo-info";
 import {
   autoStartReconcileWarmup,
   startRelaunchOnClaudeReady,
@@ -35,13 +35,13 @@ import {
   addTaskDependency,
   removeTaskDependency,
   moveTaskInDepsTree,
-  getRepoInfo,
 } from "../core/endpoints";
 
 export { armTaskAutoStart } from "./internal/arm-auto-start";
 
 export default {
   description: "Nested tasks with attempts linking to conversations.",
+  contributions: [...repoInfoServed.declare],
   httpRoutes: {
     [listTasks.route]: handleList,
     [createTask.route]: handleCreate,
@@ -56,7 +56,6 @@ export default {
     [addTaskDependency.route]: handleAddDependency,
     [removeTaskDependency.route]: handleRemoveDependency,
     [moveTaskInDepsTree.route]: handleDepsMove,
-    [getRepoInfo.route]: handleRepoInfo,
   },
   register: [addTaskTool, autoStartReconcileWarmup],
   onReady: () => {

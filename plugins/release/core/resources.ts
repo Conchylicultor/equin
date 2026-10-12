@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import { ReleaseLogsResponseSchema } from "./endpoints";
 import {
   liveInstant,
   liveText,
@@ -128,4 +129,24 @@ export type Preview = z.infer<typeof PreviewSchema>;
 export const releasePreviews = liveValue("release.previews", {
   schema: z.record(z.string(), PreviewSchema),
   preload: "boot",
+});
+
+/**
+ * One release run's persisted log — every line of its supervised-run
+ * transcript, by run id. The run-detail pane reads it once the run is no longer
+ * live (an in-flight run streams over the `release` log channel instead).
+ *
+ * Served external, `notified` by a watch on the transcript file for as long as
+ * a tuple is read: a live run's transcript grows, the artifact prune can reap a
+ * finished one, and a terminal run's never changes again — so the watch is
+ * silent exactly when the answer is immutable, without the loader reading the
+ * run row to tell the two apart.
+ *
+ * An id that is not a single path segment (it names the transcript's filename)
+ * is refused `invalid-id` — a malformed question, not a server failure.
+ */
+export const releaseRunLogs = liveValue("release.run-logs", {
+  schema: ReleaseLogsResponseSchema,
+  params: ["id"],
+  refusals: ["invalid-id"],
 });

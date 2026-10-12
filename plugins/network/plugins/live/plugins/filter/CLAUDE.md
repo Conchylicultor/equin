@@ -83,15 +83,16 @@ renderOpSql("contains", "text", sql`${t.title}`, "abc");    // one op
 
 - Description: The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
 - Cross-plugin:
-  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×10
     - `infra` ×4
     - `conversations` ×3
+    - `debug` ×2
     - `release` ×2
     - `tasks` ×2
     - `backup/runs-arm`
     - `build/runs-arm`
-    - `debug/profiling/op-log/op-store`
+    - `history/engine`
     - `network/live`
     - `primitives/usage-rank`
     - `reports`

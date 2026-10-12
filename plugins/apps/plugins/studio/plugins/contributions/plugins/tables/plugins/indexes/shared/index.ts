@@ -1,1 +1,1 @@
-export { getTableIndexes } from "./endpoints";
+export { tableIndexes } from "./resources";

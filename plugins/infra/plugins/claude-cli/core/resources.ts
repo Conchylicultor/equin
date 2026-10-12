@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { liveCollection } from "@plugins/network/plugins/live/core";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import {
   liveInstant,
   liveNumber,
@@ -126,4 +126,48 @@ export const claudeCliCalls = liveCollection("claude-cli-calls", {
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },
   maxLimit: RECENT_CALLS_LIMIT,
   scroll: true,
+});
+
+/**
+ * The answer to "which model calls produced this record?" — a discriminated
+ * result, never a bare array, because an empty array would collapse three
+ * genuinely different answers a consumer must render differently:
+ *
+ * - `calls`        — here they are.
+ * - `none`         — this record never made a model call. For a cheap cache-hit
+ *                    run that deliberately skipped the expensive phase, this is
+ *                    the CORRECT and expected outcome, not a gap.
+ * - `not-retained` — it did make one, but the call log is a global ring of the
+ *                    most recent N calls and has since trimmed it. The text is
+ *                    gone; saying so is the honest answer.
+ *
+ * `[]` for all three would render "no model call" over a run whose prompt merely
+ * aged out — a wrong explanation, silently. That is exactly what the repo's
+ * `no-absorbed-failure` rule exists to prevent (same shape as
+ * `RefreshSourceResultSchema` in `events-core`).
+ */
+export const ClaudeCliCallsResultSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("calls"), calls: z.array(ClaudeCliCallSchema) }),
+  z.object({ status: z.literal("none") }),
+  z.object({ status: z.literal("not-retained") }),
+]);
+export type ClaudeCliCallsResult = z.infer<typeof ClaudeCliCallsResultSchema>;
+
+/**
+ * The calls recorded for one domain record, oldest first, as a live value —
+ * served `db` over `claude_cli_calls`, so a call recorded (or trimmed) while a
+ * reader watches is pushed to it.
+ *
+ * `occurredAt` is when the asking record happened (a run's `startedAt`, a
+ * task's creation), as an ISO instant. It is what makes `not-retained`
+ * distinguishable from `none`: without it the reader cannot tell "never
+ * called" from "called before the retention horizon", so an omitted
+ * `occurredAt` always reports `none`. A present `occurredAt` that is not an
+ * instant is refused `invalid-occurred-at` — a malformed question, not a server
+ * failure. (It cannot be a typed param: every typed param is required.)
+ */
+export const claudeCliCallsFor = liveValue("claude-cli.calls-for", {
+  schema: ClaudeCliCallsResultSchema,
+  params: ["correlationId", "occurredAt?"],
+  refusals: ["invalid-occurred-at"],
 });

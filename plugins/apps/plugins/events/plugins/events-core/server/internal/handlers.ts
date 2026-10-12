@@ -4,7 +4,6 @@ import {
   deleteEventSource,
   getEventSource,
   listEventSources,
-  listRunEvents,
   refreshAllEventSources,
   refreshEventSourceNow,
   updateEventSource,
@@ -12,9 +11,7 @@ import {
 import {
   createSource,
   deleteSource,
-  listRunEvents as selectRunEvents,
   listSources,
-  requireRun,
   requireSource,
   updateSource,
 } from "./sources-repo";
@@ -97,14 +94,3 @@ export const handleRefreshAll = implement(refreshAllEventSources, async () => {
   }
   return tally;
 });
-
-// `requireRun` first, so an unknown run is a 404 rather than an empty list — the
-// two mean completely different things here ("this run is gone" vs "this run
-// touched nothing", which is what every `unchanged` run legitimately looks like).
-export const handleListRunEvents = implement(
-  listRunEvents,
-  async ({ params, query }) => {
-    await requireRun(params.runId);
-    return selectRunEvents(params.runId, query.limit ?? 200);
-  },
-);

@@ -1,11 +1,8 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { fileExplorerCheckout } from "../core";
-import { handleCheckout } from "./internal/checkout";
+import { mainCheckoutServed } from "./internal/served";
 
 export default {
   description:
-    "Where the file explorer's Singularity place leads: the main checkout's path (GET /api/file-explorer/checkout).",
-  httpRoutes: {
-    [fileExplorerCheckout.route]: handleCheckout,
-  },
+    "Where the file explorer's Singularity place leads: serves the file-explorer.main-checkout value, the main checkout's path.",
+  contributions: [...mainCheckoutServed.declare],
 } satisfies ServerPluginDefinition;

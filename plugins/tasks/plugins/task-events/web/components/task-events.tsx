@@ -5,10 +5,9 @@ import {
   foldResource,
   ResourceErrorInline,
 } from "@plugins/primitives/plugins/live-state/web";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { ConversationRow } from "@plugins/conversations/plugins/conversation-ui/plugins/row/web";
 import { useConversationOpener } from "@plugins/conversations/plugins/conversation-view/web";
-import { getRepoInfo } from "@plugins/tasks/core";
+import { repoInfo } from "@plugins/tasks/core";
 import { pushRows } from "@plugins/tasks/plugins/tasks-core/core";
 import type { Push } from "@plugins/tasks/plugins/tasks-core/core";
 import { useTaskAttempts } from "@plugins/tasks/plugins/tasks-core/web";
@@ -22,11 +21,6 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-
-function useGithubBase(): string | null {
-  const { data } = useEndpoint(getRepoInfo, {});
-  return data?.githubBase ?? null;
-}
 
 function formatDate(value: Date | string): string {
   const d = typeof value === "string" ? new Date(value) : value;
@@ -143,9 +137,13 @@ export function useHasTaskAttempts({ taskId }: { taskId: string }): boolean {
 
 export function TaskPushes({ taskId }: { taskId: string }) {
   const attempts = useTaskAttempts(taskId);
-  const githubBase = useGithubBase();
+  // Where a push row links its sha: not known yet is loading, never a row
+  // rendered without its link that gains one a round trip later.
+  const repo = useLive(repoInfo);
 
-  if (attempts.status === "loading") return <Loading variant="rows" />;
+  if (attempts.status === "loading" || repo.status === "loading") {
+    return <Loading variant="rows" />;
+  }
   if (attempts.status === "error") {
     return (
       <ResourceErrorInline
@@ -156,6 +154,17 @@ export function TaskPushes({ taskId }: { taskId: string }) {
       />
     );
   }
+  if (repo.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the repository's GitHub address"
+        error={repo.error}
+        refetch={repo.refetch}
+      />
+    );
+  }
+  const githubBase = repo.data.githubBase;
   if (attempts.data.length === 0) {
     return (
       <Text as="p" variant="body" tone="muted">

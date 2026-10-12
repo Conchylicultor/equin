@@ -50,3 +50,27 @@ export const pageBlocks = liveValue("page-blocks", {
   schema: z.array(BlockSchema),
   params: ["pageId"],
 });
+
+// Where a block lives — its type and its nearest page ancestor — for ANY live
+// block, content blocks included: the reverse lookup `pagesTree` structurally
+// cannot answer (it holds only page rows). Lookup-only (`:rows`, by id): a
+// surface holding a bare block id (a transcript chip, the block pane) reads
+// one row with `useLiveRow(blockLocations, id)`. Served over the `page_blocks`
+// table with the live-block predicate (`deleted_at IS NULL`) as its base
+// membership, so a trash is a where-flip exit (the row reads not found) and a
+// restore an entrant. The point route reads only these columns, so the typing
+// projection (a `data` write) loads nothing; a cross-page move or a
+// turn-into-page refills the row.
+export const BlockLocationSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  // The nearest page ancestor; NULL for a page-less block at the forest root
+  // (displayed by no page) — and, for a page row, the page it sits under.
+  pageId: z.string().nullable(),
+});
+export type BlockLocation = z.infer<typeof BlockLocationSchema>;
+
+export const blockLocations = liveCollection("page.block-locations", {
+  row: BlockLocationSchema,
+  id: "id",
+});

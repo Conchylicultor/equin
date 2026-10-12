@@ -1,1 +1,1 @@
-export { getTableRowCount } from "./endpoints";
+export { tableRowCount } from "./resources";

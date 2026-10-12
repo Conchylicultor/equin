@@ -1,9 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { handleGetSampleRows } from "./internal/sample-rows-handler";
-import { getTableSampleRows } from "../shared/endpoints";
+import { tableSampleRowsServed } from "./internal/served";
 
 export default {
-  httpRoutes: {
-    [getTableSampleRows.route]: handleGetSampleRows,
-  },
+  contributions: [...tableSampleRowsServed.declare],
 } satisfies ServerPluginDefinition;

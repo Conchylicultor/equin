@@ -1,1 +1,1 @@
-export { getTableSampleRows } from "./endpoints";
+export { tableSampleRows } from "./resources";

@@ -1,1 +1,1 @@
-export { getTableColumns } from "./endpoints";
+export { tableColumns } from "./resources";

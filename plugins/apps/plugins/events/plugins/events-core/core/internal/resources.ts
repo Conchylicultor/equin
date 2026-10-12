@@ -1,12 +1,16 @@
 import { z } from "zod";
-import { liveCollection } from "@plugins/network/plugins/live/core";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import {
   liveBoolean,
   liveInstant,
   liveNumber,
   liveText,
 } from "@plugins/network/plugins/live/plugins/filter/core";
-import { EventSourceRunSchema, EventSourceSchema } from "./schema";
+import {
+  EventSourceRunSchema,
+  EventSourceSchema,
+  RunEventSchema,
+} from "./schema";
 import { RUN_OUTCOMES, SOURCE_STATUSES } from "./vocab";
 
 /**
@@ -84,4 +88,34 @@ export const eventSourceRuns = liveCollection("events.source-runs", {
   maxLimit: 500,
   scroll: true,
   columnScope: SOURCE_RUNS_VIEW_ID,
+});
+
+/**
+ * How many of a run's events `runEvents` holds. One run is one extraction —
+ * tens of events — so this is a guard against a pathological page, not a page
+ * size: there is deliberately no "load more", because a run's set is closed.
+ */
+export const RUN_EVENTS_LIMIT = 200;
+
+/**
+ * The events one run touched, each with what the run did to it — the detail
+ * behind that run's counts — ordered by when the event happens, at most
+ * `RUN_EVENTS_LIMIT`.
+ *
+ * Keyed by the run id alone: the run pane's params are own-only, so a
+ * deep-linked run resolves its whole content from the URL without first
+ * learning which source it belongs to (the run row itself is read the same
+ * way, through the `events.source-runs` point sibling).
+ *
+ * Live (served `db`): the set is written once, in the transaction that closes
+ * the run, but the events it lists keep moving (a later run updates one, a
+ * source rename re-labels it), and retention or a source delete removes the
+ * run — the read follows each. An unknown run is refused `missing`, never an
+ * empty list: "this run is gone" and "this run touched nothing" (what every
+ * `unchanged` run legitimately looks like) are different answers.
+ */
+export const runEvents = liveValue("events.run-events", {
+  schema: z.array(RunEventSchema),
+  params: ["runId"],
+  refusals: ["missing"],
 });

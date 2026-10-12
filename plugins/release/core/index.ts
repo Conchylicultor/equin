@@ -22,7 +22,6 @@ export {
   STAGED_INTENT,
   previewEndpoint,
   stopPreviewEndpoint,
-  releaseLogsEndpoint,
   ReleaseLogsResponseSchema,
 } from "./endpoints";
 export type {
@@ -43,5 +42,6 @@ export {
   releaseHistory,
   PreviewSchema,
   releasePreviews,
+  releaseRunLogs,
 } from "./resources";
 export type { ReleaseRun, Preview } from "./resources";

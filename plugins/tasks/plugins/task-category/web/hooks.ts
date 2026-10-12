@@ -1,27 +1,21 @@
-import { useMemo } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type { TaskCategoryDef } from "@plugins/tasks/plugins/task-category/core";
 import {
-  mapResource,
-  useEndpointResource,
-  type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
-import {
-  listTaskCategories,
-  type TaskCategoryDef,
-} from "@plugins/tasks/plugins/task-category/core";
-import { taskCategories, type TaskCategoryRow } from "../shared/resources";
-
-const NO_REFETCH = { staleTime: Infinity, gcTime: Infinity } as const;
+  taskCategories,
+  taskCategoryRegistry,
+  type TaskCategoryRow,
+} from "../shared/resources";
 
 /**
- * The registered categories: a read — loading, failed, or the list. Static
- * after boot (each filing plugin contributes its own at load time), so cached
- * indefinitely and never refetched. Ordered server-side by `order ?? 0` then
- * id. Not known yet is the loading arm, never an empty registry.
+ * The registered categories: a read — loading, failed, or the list. Fixed for
+ * the server process (each filing plugin contributes its own at load time),
+ * hydrated at boot and never garbage-collected (`boot-and-keep`). Ordered
+ * server-side by `order ?? 0` then id. Not known yet is the loading arm, never
+ * an empty registry.
  */
 export function useTaskCategories(): ResourceResult<TaskCategoryDef[]> {
-  const result = useEndpointResource(listTaskCategories, {}, NO_REFETCH);
-  return useMemo(() => mapResource(result, (r) => r.categories), [result]);
+  return useLive(taskCategoryRegistry);
 }
 
 /** taskId → categoryId, one entry per categorized task. */

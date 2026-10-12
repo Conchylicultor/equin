@@ -1,5 +1,6 @@
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { chainFromEndpoint, type ChainFrom } from "../../shared/endpoints";
+import { useLive } from "@plugins/network/plugins/live/web";
+import type { ResourceError } from "@plugins/primitives/plugins/live-state/core";
+import { chainFrom, type ChainFrom } from "../../shared/chain-from";
 
 /**
  * What this client knows about the chain below the server's own.
@@ -12,36 +13,27 @@ import { chainFromEndpoint, type ChainFrom } from "../../shared/endpoints";
 export type ChainFromReading =
   | { kind: "idle" }
   | { kind: "pending" }
-  | { kind: "failed"; reason: string }
+  | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> }
   | ChainFrom;
 
 /**
- * The chain from a commit only this browser knows about, up to HEAD.
+ * The chain from a commit only this browser knows about, up to HEAD — the live
+ * `build.chain-from` value, so a HEAD advance while the popover is open redraws
+ * it rather than leaving a walk to the old target.
  *
- * `commit === null` means nothing is off-chain, and the request is not made at
- * all — `enabled` rather than a conditional hook, so the hook order is fixed.
- *
- * `staleTime: Infinity` because the answer cannot go stale while the popover is
- * open in the way that matters: the pin is baked into this page and never moves,
- * and if HEAD advances the deployment resource pushes and the chain is asked for
- * again. What it buys is the common case: opening and closing the popover five
- * times does one git walk, not five.
+ * `commit === null` means nothing is off-chain, and nothing is read at all.
  */
 export function useChainFrom(commit: string | null): ChainFromReading {
-  const result = useEndpoint(
-    chainFromEndpoint,
-    {},
-    {
-      query: commit === null ? undefined : { commit },
-      enabled: commit !== null,
-      staleTime: Infinity,
-    },
-  );
+  const result = useLive(chainFrom, commit === null ? null : { commit });
   if (commit === null) return { kind: "idle" };
-  if (result.data !== undefined) return result.data;
-  // A transport failure is not "unplaceable" — the commit may be perfectly
-  // placeable and the request simply did not land — so it gets its own arm and
-  // its own sentence.
-  if (result.error) return { kind: "failed", reason: result.error.message };
-  return { kind: "pending" };
+  switch (result.status) {
+    case "loading":
+      return { kind: "pending" };
+    // A failed read is not "unplaceable" — the commit may be perfectly
+    // placeable and the read simply did not land — so it gets its own arm.
+    case "error":
+      return { kind: "failed", error: result.error, refetch: result.refetch };
+    case "ready":
+      return result.data;
+  }
 }

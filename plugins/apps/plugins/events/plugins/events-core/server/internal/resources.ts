@@ -1,6 +1,15 @@
-import { serveCollection } from "@plugins/network/plugins/live/server";
-import { eventSourceRuns, eventSources } from "../../core";
+import {
+  serveCollection,
+  serveValue,
+} from "@plugins/network/plugins/live/server";
+import {
+  eventSourceRuns,
+  eventSources,
+  RUN_EVENTS_LIMIT,
+  runEvents,
+} from "../../core";
 import { _eventSources, _eventSourceRuns } from "./tables";
+import { listRunEvents, runExists } from "./sources-repo";
 
 // The sources collection over `event_sources`: its window (filterable on
 // status / enabled, sortable by createdAt / name) and its `:rows` point sibling.
@@ -23,4 +32,23 @@ export const eventSourcesServed = serveCollection(eventSources, {
 // the tuples holding the run.
 export const eventSourceRunsServed = serveCollection(eventSourceRuns, {
   from: _eventSourceRuns,
+});
+
+// One run's events (`events.run-events`). The loader reads the run, its
+// run-events rows, the events and their sources, so the change feed recomputes
+// an open tuple when the run's set lands (one transaction at the end of the
+// run), when a listed event or its source changes, and when retention or a
+// source delete removes the run — which then answers `missing`, never `[]`.
+export const runEventsServed = serveValue(runEvents, {
+  source: "db",
+  unbounded: {
+    reason:
+      "one run's closed event set — a single extraction, tens of events — and the loader caps it at RUN_EVENTS_LIMIT rows",
+  },
+  loader: async ({ runId }) => {
+    if (!(await runExists(runId))) {
+      throw runEvents.refuse("missing", `Unknown event source run: ${runId}`);
+    }
+    return listRunEvents(runId, RUN_EVENTS_LIMIT);
+  },
 });

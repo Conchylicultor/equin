@@ -124,9 +124,16 @@ function OffChain({
                 // not on the chain while we are still asking is a sentence that
                 // reverses itself a moment later.
                 <Loading variant="text" label="placing this commit…" />
+              ) : reading.kind === "failed" ? (
+                <ResourceErrorInline
+                  variant="inline"
+                  subject="where this commit sits"
+                  error={reading.error}
+                  refetch={reading.refetch}
+                />
               ) : (
                 <Text as="span" variant="caption" tone="muted">
-                  {reading.kind === "unplaceable" || reading.kind === "failed"
+                  {reading.kind === "unplaceable"
                     ? reading.reason
                     : truncated
                       ? `more than ${CHAIN_CAP} commits behind`

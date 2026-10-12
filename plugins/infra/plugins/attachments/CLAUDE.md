@@ -22,6 +22,8 @@ await taskAttachments.add(taskId, ids);   // append-only union (race-free, atomi
 const rows = await taskAttachments.list(taskId);  // joined Attachment[]
 ```
 
+The browser reads one owner's attachments live: `useLive(attachmentsByOwner, { ownerType: "tasks", id })` (core) — a `db` value over the link table joined with `attachments`, so a link or attachment write recomputes it; an owner type no plugin linked is refused `unknown-owner-type`.
+
 `set` reconciles the link set to exactly match `ids` — used when the source of truth is replaceable (e.g. a markdown column). `add` is the atomic append-only union, used when the source grows monotonically (turns in a conversation). They lower to different SQL plans and are not parameter variants of each other.
 
 ### Many owners: `setMany`, never a `set` loop
@@ -44,18 +46,14 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
 
 - Description: Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
 - Load-bearing: yes
-- Web:
-  - Uses: `infra/endpoints.fetchEndpoint`
-  - Exports (types): `UploadedAttachment`
-  - Exports (values):
-    - `getAttachmentFile`
-    - `uploadAttachment`
 - Server:
+  - Contributes: `resource.declare` "attachments.by-owner"
   - Uses:
     - `database.db`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/jobs.defineJob`
+    - `network/live.serveValue`
     - `primitives/log-channels.Log`
   - DB schema:
     - `plugins/infra/plugins/attachments/server/internal/define-link.ts`
@@ -68,19 +66,25 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `deleteAttachment`
     - `getAttachment`
   - Register: `defineJob('attachments.orphan-sweep')`
+  - Resources: `attachments.by-owner` (push, unbounded: one owner's attachments — the files a person attached to one task or block, a handful, never a growing log)
   - Routes:
     - `POST /api/attachments`
     - `GET /api/attachments/:id`
     - `DELETE /api/attachments/:id`
-    - `GET /api/attachments/by/:ownerType/:id`
+- Web:
+  - Uses: `infra/endpoints.fetchEndpoint`
+  - Exports (types): `UploadedAttachment`
+  - Exports (values):
+    - `getAttachmentFile`
+    - `uploadAttachment`
 - Core:
   - Uses:
     - `infra/endpoints.dateString`
-    - `infra/endpoints.defineEndpoint`
+    - `network/live.liveValue`
   - Exports (types): `Attachment`
   - Exports (values):
+    - `attachmentsByOwner`
     - `AttachmentSchema`
-    - `listAttachmentsEndpoint`
 - Cross-plugin:
   - Imported by:
     - `apps/mail/attachments`

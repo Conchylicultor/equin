@@ -21,7 +21,7 @@ future home of the plugin marketplace.
         - Plugins:
           - **`release-artifact`** — Artifact path plus local preview (start/stop + live link) section in the release detail pane.
           - **`release-info`** — Status, composition, target, platform, and timing section in the release detail pane.
-          - **`release-logs`** [exempt] — Live + persisted release log stream section in the release detail pane.
+          - **`release-logs`** — Live + persisted release log stream section in the release detail pane.
   - **`contributions`** [exempt] — Central view of all plugin contributions aggregated by type.
     - Plugins:
       - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.

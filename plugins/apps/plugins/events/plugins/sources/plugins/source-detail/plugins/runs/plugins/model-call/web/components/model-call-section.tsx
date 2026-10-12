@@ -6,7 +6,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   ClaudeCliCallDetail,
   useClaudeCliCalls,
@@ -28,26 +28,31 @@ export function ModelCallSection({ runId }: { runId: string }): ReactNode {
   // than asking with a bare correlation id and accepting a wrong answer.
   const row = useEventSourceRun(runId);
   const run = row.status === "ready" && row.found ? row.row : undefined;
-  const calls = useClaudeCliCalls({
-    correlationId: runId,
-    occurredAt: run?.startedAt,
-  });
+  // Both reads gate the answer: asking before `startedAt` has landed would
+  // report `none` for a run whose call merely aged out — so nothing is asked
+  // (the read stays `loading`) until the run is in hand.
+  const calls = useClaudeCliCalls(
+    run === undefined
+      ? null
+      : { correlationId: runId, occurredAt: run.startedAt },
+  );
 
   if (row.status === "error") {
     return <Placeholder tone="error">{row.error.message}</Placeholder>;
   }
   // Absent: the pane's own resolve turns this into its Not Found.
   if (row.status === "ready" && !row.found) return null;
-  if (calls.isError) {
+  if (calls.status === "error") {
     return (
-      <Placeholder tone="error">
-        {getEndpointErrorMessage(calls.error)}
-      </Placeholder>
+      <ResourceErrorInline
+        error={calls.error}
+        refetch={calls.refetch}
+        variant="block"
+        subject="the model calls"
+      />
     );
   }
-  // Both reads gate the answer: asking before `startedAt` has landed would
-  // report `none` for a run whose call merely aged out.
-  if (run === undefined || calls.isPending) return <Loading variant="rows" />;
+  if (calls.status === "loading") return <Loading variant="rows" />;
 
   const result = calls.data;
 

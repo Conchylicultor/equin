@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import {
@@ -12,6 +12,10 @@ import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import {
+  foldResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { SearchResult } from "@plugins/search/plugins/engine/core";
 import { useSearch } from "../internal/use-search";
@@ -51,6 +55,9 @@ function Snippet({ snippet }: { snippet: string }) {
   );
 }
 
+/** Stable identity for "no settled hits", so the key handler does not churn. */
+const NO_HITS: SearchResult[] = [];
+
 export function QuickFindDialog({
   open,
   onOpenChange,
@@ -66,7 +73,6 @@ export function QuickFindDialog({
             open via a fresh mount — no props-to-state reset effect. */}
         <QuickFindDialogBody
           key={open ? "open" : "closed"}
-          open={open}
           onOpenChange={onOpenChange}
           sources={sources}
           placeholder={placeholder}
@@ -79,24 +85,28 @@ export function QuickFindDialog({
 }
 
 function QuickFindDialogBody({
-  open,
   onOpenChange,
   sources,
   placeholder = "Search…",
   onSelect,
   renderIcon,
-}: QuickFindDialogProps) {
+}: Omit<QuickFindDialogProps, "open">) {
   const [query, setQuery] = useState("");
   // Set only by keyboard nav / hover; reset to 0 in the query onChange (where
   // new results originate) and clamped in render for the async-arrival edge case.
   const [activeIdx, setActiveIdx] = useState(0);
   const activeRef = useRef<HTMLButtonElement>(null);
 
-  const { data: results, isFetching } = useSearch(query, {
-    sources,
-    enabled: open,
+  // The body mounts only while the dialog is open (keyed on `open` below the
+  // DialogContent), so the search is read only then.
+  const search = useSearch(query, { sources });
+  // Keyboard navigation walks the settled hits; with none settled (loading, a
+  // failure) there is nothing to walk.
+  const list = foldResource(search, {
+    loading: () => NO_HITS,
+    error: () => NO_HITS,
+    ready: (hits) => hits,
   });
-  const list = useMemo(() => results ?? [], [results]);
 
   // Derive the effective active index — never index past the current list, and
   // collapse to 0 when empty. Replaces the reset-to-0-on-results effect.
@@ -169,8 +179,15 @@ function QuickFindDialogBody({
         <div className="py-xs">
           {!hasQuery ? (
             <Placeholder>Type to search.</Placeholder>
-          ) : isFetching && list.length === 0 ? (
+          ) : search.status === "loading" ? (
             <Loading variant="rows" />
+          ) : search.status === "error" ? (
+            <ResourceErrorInline
+              variant="block"
+              subject="search results"
+              error={search.error}
+              refetch={search.refetch}
+            />
           ) : list.length === 0 ? (
             <Placeholder>No results.</Placeholder>
           ) : (

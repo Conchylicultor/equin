@@ -236,7 +236,7 @@ export function defineLink<T extends OwnerTable>(
 }
 
 // Look up the link handle for a given owner-type key (the owner table name,
-// e.g. "tasks"). Backs the central list-attachments dispatch endpoint.
+// e.g. "tasks"). Backs the `attachments.by-owner` live value.
 export function getLink(ownerType: string): AttachmentLink | undefined {
   return links.get(ownerType);
 }

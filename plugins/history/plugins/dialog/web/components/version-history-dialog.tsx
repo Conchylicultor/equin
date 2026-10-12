@@ -9,28 +9,37 @@ import {
   ScrollArea,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
+  DataView,
+  defineDataView,
+  liveDataSource,
+  type FieldDef,
+} from "@plugins/primitives/plugins/data-view/web";
+import {
   Stack,
   Inset,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import {
   SectionLabel,
   Text,
 } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import {
-  listVersions,
+  historyVersions,
   restoreVersion,
+  type Version,
 } from "@plugins/history/plugins/engine/core";
-import type { Version } from "@plugins/history/plugins/engine/core";
-import { useVersionHistory } from "../internal/use-version-history";
-
+import { useNewestVersion } from "../internal/use-newest-version";
+import {
+  RestoreVersionContext,
+  VersionItemActions,
+} from "./version-item-actions";
 export interface VersionHistoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -46,48 +55,68 @@ export interface VersionHistoryDialogProps {
   renderPreview: (version: Version) => ReactNode;
 }
 
-// One timeline row: relative time, optional author/label, and an inline Restore
-// affordance. Selecting the row drives the preview; Restore opens confirmation.
-function TimelineRow({
-  version,
-  selected,
-  onSelect,
-  onRestore,
-}: {
-  version: Version;
-  selected: boolean;
-  onSelect: () => void;
-  onRestore: () => void;
-}) {
+// Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
+const VERSIONS_VIEW = defineDataView("history.versions");
+
+// The timeline as a live source, scoped per dialog to one (source, entity): a
+// snapshot recorded, a restore's "Before restore" point and the retention sweep
+// all reach the open timeline through the change feed, and the scroll pages
+// the whole history. Nothing to search: a version is a label and a time.
+const versionsSource = liveDataSource(historyVersions, { searchable: [] });
+
+// The fields are the timeline's sort / Properties dimensions; `createdAt` is
+// the one collection column (it sorts). The row body is drawn by
+// `TimelineRowBody`, so a version with no author and no checkpoint reads as a
+// label and a time rather than a run of empty separators.
+const fields: FieldDef<Version>[] = [
+  {
+    id: "label",
+    label: "Version",
+    type: "text",
+    value: (v) => v.label || "Version",
+    primary: true,
+    sortable: false,
+    filterable: false,
+  },
+  {
+    id: "createdAt",
+    label: "When",
+    type: "date",
+    value: (v) => v.createdAt,
+    cell: (v) => <RelativeTime date={v.createdAt} />,
+    sortable: true,
+    filterable: false,
+  },
+  {
+    id: "author",
+    label: "Author",
+    type: "text",
+    value: (v) => v.author,
+    sortable: false,
+    filterable: false,
+  },
+];
+
+// One timeline row: the label, then when — and whether it is a checkpoint and
+// who made it, only when it says so.
+function TimelineRowBody({ version }: { version: Version }) {
   return (
-    <Row
-      selected={selected}
-      onClick={onSelect}
-      actions={
-        <Button
-          variant="ghost"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRestore();
-          }}
-        >
-          Restore
-        </Button>
-      }
-    >
-      <Stack gap="2xs" className={yieldClass("x")}>
-        <Text as="span" variant="body" className="truncate">
-          {version.label || "Version"}
-        </Text>
-        <Text as="span" variant="caption" tone="muted" className="truncate">
-          <RelativeTime date={version.createdAt} />
-          {version.pinned ? " · checkpoint" : ""}
-          {version.author ? ` · ${version.author}` : ""}
-        </Text>
-      </Stack>
-    </Row>
+    <Stack gap="2xs" className={yieldClass("x")}>
+      <Text as="span" variant="body" className="truncate">
+        {version.label || "Version"}
+      </Text>
+      <Text as="span" variant="caption" tone="muted" className="truncate">
+        <RelativeTime date={version.createdAt} />
+        {version.pinned ? " · checkpoint" : ""}
+        {version.author ? ` · ${version.author}` : ""}
+      </Text>
+    </Stack>
   );
 }
+
+const timelineViewOptions = {
+  list: { renderRow: (v: Version) => <TimelineRowBody version={v} /> },
+};
 
 export function VersionHistoryDialog({
   open,
@@ -96,33 +125,12 @@ export function VersionHistoryDialog({
   entityId,
   renderPreview,
 }: VersionHistoryDialogProps) {
-  const { data: versions, isLoading } = useVersionHistory(sourceId, entityId, {
-    enabled: open,
-  });
-  const list = useMemo(() => versions ?? [], [versions]);
-
-  // The user's explicit click (null = no explicit pick yet). The effective
-  // active id is derived in render: the explicit pick if it still exists in the
-  // list, otherwise the newest version. Deriving it (instead of mirroring into
-  // state via an effect) keeps selection consistent with the current list with
-  // no render-behind lag — on first open or after a restore inserts a row, the
-  // newest is selected immediately.
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   // Version pending a restore confirmation (null = no confirmation open).
   const [pendingRestore, setPendingRestore] = useState<Version | null>(null);
 
-  const activeId =
-    selectedId !== null && list.some((v) => v.id === selectedId)
-      ? selectedId
-      : (list[0]?.id ?? null);
-
-  const activeVersion = useMemo(
-    () => list.find((v) => v.id === activeId) ?? null,
-    [list, activeId],
-  );
-
+  // No invalidation: the timeline is live, so the restore's "Before restore"
+  // point and its new version land in it through the change feed.
   const restore = useEndpointMutation(restoreVersion, {
-    invalidates: [listVersions],
     onSuccess: () => {
       toast({
         type: "history",
@@ -146,86 +154,13 @@ export function VersionHistoryDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent size="lg" className="h-[32rem]">
-          <Column
-            className="h-full"
-            header={
-              // The panel owns the inset (its `lg` rail is exactly the `px-lg`
-              // this band used to apply), so the band applies none of its own
-              // and BLEEDS instead: its rule spans the whole panel while the
-              // title lands back on the panel's rail. Safe here — the band is a
-              // direct child of the panel, whose `overflow-x-hidden` clips a
-              // bleed, unlike a child of an inner ScrollArea.
-              <div className="border-b rail-bleed py-sm">
-                <DialogTitle>Version history</DialogTitle>
-                <DialogDescription>
-                  Browse past versions and restore any of them.
-                </DialogDescription>
-              </div>
-            }
-            scrollBody={false}
-            body={
-              <Stack
-                direction="row"
-                gap="none"
-                align="stretch"
-                className="h-full"
-              >
-                {/* LEFT — timeline column, newest first. */}
-                <Column
-                  // Rigid timeline pane in the two-pane stretch split.
-                  // eslint-disable-next-line layout/no-adhoc-layout -- rigid left pane of the two-pane stretch split
-                  className="w-72 shrink-0 border-r"
-                  header={
-                    <Inset x="md" t="sm" b="2xs">
-                      <SectionLabel>Timeline</SectionLabel>
-                    </Inset>
-                  }
-                  scrollBody={false}
-                  body={
-                    <ScrollArea className="h-full">
-                      <Inset x="xs" b="xs">
-                        {isLoading ? (
-                          <Loading variant="rows" count={5} />
-                        ) : list.length === 0 ? (
-                          <Placeholder>No versions yet.</Placeholder>
-                        ) : (
-                          <Stack gap="2xs">
-                            {list.map((version) => (
-                              <TimelineRow
-                                key={version.id}
-                                version={version}
-                                selected={version.id === activeId}
-                                onSelect={() => setSelectedId(version.id)}
-                                onRestore={() => setPendingRestore(version)}
-                              />
-                            ))}
-                          </Stack>
-                        )}
-                      </Inset>
-                    </ScrollArea>
-                  }
-                />
-
-                {/* RIGHT — host-injected preview of the active version.
-                    The shadcn ScrollArea keeps its styled scrollbar; it's the
-                    flexible pane filling the remaining width and height of the
-                    two-pane stretch split. */}
-                {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible right pane (styled ScrollArea) of the two-pane stretch split */}
-                <ScrollArea className="min-h-0 flex-1">
-                  {isLoading ? (
-                    <Inset pad="lg">
-                      <Loading variant="block" />
-                    </Inset>
-                  ) : activeVersion ? (
-                    renderPreview(activeVersion)
-                  ) : (
-                    <Inset pad="lg">
-                      <Placeholder>Select a version to preview it.</Placeholder>
-                    </Inset>
-                  )}
-                </ScrollArea>
-              </Stack>
-            }
+          {/* The content mounts only while the dialog is open, so the
+              timeline is read (and subscribed) only then. */}
+          <VersionHistoryBody
+            sourceId={sourceId}
+            entityId={entityId}
+            renderPreview={renderPreview}
+            onRestore={setPendingRestore}
           />
         </DialogContent>
       </Dialog>
@@ -264,5 +199,159 @@ export function VersionHistoryDialog({
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+/**
+ * The dialog's two panes: the timeline DataView (its own loading, empty and
+ * paging states) and the preview of the active version — the user's pick, or
+ * the newest until they make one.
+ */
+function VersionHistoryBody({
+  sourceId,
+  entityId,
+  renderPreview,
+  onRestore,
+}: {
+  sourceId: string;
+  entityId: string;
+  renderPreview: (version: Version) => ReactNode;
+  onRestore: (version: Version) => void;
+}) {
+  // The user's explicit pick (null = none yet: the newest is previewed).
+  const [picked, setPicked] = useState<Version | null>(null);
+  const newest = useNewestVersion(sourceId, entityId);
+  const source = useMemo(
+    () => versionsSource.scoped({ where: { sourceId, entityId } }),
+    [sourceId, entityId],
+  );
+  const active =
+    picked ?? (newest.status === "ready" ? (newest.data[0] ?? null) : null);
+
+  return (
+    <HistoryPanes
+      timeline={
+        <RestoreVersionContext.Provider value={onRestore}>
+          <DataView<Version>
+            storageKey={VERSIONS_VIEW}
+            source={source}
+            fields={fields}
+            views={["list"]}
+            density="compact"
+            itemActions={VersionItemActions}
+            selectedRowId={active?.id}
+            onRowActivate={setPicked}
+            viewOptions={timelineViewOptions}
+            emptyState="No versions yet."
+          />
+        </RestoreVersionContext.Provider>
+      }
+      preview={
+        <VersionPreview
+          active={active}
+          newest={newest}
+          renderPreview={renderPreview}
+        />
+      }
+    />
+  );
+}
+
+function VersionPreview({
+  active,
+  newest,
+  renderPreview,
+}: {
+  active: Version | null;
+  newest: ReturnType<typeof useNewestVersion>;
+  renderPreview: (version: Version) => ReactNode;
+}) {
+  if (active) return renderPreview(active);
+  switch (newest.status) {
+    case "loading":
+      return (
+        <Inset pad="lg">
+          <Loading variant="block" />
+        </Inset>
+      );
+    case "error":
+      return (
+        <Inset pad="lg">
+          <ResourceErrorInline
+            variant="block"
+            subject="the newest version"
+            error={newest.error}
+            refetch={newest.refetch}
+          />
+        </Inset>
+      );
+    case "ready":
+      // `active` falls back to the newest, so a ready read with no active
+      // version is an empty history.
+      return (
+        <Inset pad="lg">
+          <Placeholder>No versions yet.</Placeholder>
+        </Inset>
+      );
+  }
+}
+
+/** The dialog's chrome: header, the timeline column and the preview pane. */
+function HistoryPanes({
+  timeline,
+  preview,
+}: {
+  timeline: ReactNode;
+  preview: ReactNode;
+}) {
+  return (
+    <Column
+      className="h-full"
+      header={
+        // The panel owns the inset (its `lg` rail is exactly the `px-lg`
+        // this band used to apply), so the band applies none of its own
+        // and BLEEDS instead: its rule spans the whole panel while the
+        // title lands back on the panel's rail. Safe here — the band is a
+        // direct child of the panel, whose `overflow-x-hidden` clips a
+        // bleed, unlike a child of an inner ScrollArea.
+        <div className="border-b rail-bleed py-sm">
+          <DialogTitle>Version history</DialogTitle>
+          <DialogDescription>
+            Browse past versions and restore any of them.
+          </DialogDescription>
+        </div>
+      }
+      scrollBody={false}
+      body={
+        <Stack direction="row" gap="none" align="stretch" className="h-full">
+          {/* LEFT — timeline column, newest first. */}
+          <Column
+            // Rigid timeline pane in the two-pane stretch split.
+            // eslint-disable-next-line layout/no-adhoc-layout -- rigid left pane of the two-pane stretch split
+            className="w-72 shrink-0 border-r"
+            header={
+              <Inset x="md" t="sm" b="2xs">
+                <SectionLabel>Timeline</SectionLabel>
+              </Inset>
+            }
+            scrollBody={false}
+            body={
+              <ScrollArea className="h-full">
+                <Inset x="xs" b="xs">
+                  {timeline}
+                </Inset>
+              </ScrollArea>
+            }
+          />
+
+          {/* RIGHT — host-injected preview of the active version.
+              The shadcn ScrollArea keeps its styled scrollbar; it's the
+              flexible pane filling the remaining width and height of the
+              two-pane stretch split. */}
+          {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible right pane (styled ScrollArea) of the two-pane stretch split */}
+          <ScrollArea className="min-h-0 flex-1">{preview}</ScrollArea>
+        </Stack>
+      }
+    />
   );
 }

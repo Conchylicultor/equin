@@ -1,8 +1,9 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
-import { listClaudeCliCallsFor } from "../core";
-import { claudeCliCallsServed } from "./internal/resources";
-import { handleListCallsFor } from "./internal/list-calls";
+import {
+  claudeCliCallsForServed,
+  claudeCliCallsServed,
+} from "./internal/resources";
 import { _claudeCliCalls } from "./internal/tables";
 
 export { runClaudePrint, ClaudeCliError } from "./internal/run-claude-print";
@@ -18,11 +19,9 @@ export { listCallsFor } from "./internal/list-calls";
 export default {
   description:
     "One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations, and runClaudeReadOnly — a print that may only Read / Grep / Glob one directory and answers with a zod-schema'd structured value. Reuses the user's local Claude CLI auth — no API key plumbing.",
-  httpRoutes: {
-    [listClaudeCliCallsFor.route]: handleListCallsFor,
-  },
   contributions: [
     ...claudeCliCallsServed.declare,
+    ...claudeCliCallsForServed.declare,
     // Calls are looked up by `correlationId`, minted per-record in the consuming
     // domain table. Inherited rows can therefore answer a fork-local correlation
     // query with one of main's calls. The table is also trimmed to the global

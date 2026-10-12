@@ -403,3 +403,65 @@ Status: all P0 parts are in the working tree, and a review pass's findings are f
 3. **`network/live`'s own sanctioned `live/no-endpoint-read` entry (`web`) matches nothing.** It was not reported as unused; it was left alone.
 4. **Not exercised live:** no production value uses `snapshot`, `bytes` or the list form yet. The first are B3/B8, B5 and B5 respectively.
 5. **Lint blind spot:** a GET `fetchEndpoint` wrapper exported from one file and called from another file's effect is not flagged, and neither is a function stored in an object or class.
+
+## Result (B1)
+
+Integration verdicts: `./singularity check` is green except for `web-artifacts:map-in-sync`, which needs a build. `./singularity build` succeeded (build-1791789239-7cmjxc). Tests on every touched plugin plus `network/live`: 2624 bun:test tests pass, 4 fail, and every vitest test passes. The failures are listed under Open below, and none is caused by B1. In `GET /api/resources/_debug`, every new external key reports its declared freshness, and no external resource has a null freshness.
+
+| Site | Value / collection | Source · freshness | Endpoint | Live evidence |
+|---|---|---|---|---|
+| task-category registry | `task-category.registry` (boot-and-keep) | external · fixed | `GET /api/tasks/categories` deleted | not opened (no screenshot shows a category-grouped task list) |
+| task-events repo link | `tasks.repo-info` | external · snapshot (re-read per mount; see review fixes) | `GET /api/repo-info` deleted | task detail Pushes rows link the commit |
+| task attachments | `attachments.by-owner` (`ownerType`, `id`; refuses `unknown-owner-type`) | db | `GET /api/attachments/by/:ownerType/:id` deleted | Attachments (3) render. **Freshness:** an open probe task gained the card 1.25 s after a PATCH linked an attachment, with no reload |
+| report-investigations scope | `report-investigations.scope` (typed `{minCount}`) | db, throttle 1 s | deleted | not opened |
+| claude-cli calls | `claude-cli.calls-for` (refuses `invalid-occurred-at`) | db | deleted | not opened |
+| events run events | `events.run-events` (refuses `missing`) | db | deleted | not opened |
+| version timeline | `history.versions` scroll collection, rendered as a DataView (`history.versions`) with a Restore item action | db (routed) | `GET …/versions` **kept** for e2e `crdt-restore-verify` | Version history dialog lists the timeline |
+| version preview | `history.version` (refuses `missing`) | db | deleted | preview pane renders the selected version |
+| block target | `page.block-locations` lookup-only collection (in `page/editor`) | db (routed) | `GET /api/blocks/:id/page` **kept** for e2e `page-link-verify` | not driven |
+| quick-find | `search.results` (typed `{q, sources?}`) | db, throttle 1 s | `GET /api/search` **kept** for e2e (handler shares `runSearch`) | typing "plan" in the pages Search dialog lists highlighted results |
+| commit detail | `code.commit-info`, `code.commit-files` (refuse `missing`, `no-checkout`) | external · immutable (the reason states what does not heal while subscribed) | both deleted | commit pane lists 265 files with +/- counts |
+| deployment chain | `build.chain-from` (typed `{commit}`) | external · notified, `recomputeOn: [refHeadServed]` | deleted | not opened |
+| release logs | `release.run-logs` (refuses `invalid-id`) | external · notified (dir watch on the run's transcript) | deleted | not opened |
+| studio columns / FKs / indexes | `studio.table-{columns,foreign-keys,indexes}` | external · fixed (schema only changes at boot) | deleted | sections present (collapsed); contents not opened |
+| studio row count | `studio.table-row-count` | external · snapshot | deleted | "5,195 rows (est.)" |
+| studio sample rows | `studio.table-sample-rows` | external · snapshot (Refresh button) | deleted | section renders (collapsed) |
+| boot profiles list | `debug.boot-traces` scroll collection | db (routed) | deleted (POST save kept) | list renders its empty state; this worktree has no saved traces |
+| boot profile detail | `debug.boot-trace` lookup-only, `useLiveRow` | db (routed) | deleted | an unknown uuid renders "No saved boot trace with id …" |
+| file-explorer main checkout | `file-explorer.main-checkout` | external · fixed | deleted | not opened |
+| host home | `host-account.home` (sibling of `host-account`), read with `useLive(hostHome)` | external · fixed (`HOME_DIR` is `resolve()`d) | `hostFsStat` kept (B5 sites still use it) | not opened |
+
+### Deviations (from the per-batch decisions)
+- `tasks.repo-info` is a `snapshot`, not `fixed`, because `origin` can be re-pointed at runtime. (It was first `notified` by a watch on the common git dir; review moved it, see below.)
+- `build.chain-from` is external `notified`, not `db`, because the loader only runs git.
+- `release.run-logs` is one external `notified` value with a per-run dir-watch, not "immutable once terminal", because an external loader cannot read `release_runs`. A terminal run's file never changes, so its watch stays silent.
+- Studio columns, FKs and indexes are external `fixed`, not `db`, because catalog views are not in the read-set. Row-count is a `snapshot` because `pg_stat_user_tables` has no change signal. Each of the four plugins has a sanctioned `no-db-backed-notify` exemption for catalog-only loaders.
+- The boot-trace detail is a lookup-only collection read with `useLiveRow`, not a parameterised value.
+- `task-source-url.by-attempt` was already a `db` live value before B1 (49b53b9eab); nothing to do.
+- `host-account.home` is a sibling value, so the file explorer never waits on the full-name lookup.
+- `page.block-locations` lives in `page/editor`, the plugin that owns `page_blocks`. `useBlockTarget` now makes one read instead of two.
+- The commit `worktree` param resolves non-absolute worktrees in the shared object store. An unknown attempt id used to fail with a 404; a reaped attempt's commits now stay readable.
+- `releaseTranscriptPath` now rejects ids that are not a single path segment, which closes a path-traversal hole.
+- Integration fix: `commit-values.ts` declared `changes:` through a shared const, which the resources docs facet cannot read, so regen failed. The literal `{ immutable: { reason } }` is now inline at both call sites.
+
+### Review fixes (B1)
+- `release.run-logs`: the transcript watch is returned to the runtime (`whileSubscribed` → `Promise<StopFn>`), so a failed start is reported and paired instead of an unobserved rejection; a malformed id is refused `invalid-id` before anything is read or watched.
+- `claude-cli.calls-for`: a malformed `occurredAt` is refused `invalid-occurred-at`. It stays a plain optional param: a typed param must be required.
+- `HOME_DIR` is `resolve(homedir())` at its one definition, so `host-account.home` and every host-fs path share one spelling. `useHostHome` is deleted; the file explorer reads `useLive(hostHome)`.
+- `code.commit-info` / `code.commit-files`: still `immutable`, and the reason now names what does not heal while subscribed (refusals, abbreviated shas). `commitFiles` answers with the full sha `rev-parse` resolved. Abbreviated shas stay accepted because the commit-link chip resolves the short sha an author typed.
+- `studio.table-sample-rows`: an external `snapshot` with a Refresh button, not `db`. It samples any public relation, including views, rollups and change-feed-excluded tables, which would otherwise stay frozen while labelled fresh. Sanctioned `no-db-backed-notify` exemption.
+- `tasks.repo-info`: a `snapshot` (re-read per mount). The `notified` form opened a native recursive watch on the shared common git dir.
+- Version timeline: a DataView (`history.versions`, list view, authored config) over the now-`scroll: true` collection. Restore is an item action, and the newest version comes from a one-row read until the user picks one. `useVersionHistory` is deleted. A failed grow surfaces through the read's `error` arm (live has no separate grow error), which the DataView renders.
+- Stale names fixed: `releaseLogsEndpoint` → `releaseRunLogs` (release CLAUDE.md), `getVersion` → `historyVersion`, `listClaudeCliCallsFor` → `claudeCliCallsFor`.
+- Verification: `./singularity check` green; `./singularity build` green (build-1791794627-wirnrw). Tests on the touched plugins: 252 pass, 1 fail. The failure is `paths/legacy-layout` (`native → cache/signal-origin-native` has no declaration). No data-dir in the tree declares that row, and neither B1 nor the review touches it. Screenshots: Studio `entity_versions` Sample Rows renders 10 rows with Refresh. The pages Version history dialog lists the timeline as a DataView, with the newest selected and previewed.
+
+### Open
+- Three GET endpoints are kept only for e2e scripts that call them over HTTP: `…/versions`, `/api/blocks/:id/page` and `/api/search`. Move those scripts onto the live reads, or to a test helper, then delete the endpoints.
+- The commit pane's per-file diffs still use the old per-worktree file-diff endpoint (B6).
+- The startup-volume read in `places.ts` and `useRootVolumeName` in `host-path-source.ts` keep their narrowed `no-endpoint-read` debt entries (B5).
+- Test failures not caused by B1:
+  - `paths/legacy-layout`: the `native → cache/signal-origin-native` row has no declaration.
+  - `tasks-core/tree-oracle` C39 fails even in isolation: the strict legacy conversation schema rejects the current row. B1 does not touch conversations.
+  - `events-core/source-runs-oracle` and `page/editor/doc-rank` (seed 3) fail only when every file shares one bun process, because resource keys are registered twice (`events.source-runs`, `release.history`). The plugin-tree barrel import in `page/editor/core/markdown.test.ts` loads every server barrel. Both pass in isolation.
+- Every headless run records a `browser-rejection` "Failed to fetch" crash from `debug.slow-ops` `flush`, unrelated to B1.
+- Not driven live: report-investigations scope, claude-cli calls, run events, deployment chain, release logs, block-locations, file-explorer places and home, and the task-category registry. Each was checked through check/test/build and `_debug` only.

@@ -1,2 +1,2 @@
-export { listTaskCategories, TaskCategoryDefSchema } from "./endpoints";
-export type { TaskCategoryDef } from "./endpoints";
+export { TaskCategoryDefSchema } from "./category-def";
+export type { TaskCategoryDef } from "./category-def";

@@ -2,11 +2,10 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
-    rule: "live/no-endpoint-read",
-    paths: ["web/components/row-count-section.tsx"],
-    kind: "debt",
-    task: "task-1791560308-woqgfi",
+    rule: "no-db-backed-notify",
+    paths: ["server/internal/served.ts"],
+    kind: "sanctioned",
     reason:
-      "A request/response server read (useEndpoint / useEndpointResource / TanStack useQuery family / fetchEndpoint in a queryFn) not yet moved onto a liveValue or liveCollection read with useLive.",
+      "The loader reads only Postgres's catalogs and statistics views (`information_schema.tables`, `pg_stat_user_tables`), which the change feed cannot see — it triggers `public` tables — so a `db` read-set would be empty and never fire. Served as an external snapshot instead: the estimate is re-read whenever a reader asks.",
   },
 ] satisfies Exemptions;

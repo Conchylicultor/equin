@@ -1,16 +1,15 @@
 import { Fragment, useState, type ReactElement } from "react";
 import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   ControlPanel,
   ControlPanelPane,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { reportInvestigationsConfig } from "../../shared/config";
-import { getReportScope } from "../../shared/endpoints";
+import { reportInvestigationsScope } from "../../shared/live";
 import {
   REPORT_SEVERITIES,
   REPORT_SEVERITY_LABELS,
@@ -79,7 +78,7 @@ function ScopePanel({
   excludedKinds: readonly string[];
 }): ReactElement {
   const set = useSetConfig(reportInvestigationsConfig);
-  const scope = useEndpoint(getReportScope, {}, { query: { minCount } });
+  const scope = useLive(reportInvestigationsScope, { minCount });
   const excluded = new Set(excludedKinds);
   const inScope = (k: ReportKindScope): boolean =>
     severityInScope(k.variant, severity) && !excluded.has(k.kind);
@@ -106,12 +105,15 @@ function ScopePanel({
           }
         />
       </ControlPanel.Section>
-      {scope.isPending ? (
+      {scope.status === "loading" ? (
         <Loading variant="rows" />
-      ) : scope.isError ? (
-        <Text variant="caption" tone="destructive">
-          Could not read the report kinds: {scope.error.message}
-        </Text>
+      ) : scope.status === "error" ? (
+        <ResourceErrorInline
+          variant="block"
+          subject="the report kinds"
+          error={scope.error}
+          refetch={scope.refetch}
+        />
       ) : (
         <ControlPanel.Section
           label="Kinds"

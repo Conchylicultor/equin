@@ -2,11 +2,10 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
-    rule: "live/no-endpoint-read",
-    paths: ["web/components/sample-rows-section.tsx"],
-    kind: "debt",
-    task: "task-1791560308-woqgfi",
+    rule: "no-db-backed-notify",
+    paths: ["server/internal/served.ts"],
+    kind: "sanctioned",
     reason:
-      "A request/response server read (useEndpoint / useEndpointResource / TanStack useQuery family / fetchEndpoint in a queryFn) not yet moved onto a liveValue or liveCollection read with useLive.",
+      "The loader samples ANY public relation the reader names (`SELECT * … LIMIT 10`), and the change feed covers only some: views, derived-table rollups and `ExcludeFromChangeFeed` tables never fire, so a `db` read-set would leave their samples frozen while labelled fresh. Served as an external snapshot instead: re-read whenever a reader asks, with a Refresh affordance.",
   },
 ] satisfies Exemptions;

@@ -1,10 +1,9 @@
 import { asc, count, eq, min } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { implement } from "@plugins/infra/plugins/endpoints/server";
 import {
-  listClaudeCliCallsFor,
+  claudeCliCallsFor,
   type ClaudeCliCallsResult,
-} from "../../core/endpoints";
+} from "../../core/resources";
 import { _claudeCliCalls } from "./tables";
 import { RECENT_CALLS_LIMIT } from "../../core/resources";
 import { statusForNoCalls } from "./retention-verdict";
@@ -43,7 +42,20 @@ export async function listCallsFor(
   return { status: "none" };
 }
 
-export const handleListCallsFor = implement(
-  listClaudeCliCallsFor,
-  async ({ query }) => listCallsFor(query.correlationId, query.occurredAt),
-);
+/**
+ * The `occurredAt` param — an ISO instant — as a `Date`; a malformed one is
+ * refused `invalid-occurred-at` (a malformed question), not a loader failure.
+ */
+export function parseOccurredAt(
+  occurredAt: string | undefined,
+): Date | undefined {
+  if (occurredAt === undefined) return undefined;
+  const at = new Date(occurredAt);
+  if (Number.isNaN(at.getTime())) {
+    throw claudeCliCallsFor.refuse(
+      "invalid-occurred-at",
+      `occurredAt is not an instant: ${JSON.stringify(occurredAt)}`,
+    );
+  }
+  return at;
+}

@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { HostAccountSchema } from "./account";
 
@@ -8,4 +9,15 @@ import { HostAccountSchema } from "./account";
  */
 export const hostAccount = liveValue("host-account", {
   schema: HostAccountSchema,
+});
+
+/**
+ * The home directory of the OS account this backend runs as, absolute — what
+ * `~` stands for in every host path the server reads. A sibling of
+ * {@link hostAccount} rather than a field of it: it is known without the
+ * full-name read, so a surface that only needs `~` never waits on (or fails
+ * with) that spawn.
+ */
+export const hostHome = liveValue("host-account.home", {
+  schema: z.string().min(1),
 });

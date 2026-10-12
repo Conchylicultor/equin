@@ -1,6 +1,5 @@
 import {
   fetchEndpoint,
-  getEndpointErrorMessage,
   useEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -9,6 +8,9 @@ import {
   hostFsVolume,
   isBrowsable,
 } from "@plugins/infra/plugins/host-fs/core";
+import { hostHome } from "@plugins/infra/plugins/host-account/core";
+import { useLive } from "@plugins/network/plugins/live/web";
+import type { ResourceError } from "@plugins/primitives/plugins/live-state/web";
 import type {
   PathBarSource,
   PathResolution,
@@ -24,31 +26,25 @@ import {
 
 /**
  * The user's home directory, absolute — what `~` stands for. Every comparison
- * between a typed path and a listed one goes through it. Asked once per
- * session; pending until the server answers.
+ * between a typed path and a listed one goes through it. Read from the
+ * backend account's `host-account.home` live value (fixed for the process);
+ * pending until it arrives.
  */
 export type HomeDir =
   | { kind: "pending" }
   | { kind: "ready"; home: string }
-  | { kind: "failed"; message: string };
+  | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> };
 
 export function useHomeDir(): HomeDir {
-  const query = useEndpoint(
-    hostFsStat,
-    {},
-    { query: { path: HOME }, staleTime: Number.POSITIVE_INFINITY },
-  );
-  if (query.isError) {
-    return { kind: "failed", message: getEndpointErrorMessage(query.error) };
+  const home = useLive(hostHome);
+  switch (home.status) {
+    case "loading":
+      return { kind: "pending" };
+    case "error":
+      return { kind: "failed", error: home.error, refetch: home.refetch };
+    case "ready":
+      return { kind: "ready", home: home.data };
   }
-  if (!query.data) return { kind: "pending" };
-  if (query.data.kind !== "ok") {
-    return {
-      kind: "failed",
-      message: `The home directory is ${query.data.kind}.`,
-    };
-  }
-  return { kind: "ready", home: query.data.path };
 }
 
 /** The name of the volume mounted at `/` ("Macintosh HD"), once known. */

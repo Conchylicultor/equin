@@ -1,13 +1,14 @@
 export {
   claudeCliCalls,
+  claudeCliCallsFor,
   ClaudeCliCallSchema,
+  ClaudeCliCallsResultSchema,
   claudeCliCallFields,
   ClaudeCliCallStatusSchema,
 } from "./resources";
 export type {
   ClaudeCliCall,
   ClaudeCliCallRow,
+  ClaudeCliCallsResult,
   ClaudeCliCallStatus,
 } from "./resources";
-export { listClaudeCliCallsFor, ClaudeCliCallsResultSchema } from "./endpoints";
-export type { ClaudeCliCallsResult } from "./endpoints";
