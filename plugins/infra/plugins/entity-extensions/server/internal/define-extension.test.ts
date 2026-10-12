@@ -257,7 +257,11 @@ describe("defineExtension derived updatedAt", () => {
 
   test("upsert never writes updated_at", async () => {
     statements.length = 0;
-    await thing.upsert("s1", { semitones: 2, label: "x", source: "user" }, recordingDb);
+    await thing.upsert(
+      "s1",
+      { semitones: 2, label: "x", source: "user" },
+      recordingDb,
+    );
     const [upsert] = statements;
     expect(conflictSet(upsert?.sql)).toBe(`"semitones" = $4, "label" = $5`);
     expect(bindsADate(upsert?.params)).toBe(false);
