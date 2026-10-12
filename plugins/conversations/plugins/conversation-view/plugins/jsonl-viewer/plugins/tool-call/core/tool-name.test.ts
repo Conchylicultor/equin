@@ -3,10 +3,10 @@ import { toolName } from "./tool-name";
 
 describe("toolName", () => {
   test("splits an MCP tool into its name and server", () => {
-    expect(toolName("mcp__singularity__add_task")).toEqual({
-      id: "mcp__singularity__add_task",
+    expect(toolName("mcp__equin__add_task")).toEqual({
+      id: "mcp__equin__add_task",
       name: "add_task",
-      server: "singularity",
+      server: "equin",
     });
   });
 

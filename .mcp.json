@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "singularity": {
+    "equin": {
       "type": "http",
       "url": "http://${SINGULARITY_PARENT_HOST}.localhost:9000/api/mcp/${SINGULARITY_CONVERSATION_ID}"
     }

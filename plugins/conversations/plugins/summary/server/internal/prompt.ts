@@ -82,7 +82,7 @@ function INSTRUCTIONS(
 
 The target conversation context (status, task, transcript) is at \`${contextPath}\`. Read that file first with the Read tool.
 
-Then call \`mcp__singularity__submit_conversation_summary\` EXACTLY ONCE with these fields:
+Then call \`mcp__equin__submit_conversation_summary\` EXACTLY ONCE with these fields:
 
 - \`conversationId\`: must be exactly \`"${targetConversationId}"\`.
 - \`phase\`: pick the enum value that best describes what's happening RIGHT NOW (see the tool's description for semantics). The enum is orthogonal to status (working/blocked/done is surfaced separately) — focus on *what kind of activity*.

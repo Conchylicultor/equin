@@ -32,7 +32,7 @@ export async function handleMcpRequest(
 
   const server = new McpServer(
     {
-      name: "singularity",
+      name: "equin",
       version: "0.0.1",
     },
     { instructions },

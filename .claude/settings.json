@@ -7,7 +7,7 @@
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "permissions": {
-    "allow": ["mcp__singularity__query_db", "Bash(rg:*)", "Bash(ls:*)"],
+    "allow": ["mcp__equin__query_db", "Bash(rg:*)", "Bash(ls:*)"],
     "deny": ["EnterWorktree", "ExitWorktree"]
   },
   "enableAllProjectMcpServers": true,

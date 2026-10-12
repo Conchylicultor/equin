@@ -48,7 +48,7 @@ function rows(event: JsonlEvent): [string, string][] {
 describe("extractPageHits — which tools", () => {
   test("the MCP server prefix does not hide a page tool", () => {
     const event = toolCall(
-      "mcp__singularity__read_page",
+      "mcp__equin__read_page",
       { block_id: PAGE },
       { content: "# Plan" },
     );
@@ -77,7 +77,7 @@ describe("extractPageHits — which tools", () => {
 describe("extractPageHits — relation", () => {
   test("write_agent_note edits the page", () => {
     const event = toolCall(
-      "mcp__singularity__write_agent_note",
+      "mcp__equin__write_agent_note",
       { block_id: CARD, content: "Findings\n\n- one" },
       { content: report(PAGE) },
     );
@@ -86,7 +86,7 @@ describe("extractPageHits — relation", () => {
 
   test("edit_page edits the page", () => {
     const event = toolCall(
-      "mcp__singularity__edit_page",
+      "mcp__equin__edit_page",
       { block_id: PAGE, old_string: "a", new_string: "b" },
       { content: report(PAGE) },
     );
@@ -95,7 +95,7 @@ describe("extractPageHits — relation", () => {
 
   test("read_page only references it", () => {
     const event = toolCall(
-      "mcp__singularity__read_page",
+      "mcp__equin__read_page",
       { block_id: PAGE },
       { content: "# Plan\n\nprose, not a report" },
     );
@@ -104,7 +104,7 @@ describe("extractPageHits — relation", () => {
 
   test("a sub-page the write minted is its own created row", () => {
     const event = toolCall(
-      "mcp__singularity__edit_page",
+      "mcp__equin__edit_page",
       {
         block_id: PAGE,
         old_string: "x",
@@ -119,7 +119,7 @@ describe("extractPageHits — relation", () => {
   });
 
   test("a mint still in flight edits the page — the new id is not known yet", () => {
-    const event = toolCall("mcp__singularity__write_agent_note", {
+    const event = toolCall("mcp__equin__write_agent_note", {
       block_id: PAGE,
       content: '<agent-page title="Findings">the body</agent-page>',
     });
@@ -128,7 +128,7 @@ describe("extractPageHits — relation", () => {
 
   test("a report without created_page_ids creates nothing", () => {
     const event = toolCall(
-      "mcp__singularity__edit_page",
+      "mcp__equin__edit_page",
       {
         block_id: PAGE,
         old_string: "x",
@@ -143,7 +143,7 @@ describe("extractPageHits — relation", () => {
 describe("extractPageHits — which key", () => {
   test("the report's page wins over the block the write was scoped to", () => {
     const event = toolCall(
-      "mcp__singularity__write_agent_note",
+      "mcp__equin__write_agent_note",
       { block_id: CARD, content: "note" },
       { content: report(PAGE) },
     );
@@ -151,7 +151,7 @@ describe("extractPageHits — which key", () => {
   });
 
   test("a write still in flight falls back to the block it was given", () => {
-    const event = toolCall("mcp__singularity__edit_page", {
+    const event = toolCall("mcp__equin__edit_page", {
       block_id: CARD,
       old_string: "a",
       new_string: "b",
@@ -161,7 +161,7 @@ describe("extractPageHits — which key", () => {
 
   test("a refused write falls back too — the refusal is prose, not a report", () => {
     const event = toolCall(
-      "mcp__singularity__edit_page",
+      "mcp__equin__edit_page",
       { block_id: CARD, old_string: "a", new_string: "b" },
       { content: "Refused: instructions not received.", isError: true },
     );
@@ -170,7 +170,7 @@ describe("extractPageHits — which key", () => {
 
   test("the legacy `blockId` spelling still names the page", () => {
     const event = toolCall(
-      "mcp__singularity__read_page",
+      "mcp__equin__read_page",
       { blockId: PAGE },
       { content: "# Plan" },
     );
@@ -178,9 +178,9 @@ describe("extractPageHits — which key", () => {
   });
 
   test("a call naming no page at all lists nothing", () => {
-    expect(rows(toolCall("mcp__singularity__read_page", {}))).toEqual([]);
-    expect(
-      rows(toolCall("mcp__singularity__read_page", { block_id: "" })),
-    ).toEqual([]);
+    expect(rows(toolCall("mcp__equin__read_page", {}))).toEqual([]);
+    expect(rows(toolCall("mcp__equin__read_page", { block_id: "" }))).toEqual(
+      [],
+    );
   });
 });

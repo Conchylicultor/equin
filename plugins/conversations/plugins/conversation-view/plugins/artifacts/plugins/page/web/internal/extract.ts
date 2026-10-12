@@ -20,7 +20,7 @@ type ToolCall = Extract<JsonlEvent, { kind: "tool-call" }>;
 /**
  * The three page tools, matched the way their renderers match them: on the
  * SUFFIX. An MCP tool arrives named for its server too
- * (`mcp__singularity__edit_page`), and the prefix is not ours to predict.
+ * (`mcp__equin__edit_page`), and the prefix is not ours to predict.
  */
 const PAGE_TOOLS: { readonly match: RegExp; readonly writes: boolean }[] = [
   { match: /edit_page$/, writes: true },
