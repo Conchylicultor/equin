@@ -1,4 +1,5 @@
 import * as React from "react";
+import { MenuSurfaceProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/menu-surface";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 
 import {
@@ -165,17 +166,18 @@ function SelectContent({
   // popup would be invisible.
   const container = usePortalContainer();
   return (
-    <SelectPrimitive.Portal container={container}>
-      <SelectPrimitive.Positioner
-        {...forwarded}
-        side={side}
-        sideOffset={sideOffset}
-        align={align}
-        alignOffset={alignOffset}
-        alignItemWithTrigger={alignItemWithTrigger}
-        className="isolate z-popover"
-      >
-        {/* The popup IS the shared panel (see `overlay-panel.tsx`); `{...props}`
+    <MenuSurfaceProvider value={true}>
+      <SelectPrimitive.Portal container={container}>
+        <SelectPrimitive.Positioner
+          {...forwarded}
+          side={side}
+          sideOffset={sideOffset}
+          align={align}
+          alignOffset={alignOffset}
+          alignItemWithTrigger={alignItemWithTrigger}
+          className="isolate z-popover"
+        >
+          {/* The popup IS the shared panel (see `overlay-panel.tsx`); `{...props}`
             stays BEFORE `render` and `render` is `Omit`ed from the public prop
             type, so a caller can never replace it.
 
@@ -188,38 +190,39 @@ function SelectContent({
             `relative`. It carries `rail-bleed` instead of the `header` prop's
             fixed negative margins, so its rule spans the panel at whatever
             padding role the panel is actually on. */}
-        <SelectPrimitive.Popup
-          data-slot="select-content"
-          data-align-trigger={alignItemWithTrigger}
-          {...props}
-          render={
-            <OverlayPanel
-              width={width}
-              padding={padding}
-              maxHeight={maxHeight}
-              className={cn(
-                // `relative` is the arrows' containing block; `isolate` keeps the
-                // sticky header / arrows stacking inside the panel. The
-                // animate-none is genuinely Select-specific: with
-                // `alignItemWithTrigger` base-ui places the popup by measuring it,
-                // so a zoom/slide entrance would fight its own measurement.
-                "relative isolate data-[align-trigger=true]:animate-none",
-                className,
-              )}
-            >
-              <SelectScrollUpButton />
-              {header != null && (
-                <div className="sticky top-0 z-raised border-b bg-popover rail-bleed py-xs">
-                  {header}
-                </div>
-              )}
-              <SelectPrimitive.List>{children}</SelectPrimitive.List>
-              <SelectScrollDownButton />
-            </OverlayPanel>
-          }
-        />
-      </SelectPrimitive.Positioner>
-    </SelectPrimitive.Portal>
+          <SelectPrimitive.Popup
+            data-slot="select-content"
+            data-align-trigger={alignItemWithTrigger}
+            {...props}
+            render={
+              <OverlayPanel
+                width={width}
+                padding={padding}
+                maxHeight={maxHeight}
+                className={cn(
+                  // `relative` is the arrows' containing block; `isolate` keeps the
+                  // sticky header / arrows stacking inside the panel. The
+                  // animate-none is genuinely Select-specific: with
+                  // `alignItemWithTrigger` base-ui places the popup by measuring it,
+                  // so a zoom/slide entrance would fight its own measurement.
+                  "relative isolate data-[align-trigger=true]:animate-none",
+                  className,
+                )}
+              >
+                <SelectScrollUpButton />
+                {header != null && (
+                  <div className="sticky top-0 z-raised border-b bg-popover rail-bleed py-xs">
+                    {header}
+                  </div>
+                )}
+                <SelectPrimitive.List>{children}</SelectPrimitive.List>
+                <SelectScrollDownButton />
+              </OverlayPanel>
+            }
+          />
+        </SelectPrimitive.Positioner>
+      </SelectPrimitive.Portal>
+    </MenuSurfaceProvider>
   );
 }
 

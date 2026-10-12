@@ -20,6 +20,7 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import {
+  SectionLabel,
   Text,
   textVariantClass,
 } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -231,9 +232,7 @@ function InstrumentPicker({
         {groups.map(({ group, options: groupOptions }) => (
           // eslint-disable-next-line spacing/no-adhoc-spacing -- mt separates each instrument group header from the prior group (no named margin utility)
           <div key={group} className="mt-1">
-            <div className="px-sm py-xs text-3xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {group}
-            </div>
+            <SectionLabel className="px-sm py-xs">{group}</SectionLabel>
             {/* eslint-disable-next-line data-view/no-adhoc-row-list -- mixer channel strips (bespoke instrument UI) */}
             {groupOptions.map((o) => {
               const icon = o.icon;

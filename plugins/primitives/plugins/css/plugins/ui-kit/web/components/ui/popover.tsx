@@ -1,4 +1,5 @@
 import * as React from "react";
+import { MenuSurfaceProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/menu-surface";
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward";
@@ -120,42 +121,44 @@ function PopoverContent({
   const container = usePortalContainer();
   const everOpened = React.useContext(PopoverEverOpenedContext);
   return (
-    <PopoverPrimitive.Portal
-      container={container}
-      keepMounted={everOpened && !resetOnClose}
-    >
-      <PopoverPrimitive.Positioner
-        {...forwarded}
-        className="isolate z-popover outline-none"
-        align={align}
-        alignOffset={alignOffset}
-        side={side}
-        sideOffset={sideOffset}
-        anchor={anchor}
+    <MenuSurfaceProvider value={true}>
+      <PopoverPrimitive.Portal
+        container={container}
+        keepMounted={everOpened && !resetOnClose}
       >
-        {/* The popup IS the shared panel: base-ui owns the state machine, and
+        <PopoverPrimitive.Positioner
+          {...forwarded}
+          className="isolate z-popover outline-none"
+          align={align}
+          alignOffset={alignOffset}
+          side={side}
+          sideOffset={sideOffset}
+          anchor={anchor}
+        >
+          {/* The popup IS the shared panel: base-ui owns the state machine, and
             `render` hands it `OverlayPanel` as the element to clone its merged
             props onto (`{...props}` stays BEFORE `render`, and `render` is
             `Omit`ed from the public prop type, so a caller can never replace the
             panel). Chrome, geometry, viewport fit and the content-context resets
             all live in one place — see `overlay-panel.tsx`. */}
-        <PopoverPrimitive.Popup
-          data-slot="popover-content"
-          {...props}
-          render={
-            <OverlayPanel
-              width={width}
-              padding={padding}
-              maxHeight={maxHeight}
-              header={header}
-              className={className}
-            >
-              {children}
-            </OverlayPanel>
-          }
-        />
-      </PopoverPrimitive.Positioner>
-    </PopoverPrimitive.Portal>
+          <PopoverPrimitive.Popup
+            data-slot="popover-content"
+            {...props}
+            render={
+              <OverlayPanel
+                width={width}
+                padding={padding}
+                maxHeight={maxHeight}
+                header={header}
+                className={className}
+              >
+                {children}
+              </OverlayPanel>
+            }
+          />
+        </PopoverPrimitive.Positioner>
+      </PopoverPrimitive.Portal>
+    </MenuSurfaceProvider>
   );
 }
 

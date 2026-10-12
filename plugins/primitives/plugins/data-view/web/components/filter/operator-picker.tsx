@@ -8,7 +8,6 @@ import {
   DropdownMenuTrigger,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { FilterOperator } from "../../../core";
 
 /** One rendered section: a `group` label (empty string = the default,
@@ -78,9 +77,7 @@ export function OperatorPicker(props: {
             <Fragment key={group.label || "__default"}>
               {index > 0 && <DropdownMenuSeparator />}
               {group.label ? (
-                <DropdownMenuSection
-                  label={<SectionLabel>{group.label}</SectionLabel>}
-                >
+                <DropdownMenuSection label={group.label}>
                   {items}
                 </DropdownMenuSection>
               ) : (

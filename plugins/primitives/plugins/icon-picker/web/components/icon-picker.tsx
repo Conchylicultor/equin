@@ -98,9 +98,9 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
     <Stack gap="xs" className={className}>
       {/* Header + search */}
       <Stack direction="row" align="center" justify="between" gap="none">
-        {/* No size override: this heading reads as a band label beside the
-            panel's own (`ControlPanel.Section label`), so it takes the eyebrow
-            role the primitive gives that one. */}
+        {/* No look override: inside a menu surface (a `ControlPanel`, a
+            popover) `SectionLabel` IS the shared menu label, so this heading
+            matches the panel's own `ControlPanel.Section label` beside it. */}
         <SectionLabel as="span">
           {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on the "loading…" suffix next to the label text */}
           Icon{!set && <span className="ml-1 opacity-50">· loading…</span>}
@@ -160,8 +160,7 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
           >
             {(row) =>
               row.kind === "header" ? (
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- a category label's offset above its first icon row
-                <SectionLabel className="pb-1 pt-2 text-3xs text-muted-foreground/60">
+                <SectionLabel className="pt-xs pb-2xs">
                   {row.label}
                 </SectionLabel>
               ) : (

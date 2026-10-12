@@ -11,7 +11,8 @@ export interface ConfigMenuHeaderProps {
 }
 
 // The menu twin of ConfigPopoverHeader: a header row for a config-backed
-// Select / DropdownMenu, with an optional eyebrow label and a trailing gear that
+// Select / DropdownMenu, with an optional section label (the menu label, as
+// SectionLabel draws inside any menu surface) and a trailing gear that
 // jumps to the backing config. Lives inside the menu chrome so the "configure"
 // affordance can't be forgotten. The flexible spacer cell absorbs the row slack
 // so the gear stays pinned right even when there is no label.

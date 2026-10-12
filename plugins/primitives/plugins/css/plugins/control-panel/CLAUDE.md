@@ -621,26 +621,16 @@ The primitive needs **no** new lint exemptions: it inherits the
 
 - Description: The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
 - Web:
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×11
+    - `primitives/row-actions` ×2
     - `primitives/css/rail.useRailGuard`
     - `primitives/css/selection-indicator.CheckboxIndicator`
     - `primitives/css/spacing.Stack`
     - `primitives/css/switch.SwitchIndicator`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.MENU_LABEL_PAINT`
-    - `primitives/css/ui-kit.MENU_ROW_CHECKED`
-    - `primitives/css/ui-kit.MENU_ROW_PAINT`
-    - `primitives/css/ui-kit.MENU_VALUE`
-    - `primitives/css/ui-kit.Popover`
-    - `primitives/css/ui-kit.PopoverContent`
-    - `primitives/css/ui-kit.PopoverMaxHeight`
-    - `primitives/css/ui-kit.PopoverTrigger`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/tooltip.WithTooltip`
-    - `primitives/row-actions.RowActions`
-    - `primitives/row-actions.rowActionsAnchor`
     - `ui/icons.Icon`
   - Exports (types):
     - `ControlPanelBlockProps`

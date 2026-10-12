@@ -1,3 +1,8 @@
+import {
+  cn,
+  MENU_LABEL_PAINT,
+  useMenuSurface,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "./text";
 
 export interface SectionLabelProps extends React.HTMLAttributes<HTMLElement> {
@@ -5,10 +10,15 @@ export interface SectionLabelProps extends React.HTMLAttributes<HTMLElement> {
 }
 
 /**
- * Eyebrow / form-section / content-header label — the small-caps muted label.
- * A thin composition over `<Text variant="eyebrow">`: the eyebrow geometry lives
- * in the typography primitive (one definition), this helper just adds the muted
- * tone and the block (`div`) host that section labels conventionally use.
+ * The label that names a section — and it reads WHERE it is to decide how.
+ *
+ * - On a page: the eyebrow / form-section / content-header label — the small-caps
+ *   muted label (`<Text variant="eyebrow" tone="muted">`).
+ * - Inside a menu surface (`useMenuSurface()` — a dropdown, select, popover or
+ *   control panel): the shared menu section label (ui-kit `MENU_LABEL_PAINT`:
+ *   faint caption, semibold, sentence case), the one a `DropdownMenuSection`,
+ *   `ControlPanel.Section` or `ControlPanel.Subhead` draws. A heading placed
+ *   inside a menu therefore cannot drift from the menu's own headings.
  */
 export function SectionLabel({
   as = "div",
@@ -16,8 +26,27 @@ export function SectionLabel({
   children,
   ...rest
 }: SectionLabelProps) {
+  const inMenu = useMenuSurface();
+  if (inMenu) {
+    return (
+      <Text
+        variant="caption"
+        as={as}
+        className={cn(MENU_LABEL_PAINT, className)}
+        {...rest}
+      >
+        {children}
+      </Text>
+    );
+  }
   return (
-    <Text variant="eyebrow" tone="muted" as={as} className={className} {...rest}>
+    <Text
+      variant="eyebrow"
+      tone="muted"
+      as={as}
+      className={className}
+      {...rest}
+    >
       {children}
     </Text>
   );

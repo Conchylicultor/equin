@@ -261,8 +261,10 @@ to reconcile them; they never needed reconciling.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.MENU_LABEL_PAINT`
     - `primitives/css/ui-kit.textStepFor`
     - `primitives/css/ui-kit.useControlSize`
+    - `primitives/css/ui-kit.useMenuSurface`
     - `primitives/css/ui-kit.useSingleLine`
   - Exports (types):
     - `SectionLabelProps`

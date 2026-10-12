@@ -6,7 +6,10 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -188,9 +191,7 @@ function ReadyStepper({
       }
     >
       <Stack gap="xs">
-        <Text variant="eyebrow" tone="faint">
-          Versions
-        </Text>
+        <SectionLabel>Versions</SectionLabel>
         <VersionListFrameContext value={listFrame}>
           <VersionList
             history={history}

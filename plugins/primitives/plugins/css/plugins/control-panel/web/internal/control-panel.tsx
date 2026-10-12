@@ -1,6 +1,7 @@
 import {
   cn,
   MENU_LABEL_PAINT,
+  MenuSurfaceProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useRailGuard } from "@plugins/primitives/plugins/css/plugins/rail/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -95,7 +96,10 @@ export function ControlPanel({
       aria-label={ariaLabel}
       className={cn("cp-panel cp-body", className)}
     >
-      {children}
+      {/* A panel is a menu surface wherever it is mounted (popover or pane):
+          a `SectionLabel` inside — a picker's heading, a contributed block's —
+          draws the same menu label as this panel's own `Section`s. */}
+      <MenuSurfaceProvider value={true}>{children}</MenuSurfaceProvider>
     </div>
   );
 }

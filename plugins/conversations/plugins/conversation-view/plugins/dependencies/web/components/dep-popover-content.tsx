@@ -55,7 +55,7 @@ export function DepPopoverContent({
   return (
     <>
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset on the section label; siblings sit in a fragment with no flex parent to own the gap */}
-      <SectionLabel className="mb-1.5 text-3xs">{label}</SectionLabel>
+      <SectionLabel className="mb-1.5">{label}</SectionLabel>
 
       {(currentConvs.length > 0 || orphanIds.length > 0) && (
         // eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset separating the current-deps list from the search input; fragment parent can't own the gap

@@ -4471,7 +4471,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-            - Uses: 71 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+            - Uses: 72 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
               - `primitives/css/ui-kit` ×6
               - `primitives/data-view` ×6
               - `primitives/hover-reveal` ×3
@@ -4479,6 +4479,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/action-presentation` ×2
               - `primitives/css/control-panel` ×2
               - `primitives/css/spacing` ×2
+              - `primitives/css/text` ×2
               - `primitives/css/toggle-chip` ×2
               - `primitives/dom/auto-scroll` ×2
               - `primitives/dom/element-size` ×2
@@ -4505,7 +4506,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/scroll.Scroll`
               - `primitives/css/slider.Slider`
               - `primitives/css/sticky.Sticky`
-              - `primitives/css/text.Text`
               - `primitives/embed.isEmbeddedDocument`
               - `primitives/error-boundary.PluginErrorBoundary`
               - `primitives/icon-button.IconButton`
@@ -6945,10 +6945,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `SonataDocument.SongSetting` "track-view-sync" → `TrackViewObserver`
               - `Sonata.Section` "Tracks" → `TrackMixerPanel`
-            - Uses: 40 symbols — full list in [`plugins/apps/plugins/sonata/plugins/track-mixer/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/track-mixer/REFERENCE.md)
+            - Uses: 41 symbols — full list in [`plugins/apps/plugins/sonata/plugins/track-mixer/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/track-mixer/REFERENCE.md)
               - `apps/sonata/document` ×8
+              - `primitives/css/text` ×3
               - `primitives/css/spacing` ×2
-              - `primitives/css/text` ×2
               - `primitives/css/ui-kit` ×2
               - `primitives/live-state` ×2
               - `primitives/optimistic-mutation` ×2
@@ -29067,26 +29067,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `history/dialog`
         - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
           - Web:
-            - Uses:
+            - Uses: 21 symbols — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+              - `primitives/css/ui-kit` ×11
+              - `primitives/row-actions` ×2
               - `primitives/css/rail.useRailGuard`
               - `primitives/css/selection-indicator.CheckboxIndicator`
               - `primitives/css/spacing.Stack`
               - `primitives/css/switch.SwitchIndicator`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
-              - `primitives/css/ui-kit.cn`
-              - `primitives/css/ui-kit.MENU_LABEL_PAINT`
-              - `primitives/css/ui-kit.MENU_ROW_CHECKED`
-              - `primitives/css/ui-kit.MENU_ROW_PAINT`
-              - `primitives/css/ui-kit.MENU_VALUE`
-              - `primitives/css/ui-kit.Popover`
-              - `primitives/css/ui-kit.PopoverContent`
-              - `primitives/css/ui-kit.PopoverMaxHeight`
-              - `primitives/css/ui-kit.PopoverTrigger`
               - `primitives/icon-button.IconButton`
               - `primitives/overlay/tooltip.WithTooltip`
-              - `primitives/row-actions.RowActions`
-              - `primitives/row-actions.rowActionsAnchor`
               - `ui/icons.Icon`
             - Exports (types):
               - `ControlPanelBlockProps`
@@ -29820,8 +29810,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Uses:
               - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.MENU_LABEL_PAINT`
               - `primitives/css/ui-kit.textStepFor`
               - `primitives/css/ui-kit.useControlSize`
+              - `primitives/css/ui-kit.useMenuSurface`
               - `primitives/css/ui-kit.useSingleLine`
             - Exports (types):
               - `SectionLabelProps`
@@ -30014,6 +30006,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MENU_ROW_PAINT`
               - `MENU_SEPARATOR`
               - `MENU_VALUE`
+              - `MenuSurfaceProvider`
               - `OverlayPanel`
               - `Popover`
               - `POPOVER_MAX_HEIGHT`
@@ -30082,6 +30075,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TooltipProvider`
               - `TooltipTrigger`
               - `useControlSize`
+              - `useMenuSurface`
               - `usePortalForwardedAttrs`
               - `usePortalThemeScope`
               - `useRegionForwardedAttrs`
@@ -30287,7 +30281,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
-        - Uses: 83 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 82 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `primitives/css/ui-kit` ×11
           - `primitives/data-view/view-core` ×8
           - `network/live` ×5
@@ -30299,7 +30293,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/row` ×2
           - `primitives/css/sticky/stack` ×2
           - `primitives/css/sticky` ×2
-          - `primitives/css/text` ×2
           - `primitives/cursor-pagination` ×2
           - `primitives/hover-reveal` ×2
           - `primitives/latest-ref` ×2
@@ -30317,6 +30310,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/surface.Surface`
+          - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/css/yield.yieldClass`
           - `primitives/dom/auto-scroll.KeepAnchorAcross`

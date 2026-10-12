@@ -1,4 +1,5 @@
 import * as React from "react";
+import { MenuSurfaceProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/menu-surface";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils";
@@ -118,38 +119,40 @@ function DropdownMenuContent({
   // popup would be invisible.
   const container = usePortalContainer();
   return (
-    <MenuPrimitive.Portal container={container}>
-      <MenuPrimitive.Positioner
-        {...forwarded}
-        className="isolate z-popover outline-none"
-        align={align}
-        alignOffset={alignOffset}
-        side={side}
-        sideOffset={sideOffset}
-      >
-        {/* The popup IS the shared panel: base-ui owns the state machine, and
+    <MenuSurfaceProvider value={true}>
+      <MenuPrimitive.Portal container={container}>
+        <MenuPrimitive.Positioner
+          {...forwarded}
+          className="isolate z-popover outline-none"
+          align={align}
+          alignOffset={alignOffset}
+          side={side}
+          sideOffset={sideOffset}
+        >
+          {/* The popup IS the shared panel: base-ui owns the state machine, and
             `render` hands it `OverlayPanel` as the element to clone its merged
             props onto (`{...props}` stays BEFORE `render`, and `render` is
             `Omit`ed from the public prop type, so a caller can never replace the
             panel). Chrome, geometry, viewport fit and the content-context resets
             all live in one place — see `overlay-panel.tsx`. */}
-        <MenuPrimitive.Popup
-          data-slot="dropdown-menu-content"
-          {...props}
-          render={
-            <OverlayPanel
-              width={width}
-              padding={padding}
-              maxHeight={maxHeight}
-              header={header}
-              className={className}
-            >
-              {children}
-            </OverlayPanel>
-          }
-        />
-      </MenuPrimitive.Positioner>
-    </MenuPrimitive.Portal>
+          <MenuPrimitive.Popup
+            data-slot="dropdown-menu-content"
+            {...props}
+            render={
+              <OverlayPanel
+                width={width}
+                padding={padding}
+                maxHeight={maxHeight}
+                header={header}
+                className={className}
+              >
+                {children}
+              </OverlayPanel>
+            }
+          />
+        </MenuPrimitive.Positioner>
+      </MenuPrimitive.Portal>
+    </MenuSurfaceProvider>
   );
 }
 

@@ -494,6 +494,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `MENU_ROW_PAINT`
     - `MENU_SEPARATOR`
     - `MENU_VALUE`
+    - `MenuSurfaceProvider`
     - `OverlayPanel`
     - `Popover`
     - `POPOVER_MAX_HEIGHT`
@@ -562,6 +563,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `TooltipProvider`
     - `TooltipTrigger`
     - `useControlSize`
+    - `useMenuSurface`
     - `usePortalForwardedAttrs`
     - `usePortalThemeScope`
     - `useRegionForwardedAttrs`

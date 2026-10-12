@@ -26,6 +26,7 @@ export {
 } from "./theme/control-size";
 
 export { SingleLineProvider, useSingleLine } from "./theme/single-line";
+export { MenuSurfaceProvider, useMenuSurface } from "./theme/menu-surface";
 
 export {
   MENU_ROW,

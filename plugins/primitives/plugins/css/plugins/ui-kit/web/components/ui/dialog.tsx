@@ -1,4 +1,5 @@
 import type * as React from "react";
+import { MenuSurfaceProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/menu-surface";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils";
@@ -119,9 +120,10 @@ function DialogContent({
 }: DialogContentProps) {
   const forwarded = usePortalForwardedAttrs();
   return (
-    <DialogPortal>
-      <DialogOverlay />
-      {/* The popup's box IS the panel's box — never a full-viewport wrapper.
+    <MenuSurfaceProvider value={false}>
+      <DialogPortal>
+        <DialogOverlay />
+        {/* The popup's box IS the panel's box — never a full-viewport wrapper.
           base-ui dismisses on an outside press by asking "is the press target
           inside the floating element?", and the floating element is THIS node.
           A `fixed inset-0` popup with the panel centred inside it therefore
@@ -129,30 +131,30 @@ function DialogContent({
           used to be dismissable only with Escape. Centring is done with the
           box itself (`inset-x-*` + `mx-auto` against the width tier) so there
           is no wrapper left to swallow the press. */}
-      <DialogPrimitive.Popup
-        data-slot="dialog-content"
-        {...forwarded}
-        // `inset-x-(--space-md)` rather than `inset-x-0`: at phone width the
-        // panel is narrower than its tier's cap, so without it the box runs
-        // edge to edge and the dialog reads as a page rather than as something
-        // laid over one. The margin is inset, never padding — padding on the
-        // popup would be dead area INSIDE the dialog's own box, which is the
-        // full-viewport-wrapper bug in miniature.
-        className={cn(
-          "fixed inset-x-(--space-md) top-(--dialog-top) z-popover mx-auto outline-none",
-          DIALOG_SIZES[size],
-        )}
-        style={
-          {
-            "--dialog-top": DIALOG_TOP,
-            // Declared here, with the offset it is derived from, so the two can
-            // no longer drift apart (see DIALOG_TOP). The panel inherits it.
-            "--available-height": `calc(100dvh - ${DIALOG_TOP} - ${DIALOG_BOTTOM_GAP})`,
-          } as React.CSSProperties
-        }
-        {...props}
-      >
-        {/* The dialog's box IS the shared panel — see `overlay-panel.tsx`. A
+        <DialogPrimitive.Popup
+          data-slot="dialog-content"
+          {...forwarded}
+          // `inset-x-(--space-md)` rather than `inset-x-0`: at phone width the
+          // panel is narrower than its tier's cap, so without it the box runs
+          // edge to edge and the dialog reads as a page rather than as something
+          // laid over one. The margin is inset, never padding — padding on the
+          // popup would be dead area INSIDE the dialog's own box, which is the
+          // full-viewport-wrapper bug in miniature.
+          className={cn(
+            "fixed inset-x-(--space-md) top-(--dialog-top) z-popover mx-auto outline-none",
+            DIALOG_SIZES[size],
+          )}
+          style={
+            {
+              "--dialog-top": DIALOG_TOP,
+              // Declared here, with the offset it is derived from, so the two can
+              // no longer drift apart (see DIALOG_TOP). The panel inherits it.
+              "--available-height": `calc(100dvh - ${DIALOG_TOP} - ${DIALOG_BOTTOM_GAP})`,
+            } as React.CSSProperties
+          }
+          {...props}
+        >
+          {/* The dialog's box IS the shared panel — see `overlay-panel.tsx`. A
             dialog is CENTERED rather than anchored, so nothing positions it and
             no positioner publishes an `--available-height` for it; the popup
             above declares one from its own offset, which is what turns the
@@ -181,39 +183,40 @@ function DialogContent({
             `rail-bleed` is `extend px`, so it would REMOVE the `rail-lg` below
             it, leaving the panel un-inset (the intended half) and also bleeding
             against a rail that is now zero. */}
-        <OverlayPanel
-          data-slot="dialog-panel"
-          padding="lg"
-          className={cn("w-full", className)}
-        >
-          {children}
-        </OverlayPanel>
-        {showCloseButton && (
-          // A SIBLING of the panel, not a child: the panel is the scroller, so a
-          // button inside it would scroll away with the content and be clipped
-          // by its overflow. As a sibling of a `fixed` popup it resolves against
-          // the popup — which is now exactly the panel's box, so "the panel's
-          // top-right corner" and "the popup's top-right corner" are one place.
-          //
-          // `z-popover` matches the panel rather than beating it: equal layers
-          // paint in tree order and this comes second, so it lands on top
-          // without claiming a rung above the whole popover layer.
-          <DialogPrimitive.Close
-            data-slot="dialog-close-corner"
-            render={
-              <Button
-                variant="ghost"
-                aspect="icon"
-                className="absolute top-3 right-3 z-popover"
-              />
-            }
+          <OverlayPanel
+            data-slot="dialog-panel"
+            padding="lg"
+            className={cn("w-full", className)}
           >
-            <Icon icon={closeIcon} />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
-        )}
-      </DialogPrimitive.Popup>
-    </DialogPortal>
+            {children}
+          </OverlayPanel>
+          {showCloseButton && (
+            // A SIBLING of the panel, not a child: the panel is the scroller, so a
+            // button inside it would scroll away with the content and be clipped
+            // by its overflow. As a sibling of a `fixed` popup it resolves against
+            // the popup — which is now exactly the panel's box, so "the panel's
+            // top-right corner" and "the popup's top-right corner" are one place.
+            //
+            // `z-popover` matches the panel rather than beating it: equal layers
+            // paint in tree order and this comes second, so it lands on top
+            // without claiming a rung above the whole popover layer.
+            <DialogPrimitive.Close
+              data-slot="dialog-close-corner"
+              render={
+                <Button
+                  variant="ghost"
+                  aspect="icon"
+                  className="absolute top-3 right-3 z-popover"
+                />
+              }
+            >
+              <Icon icon={closeIcon} />
+              <span className="sr-only">Close</span>
+            </DialogPrimitive.Close>
+          )}
+        </DialogPrimitive.Popup>
+      </DialogPortal>
+    </MenuSurfaceProvider>
   );
 }
 

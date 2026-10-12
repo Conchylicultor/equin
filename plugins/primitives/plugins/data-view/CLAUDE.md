@@ -2311,7 +2311,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 82 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×11
     - `primitives/data-view/view-core` ×8
     - `network/live` ×5
@@ -2323,7 +2323,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/css/row` ×2
     - `primitives/css/sticky/stack` ×2
     - `primitives/css/sticky` ×2
-    - `primitives/css/text` ×2
     - `primitives/cursor-pagination` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/latest-ref` ×2
@@ -2341,6 +2340,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
+    - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/auto-scroll.KeepAnchorAcross`
