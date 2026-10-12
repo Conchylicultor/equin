@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { is, SQL } from "drizzle-orm";
 import {
@@ -14,7 +14,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import { drizzle } from "drizzle-orm/pg-proxy";
-import * as realDatabase from "@plugins/database/server";
+import type { DbExecutor } from "@plugins/database/server";
 import { parsedText } from "@plugins/database/plugins/sql-column/server";
 import { nullable } from "@plugins/fields/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
@@ -24,21 +24,22 @@ import {
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
+import { defineExtension } from "./define-extension";
 
-// The handle's accessors run against the real `db`. Swap it for a drizzle proxy
-// that records every statement instead of sending it — so the accessors can be
-// checked against the SQL they produce, with no database. Bun scopes module
-// mocks to this test file.
+// A drizzle proxy that records every statement instead of sending it — so the
+// accessors can be checked against the SQL they produce, with no database. It
+// is handed to each accessor as its executor (never swapped in via
+// `mock.module`: a bun module mock is process-wide and would leak into every
+// suite sharing the `./singularity test` run).
 const statements: { sql: string; params: unknown[] }[] = [];
 const recordingDb = drizzle(async (sql, params) => {
   statements.push({ sql, params });
   return { rows: [] };
 });
-void mock.module("@plugins/database/server", () => ({
-  ...realDatabase,
-  db: recordingDb,
-}));
-const { defineExtension } = await import("./define-extension");
+// The accessors only call pg-core query builders (select / insert / delete),
+// which the pg-proxy and node-postgres drizzles share; `DbExecutor` is spelled
+// as the node-postgres pool-or-tx type, hence the cast.
+const exec = recordingDb as unknown as DbExecutor;
 
 // ── A parent, and one extension built each way ──────────────────────────────
 const parent = pgTable("ext_probe", { id: text("id").primaryKey() });
@@ -178,9 +179,9 @@ describe("defineExtension wire", () => {
 describe("defineExtension accessors", () => {
   test("get / upsert / delete key on parent_id", async () => {
     statements.length = 0;
-    await thing.get("s1");
-    await thing.upsert("s1", { semitones: 2 });
-    await thing.delete("s1");
+    await thing.get("s1", exec);
+    await thing.upsert("s1", { semitones: 2 }, exec);
+    await thing.delete("s1", exec);
 
     const [get, upsert, del] = statements;
     expect(get?.sql).toContain(`where "ext_probe_ext_thing"."parent_id" = $1`);
@@ -240,7 +241,7 @@ describe("defineExtension derived updatedAt", () => {
 
   test("upsert never writes updated_at", async () => {
     statements.length = 0;
-    await thing.upsert("s1", { semitones: 2, label: "x" });
+    await thing.upsert("s1", { semitones: 2, label: "x" }, exec);
     const [upsert] = statements;
     expect(conflictSet(upsert?.sql)).toBe(`"semitones" = $4, "label" = $5`);
     expect(bindsADate(upsert?.params)).toBe(false);
@@ -248,8 +249,8 @@ describe("defineExtension derived updatedAt", () => {
 
   test("an empty patch rewrites the key with its own value", async () => {
     statements.length = 0;
-    await thing.upsert("s1", {});
-    await thing.upsert("s2", { label: undefined });
+    await thing.upsert("s1", {}, exec);
+    await thing.upsert("s2", { label: undefined }, exec);
     for (const [i, id] of ["s1", "s2"].entries()) {
       const upsert = statements[i];
       expect(conflictSet(upsert?.sql)).toBe(`"parent_id" = $2`);
