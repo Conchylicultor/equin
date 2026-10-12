@@ -14,6 +14,7 @@ import {
   useCombinedResources,
 } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import type {
   Place,
   PlaceTag,
@@ -58,7 +59,7 @@ const PAST_CARD = `calc(${spaceLength("md")} * 2 + ${PLACE_CARD_WIDTH})`;
  * the map (`floatingToolbar`): the tag sidebar as the surface's `aside`, the
  * view tabs top-left, search / filter / Add place top-right. Selecting a place
  * (a pin, a card, a row) opens its card on the right, and a click anywhere
- * else on the screen (the map, the sidebar, the toolbar) closes it; Manage tags
+ * else on the screen (the map, the sidebar, the toolbar) or Esc closes it; Manage tags
  * lays the tag manager over the map.
  *
  * The places and the tag tree are two live reads, and every part of the
@@ -105,6 +106,23 @@ function PlacesSurface({
     panel: cardRef,
     onDismiss: () => setSelectedId(null),
   });
+  useSurfaceShortcuts(
+    useMemo(
+      () => [
+        {
+          id: "places.close-card",
+          keys: "Escape",
+          label: "Close the place card",
+          // Above the solo surface's Esc (exit fullscreen): the card is the
+          // nearer thing to close. A popover open in the card owns its Esc.
+          priority: 1,
+          when: () => showCard,
+          handler: () => setSelectedId(null),
+        },
+      ],
+      [showCard],
+    ),
+  );
 
   const viewOptions = useMemo(
     () => ({

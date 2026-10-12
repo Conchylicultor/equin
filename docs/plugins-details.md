@@ -4370,7 +4370,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "places-map"
               - `GeoMap.Pin` → `SavedPlacePin`
               - `GeoMap.Cluster` → `SavedPlaceCluster`
-            - Uses: 56 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 57 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `apps/places/places-core` ×8
               - `primitives/css/ui-kit` ×4
               - `primitives/data-view` ×4
@@ -4402,6 +4402,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/latest-ref.useEventCallback`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+              - `primitives/shortcuts.useSurfaceShortcuts`
               - `ui/icons.Icon`
         - **`shell`** — The Places app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the map's index pane is shown, and the app's own light-only theme, which the places app selects.
           - Web:
@@ -33815,9 +33816,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useFocusedSurfaceId`
           - `useSurfaceShortcuts`
       - Cross-plugin:
-        - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
+        - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
           - `primitives` ×11
-          - `apps` ×7
+          - `apps` ×8
           - `apps-core` ×3
           - `reorder/edit-mode`
           - `tasks/task-draft-form`

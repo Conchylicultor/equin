@@ -1,7 +1,7 @@
 // The place card's click-away on THIS checkout's deploy: select a pin, then
 // check that panning the map keeps the card, that selecting another pin swaps
 // it, that a click on the card itself keeps it, and that a click on the bare
-// map closes it. Needs at least two saved places with a location (run
+// map — or Esc — closes it. Needs at least two saved places with a location (run
 // `tour.ts` first on an empty deploy).
 //
 // Usage:
@@ -77,4 +77,10 @@ await withBrowser(async (h) => {
   // A click on the bare map (bottom middle, away from the chrome) closes it.
   await page.mouse.click(mid.x, mid.y);
   await expectCard(false, "click-away");
+
+  // Esc closes it too.
+  await pins.nth(0).click();
+  await expectCard(true, "reselected");
+  await page.keyboard.press("Escape");
+  await expectCard(false, "escape");
 });
