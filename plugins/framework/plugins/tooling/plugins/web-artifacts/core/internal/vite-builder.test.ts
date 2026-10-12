@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   assertCoEntriesOffHostPath,
   assertWorkersSelfContained,
+  chunkCssPlugin,
   ownFolderBarrelPlugin,
   parseEmittedImports,
 } from "./vite-builder";
@@ -174,5 +175,49 @@ describe("assertWorkersSelfContained", () => {
     expect(message).toContain(
       "assets/w.worker-abc.js imports @plugins/x/core, ./lazy.js",
     );
+  });
+});
+
+describe("chunkCssPlugin (a lazy chunk's styles stay off the entry)", () => {
+  type Out = Record<string, Record<string, unknown>>;
+  const chunk = (fileName: string, css: string[]) => ({
+    type: "chunk",
+    fileName,
+    code: `/* ${fileName} */`,
+    viteMetadata: { importedCss: new Set(css) },
+  });
+  const asset = (fileName: string, source: string) => ({
+    type: "asset",
+    fileName,
+    source,
+  });
+  const run = (bundle: Out) =>
+    (
+      chunkCssPlugin("demo").generateBundle as unknown as (
+        o: unknown,
+        b: Out,
+      ) => void
+    ).call({}, {}, bundle);
+
+  test("each chunk injects only its own CSS; CSS assets are consumed", () => {
+    const bundle: Out = {
+      "index.js": chunk("index.js", ["index.css"]),
+      "lazy-X.mjs": chunk("lazy-X.mjs", ["lazy.css"]),
+      "index.css": asset("index.css", ".entry{}"),
+      "lazy.css": asset("lazy.css", ".katex{}"),
+    };
+    run(bundle);
+    expect(bundle["index.js"]?.code).toContain(".entry{}");
+    expect(bundle["index.js"]?.code).not.toContain(".katex{}");
+    expect(bundle["lazy-X.mjs"]?.code).toContain(".katex{}");
+    expect(Object.keys(bundle).sort()).toEqual(["index.js", "lazy-X.mjs"]);
+  });
+
+  test("a CSS asset no chunk imports throws", () => {
+    const bundle: Out = {
+      "index.js": chunk("index.js", []),
+      "orphan.css": asset("orphan.css", ".x{}"),
+    };
+    expect(() => run(bundle)).toThrow(/belongs to no chunk/);
   });
 });

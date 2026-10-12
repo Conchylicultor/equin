@@ -430,3 +430,60 @@ describe("remount detection", () => {
     expect(remounts).toHaveLength(0);
   });
 });
+
+describe("fibers rendered per initiator", () => {
+  test("each initiator counts the component fibers rendered under it", () => {
+    // Root (bailed) holds two independent updates: P re-renders with two
+    // rendered children and one bailed child; Q re-renders alone.
+    const tree = fib({
+      tag: FunctionComponent,
+      type: comp("Root"),
+      mounted: true,
+      children: [
+        fib({
+          tag: FunctionComponent,
+          type: comp("P"),
+          rendered: true,
+          mounted: true,
+          children: [
+            fib({
+              tag: FunctionComponent,
+              type: A,
+              rendered: true,
+              mounted: true,
+            }),
+            fib({
+              tag: HostComponent,
+              type: "div",
+              index: 1,
+              mounted: true,
+              children: [
+                fib({
+                  tag: FunctionComponent,
+                  type: B,
+                  rendered: true,
+                  mounted: true,
+                }),
+              ],
+            }),
+            fib({ tag: FunctionComponent, type: X, index: 2, mounted: true }),
+          ],
+        }),
+        fib({
+          tag: FunctionComponent,
+          type: comp("Q"),
+          index: 1,
+          rendered: true,
+          mounted: true,
+        }),
+      ],
+    });
+    // No prior commit: every flagged fiber counts as rendered.
+    const result = collectCommit(rootOf(tree), new Map(), new WeakSet());
+    const by = Object.fromEntries(
+      result.initiators.map((i) => [i.fiber.type.name, i.rendered]),
+    );
+    expect(by).toEqual({ P: 3, Q: 1 });
+    expect(result.rendered).toBe(4);
+  });
+});

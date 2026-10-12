@@ -1,4 +1,7 @@
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Badge,
@@ -52,7 +55,8 @@ export function InitiatorRow({ stat }: { stat: InitiatorStat }) {
           {stat.instanceCount > 1 ? ` · ×${stat.instanceCount} instances` : ""}
         </Text>
         <Text as="div" variant="caption" tone="muted">
-          {stat.mountCount} mounts · {stat.updateCount} updates
+          {stat.mountCount} mounts · {stat.updateCount} updates ·{" "}
+          {stat.fibersRendered} fibers rendered
         </Text>
         {stat.changedHooks.length > 0 && (
           <Cluster>

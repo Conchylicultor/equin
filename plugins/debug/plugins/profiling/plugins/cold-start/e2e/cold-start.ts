@@ -5,7 +5,7 @@
 // Usage:
 //   ./singularity run plugins/debug/plugins/profiling/plugins/cold-start/e2e/cold-start.ts \
 //     [--iterations 5] [--path /agents] [--busy N] [--out /tmp/cold-start.json] \
-//     [--no-stop] [--timeout 120000] [--code-cache]
+//     [--no-stop] [--timeout 120000] [--code-cache] [--cpu-profile] [--react-profile]
 //
 // --busy N   N CPU-spinning children at background priority for the whole run
 //            (standing in for agent builds); always killed at the end.
@@ -17,6 +17,13 @@
 //            fills with the app's code; every iteration still stops the server
 //            and clears all browser-side storage, so only code is cached. Never
 //            the headline number (see CLAUDE.md).
+// --cpu-profile  record a Chromium trace with V8's sampler per iteration and
+//            split the main thread's self time by code file per boot window
+//            (P rows); with --out, each trace is written next to it.
+// --react-profile  run debug/render-profiler from the moment its API is
+//            installed (before first data) to route content, and print which
+//            component and hook started each commit. Its fiber walk slows the
+//            page: read counts, not times.
 
 import { cpus, loadavg } from "node:os";
 import type { Subprocess } from "bun";
@@ -46,17 +53,31 @@ import type {
   BootPluginLoadDetail,
   BootTimingDetail,
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
+import { SLOT_READ_TIMING_PREFIX } from "@plugins/framework/plugins/web-sdk/core";
+import type { SlotReadDetail } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  formatProfilerReport,
+  RENDER_PROFILER_GLOBAL,
+} from "@plugins/debug/plugins/render-profiler/core";
+import type {
+  ProfilerReport,
+  ProfilerStartOptions,
+} from "@plugins/debug/plugins/render-profiler/core";
 import { ProfilingDataSchema } from "@plugins/debug/plugins/profiling/plugins/boot/core";
 import type { ProfilingData } from "@plugins/debug/plugins/profiling/plugins/boot/core";
 import type { BrowserContext, Page } from "playwright";
 import { browserTrack } from "./browser-track";
+import { CPU_TRACE_CATEGORIES, summariseCpuTrace } from "./cpu-profile";
+import type { CpuWindow } from "./cpu-profile";
 import type { BrowserTrack, BrowserTrackInput } from "./browser-track";
 
-// The page-side accumulator the init script fills: long tasks from the very
-// start of the load. Declared here so the augmentation travels with the module.
+// The page-side accumulators the init script fills: long tasks from the very
+// start of the load, and when each React commit happened. Declared here so the
+// augmentation travels with the module.
 declare global {
   interface Window {
     __coldStartLongTasks?: { startMs: number; durationMs: number }[];
+    __coldStartCommits?: number[];
   }
 }
 
@@ -66,6 +87,8 @@ const timeoutMs = numArg("timeout", 120_000);
 const out = arg("out");
 const warm = flag("no-stop");
 const codeCache = flag("code-cache");
+const cpuProfile = flag("cpu-profile");
+const reactProfile = flag("react-profile");
 const url = pageUrl("/agents");
 const namespace = targetNamespace();
 if (!Number.isInteger(iterations) || iterations < 1)
@@ -128,6 +151,15 @@ interface PageTimings {
   domContentLoadedMs: number | null;
   firstContentfulPaintMs: number | null;
   entries: TimingEntry[];
+  /** Every slot this page read, at its first read (web-sdk's `slot-read:` marks). */
+  slotReads: {
+    slot: string;
+    owner: string;
+    contributors: string[];
+    startMs: number;
+  }[];
+  /** When each React commit happened (web-core's commit bridge), page clock. */
+  commits: number[];
   /** Resource Timing, long tasks and per-plugin imports, for the browser-track breakdown. */
   track: BrowserTrackInput;
 }
@@ -206,14 +238,33 @@ const origin = new URL(url).origin;
 
 /**
  * Before any page script: a Resource Timing buffer large enough for every
- * artifact (the default 250 drops most of them) and a buffered long-task
- * observer from the very first task.
+ * artifact (the default 250 drops most of them), a buffered long-task
+ * observer from the very first task, and a subscriber on the React commit
+ * bridge (index.html's inline script, which has run by `interactive`; React's
+ * module scripts, and so every commit, come after it).
  */
 async function instrument(context: BrowserContext): Promise<void> {
+  if (reactProfile) await profileReactUntilRouteContent(context);
   await context.addInitScript(() => {
     performance.setResourceTimingBufferSize(100_000);
     const tasks: { startMs: number; durationMs: number }[] = [];
     window.__coldStartLongTasks = tasks;
+    const commits: number[] = [];
+    window.__coldStartCommits = commits;
+    document.addEventListener("readystatechange", () => {
+      if (document.readyState !== "interactive") return;
+      const hook = (
+        window as {
+          __REACT_DEVTOOLS_GLOBAL_HOOK__?: {
+            __commitSubscribers?: Set<() => void>;
+          };
+        }
+      ).__REACT_DEVTOOLS_GLOBAL_HOOK__;
+      const subs = hook?.__commitSubscribers;
+      if (!subs)
+        throw new Error("cold-start: no React commit bridge in index.html");
+      subs.add(() => commits.push(performance.now()));
+    });
     if (!PerformanceObserver.supportedEntryTypes.includes("longtask")) return;
     new PerformanceObserver((list) => {
       for (const e of list.getEntries())
@@ -275,9 +326,69 @@ async function waitMark(
  * same budget) for the deferred tier to finish so tier C counts are whole.
  * A timeout is data, not an exception.
  */
-async function loadPage(
-  page: Page,
-): Promise<{ gotoAt: number; failure: string | null; timings: PageTimings }> {
+/**
+ * --react-profile: start debug/render-profiler the moment its Core.Root
+ * installer assigns the window API (an accessor on that key — the installer's
+ * effect runs at the first render, before first data), and stop it at the
+ * route-content mark, so its report covers exactly the boot's commits.
+ */
+async function profileReactUntilRouteContent(
+  context: BrowserContext,
+): Promise<void> {
+  await context.addInitScript(
+    ([key, markName]) => {
+      interface Api {
+        start: (opts?: ProfilerStartOptions) => void;
+        stop: () => void;
+      }
+      let api: Api | undefined;
+      Object.defineProperty(window, key, {
+        configurable: true,
+        get: () => api,
+        set: (value: Api) => {
+          api = value;
+          value.start({ maxDurationMs: 600_000 });
+        },
+      });
+      new PerformanceObserver((list, observer) => {
+        if (!list.getEntries().some((e) => e.name === markName)) return;
+        observer.disconnect();
+        if (!api)
+          throw new Error(
+            "cold-start --react-profile: route content before the render profiler was installed",
+          );
+        api.stop();
+      }).observe({ type: "mark" });
+    },
+    [RENDER_PROFILER_GLOBAL, routeContentName] as const,
+  );
+}
+
+async function readReactProfile(page: Page): Promise<ProfilerReport> {
+  return page.evaluate((key) => {
+    const api = (
+      window as unknown as Record<
+        string,
+        { getReport: () => ProfilerReport } | undefined
+      >
+    )[key];
+    if (!api)
+      throw new Error("cold-start --react-profile: no render profiler API");
+    return api.getReport();
+  }, RENDER_PROFILER_GLOBAL);
+}
+
+async function loadPage(page: Page): Promise<{
+  gotoAt: number;
+  failure: string | null;
+  timings: PageTimings;
+  trace: string | null;
+}> {
+  const browser = page.context().browser();
+  if (cpuProfile) {
+    if (!browser) throw new Error("--cpu-profile: page has no browser");
+    await browser.startTracing(page, { categories: CPU_TRACE_CATEGORIES });
+  }
   const gotoAt = Date.now();
   const remaining = () => Math.max(0, timeoutMs - (Date.now() - gotoAt));
   let failure: string | null = null;
@@ -310,8 +421,12 @@ async function loadPage(
     failure = `navigation did not commit within ${timeoutMs} ms`;
   }
   await cdp.detach();
+  const trace =
+    cpuProfile && browser
+      ? (await browser.stopTracing()).toString("utf8")
+      : null;
   const evaluated = await page.evaluate(
-    ([prefix, pluginPrefix]): PageTimings => {
+    ([prefix, pluginPrefix, slotPrefix]): PageTimings => {
       const nav = performance.getEntriesByType("navigation")[0] as
         PerformanceNavigationTiming | undefined;
       const fcp = performance
@@ -344,6 +459,18 @@ async function loadPage(
             endMs: e.startTime + e.duration,
           };
         });
+      const slotReads = performance
+        .getEntriesByType("mark")
+        .filter((e) => e.name.startsWith(slotPrefix))
+        .map((e) => {
+          const d = (e as PerformanceMark).detail as SlotReadDetail;
+          return {
+            slot: e.name.slice(slotPrefix.length),
+            owner: d.owner,
+            contributors: d.contributors,
+            startMs: e.startTime,
+          };
+        });
       const resources = (
         performance.getEntriesByType("resource") as PerformanceResourceTiming[]
       ).map((e) => ({
@@ -371,6 +498,8 @@ async function loadPage(
         domContentLoadedMs: stamp(nav?.domContentLoadedEventEnd),
         firstContentfulPaintMs: fcp ? fcp.startTime : null,
         entries,
+        slotReads,
+        commits: window.__coldStartCommits ?? [],
         track: {
           documentTransfer: nav?.transferSize ?? 0,
           documentDecoded: nav?.decodedBodySize ?? 0,
@@ -389,13 +518,109 @@ async function loadPage(
         },
       };
     },
-    [BOOT_TIMING_PREFIX, BOOT_PLUGIN_TIMING_PREFIX] as const,
+    [
+      BOOT_TIMING_PREFIX,
+      BOOT_PLUGIN_TIMING_PREFIX,
+      SLOT_READ_TIMING_PREFIX,
+    ] as const,
   );
   const timings: PageTimings = {
     ...evaluated,
     track: { ...evaluated.track, mainThread },
   };
-  return { gotoAt, failure, timings };
+  return { gotoAt, failure, timings, trace };
+}
+
+/** --cpu-profile: the boot windows the trace is split over, on the page clock. */
+function cpuWindows(track: BrowserTrackInput): CpuWindow[] {
+  const lp = track.loadPlugins;
+  if (!lp || track.firstDataMs === null || track.routeContentMs === null)
+    return [];
+  return [
+    { name: "1 page request → load-plugins", startMs: 0, endMs: lp.startMs },
+    { name: "2 load-plugins", startMs: lp.startMs, endMs: lp.endMs },
+    {
+      name: "3 load-plugins end → first data",
+      startMs: lp.endMs,
+      endMs: track.firstDataMs,
+    },
+    {
+      name: "4 first data → route content",
+      startMs: track.firstDataMs,
+      endMs: track.routeContentMs,
+    },
+  ];
+}
+
+/**
+ * R rows: the React commits between first data and route content — how many,
+ * and the longest stretch with none (the main thread inside one render, or
+ * busy with something other than React).
+ */
+function withCommits(track: BrowserTrack, timings: PageTimings): BrowserTrack {
+  const { firstDataMs, routeContentMs } = timings.track;
+  if (firstDataMs === null || routeContentMs === null) return track;
+  if (timings.commits.length === 0)
+    throw new Error(
+      "cold-start: the page reached first data with no React commit recorded — is index.html's commit bridge gone?",
+    );
+  const inWindow = timings.commits.filter(
+    (t) => t > firstDataMs && t <= routeContentMs,
+  );
+  const edges = [firstDataMs, ...inWindow];
+  let longestGap = 0;
+  for (let i = 1; i < edges.length; i++)
+    longestGap = Math.max(longestGap, (edges[i] ?? 0) - (edges[i - 1] ?? 0));
+  return {
+    metrics: {
+      ...track.metrics,
+      "R commits before first data": timings.commits.filter(
+        (t) => t <= firstDataMs,
+      ).length,
+      "R commits first data → route content": inWindow.length,
+      "R longest ms without a commit in that window": longestGap,
+    },
+    lists: track.lists,
+  };
+}
+
+/** S rows: how many distinct slots the page had read by each end instant. */
+function withSlotReads(
+  track: BrowserTrack,
+  timings: PageTimings,
+): BrowserTrack {
+  const t = timings.track;
+  const by = (endMs: number | null): number =>
+    endMs === null
+      ? NaN
+      : timings.slotReads.filter((s) => s.startMs <= endMs).length;
+  return {
+    metrics: {
+      ...track.metrics,
+      "S slots read by first data": by(t.firstDataMs),
+      "S slots read by route content": by(t.routeContentMs),
+      "S slots read by deferred-load complete": by(t.deferredCompleteMs),
+    },
+    lists: track.lists,
+  };
+}
+
+function withCpuProfile(
+  track: BrowserTrack,
+  timings: PageTimings,
+  trace: string | null,
+): BrowserTrack {
+  const routeContentMs = timings.track.routeContentMs;
+  if (trace === null || routeContentMs === null) return track;
+  const cpu = summariseCpuTrace(
+    trace,
+    { markName: routeContentName, pageMs: routeContentMs },
+    cpuWindows(timings.track),
+  );
+  return {
+    metrics: { ...track.metrics, ...cpu.metrics },
+    lists: { ...track.lists, ...cpu.lists },
+  };
 }
 
 const iterationsRun = await withBrowser(async (h) => {
@@ -447,7 +672,22 @@ const iterationsRun = await withBrowser(async (h) => {
       const path = new URL(res.url()).pathname;
       shed[path] = (shed[path] ?? 0) + 1;
     });
-    const { gotoAt, failure, timings } = await loadPage(page);
+    const { gotoAt, failure, timings, trace } = await loadPage(page);
+    if (reactProfile) {
+      const profile = await readReactProfile(page);
+      console.log(
+        `  #${i + 1} React commits from the profiler's install to route content:\n` +
+          formatProfilerReport(profile, { top: 30, commits: true })
+            .split("\n")
+            .map((l) => `    ${l}`)
+            .join("\n"),
+      );
+    }
+    if (trace !== null && out) {
+      const tracePath = out.replace(/\.json$/, "") + `.trace-${i + 1}.json`;
+      await Bun.write(tracePath, trace);
+      console.log(`  #${i + 1} trace written to ${tracePath}`);
+    }
     // Close BEFORE the next stop: an open page's socket would respawn the
     // server the moment it exits.
     await close();
@@ -459,7 +699,14 @@ const iterationsRun = await withBrowser(async (h) => {
       server: await readServerProfile(),
       shed,
       loadAvgEnd: loadavg(),
-      browser: browserTrack(timings.track),
+      browser: withCpuProfile(
+        withCommits(
+          withSlotReads(browserTrack(timings.track), timings),
+          timings,
+        ),
+        timings,
+        trace,
+      ),
     };
     runs.push(run);
     printIteration(i, run);

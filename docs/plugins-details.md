@@ -16583,6 +16583,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `renderProfilerPane`
       - Core:
         - Exports (types):
+          - `CommitSample`
           - `FormatProfilerReportOptions`
           - `HookChange`
           - `HookKind`
@@ -20373,7 +20374,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SealedComponent`
           - `SealedMeta`
           - `Slot`
+          - `SlotReadDetail`
         - Exports (values):
+          - `contributionsOf`
           - `Core`
           - `defineSlot`
           - `defineSlotFacade`
@@ -20388,6 +20391,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pluginLoadReportSink`
           - `PluginProvider`
           - `PluginRuntimeContext`
+          - `SLOT_READ_TIMING_PREFIX`
           - `slots`
           - `subscribeDeferredLoadState`
           - `UNSAFE_unsealSlotComponent`

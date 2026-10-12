@@ -116,6 +116,16 @@ func serveIndex(w http.ResponseWriter, r *http.Request, indexPath string) {
 	http.ServeFile(w, r, indexPath)
 }
 
+// serveArtifact serves a content-addressed module file: its directory is named
+// by the hash of everything that built it, so the bytes under one URL never
+// change and a browser may keep them for good without asking again. Without
+// Cache-Control a browser guesses (heuristic freshness) and revalidates code it
+// already holds — one round trip per module, over a thousand per page load.
+func serveArtifact(w http.ResponseWriter, r *http.Request, file string) {
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	http.ServeFile(w, r, file)
+}
+
 // serveShell serves the SPA shell, and on a document load starts the backend
 // alongside it (prestartBackend). The only place handleStatic serves the shell,
 // so the direct hit and the SPA fallback cannot disagree about prestarting.
@@ -174,6 +184,10 @@ func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktre
 	if err == nil && !info.IsDir() {
 		if upath == indexURL {
 			serveShell(w, r, wt, full)
+			return
+		}
+		if strings.HasPrefix(upath, "/artifacts/") {
+			serveArtifact(w, r, full)
 			return
 		}
 		http.ServeFile(w, r, full)

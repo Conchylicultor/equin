@@ -6,6 +6,7 @@ export type {
   RemountStat,
   ProfilerReport,
   ProfilerStartOptions,
+  CommitSample,
 } from "./types";
 export { RENDER_PROFILER_CHANNEL, RENDER_PROFILER_GLOBAL } from "./constants";
 export { formatProfilerReport } from "./format";

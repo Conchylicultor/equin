@@ -16,6 +16,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  contributionsOf,
   defineSlot,
   PluginRuntimeContext,
   UNSAFE_unsealSlotComponent,
@@ -280,7 +281,7 @@ export function defineRenderSlot<P>(
       throw new Error("SlotRender must be used within PluginProvider");
     }
 
-    const rawContributions = ctx.bySlot.get(slot) ?? [];
+    const rawContributions = contributionsOf(ctx, slot) ?? [];
     const cleanItems = slot.useContributions();
 
     const cleanById = useMemo(
@@ -445,7 +446,7 @@ export function defineMountSlot<P = {}>(
       throw new Error("SlotMount must be used within PluginProvider");
     }
 
-    const rawContributions = ctx.bySlot.get(slot) ?? [];
+    const rawContributions = contributionsOf(ctx, slot) ?? [];
     const cleanItems = slot.useContributions();
 
     const cleanById = useMemo(
@@ -604,7 +605,7 @@ export function defineDispatchSlot<
       throw new Error("SlotDispatch must be used within PluginProvider");
     }
 
-    const rawContributions = ctx.bySlot.get(slot) ?? [];
+    const rawContributions = contributionsOf(ctx, slot) ?? [];
     const cleanItems = slot.useContributions();
 
     const key = config.key(props);

@@ -123,6 +123,8 @@ interface StackEntry {
   path: string[];
   /** Position key of the parent, so children build their own key on it. */
   parentPositionKey: string;
+  /** Index in `initiators` of the initiator this subtree renders under, or -1. */
+  initiator: number;
 }
 
 /** What a recorded position held last/this commit — its occupant identity. */
@@ -137,6 +139,11 @@ export interface CommitInitiatorFiber {
   ancestorPath: string[];
   /** True when the fiber freshly mounted this commit (`alternate === null`). */
   isMount: boolean;
+  /**
+   * Component fibers that rendered under this initiator this commit, itself
+   * included — what its update cost, as opposed to how often it fires.
+   */
+  rendered: number;
 }
 
 /** One remount detected by diffing this commit's positions against the prev. */
@@ -155,6 +162,8 @@ export interface CommitWalkResult {
   remounts: RemountDetection[];
   /** True when `currentPositions` hit POSITION_MAP_CAP and stopped inserting. */
   truncated: boolean;
+  /** Component fibers that rendered this commit, across every initiator. */
+  rendered: number;
   /**
    * Every component fiber visited this commit, by object identity. Threaded back
    * in as `prevSeen` next commit so `fiberRenderedThisCommit` can tell a genuine
@@ -232,22 +241,37 @@ export function collectCommit(
   const remounts: RemountDetection[] = [];
   const currentSeen = new WeakSet<Fiber>();
   let truncated = false;
+  let rendered = 0;
 
   const start = root?.current;
   if (!start) {
-    return { initiators, currentPositions, remounts, truncated, currentSeen };
+    return {
+      initiators,
+      currentPositions,
+      remounts,
+      truncated,
+      rendered,
+      currentSeen,
+    };
   }
 
   // Explicit stack of per-path state — clearer and correct vs. return-pointer
   // bookkeeping for the "ancestor rendered" flag.
   const stack: StackEntry[] = [
-    { fiber: start, ancestorRendered: false, path: [], parentPositionKey: "" },
+    {
+      fiber: start,
+      ancestorRendered: false,
+      path: [],
+      parentPositionKey: "",
+      initiator: -1,
+    },
   ];
 
   while (stack.length > 0) {
     const entry = stack.pop();
     if (!entry) break;
     const { fiber, ancestorRendered, path, parentPositionKey } = entry;
+    let childInitiator = entry.initiator;
 
     // Compute the position key for EVERY fiber so children can build on it.
     // Purely index-based (React's authoritative per-parent slot); the prev
@@ -266,12 +290,17 @@ export function collectCommit(
         // First rendered component on this path is the initiator; deeper renders
         // are propagation. Either way, the subtree now has a rendered ancestor.
         if (!ancestorRendered) {
+          childInitiator = initiators.length;
           initiators.push({
             fiber,
             ancestorPath: path.slice(-ANCESTOR_PATH_CAP),
             isMount: isFreshlyPlaced(fiber),
+            rendered: 0,
           });
         }
+        const owner = initiators[childInitiator];
+        if (owner) owner.rendered += 1;
+        rendered += 1;
         childAncestorRendered = true;
       }
       // Extend the ancestor path for descendants with this component's name.
@@ -328,10 +357,18 @@ export function collectCommit(
         ancestorRendered: childAncestorRendered,
         path: childPath,
         parentPositionKey: positionKey,
+        initiator: childInitiator,
       });
       child = child.sibling;
     }
   }
 
-  return { initiators, currentPositions, remounts, truncated, currentSeen };
+  return {
+    initiators,
+    currentPositions,
+    remounts,
+    truncated,
+    rendered,
+    currentSeen,
+  };
 }

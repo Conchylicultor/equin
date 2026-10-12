@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import {
   RENDER_PROFILER_CHANNEL,
+  type CommitSample,
   type HookChange,
   type InitiatorStat,
   type ProfilerReport,
@@ -18,6 +19,8 @@ import { classifyHookChanges } from "./hook-classify";
 import { isExcludedFiber } from "./global-api";
 
 const DEFAULT_MAX_DURATION_MS = 30_000;
+/** Commits kept in the per-commit log; the aggregates keep counting past it. */
+const COMMIT_LOG_CAP = 2_000;
 /** Cap the recompute/notify cadence to ~4×/s — NOT a polling loop. */
 const FLUSH_INTERVAL_MS = 250;
 
@@ -42,6 +45,8 @@ let prevSeen = new WeakSet<Fiber>();
 let primed = false;
 let remountTruncated = false;
 let totalCommits = 0;
+const commitLog: CommitSample[] = [];
+let commitLogTruncated = false;
 let startedAtMs: number | null = null;
 let running = false;
 let maxDurationMs = DEFAULT_MAX_DURATION_MS;
@@ -64,6 +69,7 @@ function emptyReport(): ProfilerReport {
     commitsPerSec: 0,
     initiators: [],
     remounts: [],
+    commits: [],
   };
 }
 
@@ -116,6 +122,8 @@ function computeReport(): ProfilerReport {
     initiators,
     remounts: remountStats,
     remountTruncated: remountTruncated || undefined,
+    commits: commitLog.slice(),
+    commitLogTruncated: commitLogTruncated || undefined,
     bridgeMissing: bridgeMissing || undefined,
   };
 }
@@ -139,13 +147,21 @@ interface CommitInitiator {
   changedHooks: HookChange[];
   /** True when this signature's fiber freshly mounted this commit. */
   isMount: boolean;
+  /** Fibers rendered under this signature's instances this commit. */
+  rendered: number;
 }
 
 function onCommit(root: FiberRoot): void {
   if (!running) return;
 
-  const { initiators, currentPositions, remounts: detected, truncated, currentSeen } =
-    collectCommit(root, prevPositions, prevSeen);
+  const {
+    initiators,
+    currentPositions,
+    remounts: detected,
+    truncated,
+    rendered,
+    currentSeen,
+  } = collectCommit(root, prevPositions, prevSeen);
 
   // Swap the per-commit baselines EVERY commit (not on the throttled flush), or
   // the diffs go stale and report phantom renders / remounts.
@@ -168,7 +184,7 @@ function onCommit(root: FiberRoot): void {
   // per-initiator rate would be meaningless. We keep the per-commit fiber count
   // as `instanceCount` — a separate, useful signal.
   const perCommit = new Map<string, CommitInitiator & { instances: number }>();
-  for (const { fiber, ancestorPath, isMount } of initiators) {
+  for (const { fiber, ancestorPath, isMount, rendered: under } of initiators) {
     if (isExcludedFiber(fiber)) continue;
     const componentName = getComponentName(fiber);
     const changedHooks = classifyHookChanges(fiber).filter((h) => h.changed);
@@ -176,6 +192,7 @@ function onCommit(root: FiberRoot): void {
     const seen = perCommit.get(signature);
     if (seen) {
       seen.instances += 1;
+      seen.rendered += under;
       // The signature counts as a mount for this commit if any instance mounted.
       if (isMount) seen.isMount = true;
     } else {
@@ -185,11 +202,21 @@ function onCommit(root: FiberRoot): void {
         changedHooks,
         isMount,
         instances: 1,
+        rendered: under,
       });
     }
   }
 
   const now = performance.now();
+  if (commitLog.length < COMMIT_LOG_CAP)
+    commitLog.push({
+      atMs: now,
+      rendered,
+      initiators: [...perCommit.values()]
+        .map((i) => ({ name: i.componentName, rendered: i.rendered }))
+        .sort((a, b) => b.rendered - a.rendered),
+    });
+  else commitLogTruncated = true;
   for (const [signature, info] of perCommit) {
     const existing = stats.get(signature);
     if (existing) {
@@ -197,6 +224,7 @@ function onCommit(root: FiberRoot): void {
       if (info.isMount) existing.mountCount += 1;
       else existing.updateCount += 1;
       existing.instanceCount = info.instances;
+      existing.fibersRendered += info.rendered;
       existing.lastSeenMs = now;
       existing.changedHooks = info.changedHooks;
       existing.ancestorPath = info.ancestorPath;
@@ -209,6 +237,7 @@ function onCommit(root: FiberRoot): void {
         mountCount: info.isMount ? 1 : 0,
         updateCount: info.isMount ? 0 : 1,
         instanceCount: info.instances,
+        fibersRendered: info.rendered,
         ratePerSec: 0,
         firstSeenMs: now,
         lastSeenMs: now,
@@ -259,6 +288,8 @@ export function startSession(opts?: ProfilerStartOptions): void {
   primed = false;
   remountTruncated = false;
   totalCommits = 0;
+  commitLog.length = 0;
+  commitLogTruncated = false;
   bridgeMissing = false;
   maxDurationMs = opts?.maxDurationMs ?? DEFAULT_MAX_DURATION_MS;
   startedAtMs = performance.now();

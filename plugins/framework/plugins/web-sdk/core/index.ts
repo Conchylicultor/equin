@@ -7,7 +7,13 @@ export type {
   SealContributions,
   SealedMeta,
 } from "./sealed-component";
-export { PluginProvider, PluginRuntimeContext } from "./context";
+export {
+  PluginProvider,
+  PluginRuntimeContext,
+  contributionsOf,
+  SLOT_READ_TIMING_PREFIX,
+} from "./context";
+export type { SlotReadDetail } from "./context";
 export type {
   PluginDefinition,
   LoadedPlugin,

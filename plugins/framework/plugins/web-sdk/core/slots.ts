@@ -1,5 +1,5 @@
 import { useContext, useMemo } from "react";
-import { PluginRuntimeContext } from "./context";
+import { contributionsOf, PluginRuntimeContext } from "./context";
 import {
   recordCreatedSlot,
   slotIdFor,
@@ -61,7 +61,7 @@ export function defineSlot<P>(opts?: {
     if (!ctx) {
       throw new Error("useContributions must be used within PluginProvider");
     }
-    const raw = ctx.bySlot.get(slot) ?? EMPTY;
+    const raw = contributionsOf(ctx, slot) ?? EMPTY;
     // eslint-disable-next-line react-hooks/rules-of-hooks -- same as above
     return useMemo(
       () =>

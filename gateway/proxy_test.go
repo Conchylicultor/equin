@@ -157,6 +157,15 @@ func TestArtifactsHitServesFile(t *testing.T) {
 	}
 }
 
+// A miss is never cacheable: the file may appear under that URL later.
+func TestArtifactsMissIsNotImmutable(t *testing.T) {
+	p := newStaticProxy(t).proxy
+	rec := serve(p, "alpha.localhost:9000", "/artifacts/tasks.web.abc123/missing.js")
+	if got := rec.Header().Get("Cache-Control"); strings.Contains(got, "immutable") {
+		t.Fatalf("404 Cache-Control = %q, must not be immutable", got)
+	}
+}
+
 // A missing /artifacts/* file is an honest 404, never the SPA fallback: the
 // import-map loader would otherwise receive index.html for a module URL and
 // die with a cryptic parse error.
@@ -216,14 +225,14 @@ func TestExplicitIndexRedirectIsRevalidated(t *testing.T) {
 	}
 }
 
-// The converse: a content-addressed artifact keeps whatever caching it had. Its
-// hash IS its identity, so there is nothing to revalidate, and pinning no-cache
-// on it would cost a round trip per module on every load.
-func TestArtifactIsNotForcedToRevalidate(t *testing.T) {
+// The converse: a content-addressed artifact is immutable. Its hash IS its
+// identity, so there is nothing to revalidate — no-cache, or no header at all
+// (heuristic freshness), would cost a round trip per module on every load.
+func TestArtifactIsImmutable(t *testing.T) {
 	p := newStaticProxy(t).proxy
 	rec := serve(p, "alpha.localhost:9000", "/artifacts/tasks.web.abc123/index.js")
-	if got := rec.Header().Get("Cache-Control"); got != "" {
-		t.Fatalf("artifact Cache-Control = %q, want unset", got)
+	if got := rec.Header().Get("Cache-Control"); got != "public, max-age=31536000, immutable" {
+		t.Fatalf("artifact Cache-Control = %q, want immutable", got)
 	}
 }
 

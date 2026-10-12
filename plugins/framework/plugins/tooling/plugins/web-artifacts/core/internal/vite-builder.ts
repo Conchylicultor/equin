@@ -10,7 +10,6 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
-  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -66,13 +65,6 @@ export interface CoEntry {
 export function coEntryFileName(entry: Pick<CoEntry, "folder">): string {
   return `${entry.folder}.js`;
 }
-
-/**
- * The module a multi-entry artifact's extracted CSS is injected from. Each entry
- * imports it, so the styles apply once whichever entry the browser loads first —
- * an exhibit can be the first module of its plugin a tab ever fetches.
- */
-export const COBUILT_STYLES_FILE = "__artifact-styles.js";
 
 /**
  * Rung-4 guard of "a co-entry is never on the boot path": no file the host
@@ -245,6 +237,54 @@ function stripGlobalCssPlugin(): VitePlugin {
   };
 }
 
+/**
+ * Each chunk carries the CSS of its own modules, injected when the chunk runs.
+ * A dynamically imported chunk's styles (KaTeX's 1.4 MB stylesheet, behind
+ * `lazyComponent`) therefore load with that chunk, never with the entry — so
+ * they stay off the eager boot path the way its code does. An exhibit entry and
+ * `index.js` that share styles share them through the chunk both import.
+ *
+ * Needs `cssCodeSplit` (vite's lib mode defaults it off, which merges every
+ * chunk's CSS into one file). Every CSS asset must belong to a chunk: an
+ * orphan would be a style no module ever applies, so it throws.
+ */
+export function chunkCssPlugin(dirName: string): VitePlugin {
+  return {
+    name: "web-artifacts:chunk-css",
+    enforce: "post",
+    generateBundle(_opts, bundle) {
+      const claimed = new Set<string>();
+      for (const out of Object.values(bundle)) {
+        if (out.type !== "chunk") continue;
+        const files = [...(out.viteMetadata?.importedCss ?? [])];
+        if (files.length === 0) continue;
+        const css = files
+          .map((f) => {
+            const asset = bundle[f];
+            if (asset?.type !== "asset")
+              throw new Error(
+                `vite build of ${dirName}: chunk ${out.fileName} imports CSS ${f}, which is not in the bundle`,
+              );
+            claimed.add(f);
+            return typeof asset.source === "string"
+              ? asset.source
+              : new TextDecoder().decode(asset.source);
+          })
+          .join("\n");
+        out.code += cssInjectionSnippet(css, dirName);
+      }
+      for (const [fileName, out] of Object.entries(bundle)) {
+        if (out.type !== "asset" || !fileName.endsWith(".css")) continue;
+        if (!claimed.has(fileName))
+          throw new Error(
+            `vite build of ${dirName}: CSS ${fileName} belongs to no chunk`,
+          );
+        delete bundle[fileName];
+      }
+    },
+  };
+}
+
 /** Wrap extracted CSS into a JS snippet appended to the module (atomic load). */
 function cssInjectionSnippet(css: string, dirName: string): string {
   return (
@@ -364,7 +404,7 @@ export async function buildArtifact(
     kind: target.kind,
   });
 
-  const plugins: VitePlugin[] = [audit.plugin];
+  const plugins: VitePlugin[] = [audit.plugin, chunkCssPlugin(target.dirName)];
   if (target.kind === "entry") plugins.push(stripGlobalCssPlugin());
   if (target.pluginPath) {
     plugins.push(
@@ -409,6 +449,8 @@ export async function buildArtifact(
         outDir: tmpDir,
         emptyOutDir: true,
         minify: ctx.minify ? "esbuild" : false,
+        // Per-chunk CSS, injected by `chunkCssPlugin`.
+        cssCodeSplit: true,
         sourcemap: true,
         reportCompressedSize: false,
         rollupOptions: {
@@ -421,41 +463,12 @@ export async function buildArtifact(
     audit.verify();
     workerAudit.verify();
 
-    // Fold any extracted CSS (plugin-local + npm package CSS; lib mode inlines
-    // url() assets as data URIs) into the module so styles load atomically.
-    const cssFiles = readdirSync(tmpDir).filter((f) => f.endsWith(".css"));
-    if (cssFiles.length > 0) {
-      const css = cssFiles
-        .map((f) => readFileSync(join(tmpDir, f), "utf8"))
-        .join("\n");
-      // Whole-file rewrite (read + concatenate + write), not an append: this is
-      // build-artifact ASSEMBLY of a freshly-emitted index.js, not a durable
-      // growing log — so it stays on the sanctioned whole-file writer.
-      const appendTo = (file: string, text: string): void => {
-        const path = join(tmpDir, file);
-        writeFileSync(path, readFileSync(path, "utf8") + text);
-      };
-      if (multiEntry) {
-        // One styles module every entry imports (an import declaration is
-        // hoisted wherever it sits, so appending it is enough).
-        const stylesPath = join(tmpDir, COBUILT_STYLES_FILE);
-        if (existsSync(stylesPath)) {
-          throw new Error(
-            `vite build of ${target.dirName} emitted its own ${COBUILT_STYLES_FILE}`,
-          );
-        }
-        writeFileSync(stylesPath, cssInjectionSnippet(css, target.dirName));
-        for (const file of [
-          "index.js",
-          ...target.coEntries.map(coEntryFileName),
-        ]) {
-          appendTo(file, `\nimport "./${COBUILT_STYLES_FILE}";\n`);
-        }
-      } else {
-        appendTo("index.js", cssInjectionSnippet(css, target.dirName));
-      }
-      for (const f of cssFiles) unlinkSync(join(tmpDir, f));
-    }
+    // `chunkCssPlugin` folded every chunk's CSS into that chunk.
+    const strayCss = readdirSync(tmpDir).filter((f) => f.endsWith(".css"));
+    if (strayCss.length > 0)
+      throw new Error(
+        `vite build of ${target.dirName} left CSS outside its chunks: ${strayCss.join(", ")}`,
+      );
 
     for (const file of ["index.js", ...target.coEntries.map(coEntryFileName)]) {
       if (!existsSync(join(tmpDir, file))) {

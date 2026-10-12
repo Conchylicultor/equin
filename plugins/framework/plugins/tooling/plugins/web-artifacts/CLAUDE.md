@@ -74,8 +74,10 @@ Key invariants:
   every-URL-is-a-file gate and `scanStagedModules` then verify it like any other
   entry), and the barrel closure resolves an `@plugins/<p>/exhibits` import to
   the HOST artifact (`hostSpecOf`), planning it when the fleet lacks it and
-  throwing when the plugin has no `web/`. Extracted CSS of a multi-entry build
-  goes into one `__artifact-styles.js` every entry imports. `exhibits.js` is
+  throwing when the plugin has no `web/`. Extracted CSS rides with the chunk whose
+  modules import it (`chunkCssPlugin`, `cssCodeSplit`): an entry's styles run
+  with the entry, a dynamically imported chunk's styles only when that chunk
+  loads, and styles an exhibit shares with `index.js` live in the shared chunk. `exhibits.js` is
   reached only through the exhibits registry's dynamic import, so it never
   joins the modulepreload closure — asserted per build by
   `assertCoEntriesOffHostPath` (`index.js` must not statically reach a

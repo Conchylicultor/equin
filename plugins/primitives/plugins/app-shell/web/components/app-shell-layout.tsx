@@ -18,6 +18,7 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { useContext, useMemo, type ReactNode } from "react";
 import {
+  contributionsOf,
   PluginRuntimeContext,
   type Contribution,
 } from "@plugins/framework/plugins/web-sdk/core";
@@ -169,7 +170,7 @@ function ToolbarItem(item: AppShellToolbarItem) {
  */
 function useSlotHasContributions(slot: SlotHandle | undefined): boolean {
   const ctx = useContext(PluginRuntimeContext);
-  return !!slot && (ctx?.bySlot.get(slot)?.length ?? 0) > 0;
+  return !!slot && !!ctx && (contributionsOf(ctx, slot)?.length ?? 0) > 0;
 }
 
 /**

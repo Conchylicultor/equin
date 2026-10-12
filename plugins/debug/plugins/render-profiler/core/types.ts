@@ -49,6 +49,22 @@ export interface InitiatorStat {
   mountCount: number;
   /** Commits where this initiator's fiber updated in place (`alternate !== null`). */
   updateCount: number;
+  /**
+   * Component fibers rendered under this initiator, summed over the session —
+   * rate × size. A rare initiator re-rendering the whole tree outranks a
+   * frequent one re-rendering itself.
+   */
+  fibersRendered: number;
+}
+
+/** One commit of the session, in order: when, how big, and who started it. */
+export interface CommitSample {
+  /** `performance.now()` at the commit. */
+  atMs: number;
+  /** Component fibers that rendered this commit. */
+  rendered: number;
+  /** The commit's initiators, largest render first: name and fibers rendered under it. */
+  initiators: { name: string; rendered: number }[];
 }
 
 /**
@@ -83,6 +99,9 @@ export interface ProfilerReport {
   initiators: InitiatorStat[];
   /** Remounting positions ranked by count desc. */
   remounts: RemountStat[];
+  /** Every commit in order (the first `COMMIT_LOG_CAP`; `commitLogTruncated` past it). */
+  commits: CommitSample[];
+  commitLogTruncated?: boolean;
   /** Set when the position map hit POSITION_MAP_CAP (some remounts may be missed). */
   remountTruncated?: boolean;
   /**

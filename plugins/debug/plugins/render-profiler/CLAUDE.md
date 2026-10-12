@@ -67,6 +67,14 @@ always-on cost is one empty-`Set` check per commit.
   a stable bailed-out subtree reports nothing (not placed). Aggregated by position
   into a ranked `top remounts + cause` report (`remountTruncated` flags the 20k
   position-map cap).
+- **Fibers rendered.** Each component fiber that re-rendered this commit is
+  charged to the nearest initiator above it (`InitiatorStat.fibersRendered`), so
+  a cheap commit (one hook, 3 fibers) is told apart from one that re-renders a
+  whole list (one hook, 12 000 fibers). The report ranks initiators by it too
+  ("by fibers rendered") — the count ranking alone hides the expensive ones.
+- **Commit log.** `ProfilerReport.commits` keeps one `CommitSample` per commit
+  (`atMs`, fibers rendered, per-initiator split), capped at 2 000
+  (`commitLogTruncated`); `formatProfilerReport(r, { commits: true })` prints it.
 
 ## Use it
 
@@ -118,6 +126,7 @@ React-internals coupling (fiber `flags` / `memoizedState` / `dependencies` /
   - Exports (values): `renderProfilerPane`
 - Core:
   - Exports (types):
+    - `CommitSample`
     - `FormatProfilerReportOptions`
     - `HookChange`
     - `HookKind`

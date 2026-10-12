@@ -7,7 +7,7 @@ server was stopped (idle sweep), split into where the time goes. Plan:
 ```bash
 ./singularity build      # the script drives the deploy this checkout published
 ./singularity run plugins/debug/plugins/profiling/plugins/cold-start/e2e/cold-start.ts \
-  [--iterations 5] [--path /agents] [--busy N] [--out /tmp/cold-start.json] [--timeout 120000] [--code-cache]
+  [--iterations 5] [--path /agents] [--busy N] [--out /tmp/cold-start.json] [--timeout 120000] [--code-cache] [--cpu-profile] [--react-profile]
 ```
 
 - `--busy N` spawns N CPU-spinning children at background priority
@@ -31,6 +31,29 @@ server was stopped (idle sweep), split into where the time goes. Plan:
   agent-provenance headers from other origins — the app requests Google Fonts).
   So it sends no provenance headers at all: its requests are unmarked agent
   traffic, which for a page load is telemetry (app usage, log beacons).
+
+- `--cpu-profile` records a Chromium trace with V8's sampling profiler per
+  iteration (`browser.startTracing`, `e2e/cpu-profile.ts`) and adds **P** rows:
+  per boot window (page request → load-plugins, load-plugins, → first data,
+  → route content) the busy / script / GC / native time and four rankings —
+  self time by code file (a plugin artifact, a vendor package, V8's buckets),
+  self time by function, time under the deepest plugin frame on the stack
+  (vendor and React work charged to the plugin code that called into it), and
+  inclusive time per plugin on the stack. The profiler slows the page: read
+  proportions, not headline times. With `--out`, each trace is written beside
+  it (`<out>.trace-<n>.json`, opens in DevTools' Performance panel).
+- `--react-profile` runs `debug/render-profiler` from the moment its Core.Root
+  installer publishes `window.__reactRenderProfiler` until the route-content
+  mark, and prints its report per iteration: commits ranked by initiating
+  component and hook, the same ranked by **fibers rendered** (which commit
+  re-renders a whole subtree), and the per-commit log. The fiber walk slows
+  every commit: read counts and fiber totals, not times. Most useful on a
+  `--no-minify` build (real component names).
+
+Every run also prints **R** rows (React commits, from the DevTools hook's
+commit subscribers, installed before the app loads): commits before first
+data, commits between first data and route content, and the longest stretch
+with no commit in that window.
 
 ## Per iteration
 
@@ -95,6 +118,12 @@ Then the **browser track** (`e2e/browser-track.ts`), in every run, median
   and how many resolved before first data / route content / after it. The
   script waits for the `deferred-load-complete` mark (within `--timeout`) so
   the counts are whole.
+
+- **S, slots read** — how many distinct slots the page had read by first
+  data, route content and deferred-load complete, from web-sdk's
+  `slot-read:<slot id>` first-read marks (`contributionsOf`, the one read
+  funnel); each mark's detail names the slot's owner and its contributors, kept
+  in the `--out` JSON (`slotReads`) — the input for sizing what a screen needs.
 
 The page gets an init script first: a Resource Timing buffer of 100 000 (the
 default 250 drops most artifacts) and a buffered `longtask` observer.

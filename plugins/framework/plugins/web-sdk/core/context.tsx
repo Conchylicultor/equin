@@ -18,6 +18,50 @@ export interface PluginRuntime {
 
 export const PluginRuntimeContext = createContext<PluginRuntime | null>(null);
 
+/**
+ * Prefix of the per-slot first-read User Timing marks: `slot-read:<slot id>`,
+ * one per slot, stamped the first time anything in this page reads it. Readers
+ * outside the bundle (the cold-start benchmark) learn which slots a screen
+ * needed — the set a load-on-first-read plugin loader would have to load.
+ */
+export const SLOT_READ_TIMING_PREFIX = "slot-read:";
+
+/** The `detail` a slot's first-read mark carries. */
+export interface SlotReadDetail {
+  /** The id of the plugin that declares the slot. */
+  owner: string;
+  /** The ids of the plugins contributing to it at that first read. */
+  contributors: string[];
+}
+
+const readSlots = new WeakSet<SlotHandle>();
+
+/**
+ * The one way to read a slot's contributions from the runtime. Every reader
+ * (`useContributions`, `.Render`, `.Mount`, `.Dispatch`, presence checks)
+ * funnels here, so "which slots did this screen read" has exactly one answer.
+ */
+export function contributionsOf(
+  runtime: PluginRuntime,
+  slot: SlotHandle,
+): Contribution[] | undefined {
+  // A slot whose declaring plugin has not loaded yet (a deferred owner) has
+  // no id; it is recorded on its first read after the declaration lands.
+  if (!readSlots.has(slot) && slot._pluginId !== undefined) {
+    readSlots.add(slot);
+    const detail: SlotReadDetail = {
+      owner: slot._pluginId,
+      contributors: [
+        ...new Set(
+          (runtime.bySlot.get(slot) ?? []).map((c) => String(c._pluginId)),
+        ),
+      ],
+    };
+    performance.mark(`${SLOT_READ_TIMING_PREFIX}${slot.id}`, { detail });
+  }
+  return runtime.bySlot.get(slot);
+}
+
 // Tracks plugins whose `register` array has been applied so a remount of
 // PluginProvider (or a useMemo recompute) doesn't double-invoke registry
 // writes.

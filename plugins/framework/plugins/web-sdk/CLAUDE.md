@@ -330,7 +330,9 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `SealedComponent`
     - `SealedMeta`
     - `Slot`
+    - `SlotReadDetail`
   - Exports (values):
+    - `contributionsOf`
     - `Core`
     - `defineSlot`
     - `defineSlotFacade`
@@ -345,6 +347,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `pluginLoadReportSink`
     - `PluginProvider`
     - `PluginRuntimeContext`
+    - `SLOT_READ_TIMING_PREFIX`
     - `slots`
     - `subscribeDeferredLoadState`
     - `UNSAFE_unsealSlotComponent`
