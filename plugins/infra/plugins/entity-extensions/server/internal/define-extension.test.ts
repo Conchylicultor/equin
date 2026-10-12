@@ -13,8 +13,8 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { drizzle } from "drizzle-orm/pg-proxy";
-import type { DbExecutor } from "@plugins/database/server";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool, type QueryConfig } from "pg";
 import { parsedText } from "@plugins/database/plugins/sql-column/server";
 import { nullable } from "@plugins/fields/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
@@ -26,20 +26,21 @@ import {
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { defineExtension } from "./define-extension";
 
-// A drizzle proxy that records every statement instead of sending it — so the
-// accessors can be checked against the SQL they produce, with no database. It
-// is handed to each accessor as its executor (never swapped in via
-// `mock.module`: a bun module mock is process-wide and would leak into every
-// suite sharing the `./singularity test` run).
+// Every accessor takes an executor (the pool by default). The tests pass one
+// that records every statement instead of sending it — so the accessors can be
+// checked against the SQL they produce, with no database. It is the same
+// node-postgres drizzle `db` is, over a pool that never connects: drizzle hands
+// each statement to `pool.query`, which records it and answers no rows.
+// (Not `mock.module` on `db`: bun runs every suite in one process, so a module
+// mock leaks into every test file that runs after this one.)
 const statements: { sql: string; params: unknown[] }[] = [];
-const recordingDb = drizzle(async (sql, params) => {
-  statements.push({ sql, params });
-  return { rows: [] };
+const recordingPool = Object.assign(new Pool(), {
+  query: async (config: QueryConfig, params: unknown[] = []) => {
+    statements.push({ sql: config.text, params });
+    return { rows: [] };
+  },
 });
-// The accessors only call pg-core query builders (select / insert / delete),
-// which the pg-proxy and node-postgres drizzles share; `DbExecutor` is spelled
-// as the node-postgres pool-or-tx type, hence the cast.
-const exec = recordingDb as unknown as DbExecutor;
+const recordingDb = drizzle(recordingPool);
 
 // ── A parent, and one extension built each way ──────────────────────────────
 const parent = pgTable("ext_probe", { id: text("id").primaryKey() });
@@ -179,9 +180,9 @@ describe("defineExtension wire", () => {
 describe("defineExtension accessors", () => {
   test("get / upsert / delete key on parent_id", async () => {
     statements.length = 0;
-    await thing.get("s1", exec);
-    await thing.upsert("s1", { semitones: 2 }, exec);
-    await thing.delete("s1", exec);
+    await thing.get("s1", recordingDb);
+    await thing.upsert("s1", { semitones: 2 }, recordingDb);
+    await thing.delete("s1", recordingDb);
 
     const [get, upsert, del] = statements;
     expect(get?.sql).toContain(`where "ext_probe_ext_thing"."parent_id" = $1`);
@@ -241,7 +242,7 @@ describe("defineExtension derived updatedAt", () => {
 
   test("upsert never writes updated_at", async () => {
     statements.length = 0;
-    await thing.upsert("s1", { semitones: 2, label: "x" }, exec);
+    await thing.upsert("s1", { semitones: 2, label: "x" }, recordingDb);
     const [upsert] = statements;
     expect(conflictSet(upsert?.sql)).toBe(`"semitones" = $4, "label" = $5`);
     expect(bindsADate(upsert?.params)).toBe(false);
@@ -249,8 +250,8 @@ describe("defineExtension derived updatedAt", () => {
 
   test("an empty patch rewrites the key with its own value", async () => {
     statements.length = 0;
-    await thing.upsert("s1", {}, exec);
-    await thing.upsert("s2", { label: undefined }, exec);
+    await thing.upsert("s1", {}, recordingDb);
+    await thing.upsert("s2", { label: undefined }, recordingDb);
     for (const [i, id] of ["s1", "s2"].entries()) {
       const upsert = statements[i];
       expect(conflictSet(upsert?.sql)).toBe(`"parent_id" = $2`);
