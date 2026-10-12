@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  hoverRevealGroup,
+  hoverRevealTargetWithGroupFocus,
+} from "@plugins/primitives/plugins/hover-reveal/web";
+import { navIcons } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import { youtubeWatchUrl } from "../../core";
 import {
   YouTubePlayerControllerImpl,
   type YouTubePlayerCallbacks,
@@ -33,7 +43,10 @@ export interface YouTubePlayerProps extends YouTubePlayerCallbacks {
   audio?: YouTubeAudio;
   /**
    * Show YouTube's own control bar (play, seek, volume), for a video the viewer
-   * plays by hand. Off by default: the app owns the transport. Read when the
+   * plays by hand. Off by default: the app owns the transport, so the iframe
+   * takes no pointer at all — YouTube's hover chrome (title, channel, share,
+   * watch later, logo, play button) never shows — and a click on the video
+   * opens it on youtube.com, in a new tab, where it is now. Read when the
    * player is created — changing it re-creates the player.
    */
   controls?: boolean;
@@ -115,7 +128,61 @@ export function YouTubePlayer({
 
   if (loadError !== null) throw loadError;
 
-  return <div ref={hostRef} className={cn("size-full", className)} />;
+  return (
+    <div className={cn("relative size-full", className)}>
+      <div ref={hostRef} className="size-full" />
+      {!controls && <OpenOnYouTube controller={impl} videoId={videoId} />}
+    </div>
+  );
+}
+
+/**
+ * A shield over an app-driven player: it keeps the pointer off the iframe (so
+ * YouTube draws none of its hover chrome) and is itself a link to the video on
+ * youtube.com — a real link, so a middle- or cmd-click works too. The link
+ * starts where the video is: the playhead is read on press, which React
+ * flushes before the click that follows it.
+ */
+function OpenOnYouTube({
+  controller,
+  videoId,
+}: {
+  controller: YouTubePlayerControllerImpl;
+  videoId: string;
+}) {
+  const [at, setAt] = useState<number | null>(null);
+  const readPlayhead = () =>
+    setAt(
+      controller.getSnapshot().kind === "ready"
+        ? controller.getCurrentTime()
+        : null,
+    );
+  return (
+    <a
+      href={youtubeWatchUrl(videoId, at)}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Open on YouTube"
+      className={cn(
+        layerClasses(),
+        hoverRevealGroup,
+        "cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
+      )}
+      onPointerDown={readPlayhead}
+      onKeyDown={readPlayhead}
+    >
+      {/* The link is the trigger, so its focus reveals the mark too. */}
+      <Pin
+        to="top-right"
+        offset="xs"
+        className={hoverRevealTargetWithGroupFocus}
+      >
+        <Center as="span" className="size-6 rounded-md bg-black/60 text-white">
+          <Icon icon={navIcons.newTab} />
+        </Center>
+      </Pin>
+    </a>
+  );
 }
 
 function asImpl(

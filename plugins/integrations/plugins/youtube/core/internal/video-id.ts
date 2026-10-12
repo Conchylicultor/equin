@@ -46,3 +46,19 @@ export function youtubeVideoId(raw: string): string | null {
   }
   return candidate !== null && VIDEO_ID.test(candidate) ? candidate : null;
 }
+
+/**
+ * The video's own page on youtube.com, starting at `atSeconds` (whole seconds,
+ * rounded down) when given — where "open on YouTube" sends the viewer.
+ */
+export function youtubeWatchUrl(
+  videoId: string,
+  atSeconds: number | null = null,
+): string {
+  const url = new URL("https://www.youtube.com/watch");
+  url.searchParams.set("v", videoId);
+  if (atSeconds !== null && atSeconds >= 1) {
+    url.searchParams.set("t", `${Math.floor(atSeconds)}s`);
+  }
+  return url.toString();
+}

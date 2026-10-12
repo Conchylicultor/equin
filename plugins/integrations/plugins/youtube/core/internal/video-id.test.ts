@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { youtubeVideoId } from "./video-id";
+import { youtubeVideoId, youtubeWatchUrl } from "./video-id";
 
 describe("youtubeVideoId", () => {
   // The first three are spellings found in real TheoryTab sections.
@@ -27,5 +27,25 @@ describe("youtubeVideoId", () => {
     ["https://youtu.be/"],
   ])("finds no video in %p", (raw) => {
     expect(youtubeVideoId(raw)).toBeNull();
+  });
+});
+
+describe("youtubeWatchUrl", () => {
+  it("links the watch page", () => {
+    expect(youtubeWatchUrl("CGj85pVzRJs")).toBe(
+      "https://www.youtube.com/watch?v=CGj85pVzRJs",
+    );
+  });
+
+  it("starts at the whole second the playhead is in", () => {
+    expect(youtubeWatchUrl("CGj85pVzRJs", 83.9)).toBe(
+      "https://www.youtube.com/watch?v=CGj85pVzRJs&t=83s",
+    );
+  });
+
+  it("leaves the start off under a second in", () => {
+    expect(youtubeWatchUrl("CGj85pVzRJs", 0.4)).toBe(
+      "https://www.youtube.com/watch?v=CGj85pVzRJs",
+    );
   });
 });

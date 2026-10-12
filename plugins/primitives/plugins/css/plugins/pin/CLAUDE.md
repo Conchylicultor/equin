@@ -100,7 +100,7 @@ offsets expressible on the semantic ramp.
     - `Pin`
     - `pinClasses`
 - Cross-plugin:
-  - Imported by: 56 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 57 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×17
     - `apps` ×14
     - `page` ×9
@@ -109,6 +109,7 @@ offsets expressible on the semantic ramp.
     - `tasks` ×2
     - `ui` ×2
     - `debug/logs`
+    - `integrations/youtube`
     - `reorder/editor`
     - `screenshot/draw-on-app`
 

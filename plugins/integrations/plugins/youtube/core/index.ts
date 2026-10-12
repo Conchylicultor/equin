@@ -1,4 +1,8 @@
-export { VideoIdSchema, youtubeVideoId } from "./internal/video-id";
+export {
+  VideoIdSchema,
+  youtubeVideoId,
+  youtubeWatchUrl,
+} from "./internal/video-id";
 export {
   EmbedStatusSchema,
   statusFromOembedCode,

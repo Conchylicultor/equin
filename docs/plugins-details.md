@@ -23657,11 +23657,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LET_IT_BE_VERSE` — `GET /v1/songs/public/_NgbRXeYgQA?fields=ID,song,jsonData` — the verse of "Let It Be", captured 2026-09-15. `jsonData` is the Hookpad document as a JSON string, editor state (bands, lyrics, cursor, settings, mixer) included; `youtube.id` is a `youtu.be` share link, not a bare id.
           - `TRENDS_NODES_401_HTML` — `GET /v1/trends/nodes?cp=1,4` with no Authorization header, captured 2026-09-16: a 401 whose body is Hooktheory's HTML error page, not its JSON envelope.
           - `UNKNOWN_SECTION_400_JSON` — `GET /v1/songs/public/1?fields=ID,song,jsonData`, captured 2026-09-16: the JSON envelope Hooktheory answers an unknown section id with.
-    - **`youtube`** — Embedded YouTube player the app controls: loadYouTubeIframeApi (the IFrame API, loaded once), <YouTubePlayer controller videoId loop autoplay audio onReady onPlaying onError onStateChange/> bound to a useYouTubePlayer() controller (play, pause, isPlaying, isAdvancing, playRange for one pass then back to the loop, seek — re-cueing a video that has not started rather than starting it — getCurrentTime, getDuration, getPlaybackRate, setPlaybackRate resolving to the rate the video took), useYouTubePlayerState, useYouTubePlayhead (one read per animation frame while playing), and createMediaClock (a smoothed, slewed reading of the playhead for something slaved to it). Loops without polling: one timer to the loop's end, reset on every state change. Server-side YouTube: checkOembed(videoId) asks oEmbed whether a video plays in an embed (status code mapped by the core's statusFromOembedCode, plus the title and channel of a 200), and searchYouTube(query, exec) lists YouTube's results for a query (id, title, channel, duration, views, verified, art track) through yt-dlp's flat search, from the on-demand `youtube-audio` dependency this plugin owns.
+    - **`youtube`** — Embedded YouTube player the app controls: loadYouTubeIframeApi (the IFrame API, loaded once), <YouTubePlayer controller videoId loop autoplay audio onReady onPlaying onError onStateChange/> bound to a useYouTubePlayer() controller (without controls the iframe takes no pointer, so YouTube draws no hover chrome, and a click opens the video on youtube.com at the playhead) (play, pause, isPlaying, isAdvancing, playRange for one pass then back to the loop, seek — re-cueing a video that has not started rather than starting it — getCurrentTime, getDuration, getPlaybackRate, setPlaybackRate resolving to the rate the video took), useYouTubePlayerState, useYouTubePlayhead (one read per animation frame while playing), and createMediaClock (a smoothed, slewed reading of the playhead for something slaved to it). Loops without polling: one timer to the loop's end, reset on every state change. Server-side YouTube: checkOembed(videoId) asks oEmbed whether a video plays in an embed (status code mapped by the core's statusFromOembedCode, plus the title and channel of a 200), and searchYouTube(query, exec) lists YouTube's results for a query (id, title, channel, duration, views, verified, art track) through yt-dlp's flat search, from the on-demand `youtube-audio` dependency this plugin owns.
       - Web:
         - Uses:
+          - `primitives/css/center.Center`
+          - `primitives/css/layer.layerClasses`
+          - `primitives/css/pin.Pin`
           - `primitives/css/ui-kit.cn`
+          - `primitives/hover-reveal.hoverRevealGroup`
+          - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
           - `primitives/latest-ref.useLatestRef`
+          - `ui/icons.Icon`
         - Exports (types):
           - `MediaClock`
           - `YouTubeAudio`
@@ -23719,6 +23725,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `statusFromPlayerCode`
           - `VideoIdSchema`
           - `youtubeVideoId`
+          - `youtubeWatchUrl`
       - Plugins:
         - **`audio-fetch`** — YouTube audio download: fetchYouTubeAudio(videoId, exec) returns one video's best audio stream as served (webm/opus or m4a, no ffmpeg), downloaded by yt-dlp — JavaScript challenges solved on bun — from the on-demand `youtube-audio` Python dependency into a host-wide cache under a per-video host flock; a hit is a file read. A video YouTube will not serve throws YouTubeAudioUnavailableError (non-retryable); a stream YouTube refuses (HTTP 403, intermittent) is re-extracted with a freshly signed URL and retried up to 3 times; still refused, or another download error of the video, throws YouTubeAudioDownloadError — isYouTubeAudioError answers 'the video's failure, not the machine's' for both. A bot check, rate limit or unreachable YouTube throws YouTubeAccessError (retryable, the machine's failure). Failures come back from the Python module as a classified document, never a traceback. The daily youtube-audio.sweep keeps the cache within 30 days unused and 2 GB.
           - Server:
@@ -28630,7 +28637,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 110 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×27
               - `primitives` ×24
               - `page` ×18
@@ -28641,11 +28648,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×3
               - `active-data` ×2
               - `fields` ×2
+              - `integrations` ×2
               - `map` ×2
               - `shell` ×2
               - `tasks` ×2
               - `config_v2/settings`
-              - `integrations/gmail`
               - `layouts/route-fallback`
               - `reorder/node-types/header`
               - `screenshot`
@@ -28993,6 +29000,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/progress/keys`
               - `apps/sonata/progress/loop`
               - `apps/sonata/progress/scrubber`
+              - `integrations/youtube`
               - `page/code-block`
               - `page/place/map-layer`
               - `primitives/css/color-picker`
@@ -29119,7 +29127,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pin`
               - `pinClasses`
           - Cross-plugin:
-            - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×17
               - `apps` ×14
               - `page` ×9
@@ -29128,6 +29136,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×2
               - `ui` ×2
               - `debug/logs`
+              - `integrations/youtube`
               - `reorder/editor`
               - `screenshot/draw-on-app`
         - **`placeholder`** — Muted text placeholder for loading, empty, and error states. Props: children, tone (muted | error).
@@ -31334,12 +31343,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hoverRevealTargetWithGroupFocus`
           - `useHoverReveal`
       - Cross-plugin:
-        - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
+        - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
           - `page` ×8
           - `apps` ×7
           - `primitives` ×7
           - `ui` ×4
           - `apps-core/surface/floating`
+          - `integrations/youtube`
           - `layouts/miller`
           - `tasks/task-description`
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
@@ -37900,7 +37910,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Cross-plugin:
-        - Imported by: 302 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 303 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×62
           - `conversations` ×55
           - `page` ×40
@@ -37923,6 +37933,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fullscreen`
           - `improve`
           - `infra/events-test`
+          - `integrations/youtube`
           - `layouts/miller`
           - `reports/launch-fix`
           - `screenshot`

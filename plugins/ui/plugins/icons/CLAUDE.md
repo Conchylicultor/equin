@@ -253,7 +253,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
 
 - Description: Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
 - Cross-plugin:
-  - Imported by: 302 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 303 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×62
     - `conversations` ×55
     - `page` ×40
@@ -276,6 +276,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `fullscreen`
     - `improve`
     - `infra/events-test`
+    - `integrations/youtube`
     - `layouts/miller`
     - `reports/launch-fix`
     - `screenshot`
