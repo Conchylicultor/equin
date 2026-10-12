@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   combineResources,
@@ -16,14 +17,23 @@ import type { FieldsRecord } from "@plugins/fields/core";
 import { useStorePath } from "./use-store-path";
 
 /**
- * The server-registered storePaths as this page first saw them: the keys of the
- * first settled `configScopes` map (normally the boot snapshot's). Fixed for the
- * page's lifetime, like the web registrations it is compared with.
+ * The server-registered storePaths as each live-state pipeline first saw them:
+ * the keys of the first settled `configScopes` map (normally the boot
+ * snapshot's, for the page's own pipeline). Fixed for the pipeline's lifetime,
+ * like the web registrations it is compared with. Keyed by the pipeline's
+ * QueryClient, so a scoped transport's backend is judged against its own map.
  */
-let pageBootPaths: ReadonlySet<string> | null = null;
-function registeredAtPageBoot(map: ConfigV2ScopesMap): ReadonlySet<string> {
-  pageBootPaths ??= new Set(Object.keys(map));
-  return pageBootPaths;
+const bootPathsByPipeline = new WeakMap<QueryClient, ReadonlySet<string>>();
+function registeredAtPageBoot(
+  pipeline: QueryClient,
+  map: ConfigV2ScopesMap,
+): ReadonlySet<string> {
+  let paths = bootPathsByPipeline.get(pipeline);
+  if (!paths) {
+    paths = new Set(Object.keys(map));
+    bootPathsByPipeline.set(pipeline, paths);
+  }
+  return paths;
 }
 
 /**
@@ -65,10 +75,11 @@ export function useConfigResult<F extends FieldsRecord>(
   // snapshot's): a later push can drop a path because the server changed under
   // an open tab (a deploy that moved the plugin), which is skew, not a wiring
   // bug, and must not crash every reader of it.
+  const pipeline = useQueryClient();
   const scopes = useLive(configScopes);
   if (
     scopes.status === "ready" &&
-    !registeredAtPageBoot(scopes.data).has(path)
+    !registeredAtPageBoot(pipeline, scopes.data).has(path)
   ) {
     throw new Error(
       `[config-v2] useConfig: descriptor "${descriptor.name}" is registered on web ` +

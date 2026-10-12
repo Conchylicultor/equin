@@ -15,6 +15,7 @@
     - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
+    - `primitives/networking.useTransport`
     - `primitives/overlay/image-viewer.ImageGallery`
     - `primitives/overlay/image-viewer.ViewerThumbnail`
     - `tasks/task-detail.TaskDetailSlots`

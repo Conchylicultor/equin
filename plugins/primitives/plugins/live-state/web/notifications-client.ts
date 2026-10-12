@@ -6,6 +6,7 @@ import type {
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   SharedWebSocket,
+  type TransportSocket,
   subscribeWsStatus,
   subscribeNetDiag,
   type WsStatus,
@@ -15,8 +16,8 @@ import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import type { ResourceDescriptor, ResourceOrigin } from "../core";
 import { mergeKeyedDelta } from "./keyed-delta-merge";
-import { noteResourceWatermark } from "./watermark-registry";
-import { noteResourceTxAcks } from "./tx-ack-registry";
+import { rootWatermarks, type WatermarkRegistry } from "./watermark-registry";
+import { rootTxAcks, type TxAckRegistry } from "./tx-ack-registry";
 import { httpStaleDropReportSink } from "./stale-drop-reporter";
 import { updateDelayReportSink } from "./update-delay-reporter";
 import {
@@ -549,7 +550,7 @@ export interface MissedFrame {
 }
 
 interface SocketChannel {
-  ws: SharedWebSocket;
+  ws: TransportSocket;
   /** (key, paramsKey) -> subscription state for subs routed to this socket. */
   subs: Map<string, ActiveSub>;
   /**
@@ -586,6 +587,18 @@ interface SocketChannel {
    */
   opens: number;
 }
+
+/** One live-state pipeline's causal-floor registries. */
+export interface LiveRegistries {
+  watermarks: WatermarkRegistry;
+  txAcks: TxAckRegistry;
+}
+
+/** The page's own pipeline's registries. */
+export const rootLiveRegistries: LiveRegistries = {
+  watermarks: rootWatermarks,
+  txAcks: rootTxAcks,
+};
 
 export class NotificationsClient {
   // Lazily-populated: the worktree channel is opened eagerly in the constructor,
@@ -642,8 +655,16 @@ export class NotificationsClient {
    *  constructs many clients; the module-level bus would otherwise leak). */
   private unsubscribeFromNetDiag: () => void;
   /** Socket factory (injection seam): defaults to a real `SharedWebSocket`; a
-   *  test wires one built on fake transports. */
-  private makeSocket: (url: string) => SharedWebSocket;
+   *  test wires one built on fake transports, a scoped pipeline its transport's. */
+  private makeSocket: (url: string) => TransportSocket;
+  /** The URL each socket kind opens at — the identity the ws-status bus reports
+   *  it under, so this client reads ITS sockets' status and never another
+   *  pipeline's (see `socketKindOf`). */
+  private socketUrls: Record<SocketKind, string>;
+  /** This pipeline's causal-floor registries (`rootWatermarks` / `rootTxAcks`
+   *  for the page's own pipeline). Read by the optimistic hook through
+   *  `useLiveRegistries`. */
+  readonly registries: LiveRegistries;
   /** `fetch` implementation (injection seam): defaults to the global `fetch`; a
    *  test wires a scripted one to drive `fetchOverHttp` deterministically. Used
    *  for BOTH the conditional GET and the defensive refetch. Typed as the call
@@ -701,22 +722,38 @@ export class NotificationsClient {
   constructor(
     private queryClient: QueryClient,
     hooks?: {
-      makeSocket?: (url: string) => SharedWebSocket;
+      makeSocket?: (
+        url: string,
+        options: { dialect: string },
+      ) => TransportSocket;
+      /** Maps a socket path to the URL it opens at (default: the path itself). */
+      socketUrl?: (path: string) => string;
       tabId?: string;
-      fetchImpl?: typeof fetch;
+      fetchImpl?: (
+        ...args: Parameters<typeof fetch>
+      ) => ReturnType<typeof fetch>;
+      registries?: LiveRegistries;
     },
   ) {
     // Socket factory must be set before channelFor (openChannel reads it).
-    this.makeSocket =
+    const makeSocket =
       hooks?.makeSocket ??
-      ((u) => new SharedWebSocket(u, undefined, { dialect: SOCKET_DIALECT }));
+      ((u: string, options: { dialect: string }) =>
+        new SharedWebSocket(u, undefined, options));
+    this.makeSocket = (u) => makeSocket(u, { dialect: SOCKET_DIALECT });
+    const socketUrl = hooks?.socketUrl ?? ((path: string) => path);
+    this.socketUrls = {
+      worktree: socketUrl(WS_URLS.worktree),
+      central: socketUrl(WS_URLS.central),
+    };
+    this.registries = hooks?.registries ?? rootLiveRegistries;
     this.fetchImpl = hooks?.fetchImpl ?? ((...a) => fetch(...a));
     this.tabId = hooks?.tabId ?? REALM_HOLDER_ID;
     // Open the worktree channel eagerly (always used). Central stays lazy —
     // opened on the first central-origin observe() via channelFor.
     this.channelFor("worktree");
     this.unsubscribeFromBus = subscribeWsStatus(({ url, status }) => {
-      const kind = liveStateSocketKind(url);
+      const kind = this.socketKindOf(url);
       if (kind === null) return;
       if (this.channelStatuses.get(url) !== status)
         this.serverFlushOpenMs[kind] = 0;
@@ -765,6 +802,18 @@ export class NotificationsClient {
     this.unsubscribeFromQueryCache = this.queryClient
       .getQueryCache()
       .subscribe((event) => this.noteQueryError(event));
+  }
+
+  /**
+   * Classify a ws-status-bus url as one of THIS client's sockets, or null — the
+   * per-pipeline twin of `liveStateSocketKind`, which knows only the page's own
+   * pipeline's URLs.
+   */
+  socketKindOf(url: string): LiveStateSocketKind | null {
+    for (const kind of Object.keys(this.socketUrls) as SocketKind[]) {
+      if (url === this.socketUrls[kind]) return kind;
+    }
+    return null;
   }
 
   getStatus(): WsStatus {
@@ -1626,7 +1675,7 @@ export class NotificationsClient {
     // never advances the causal floor) and IMMEDIATELY BEFORE the cache write it
     // describes — same load-bearing order as the WS paths.
     if (body.watermark !== undefined)
-      noteResourceWatermark(key, params, body.watermark);
+      this.registries.watermarks.note(key, params, body.watermark);
     this.queryClient.setQueryData(queryKeyFor(key, params), parsed);
     if (entry) {
       // Read apart from the server's snapshot of the tuple: no derivation may
@@ -1755,7 +1804,7 @@ export class NotificationsClient {
 
   private openChannel(kind: SocketKind): SocketChannel {
     const channel: SocketChannel = {
-      ws: this.makeSocket(WS_URLS[kind]),
+      ws: this.makeSocket(this.socketUrls[kind]),
       subs: new Map(),
       pendingTeardown: new Map(),
       ackInterest: new Map(),
@@ -2056,7 +2105,7 @@ export class NotificationsClient {
         trace(`drop key=${msg.key} params=${pk} reason=no-sub source=ack`);
         return;
       }
-      noteResourceTxAcks(msg.key, msg.params, msg.ackTx);
+      this.registries.txAcks.note(msg.key, msg.params, msg.ackTx);
       return;
     }
     // Learn the server's boot epoch from any ack frame carrying one — BEFORE the
@@ -2284,9 +2333,10 @@ export class NotificationsClient {
     // registries synchronously inside setQueryData dispatch). After the parse,
     // so a frame that never lands (schema throw) never advances the causal
     // floor / acks past the cache content.
-    if (watermark !== undefined) noteResourceWatermark(key, params, watermark);
+    if (watermark !== undefined)
+      this.registries.watermarks.note(key, params, watermark);
     if (ackTx !== undefined && ackTx.length > 0)
-      noteResourceTxAcks(key, params, ackTx);
+      this.registries.txAcks.note(key, params, ackTx);
     this.queryClient.setQueryData(queryKeyFor(key, params), parsed);
     entry.socketValue = true;
     this.markApplied(entry, key);
@@ -2417,9 +2467,10 @@ export class NotificationsClient {
     // watermark-less by construction (Rule B′) but DO carry ackTx: the ack
     // claims only "these transactions' rows were re-read", never snapshot
     // completeness, so it composes with a partial re-read.
-    if (watermark !== undefined) noteResourceWatermark(key, params, watermark);
+    if (watermark !== undefined)
+      this.registries.watermarks.note(key, params, watermark);
     if (ackTx !== undefined && ackTx.length > 0)
-      noteResourceTxAcks(key, params, ackTx);
+      this.registries.txAcks.note(key, params, ackTx);
     this.queryClient.setQueryData(queryKey, result.rows);
     entry.socketValue = true;
     this.markApplied(entry, key);

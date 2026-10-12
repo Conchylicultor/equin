@@ -512,11 +512,9 @@ ordering — is pinned by `web/__tests__/use-optimistic-resource.test.tsx`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.getEndpointErrorMessage`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/live-state.getResourceWatermark`
-    - `primitives/live-state.hasResourceTxAck`
-    - `primitives/live-state.liveStateSocketKind`
     - `primitives/live-state.queryKeyFor`
-    - `primitives/live-state.subscribeResourceTxAcks`
+    - `primitives/live-state.useLiveRegistries`
+    - `primitives/live-state.useLiveSocketKindOf`
     - `primitives/live-state.useResource`
     - `primitives/live-state.useResourceAcks`
     - `primitives/networking.subscribeWsStatus`

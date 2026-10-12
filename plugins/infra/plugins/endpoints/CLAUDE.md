@@ -183,6 +183,9 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
   - Uses:
     - `primitives/networking.fetchWithRetry`
     - `primitives/networking.FetchWithRetryOptions`
+    - `primitives/networking.originTransport`
+    - `primitives/networking.Transport`
+    - `primitives/networking.useTransport`
   - Exports (types): `EndpointErrorInfo`
   - Exports (values):
     - `EndpointError`
@@ -192,6 +195,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `getEndpointErrorMessage`
     - `useEndpoint`
     - `useEndpointMutation`
+    - `useFetchEndpoint`
 - Core:
   - Uses:
     - `infra/runtime-profiler.chargeWait`

@@ -10,15 +10,16 @@ import { compareTxWatermark } from "../core";
 // QueryCache listener reading the registry synchronously sees the floor of the
 // value it was just handed.
 //
-// Deliberately MODULE-LEVEL (not per-NotificationsClient): the optimistic hook
-// runs inside QueryCache callbacks and jsdom tests exercise the overlay machine
-// without a NotificationsProvider, so the read path must not require a client
-// instance. One browser tab has exactly one live-state pipeline; each tab
-// parses the shared socket's frames itself and populates its own registry.
+// One registry per live-state PIPELINE (a NotificationsClient and its
+// QueryClient): the page's own pipeline uses `rootWatermarks`, which the free
+// functions below read and write — the optimistic hook runs inside QueryCache
+// callbacks and jsdom tests exercise the overlay machine without a
+// NotificationsProvider, so the root read path must not require a client
+// instance. A scoped pipeline (a `<TransportProvider>` subtree talking to
+// another backend) gets its own registry, so its tuples never share a causal
+// floor with the page's tuples of the same (key, params).
 // Monotonic adopt: an older watermark (a joiner-adopted flight, an out-of-order
 // HTTP response) never regresses the stored floor.
-
-const watermarks = new Map<string, string>();
 
 type ResourceParams = Record<string, string>;
 
@@ -37,6 +38,34 @@ function registryId(key: string, params: ResourceParams | undefined): string {
   return `${key}\0${paramsKey(params)}`;
 }
 
+export interface WatermarkRegistry {
+  note(
+    key: string,
+    params: ResourceParams | undefined,
+    watermark: string,
+  ): void;
+  get(key: string, params?: ResourceParams): string | undefined;
+}
+
+export function createWatermarkRegistry(): WatermarkRegistry {
+  const watermarks = new Map<string, string>();
+  return {
+    note(key, params, watermark) {
+      const id = registryId(key, params);
+      const prev = watermarks.get(id);
+      if (prev !== undefined && compareTxWatermark(watermark, prev) <= 0)
+        return;
+      watermarks.set(id, watermark);
+    },
+    get(key, params = {}) {
+      return watermarks.get(registryId(key, params));
+    },
+  };
+}
+
+/** The page's own pipeline's registry. */
+export const rootWatermarks = createWatermarkRegistry();
+
 /**
  * Adopt a frame's commit watermark for (key, params), monotonically: an equal
  * or older watermark than the stored one is a no-op (compared causally via
@@ -47,10 +76,7 @@ export function noteResourceWatermark(
   params: ResourceParams | undefined,
   watermark: string,
 ): void {
-  const id = registryId(key, params);
-  const prev = watermarks.get(id);
-  if (prev !== undefined && compareTxWatermark(watermark, prev) <= 0) return;
-  watermarks.set(id, watermark);
+  rootWatermarks.note(key, params, watermark);
 }
 
 /**
@@ -64,5 +90,5 @@ export function getResourceWatermark(
   key: string,
   params: ResourceParams | undefined = {},
 ): string | undefined {
-  return watermarks.get(registryId(key, params));
+  return rootWatermarks.get(key, params);
 }

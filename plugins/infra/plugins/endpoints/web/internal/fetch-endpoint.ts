@@ -1,6 +1,10 @@
+import { useMemo } from "react";
 import {
   fetchWithRetry,
+  originTransport,
+  useTransport,
   type FetchWithRetryOptions,
+  type Transport,
 } from "@plugins/primitives/plugins/networking/web";
 import type { EndpointDef } from "../../core";
 import { extractMethod, interpolatePath } from "../../core";
@@ -38,6 +42,12 @@ export function getEndpointErrorMessage(error: unknown): string {
 
 type FetchOpts<TBody, TQuery> = {
   signal?: AbortSignal;
+  /**
+   * The server the request goes to — the caller's `useTransport()`. Omitted =
+   * the page's own server; a component reaches its subtree's through
+   * `useFetchEndpoint()` instead of passing it by hand.
+   */
+  transport?: Transport;
   /** RequestInit passthrough; lets a beacon survive page unload. */
   keepalive?: boolean;
   /** Default true. `false` skips endpointErrorSink.emit (e.g. the crash beacon). */
@@ -115,9 +125,10 @@ export async function fetchEndpoint<
     signal: opts?.signal,
     keepalive: opts?.keepalive,
   };
+  const transport = opts?.transport ?? originTransport;
   const res = opts?.retry
-    ? await fetchWithRetry(url, init, opts.retry)
-    : await fetch(url, init);
+    ? await fetchWithRetry(url, init, { ...opts.retry, fetch: transport.fetch })
+    : await transport.fetch(url, init);
 
   if (!res.ok) {
     // Read the body ONCE, as text, then upgrade to JSON if it parses.
@@ -154,4 +165,23 @@ export async function fetchEndpoint<
 
   const parsed = await endpoint.responseCodec.decodeResponse(res);
   return parsed as TResponse extends void ? void : TResponse;
+}
+
+/**
+ * `fetchEndpoint` bound to the enclosing subtree's transport — what a
+ * component calls instead of the bare function, so a request it makes inside a
+ * `<TransportProvider>` (a demo backend) reaches that transport, never the
+ * page's server.
+ */
+export function useFetchEndpoint(): typeof fetchEndpoint {
+  const transport = useTransport();
+  return useMemo(
+    () =>
+      ((endpoint, params, opts) =>
+        fetchEndpoint(endpoint, params, {
+          ...opts,
+          transport,
+        } as typeof opts)) as typeof fetchEndpoint,
+    [transport],
+  );
 }

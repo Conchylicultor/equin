@@ -4,10 +4,8 @@ import {
   useResource,
   useResourceAcks,
   queryKeyFor,
-  liveStateSocketKind,
-  getResourceWatermark,
-  hasResourceTxAck,
-  subscribeResourceTxAcks,
+  useLiveRegistries,
+  useLiveSocketKindOf,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
@@ -342,6 +340,10 @@ function useOptimisticCore<Data, Vars>(
     ? { isConfirmedBy: options.isConfirmedBy, sameTarget: options.sameTarget }
     : undefined;
   const queryClient = useQueryClient();
+  // The enclosing pipeline's causal-floor registries and socket identities —
+  // the page's own, or a scoped transport's (live-state `NotificationsProvider`).
+  const { watermarks, txAcks } = useLiveRegistries();
+  const socketKindOf = useLiveSocketKindOf();
   const result = useResource(resource, params);
   // Every optimistic reader asks for standalone ack frames on its tuple: a
   // write that changes nothing this tuple can see (a net-zero diff, a row
@@ -452,16 +454,16 @@ function useOptimisticCore<Data, Vars>(
     [reportDivergence],
   );
 
-  // Exact-ack membership probe against the module-level tx-ack registry,
+  // Exact-ack membership probe against the pipeline's tx-ack registry,
   // namespaced to THIS hook's live tuple (`paramsRef.current`, so a params
   // re-baseline swaps the namespace with it — a wrong-tuple confirmation is
   // impossible in either direction). Passed into every confirmation edge; a
   // registry hit on an op's ack token is the exact "your commit's rows were
   // re-read" proof, strictly more precise than the watermark compare.
   const hasAck = useCallback(
-    (txid: string) => hasResourceTxAck(resource.key, paramsRef.current, txid),
+    (txid: string) => txAcks.has(resource.key, paramsRef.current, txid),
     // paramsRef is a stable latest-ref handle; only the key participates.
-    [resource.key],
+    [resource.key, txAcks],
   );
 
   // Last `dataUpdateCount` this hook has already reconciled against. See the
@@ -509,7 +511,7 @@ function useOptimisticCore<Data, Vars>(
       const next = confirmPass(
         pendingRef.current,
         serverData,
-        getResourceWatermark(resource.key, paramsRef.current),
+        watermarks.get(resource.key, paramsRef.current),
         confirmationRef.current,
         hasAck,
       );
@@ -526,6 +528,7 @@ function useOptimisticCore<Data, Vars>(
     commitPending,
     reportOutcomes,
     hasAck,
+    watermarks,
   ]);
 
   // The ACK edge: a standalone `{ kind: "ack" }` frame produces NO cache event
@@ -537,7 +540,7 @@ function useOptimisticCore<Data, Vars>(
   // notes fire this too; that second pass is an identity no-op after the cache
   // edge handled them.
   useEffect(() => {
-    return subscribeResourceTxAcks((key, params) => {
+    return txAcks.subscribe((key, params) => {
       if (key !== resource.key) return;
       if (ackParamsKey(params) !== ackParamsKey(paramsRef.current)) return;
       if (pendingRef.current.length === 0) return;
@@ -549,7 +552,7 @@ function useOptimisticCore<Data, Vars>(
       // Identity when nothing changed — skip the state write.
       if (next.pending !== pendingRef.current) commitPending(next.pending);
     });
-  }, [resource.key, hasAck, commitPending]);
+  }, [resource.key, hasAck, commitPending, txAcks]);
 
   const data = useMemo(
     // `applyRef` (stable useLatestRef handle) is read through `.current` at
@@ -593,7 +596,7 @@ function useOptimisticCore<Data, Vars>(
             opId,
             hasAuthoritative ? state?.data : undefined,
             state?.dataUpdateCount ?? 0,
-            getResourceWatermark(resource.key, paramsRef.current),
+            watermarks.get(resource.key, paramsRef.current),
             res ? res.watermark : undefined,
             confirmationRef.current,
             // The exact-ack probe closes the delta-before-HTTP-response race:
@@ -657,7 +660,14 @@ function useOptimisticCore<Data, Vars>(
       );
     },
     // The latest-ref handles are stable; only these participate.
-    [queryClient, resource.key, commitPending, reportOutcomes, hasAck],
+    [
+      queryClient,
+      resource.key,
+      commitPending,
+      reportOutcomes,
+      hasAck,
+      watermarks,
+    ],
   );
 
   const dispatch = useCallback(
@@ -770,8 +780,7 @@ function useOptimisticCore<Data, Vars>(
   useEffect(() => {
     const socketKind = resource.origin === "central" ? "central" : "worktree";
     const unsubscribe = subscribeWsStatus((ev) => {
-      if (ev.status !== "open" || liveStateSocketKind(ev.url) !== socketKind)
-        return;
+      if (ev.status !== "open" || socketKindOf(ev.url) !== socketKind) return;
       retryNetworkFailed();
     });
     const onOnline = () => retryNetworkFailed();
@@ -780,7 +789,7 @@ function useOptimisticCore<Data, Vars>(
       unsubscribe();
       window.removeEventListener("online", onOnline);
     };
-  }, [resource.origin, retryNetworkFailed]);
+  }, [resource.origin, retryNetworkFailed, socketKindOf]);
 
   const pendingOps = useMemo(
     () => pending.map((op) => ({ opId: op.opId, vars: op.vars })),

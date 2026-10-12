@@ -263,6 +263,38 @@ localStorage.setItem("liveState.verboseTrace", "1"); // enable; "0"/remove to di
 Deliberately a localStorage flag, not a `config_v2` setting — a local debug
 switch, not user config.
 
+## Scoped pipelines — a subtree talking to another backend
+
+`NotificationsProvider` reads `useTransport()` (`primitives/networking`). Under
+the page's own transport (`originTransport` — no `<TransportProvider>` above)
+it is the page's singleton pipeline, exactly as before. Under any other
+transport it mounts a pipeline of that transport's own: a fresh QueryClient, a
+`NotificationsClient` opening `transport.openSocket(transport.socketUrl(path))`
+and fetching through `transport.fetch`, and its own causal-floor registries
+(`LiveRegistries`: watermarks + tx acks). So a subtree rendered against an
+in-browser backend (the demo scope,
+`research/2026-10-12-global-in-app-demo-scope.md`) never caches, confirms or
+reports against the page's server, and the page never sees its tuples.
+
+- **One pipeline per transport**, shared by every provider under it, created
+  during render and torn down a microtask after the last provider unmounts (so
+  StrictMode's remount re-retains it).
+- **Socket identity is the transport's URL.** The ws-status bus is page-global
+  and keyed by URL; `client.socketKindOf(url)` matches only this client's own
+  sockets, so two transports must map a path to different URLs.
+  `liveStateSocketKind` still names the page's own pipeline's sockets; a hook
+  reads its enclosing pipeline's with `useLiveSocketKindOf()`.
+- **Registries come from context.** `useLiveRegistries()` returns the enclosing
+  pipeline's (the page's own outside any provider, which is what a jsdom test
+  driving the optimistic overlay without a provider reads). The module-level
+  `noteResource…` / `getResourceWatermark` / `hasResourceTxAck` functions are
+  the page pipeline's registries only — test support, not a read path.
+- **Not scoped:** boot hydration (`hydrateResource` / `hydrateQuery` seed the
+  page's own client), the contract-mismatch store (version skew is about the
+  page's bundle) and the pending-mount counters (page diagnostics).
+
+Pinned by `web/__tests__/scoped-pipeline.test.tsx`.
+
 ## One socket per origin, shared across tabs
 
 The `NotificationsClient` talks to the server over a `SharedWebSocket`: the real
@@ -431,14 +463,15 @@ or HTTP apply). The primitive owns no threshold — it emits on every drop; the
 `consecutiveDrops === 3 && neverApplied`). Import direction: `live-state` →
 `report-sink` (a leaf); `live-state` must never import `reports`.
 
-## Commit watermarks (`getResourceWatermark` / `compareTxWatermark`)
+## Commit watermarks (`LiveRegistries.watermarks` / `compareTxWatermark`)
 
 Full-reconcile frames from a worktree server carry a `watermark` — the snapshot's
 `pg_snapshot_xmin(pg_current_snapshot())` as xid8 decimal text, captured by the
 resource runtime before the loader read. `NotificationsClient` notes it into
-`web/watermark-registry.ts` (keyed `(key, params)`, monotonic adopt) immediately
-**before** the cache write it describes, so a QueryCache listener reading
-`getResourceWatermark(key, params)` synchronously sees the causal floor of the
+its pipeline's watermark registry (`web/watermark-registry.ts`, keyed `(key,
+params)`, monotonic adopt) immediately **before** the cache write it describes,
+so a QueryCache listener reading `registries.watermarks.get(key, params)`
+synchronously sees the causal floor of the
 value it was just handed. optimistic-mutation compares that floor against
 mutation ack tokens (`currentTxId`) to confirm — or causally deny — pending
 overlay ops.
@@ -951,8 +984,8 @@ keeps every row's identity rather than re-minting each moved row.
 - Description: Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a local async load (not a server read — those are live) as a ResourceResult.
 - Load-bearing: yes
 - Web:
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/networking` ×5
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/networking` ×9
     - `infra/endpoints` ×4
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
@@ -1007,8 +1040,6 @@ keeps every row's identity rather than re-minting each moved row.
     - `ensureNotificationsClient`
     - `foldResource`
     - `getNotificationsClient`
-    - `getResourceWatermark`
-    - `hasResourceTxAck`
     - `httpStaleDropReportSink`
     - `hydrateEndpoint`
     - `hydrateQuery`
@@ -1028,11 +1059,12 @@ keeps every row's identity rather than re-minting each moved row.
     - `ResourceView`
     - `slowResourceReportSink`
     - `subscribePendingMounts`
-    - `subscribeResourceTxAcks`
     - `updateDelayReportSink`
     - `useCombinedResources`
     - `useEndpointResource`
     - `useFailingResources`
+    - `useLiveRegistries`
+    - `useLiveSocketKindOf`
     - `useNotificationsChannelStatuses`
     - `useNotificationsClient`
     - `useNotificationsStatus`

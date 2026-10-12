@@ -5,6 +5,7 @@ import {
   ResourceErrorInline,
 } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -53,6 +54,7 @@ export function TaskAttachmentsCount({ taskId }: { taskId: string }) {
 
 export function TaskAttachments({ taskId }: { taskId: string }) {
   const result = useTaskAttachments(taskId);
+  const transport = useTransport();
   if (result.status === "loading") return <Loading variant="rows" />;
   if (result.status === "error") {
     return (
@@ -77,7 +79,7 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
             <ViewerThumbnail
               key={a.id}
               image={{
-                src: `/api/attachments/${a.id}`,
+                src: transport.assetUrl(`/api/attachments/${a.id}`),
                 name: a.filename,
                 sourceLabel: "Attached",
               }}
@@ -85,7 +87,7 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
           ) : (
             <Row
               key={a.id}
-              href={`/api/attachments/${a.id}`}
+              href={transport.assetUrl(`/api/attachments/${a.id}`)}
               download={a.filename}
               bordered
             >

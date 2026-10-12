@@ -13,6 +13,8 @@ export {
   useNotificationsClient,
   getNotificationsClient,
   useFailingResources,
+  useLiveRegistries,
+  useLiveSocketKindOf,
 } from "./use-resource";
 export { hydrateEndpoint } from "./hydrate-endpoint";
 export { useEndpointResource } from "./use-endpoint-resource";
@@ -63,8 +65,6 @@ export {
   liveStateSocketKind,
   ResourceStaleReadError,
 } from "./notifications-client";
-export { getResourceWatermark } from "./watermark-registry";
-export { hasResourceTxAck, subscribeResourceTxAcks } from "./tx-ack-registry";
 export { httpStaleDropReportSink } from "./stale-drop-reporter";
 export { useResourceContractMismatches } from "./resource-contract-store";
 export type { ResourceContractMismatch } from "./resource-contract-store";

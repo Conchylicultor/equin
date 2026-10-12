@@ -3,6 +3,7 @@ import {
   useQueryClient,
   type UseMutationResult,
 } from "@tanstack/react-query";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import type { EndpointDef } from "../../core";
 import { EndpointError, fetchEndpoint } from "./fetch-endpoint";
 
@@ -54,6 +55,7 @@ export function useEndpointMutation<
   MutationVariables<TParams, TBody>
 > {
   const queryClient = useQueryClient();
+  const transport = useTransport();
   const suppressError =
     opts?.meta?.suppressError ?? opts?.onError !== undefined;
 
@@ -66,7 +68,8 @@ export function useEndpointMutation<
     mutationFn: async (variables) => {
       const params = (variables.params ?? {}) as TParams;
       const body = "body" in variables ? variables.body : undefined;
-      const fetchOpts = body !== undefined ? { body } : {};
+      const fetchOpts =
+        body !== undefined ? { body, transport } : { transport };
       return fetchEndpoint(
         endpoint,
         params,

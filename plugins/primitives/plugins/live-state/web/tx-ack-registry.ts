@@ -16,10 +16,11 @@
 // equals W; it can never deny (denial stays snapshot-watermark-only — Rule B′
 // coexists unchanged).
 //
-// Deliberately MODULE-LEVEL (not per-NotificationsClient), exactly like
-// `watermark-registry.ts`: the optimistic hook reads it synchronously inside
-// QueryCache callbacks, and jsdom tests exercise the overlay machine without a
-// NotificationsProvider. Per-tuple insertion-order ring, bounded at
+// One registry per live-state pipeline, exactly like `watermark-registry.ts`:
+// the free functions below read and write the page's own (`rootTxAcks`) — the
+// optimistic hook reads it synchronously inside QueryCache callbacks, and jsdom
+// tests exercise the overlay machine without a NotificationsProvider — and a
+// scoped pipeline gets its own. Per-tuple insertion-order ring, bounded at
 // ACK_RING_CAP — old acks age out; a missed (evicted) ack is safe, the sub-ack
 // watermark backstop confirms.
 
@@ -37,10 +38,7 @@ interface AckRing {
   set: Set<string>;
 }
 
-const rings = new Map<string, AckRing>();
-
 type AckListener = (key: string, params: ResourceParams | undefined) => void;
-const listeners = new Set<AckListener>();
 
 // Canonical params serialization — byte-identical to `paramsKey` in
 // notifications-client.ts (sorted-key JSON), so `${key}\0${paramsKey}` here
@@ -57,6 +55,54 @@ function registryId(key: string, params: ResourceParams | undefined): string {
   return `${key}\0${paramsKey(params)}`;
 }
 
+export interface TxAckRegistry {
+  note(
+    key: string,
+    params: ResourceParams | undefined,
+    txids: readonly string[],
+  ): void;
+  has(key: string, params: ResourceParams | undefined, txid: string): boolean;
+  subscribe(listener: AckListener): () => void;
+}
+
+export function createTxAckRegistry(): TxAckRegistry {
+  const rings = new Map<string, AckRing>();
+  const listeners = new Set<AckListener>();
+  return {
+    note(key, params, txids) {
+      if (txids.length === 0) return;
+      const id = registryId(key, params);
+      let ring = rings.get(id);
+      if (!ring) {
+        ring = { list: [], set: new Set() };
+        rings.set(id, ring);
+      }
+      for (const txid of txids) {
+        if (ring.set.has(txid)) continue;
+        ring.list.push(txid);
+        ring.set.add(txid);
+        if (ring.list.length > ACK_RING_CAP) {
+          const evicted = ring.list.shift()!;
+          ring.set.delete(evicted);
+        }
+      }
+      for (const fn of listeners) fn(key, params);
+    },
+    has(key, params, txid) {
+      return rings.get(registryId(key, params))?.set.has(txid) ?? false;
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+}
+
+/** The page's own pipeline's registry. */
+export const rootTxAcks = createTxAckRegistry();
+
 /**
  * Record the server-acknowledged source-transaction ids for (key, params), then
  * notify subscribers (emit-after-note: a listener reading `hasResourceTxAck`
@@ -68,23 +114,7 @@ export function noteResourceTxAcks(
   params: ResourceParams | undefined,
   txids: readonly string[],
 ): void {
-  if (txids.length === 0) return;
-  const id = registryId(key, params);
-  let ring = rings.get(id);
-  if (!ring) {
-    ring = { list: [], set: new Set() };
-    rings.set(id, ring);
-  }
-  for (const txid of txids) {
-    if (ring.set.has(txid)) continue;
-    ring.list.push(txid);
-    ring.set.add(txid);
-    if (ring.list.length > ACK_RING_CAP) {
-      const evicted = ring.list.shift()!;
-      ring.set.delete(evicted);
-    }
-  }
-  for (const fn of listeners) fn(key, params);
+  rootTxAcks.note(key, params, txids);
 }
 
 /**
@@ -98,7 +128,7 @@ export function hasResourceTxAck(
   params: ResourceParams | undefined,
   txid: string,
 ): boolean {
-  return rings.get(registryId(key, params))?.set.has(txid) ?? false;
+  return rootTxAcks.has(key, params, txid);
 }
 
 /**
@@ -110,8 +140,5 @@ export function hasResourceTxAck(
  * second pass is an identity no-op.
  */
 export function subscribeResourceTxAcks(listener: AckListener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
+  return rootTxAcks.subscribe(listener);
 }

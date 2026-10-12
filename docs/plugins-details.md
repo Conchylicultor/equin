@@ -21384,6 +21384,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/networking.fetchWithRetry`
           - `primitives/networking.FetchWithRetryOptions`
+          - `primitives/networking.originTransport`
+          - `primitives/networking.Transport`
+          - `primitives/networking.useTransport`
         - Exports (types): `EndpointErrorInfo`
         - Exports (values):
           - `EndpointError`
@@ -21393,6 +21396,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getEndpointErrorMessage`
           - `useEndpoint`
           - `useEndpointMutation`
+          - `useFetchEndpoint`
       - Core:
         - Uses:
           - `infra/runtime-profiler.chargeWait`
@@ -31899,8 +31903,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runActivation`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a local async load (not a server read — those are live) as a ResourceResult.
       - Web:
-        - Uses: 21 symbols — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `primitives/networking` ×5
+        - Uses: 25 symbols — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `primitives/networking` ×9
           - `infra/endpoints` ×4
           - `primitives/css/spacing` ×2
           - `primitives/css/ui-kit` ×2
@@ -31955,8 +31959,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ensureNotificationsClient`
           - `foldResource`
           - `getNotificationsClient`
-          - `getResourceWatermark`
-          - `hasResourceTxAck`
           - `httpStaleDropReportSink`
           - `hydrateEndpoint`
           - `hydrateQuery`
@@ -31976,11 +31978,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResourceView`
           - `slowResourceReportSink`
           - `subscribePendingMounts`
-          - `subscribeResourceTxAcks`
           - `updateDelayReportSink`
           - `useCombinedResources`
           - `useEndpointResource`
           - `useFailingResources`
+          - `useLiveRegistries`
+          - `useLiveSocketKindOf`
           - `useNotificationsChannelStatuses`
           - `useNotificationsClient`
           - `useNotificationsStatus`
@@ -32516,12 +32519,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ReconnectingWsHandle`
           - `ReconnectingWsOptions`
           - `SharedWebSocketHooks`
+          - `SharedWebSocketOptions`
           - `SharedWorkerLike`
+          - `Transport`
+          - `TransportSocket`
           - `UrlStatus`
           - `WsStatus`
           - `WsStatusEvent`
         - Exports (values):
           - `fetchWithRetry`
+          - `originTransport`
           - `probeUrlStatus`
           - `publishNetDiag`
           - `publishWsStatus`
@@ -32530,6 +32537,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `subscribeNetDiag`
           - `subscribeWsStatus`
           - `useReconnectingWebSocket`
+          - `useTransport`
           - `wsUrl`
       - Cross-plugin:
         - Imported by:
@@ -32549,6 +32557,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/overlay/image-viewer`
           - `primitives/terminal`
           - `shell/notifications`
+          - `tasks/task-attachments`
           - `tasks/tasks-core`
       - Exemptions:
         - Exempts itself from:
@@ -32572,6 +32581,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FakeSharedWorkers` — The browser's SharedWorker registry: one REAL `createSharedWsHost` per worker name (the production worker's logic, in-process), shared by every tab; `make(name)` is the `makeSharedWorker` factory, connecting a fresh `MessageChannel` to that host like the worker's `connect` event.
           - `FakeWebSocket` — A `WebSocketLike` with no network.
           - `FakeWsServer` — A no-network WebSocket server: `connect` is the bound `makeWebSocket` factory; every socket it ever handed out is retained for introspection (`all`), and the currently-OPEN subset (`openSockets`) is derived live from `readyState` so it is the single source of truth for the one-socket invariant.
+          - `TransportProvider` — Points every transport client in `children` at `transport`.
           - Types: `FakeWsServerOptions`, `TabHandle`, `TransportHub`
     - **`optimistic-mutation`** — Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported.
       - Web:
@@ -32579,11 +32589,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.getEndpointErrorMessage`
           - `primitives/latest-ref.useLatestRef`
-          - `primitives/live-state.getResourceWatermark`
-          - `primitives/live-state.hasResourceTxAck`
-          - `primitives/live-state.liveStateSocketKind`
           - `primitives/live-state.queryKeyFor`
-          - `primitives/live-state.subscribeResourceTxAcks`
+          - `primitives/live-state.useLiveRegistries`
+          - `primitives/live-state.useLiveSocketKindOf`
           - `primitives/live-state.useResource`
           - `primitives/live-state.useResourceAcks`
           - `primitives/networking.subscribeWsStatus`
@@ -37214,6 +37222,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/live-state.foldResource`
           - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
+          - `primitives/networking.useTransport`
           - `primitives/overlay/image-viewer.ImageGallery`
           - `primitives/overlay/image-viewer.ViewerThumbnail`
           - `tasks/task-detail.TaskDetailSlots`

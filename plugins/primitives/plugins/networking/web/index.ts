@@ -19,6 +19,9 @@ export type {
   MessagePortLike,
   SharedWorkerLike,
 } from "./transport-types";
+export { originTransport, useTransport } from "./transport";
+export type { Transport, TransportSocket } from "./transport";
+export type { SharedWebSocketOptions } from "./shared-websocket";
 export { fetchWithRetry } from "./fetch-with-retry";
 export type { FetchWithRetryOptions } from "./fetch-with-retry";
 export { probeUrlStatus, type UrlStatus } from "./probe-url-status";

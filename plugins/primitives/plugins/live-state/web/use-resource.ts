@@ -25,7 +25,13 @@ import {
   NotificationsClient,
   isTerminalResourceError,
   queryKeyFor,
+  rootLiveRegistries,
+  liveStateSocketKind,
+  type LiveRegistries,
+  type LiveStateSocketKind,
 } from "./notifications-client";
+import { createWatermarkRegistry } from "./watermark-registry";
+import { createTxAckRegistry } from "./tx-ack-registry";
 import { slowResourceReportSink } from "./slow-resource-reporter";
 import { notePendingMount } from "./pending-mount-tracker";
 import { dateAwareReplaceEqualDeep } from "./internal/structural-sharing";
@@ -38,7 +44,12 @@ import type {
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import type { FailingResource } from "./resource-error-reporter";
 import type { ResourceDescriptor, ResourceError } from "../core";
-import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
+import {
+  originTransport,
+  useTransport,
+  type Transport,
+  type WsStatus,
+} from "@plugins/primitives/plugins/networking/web";
 
 type ResourceParams = Record<string, string>;
 
@@ -46,26 +57,28 @@ const NotificationsContext = createContext<NotificationsClient | null>(null);
 
 let defaultClient: QueryClient | null = null;
 function getDefaultQueryClient(): QueryClient {
-  if (!defaultClient) {
-    defaultClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          // The WS is the source of truth. Disable background refetches; the
-          // notifications client keeps cached data in sync.
-          staleTime: Infinity,
-          refetchOnWindowFocus: false,
-          refetchOnReconnect: false,
-          // One retry for a transient failure — never for a contract refusal
-          // (`contract-mismatch` / `unknown-key`): the same bundle sends the
-          // same params and is refused the same way; the Reload advice is the
-          // remedy, not another request.
-          retry: (failureCount, error) =>
-            failureCount < 1 && !isTerminalResourceError(error),
-        },
-      },
-    });
-  }
+  if (!defaultClient) defaultClient = createLiveQueryClient();
   return defaultClient;
+}
+
+function createLiveQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        // The WS is the source of truth. Disable background refetches; the
+        // notifications client keeps cached data in sync.
+        staleTime: Infinity,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        // One retry for a transient failure — never for a contract refusal
+        // (`contract-mismatch` / `unknown-key`): the same bundle sends the
+        // same params and is refused the same way; the Reload advice is the
+        // remedy, not another request.
+        retry: (failureCount, error) =>
+          failureCount < 1 && !isTerminalResourceError(error),
+      },
+    },
+  });
 }
 
 export interface NotificationsProviderProps {
@@ -73,13 +86,50 @@ export interface NotificationsProviderProps {
   queryClient?: QueryClient;
 }
 
-export function NotificationsProvider({
-  children,
-  queryClient,
-}: NotificationsProviderProps) {
+/**
+ * Mounts a live-state pipeline — a QueryClient and the NotificationsClient
+ * feeding it — for `children`. Under the page's own transport (no
+ * `<TransportProvider>` above) it is the page's singleton pipeline. Under any
+ * other transport it is a pipeline of that transport's own: a fresh
+ * QueryClient, a NotificationsClient opening the transport's sockets and
+ * fetching through it, and its own causal-floor registries — so nothing read
+ * inside the subtree is cached, confirmed or reported against the page's
+ * server, and the reverse.
+ */
+export function NotificationsProvider(props: NotificationsProviderProps) {
+  const transport = useTransport();
+  if (transport === originTransport) return createElement(RootPipeline, props);
+  if (props.queryClient)
+    throw new Error(
+      "NotificationsProvider: a scoped pipeline owns its QueryClient — pass no queryClient under a TransportProvider",
+    );
+  return createElement(ScopedPipeline, { transport, children: props.children });
+}
+
+function RootPipeline({ children, queryClient }: NotificationsProviderProps) {
   const qc = queryClient ?? getDefaultQueryClient();
   // NotificationsClient is a singleton for the tab; create on first render.
   const notifications = getOrCreateNotifications(qc);
+  return providePipeline(qc, notifications, children);
+}
+
+function ScopedPipeline({
+  transport,
+  children,
+}: {
+  transport: Transport;
+  children: ReactNode;
+}) {
+  const pipeline = scopedPipelineFor(transport);
+  useEffect(() => retainScopedPipeline(transport), [transport]);
+  return providePipeline(pipeline.queryClient, pipeline.client, children);
+}
+
+function providePipeline(
+  qc: QueryClient,
+  notifications: NotificationsClient,
+  children: ReactNode,
+) {
   return createElement(
     QueryClientProvider,
     { client: qc },
@@ -88,6 +138,77 @@ export function NotificationsProvider({
       { value: notifications },
       children,
     ),
+  );
+}
+
+interface ScopedPipelineEntry {
+  queryClient: QueryClient;
+  client: NotificationsClient;
+  holders: number;
+}
+
+// One pipeline per non-origin transport, shared by every provider under it and
+// torn down when the last one unmounts. Created during render (children read it
+// on their first render) and retained by an effect; the teardown is deferred a
+// microtask so StrictMode's unmount→remount of the same commit re-retains the
+// live pipeline instead of reading a destroyed one.
+const scopedPipelines = new Map<Transport, ScopedPipelineEntry>();
+
+function scopedPipelineFor(transport: Transport): ScopedPipelineEntry {
+  let entry = scopedPipelines.get(transport);
+  if (!entry) {
+    const queryClient = createLiveQueryClient();
+    const client = new NotificationsClient(queryClient, {
+      makeSocket: (url, options) => transport.openSocket(url, options),
+      socketUrl: (path) => transport.socketUrl(path),
+      fetchImpl: (input, init) => transport.fetch(input, init),
+      registries: {
+        watermarks: createWatermarkRegistry(),
+        txAcks: createTxAckRegistry(),
+      },
+    });
+    entry = { queryClient, client, holders: 0 };
+    scopedPipelines.set(transport, entry);
+  }
+  return entry;
+}
+
+function retainScopedPipeline(transport: Transport): () => void {
+  const entry = scopedPipelineFor(transport);
+  entry.holders++;
+  return () => {
+    entry.holders--;
+    queueMicrotask(() => {
+      if (entry.holders > 0 || scopedPipelines.get(transport) !== entry) return;
+      scopedPipelines.delete(transport);
+      entry.client.destroy();
+      entry.queryClient.clear();
+    });
+  };
+}
+
+/**
+ * The causal-floor registries of the enclosing live-state pipeline — the
+ * page's own outside any provider (a jsdom test driving the optimistic overlay
+ * with no NotificationsProvider reads and writes the same root registries the
+ * testing barrel's `note…` helpers do).
+ */
+export function useLiveRegistries(): LiveRegistries {
+  const client = useContext(NotificationsContext);
+  return client?.registries ?? rootLiveRegistries;
+}
+
+/**
+ * Classifies a ws-status-bus url as one of the enclosing pipeline's sockets —
+ * `liveStateSocketKind` (the page's own) outside any provider.
+ */
+export function useLiveSocketKindOf(): (
+  url: string,
+) => LiveStateSocketKind | null {
+  const client = useContext(NotificationsContext);
+  return useMemo(
+    () => (client ? (url) => client.socketKindOf(url) : liveStateSocketKind),
+    [client],
   );
 }
 
