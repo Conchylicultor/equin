@@ -11,6 +11,7 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { pageData } from "@plugins/page/plugins/editor/core";
 import {
   PageIcon,
@@ -25,6 +26,13 @@ import {
   usePageReferenceDecoration,
 } from "@plugins/page/plugins/page-reference/web";
 import { isPageCard } from "../internal/page-card";
+
+/**
+ * The row's activation where the host declared no navigation: it still has to
+ * be a `<button>` (the editor's caret lands on its control through `focusRef`),
+ * it just opens nothing.
+ */
+const INERT = (): void => undefined;
 
 /**
  * A sub-page rendered inline in its parent's content flow: icon + title, click
@@ -130,7 +138,9 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
         // still wins over it on its own (a `hover:` variant outranks a plain
         // utility), so the row answers the pointer exactly like any other.
         className={isFocused ? undefined : tint}
-        onClick={() => nav?.open(block.id)}
+        // A link: ⌘/middle-click opens the page in a new browser tab, and
+        // Enter/Space synthesize the plain click, which opens it in place.
+        {...activationProps(nav?.open(block.id) ?? INERT)}
         onKeyDown={onKeyDown}
         onFocus={onFocus}
         actions={trailing}

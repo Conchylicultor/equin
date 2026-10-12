@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import type { ControlSize } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { SortState } from "./use-data-table";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 
 export interface ColumnDef<TRow> {
   id: string;
@@ -108,18 +109,17 @@ export interface DataTableProps<TRow> {
   sortState?: SortState | null;
   /** Host-controlled sort toggle; pairs with `sortState`. */
   onToggleSort?: (columnId: string) => void;
-  /** When provided, rows become clickable and fire this on click/Enter/Space. */
-  onRowClick?: (row: TRow) => void;
   /**
-   * Makes a row's click a LINK: the thunk of the app path a ⌘/Ctrl- or
-   * middle-click on that row opens in a new browser tab instead of firing
-   * `onRowClick` (evaluated at click time), or `undefined` for a row whose click
-   * is not navigation. Keyboard activation always fires `onRowClick`.
+   * What activating a row does — click, Enter or Space. A `LinkTarget` (an
+   * opener's result, `openPane.to(…)`) makes the row a LINK: ⌘/Ctrl- and
+   * middle-click open its `href()` in a new browser tab; a plain action only
+   * runs on the plain gestures; `undefined` leaves that row inert. Present →
+   * rows are clickable and focusable.
    */
-  rowHref?: (row: TRow) => (() => string) | undefined;
+  rowActivation?: (row: TRow) => Activation | undefined;
   /**
    * The open gesture: double-click a row, or Enter on a focused row (Space then
-   * still fires `onRowClick`). Distinct from the click — a file browser's
+   * still runs `rowActivation`). Distinct from the click — a file browser's
    * "click selects, double-click opens". Present → rows are focusable.
    */
   onRowOpen?: (row: TRow) => void;

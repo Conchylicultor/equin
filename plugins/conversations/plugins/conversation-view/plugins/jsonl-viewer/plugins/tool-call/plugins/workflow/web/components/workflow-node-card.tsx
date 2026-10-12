@@ -5,6 +5,8 @@ import {
   modelDisplayLabel,
 } from "@plugins/conversations/plugins/model-provider/core";
 import type { TracedNode } from "../internal/trace-types";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
   Badge,
   formatStatusLabel,
@@ -34,12 +36,12 @@ function MetaChip({ children }: { children: React.ReactNode }) {
 export function WorkflowNodeCard({
   node,
   emphasis,
-  onOpen,
+  activation,
   onHover,
 }: {
   node: TracedNode;
   emphasis: NodeEmphasis;
-  onOpen: (nodeId: string) => void;
+  activation: Activation;
   onHover: (nodeId: string | null) => void;
 }) {
   const modelTier = node.model
@@ -55,7 +57,7 @@ export function WorkflowNodeCard({
     <Card
       as="button"
       type="button"
-      onClick={() => onOpen(node.id)}
+      {...activationProps(activation)}
       onMouseEnter={() => onHover(node.id)}
       onMouseLeave={() => onHover(null)}
       className={cn(

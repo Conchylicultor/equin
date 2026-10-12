@@ -35,8 +35,11 @@ export function useShellNotificationClaim(
     target: {
       label: "Open output",
       icon: terminalIcon,
-      open: () =>
-        openPane(shellOutputPane, { shellId: shell.shellId }, { mode: "push" }),
+      activation: openPane.to(
+        shellOutputPane,
+        { shellId: shell.shellId },
+        { mode: "push" },
+      ),
     },
   };
 }

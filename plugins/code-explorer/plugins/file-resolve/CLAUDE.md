@@ -18,6 +18,7 @@ A path that names an existing file answers `exact` with where its bytes live: `g
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/link-gesture.activationProps`
   - Exports (types): `ResolvedFileState`
   - Exports (values):
     - `FileDisambiguation`

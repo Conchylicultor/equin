@@ -304,7 +304,10 @@ place the modes below are implemented, shared with `store.openPaneImpl` and
 does. `store.routeUrl(route)` is the base-path-prefixed address for a route.
 `hint` is lost in the new tab (it always is on a rebuilt route), and `options`
 are not in URLs: state a link must carry belongs in a URL param.
-`lint/no-onclick-open-pane` flags an `onClick` whose only job is `openPane(…)`.
+`link-gesture/no-click-navigate` flags any click-style callback (`onClick`,
+`onRowActivate`, `onOpen`, …) or plain-function activation whose only job is
+`openPane(…)` (or another navigation) — pass `openPane.link(…)` / `openPane.to(…)`
+instead.
 
 Modes:
 
@@ -1029,7 +1032,7 @@ See "Open questions" in the design doc.
     - `useSurfaceAppId`
     - `useSyncPaneRegistry`
 - Cross-plugin:
-  - Imported by: 167 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 166 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×59
     - `conversations` ×29
     - `debug` ×23
@@ -1037,7 +1040,7 @@ See "Open questions" in the design doc.
     - `tasks` ×9
     - `plugin-meta` ×6
     - `apps-core` ×5
-    - `auth` ×5
+    - `auth` ×4
     - `layouts` ×4
     - `infra` ×3
     - `primitives` ×2

@@ -5,6 +5,11 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import {
+  afterOpen,
+  type Activation,
+} from "@plugins/primitives/plugins/link-gesture/core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
+import {
   RELATION_LABEL,
   type ArtifactItem,
 } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
@@ -18,8 +23,12 @@ export interface ArtifactRowProps {
   title: string;
   /** The kind's glyph. Every row of one kind shows the same one. */
   icon: IconRef;
-  /** Opens the artifact. Omit for an artifact that has nowhere to go. */
-  onOpen?: () => void;
+  /**
+   * What activating the row does — a `LinkTarget` for anything that navigates,
+   * so ⌘/middle-click opens it in a new browser tab. Omit for an artifact that
+   * has nowhere to go.
+   */
+  activation?: Activation;
   /**
    * Why this row cannot be opened, e.g. a packaged skill with no file on disk.
    * Replaces the default tooltip's second line and greys the row out.
@@ -46,13 +55,14 @@ export interface ArtifactRowProps {
  * "referenced" signal: no mark, quieter text.
  *
  * Activating a row also dismisses the popover it is in, so a kind cannot ship a
- * row that navigates and leaves the panel hanging over what it opened.
+ * row that navigates and leaves the panel hanging over what it opened. A
+ * ⌘/middle-click does not: it opens a browser tab and this one stays put.
  */
 export function ArtifactRow({
   item,
   title,
   icon,
-  onOpen,
+  activation,
   inertReason,
 }: ArtifactRowProps) {
   const close = useCloseArtifacts();
@@ -75,11 +85,8 @@ export function ArtifactRow({
       // decision, because the glyph is sized from the ROW's rung — a title that
       // declared a different one would put the two back out of step.
       size="sm"
-      disabled={inertReason !== undefined || onOpen === undefined}
-      onClick={() => {
-        onOpen?.();
-        close();
-      }}
+      disabled={inertReason !== undefined || activation === undefined}
+      {...activationProps(activation && afterOpen(activation, close))}
       title={`${item.key}\n${detail}`}
     >
       <Fill>

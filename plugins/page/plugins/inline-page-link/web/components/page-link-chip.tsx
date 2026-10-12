@@ -10,6 +10,7 @@ import {
 } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { INERT_ACTIVATION } from "../internal/inert-activation";
 
 const linkIcon = symbol("link");
 
@@ -17,9 +18,9 @@ const linkIcon = symbol("link");
  * Read-only equivalent of the editor's inline page-link chip
  * (`PageLinkInlineView`). Resolves the linked page's title + icon from its live
  * row in `pagesTree` and renders the same `LinkChip` shape — but never navigates
- * (a static render declares no page navigation), so `onClick` is a pure
- * `stopPropagation`. A consumer that wants navigation can wrap the rendered
- * output in its own click handler; the preview layer stays inert by design.
+ * (a static render declares no page navigation), so its activation is inert:
+ * the chip still isolates its click from whatever holds it. The preview layer
+ * stays inert by design.
  *
  * It lives HERE, with the family that declares the token, rather than in
  * `read-only-view` — which used to own it and to name this token type by hand.
@@ -38,7 +39,7 @@ export function PageLinkChip({ pageId }: { pageId: string }) {
       // Show the raw token-free title placeholder rather than nothing, so the
       // line height stays stable while the row loads.
       return (
-        <LinkChip onClick={(e) => e.stopPropagation()}>
+        <LinkChip activation={INERT_ACTIVATION}>
           <Placeholder>…</Placeholder>
         </LinkChip>
       );
@@ -64,7 +65,7 @@ export function PageLinkChip({ pageId }: { pageId: string }) {
 
   if (!target) {
     return (
-      <LinkChip onClick={(e) => e.stopPropagation()}>
+      <LinkChip activation={INERT_ACTIVATION}>
         <Placeholder>(page not found)</Placeholder>
       </LinkChip>
     );
@@ -81,7 +82,7 @@ export function PageLinkChip({ pageId }: { pageId: string }) {
           />
         </Center>
       }
-      onClick={(e) => e.stopPropagation()}
+      activation={INERT_ACTIVATION}
     >
       {data?.title || "Untitled"}
     </LinkChip>

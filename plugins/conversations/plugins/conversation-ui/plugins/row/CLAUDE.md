@@ -29,9 +29,11 @@ What it wraps `ConversationItem` in:
 - **`trailing`** — presentational content after the body (the authorship row's
   "when this conversation first wrote here").
 - **`actions`** — `Row`'s interactive slot (task detail's "Open as page", which
-  calls `openAsPage` off the same opener). Never put a control in `trailing`:
+  spreads `asPage(id)` off the same opener). Never put a control in `trailing`:
   `Row`'s contract is that a clickable row's body is presentational.
-- **`onOpen`** — fired after navigating, so a popover can dismiss itself.
+- **`onOpen`** — fired after a plain-click open (not a ⌘/middle-click, which
+  opens a browser tab), so a popover can dismiss itself. The row itself spreads
+  the opener's `toggle(id)` link.
 
 ## `ConversationRowById`
 
@@ -62,6 +64,7 @@ records with a surface of its own is a `data-view` — see
     - `primitives/css/fill.Fill`
     - `primitives/css/row.Row`
     - `primitives/css/text.Text`
+    - `primitives/link-gesture.activationProps`
   - Exports (types):
     - `ConversationRowByIdProps`
     - `ConversationRowChrome`

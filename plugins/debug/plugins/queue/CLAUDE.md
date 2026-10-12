@@ -35,7 +35,7 @@
     - `trigger-actions` "enabled" → `TriggerEnabledAction`
     - `trigger-actions` "delete" → `DeleteTriggerAction`
     - `DebugApp.Sidebar` "Queue"
-  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×8
     - `primitives/live-state` ×6
     - `primitives/data-view` ×4
@@ -61,6 +61,7 @@
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/yield.yieldClass`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
     - `primitives/relative-time.useNow`
     - `ui/icons.Icon`

@@ -3,20 +3,21 @@ import {
   linkifyChildren,
   parseFileLinks,
 } from "@plugins/primitives/plugins/file-links/web";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
   MarkdownEnhancementContext,
   useMarkdownEnhancement,
   type MarkdownEnhancement,
 } from "@plugins/primitives/plugins/markdown/web";
-import { useFileOpen } from "./use-file-open";
+import { useFileTarget } from "./use-file-target";
 
 export function FileLinksEnhancer({ children }: { children: ReactNode }) {
-  const onFileOpen = useFileOpen();
+  const fileTarget = useFileTarget();
 
   const enhancement = useMemo((): MarkdownEnhancement | null => {
-    if (!onFileOpen) return null;
+    if (!fileTarget) return null;
     return {
-      transform: (c: ReactNode) => linkifyChildren(c, onFileOpen),
+      transform: (c: ReactNode) => linkifyChildren(c, fileTarget),
       components: {
         a: ({ href, children: kids, ...p }) => {
           if (href && !href.startsWith("http") && !href.startsWith("#")) {
@@ -25,10 +26,7 @@ export function FileLinksEnhancer({ children }: { children: ReactNode }) {
               return (
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onFileOpen(href);
-                  }}
+                  {...activationProps(fileTarget(href), { isolate: true })}
                   className="text-primary-text underline"
                 >
                   {kids}
@@ -50,7 +48,7 @@ export function FileLinksEnhancer({ children }: { children: ReactNode }) {
         },
       },
     };
-  }, [onFileOpen]);
+  }, [fileTarget]);
 
   const value = useMarkdownEnhancement(enhancement);
   return (

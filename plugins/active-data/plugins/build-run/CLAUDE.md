@@ -5,7 +5,7 @@ Renders a bare `build-<id>` written in a transcript as the generic id chip —
 run-detail pane (`r/:runId`) beside the conversation. The id's shape is the
 build-run kind's (`buildRunIdKind`, `build/run-ledger/core`); this plugin only
 supplies the presenter (`useBuildRunReferent` over `build.history`'s by-id row,
-and `useOpenBuildRun`) and the server referent (a `build_runs` lookup), through
+and `useBuildRunTarget`) and the server referent (a `build_runs` lookup), through
 `active-data/id-chip`'s `idChip` / `idChipServer`. `buildRunTitle` (core) is the
 one spelling of the title both halves show.
 

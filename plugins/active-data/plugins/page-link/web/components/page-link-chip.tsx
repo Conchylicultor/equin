@@ -7,10 +7,11 @@ import {
   blockDetailPane,
   pageDetailPane,
   useBlockTarget,
+  useBlockTargetLink,
   useBlockTargetTitle,
-  useOpenBlockTarget,
 } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import type { IdReferentState } from "@plugins/ids/web";
 
 /**
@@ -36,7 +37,7 @@ export function PageLinkChip({
   const title = useBlockTargetTitle(target);
   const opens = target.kind === "page" || target.kind === "block";
   const page = useLiveRow(pagesTree, opens ? target.pageId : null);
-  const open = useOpenBlockTarget();
+  const link = useBlockTargetLink();
 
   // Nothing to open, or not resolved yet: the raw string exactly as written,
   // unstyled — a font change would advertise an affordance that isn't there.
@@ -51,10 +52,7 @@ export function PageLinkChip({
 
   return (
     <LinkChip
-      onClick={(e) => {
-        e.stopPropagation();
-        open(target);
-      }}
+      activation={link(target)}
       title={
         target.kind === "page"
           ? `${title} · ${blockId}`
@@ -88,12 +86,12 @@ export function useBlockReferent(blockId: string): IdReferentState {
 }
 
 /**
- * Opens what a block id names: a page id its page, a content-block id the
- * block view (that block as a page of its own), as a column beside the surface
- * holding the id. Which one is decided from the live pages list; an id the list
- * does not hold is a content block, whose view resolves its own page.
+ * The link to what a block id names: a page id its page, a content-block id
+ * the block view (that block as a page of its own), as a column beside the
+ * surface holding the id. Which one is decided from the live pages list; an id
+ * the list does not hold is a content block, whose view resolves its own page.
  */
-export function useOpenBlock(): (blockId: string) => void {
+export function useBlockTargetById(): (blockId: string) => LinkTarget {
   const pages = useLive(pagesTree);
   const openPane = useOpenPane();
   return (blockId) => {
@@ -102,7 +100,8 @@ export function useOpenBlock(): (blockId: string) => void {
       error: () => false,
       ready: (list) => list.some((p) => p.id === blockId),
     });
-    if (isPage) openPane(pageDetailPane, { pageId: blockId }, { mode: "push" });
-    else openPane(blockDetailPane, { blockId }, { mode: "push" });
+    return isPage
+      ? openPane.to(pageDetailPane, { pageId: blockId }, { mode: "push" })
+      : openPane.to(blockDetailPane, { blockId }, { mode: "push" });
   };
 }

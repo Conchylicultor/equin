@@ -29,7 +29,11 @@ import type {
   DataTableRowDecoration,
 } from "./types";
 import { useDataTable } from "./use-data-table";
-import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
+import {
+  runActivation,
+  type Activation,
+} from "@plugins/primitives/plugins/link-gesture/core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
@@ -85,8 +89,7 @@ export function DataTable<TRow>({
   emptyLabel = "No results found",
   sortState: controlledSort,
   onToggleSort,
-  onRowClick,
-  rowHref,
+  rowActivation,
   onRowOpen,
   rowActions,
   rowPersistentActions,
@@ -218,8 +221,7 @@ export function DataTable<TRow>({
       columns={columns}
       rowKey={rowKey}
       selectedRowId={selectedRowId}
-      onRowClick={onRowClick}
-      rowHref={rowHref}
+      rowActivation={rowActivation}
       onRowOpen={onRowOpen}
       rowActions={rowActions}
       rowPersistentActions={rowPersistentActions}
@@ -303,8 +305,7 @@ function DataTableRow<TRow>({
   columns,
   rowKey,
   selectedRowId,
-  onRowClick,
-  rowHref,
+  rowActivation,
   onRowOpen,
   rowActions,
   rowPersistentActions,
@@ -317,8 +318,7 @@ function DataTableRow<TRow>({
   columns: ColumnDef<TRow>[];
   rowKey: (row: TRow, index: number) => string;
   selectedRowId: string | undefined;
-  onRowClick: ((row: TRow) => void) | undefined;
-  rowHref: ((row: TRow) => (() => string) | undefined) | undefined;
+  rowActivation: ((row: TRow) => Activation | undefined) | undefined;
   onRowOpen: ((row: TRow) => void) | undefined;
   rowActions: ((row: TRow, index: number) => ReactNode) | undefined;
   rowPersistentActions: ((row: TRow, index: number) => ReactNode) | undefined;
@@ -330,13 +330,10 @@ function DataTableRow<TRow>({
   rowPad: "py-row" | "py-row-compact";
 }): ReactNode {
   const decoration = useRowDecoration(row, index);
-  // A row whose click navigates reads the link gestures: ⌘/middle-click open
-  // its href in a browser tab rather than firing `onRowClick`.
-  const href = onRowClick ? rowHref?.(row) : undefined;
-  const link =
-    onRowClick && href
-      ? linkProps({ open: () => onRowClick(row), href })
-      : undefined;
+  // A row whose activation is a link reads the link gestures: ⌘/middle-click
+  // open its href in a browser tab instead of opening it here.
+  const activation = rowActivation?.(row);
+  const gestures = activationProps(activation);
   const key = rowKey(row, index);
   // Destructure-and-rename so render never does inline `decoration.ref` member
   // access on the hook output (react-hooks/refs flags member access on a ref
@@ -368,27 +365,26 @@ function DataTableRow<TRow>({
         // lays out and stacks identically, so it is inert on plain rows).
         rowActionsAnchor,
         key === selectedRowId && "bg-accent",
-        (onRowClick || onRowOpen) && "cursor-pointer",
+        (rowActivation || onRowOpen) && "cursor-pointer",
         decorationClassName,
       )}
       style={decorationStyle}
       onClick={
-        onRowClick
+        gestures.onClick
           ? (e) => {
               // The second click of a double-click belongs to `onRowOpen`.
               if (onRowOpen && e.detail > 1) return;
-              if (link) link.onClick(e);
-              else onRowClick(row);
+              gestures.onClick?.(e);
             }
           : undefined
       }
-      onAuxClick={link?.onAuxClick}
-      onMouseDown={link?.onMouseDown}
+      onAuxClick={gestures.onAuxClick}
+      onMouseDown={gestures.onMouseDown}
       onDoubleClick={onRowOpen ? () => onRowOpen(row) : undefined}
-      role={onRowClick || onRowOpen ? "button" : undefined}
-      tabIndex={onRowClick || onRowOpen ? 0 : undefined}
+      role={rowActivation || onRowOpen ? "button" : undefined}
+      tabIndex={rowActivation || onRowOpen ? 0 : undefined}
       onKeyDown={
-        onRowClick || onRowOpen
+        rowActivation || onRowOpen
           ? (e) => {
               // Only the row's own Enter opens — never one bubbling out of a
               // control inside a cell.
@@ -399,9 +395,12 @@ function DataTableRow<TRow>({
               ) {
                 e.preventDefault();
                 onRowOpen(row);
-              } else if ((e.key === "Enter" || e.key === " ") && onRowClick) {
+              } else if (
+                (e.key === "Enter" || e.key === " ") &&
+                activation !== undefined
+              ) {
                 e.preventDefault();
-                onRowClick(row);
+                runActivation(activation);
               }
             }
           : undefined

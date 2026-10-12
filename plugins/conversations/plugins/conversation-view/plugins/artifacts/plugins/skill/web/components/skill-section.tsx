@@ -2,6 +2,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
 import { useConversationById } from "@plugins/conversations/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
@@ -33,12 +34,6 @@ export function SkillSection({ items }: { items: ArtifactItem[] }) {
   const close = useCloseArtifacts();
 
   const worktree = conversation?.attemptId;
-
-  const open = (path: string) => {
-    if (worktree === undefined) return;
-    openPane(filePeekPane, { worktree, filePath: path }, { mode: "push" });
-    close();
-  };
 
   return (
     <Cluster gap="2xs" className="px-sm">
@@ -72,7 +67,14 @@ export function SkillSection({ items }: { items: ArtifactItem[] }) {
             key={item.key}
             mono
             title={`Open ${path}`}
-            onClick={() => open(path)}
+            activation={afterOpen(
+              openPane.to(
+                filePeekPane,
+                { worktree, filePath: path },
+                { mode: "push" },
+              ),
+              close,
+            )}
           >
             {item.key}
           </LinkChip>

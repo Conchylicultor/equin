@@ -8,22 +8,24 @@ import { formatDuration, formatWhen } from "../internal/format";
 import { isActive, type JobListRow } from "../internal/job-rows";
 import { STATUS_META } from "../internal/status";
 import { DetailSection } from "./detail-kit";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 
 /**
  * "Recent runs of this job": every row of the same job — its recorded runs
  * oldest → newest, then whatever is in flight — as small bars, height by the
  * square root of the duration (so one long run does not flatten the rest),
- * coloured by outcome; in-flight rows striped. A bar selects its row.
+ * coloured by outcome; in-flight rows striped. A bar links to its row.
  */
 export function RunStrip({
   rows,
   current,
-  onSelect,
+  runTarget,
 }: {
   /** Every Jobs row of this job name. */
   rows: readonly JobListRow[];
   current: string;
-  onSelect: (key: string) => void;
+  runTarget: (key: string) => LinkTarget;
 }) {
   const now = useNow(10_000);
   const done = rows
@@ -59,7 +61,7 @@ export function RunStrip({
                 title={title}
                 aria-label={title}
                 aria-current={r.key === current ? "true" : undefined}
-                onClick={() => onSelect(r.key)}
+                {...activationProps(runTarget(r.key))}
                 style={{ height: `${height}%` }}
                 className={cn(
                   // Bars share the strip's width, between a hairline and 12px.

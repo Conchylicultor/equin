@@ -148,7 +148,7 @@ function EdgeChip({ step }: { step: InclusionStep }) {
     <Stack as="span" direction="row" align="center" gap="xs">
       <LinkChip
         mono
-        onClick={() => pinAsRoot(step.from)}
+        activation={() => pinAsRoot(step.from)}
         title={String(step.from)}
       >
         {shortName(step.from)}
@@ -158,7 +158,11 @@ function EdgeChip({ step }: { step: InclusionStep }) {
         {step.kind}
       </Badge>
       <Icon icon={arrowForwardIcon} className="size-3 text-muted-foreground" />
-      <LinkChip mono onClick={() => pinAsRoot(step.to)} title={String(step.to)}>
+      <LinkChip
+        mono
+        activation={() => pinAsRoot(step.to)}
+        title={String(step.to)}
+      >
         {shortName(step.to)}
       </LinkChip>
     </Stack>

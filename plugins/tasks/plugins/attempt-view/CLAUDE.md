@@ -11,7 +11,7 @@
   - Contributes:
     - `Pane.Register` "attempt"
     - `Conversation.ActionBar` → `AttemptSwitchButton`
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×7
     - `conversations/conversation-ui/item` ×2
     - `primitives/css/fill` ×2
@@ -28,6 +28,7 @@
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/launch.LaunchControl`
+    - `primitives/link-gesture.activationProps`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`

@@ -24,7 +24,6 @@
     - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/pane.defineRoute`
-    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/setup-steps.Step`
     - `primitives/setup-steps.StepDone`

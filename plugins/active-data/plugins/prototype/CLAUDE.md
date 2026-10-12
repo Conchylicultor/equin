@@ -21,7 +21,7 @@ recognition against real mints.
 
 The chip is id-chip's GENERIC one (no component of its own): this plugin only
 supplies the presenter — `usePrototypeReferent` (the title) and
-`useOpenPrototype` — and the `dashboard-customize` icon.
+`usePrototypeTarget` — and the `dashboard-customize` icon.
 
 **Resolution is free.** `prototypesList` (`files`' live value, read with
 `useLive`) is an app-wide list re-broadcast on every file change under the

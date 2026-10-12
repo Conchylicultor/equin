@@ -1,4 +1,5 @@
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { pluginViewPane } from "../panes";
 
 /**
@@ -19,10 +20,11 @@ export function PluginLink({
   return (
     <button
       className={className}
-      onClick={(e) => {
-        e.stopPropagation();
-        openPane(pluginViewPane, { pluginId: name }, { mode: "swap" });
-      }}
+      // Isolated: the link sits inside rows that are clickable themselves.
+      {...activationProps(
+        openPane.to(pluginViewPane, { pluginId: name }, { mode: "swap" }),
+        { isolate: true },
+      )}
     >
       {label ?? name}
     </button>

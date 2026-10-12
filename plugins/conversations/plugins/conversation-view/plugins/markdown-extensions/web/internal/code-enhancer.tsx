@@ -6,14 +6,14 @@ import {
   useMarkdownEnhancement,
   type MarkdownEnhancement,
 } from "@plugins/primitives/plugins/markdown/web";
-import { useFileOpen } from "./use-file-open";
+import { useFileTarget } from "./use-file-target";
 
 export function CodeEnhancer({ children }: { children: ReactNode }) {
-  const onFileOpen = useFileOpen();
+  const fileTarget = useFileTarget();
 
   const inlineCode = useCallback(
     (text: string): ReactNode | null => {
-      if (!onFileOpen) return null;
+      if (!fileTarget) return null;
       if (text.startsWith("http://") || text.startsWith("https://")) {
         return (
           <a
@@ -32,10 +32,7 @@ export function CodeEnhancer({ children }: { children: ReactNode }) {
         return (
           <LinkChip
             mono
-            onClick={(e) => {
-              e.stopPropagation();
-              onFileOpen(seg.value, seg.line);
-            }}
+            activation={fileTarget(seg.value, seg.line)}
             className="text-info"
           >
             {seg.line != null ? `${seg.value}:${seg.line}` : seg.value}
@@ -44,13 +41,13 @@ export function CodeEnhancer({ children }: { children: ReactNode }) {
       }
       return null;
     },
-    [onFileOpen],
+    [fileTarget],
   );
 
   const enhancement = useMemo((): MarkdownEnhancement | null => {
-    if (!onFileOpen) return null;
+    if (!fileTarget) return null;
     return { inlineCode };
-  }, [onFileOpen, inlineCode]);
+  }, [fileTarget, inlineCode]);
 
   const value = useMarkdownEnhancement(enhancement);
   return (

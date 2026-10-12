@@ -5,7 +5,10 @@ import {
   type DataViewDensity,
 } from "@plugins/primitives/plugins/data-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
+import {
+  afterOpen,
+  type Activation,
+} from "@plugins/primitives/plugins/link-gesture/core";
 import { runRowKey, runs, type RunRow } from "../../core";
 import { useRunFields } from "../internal/fields";
 import { Runs } from "../internal/slots";
@@ -124,17 +127,13 @@ export function RunsDataView({
   const resolveActivation = useCallback(
     (run: RunRow): Activation | undefined => {
       const linkOf = openers.get(run.kind);
+      // No opener: the host's effect alone, which is not navigation — a plain
+      // action, with no gesture to honour.
       if (!linkOf) {
         return onRowActivate ? () => onRowActivate(run) : undefined;
       }
       const link = linkOf(run, { openPane });
-      return {
-        open: () => {
-          link.open();
-          onRowActivate?.(run);
-        },
-        href: link.href,
-      };
+      return onRowActivate ? afterOpen(link, () => onRowActivate(run)) : link;
     },
     [openers, onRowActivate, openPane],
   );

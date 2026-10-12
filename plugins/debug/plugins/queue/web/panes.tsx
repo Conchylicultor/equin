@@ -32,6 +32,7 @@ import { JobsView } from "./components/jobs-view";
 import { DeadView } from "./components/dead-view";
 import { EventsView } from "./components/events-view";
 import { TriggersView } from "./components/triggers-view";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { JobDetail } from "./components/job-detail";
 import {
   DeadJobDetail,
@@ -223,8 +224,12 @@ function JobDetailBody(): ReactElement {
           <JobDetailContent
             rows={result.data.rows}
             jobRowId={jobRowId}
-            onSelect={(key) =>
-              openPane(jobDetailPane, { tab, jobRowId: key }, { mode: "swap" })
+            runTarget={(key) =>
+              openPane.to(
+                jobDetailPane,
+                { tab, jobRowId: key },
+                { mode: "swap" },
+              )
             }
           />
         )}
@@ -236,11 +241,11 @@ function JobDetailBody(): ReactElement {
 function JobDetailContent({
   rows,
   jobRowId,
-  onSelect,
+  runTarget,
 }: {
   rows: Parameters<typeof findJobRow>[0];
   jobRowId: string;
-  onSelect: (key: string) => void;
+  runTarget: (key: string) => LinkTarget;
 }): ReactElement {
   const found = findJobRow(rows, jobRowId);
   // The guard said the row exists; it can still vanish under a mounted pane
@@ -254,7 +259,7 @@ function JobDetailContent({
       row={found.row}
       followed={found.followed}
       jobRows={jobRows}
-      onSelect={onSelect}
+      runTarget={runTarget}
     />
   );
 }

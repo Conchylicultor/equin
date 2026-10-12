@@ -190,9 +190,16 @@ export function TaskGraph({ taskId }: { taskId: string }) {
   const closure = useTaskClosure(taskId);
   // Clicking a node re-roots this pane in place, keeping the URL truthful.
   const openPane = useOpenPane();
-  const onNavigate = useCallback(
-    (id: string) => openPane(taskDetailPane, { taskId: id }, { mode: "swap" }),
+  const taskTarget = useCallback(
+    (id: string) =>
+      openPane.to(taskDetailPane, { taskId: id }, { mode: "swap" }),
     [openPane],
+  );
+  // A task the edge's "+" just created opens after the mutation settles: no
+  // gesture to read, so the plain open.
+  const onNavigate = useCallback(
+    (id: string) => taskTarget(id).open(),
+    [taskTarget],
   );
   const onConnect = useCallback((source: string, target: string) => {
     void fetchEndpoint(
@@ -223,7 +230,7 @@ export function TaskGraph({ taskId }: { taskId: string }) {
         groups={groups}
         connectable
         onConnect={onConnect}
-        onNodeClick={onNavigate}
+        nodeActivation={taskTarget}
         edgePath="smoothstep"
         minZoom={0.5}
       />

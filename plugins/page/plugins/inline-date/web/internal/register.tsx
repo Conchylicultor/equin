@@ -25,7 +25,9 @@ registerBlockTextExtension(
       <DateMentionChip
         iso={iso}
         reminderId={reminderId}
-        onClick={(e) => e.stopPropagation()}
+        // A no-op action: LinkChip isolates it, so the press stops here
+        // rather than reaching the surface the token is rendered in.
+        activation={() => {}}
       />
     ),
     Plugin: InlineDatePlugin,

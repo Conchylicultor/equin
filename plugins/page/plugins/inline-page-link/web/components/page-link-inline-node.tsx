@@ -13,6 +13,7 @@ import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { usePageNavigation } from "@plugins/page/plugins/page-reference/web";
 import { pageLinkInlineNode } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { INERT_ACTIVATION } from "../internal/inert-activation";
 
 const linkIcon = symbol("link");
 
@@ -63,7 +64,7 @@ function PageLinkInlineView({ pageId }: { pageId: string }) {
 
   if (!target) {
     return (
-      <LinkChip onClick={(e) => e.stopPropagation()}>
+      <LinkChip activation={INERT_ACTIVATION}>
         <Placeholder>(page not found)</Placeholder>
       </LinkChip>
     );
@@ -80,10 +81,9 @@ function PageLinkInlineView({ pageId }: { pageId: string }) {
           />
         </Center>
       }
-      onClick={(e) => {
-        e.stopPropagation();
-        nav?.open(pageId);
-      }}
+      // A link: ⌘/middle-click opens the page in a new browser tab. The chip
+      // isolates the click, so it never also lands in the editor around it.
+      activation={nav?.open(pageId) ?? INERT_ACTIVATION}
     >
       {data?.title || "Untitled"}
     </LinkChip>

@@ -2,6 +2,7 @@ import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import type { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 
 /** One plugin's slice of a facet's data, paired with its node. */
 export interface FacetTableEntry<T = unknown> {
@@ -11,10 +12,11 @@ export interface FacetTableEntry<T = unknown> {
 
 /**
  * Caller-aware pane opener handed to interactive rows. It is the host's
- * `useOpenPane()` result, so an `onRowClick` can `push` a detail pane relative to
- * the Contributions pane — which a module-scope opener cannot do.
+ * `useOpenPane()` result, so a `rowActivation` can `push` a detail pane relative
+ * to the Contributions pane (`openPane.to(…)`) — which a module-scope opener
+ * cannot do.
  */
-export type ContributionsRowClickContext = {
+export type ContributionsRowActivationContext = {
   openPane: ReturnType<typeof useOpenPane>;
 };
 
@@ -52,17 +54,24 @@ export function defineFacetTable<Row>(
   return table as ContributionsFacetTable;
 }
 
-/** A keyed row-click drill-down contributed by the owner of the target pane
+/** A keyed row drill-down contributed by the owner of the target pane
  *  (app-side), so a facet renderer (meta) never imports an app pane. */
-export interface ContributionsRowClick<Row = unknown> {
-  /** Facet id whose table rows this handler makes clickable. */
+export interface ContributionsRowActivation<Row = unknown> {
+  /** Facet id whose table rows this makes clickable. */
   facetId: string;
-  /** Invoked with the projected row and the host's useOpenPane() opener. */
-  onRowClick: (row: Row, ctx: ContributionsRowClickContext) => void;
+  /**
+   * What activating the projected row does, given the host's `useOpenPane()`
+   * opener — a `LinkTarget` (`openPane.to(…)`), so ⌘/middle-click opens the
+   * drill-down in a new browser tab.
+   */
+  rowActivation: (
+    row: Row,
+    ctx: ContributionsRowActivationContext,
+  ) => Activation;
 }
 
-export function defineRowClick<Row>(
-  entry: ContributionsRowClick<Row>,
-): ContributionsRowClick {
-  return entry as ContributionsRowClick;
+export function defineRowActivation<Row>(
+  entry: ContributionsRowActivation<Row>,
+): ContributionsRowActivation {
+  return entry as ContributionsRowActivation;
 }

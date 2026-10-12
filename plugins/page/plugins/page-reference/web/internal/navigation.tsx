@@ -1,4 +1,5 @@
 import { createContext, useContext, type ReactNode } from "react";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 
 /**
  * How a reference to another page — a sub-page row, a link block, an inline
@@ -18,10 +19,16 @@ import { createContext, useContext, type ReactNode } from "react";
  * new intent would have restated all of them again. Context crosses the
  * composite store for free, so a second intent (`openAside`) costs one field
  * here and nothing anywhere else.
+ *
+ * Every intent returns a {@link LinkTarget} rather than navigating: a reference
+ * is a link, so a ⌘/Ctrl- or middle-click on it opens the destination in a new
+ * browser tab, and that needs the destination's URL (`href`) as well as the
+ * in-place open. The reference spreads it (`activationProps`), or runs it
+ * (`runActivation`) where the activation has no mouse event (Enter on a row).
  */
 export interface PageNavigation {
   /** Open the page IN PLACE — in the surface the reference itself lives in. */
-  open(pageId: string): void;
+  open(pageId: string): LinkTarget;
   /**
    * Open the page BESIDE the current one, keeping it in view.
    *
@@ -31,7 +38,7 @@ export interface PageNavigation {
    * box is a different action than the one the user asked for — so the seam says
    * the capability is MISSING, and the affordance for it then does not appear.
    */
-  openAside?(pageId: string): void;
+  openAside?(pageId: string): LinkTarget;
   /**
    * Open ONE BLOCK of a page as a page of its own — that block and its nested
    * lines, editable, saving to the page that holds it — beside the current one.
@@ -39,7 +46,7 @@ export interface PageNavigation {
    * Optional for the same reason as `openAside`: a host with nowhere to put a
    * block view declares none, and the "Open as page" affordance is then absent.
    */
-  openBlock?(blockId: string): void;
+  openBlock?(blockId: string): LinkTarget;
 }
 
 const PageNavigationContext = createContext<PageNavigation | undefined>(

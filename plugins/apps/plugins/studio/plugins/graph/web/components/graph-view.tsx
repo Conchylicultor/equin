@@ -183,7 +183,7 @@ export function GraphView({ paneFocusId }: { paneFocusId?: PluginId }) {
           nodes={nodes}
           edges={edges}
           focusId={focusId}
-          onNodeClick={(id) => setFocusId(id as PluginId)}
+          nodeActivation={(id) => () => setFocusId(id as PluginId)}
         />
       }
     />

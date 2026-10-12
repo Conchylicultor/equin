@@ -2,8 +2,8 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   useBlockTarget,
+  useBlockTargetLink,
   useBlockTargetTitle,
-  useOpenBlockTarget,
 } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
 import { ArtifactRow } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/web";
@@ -58,7 +58,7 @@ export function PageSection({ items }: { items: ArtifactItem[] }) {
 function PageArtifactRow({ item }: { item: ArtifactItem }) {
   const target = useBlockTarget(item.key);
   const title = useBlockTargetTitle(target);
-  const open = useOpenBlockTarget();
+  const link = useBlockTargetLink();
 
   if (target.kind === "pending") return <Loading variant="rows" count={1} />;
   if (target.kind === "missing" || target.kind === "error") {
@@ -83,7 +83,7 @@ function PageArtifactRow({ item }: { item: ArtifactItem }) {
       title={title}
       // Opens as a column to the RIGHT of the conversation, so the transcript
       // stays beside it — the page, or the block view for a block.
-      onOpen={() => open(target)}
+      activation={link(target)}
     />
   );
 }

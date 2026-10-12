@@ -1,3 +1,4 @@
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -30,13 +31,11 @@ export function FilePath({ filePath }: FilePathProps) {
 
   const relativePath = toRelativePath(filePath, conversation.attemptId);
 
-  const openFile = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    openPane(filePeekPane, {
-      worktree: conversation.attemptId,
-      filePath,
-    }, { mode: "push" });
-  };
+  const fileTarget = openPane.to(
+    filePeekPane,
+    { worktree: conversation.attemptId, filePath },
+    { mode: "push" },
+  );
 
   return (
     <Inline gap="2xs" className="group/path max-w-full">
@@ -44,7 +43,7 @@ export function FilePath({ filePath }: FilePathProps) {
         <Text
           as="button"
           side="start"
-          onClick={openFile}
+          {...activationProps(fileTarget, { isolate: true })}
           title={relativePath}
           className="max-w-full font-mono text-2xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
         >

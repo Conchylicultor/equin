@@ -11,7 +11,7 @@ the raw id if the task isn't in the index yet.
 
 The id shape is not declared here: the chip's pattern is derived from
 `taskIdKind` (`tasks-core/core/id-kinds.ts`) by `active-data/id-chip`, which
-also mints the kind's `IdKinds.Presenter` (`useTaskReferent` / `useOpenTask`)
+also mints the kind's `IdKinds.Presenter` (`useTaskReferent` / `useTaskTarget`)
 and, server side, its referent and page-editor inline token.
 
 Note: this plugin (`task-link`) is distinct from the existing `task` plugin,

@@ -1,16 +1,22 @@
 import { Fragment, type ReactNode } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import { parseFileLinks } from "./parse";
 
 export interface FileLinkTextProps {
   text: string;
-  onFileOpen?: (path: string, line?: number) => void;
+  /**
+   * What activating a path chip does — a `LinkTarget` for anything that
+   * navigates, so ⌘/middle-click opens the file in a new browser tab. Omitted,
+   * paths render as inert badges.
+   */
+  fileTarget?: (path: string, line?: number) => Activation;
 }
 
 export function FileLinkText({
   text,
-  onFileOpen,
+  fileTarget,
 }: FileLinkTextProps): ReactNode {
   if (!text) return null;
   const segments = parseFileLinks(text);
@@ -33,15 +39,12 @@ export function FileLinkText({
         }
         if (seg.type !== "path")
           return <Fragment key={i}>{seg.value}</Fragment>;
-        if (onFileOpen) {
+        if (fileTarget) {
           return (
             <LinkChip
               key={i}
               mono
-              onClick={(e) => {
-                e.stopPropagation();
-                onFileOpen(seg.value, seg.line);
-              }}
+              activation={fileTarget(seg.value, seg.line)}
               className="text-info"
             >
               {seg.line != null ? `${seg.value}:${seg.line}` : seg.value}

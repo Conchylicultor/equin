@@ -47,6 +47,7 @@ page's own prose.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/link-gesture.activationProps`
     - `primitives/row-actions.RowActions`
   - Exports (values): `subPageBlock`
 - Core:

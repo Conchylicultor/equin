@@ -137,7 +137,8 @@ inside a block view opens exactly as one clicked inside a page. Both declare
 `missing` / `error` / `page` / `block` from one live row of `page/editor`'s
 `blockLocations` (lookup-only, `page.block-locations:rows`: the block's type and
 nearest page ancestor, for a page and a content block alike) — and
-`useOpenBlockTarget()` opens the matching pane.
+`useBlockTargetLink()` is the link to the matching pane (a
+`LinkTarget`, so ⌘/middle-click opens it in a browser tab).
 The transcript's `block-…` chip and the conversation Artifacts panel both use
 it, so an id means the same thing wherever it is clicked.
 
@@ -246,9 +247,9 @@ it, so an id means the same thing wherever it is clicked.
     - `pagesTreePane`
     - `PageTree`
     - `useBlockTarget`
+    - `useBlockTargetLink`
     - `useBlockTargetTitle`
     - `useBlockTypeLabel`
-    - `useOpenBlockTarget`
 - Core:
   - Uses: `primitives/pane.defineRoute`
   - Exports (values):

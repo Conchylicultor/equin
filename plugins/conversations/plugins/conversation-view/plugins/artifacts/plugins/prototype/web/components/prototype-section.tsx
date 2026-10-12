@@ -58,17 +58,16 @@ export function PrototypeSection({ items }: { items: ArtifactItem[] }) {
               icon={PROTOTYPE_ICON}
               title={meta?.title ?? item.key}
               inertReason={meta === undefined ? NO_SUCH_PROTOTYPE : undefined}
-              onOpen={
+              activation={
                 meta === undefined
                   ? undefined
                   : // `push` opens the mock as a column to the RIGHT of the
                     // conversation, so the transcript stays beside it.
-                    () =>
-                      openPane(
-                        prototypeDetailPane,
-                        { name: item.key },
-                        { mode: "push" },
-                      )
+                    openPane.to(
+                      prototypeDetailPane,
+                      { name: item.key },
+                      { mode: "push" },
+                    )
               }
             />
           );

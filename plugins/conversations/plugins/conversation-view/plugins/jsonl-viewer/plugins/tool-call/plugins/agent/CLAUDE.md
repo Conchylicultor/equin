@@ -12,7 +12,7 @@
     - `JsonlViewerTool.Renderer` "Agent" → `AgentToolView`
     - `Pane.Register` "agent-report"
     - `TaskNotification.Open` "sub-agent"
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/conversation-view/jsonl-viewer/subagents` ×6
     - `primitives/pane` ×4
     - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
@@ -29,6 +29,7 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture.activationProps`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/markdown.Markdown`
     - `ui/icons.Icon`

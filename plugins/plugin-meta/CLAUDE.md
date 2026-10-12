@@ -17,7 +17,7 @@ Sub-plugins:
   - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
   - **`closure`**
   - **`composition`** — Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact…
-  - **`contributions-table`** — Registry for the Studio Contributions aggregated-table surface: FacetTable + RowClick slots and factories.
+  - **`contributions-table`** — Registry for the Studio Contributions aggregated-table surface: FacetTable + RowActivation slots and factories.
   - **`exhibits`** — Exhibit catalog: a plugin shows one of its REAL components standalone from an exhibits/ folder (isolatedExhibit / regionExhibit / appExhibit), collected into one generated registry. useExhibits() /…
   - **`facets`** — Facet-based plugin metadata extraction and docgen pipeline
   - **`parse-utils`**

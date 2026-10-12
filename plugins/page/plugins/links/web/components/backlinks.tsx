@@ -118,7 +118,9 @@ export function Backlinks({ documentId }: BacklinksProps) {
       views={["list"]}
       storageKey={BACKLINKS_VIEW}
       toolbar={BACKLINKS_TOOLBAR}
-      onRowActivate={(row) => nav?.open(row.id)}
+      // A link, so ⌘/middle-click opens the source page in a browser tab. With
+      // no declared navigation the rows are plain, inert entries.
+      rowActivation={nav && ((row) => nav.open(row.id))}
       viewOptions={{
         list: {
           renderRow: (row: BacklinkRow) => <BacklinkBody row={row} />,

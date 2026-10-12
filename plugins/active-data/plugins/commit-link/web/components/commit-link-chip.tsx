@@ -47,16 +47,13 @@ export function CommitLinkChip({
       }
     >
       <LinkChip
-        onClick={(e) => {
-          e.stopPropagation();
-          // The FULL sha, not the abbreviation the author typed — the pane's
-          // route param should name the object unambiguously.
-          openPane(
-            commitDetailPane,
-            { worktree: COMMIT_WORKTREE, sha: value.sha },
-            { mode: "push" },
-          );
-        }}
+        // The FULL sha, not the abbreviation the author typed — the pane's
+        // route param should name the object unambiguously.
+        activation={openPane.to(
+          commitDetailPane,
+          { worktree: COMMIT_WORKTREE, sha: value.sha },
+          { mode: "push" },
+        )}
         leading={<Icon icon={commitIcon} className="text-muted-foreground" />}
         mono
       >

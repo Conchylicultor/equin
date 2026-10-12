@@ -44,15 +44,14 @@ export function ResearchSection({ items }: { items: ArtifactItem[] }) {
           item={item}
           title={researchTitle(item.key)}
           icon={RESEARCH_ICON}
-          onOpen={
+          activation={
             worktree === undefined
               ? undefined
-              : () =>
-                  openPane(
-                    filePeekPane,
-                    { worktree, filePath: item.key },
-                    { mode: "push" },
-                  )
+              : openPane.to(
+                  filePeekPane,
+                  { worktree, filePath: item.key },
+                  { mode: "push" },
+                )
           }
         />
       ))}

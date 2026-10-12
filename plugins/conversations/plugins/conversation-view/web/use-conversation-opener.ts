@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "./panes";
 
@@ -18,13 +19,15 @@ export interface ConversationOpener {
   /** Is this the conversation this surface has open? */
   isOpen(convId: string): boolean;
   /**
-   * Open this conversation beside the surface — or close it, when it is the one
-   * already open. Opening a conversation is a toggle everywhere, so a row that
-   * lights up when you open it also puts itself out when you click it again.
+   * The link that opens this conversation beside the surface — or closes it,
+   * when it is the one already open. Opening a conversation is a toggle
+   * everywhere, so a row that lights up when you open it also puts itself out
+   * when you click it again. Its `href` is always the opened route's URL: a
+   * ⌘/middle-click opens the conversation in a new browser tab, never closes.
    */
-  toggle(convId: string): void;
-  /** Open this conversation as its own page, replacing the surface's route. */
-  openAsPage(convId: string): void;
+  toggle(convId: string): LinkTarget;
+  /** The link that opens this conversation as its own page (a fresh route). */
+  asPage(convId: string): LinkTarget;
 }
 
 export function useConversationOpener(): ConversationOpener {
@@ -39,15 +42,24 @@ export function useConversationOpener(): ConversationOpener {
       openConvId,
       isOpen: (convId) => convId === openConvId,
       toggle: (convId) => {
-        if (opened && convId === openConvId) {
-          conversationPane.close(opened.instanceId);
-          return;
-        }
-        openPane(conversationPane, { convId }, { mode: "push" });
+        const push = openPane.to(
+          conversationPane,
+          { convId },
+          { mode: "push" },
+        );
+        return {
+          open: () => {
+            if (opened && convId === openConvId) {
+              conversationPane.close(opened.instanceId);
+            } else {
+              push.open();
+            }
+          },
+          href: push.href,
+        };
       },
-      openAsPage: (convId) => {
-        openPane(conversationPane, { convId }, { mode: "root" });
-      },
+      asPage: (convId) =>
+        openPane.to(conversationPane, { convId }, { mode: "root" }),
     } satisfies ConversationOpener;
   }, [opened, openPane]);
 }

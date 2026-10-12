@@ -18,10 +18,10 @@
     - `tableDetailPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "table-detail"
-    - `Contributions.RowClick` "db-schema"
+    - `Contributions.RowActivation` "db-schema"
   - Uses:
     - `plugin-meta/contributions-table.Contributions`
-    - `plugin-meta/contributions-table.defineRowClick`
+    - `plugin-meta/contributions-table.defineRowActivation`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

@@ -13,7 +13,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   useExplorerLocation,
   useHomeDir,
-  useOpenExplorerFolder,
+  useExplorerFolderTarget,
 } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 import { absolutePath } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
 import {
@@ -227,7 +227,7 @@ function PlacesList({
 }): ReactNode {
   const location = useExplorerLocation();
   const home = useHomeDir();
-  const openFolder = useOpenExplorerFolder();
+  const folderTarget = useExplorerFolderTarget();
   const readiness: ResourceReadiness =
     pending || home.kind === "pending"
       ? { status: "loading" }
@@ -256,10 +256,9 @@ function PlacesList({
           toolbar={SECTIONS}
           density="compact"
           selectedRowId={activeId}
-          rowActivation={(r) => {
-            const { path } = r;
-            return path === null ? undefined : () => openFolder(path);
-          }}
+          rowActivation={(r) =>
+            r.path === null ? undefined : folderTarget(r.path)
+          }
           rowTone={(r) => (r.path === null ? "muted" : "default")}
           viewOptions={listOptions(activeId)}
         />

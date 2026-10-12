@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { navigate } from "@plugins/apps-core/plugins/tabs/web";
+import { appLink } from "@plugins/apps-core/plugins/tabs/web";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -56,9 +57,9 @@ function BreakdownRows({
       {data.rows.map((row) => (
         <Row
           key={row.key}
-          onClick={
-            row.link === undefined ? undefined : () => navigate(row.link!.href)
-          }
+          {...activationProps(
+            row.link === undefined ? undefined : appLink(row.link.href),
+          )}
         >
           <Fill>
             <Text>{row.label}</Text>

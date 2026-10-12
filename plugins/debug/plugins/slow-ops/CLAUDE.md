@@ -124,7 +124,7 @@ bar).
     - `Core.Root` → `SlowOpCollector`
     - `Reports.KindView` → `SlowOpKindView`
   - Uses:
-    - `apps-core/tabs.navigate`
+    - `apps-core/tabs.appLink`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `infra/endpoints.fetchEndpoint`

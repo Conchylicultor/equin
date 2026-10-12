@@ -171,7 +171,7 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `metrics.details:meta` (push)
     - `metrics.query` (invalidate)
 - Web:
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
     - `primitives/data-view/view-core` ×4
     - `primitives/live-state` ×4
@@ -179,7 +179,7 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `network/live` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/toggle-chip` ×2
-    - `apps-core/tabs.navigate`
+    - `apps-core/tabs.appLink`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
@@ -190,6 +190,7 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `primitives/css/scroll.Scroll`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
     - `primitives/outline/rail.OutlineRail`
     - `primitives/persistent-draft.useDraft`

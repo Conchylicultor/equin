@@ -132,8 +132,8 @@ function FilePeekPaneBody() {
           <FileDisambiguation
             query={filePath}
             matches={resolved.matches}
-            onSelect={(fp) =>
-              openPane(
+            activationFor={(fp) =>
+              openPane.to(
                 filePeekPane,
                 {
                   worktree,

@@ -65,8 +65,8 @@ Two states are not a title and do not pretend to be one:
   - Contributes: `ConversationArtifacts.Kind` "Pages"
   - Uses:
     - `apps/pages/page-tree.useBlockTarget`
+    - `apps/pages/page-tree.useBlockTargetLink`
     - `apps/pages/page-tree.useBlockTargetTitle`
-    - `apps/pages/page-tree.useOpenBlockTarget`
     - `conversations/conversation-view/artifacts.ArtifactRow`
     - `conversations/conversation-view/artifacts.ConversationArtifacts`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageApplyReport`

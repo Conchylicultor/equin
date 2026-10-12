@@ -256,10 +256,7 @@ function TaskChip({ taskId }: { taskId: string }) {
   const title = task?.title.trim() || "Untitled task";
   return (
     <LinkChip
-      onClick={(e) => {
-        e.stopPropagation();
-        openPane(taskDetailPane, { taskId }, { mode: "push" });
-      }}
+      activation={openPane.to(taskDetailPane, { taskId }, { mode: "push" })}
       leading={<span className="text-muted-foreground">✓</span>}
       title={title}
     >

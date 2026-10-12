@@ -6,7 +6,9 @@ import { matchesFilter } from "@plugins/network/plugins/live/plugins/filter/core
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
-import { navigate } from "@plugins/apps-core/plugins/tabs/web";
+import { appLink } from "@plugins/apps-core/plugins/tabs/web";
+import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -67,20 +69,17 @@ function NotificationRow({
 }) {
   const clientId =
     typeof n.metadata?.clientId === "string" ? n.metadata.clientId : null;
+  // An in-app link only: a row's `linkTo` may be anything the server stored.
+  const link = n.linkTo?.startsWith("/") ? n.linkTo : undefined;
   return (
     <Stack
       as="li"
       direction="row"
       gap="sm"
-      className={`px-md py-sm border-l-2 ${n.muted ? VARIANT_BORDER_MUTED[n.variant] : VARIANT_BORDER[n.variant]} ${n.muted || n.read ? "opacity-60" : ""} hover:bg-muted/50 ${n.linkTo?.startsWith("/") ? "cursor-pointer" : ""}`}
-      onClick={
-        n.linkTo?.startsWith("/")
-          ? () => {
-              navigate(n.linkTo!);
-              onClose();
-            }
-          : undefined
-      }
+      className={`px-md py-sm border-l-2 ${n.muted ? VARIANT_BORDER_MUTED[n.variant] : VARIANT_BORDER[n.variant]} ${n.muted || n.read ? "opacity-60" : ""} hover:bg-muted/50 ${link !== undefined ? "cursor-pointer" : ""}`}
+      {...activationProps(
+        link !== undefined ? afterOpen(appLink(link), onClose) : undefined,
+      )}
     >
       <Fill>
         <Line className="gap-xs">
@@ -131,7 +130,7 @@ function NotificationRow({
               {clientId === getTabId() ? "this tab" : "another tab"}
             </span>
           )}
-          {n.linkTo?.startsWith("/") && (
+          {link !== undefined && (
             <span className="text-3xs text-muted-foreground hover:text-foreground">
               View &rarr;
             </span>

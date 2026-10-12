@@ -1,4 +1,5 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
   usePageNavigation,
   type PageNavigation,
@@ -20,7 +21,8 @@ export function canOpenAside(nav: PageNavigation | undefined): boolean {
  * Open the referenced page in a column beside the one it is referenced from,
  * leaving the current page on screen. The reference's own click still opens it
  * in place; this is the second intent, and it is a button precisely because the
- * row's click can only carry one.
+ * row's click can only carry one. A link like the reference itself:
+ * ⌘/middle-click opens the page in a new browser tab.
  */
 export function OpenAsideAction({ pageId }: PageReferenceActionProps) {
   const openAside = usePageNavigation()?.openAside;
@@ -31,7 +33,7 @@ export function OpenAsideAction({ pageId }: PageReferenceActionProps) {
     <IconButton
       icon={navIcons.sidePane}
       label="Open in side pane"
-      onClick={() => openAside(pageId)}
+      {...linkProps(openAside(pageId))}
     />
   );
 }

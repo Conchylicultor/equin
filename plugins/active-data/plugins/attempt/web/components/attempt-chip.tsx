@@ -6,6 +6,7 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import type { IdReferentState } from "@plugins/ids/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { useConversationOpener } from "@plugins/conversations/plugins/conversation-view/web";
@@ -61,17 +62,16 @@ export function AttemptChip({
   // Either way it is a regular push to the right, like every other chip —
   // opening the attempt pane on the LEFT of a conversation is the
   // conversation toolbar's attempt-switch toggle alone.
-  const open = (convId: string | undefined) => (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (convId) opener.toggle(convId);
-    else openPane(attemptPane, { attemptId }, { mode: "push" });
-  };
+  const target = (convId: string | undefined): LinkTarget =>
+    convId
+      ? opener.toggle(convId)
+      : openPane.to(attemptPane, { attemptId }, { mode: "push" });
 
   // The degraded raw-id chip: shown while loading, and for an attempt the
   // index doesn't hold, so the chip never disappears.
   const rawChip = (
     <LinkChip
-      onClick={open(undefined)}
+      activation={target(undefined)}
       title={attemptId}
       leading={<StatusDot colorClass={UNKNOWN_DOT} />}
       mono
@@ -95,7 +95,7 @@ export function AttemptChip({
       const count = attempt.conversations.length;
       return (
         <LinkChip
-          onClick={open(conv?.id)}
+          activation={target(conv?.id)}
           title={[name, attemptStatusLabel(attempt.status), attemptId]
             .filter(Boolean)
             .join(" · ")}
@@ -141,10 +141,11 @@ export function useAttemptReferent(attemptId: string): IdReferentState {
 }
 
 /**
- * Opens an attempt the way its chip does: its first conversation (most attempts
- * hold one), else the attempt pane — a push beside the surface holding the id.
+ * The link to an attempt, the way its chip opens it: its first conversation
+ * (most attempts hold one), else the attempt pane — a push beside the surface
+ * holding the id.
  */
-export function useOpenAttempt(): (attemptId: string) => void {
+export function useAttemptTarget(): (attemptId: string) => LinkTarget {
   const attempts = useLive(attemptRows);
   const openPane = useOpenPane();
   const opener = useConversationOpener();
@@ -155,7 +156,8 @@ export function useOpenAttempt(): (attemptId: string) => void {
       ready: (rows) => rows.find((a) => a.id === attemptId),
     });
     const conv = attempt ? firstConversation(attempt) : undefined;
-    if (conv) opener.toggle(conv.id);
-    else openPane(attemptPane, { attemptId }, { mode: "push" });
+    return conv
+      ? opener.toggle(conv.id)
+      : openPane.to(attemptPane, { attemptId }, { mode: "push" });
   };
 }

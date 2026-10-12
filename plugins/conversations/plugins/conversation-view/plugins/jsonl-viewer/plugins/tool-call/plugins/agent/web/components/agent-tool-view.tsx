@@ -10,6 +10,7 @@ import {
   useSubagentStatus,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -74,14 +75,11 @@ export function AgentToolView({ event }: ToolRendererProps) {
 
   const openPane = useOpenPane();
 
-  const openReport = (e: React.MouseEvent | React.KeyboardEvent) => {
-    e.stopPropagation();
-    openPane(
-      agentReportPane,
-      { by: "call", key: event.toolUseId },
-      { mode: "push" },
-    );
-  };
+  const report = openPane.to(
+    agentReportPane,
+    { by: "call", key: event.toolUseId },
+    { mode: "push" },
+  );
 
   // Always openable, whether or not a result has landed: while it runs the pane
   // is where you watch it, and if it died without reporting the pane is the only
@@ -126,7 +124,11 @@ export function AgentToolView({ event }: ToolRendererProps) {
   // `aside` is auto-wrapped in CardHeaderAction by CollapsibleCard, restoring
   // its own click.
   const aside = (
-    <IconButton icon={OpenIcon} label={openLabel} onClick={openReport} />
+    <IconButton
+      icon={OpenIcon}
+      label={openLabel}
+      {...activationProps(report, { isolate: true })}
+    />
   );
 
   return (
@@ -153,7 +155,7 @@ export function AgentToolView({ event }: ToolRendererProps) {
           <Row
             size="sm"
             bordered
-            onClick={openReport}
+            {...activationProps(report, { isolate: true })}
             className="rounded-md border-border/40 text-muted-foreground"
             icon={<Icon icon={OpenIcon} />}
           >

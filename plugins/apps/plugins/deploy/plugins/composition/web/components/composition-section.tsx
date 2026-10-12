@@ -1,6 +1,6 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import type { ReactNode } from "react";
-import { navigate } from "@plugins/apps-core/plugins/tabs/web";
+import { appLink } from "@plugins/apps-core/plugins/tabs/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
@@ -98,9 +98,9 @@ function CompositionCard({
             mono
             leading={<Icon icon={layersIcon} />}
             title={`Open “${item.name}” in Studio`}
-            onClick={() =>
-              navigate(compositionDetailRoute.link(studioApp, { id: item.id }))
-            }
+            activation={appLink(
+              compositionDetailRoute.link(studioApp, { id: item.id }),
+            )}
           >
             {item.name}
           </LinkChip>

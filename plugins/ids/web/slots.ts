@@ -1,6 +1,7 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { kindLabel, type AnyIdKind } from "../core";
 
 /**
@@ -26,8 +27,11 @@ export interface IdPresenter {
   icon?: IconRef;
   /** The referent's title, or that it does not exist (or is still loading). */
   useReferent: Hook<(id: string) => IdReferentState>;
-  /** Opens the referent (a pane, beside the surface holding the id). */
-  useOpen: Hook<() => (id: string) => void>;
+  /**
+   * The link to the referent (a pane, beside the surface holding the id): its
+   * plain open, and the URL a ⌘/middle-click opens in a new browser tab.
+   */
+  useTarget: Hook<() => (id: string) => LinkTarget>;
 }
 
 /**

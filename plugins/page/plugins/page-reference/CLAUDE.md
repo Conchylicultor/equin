@@ -13,6 +13,14 @@ renders no reference, ships no action and declares no kind.
 (`open`, optionally `openAside` and `openBlock`) from the surface hosting the editor down to
 every reference under it.
 
+Each intent returns a `LinkTarget` (`primitives/link-gesture`), never `void`: a
+reference is a link, so ⌘/Ctrl- and middle-click must open its destination in a
+new browser tab, which needs the URL (`href`) as well as the in-place `open`. A
+reference spreads it (`activationProps` on a row, `activation` on a `LinkChip`,
+`linkProps` on an action button), a DataView takes it as `rowActivation`, and a
+caller with no mouse event (a menu pick) runs it with `runActivation`. The Pages
+host builds each with `openPane.to(…)`.
+
 It replaced an `onOpenPage?: (pageId) => void` prop threaded from `<BlockEditor>`
 down. The editor's store is **composite** — one live feed per expanded nested
 page, unioned into one store — so that prop had to be restated at ~20 points on

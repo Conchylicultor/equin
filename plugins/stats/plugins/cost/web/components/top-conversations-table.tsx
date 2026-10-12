@@ -8,6 +8,7 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import { getCostSessions } from "../../shared/endpoints";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { formatTokensCompact, formatUsd } from "../../core";
 import { useScope } from "./use-scope";
@@ -68,18 +69,18 @@ function TopRow({ row }: { row: Row }) {
     row.outputTokens +
     row.cacheCreationTokens +
     row.cacheReadTokens;
-  const isClickable = !!row.conversationId;
-  const onClick = isClickable
-    ? () =>
-        openPane(
+  const target =
+    row.conversationId === null
+      ? undefined
+      : openPane.to(
           conversationPane,
-          { convId: row.conversationId! },
+          { convId: row.conversationId },
           { mode: "push" },
-        )
-    : undefined;
+        );
+  const isClickable = target !== undefined;
   return (
     <tr
-      onClick={onClick}
+      {...activationProps(target)}
       className={cn(
         "border-b border-border/50",
         isClickable && "cursor-pointer hover:bg-muted/50",

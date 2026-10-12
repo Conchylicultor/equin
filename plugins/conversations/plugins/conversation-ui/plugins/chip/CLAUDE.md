@@ -55,6 +55,7 @@ what an untitled conversation is called — is below both.
     - `conversations/conversation-ui/item.conversationTitle`
     - `conversations/conversation-view.useConversationOpener`
     - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/link-gesture.activationProps`
   - Exports (types): `ConversationChipProps`
   - Exports (values): `ConversationChip`
 - Cross-plugin:

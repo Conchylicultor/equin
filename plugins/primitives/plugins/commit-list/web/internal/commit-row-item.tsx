@@ -11,6 +11,8 @@ import {
   RowActions,
   rowActionsAnchor,
 } from "@plugins/primitives/plugins/row-actions/web";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import type React from "react";
 import type { CommitRow } from "../../core";
 import { CommitRail, commitRowHeight } from "./commit-rail";
@@ -55,7 +57,7 @@ export function CommitRowItem({
   pushed = false,
   markers,
   actions,
-  onClick,
+  commitActivation,
 }: {
   commit: CommitRow;
   isFirst: boolean;
@@ -79,9 +81,14 @@ export function CommitRowItem({
    * row reserves no width for them at rest.
    */
   actions?: React.ReactNode;
-  onClick?: (commit: CommitRow) => void;
+  /**
+   * What activating this commit does — a `LinkTarget` (an opener's result) so
+   * ⌘/middle-click opens it in a new browser tab, or a plain action.
+   */
+  commitActivation?: (commit: CommitRow) => Activation;
 }) {
   const height = commitRowHeight(useControlSize());
+  const activation = commitActivation?.(commit);
   return (
     // A commit row IS a single line: the rail, sha, chips and timestamp are
     // rigid, and the subject is the one cell that gives. `Line` states that
@@ -94,13 +101,13 @@ export function CommitRowItem({
         // A row that does something hovers to its surface's own hover step,
         // co-publishing it as `--scrim` so the pinned action cluster's mask
         // matches what is painted under it (the `css/row` contract).
-        (onClick || actions) &&
+        (activation || actions) &&
           "hover:bg-hover-fill hover:[--scrim:var(--hover-fill)]",
-        onClick && "cursor-pointer",
+        activation && "cursor-pointer",
         actions && rowActionsAnchor,
       )}
       style={{ height }}
-      onClick={onClick ? () => onClick(commit) : undefined}
+      {...activationProps(activation)}
     >
       <CommitRail isFirst={isFirst} isLast={isLast} color={color} />
       <Text

@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to onOpenFile; its FileBrowserSlots seams — Fields, extra tree columns, and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
+- Description: The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — Fields, extra tree columns, and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
 - Web:
   - Slots:
     - `filesHomePane.Actions`
@@ -20,7 +20,7 @@
     - `Pane.Register` "files-at"
     - `Pane.Register` "files-home"
     - `ThemeEngine.SubTheme` "Files document"
-  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
     - `primitives/data-view` ×5
     - `primitives/file-viewer` ×5
@@ -41,6 +41,7 @@
     - `primitives/css/theme-boundary.Theme`
     - `primitives/file-type.FileTypeIcon`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture.activationProps`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/persistent-draft.useDraft`
@@ -60,9 +61,9 @@
     - `filesAtPane`
     - `filesHomePane`
     - `useExplorerDir`
+    - `useExplorerFolderTarget`
     - `useExplorerLocation`
     - `useHomeDir`
-    - `useOpenExplorerFolder`
 - Core:
   - Uses:
     - `primitives/file-type.FilePreview`

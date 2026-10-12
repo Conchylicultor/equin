@@ -29,13 +29,15 @@ function Chip({ content }: { content: string }) {
 }
 
 // Fixture file-links walker: the real `linkifyChildren`, but with a stub
-// onFileOpen so the test needs no conversation/pane context (the real
-// FileLinksInlineWalker resolves onFileOpen from those, and is exercised in the
-// app). Order 10 — after active-data.
+// fileTarget so the test needs no conversation/pane context (the real
+// FileLinksInlineWalker resolves its file targets from those, and is exercised
+// in the app). Order 10 — after active-data.
 function FileLinksTestWalker({ children }: { children: ReactNode }) {
   const value = useInlineTextWalker(
     useMemo(
-      () => ({ transform: (c: ReactNode) => linkifyChildren(c, () => {}) }),
+      () => ({
+        transform: (c: ReactNode) => linkifyChildren(c, () => () => {}),
+      }),
       [],
     ),
   );

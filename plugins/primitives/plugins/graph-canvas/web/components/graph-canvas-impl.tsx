@@ -1,6 +1,8 @@
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { useCallback, useMemo, useRef } from "react";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import dagre from "dagre";
 import {
@@ -99,7 +101,12 @@ export interface GraphCanvasProps {
   edgePath?: "bezier" | "smoothstep";
   /** Minimum zoom, default 0.3. */
   minZoom?: number;
-  onNodeClick?: (id: string) => void;
+  /**
+   * What activating node `id` does (`undefined`: the node is inert). A
+   * `LinkTarget` gets the full link gestures — ⌘/Ctrl- and middle-click open
+   * its `href()` in a new browser tab — a plain action only the plain click.
+   */
+  nodeActivation?: (id: string) => Activation | undefined;
 }
 
 const NODE_TYPES = {
@@ -243,7 +250,7 @@ function GraphCanvasInner({
   connectable,
   onConnect,
   minZoom,
-  onNodeClick,
+  nodeActivation,
 }: {
   flowNodes: Node[];
   flowEdges: Edge[];
@@ -252,7 +259,7 @@ function GraphCanvasInner({
   connectable: boolean;
   onConnect?: (source: string, target: string) => void;
   minZoom: number;
-  onNodeClick?: (id: string) => void;
+  nodeActivation?: (id: string) => Activation | undefined;
 }) {
   const { fitView } = useReactFlow();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -276,8 +283,29 @@ function GraphCanvasInner({
     { deps: [fitKey, focusId, fitView] },
   );
 
+  // React Flow reports a node's plain (and ⌘-) click through `onNodeClick`, but
+  // has no aux-click hook: the middle button is read off the container, the
+  // node resolved from the DOM node xyflow stamps with `data-id`.
+  const activationAt = (e: MouseEvent): Activation | undefined => {
+    if (!(e.target instanceof Element)) return undefined;
+    // A node's own controls (an `actions` overlay button) own their clicks.
+    if (e.target.closest("button")) return undefined;
+    const el = e.target.closest<HTMLElement>(".react-flow__node");
+    // Background/group nodes are not navigable.
+    if (!el || el.classList.contains(`react-flow__node-${GROUP_BG_TYPE}`)) {
+      return undefined;
+    }
+    const id = el.dataset.id;
+    return id === undefined ? undefined : nodeActivation?.(id);
+  };
+
   return (
-    <div ref={containerRef} className="bg-muted/30 size-full">
+    <div
+      ref={containerRef}
+      className="bg-muted/30 size-full"
+      onAuxClick={(e) => activationProps(activationAt(e)).onAuxClick?.(e)}
+      onMouseDown={(e) => activationProps(activationAt(e)).onMouseDown?.(e)}
+    >
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
@@ -291,9 +319,10 @@ function GraphCanvasInner({
         zoomOnScroll
         zoomOnPinch
         zoomOnDoubleClick={false}
-        onNodeClick={(_, node) => {
+        onNodeClick={(e, node) => {
           // Background/group nodes are not navigable.
-          if (node.type !== GROUP_BG_TYPE) onNodeClick?.(node.id);
+          if (node.type === GROUP_BG_TYPE) return;
+          activationProps(nodeActivation?.(node.id)).onClick?.(e);
         }}
         onConnect={handleConnect}
         connectionRadius={20}
@@ -318,7 +347,7 @@ export function GraphCanvas({
   onConnect,
   edgePath = "bezier",
   minZoom = 0.3,
-  onNodeClick,
+  nodeActivation,
 }: GraphCanvasProps) {
   const { flowNodes, flowEdges } = useMemo(
     () => layout(nodes, edges, groups ?? [], direction, edgePath),
@@ -343,7 +372,7 @@ export function GraphCanvas({
         connectable={connectable}
         onConnect={onConnect}
         minZoom={minZoom}
-        onNodeClick={onNodeClick}
+        nodeActivation={nodeActivation}
       />
     </ReactFlowProvider>
   );

@@ -7,7 +7,7 @@ background shell, …), with its status, summary and output path.
 
 What the row opens is contributed through `TaskNotification.Open`: each
 contribution's `useClaim(event, conversationId)` answers `pending`, `declined`
-or `claimed{ target: { label, icon, open } }`. The row asks them in
+or `claimed{ target: { label, icon, activation } }`. The row asks them in
 registration order and draws the FIRST claim's button, or none when nobody
 claims it. A contributor still `pending` holds the chain — a later one must not
 claim what may be its task, and the wrong pane is worse than a late button.
@@ -36,6 +36,7 @@ pane by the sub-agent's own id), `background-shells` against its shells
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture.activationProps`
   - Exports (types):
     - `TaskNotificationClaim`
     - `TaskNotificationEvent`

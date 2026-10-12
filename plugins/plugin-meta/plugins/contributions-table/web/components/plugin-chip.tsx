@@ -8,10 +8,7 @@ export function PluginChip({ pluginId }: { pluginId: string }) {
     <LinkChip
       mono
       title={pluginId}
-      onClick={(e) => {
-        e.stopPropagation();
-        openPane(pluginViewPane, { pluginId }, { mode: "push" });
-      }}
+      activation={openPane.to(pluginViewPane, { pluginId }, { mode: "push" })}
     >
       {pluginId}
     </LinkChip>

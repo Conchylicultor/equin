@@ -115,7 +115,7 @@ body windows, to decide whether its `RankReorderProvider` needs `measuringAlways
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/dom/element-size.useElementSize`
-    - `primitives/link-gesture.linkProps`
+    - `primitives/link-gesture.activationProps`
     - `primitives/row-actions.RowActions`
     - `primitives/row-actions.rowActionsAnchor`
     - `primitives/virtual-rows.useVirtualRows`

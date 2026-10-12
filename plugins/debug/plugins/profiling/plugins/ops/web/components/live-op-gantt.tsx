@@ -8,7 +8,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { attemptPane } from "@plugins/tasks/plugins/attempt-view/web";
 import type { OpRow } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
 import { OpGantt } from "@plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt/web";
-import { useOpClick } from "../internal/use-op-click";
+import { useOpActivation } from "../internal/use-op-activation";
 import { groupOps, overlapping, recordsAt } from "../internal/op-groups";
 
 /** A span to clip the ops to (worktree mode), in epoch ms; `endMs` null = open-ended. */
@@ -48,7 +48,7 @@ function GanttAt({
 }: LiveOpGanttProps & { now: number; sleepNow: SleepNow }): ReactElement {
   const titleBySlug = useConversationTitleBySlug();
   const openPane = useOpenPane();
-  const onOpClick = useOpClick();
+  const opActivation = useOpActivation();
   const data = useMemo(() => {
     const records = recordsAt(rows, now, sleepNow);
     return groupOps(
@@ -65,18 +65,17 @@ function GanttAt({
       groups={data.groups}
       totalMs={data.totalMs}
       highlightWorktree={highlightWorktree}
-      onOpClick={onOpClick}
-      onWorktreeClick={(worktree, conversationId) => {
+      opActivation={opActivation}
+      worktreeActivation={(worktree, conversationId) => {
         if (conversationId != null) {
-          openPane(
+          return openPane.to(
             conversationPane,
             { convId: conversationId },
             { mode: "push" },
           );
-        } else {
-          const attemptId = worktree.split("/").pop() ?? worktree;
-          openPane(attemptPane, { attemptId }, { mode: "push" });
         }
+        const attemptId = worktree.split("/").pop() ?? worktree;
+        return openPane.to(attemptPane, { attemptId }, { mode: "push" });
       }}
     />
   );

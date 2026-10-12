@@ -11,11 +11,13 @@ per-surface wiring beyond passing the descriptor the surface already reads with
 
 ## What it exposes
 
-- **`useOpenConfig()`** — returns `(descriptor) => void` that opens the config
-  nav + detail chain focused on that descriptor (via `openPane(configDetailPane,
-  …, { mode: "root" })`). Throws loudly if the descriptor was never registered.
-- **`<ConfigGearButton descriptor />`** — a compact gear `IconButton` that calls
-  `useOpenConfig()`. Drop in anywhere (e.g. the top-left of an expanded panel).
+- **`useConfigLink()`** — returns `(descriptor) => LinkTarget`: the in-app link
+  to that descriptor's config nav + detail chain, rooted in the focused app.
+  Spread it with `activationProps` (plain click navigates, ⌘/middle-click opens
+  a browser tab) or run it with `runActivation`. Resolved when followed, so an
+  unregistered descriptor throws loudly at the click, not at render.
+- **`<ConfigGearButton descriptor />`** — a compact gear `IconButton` spreading
+  `useConfigLink()`'s link (isolated, so its container's click never fires). Drop in anywhere (e.g. the top-left of an expanded panel).
 - **`<ConfigPopoverHeader label descriptor />`** — the standard header for a
   config-backed popover: an eyebrow `SectionLabel` + trailing `ConfigGearButton`.
   Swap a bare `<SectionLabel>` for this and the affordance comes for free.
@@ -46,11 +48,11 @@ and the editor.
 
 ## Plugin reference
 
-- Description: Deep-link affordances from any config-backed surface to its settings section. useOpenConfig() navigates to a descriptor's config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear; ConfigSelectContent / ConfigMenuContent bake the gear into Select / DropdownMenu picker chrome.
+- Description: Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear; ConfigSelectContent / ConfigMenuContent bake the gear into Select / DropdownMenu picker chrome.
 - Web:
   - Uses:
     - `apps-core.useActiveApp`
-    - `apps-core/tabs.navigate`
+    - `apps-core/tabs.appLink`
     - `config_v2.useConfigRegistrations`
     - `config_v2/settings.configDetailRoute`
     - `primitives/css/fill.Fill`
@@ -61,6 +63,7 @@ and the editor.
     - `primitives/css/ui-kit.DropdownMenuContent`
     - `primitives/css/ui-kit.SelectContent`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture.activationProps`
   - Exports (types):
     - `ConfigGearButtonProps`
     - `ConfigMenuContentProps`
@@ -73,7 +76,7 @@ and the editor.
     - `ConfigMenuHeader`
     - `ConfigPopoverHeader`
     - `ConfigSelectContent`
-    - `useOpenConfig`
+    - `useConfigLink`
 - Cross-plugin:
   - Imported by:
     - `backup`

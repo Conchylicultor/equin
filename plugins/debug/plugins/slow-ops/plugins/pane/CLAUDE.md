@@ -33,7 +33,7 @@ timeline.
 - Web:
   - Contributes: `SlowEvents.View` "Aggregates" → `SlowOpsView`
   - Uses:
-    - `apps-core/tabs.navigate`
+    - `apps-core/tabs.appLink`
     - `debug/trace/pane.SlowEvents`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpoint`

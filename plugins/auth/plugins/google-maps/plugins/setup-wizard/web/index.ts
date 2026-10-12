@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Auth } from "@plugins/auth/web";
 import { GOOGLE_MAPS_PROVIDER_ID } from "@plugins/auth/plugins/google-maps/core";
 import { googleMapsSetupPane } from "./panes";
@@ -8,7 +8,7 @@ import { brand } from "@plugins/ui/plugins/icons/core";
 export { googleMapsSetupPane } from "./panes";
 
 // The Accounts row lives here rather than on the parent plugin (which google's
-// OAuth provider does) because the row's `configureCredentials` needs the pane
+// OAuth provider does) because the row's `credentialsPane` is the pane
 // and the pane needs `GOOGLE_MAPS_PROVIDER_ID`: parent → wizard → parent is a
 // cross-plugin cycle the boundary check rejects. `auth/apple-signing` is the
 // existing precedent for a wizard sub-plugin owning its provider's row.
@@ -22,8 +22,7 @@ export default {
       name: "Google Maps Platform",
       icon: brand("googlemaps"),
       helpUrl: "https://console.cloud.google.com/apis/credentials",
-      configureCredentials: () =>
-        openPane(googleMapsSetupPane, {}, { mode: "root" }),
+      credentialsPane: googleMapsSetupPane,
     }),
   ],
   slots: { "google-maps-setup": googleMapsSetupPane },

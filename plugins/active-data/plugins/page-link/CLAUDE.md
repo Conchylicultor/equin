@@ -49,8 +49,8 @@ read-surface chip for a bare id written anywhere active-data renders.
     - `apps/pages/page-tree.blockDetailPane`
     - `apps/pages/page-tree.pageDetailPane`
     - `apps/pages/page-tree.useBlockTarget`
+    - `apps/pages/page-tree.useBlockTargetLink`
     - `apps/pages/page-tree.useBlockTargetTitle`
-    - `apps/pages/page-tree.useOpenBlockTarget`
     - `network/live.useLive`
     - `network/live.useLiveRow`
     - `page/editor.PageIcon`

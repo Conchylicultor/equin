@@ -12,8 +12,13 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { BreadcrumbSlots } from "@plugins/primitives/plugins/breadcrumb/web";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { PathBar } from "../internal/path-bar";
-import type { PathBarSource, PathResolution } from "../internal/types";
+import type {
+  PathBarSource,
+  PathResolution,
+  PathTarget,
+} from "../internal/types";
 
 /**
  * The path bar's behaviour through its DOM: crumbs ⇄ field, completions,
@@ -78,10 +83,16 @@ function fakeSource(): PathBarSource & {
 
 function setup(path = "/vol/me") {
   const source = fakeSource();
+  // Every place is a link: `onNavigate` records a plain open (a crumb click,
+  // a committed path), `href` what an "elsewhere" gesture opens instead.
   const onNavigate = vi.fn();
+  const activationFor = (t: PathTarget): LinkTarget => ({
+    open: () => onNavigate(t),
+    href: () => `/files${t.path}`,
+  });
   const utils = render(
     <PluginProvider plugins={[plugin]}>
-      <PathBar path={path} source={source} onNavigate={onNavigate} />
+      <PathBar path={path} source={source} activationFor={activationFor} />
     </PluginProvider>,
   );
   const bar = () =>
@@ -104,6 +115,22 @@ describe("PathBar", () => {
     expect(onNavigate).toHaveBeenCalledWith({ kind: "dir", path: "/vol" });
   });
 
+  it("a middle-click on a crumb opens its href in a new browser tab, staying put", () => {
+    const { onNavigate } = setup();
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    try {
+      fireEvent(
+        screen.getByRole("button", { name: "vol" }),
+        new MouseEvent("auxclick", { bubbles: true, button: 1 }),
+      );
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(String(open.mock.calls[0]?.[0])).toMatch(/\/files\/vol$/);
+      expect(onNavigate).not.toHaveBeenCalled();
+    } finally {
+      open.mockRestore();
+    }
+  });
+
   it("a press on empty space opens the field on the path plus a separator, selected", async () => {
     const { field, source, startEditing } = setup();
     await startEditing();
@@ -122,7 +149,7 @@ describe("PathBar", () => {
         <PathBar
           path="/vol/me"
           source={source}
-          onNavigate={() => {}}
+          activationFor={() => () => {}}
           text="body"
           leafWeight="semibold"
         />

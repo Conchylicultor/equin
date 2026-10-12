@@ -279,8 +279,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/page-tree.blockDetailPane`
           - `apps/pages/page-tree.pageDetailPane`
           - `apps/pages/page-tree.useBlockTarget`
+          - `apps/pages/page-tree.useBlockTargetLink`
           - `apps/pages/page-tree.useBlockTargetTitle`
-          - `apps/pages/page-tree.useOpenBlockTarget`
           - `network/live.useLive`
           - `network/live.useLiveRow`
           - `page/editor.PageIcon`
@@ -372,7 +372,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `active-data/id-chip.idChip`
           - `active-data/id-chip.rowReferent`
-          - `apps-core/tabs.navigate`
+          - `apps-core/tabs.appLink`
           - `network/live.useLiveRow`
       - Server:
         - Contributes:
@@ -1712,7 +1712,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Contributes: `DeploymentDetail.Section` "Composition" → `CompositionSection`
             - Uses:
-              - `apps-core/tabs.navigate`
+              - `apps-core/tabs.appLink`
               - `apps/deploy/deployments.DeploymentDetail`
               - `network/live.useLiveRow`
               - `plugin-meta/composition.useManifestItemByName`
@@ -2988,7 +2988,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `urlSourceConfigFields`
     - **`file-explorer`** — File explorer app.
       - Plugins:
-        - **`browser`** — The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to onOpenFile; its FileBrowserSlots seams — Fields, extra tree columns, and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
+        - **`browser`** — The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — Fields, extra tree columns, and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
           - Web:
             - Slots:
               - `filesHomePane.Actions`
@@ -3004,7 +3004,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "files-at"
               - `Pane.Register` "files-home"
               - `ThemeEngine.SubTheme` "Files document"
-            - Uses: 49 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 50 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/css/ui-kit` ×7
               - `primitives/data-view` ×5
               - `primitives/file-viewer` ×5
@@ -3025,6 +3025,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/theme-boundary.Theme`
               - `primitives/file-type.FileTypeIcon`
               - `primitives/icon-button.IconButton`
+              - `primitives/link-gesture.activationProps`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/persistent-draft.useDraft`
@@ -3044,9 +3045,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `filesAtPane`
               - `filesHomePane`
               - `useExplorerDir`
+              - `useExplorerFolderTarget`
               - `useExplorerLocation`
               - `useHomeDir`
-              - `useOpenExplorerFolder`
           - Core:
             - Uses:
               - `primitives/file-type.FilePreview`
@@ -3134,9 +3135,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FileExplorer.Places` "startup-volume"
               - `FileExplorer.Places` "trash"
             - Uses:
+              - `apps/file-explorer/browser.useExplorerFolderTarget`
               - `apps/file-explorer/browser.useExplorerLocation`
               - `apps/file-explorer/browser.useHomeDir`
-              - `apps/file-explorer/browser.useOpenExplorerFolder`
               - `apps/file-explorer/shell.FileExplorer`
               - `apps/file-explorer/shell.PlaceGroup`
               - `apps/file-explorer/shell.PlacesSource`
@@ -4023,9 +4024,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pagesTreePane`
               - `PageTree`
               - `useBlockTarget`
+              - `useBlockTargetLink`
               - `useBlockTargetTitle`
               - `useBlockTypeLabel`
-              - `useOpenBlockTarget`
           - Core:
             - Uses: `primitives/pane.defineRoute`
             - Exports (values):
@@ -7414,10 +7415,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `tableDetailPane.Actions` ← `primitives.pane`
                 - Contributes:
                   - `Pane.Register` "table-detail"
-                  - `Contributions.RowClick` "db-schema"
+                  - `Contributions.RowActivation` "db-schema"
                 - Uses:
                   - `plugin-meta/contributions-table.Contributions`
-                  - `plugin-meta/contributions-table.defineRowClick`
+                  - `plugin-meta/contributions-table.defineRowActivation`
                   - `primitives/detail-sections.defineDetailSections`
                   - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
@@ -8576,6 +8577,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TabsApi`
         - Exports (values):
           - `appContributionFor`
+          - `appLink`
           - `appLinkProps`
           - `appPathFor`
           - `exitToPreviousMode`
@@ -8641,7 +8643,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Auth.ScopeRequirement` ← `backup.targets.google-drive`
       - `Auth.ScopeRequirement` ← `integrations.gmail`
       - `accountsPane.Actions` ← `primitives.pane`
-    - Uses: 27 symbols — full list in [`plugins/auth/REFERENCE.md`](../plugins/auth/REFERENCE.md)
+    - Uses: 28 symbols — full list in [`plugins/auth/REFERENCE.md`](../plugins/auth/REFERENCE.md)
       - `primitives/css/ui-kit` ×5
       - `infra/endpoints` ×4
       - `primitives/live-state` ×4
@@ -8653,6 +8655,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/css/rigid.rigidClass`
       - `primitives/css/spacing.Stack`
       - `primitives/css/text.Text`
+      - `primitives/link-gesture.activationProps`
       - `primitives/loading.Loading`
       - `primitives/overlay/imperative-dialog.openDialog`
       - `shell/notifications.toast`
@@ -8828,7 +8831,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Pane.Register` "apple-setup"
               - `Auth.Provider` "Apple Developer"
-            - Uses: 24 symbols — full list in [`plugins/auth/plugins/apple-signing/plugins/setup-wizard/REFERENCE.md`](../plugins/auth/plugins/apple-signing/plugins/setup-wizard/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/auth/plugins/apple-signing/plugins/setup-wizard/REFERENCE.md`](../plugins/auth/plugins/apple-signing/plugins/setup-wizard/REFERENCE.md)
               - `primitives/setup-steps` ×5
               - `primitives/live-state` ×3
               - `primitives/pane` ×3
@@ -8841,6 +8844,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/fill.Fill`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/link-gesture.linkProps`
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
             - Exports (values): `appleSetupPane`
@@ -8853,7 +8857,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `auth.Auth`
           - `auth/google/setup-wizard.googleSetupPane`
           - `config_v2.ConfigV2`
-          - `primitives/pane.openPane`
       - Server:
         - Contributes: `ConfigV2.Register` "auth-google"
         - Uses: `config_v2.ConfigV2`
@@ -8912,7 +8915,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/live-state.foldResource`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/pane.defineRoute`
-              - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/setup-steps.Step`
               - `primitives/setup-steps.StepDone`
@@ -9284,13 +9286,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Pane.Register` "build-detail"
       - `DebugApp.Sidebar` "Builds"
       - `ConfigV2.WebRegister` "config"
-    - Uses: 36 symbols — full list in [`plugins/build/REFERENCE.md`](../plugins/build/REFERENCE.md)
+    - Uses: 37 symbols — full list in [`plugins/build/REFERENCE.md`](../plugins/build/REFERENCE.md)
       - `primitives/css/ui-kit` ×4
       - `primitives/live-state` ×4
       - `infra/endpoints` ×2
       - `primitives/log-channels` ×2
       - `primitives/pane` ×2
-      - `apps-core/tabs.navigate`
+      - `apps-core/tabs.appLink`
       - `apps/debug/shell.DebugApp`
       - `build/deployment.DeploymentChain`
       - `config_v2.ConfigV2`
@@ -9304,6 +9306,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/css/text.Text`
       - `primitives/detail-sections.defineDetailSections`
       - `primitives/icon-button.IconButton`
+      - `primitives/link-gesture.activationProps`
       - `primitives/loading.Loading`
       - `primitives/overlay/popover.InlinePopover`
       - `primitives/overlay/tooltip.WithTooltip`
@@ -9869,6 +9872,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/link-gesture.activationProps`
         - Exports (types): `ResolvedFileState`
         - Exports (values):
           - `FileDisambiguation`
@@ -10072,11 +10076,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Core: `@plugins/config_v2/core/testing`
       - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
   - Plugins:
-    - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useOpenConfig() navigates to a descriptor's config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear; ConfigSelectContent / ConfigMenuContent bake the gear into Select / DropdownMenu picker chrome.
+    - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear; ConfigSelectContent / ConfigMenuContent bake the gear into Select / DropdownMenu picker chrome.
       - Web:
         - Uses:
           - `apps-core.useActiveApp`
-          - `apps-core/tabs.navigate`
+          - `apps-core/tabs.appLink`
           - `config_v2.useConfigRegistrations`
           - `config_v2/settings.configDetailRoute`
           - `primitives/css/fill.Fill`
@@ -10087,6 +10091,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.DropdownMenuContent`
           - `primitives/css/ui-kit.SelectContent`
           - `primitives/icon-button.IconButton`
+          - `primitives/link-gesture.activationProps`
         - Exports (types):
           - `ConfigGearButtonProps`
           - `ConfigMenuContentProps`
@@ -10099,7 +10104,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigMenuHeader`
           - `ConfigPopoverHeader`
           - `ConfigSelectContent`
-          - `useOpenConfig`
+          - `useConfigLink`
       - Cross-plugin:
         - Imported by:
           - `backup`
@@ -10933,6 +10938,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-ui/item.conversationTitle`
               - `conversations/conversation-view.useConversationOpener`
               - `primitives/css/toggle-chip.ToggleChip`
+              - `primitives/link-gesture.activationProps`
             - Exports (types): `ConversationChipProps`
             - Exports (values): `ConversationChip`
           - Cross-plugin:
@@ -11011,6 +11017,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/fill.Fill`
               - `primitives/css/row.Row`
               - `primitives/css/text.Text`
+              - `primitives/link-gesture.activationProps`
             - Exports (types):
               - `ConversationRowByIdProps`
               - `ConversationRowChrome`
@@ -11164,7 +11171,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.screenshot`
               - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.skill`
             - Contributes: `Conversation.ActionBar` → `ArtifactsButton`
-            - Uses: 21 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/artifacts/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/artifacts/REFERENCE.md)
+            - Uses: 22 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/artifacts/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/artifacts/REFERENCE.md)
               - `primitives/live-state` ×3
               - `primitives/css/text` ×2
               - `primitives/css/ui-kit` ×2
@@ -11177,6 +11184,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
               - `primitives/css/spacing.Stack`
+              - `primitives/link-gesture.activationProps`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/relative-time.formatRelativeTime`
               - `primitives/slot-render.defineRenderSlot`
@@ -11214,8 +11222,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes: `ConversationArtifacts.Kind` "Pages"
                 - Uses:
                   - `apps/pages/page-tree.useBlockTarget`
+                  - `apps/pages/page-tree.useBlockTargetLink`
                   - `apps/pages/page-tree.useBlockTargetTitle`
-                  - `apps/pages/page-tree.useOpenBlockTarget`
                   - `conversations/conversation-view/artifacts.ArtifactRow`
                   - `conversations/conversation-view/artifacts.ConversationArtifacts`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageApplyReport`
@@ -12136,6 +12144,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/inline.Inline`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.SingleLineProvider`
+                  - `primitives/link-gesture.activationProps`
                   - `primitives/pane.useOpenPane`
                 - Exports (values):
                   - `FilePath`
@@ -12392,6 +12401,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                   - `primitives/css/status-dot.StatusDot`
                   - `primitives/icon-button.IconButton`
+                  - `primitives/link-gesture.activationProps`
                 - Exports (types):
                   - `TaskNotificationClaim`
                   - `TaskNotificationEvent`
@@ -12503,7 +12513,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `JsonlViewerTool.Renderer` "Agent" → `AgentToolView`
                       - `Pane.Register` "agent-report"
                       - `TaskNotification.Open` "sub-agent"
-                    - Uses: 29 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/agent/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/agent/REFERENCE.md)
+                    - Uses: 30 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/agent/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/agent/REFERENCE.md)
                       - `conversations/conversation-view/jsonl-viewer/subagents` ×6
                       - `primitives/pane` ×4
                       - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
@@ -12520,6 +12530,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.cn`
                       - `primitives/icon-button.IconButton`
+                      - `primitives/link-gesture.activationProps`
                       - `primitives/live-state.ResourceErrorInline`
                       - `primitives/markdown.Markdown`
                       - `ui/icons.Icon`
@@ -12607,6 +12618,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/icon-button.IconButton`
+                      - `primitives/link-gesture.activationProps`
                       - `primitives/live-state.ResourceErrorInline`
                       - `primitives/pane.useOpenPane`
                       - `primitives/select-scope.ContentScope`
@@ -12787,7 +12799,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Contributes:
                       - `JsonlViewerTool.Renderer` "Workflow" → `WorkflowToolView`
                       - `Pane.Register` "workflow-node"
-                    - Uses: 30 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md)
+                    - Uses: 31 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md)
                       - `primitives/pane` ×4
                       - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
                       - `primitives/css/badge` ×2
@@ -12807,6 +12819,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.cn`
                       - `primitives/css/yield.yieldClass`
+                      - `primitives/link-gesture.activationProps`
                       - `primitives/live-state.ResourceErrorInline`
                       - `primitives/loading.Loading`
                       - `primitives/markdown.Markdown`
@@ -12962,6 +12975,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/inline-text.InlineTextWalkerContext`
               - `primitives/inline-text.InlineTextWalkerSlot`
               - `primitives/inline-text.useInlineTextWalker`
+              - `primitives/link-gesture.activationProps`
               - `primitives/markdown.MarkdownEnhancement`
               - `primitives/markdown.MarkdownEnhancementContext`
               - `primitives/markdown.MarkdownEnhancerSlot`
@@ -13028,7 +13042,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Conversation.AbovePromptInput` → `OpStatusBanner`
               - `Item.Chips` → `OpStatusChip`
               - `queue-actions` "open-conversation" → `OpenConversationAction`
-            - Uses: 33 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md)
+            - Uses: 34 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md)
               - `primitives/data-view` ×5
               - `primitives/live-state` ×4
               - `conversations/conversation-view` ×2
@@ -13048,6 +13062,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/icon-button.IconButton`
+              - `primitives/link-gesture.activationProps`
               - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/pane.useOpenPane`
               - `ui/icons.Icon`
@@ -15436,7 +15451,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DebugApp.Sidebar` "Config Orphans"
           - `ConfigNavSlots.Notice` → `StrandedConfigNotice`
         - Uses:
-          - `apps-core/tabs.navigate`
+          - `apps-core/tabs.appLinkProps`
           - `apps/debug/shell.DebugApp`
           - `config_v2/settings.ConfigNavSlots`
           - `infra/endpoints.useEndpoint`
@@ -15869,7 +15884,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Reports.KindView` → `OpRateSummary`
           - `Reports.KindView` → `OpTimeSummary`
         - Uses:
-          - `apps-core/tabs.navigate`
+          - `apps-core/tabs.appLink`
           - `config_v2.ConfigV2`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
@@ -16270,6 +16285,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/sticky.Sticky`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
+                  - `primitives/link-gesture.activationProps`
                 - Exports (types):
                   - `OpData`
                   - `OpEntry`
@@ -16344,7 +16360,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `trigger-actions` "enabled" → `TriggerEnabledAction`
           - `trigger-actions` "delete" → `DeleteTriggerAction`
           - `DebugApp.Sidebar` "Queue"
-        - Uses: 48 symbols — full list in [`plugins/debug/plugins/queue/REFERENCE.md`](../plugins/debug/plugins/queue/REFERENCE.md)
+        - Uses: 49 symbols — full list in [`plugins/debug/plugins/queue/REFERENCE.md`](../plugins/debug/plugins/queue/REFERENCE.md)
           - `primitives/pane` ×8
           - `primitives/live-state` ×6
           - `primitives/data-view` ×4
@@ -16370,6 +16386,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/toggle-chip.SegmentedControl`
           - `primitives/css/yield.yieldClass`
           - `primitives/icon-button.IconButton`
+          - `primitives/link-gesture.activationProps`
           - `primitives/loading.Loading`
           - `primitives/relative-time.useNow`
           - `ui/icons.Icon`
@@ -16389,7 +16406,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Reports.KindView` → `WedgedSummary`
           - `HealthReport.Row` "Job queue" → `QueueDetail`
         - Uses:
-          - `apps-core/tabs.navigate`
+          - `apps-core/tabs.appLinkProps`
           - `config_v2.ConfigV2`
           - `network/live.useLive`
           - `primitives/css/badge.Badge`
@@ -16630,7 +16647,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-view` ×3
           - `primitives/css/ui-kit` ×2
           - `reports` ×2
-          - `apps-core/tabs.navigate`
+          - `apps-core/tabs.appLinkProps`
           - `apps/debug/shell.DebugApp`
           - `build.useStaleFrontend`
           - `network/live.useLiveRow`
@@ -16824,7 +16841,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Core.Root` → `SlowOpCollector`
           - `Reports.KindView` → `SlowOpKindView`
         - Uses:
-          - `apps-core/tabs.navigate`
+          - `apps-core/tabs.appLink`
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
           - `infra/endpoints.fetchEndpoint`
@@ -16956,7 +16973,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Contributes: `SlowEvents.View` "Aggregates" → `SlowOpsView`
             - Uses:
-              - `apps-core/tabs.navigate`
+              - `apps-core/tabs.appLink`
               - `debug/trace/pane.SlowEvents`
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useEndpoint`
@@ -16979,7 +16996,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.WebRegister` "stall-monitor"
           - `Reports.KindView` → `StallSummary`
         - Uses:
-          - `apps-core/tabs.navigate`
+          - `apps-core/tabs.appLink`
           - `config_v2.ConfigV2`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
@@ -17014,7 +17031,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes: `Reports.KindView` → `SpanStuckSummary`
         - Uses:
-          - `apps-core/tabs.navigate`
+          - `apps-core/tabs.appLink`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
           - `primitives/css/link-chip.LinkChip`
@@ -20497,7 +20514,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: `apps/pages/history`
 
-- **`ids`** — The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, useOpen); useIdKinds() / useIdPresenters() read them at render time. The id-kind registry, server half: IdKinds.Kind registers a declared kind and IdKinds.Referent resolves a kind's id to its title; getIdKinds() reads them at call time. idColumn / idRef are a kind's drizzle primary-key and foreign-key columns (typed Id<P>; idRef cascades on update).
+- **`ids`** — The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, useTarget); useIdKinds() / useIdPresenters() read them at render time. The id-kind registry, server half: IdKinds.Kind registers a declared kind and IdKinds.Referent resolves a kind's id to its title; getIdKinds() reads them at call time. idColumn / idRef are a kind's drizzle primary-key and foreign-key columns (typed Id<P>; idRef cascades on update).
   - Web:
     - Slots:
       - `IdKinds.Kind`
@@ -26614,7 +26631,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Also registers the page-link `data` schema at the server write boundary, and supplies the target page's title to the `<page>` tag an agent reads.
       - Web:
         - Contributes: `Editor.Block` "page-link" → `PageLinkBlock`
-        - Uses: 24 symbols — full list in [`plugins/page/plugins/page-link/REFERENCE.md`](../plugins/page/plugins/page-link/REFERENCE.md)
+        - Uses: 25 symbols — full list in [`plugins/page/plugins/page-link/REFERENCE.md`](../plugins/page/plugins/page-link/REFERENCE.md)
           - `page/editor` ×6
           - `page/page-reference` ×3
           - `primitives/live-state` ×3
@@ -26624,6 +26641,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/row.Row`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
+          - `primitives/link-gesture.activationProps`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/search.SearchInput`
@@ -26700,6 +26718,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/page-reference.PageReferenceActionProps`
               - `page/page-reference.usePageNavigation`
               - `primitives/icon-button.IconButton`
+              - `primitives/link-gesture.linkProps`
     - **`place`** — Place block type: search an address or business through a registered place provider and render it as a card (name, address, category, link out to the provider's map). Owns the Place.Provider registry, so the block names no provider. Place block server half: the definePlaceProvider registry plus the two provider-agnostic lookup endpoints (search, resolve), which dispatch by `providerId` and name no provider. Also registers the place `data` schema at the server write boundary.
       - Web:
         - Slots: `Place.Provider`
@@ -26985,6 +27004,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
+          - `primitives/link-gesture.activationProps`
           - `primitives/row-actions.RowActions`
         - Exports (values): `subPageBlock`
       - Core:
@@ -27422,11 +27442,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/codegen`
           - `plugin-meta/plugin-view/dependencies`
           - `plugin-meta/plugin-view/inclusion`
-    - **`contributions-table`** — Registry for the Studio Contributions aggregated-table surface: FacetTable + RowClick slots and factories.
+    - **`contributions-table`** — Registry for the Studio Contributions aggregated-table surface: FacetTable + RowActivation slots and factories.
       - Web:
         - Slots:
           - `Contributions.FacetTable`
-          - `Contributions.RowClick`
+          - `Contributions.RowActivation`
         - Slot contributors:
           - `Contributions.FacetTable` ← `plugin-meta.facets.contributions.render-contributions`
           - `Contributions.FacetTable` ← `plugin-meta.facets.cross-refs.render-contributions`
@@ -27438,21 +27458,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Contributions.FacetTable` ← `plugin-meta.facets.routes.render-contributions`
           - `Contributions.FacetTable` ← `plugin-meta.facets.slots.render-contributions`
           - `Contributions.FacetTable` ← `plugin-meta.facets.structure.render-contributions`
-          - `Contributions.RowClick` ← `apps.studio.contributions.tables`
-          - `Contributions.RowClick` ← `plugin-meta.facets.structure.render-contributions`
+          - `Contributions.RowActivation` ← `apps.studio.contributions.tables`
+          - `Contributions.RowActivation` ← `plugin-meta.facets.structure.render-contributions`
         - Uses:
           - `plugin-meta/plugin-view.pluginViewPane`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/pane.useOpenPane`
         - Exports (types):
           - `ContributionsFacetTable`
-          - `ContributionsRowClick`
-          - `ContributionsRowClickContext`
+          - `ContributionsRowActivation`
+          - `ContributionsRowActivationContext`
           - `FacetTableEntry`
         - Exports (values):
           - `Contributions`
           - `defineFacetTable`
-          - `defineRowClick`
+          - `defineRowActivation`
           - `PluginChip`
       - Cross-plugin:
         - Imported by:
@@ -27922,11 +27942,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Web:
                 - Contributes:
                   - `Contributions.FacetTable` "Structure"
-                  - `Contributions.RowClick` "structure"
+                  - `Contributions.RowActivation` "structure"
                 - Uses:
                   - `plugin-meta/contributions-table.Contributions`
                   - `plugin-meta/contributions-table.defineFacetTable`
-                  - `plugin-meta/contributions-table.defineRowClick`
+                  - `plugin-meta/contributions-table.defineRowActivation`
                   - `plugin-meta/contributions-table.FacetTableEntry`
                   - `plugin-meta/contributions-table.PluginChip`
                   - `plugin-meta/plugin-view.pluginViewPane`
@@ -28195,13 +28215,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.sub-plugins`
           - `pluginViewPane.Actions` ← `primitives.pane`
         - Contributes: `Pane.Register` "plugin-view"
-        - Uses:
+        - Uses: 21 symbols — full list in [`plugins/plugin-meta/plugins/plugin-view/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-view/REFERENCE.md)
+          - `primitives/collapsible` ×4
+          - `primitives/pane` ×4
           - `network/live.useLive`
           - `primitives/breadcrumb.Breadcrumb`
-          - `primitives/collapsible.Collapsible`
-          - `primitives/collapsible.CollapsibleChevron`
-          - `primitives/collapsible.CollapsibleContent`
-          - `primitives/collapsible.CollapsibleTrigger`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/cluster.Cluster`
@@ -28209,12 +28227,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/detail-sections.defineDetailSections`
+          - `primitives/link-gesture.activationProps`
           - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
-          - `primitives/pane.defineRoute`
-          - `primitives/pane.Pane`
-          - `primitives/pane.PaneChrome`
-          - `primitives/pane.useOpenPane`
           - `ui/icons.Icon`
         - Exports (types):
           - `ExportRuntime`
@@ -28640,6 +28655,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.DropdownMenuItem`
           - `primitives/css/ui-kit.DropdownMenuTrigger`
           - `primitives/dom/element-size.useResizeObserver`
+          - `primitives/link-gesture.activationProps`
           - `primitives/row-actions.RowActions`
           - `primitives/slot-render.renderIsolated`
           - `ui/icons.Icon`
@@ -28763,6 +28779,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSize`
           - `primitives/css/ui-kit.useControlSize`
+          - `primitives/link-gesture.activationProps`
           - `primitives/row-actions.RowActions`
           - `primitives/row-actions.rowActionsAnchor`
         - Exports (types): `CommitRow`
@@ -29367,6 +29384,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.DensityControlled`
               - `primitives/css/ui-kit.textStepFor`
               - `primitives/css/ui-kit.useControlSize`
+              - `primitives/link-gesture.activationProps`
             - Exports (types): `LinkChipProps`
             - Exports (values): `LinkChip`
           - Cross-plugin:
@@ -30232,7 +30250,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/css/ui-kit.SingleLineProvider`
           - `primitives/dom/element-size.useElementSize`
-          - `primitives/link-gesture.linkProps`
+          - `primitives/link-gesture.activationProps`
           - `primitives/row-actions.RowActions`
           - `primitives/row-actions.rowActionsAnchor`
           - `primitives/virtual-rows.useVirtualRows`
@@ -31365,7 +31383,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations/conversation-view/jsonl-viewer/user-text`
           - `tasks/outcome-report`
-    - **`file-links`** — Parses inline file paths (e.g. `research/foo.md`) in plain text and renders them as clickable buttons that fire onFileOpen. Exposes <FileLinkText/>, parseFileLinks(), and linkifyChildren() for use inside ReactMarkdown component overrides.
+    - **`file-links`** — Parses inline file paths (e.g. `research/foo.md`) in plain text and renders them as clickable chips activating fileTarget(path, line) (a LinkTarget, so ⌘/middle-click opens a browser tab). Exposes <FileLinkText/>, parseFileLinks(), and linkifyChildren() for use inside ReactMarkdown component overrides.
       - Web:
         - Uses:
           - `primitives/css/badge.Badge`
@@ -31653,6 +31671,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.SURFACE_LEVELS`
           - `primitives/dom/element-size.useResizeObserver`
           - `primitives/lazy-component.lazyComponent`
+          - `primitives/link-gesture.activationProps`
         - Exports (types):
           - `GraphCanvasEdge`
           - `GraphCanvasEdgeTone`
@@ -31872,19 +31891,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/text-editor`
     - **`link-gesture`** — The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab. A <button> gets none of this for free, so every navigating control reads it from one place.
       - Cross-plugin:
-        - Imported by:
-          - `apps-core/app-launcher`
-          - `apps-core/app-rail`
-          - `apps-core/tabs`
-          - `apps/sonata/library`
-          - `conversations/commit-conversation`
-          - `conversations/conversation-view/open-app`
-          - `primitives/data-table`
-          - `primitives/data-view/gallery`
-          - `primitives/data-view/icons`
-          - `primitives/data-view/list`
-          - `primitives/pane`
-          - `primitives/tree`
+        - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+          - `conversations` ×12
+          - `primitives` ×11
+          - `apps-core` ×3
+          - `page` ×3
+          - `apps` ×2
+          - `auth` ×2
+          - `debug` ×2
+          - `tasks` ×2
+          - `build`
+          - `code-explorer/file-resolve`
+          - `config_v2/config-link`
+          - `plugin-meta/plugin-view`
+          - `shell/notifications`
+          - `stats/cost`
       - Web:
         - Exports (types): `LinkGestureProps`
         - Exports (values):
@@ -32253,7 +32274,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `metrics.details:meta` (push)
           - `metrics.query` (invalidate)
       - Web:
-        - Uses: 39 symbols — full list in [`plugins/primitives/plugins/metrics/REFERENCE.md`](../plugins/primitives/plugins/metrics/REFERENCE.md)
+        - Uses: 40 symbols — full list in [`plugins/primitives/plugins/metrics/REFERENCE.md`](../plugins/primitives/plugins/metrics/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
           - `primitives/data-view/view-core` ×4
           - `primitives/live-state` ×4
@@ -32261,7 +32282,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live` ×2
           - `primitives/css/spacing` ×2
           - `primitives/css/toggle-chip` ×2
-          - `apps-core/tabs.navigate`
+          - `apps-core/tabs.appLink`
           - `primitives/css/card.Card`
           - `primitives/css/center.Center`
           - `primitives/css/cluster.Cluster`
@@ -32272,6 +32293,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/scroll.Scroll`
           - `primitives/css/text.Text`
           - `primitives/icon-button.IconButton`
+          - `primitives/link-gesture.activationProps`
           - `primitives/loading.Loading`
           - `primitives/outline/rail.OutlineRail`
           - `primitives/persistent-draft.useDraft`
@@ -33251,7 +33273,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceAppId`
           - `useSyncPaneRegistry`
       - Cross-plugin:
-        - Imported by: 167 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 166 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×59
           - `conversations` ×29
           - `debug` ×23
@@ -33259,7 +33281,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×9
           - `plugin-meta` ×6
           - `apps-core` ×5
-          - `auth` ×5
+          - `auth` ×4
           - `layouts` ×4
           - `infra` ×3
           - `primitives` ×2
@@ -36060,12 +36082,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `IdKinds.Kind` "notif"
           - `ActionBar.Item` → `BellButton`
-        - Uses: 28 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Uses: 29 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `infra/endpoints` ×2
           - `primitives/css/coords` ×2
           - `primitives/cursor-pagination` ×2
           - `primitives/live-state` ×2
-          - `apps-core/tabs.navigate`
+          - `apps-core/tabs.appLink`
           - `ids.IdKinds`
           - `network/live.useLive`
           - `primitives/css/badge.Badge`
@@ -36079,6 +36101,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/css/ui-kit.cn`
           - `primitives/icon-button.IconButton`
+          - `primitives/link-gesture.activationProps`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/relative-time.RelativeTime`
@@ -36312,7 +36335,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Stats.Chart` "Average cost per conversation" → `AvgCostPerConversationChart`
           - `Stats.Chart` "Cost distribution per conversation" → `CostDistributionChart`
           - `Stats.Chart` "Top conversations by cost" → `TopConversationsTable`
-        - Uses: 24 symbols — full list in [`plugins/stats/plugins/cost/REFERENCE.md`](../plugins/stats/plugins/cost/REFERENCE.md)
+        - Uses: 25 symbols — full list in [`plugins/stats/plugins/cost/REFERENCE.md`](../plugins/stats/plugins/cost/REFERENCE.md)
           - `stats/commits` ×9
           - `config_v2` ×3
           - `infra/endpoints` ×2
@@ -36324,6 +36347,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/css/ui-kit.cn`
+          - `primitives/link-gesture.activationProps`
           - `primitives/pane.useOpenPane`
       - Server:
         - Contributes:
@@ -36624,7 +36648,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Pane.Register` "attempt"
           - `Conversation.ActionBar` → `AttemptSwitchButton`
-        - Uses: 29 symbols — full list in [`plugins/tasks/plugins/attempt-view/REFERENCE.md`](../plugins/tasks/plugins/attempt-view/REFERENCE.md)
+        - Uses: 30 symbols — full list in [`plugins/tasks/plugins/attempt-view/REFERENCE.md`](../plugins/tasks/plugins/attempt-view/REFERENCE.md)
           - `primitives/pane` ×7
           - `conversations/conversation-ui/item` ×2
           - `primitives/css/fill` ×2
@@ -36641,6 +36665,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/text.Text`
           - `primitives/launch.LaunchControl`
+          - `primitives/link-gesture.activationProps`
           - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `ui/icons.Icon`
@@ -36992,7 +37017,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskLaunch.Option` ← `tasks.task-effort`
           - `TaskLaunch.Option` ← `tasks.task-preprompt`
         - Uses:
-          - `config_v2/config-link.useOpenConfig`
+          - `config_v2/config-link.useConfigLink`
           - `primitives/css/spacing.Stack`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/overlay/overlay-boundary.OverlayBoundary`
@@ -37535,6 +37560,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
           - `primitives/icon-button.IconButton`
+          - `primitives/link-gesture.activationProps`
           - `primitives/live-state.foldResource`
           - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
@@ -38171,7 +38197,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes: `HealthReport.Row` "worktree"
         - Uses:
-          - `apps-core/tabs.navigate`
+          - `apps-core/tabs.appLinkProps`
           - `network/live.useLive`
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/icon-button.IconButton`
@@ -38864,7 +38890,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `ActionBar.Item` → `QuickThemeButton`
             - Uses:
               - `apps-core.useActiveApp`
-              - `apps-core/tabs.navigate`
+              - `apps-core/tabs.appLink`
               - `config_v2.useScopeMembership`
               - `primitives/css/control-panel.ControlPanel`
               - `primitives/css/control-panel.ControlPanelPopover`

@@ -1,9 +1,5 @@
 import type { ReactNode } from "react";
 import {
-  activationHref,
-  runActivation,
-} from "@plugins/primitives/plugins/link-gesture/core";
-import {
   DataTable,
   DATA_TABLE_VIRTUALIZE_THRESHOLD,
   type ColumnDef,
@@ -218,22 +214,9 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     // server-ordered source.
     sortState: mapPrimary(props.sortHeader.active),
     onToggleSort: (columnId: string) => props.setSort(columnId),
-    // `DataTable.onRowClick` is a TABLE-level prop (and has consumers outside
-    // data-view), so the table's granularity stays table-level: rows are
-    // clickable iff the surface resolves activation at all. A row this resolver
-    // answers `undefined` for simply does nothing when clicked — it does not get
-    // its own plain-container element the way a list row does. Per-row here
-    // means a `DataTable` change, which is its own.
-    onRowClick: props.rowActivation
-      ? (row: unknown) => {
-          const activation = props.rowActivation?.(row);
-          if (activation !== undefined) runActivation(activation);
-        }
-      : undefined,
-    // A link row's middle- / ⌘-click opens its URL in a browser tab.
-    rowHref: props.rowActivation
-      ? (row: unknown) => activationHref(props.rowActivation?.(row))
-      : undefined,
+    // The table speaks the same `Activation` the surface resolves: a link row's
+    // middle- / ⌘-click opens its URL in a browser tab, Enter runs it.
+    rowActivation: props.rowActivation,
     onRowOpen: props.onRowOpen,
     selectedRowId: props.selectedRowId,
     filter: undefined,

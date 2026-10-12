@@ -2,15 +2,21 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 
 export function FileDisambiguation({
   query,
   matches,
-  onSelect,
+  activationFor,
 }: {
   query: string;
   matches: string[];
-  onSelect: (path: string) => void;
+  /**
+   * What picking a candidate does — a `LinkTarget` when it opens the file, so
+   * ⌘/middle-click opens it in a new browser tab.
+   */
+  activationFor: (path: string) => Activation;
 }) {
   return (
     <Stack gap="xs" className="h-full p-md">
@@ -27,7 +33,11 @@ export function FileDisambiguation({
           const name =
             lastSlash >= 0 ? filePath.slice(lastSlash + 1) : filePath;
           return (
-            <Row key={filePath} size="sm" onClick={() => onSelect(filePath)}>
+            <Row
+              key={filePath}
+              size="sm"
+              {...activationProps(activationFor(filePath))}
+            >
               <span className="text-muted-foreground">{dir}</span>
               <span className="font-medium text-foreground">{name}</span>
             </Row>

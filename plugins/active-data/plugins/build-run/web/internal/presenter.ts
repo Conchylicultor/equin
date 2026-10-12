@@ -1,5 +1,6 @@
 import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { rowReferent } from "@plugins/active-data/plugins/id-chip/web";
 import { buildHistory } from "@plugins/build/core";
 import { buildDetailPane } from "@plugins/build/web";
@@ -15,8 +16,8 @@ export function useBuildRunReferent(id: string): IdReferentState {
   return rowReferent(useLiveRow(buildHistory, id), buildRunTitle);
 }
 
-/** Opens the build's run-detail pane beside the surface holding the id (`push`). */
-export function useOpenBuildRun(): (id: string) => void {
+/** The link to the build's run-detail pane beside the surface holding the id (`push`). */
+export function useBuildRunTarget(): (id: string) => LinkTarget {
   const openPane = useOpenPane();
-  return (id) => openPane(buildDetailPane, { runId: id }, { mode: "push" });
+  return (id) => openPane.to(buildDetailPane, { runId: id }, { mode: "push" });
 }

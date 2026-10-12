@@ -18,7 +18,7 @@ import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import {
   Contributions,
   type FacetTableEntry,
-  type ContributionsRowClick,
+  type ContributionsRowActivation,
 } from "@plugins/plugin-meta/plugins/contributions-table/web";
 
 /** Flatten the plugin tree into one entry per plugin carrying its slice of a facet. */
@@ -72,14 +72,14 @@ function ContributionsTables({ plugins }: { plugins: PluginNode[] }) {
     () => [...tables].sort((a, b) => a.label.localeCompare(b.label)),
     [tables],
   );
-  // Row-click drill-downs are contributed app-side (keyed by facetId) so meta
-  // facet renderers never import an app pane; match them to tables by facetId.
-  const rowClicks = Contributions.RowClick.useContributions();
-  const rowClickByFacet = useMemo(() => {
-    const map = new Map<string, ContributionsRowClick["onRowClick"]>();
-    for (const rc of rowClicks) map.set(rc.facetId, rc.onRowClick);
+  // Row drill-downs are contributed app-side (keyed by facetId) so meta facet
+  // renderers never import an app pane; match them to tables by facetId.
+  const rowActivations = Contributions.RowActivation.useContributions();
+  const rowActivationByFacet = useMemo(() => {
+    const map = new Map<string, ContributionsRowActivation["rowActivation"]>();
+    for (const ra of rowActivations) map.set(ra.facetId, ra.rowActivation);
     return map;
-  }, [rowClicks]);
+  }, [rowActivations]);
 
   // Project every facet's rows once per tree load so tab badges and the active
   // table share the same computation.
@@ -93,8 +93,8 @@ function ContributionsTables({ plugins }: { plugins: PluginNode[] }) {
 
   const activeId = selectedId ?? sortedTables[0]?.facetId ?? null;
   const activeTable = sortedTables.find((t) => t.facetId === activeId) ?? null;
-  const activeRowClick = activeTable
-    ? rowClickByFacet.get(activeTable.facetId)
+  const activeRowActivation = activeTable
+    ? rowActivationByFacet.get(activeTable.facetId)
     : undefined;
 
   return (
@@ -149,9 +149,9 @@ function ContributionsTables({ plugins }: { plugins: PluginNode[] }) {
             columns={activeTable.columns}
             filter={filter}
             rowKey={activeTable.rowKey}
-            onRowClick={
-              activeRowClick
-                ? (row) => activeRowClick(row, { openPane })
+            rowActivation={
+              activeRowActivation
+                ? (row) => activeRowActivation(row, { openPane })
                 : undefined
             }
             emptyLabel={`No ${activeTable.label.toLowerCase()} found`}

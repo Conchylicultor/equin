@@ -17,7 +17,7 @@ export default {
     }),
     // Plain-text (non-markdown) counterpart of the file-links markdown
     // enhancer, registered after active-data (order 10) so chips stay opaque
-    // and remaining file paths still linkify. Same onFileOpen resolution.
+    // and remaining file paths still linkify. Same useFileTarget resolution.
     InlineTextWalkerSlot({
       id: "file-links",
       order: 10,

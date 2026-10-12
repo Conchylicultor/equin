@@ -16,9 +16,15 @@ import { Auth } from "@plugins/auth/web";
 import type { AuthProviderRowProps } from "@plugins/auth/web";
 import { configSecretMeta } from "@plugins/fields/plugins/secret/plugins/config/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
+import { appleSetupPane } from "../panes";
 
 export function AppleProviderRow({ providerId }: AuthProviderRowProps) {
   const providers = Auth.Provider.useContributions();
+  const openPane = useOpenPane();
+  const setup = openPane.to(appleSetupPane, {}, { mode: "root" });
   const provider = providers.find((p) => p.id === providerId);
 
   const registrations = useConfigRegistrations();
@@ -38,7 +44,6 @@ export function AppleProviderRow({ providerId }: AuthProviderRowProps) {
 
   if (!provider) return null;
   const icon = provider.icon;
-  const configure = () => provider.configureCredentials?.();
 
   return (
     <Stack direction="row" gap="lg" align="start" className="p-lg">
@@ -66,7 +71,7 @@ export function AppleProviderRow({ providerId }: AuthProviderRowProps) {
                 }
               }
               name={provider.name}
-              onConfigure={configure}
+              setup={setup}
             />
           ),
         })}
@@ -79,12 +84,13 @@ function Body({
   secretMeta,
   cfg,
   name,
-  onConfigure,
+  setup,
 }: {
   secretMeta: Record<string, { set?: boolean } | undefined>;
   cfg: { signingIdentity?: string; ascKeyId?: string; ascIssuerId?: string };
   name: string;
-  onConfigure: () => void;
+  /** The setup wizard, as a link. */
+  setup: LinkTarget;
 }) {
   const p12Set = !!secretMeta.p12Cert?.set;
   const ascKeySet = !!secretMeta.ascApiKey?.set;
@@ -131,7 +137,7 @@ function Body({
           )}
         </Stack>
       </Fill>
-      <Button variant={allSet ? "outline" : "default"} onClick={onConfigure}>
+      <Button variant={allSet ? "outline" : "default"} {...linkProps(setup)}>
         {label}
       </Button>
     </Stack>

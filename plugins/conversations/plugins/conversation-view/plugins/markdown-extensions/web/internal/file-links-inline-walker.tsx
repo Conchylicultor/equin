@@ -5,21 +5,21 @@ import {
   useInlineTextWalker,
   type InlineTextWalker,
 } from "@plugins/primitives/plugins/inline-text/web";
-import { useFileOpen } from "./use-file-open";
+import { useFileTarget } from "./use-file-target";
 
 // Registers the file-links walker into the inline-text pipeline (order 10 —
 // after active-data, so it recurses the Fragment-wrapped output and linkifies
 // the remaining raw file paths while leaving chips opaque). Shares the exact
-// onFileOpen resolution used by the markdown FileLinksEnhancer. Outside any
+// file-target resolution used by the markdown FileLinksEnhancer. Outside any
 // worktree context the walker is a no-op (file paths stay plain text).
 export function FileLinksInlineWalker({ children }: { children: ReactNode }) {
-  const onFileOpen = useFileOpen();
+  const fileTarget = useFileTarget();
   const walker = useMemo<InlineTextWalker | null>(
     () =>
-      onFileOpen
-        ? { transform: (c: ReactNode) => linkifyChildren(c, onFileOpen) }
+      fileTarget
+        ? { transform: (c: ReactNode) => linkifyChildren(c, fileTarget) }
         : null,
-    [onFileOpen],
+    [fileTarget],
   );
   const value = useInlineTextWalker(walker);
   return (

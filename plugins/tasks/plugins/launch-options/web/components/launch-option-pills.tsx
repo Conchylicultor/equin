@@ -6,7 +6,8 @@ import { OverlayBoundary } from "@plugins/primitives/plugins/overlay/plugins/ove
 import { PickerPill } from "@plugins/primitives/plugins/text-editor/plugins/composer/plugins/picker-pill/web";
 import { TooltipDoc } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { useOpenConfig } from "@plugins/config_v2/plugins/config-link/web";
+import { useConfigLink } from "@plugins/config_v2/plugins/config-link/web";
+import { runActivation } from "@plugins/primitives/plugins/link-gesture/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { TaskLaunch } from "../slots";
 import { launchOptionValue, type LaunchOptionValues } from "../internal/values";
@@ -120,7 +121,7 @@ function LaunchOptionGroup({
   onChange: (next: LaunchOptionValues) => void;
   disabled: boolean;
 }) {
-  const openConfig = useOpenConfig();
+  const configLink = useConfigLink();
   const members = group.members;
   const lead = members[0]!;
   const pill = lead.pill;
@@ -187,7 +188,9 @@ function LaunchOptionGroup({
               configure && {
                 icon: settingsIcon,
                 label: `Configure: ${option.label}`,
-                onAction: () => openConfig(configure),
+                // A menu-section action: no gestures to read, so it follows
+                // the link the way a plain click does.
+                onAction: () => runActivation(configLink(configure)),
               }
             }
           >

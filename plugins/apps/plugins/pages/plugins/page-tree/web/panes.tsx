@@ -207,11 +207,12 @@ function usePagesNavigation(): PageNavigation {
   const openPane = useOpenPane();
   return useMemo<PageNavigation>(
     () => ({
-      open: (id) => openPane(pageDetailPane, { pageId: id }, { mode: "swap" }),
+      open: (id) =>
+        openPane.to(pageDetailPane, { pageId: id }, { mode: "swap" }),
       openAside: (id) =>
-        openPane(pageDetailPane, { pageId: id }, { mode: "push" }),
+        openPane.to(pageDetailPane, { pageId: id }, { mode: "push" }),
       openBlock: (id) =>
-        openPane(blockDetailPane, { blockId: id }, { mode: "push" }),
+        openPane.to(blockDetailPane, { blockId: id }, { mode: "push" }),
     }),
     [openPane],
   );

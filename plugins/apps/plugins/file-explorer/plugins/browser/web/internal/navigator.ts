@@ -5,21 +5,28 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { locationKey, type ExplorerLocation } from "../../core";
 
 /**
  * How a file browser moves: where it is, and the moves it can make. A routed
  * explorer (the `/files` app) answers from the pane route, so back / forward
- * are the browser history and every location is a link; an embedded one keeps
- * its own stack ({@link useLocalNavigator}).
+ * are the browser history and every location is a link (`to` / `fileTo`
+ * return `LinkTarget`s, so ⌘/middle-click opens one in a new browser tab); an
+ * embedded one keeps its own stack ({@link useLocalNavigator}) and its moves
+ * are plain actions.
+ *
+ * A move is an `Activation`, never a void call: a control spreads it
+ * (`activationProps`), a keyboard path runs it (`runActivation`).
  */
 export interface ExplorerNavigator {
   location: ExplorerLocation;
-  /** List another folder (a new history entry). Clears the open file unless given. */
-  navigate: (dir: string, open?: string | null) => void;
-  /** Open a file beside the listing, or close it (`null`). */
-  openFile: (path: string | null) => void;
+  /** Listing another folder (a new history entry). Clears the open file unless given. */
+  to: (dir: string, open?: string | null) => Activation;
+  /** Opening a file beside the listing, or closing it (`null`). */
+  fileTo: (path: string | null) => Activation;
+  /** Back / forward walk the history: actions, not places, so not links. */
   back: () => void;
   forward: () => void;
   canBack: boolean;
@@ -119,12 +126,14 @@ export function useLocalNavigator(
     (next: ExplorerLocation) => setStacks((s) => observe(s, next)),
     [],
   );
-  const navigate = useCallback(
-    (dir: string, open: string | null = null) => go({ dir, open }),
+  const to = useCallback(
+    (dir: string, open: string | null = null) =>
+      () =>
+        go({ dir, open }),
     [go],
   );
-  const openFile = useCallback(
-    (open: string | null) =>
+  const fileTo = useCallback(
+    (open: string | null) => () =>
       setStacks((s) =>
         s.current === null ? s : { ...s, current: { ...s.current, open } },
       ),
@@ -149,13 +158,13 @@ export function useLocalNavigator(
   return useMemo(
     () => ({
       location,
-      navigate,
-      openFile,
+      to,
+      fileTo,
       back,
       forward,
       canBack: stacks.back.length > 0,
       canForward: stacks.forward.length > 0,
     }),
-    [location, navigate, openFile, back, forward, stacks],
+    [location, to, fileTo, back, forward, stacks],
   );
 }

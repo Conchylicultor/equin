@@ -7,6 +7,6 @@ export { useIdKinds, useIdPresenters } from "./hooks";
 
 export default {
   description:
-    "The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, useOpen); useIdKinds() / useIdPresenters() read them at render time.",
+    "The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, useTarget); useIdKinds() / useIdPresenters() read them at render time.",
   slots: IdKindsSlots,
 } satisfies PluginDefinition;

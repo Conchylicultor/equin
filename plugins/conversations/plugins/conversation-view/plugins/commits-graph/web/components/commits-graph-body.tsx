@@ -74,8 +74,12 @@ function AttemptCommitsGraph({ attemptId }: { attemptId: string }) {
   const hasAgentWork = commits.length > 0 || landedCommits.length > 0;
   // The detail pane carries the worktree in its own params, so this is the only
   // place the conversation's attempt enters the picture.
-  const openCommit = (sha: string) =>
-    openPane(commitDetailPane, { worktree: attemptId, sha }, { mode: "push" });
+  const commitTarget = (c: { sha: string }) =>
+    openPane.to(
+      commitDetailPane,
+      { worktree: attemptId, sha: c.sha },
+      { mode: "push" },
+    );
 
   return (
     <Column
@@ -108,7 +112,7 @@ function AttemptCommitsGraph({ attemptId }: { attemptId: string }) {
               isFirst={idx === 0}
               isLast={idx === commits.length - 1}
               color={BRANCH_COLOR}
-              onClick={(c) => openCommit(c.sha)}
+              commitActivation={commitTarget}
             />
           ))}
           {hasAgentWork && (
@@ -127,7 +131,7 @@ function AttemptCommitsGraph({ attemptId }: { attemptId: string }) {
               isLast={idx === landedCommits.length - 1}
               color={LANDED_COLOR}
               pushed
-              onClick={(c) => openCommit(c.sha)}
+              commitActivation={commitTarget}
             />
           ))}
           {behindCommits.length > 0 && (
@@ -140,7 +144,7 @@ function AttemptCommitsGraph({ attemptId }: { attemptId: string }) {
                   isFirst={false}
                   isLast={idx === behindCommits.length - 1}
                   color={BEHIND_COLOR}
-                  onClick={(c) => openCommit(c.sha)}
+                  commitActivation={commitTarget}
                 />
               ))}
             </>

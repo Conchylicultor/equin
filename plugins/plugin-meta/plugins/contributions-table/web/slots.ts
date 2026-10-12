@@ -1,7 +1,7 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type {
   ContributionsFacetTable,
-  ContributionsRowClick,
+  ContributionsRowActivation,
 } from "./facet-table";
 
 export const Contributions = {
@@ -15,11 +15,12 @@ export const Contributions = {
     docLabel: (t) => t.label,
   }),
   /**
-   * Per-facet row-click drill-down, keyed by `facetId`. Contributed by the
-   * app-side owner of the target pane so a facet renderer (meta) never imports an
-   * app pane — decoupling "what a row shows" (FacetTable) from "what a click does".
+   * Per-facet row drill-down, keyed by `facetId`. Contributed by the app-side
+   * owner of the target pane so a facet renderer (meta) never imports an app
+   * pane — decoupling "what a row shows" (FacetTable) from "what activating it
+   * does".
    */
-  RowClick: defineSlot<ContributionsRowClick>({
+  RowActivation: defineSlot<ContributionsRowActivation>({
     docLabel: (r) => r.facetId,
   }),
 };

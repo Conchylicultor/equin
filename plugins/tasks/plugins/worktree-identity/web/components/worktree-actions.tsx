@@ -1,6 +1,6 @@
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { navigate } from "@plugins/apps-core/plugins/tabs/web";
+import { appLinkProps } from "@plugins/apps-core/plugins/tabs/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { taskDetailRoute } from "@plugins/tasks/plugins/tasks-core/core";
 import {
@@ -26,11 +26,9 @@ export function WorktreeActions() {
         <IconButton
           icon={navIcons.expand}
           label="Open task"
-          onClick={() =>
-            navigate(
-              taskDetailRoute.link(agentManagerApp, { taskId: task.taskId }),
-            )
-          }
+          {...appLinkProps(
+            taskDetailRoute.link(agentManagerApp, { taskId: task.taskId }),
+          )}
         />
       ) : null}
     </>

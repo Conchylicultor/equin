@@ -103,10 +103,11 @@ is. Move one and the others have to follow.
 The relation mark goes in the row BODY, never in `Row`'s `actions` slot: it is
 state to read, not a control to press, and `actions` is hover-revealed.
 
-`ArtifactRow` dismisses the popover itself when its row is activated, so a kind
-cannot ship a row that navigates and leaves the panel over what it opened. A
-bespoke layout that opens something calls `useCloseArtifacts()` for the same
-effect.
+`ArtifactRow` takes an `activation` (`openPane.to(…)` — a link, so ⌘/middle-click
+opens a browser tab) and dismisses the popover itself when its row is activated,
+so a kind cannot ship a row that navigates and leaves the panel over what it
+opened. A bespoke layout that opens something wraps its link in
+`afterOpen(link, useCloseArtifacts())` for the same effect.
 
 **The glyphs come from the mock** (`proto-1789731211-jeis`): assorted shapes on
 the button, a flask for research, a camera for screenshots, a bolt for skills.
@@ -146,7 +147,7 @@ here.
     - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.screenshot`
     - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.skill`
   - Contributes: `Conversation.ActionBar` → `ArtifactsButton`
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×3
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
@@ -159,6 +160,7 @@ here.
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
+    - `primitives/link-gesture.activationProps`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/relative-time.formatRelativeTime`
     - `primitives/slot-render.defineRenderSlot`

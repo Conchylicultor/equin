@@ -1,5 +1,5 @@
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { navigate } from "@plugins/apps-core/plugins/tabs/web";
+import { appLinkProps } from "@plugins/apps-core/plugins/tabs/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -46,7 +46,7 @@ export function StrandedConfigNotice() {
         <Button
           variant="ghost"
           className="bg-warning/20 hover:bg-warning/30"
-          onClick={() => navigate(configOrphansRoute.link(debugApp, {}))}
+          {...appLinkProps(configOrphansRoute.link(debugApp, {}))}
         >
           Review
         </Button>

@@ -139,7 +139,7 @@ run no `onReady`, so no watchdog.
 - Web:
   - Contributes: `Reports.KindView` → `SpanStuckSummary`
   - Uses:
-    - `apps-core/tabs.navigate`
+    - `apps-core/tabs.appLink`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
     - `primitives/css/link-chip.LinkChip`

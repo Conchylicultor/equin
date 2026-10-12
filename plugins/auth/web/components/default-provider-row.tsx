@@ -13,6 +13,7 @@ import { useAuthState } from "../hooks";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { configNavPane } from "@plugins/config_v2/plugins/settings/web";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { currentWorktreeName, disconnect, startConnectFlow } from "../connect";
@@ -167,7 +168,7 @@ function AccountControls({
   // `handleOAuthStart` rejects a non-oauth2 provider with a 400, so
   // `startConnectFlow` must never be reached for one. An api-key provider's one
   // action is "give me the key", which is whatever the provider registered as
-  // `configureCredentials` (normally a setup pane); a password provider's is
+  // `credentialsPane` (normally a setup pane); a password provider's is
   // the sign-in dialog, whose exchange stores only the returned token.
   //
   // Two limits are real and deliberate, not oversights:
@@ -177,10 +178,11 @@ function AccountControls({
   //    until a call using it fails.
   //  - Disconnect deletes the local entry only; it does not revoke the
   //    credential at the provider.
-  function openCredentialSetup() {
-    if (provider.configureCredentials) provider.configureCredentials();
-    else openPane(configNavPane, {}, { mode: "push" });
-  }
+  const credentialSetup = activationProps(
+    provider.credentialsPane
+      ? openPane.to(provider.credentialsPane, {}, { mode: "root" })
+      : openPane.to(configNavPane, {}, { mode: "push" }),
+  );
 
   function openSignIn() {
     void openDialog(
@@ -208,7 +210,7 @@ function AccountControls({
           <>
             <Button
               variant={connected ? "outline" : "default"}
-              onClick={openCredentialSetup}
+              {...credentialSetup}
             >
               {connected ? "Replace key" : "Add key"}
             </Button>
@@ -241,7 +243,7 @@ function AccountControls({
       case "oauth2":
         if (credentialsMissing) {
           return (
-            <Button variant="outline" onClick={openCredentialSetup}>
+            <Button variant="outline" {...credentialSetup}>
               Configure credentials
             </Button>
           );

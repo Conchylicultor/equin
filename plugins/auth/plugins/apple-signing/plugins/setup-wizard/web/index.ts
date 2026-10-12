@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Auth } from "@plugins/auth/web";
 import { appleSetupPane } from "./panes";
 import { AppleProviderRow } from "./components/apple-provider-row";
@@ -17,8 +17,6 @@ export default {
       name: "Apple Developer",
       icon: brand("apple"),
       rowComponent: AppleProviderRow,
-      configureCredentials: () =>
-        openPane(appleSetupPane, {}, { mode: "root" }),
     }),
   ],
   slots: { "apple-setup": appleSetupPane },

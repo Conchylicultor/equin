@@ -1,5 +1,6 @@
 import { useLive } from "@plugins/network/plugins/live/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   foldResource,
@@ -247,7 +248,7 @@ export function TaskAttempts({ taskId }: { taskId: string }) {
                           icon={navIcons.expand}
                           label="Open as page"
                           tooltip="Open in a new page"
-                          onClick={() => opener.openAsPage(c.id)}
+                          {...activationProps(opener.asPage(c.id))}
                         />
                       }
                     />

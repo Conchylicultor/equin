@@ -18,11 +18,11 @@ anomalies in context.
 - Web:
   - Contributes:
     - `Contributions.FacetTable` "Structure"
-    - `Contributions.RowClick` "structure"
+    - `Contributions.RowActivation` "structure"
   - Uses:
     - `plugin-meta/contributions-table.Contributions`
     - `plugin-meta/contributions-table.defineFacetTable`
-    - `plugin-meta/contributions-table.defineRowClick`
+    - `plugin-meta/contributions-table.defineRowActivation`
     - `plugin-meta/contributions-table.FacetTableEntry`
     - `plugin-meta/contributions-table.PluginChip`
     - `plugin-meta/plugin-view.pluginViewPane`

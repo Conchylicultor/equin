@@ -15,7 +15,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { navigate } from "@plugins/apps-core/plugins/tabs/web";
+import { appLink } from "@plugins/apps-core/plugins/tabs/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { traceDetailRoute } from "@plugins/debug/plugins/trace/plugins/engine/core";
 import {
@@ -216,14 +216,9 @@ function SlowOpsViewInner({ ops }: { ops: SlowOp[] }) {
               <Stack direction="row" gap="2xs" align="start">
                 <LinkChip
                   leading={<Icon icon={boltIcon} className="icon-auto" />}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(
-                      traceDetailRoute.link(debugApp, {
-                        id: newestTraceId(r)!,
-                      }),
-                    );
-                  }}
+                  activation={appLink(
+                    traceDetailRoute.link(debugApp, { id: newestTraceId(r)! }),
+                  )}
                 >
                   trace
                 </LinkChip>

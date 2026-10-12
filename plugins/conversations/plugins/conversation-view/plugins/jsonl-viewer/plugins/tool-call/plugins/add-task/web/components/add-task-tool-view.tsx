@@ -67,12 +67,6 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
     return tasks.find((t) => t.id === taskId) ?? null;
   }, [tasksResult, taskId]);
 
-  const openTask = (e: React.MouseEvent) => {
-    if (!taskId) return;
-    e.stopPropagation();
-    openPane(taskDetailPane, { taskId }, { mode: "push" });
-  };
-
   const summary = (
     <Stack as="span" direction="row" align="center" gap="sm">
       <Text as="span">{input.title}</Text>
@@ -106,7 +100,11 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
         )}
         {taskId && (
           <LinkChip
-            onClick={openTask}
+            activation={openPane.to(
+              taskDetailPane,
+              { taskId },
+              { mode: "push" },
+            )}
             leading={task ? <StatusIcon status={task.status} /> : undefined}
             title={task ? `${task.title} · ${taskId}` : taskId}
           >

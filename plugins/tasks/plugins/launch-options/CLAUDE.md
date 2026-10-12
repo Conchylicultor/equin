@@ -47,7 +47,7 @@ Ordering for both surfaces lives in
     - `TaskLaunch.Option` ← `tasks.task-effort`
     - `TaskLaunch.Option` ← `tasks.task-preprompt`
   - Uses:
-    - `config_v2/config-link.useOpenConfig`
+    - `config_v2/config-link.useConfigLink`
     - `primitives/css/spacing.Stack`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/overlay/overlay-boundary.OverlayBoundary`

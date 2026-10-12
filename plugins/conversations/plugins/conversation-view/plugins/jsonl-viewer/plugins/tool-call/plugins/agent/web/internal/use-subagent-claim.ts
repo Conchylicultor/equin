@@ -44,12 +44,11 @@ export function useSubagentNotificationClaim(
     target: {
       label: "View sub-agent",
       icon: articleIcon,
-      open: () =>
-        openPane(
-          agentReportPane,
-          { by: "agent", key: entry.row.agentId },
-          { mode: "push" },
-        ),
+      activation: openPane.to(
+        agentReportPane,
+        { by: "agent", key: entry.row.agentId },
+        { mode: "push" },
+      ),
     },
   };
 }

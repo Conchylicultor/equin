@@ -5,7 +5,7 @@ import { CONV_CHIP_SURFACES } from "../core";
 import { ConvChip } from "./components/conv-chip";
 import {
   useConversationReferent,
-  useOpenConversation,
+  useConversationTarget,
 } from "./internal/presenter";
 
 export { ConvChip };
@@ -18,7 +18,7 @@ export default {
       presenter: {
         kind: conversationIdKind,
         useReferent: useConversationReferent,
-        useOpen: useOpenConversation,
+        useTarget: useConversationTarget,
       },
       surfaces: CONV_CHIP_SURFACES,
       component: ConvChip,

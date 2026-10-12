@@ -62,7 +62,7 @@ export function PromptOriginSection({ taskId }: { taskId: string }) {
       <LinkChip
         leading={<Icon icon={descriptionIcon} />}
         title={page.title}
-        {...openPane.link(
+        activation={openPane.to(
           pageDetailPane,
           { pageId: page.pageId },
           { mode: "push" },

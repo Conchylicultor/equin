@@ -74,7 +74,7 @@ function renderPanel(
   filters: AnalyticsFilter[],
   source: "raw" | "totals",
 ) {
-  const onRowClick = vi.fn();
+  const onFilterRow = vi.fn();
   const panel = PANELS.find((p) => p.id === id)!;
   render(
     <RankedPanel
@@ -84,17 +84,17 @@ function renderPanel(
       report={report()}
       source={source}
       filters={filters}
-      onRowClick={onRowClick}
+      onFilterRow={onFilterRow}
     />,
   );
-  return onRowClick;
+  return onFilterRow;
 }
 
 describe("RankedPanel", () => {
   it("reports a row click with its dimension and value", () => {
-    const onRowClick = renderPanel("pages", [], "raw");
+    const onFilterRow = renderPanel("pages", [], "raw");
     fireEvent.click(screen.getByRole("button", { name: /\/story/ }));
-    expect(onRowClick).toHaveBeenCalledWith("page", "/story");
+    expect(onFilterRow).toHaveBeenCalledWith("page", "/story");
   });
 
   it("marks the filtered row selected", () => {
@@ -117,7 +117,7 @@ describe("RankedPanel", () => {
   });
 
   it("names a country next to its code, and filters on the code", () => {
-    const onRowClick = vi.fn();
+    const onFilterRow = vi.fn();
     const panel = PANELS.find((p) => p.id === "locations")!;
     render(
       <RankedPanel
@@ -135,11 +135,11 @@ describe("RankedPanel", () => {
         })}
         source="raw"
         filters={[]}
-        onRowClick={onRowClick}
+        onFilterRow={onFilterRow}
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: startsWith(FRANCE) }));
-    expect(onRowClick).toHaveBeenCalledWith("country", "FR");
+    expect(onFilterRow).toHaveBeenCalledWith("country", "FR");
     // A code the platform cannot name, and the no-country value, read as stored.
     expect(screen.getByRole("button", { name: startsWith("XX") })).toBeTruthy();
     expect(

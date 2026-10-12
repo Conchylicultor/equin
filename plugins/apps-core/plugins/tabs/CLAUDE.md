@@ -175,6 +175,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `TabsApi`
   - Exports (values):
     - `appContributionFor`
+    - `appLink`
     - `appLinkProps`
     - `appPathFor`
     - `exitToPreviousMode`

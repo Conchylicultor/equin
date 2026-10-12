@@ -195,7 +195,7 @@ override where it survives.
     - `Stats.Chart` "Average cost per conversation" → `AvgCostPerConversationChart`
     - `Stats.Chart` "Cost distribution per conversation" → `CostDistributionChart`
     - `Stats.Chart` "Top conversations by cost" → `TopConversationsTable`
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `stats/commits` ×9
     - `config_v2` ×3
     - `infra/endpoints` ×2
@@ -207,6 +207,7 @@ override where it survives.
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.cn`
+    - `primitives/link-gesture.activationProps`
     - `primitives/pane.useOpenPane`
 - Server:
   - Contributes:

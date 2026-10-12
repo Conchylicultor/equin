@@ -94,7 +94,7 @@ export function ChartTable({
         data={rows}
         columns={columns}
         rowKey={(r) => String(r.index)}
-        onRowClick={onPick ? (r) => onPick(r.index) : undefined}
+        rowActivation={onPick ? (r) => () => onPick(r.index) : undefined}
       />
     </Scroll>
   );

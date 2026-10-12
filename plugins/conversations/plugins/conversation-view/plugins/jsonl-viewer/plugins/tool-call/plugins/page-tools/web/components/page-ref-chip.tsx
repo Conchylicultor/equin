@@ -1,4 +1,3 @@
-import type React from "react";
 import {
   useLiveRow,
   type LiveRowResult,
@@ -87,16 +86,15 @@ export function PageRefChip({
   if (!page) return <BlockIdBadge id={id} />;
 
   const title = pageData(page).title || "Untitled";
-  const open = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    openPane(pageDetailPane, { pageId: page.id }, { mode: "push" });
-  };
-
   return (
     <LinkChip
       leading={<Icon icon={descriptionIcon} />}
       title={title}
-      onClick={open}
+      activation={openPane.to(
+        pageDetailPane,
+        { pageId: page.id },
+        { mode: "push" },
+      )}
     >
       {title}
     </LinkChip>

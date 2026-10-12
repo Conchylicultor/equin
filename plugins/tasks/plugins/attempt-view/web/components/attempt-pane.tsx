@@ -31,6 +31,8 @@ import {
   Inset,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { attemptPane } from "../panes";
 import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -41,10 +43,10 @@ function SideBySideButton({ convId }: { convId: string }) {
     <button
       type="button"
       title="Open alongside"
-      onClick={(e) => {
-        e.stopPropagation();
-        openPane(conversationPane, { convId }, { mode: "push" });
-      }}
+      {...activationProps(
+        openPane.to(conversationPane, { convId }, { mode: "push" }),
+        { isolate: true },
+      )}
       className="rounded-md p-2xs text-muted-foreground hover:bg-accent hover:text-foreground"
     >
       <Icon icon={navIcons.sidePane} className="size-3.5" />
@@ -57,13 +59,14 @@ function AttemptSection({
   isCurrent,
   selectedConvId,
   convInstanceId,
-  onSelect,
+  convTarget,
 }: {
   attempt: AttemptWithConversations;
   isCurrent: boolean;
   selectedConvId: string | undefined;
   convInstanceId: number | undefined;
-  onSelect: (convId: string) => void;
+  /** The link a conversation row opens. */
+  convTarget: (convId: string) => LinkTarget;
 }) {
   const worktreeName = attempt.worktreePath.split("/").pop();
   return (
@@ -104,7 +107,7 @@ function AttemptSection({
                 <Line
                   as="button"
                   type="button"
-                  onClick={() => onSelect(c.id)}
+                  {...activationProps(convTarget(c.id))}
                   className={cn(
                     fillClasses("x"),
                     "gap-sm px-sm py-xs text-left text-body",
@@ -204,8 +207,8 @@ export function AttemptPane() {
 
   const taskAttempts = taskAttemptsOf(result.data, attemptId);
 
-  const handleSelect = (convId: string) =>
-    openPane(conversationPane, { convId }, { mode: "push" });
+  const convTarget = (convId: string) =>
+    openPane.to(conversationPane, { convId }, { mode: "push" });
 
   return (
     <PaneChrome pane={attemptPane}>
@@ -227,7 +230,7 @@ export function AttemptPane() {
                 isCurrent={a.id === attemptId}
                 selectedConvId={selectedConvId}
                 convInstanceId={convInstanceId}
-                onSelect={handleSelect}
+                convTarget={convTarget}
               />
             ))}
           </Stack>

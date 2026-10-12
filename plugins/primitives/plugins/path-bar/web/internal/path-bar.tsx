@@ -30,6 +30,10 @@ import {
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
+import {
+  runActivation,
+  type Activation,
+} from "@plugins/primitives/plugins/link-gesture/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
   CRUMBS,
@@ -59,8 +63,12 @@ export interface PathBarProps {
   /** The current path (crumb mode shows its segments). */
   path: string;
   source: PathBarSource;
-  /** A committed path that resolved — a crumb click, or Enter on a valid one. */
-  onNavigate: (target: PathTarget) => void;
+  /**
+   * What going to a resolved path does — a crumb's activation, and what Enter
+   * on a valid typed path runs. A `LinkTarget` for a bar whose places are
+   * links, so ⌘/middle-click on a crumb opens it in a new browser tab.
+   */
+  activationFor: (target: PathTarget) => Activation;
   /**
    * Register ⌘L / Ctrl+L to start editing, scoped to the surface the bar is
    * rendered in. Default `true`; a surface with two path bars turns it off on
@@ -92,7 +100,7 @@ export interface PathBarProps {
 export function PathBar({
   path,
   source,
-  onNavigate,
+  activationFor,
   shortcut = true,
   text: trailText,
   leafWeight,
@@ -187,7 +195,7 @@ export function PathBar({
         }
         session.current += 1;
         dispatch({ type: "cancel" });
-        onNavigate(resolution);
+        runActivation(activationFor(resolution));
       },
       (err: unknown) => {
         if (session.current !== mine) return;
@@ -259,13 +267,12 @@ export function PathBar({
         )}
       >
         <Breadcrumb
-          segments={segments}
+          segments={segments.map((seg) => ({
+            ...seg,
+            activation: activationFor({ kind: "dir", path: seg.path }),
+          }))}
           text={trailText}
           leafWeight={leafWeight}
-          onNavigate={(i) => {
-            const seg = segments[i];
-            if (seg) onNavigate({ kind: "dir", path: seg.path });
-          }}
         />
         <IconButton
           icon={editIcon}

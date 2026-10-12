@@ -7,7 +7,7 @@ Centralized OAuth 2.0 / API key / password sign-in infrastructure for third-part
 The closed list is `AUTH_PROVIDER_KINDS` in `core/internal/lib.ts`; everything that branches on a kind (the descriptor check, the token read, the Accounts row) is exhaustive — a `switch` with a `never` default, or a `Record` over every kind — so a new kind is a type error wherever it is unhandled.
 
 - **`oauth2`** — popup consent flow, refresh loop. `descriptor.oauth`.
-- **`apikey`** — the user pastes a key (usually through a setup pane the provider registers as `configureCredentials`); `descriptor.apiKey.verify` probes it before it is stored.
+- **`apikey`** — the user pastes a key (usually through a setup pane the provider registers as `credentialsPane`); `descriptor.apiKey.verify` probes it before it is stored.
 - **`password`** — the user types a username + password once, in the generic sign-in dialog the Accounts row opens (`web/components/password-sign-in-dialog.tsx`). `POST /api/auth/sign-in/:provider` hands them to `descriptor.password.exchange`, which trades them for the provider's long-lived token and throws the provider's own message on a rejection. Central stores **only the token** (in the same `apiKey` field an API key uses) and drops the password — never persisted, never logged; a stored password would be a strictly worse secret to hold. The web contribution's `passwordSignIn` carries the dialog's wording (username label, sign-up link). Example: `auth/plugins/hooktheory`.
 
 `apikey` and `password` accounts are both *static credentials*: `getAccessToken` / `getTokenFromCentral` return the stored value with `expiresAt: MAX_SAFE_INTEGER` and no scopes. Nothing marks one stale (the refresh loop walks only oauth2), and Disconnect deletes it locally without revoking it upstream — when the provider revokes it, the next call fails and the user signs in again.
@@ -107,7 +107,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `Auth.ScopeRequirement` ← `backup.targets.google-drive`
     - `Auth.ScopeRequirement` ← `integrations.gmail`
     - `accountsPane.Actions` ← `primitives.pane`
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×5
     - `infra/endpoints` ×4
     - `primitives/live-state` ×4
@@ -119,6 +119,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `shell/notifications.toast`

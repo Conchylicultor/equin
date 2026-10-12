@@ -5,6 +5,8 @@ import {
   useControlSize,
   type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import type React from "react";
 
@@ -23,13 +25,27 @@ import type React from "react";
  */
 export interface LinkChipProps extends DensityControlled, Passthrough {
   /**
-   * Click handler. Callers own `e.stopPropagation()` — the primitive does not add it.
+   * What clicking the chip does. A `LinkTarget` gets the browser's link
+   * gestures (⌘/Ctrl- and middle-click open its `href` in a new browser tab);
+   * a plain function runs on click. Isolated: the chip stops `click` /
+   * `auxclick` propagation itself, so a chip inside a clickable row or the
+   * page editor never also activates its container.
    *
-   * Omitted ONLY when the chip is an overlay TRIGGER: the popover/tooltip
+   * Omitted ONLY when the chip is an overlay TRIGGER (the popover/tooltip
    * wrapper clones it with the handler that opens the panel, and a second one
-   * here would fight it. Every chip that navigates somewhere passes one.
+   * here would fight it) or sits inside one (its press must bubble to it).
    */
-  onClick?: (e: React.MouseEvent) => void;
+  activation?: Activation;
+  /**
+   * Never a raw handler: a chip's click is its `activation`, which is what
+   * gives a navigating chip ⌘/middle-click and isolates it from its container.
+   * `never` (rather than omitted) because {@link Passthrough}'s index signature
+   * would otherwise accept one. A chip that does something other than navigate
+   * passes a plain function as `activation`; an overlay trigger's handler is
+   * cloned on by the overlay at runtime, not passed here.
+   */
+  onClick?: never;
+  onAuxClick?: never;
   /** StatusDot or icon, rendered before children. */
   leading?: React.ReactNode;
   /** Monospace label (for ids). Applies font-mono to the children wrapper. */
@@ -60,7 +76,7 @@ const CHIP_CHROME =
   "border border-border text-foreground hover:bg-accent transition-colors";
 
 export function LinkChip({
-  onClick,
+  activation,
   leading,
   mono,
   title,
@@ -93,7 +109,7 @@ export function LinkChip({
     <Badge
       as="button"
       type="button"
-      onClick={onClick}
+      {...activationProps(activation, { isolate: true })}
       title={title}
       icon={leading}
       mono={mono}

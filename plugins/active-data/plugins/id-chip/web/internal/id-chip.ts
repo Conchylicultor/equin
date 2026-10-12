@@ -19,7 +19,7 @@ type ChipComponent = ComponentType<{
  *
  * ```ts
  * contributions: [
- *   ...idChip({ presenter: { kind: taskIdKind, useReferent, useOpen }, surfaces: ["transcript", "document"] }),
+ *   ...idChip({ presenter: { kind: taskIdKind, useReferent, useTarget }, surfaces: ["transcript", "document"] }),
  * ]
  * ```
  *
@@ -36,7 +36,7 @@ type ChipComponent = ComponentType<{
  * "resolved"`), whose server half is `idChipServer`.
  *
  * `component` overrides the generic chip (title + icon, opening via
- * `useOpen`) for a family with richer chrome (a status dot, a count).
+ * `useTarget`) for a family with richer chrome (a status dot, a count).
  */
 export function idChip(spec: {
   presenter: IdPresenter;

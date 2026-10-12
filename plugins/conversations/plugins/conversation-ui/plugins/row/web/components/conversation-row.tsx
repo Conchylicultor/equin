@@ -6,6 +6,8 @@ import {
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { useConversationOpener } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
+import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -28,7 +30,8 @@ export interface ConversationRowChrome {
   actions?: ReactNode;
   /**
    * Called once the row has navigated, so a surface that must get out of the
-   * way (a popover hung off a glyph) can dismiss itself.
+   * way (a popover hung off a glyph) can dismiss itself. Not on a ⌘/middle-
+   * click, which opens a browser tab and leaves this one where it is.
    */
   onOpen?: () => void;
 }
@@ -114,6 +117,7 @@ function ConversationRowShell({
 }) {
   const opener = useConversationOpener();
   const inline = layout === "inline";
+  const target = opener.toggle(convId);
 
   return (
     <Row
@@ -121,10 +125,7 @@ function ConversationRowShell({
       selected={opener.isOpen(convId)}
       title={title}
       actions={actions}
-      onClick={() => {
-        opener.toggle(convId);
-        onOpen?.();
-      }}
+      {...activationProps(onOpen ? afterOpen(target, onOpen) : target)}
     >
       <Fill>{children}</Fill>
       {trailing}

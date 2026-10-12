@@ -1,5 +1,4 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { openPane } from "@plugins/primitives/plugins/pane/web";
 import { Auth } from "@plugins/auth/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { googleAuthConfig } from "../shared";
@@ -15,8 +14,7 @@ export default {
       name: "Google",
       icon: brand("google"),
       helpUrl: "https://console.cloud.google.com/apis/credentials",
-      configureCredentials: () =>
-        openPane(googleSetupPane, {}, { mode: "root" }),
+      credentialsPane: googleSetupPane,
     }),
     ConfigV2.WebRegister({ descriptor: googleAuthConfig }),
   ],

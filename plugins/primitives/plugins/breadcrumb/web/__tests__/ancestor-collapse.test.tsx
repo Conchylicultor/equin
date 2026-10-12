@@ -138,16 +138,17 @@ afterEach(() => {
   HTMLElement.prototype.getBoundingClientRect = realRect;
 });
 
+const noop = () => {};
 const SEGMENTS = [
-  { key: "a", label: "alpha" },
-  { key: "b", label: "beta" },
+  { key: "a", label: "alpha", activation: noop },
+  { key: "b", label: "beta", activation: noop },
   { key: "c", label: "gamma" },
 ];
 
 function renderTrail() {
   return render(
     <PluginProvider plugins={[plugin]}>
-      <Breadcrumb segments={SEGMENTS} onNavigate={() => {}} />
+      <Breadcrumb segments={SEGMENTS} />
     </PluginProvider>,
   );
 }

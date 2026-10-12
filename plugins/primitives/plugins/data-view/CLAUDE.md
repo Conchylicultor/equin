@@ -1337,8 +1337,9 @@ The handler is an `Activation` (`link-gesture/core`): a plain `() => void`, or a
 **link** `{ open, href }`. A row that opens a pane returns one —
 `rowActivation={(r) => openPane.to(detailPane, { id: r.id }, { mode: "push" })}`
 — so its middle- and ⌘/Ctrl-click open `href()` in a new browser tab, exactly
-like a link; plain click and Enter run `open()`. The `pane/no-onclick-open-pane`
-lint rule flags an `onRowActivate` whose only job is `openPane(...)`.
+like a link; plain click and Enter run `open()`. The
+`link-gesture/no-click-navigate` lint rule flags an `onRowActivate` whose only
+job is to navigate, and a `rowActivation` resolver handing back `() => openPane(…)`.
 
 The host folds either into ONE `DataViewRenderProps.rowActivation: (row) =>
 Activation | undefined`, so a view never sees the two. A view never switches on

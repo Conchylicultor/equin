@@ -14,6 +14,10 @@ import {
 } from "@plugins/ui/plugins/theme-engine/web";
 import { QuickTheme } from "../slots";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import {
+  runActivation,
+  type Activation,
+} from "@plugins/primitives/plugins/link-gesture/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -68,9 +72,10 @@ function ComponentVariantSection() {
  * follows the choice already made there.
  */
 export function QuickThemePanel({
-  onOpenEditor,
+  editor,
 }: {
-  onOpenEditor: () => void;
+  /** Where "Open theme editor" goes: the customizer pane in the active app. */
+  editor: Activation;
 }) {
   const activeApp = useActiveApp();
   const scopeId = activeApp ? `app:${activeApp.id}` : undefined;
@@ -115,7 +120,8 @@ export function QuickThemePanel({
       <ControlPanel.Footer>
         <ControlPanel.Row
           icon={<Icon icon={tuneIcon} />}
-          onSelect={onOpenEditor}
+          // A panel row selects; it has no link gestures to spread yet.
+          onSelect={() => runActivation(editor)}
         >
           Open theme editor
         </ControlPanel.Row>

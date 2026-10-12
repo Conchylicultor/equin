@@ -79,8 +79,6 @@ export function RelationChip({
   const isTerminal = other ? isSettled(other.status) : false;
   const openPane = useOpenPane();
 
-  const open = () =>
-    openPane(taskDetailPane, { taskId: otherId }, { mode: "swap" });
   const remove = async (e: React.MouseEvent) => {
     e.stopPropagation();
     await fetchEndpoint(removeTaskDependency, direction.edge(taskId, otherId));
@@ -109,7 +107,11 @@ export function RelationChip({
       >
         <button
           type="button"
-          onClick={open}
+          {...openPane.link(
+            taskDetailPane,
+            { taskId: otherId },
+            { mode: "swap" },
+          )}
           className="max-w-[24ch] truncate text-left"
           title={title}
         >

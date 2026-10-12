@@ -1,5 +1,5 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import type React from "react";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import type { DateMentionFields } from "../../core";
@@ -22,16 +22,18 @@ const notificationsActiveIcon = symbol("notifications-active");
  * brackets on every read surface, because that renderer named its two token
  * types by hand and nobody added the third.
  *
- * `onClick` is required rather than defaulted, because the two callers want
- * genuinely opposite things and neither is the obvious default: the editable
- * chip must let the press BUBBLE to the popover trigger that owns it, and the
- * read-only chip must stop it from reaching whatever it is embedded in.
+ * `activation` is a required key rather than defaulted, because the two
+ * callers want genuinely opposite things and neither is the obvious default:
+ * the editable chip passes `undefined` so the press BUBBLES to the popover
+ * trigger that owns it, and the read-only chip passes a no-op action, which
+ * LinkChip isolates — the press stops at the chip instead of reaching whatever
+ * it is embedded in. A date does not navigate, so it is never a `LinkTarget`.
  */
 export function DateMentionChip({
   iso,
   reminderId,
-  onClick,
-}: DateMentionFields & { onClick: (e: React.MouseEvent) => void }) {
+  activation,
+}: DateMentionFields & { activation: Activation | undefined }) {
   const isReminder = reminderId !== null;
   const icon = isReminder ? notificationsActiveIcon : calendarTodayIcon;
   return (
@@ -41,7 +43,7 @@ export function DateMentionChip({
           <Icon icon={icon} className="size-3.5" />
         </Center>
       }
-      onClick={onClick}
+      activation={activation}
     >
       {/* The label stays ABSOLUTE — a chip sitting in prose has to say which day
           it means; only the `@` menu's options carry relative labels. */}

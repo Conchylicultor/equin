@@ -283,10 +283,9 @@ function CompositionsDataView({
             <LinkChip
               mono
               title={`Open http://${host}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                window.open(`http://${host}`, "_blank", "noopener");
-              }}
+              activation={() =>
+                window.open(`http://${host}`, "_blank", "noopener")
+              }
             >
               {host}
             </LinkChip>

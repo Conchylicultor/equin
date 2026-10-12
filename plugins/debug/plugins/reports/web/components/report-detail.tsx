@@ -19,7 +19,7 @@ import {
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
-import { navigate } from "@plugins/apps-core/plugins/tabs/web";
+import { appLinkProps } from "@plugins/apps-core/plugins/tabs/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { taskDetailRoute } from "@plugins/tasks/plugins/tasks-core/core";
 import { reportDetailPane } from "../panes";
@@ -219,9 +219,7 @@ function Investigate({ report }: { report: Report }) {
       <Stack align="start" gap="none">
         <Button
           variant="outline"
-          onClick={() =>
-            navigate(taskDetailRoute.link(agentManagerApp, { taskId }))
-          }
+          {...appLinkProps(taskDetailRoute.link(agentManagerApp, { taskId }))}
           className="gap-xs"
         >
           <Icon icon={navIcons.expand} className="size-4" />

@@ -28,18 +28,19 @@ export function PluginLinkChip({
 
   return (
     <LinkChip
-      onClick={(e) => {
-        e.stopPropagation();
-        if (convId) {
-          openPane(
-            pluginConvSidePane,
-            { pluginId: resolvedId },
-            { mode: "push" },
-          );
-        } else {
-          openPane(pluginViewPane, { pluginId: resolvedId }, { mode: "push" });
-        }
-      }}
+      activation={
+        convId
+          ? openPane.to(
+              pluginConvSidePane,
+              { pluginId: resolvedId },
+              { mode: "push" },
+            )
+          : openPane.to(
+              pluginViewPane,
+              { pluginId: resolvedId },
+              { mode: "push" },
+            )
+      }
       title={value.description ?? resolvedId}
       leading={<Icon icon={widgetsIcon} className="text-muted-foreground" />}
       mono

@@ -63,8 +63,9 @@ function DateMentionView({
       // The popover owns the press: it must BUBBLE to the trigger below, whose
       // base-ui handler is the only thing that knows about the outside-press
       // that just closed the panel (a stopPropagation + setOpen here would
-      // reopen the panel on the click that dismissed it).
-      onClick={() => {}}
+      // reopen the panel on the click that dismissed it). No activation, so
+      // the chip adds no handler of its own.
+      activation={undefined}
     />
   );
 

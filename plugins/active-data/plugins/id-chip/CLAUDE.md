@@ -5,7 +5,7 @@ family spreads into its barrels:
 
 ```ts
 // web/index.ts
-contributions: [...idChip({ presenter: { kind, icon?, useReferent, useOpen }, surfaces, component? })]
+contributions: [...idChip({ presenter: { kind, icon?, useReferent, useTarget }, surfaces, component? })]
 // server/index.ts
 contributions: [...idChipServer({ kind, surfaces, resolve })]
 ```
@@ -14,7 +14,7 @@ contributions: [...idChipServer({ kind, surfaces, resolve })]
   — chip id = the kind's prefix, pattern = `idChipPattern(kind)`
   (`inlineBoundary(kind.pattern)`), `modelText: "resolved"`. Without `component`
   the chip is the generic one: the referent's title led by the kind's icon,
-  opening via `useOpen`; every not-found arm renders the raw id as written.
+  opening via `useTarget` (a link: ⌘/middle-click opens a browser tab); every not-found arm renders the raw id as written.
 - `idChipServer` contributes the kind's `IdKinds.Referent`, the
   `InlineTokenReferentSource` over the same pattern (tag = the kind's label), and
   — when `surfaces` includes `"document"` — the `Editor.InlineToken` (markdown

@@ -68,7 +68,7 @@ export function AnalyticsDashboard({
   const source = reportSourceFor(query, new Date());
   const answer = useDeploymentAnalytics(deploymentId, query);
 
-  const onRowClick = (dimension: Dimension, value: string) => {
+  const onFilterRow = (dimension: Dimension, value: string) => {
     const click = clickRow(filters, source, dimension, value);
     if (click.kind === "blocked") return;
     setFilters(click.next);
@@ -134,7 +134,7 @@ export function AnalyticsDashboard({
           onMetric={setMetric}
           tabs={tabs}
           onTab={(panel, tab) => setTabs((t) => ({ ...t, [panel]: tab }))}
-          onRowClick={onRowClick}
+          onFilterRow={onFilterRow}
         />
       ) : (
         <ResultState
@@ -157,7 +157,7 @@ function ReportView({
   onMetric,
   tabs,
   onTab,
-  onRowClick,
+  onFilterRow,
 }: {
   report: AnalyticsReport;
   source: ReportSource;
@@ -166,7 +166,7 @@ function ReportView({
   onMetric: (id: KpiId) => void;
   tabs: Record<string, string>;
   onTab: (panelId: string, tabId: string) => void;
-  onRowClick: (dimension: Dimension, value: string) => void;
+  onFilterRow: (dimension: Dimension, value: string) => void;
 }): ReactNode {
   const panel = (id: string) => {
     const def = PANELS.find((p) => p.id === id)!;
@@ -179,7 +179,7 @@ function ReportView({
         report={report}
         source={source}
         filters={filters}
-        onRowClick={onRowClick}
+        onFilterRow={onFilterRow}
       />
     );
   };

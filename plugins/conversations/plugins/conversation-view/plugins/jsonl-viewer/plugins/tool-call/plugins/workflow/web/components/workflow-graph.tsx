@@ -1,5 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import type { Group, TracedGraph, TracedNode } from "../internal/trace-types";
 import { WorkflowNodeCard, type NodeEmphasis } from "./workflow-node-card";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -25,11 +26,12 @@ type Block =
 export function WorkflowGraph({
   graph,
   activeNodeId,
-  onOpenNode,
+  nodeActivation,
 }: {
   graph: TracedGraph;
   activeNodeId?: string;
-  onOpenNode: (nodeId: string) => void;
+  /** What clicking a node card does — its pane's link. */
+  nodeActivation: (nodeId: string) => Activation;
 }) {
   const [hoverId, setHoverId] = useState<string | null>(null);
 
@@ -56,7 +58,7 @@ export function WorkflowGraph({
           key={block.node.id}
           node={block.node}
           emphasis={emphasisFor(block.node.id)}
-          onOpen={onOpenNode}
+          activation={nodeActivation(block.node.id)}
           onHover={setHoverId}
         />
       );

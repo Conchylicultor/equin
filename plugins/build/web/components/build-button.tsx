@@ -13,7 +13,9 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { ElapsedTime } from "@plugins/primitives/plugins/relative-time/web";
-import { navigate } from "@plugins/apps-core/plugins/tabs/web";
+import { appLink } from "@plugins/apps-core/plugins/tabs/web";
+import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
@@ -176,10 +178,11 @@ function BuildButtonInner({
             icon={navIcons.expand}
             label="Open in Debug"
             variant="ghost"
-            onClick={() => {
-              setOpen(false);
-              navigate(buildRoute.link(debugApp, {}));
-            }}
+            {...activationProps(
+              afterOpen(appLink(buildRoute.link(debugApp, {})), () =>
+                setOpen(false),
+              ),
+            )}
           />
         </ControlSizeProvider>
       </Stack>

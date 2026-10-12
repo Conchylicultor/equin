@@ -34,7 +34,7 @@ export function RankedPanel({
   report,
   source,
   filters,
-  onRowClick,
+  onFilterRow,
 }: {
   panel: PanelDef;
   tabId: string;
@@ -42,7 +42,7 @@ export function RankedPanel({
   report: AnalyticsReport;
   source: ReportSource;
   filters: readonly AnalyticsFilter[];
-  onRowClick: (dimension: Dimension, value: string) => void;
+  onFilterRow: (dimension: Dimension, value: string) => void;
 }): ReactNode {
   const tab = panel.tabs.find((t) => t.id === tabId) ?? panel.tabs[0]!;
   return (
@@ -67,7 +67,7 @@ export function RankedPanel({
           report={report}
           source={source}
           filters={filters}
-          onRowClick={onRowClick}
+          onFilterRow={onFilterRow}
         />
         {(tab.note || tab.credit) && (
           <Text as="p" variant="caption" tone="muted">
@@ -105,13 +105,13 @@ function RankedList({
   report,
   source,
   filters,
-  onRowClick,
+  onFilterRow,
 }: {
   tab: PanelTab;
   report: AnalyticsReport;
   source: ReportSource;
   filters: readonly AnalyticsFilter[];
-  onRowClick: (dimension: Dimension, value: string) => void;
+  onFilterRow: (dimension: Dimension, value: string) => void;
 }): ReactNode {
   const rows = report.rows[tab.dimension];
   if (rows.length === 0) {
@@ -150,7 +150,7 @@ function RankedList({
                   ? "Remove this filter"
                   : `Filter by ${label}`
             }
-            onClick={() => onRowClick(tab.dimension, row.value)}
+            onClick={() => onFilterRow(tab.dimension, row.value)}
             className="relative"
           >
             <Placed

@@ -1,3 +1,4 @@
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import {
   linkProps,
   type LinkGestureProps,
@@ -23,5 +24,15 @@ import { navigate } from "./use-tabs";
  * `link-gesture`, which is also what the pane primitive's Expand reads.
  */
 export function appLinkProps(url: string): LinkGestureProps {
-  return linkProps({ open: () => navigate(url), href: () => url });
+  return linkProps(appLink(url));
+}
+
+/**
+ * The in-app link to `url` as DATA ({@link LinkTarget}): a plain click (or
+ * Enter) navigates the focused tab there; an "elsewhere" gesture opens `url` in
+ * a new browser tab. Hand it to anything that takes an `Activation`
+ * (`activationProps`, a row's / chip's `activation` prop).
+ */
+export function appLink(url: string): LinkTarget {
+  return { open: () => navigate(url), href: () => url };
 }

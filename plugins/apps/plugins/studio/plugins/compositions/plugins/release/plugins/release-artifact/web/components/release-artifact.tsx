@@ -106,7 +106,7 @@ export function ReleaseArtifact({ runId }: { runId: string }): ReactElement {
             mono
             leading={<Icon icon={navIcons.newTab} />}
             title="Open preview in a new tab"
-            onClick={() =>
+            activation={() =>
               window.open(preview.url, "_blank", "noopener,noreferrer")
             }
           >

@@ -109,13 +109,12 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
   const { graph, status } = useWorkflowTrace(script, input.args);
 
   const openPane = useOpenPane();
-  const openNode = (nodeId: string) => {
-    openPane(
+  const nodeTarget = (nodeId: string) =>
+    openPane.to(
       workflowNodePane,
       { toolUseId: event.toolUseId, nodeId },
       { mode: "push" },
     );
-  };
 
   const result = event.result;
   const parsedResult =
@@ -162,7 +161,7 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
           )}
 
           {status === "ready" && graph ? (
-            <WorkflowGraph graph={graph} onOpenNode={openNode} />
+            <WorkflowGraph graph={graph} nodeActivation={nodeTarget} />
           ) : (
             phases.length > 0 && <PhaseList phases={phases} />
           )}

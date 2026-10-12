@@ -2,6 +2,7 @@ import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-pa
 import { PAGE_BLOCK_TYPE, type Block } from "@plugins/page/plugins/editor/core";
 import { useEditorScope } from "@plugins/page/plugins/editor/web";
 import { usePageNavigation } from "@plugins/page/plugins/page-reference/web";
+import { runActivation } from "@plugins/primitives/plugins/link-gesture/core";
 import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -37,7 +38,9 @@ export function OpenAsPageItem({
       keepFocus
       icon={<Icon icon={navIcons.sidePane} />}
       onSelect={() => {
-        openBlock(block.id);
+        // A menu pick has no link gesture to read (the row is a menu item, and
+        // keyboard-selectable): it opens in place.
+        runActivation(openBlock(block.id));
         close();
       }}
     >

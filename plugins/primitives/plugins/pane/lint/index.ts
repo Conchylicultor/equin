@@ -2,7 +2,6 @@ import noAdhocPaneTitle from "./no-adhoc-pane-title";
 import noAdhocPaneToolbar from "./no-adhoc-pane-toolbar";
 import noCoreDefineRouteInWeb from "./no-core-define-route-in-web";
 import noHintFabrication from "./no-hint-fabrication";
-import noOnclickOpenPane from "./no-onclick-open-pane";
 import noRawLocationPath from "./no-raw-location-path";
 import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
@@ -33,7 +32,6 @@ export default {
     "no-hint-fabrication": noHintFabrication,
     "no-core-define-route-in-web": noCoreDefineRouteInWeb,
     "no-raw-location-path": noRawLocationPath,
-    "no-onclick-open-pane": noOnclickOpenPane,
   },
   // Class rules are FACTORIES: they read class tokens, so they take the one
   // shared walk from `buildLintConfig` instead of hand-copying it. See
@@ -41,9 +39,5 @@ export default {
   classRules: {
     "no-adhoc-pane-toolbar": noAdhocPaneToolbar,
   },
-  closed: [
-    "no-adhoc-pane-title",
-    "no-hint-fabrication",
-    "no-onclick-open-pane",
-  ],
+  closed: ["no-adhoc-pane-title", "no-hint-fabrication"],
 } satisfies LintContribution;

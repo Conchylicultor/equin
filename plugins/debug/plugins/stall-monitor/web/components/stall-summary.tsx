@@ -2,7 +2,7 @@ import type { Report } from "@plugins/reports/core";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
-import { navigate } from "@plugins/apps-core/plugins/tabs/web";
+import { appLink } from "@plugins/apps-core/plugins/tabs/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { traceDetailRoute } from "@plugins/debug/plugins/trace/plugins/engine/core";
 import { StallPayloadSchema } from "../../core";
@@ -28,10 +28,9 @@ export function StallSummary({ report }: { report: Report }) {
       {d.traceId && (
         <LinkChip
           leading={<Icon icon={boltIcon} className="icon-auto" />}
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(traceDetailRoute.link(debugApp, { id: d.traceId! }));
-          }}
+          activation={appLink(
+            traceDetailRoute.link(debugApp, { id: d.traceId! }),
+          )}
         >
           View trace
         </LinkChip>

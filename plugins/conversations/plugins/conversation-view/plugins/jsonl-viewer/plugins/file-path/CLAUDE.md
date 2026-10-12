@@ -14,6 +14,7 @@
     - `primitives/css/inline.Inline`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.SingleLineProvider`
+    - `primitives/link-gesture.activationProps`
     - `primitives/pane.useOpenPane`
   - Exports (values):
     - `FilePath`

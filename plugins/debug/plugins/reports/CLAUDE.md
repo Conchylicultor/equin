@@ -54,7 +54,7 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `primitives/data-view` ×3
     - `primitives/css/ui-kit` ×2
     - `reports` ×2
-    - `apps-core/tabs.navigate`
+    - `apps-core/tabs.appLinkProps`
     - `apps/debug/shell.DebugApp`
     - `build.useStaleFrontend`
     - `network/live.useLiveRow`

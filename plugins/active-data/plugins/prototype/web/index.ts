@@ -3,7 +3,7 @@ import { idChip } from "@plugins/active-data/plugins/id-chip/web";
 import { protoIdKind } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { PROTOTYPE_CHIP_SURFACES } from "../core";
-import { useOpenPrototype, usePrototypeReferent } from "./internal/presenter";
+import { usePrototypeTarget, usePrototypeReferent } from "./internal/presenter";
 
 export default {
   description:
@@ -14,7 +14,7 @@ export default {
         kind: protoIdKind,
         icon: symbol("dashboard-customize"),
         useReferent: usePrototypeReferent,
-        useOpen: useOpenPrototype,
+        useTarget: usePrototypeTarget,
       },
       surfaces: PROTOTYPE_CHIP_SURFACES,
     }),

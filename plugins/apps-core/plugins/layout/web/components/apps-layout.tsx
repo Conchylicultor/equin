@@ -30,7 +30,7 @@ import {
 import {
   TabsProvider,
   useTabs,
-  navigate,
+  appLinkProps,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { AppTabsBody } from "@plugins/apps-core/plugins/tab-surface/web";
 import { isChromelessDocument } from "@plugins/primitives/plugins/embed/web";
@@ -223,8 +223,9 @@ function AppLoadErrorSurface() {
  * `/tasks/t/<id>` instead of `/agents/tasks/t/<id>`, is only diagnosable if the
  * user can still see it).
  *
- * The way out is the sanctioned `navigate()`, not another raw history write, so
- * leaving is a real navigation that mints its own history entry.
+ * The way out is the sanctioned `navigate()` (through `appLinkProps`, so a
+ * ⌘/middle-click opens it in a new browser tab), not another raw history
+ * write, so leaving is a real navigation that mints its own history entry.
  */
 function NoSuchRouteSurface({
   pathname,
@@ -249,7 +250,7 @@ function NoSuchRouteSurface({
           {pathname}
         </Badge>
         {defaultPath ? (
-          <Button variant="outline" onClick={() => navigate(defaultPath)}>
+          <Button variant="outline" {...appLinkProps(defaultPath)}>
             Go to {defaultName ?? "the home app"}
           </Button>
         ) : null}

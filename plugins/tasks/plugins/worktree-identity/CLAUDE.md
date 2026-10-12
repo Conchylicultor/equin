@@ -43,7 +43,7 @@ outside `apps/…` it loads in the eager tier, so the row is there at first pain
 - Web:
   - Contributes: `HealthReport.Row` "worktree"
   - Uses:
-    - `apps-core/tabs.navigate`
+    - `apps-core/tabs.appLinkProps`
     - `network/live.useLive`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/icon-button.IconButton`

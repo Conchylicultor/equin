@@ -38,6 +38,7 @@ safely detect whether they're inside a conversation (no-op outside):
     - `primitives/inline-text.InlineTextWalkerContext`
     - `primitives/inline-text.InlineTextWalkerSlot`
     - `primitives/inline-text.useInlineTextWalker`
+    - `primitives/link-gesture.activationProps`
     - `primitives/markdown.MarkdownEnhancement`
     - `primitives/markdown.MarkdownEnhancementContext`
     - `primitives/markdown.MarkdownEnhancerSlot`

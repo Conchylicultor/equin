@@ -15,9 +15,9 @@
     - `FileExplorer.Places` "startup-volume"
     - `FileExplorer.Places` "trash"
   - Uses:
+    - `apps/file-explorer/browser.useExplorerFolderTarget`
     - `apps/file-explorer/browser.useExplorerLocation`
     - `apps/file-explorer/browser.useHomeDir`
-    - `apps/file-explorer/browser.useOpenExplorerFolder`
     - `apps/file-explorer/shell.FileExplorer`
     - `apps/file-explorer/shell.PlaceGroup`
     - `apps/file-explorer/shell.PlacesSource`

@@ -47,6 +47,7 @@ comes back when the trail's slack covers the open run's (cached) width plus a
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/dom/element-size.useResizeObserver`
+    - `primitives/link-gesture.activationProps`
     - `primitives/row-actions.RowActions`
     - `primitives/slot-render.renderIsolated`
     - `ui/icons.Icon`

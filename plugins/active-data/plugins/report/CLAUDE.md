@@ -5,7 +5,7 @@ the report's `kind: message`, led by a bug glyph — that opens the report's
 detail pane (Debug → Reports) beside the conversation. The id's shape is the
 report kind's (`reportIdKind`, `reports/core`); this plugin only supplies the
 presenter (`useReportReferent` over the `reports.list` by-id row, and
-`useOpenReport`) and its server referent (`getReportTitle`), through
+`useReportTarget`) and its server referent (`getReportTitle`), through
 `active-data/id-chip`'s `idChip` / `idChipServer`.
 
 Transcript-only: a report is not something a page document links to.

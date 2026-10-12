@@ -2,6 +2,7 @@ import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
+import type { PaneObject } from "@plugins/primitives/plugins/pane/web";
 
 export interface AuthProviderRowProps {
   providerId: string;
@@ -15,8 +16,13 @@ export interface AuthProviderContribution {
   rowComponent?: ComponentType<AuthProviderRowProps>;
   /** Optional setup help text shown when credentials are missing. */
   helpUrl?: string;
-  /** Optional callback to override the "Configure credentials" button action. */
-  configureCredentials?: () => void;
+  /**
+   * The pane the default row's "Configure credentials" / "Add key" button
+   * links to (a param-less setup pane, opened as a fresh route); Settings →
+   * Config when absent. A pane rather than a callback, so the row can hand it
+   * out as a link — ⌘/middle-click opens it in a browser tab.
+   */
+  credentialsPane?: PaneObject;
   /**
    * Wording for the sign-in dialog of a `kind: "password"` provider. Optional —
    * the dialog works without it. Presentational, like `helpUrl`: the exchange

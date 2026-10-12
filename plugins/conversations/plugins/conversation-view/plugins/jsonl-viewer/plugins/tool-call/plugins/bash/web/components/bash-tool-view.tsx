@@ -10,6 +10,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import {
   ShellStateChip,
@@ -92,14 +93,15 @@ function BackgroundBashToolView({
             <IconButton
               icon={terminalIcon}
               label="Open output"
-              onClick={(e) => {
-                e.stopPropagation();
-                openPane(
+              // Isolated: the card header it sits in toggles on click.
+              {...activationProps(
+                openPane.to(
                   shellOutputPane,
                   { shellId: shell.shellId },
                   { mode: "push" },
-                );
-              }}
+                ),
+                { isolate: true },
+              )}
             />
           )
         }

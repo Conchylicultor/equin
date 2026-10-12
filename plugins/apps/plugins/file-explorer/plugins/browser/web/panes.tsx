@@ -4,6 +4,7 @@ import {
   defineRoute,
   useOpenPane,
 } from "@plugins/primitives/plugins/pane/web";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/shell/core";
 import {
   baseName,
@@ -63,6 +64,7 @@ function paramsOf(location: ExplorerLocation): { dir: string; open?: string } {
  * The route navigator: where the explorer is comes from the URL, a folder
  * change opens a new route, and an open-file change rewrites the current one
  * (`setParams`) — or opens one, from the index pane, which has no params.
+ * Every move is a link: its `href` is the location's own `/files/at/…` route.
  */
 function useRouteNavigator(
   location: ExplorerLocation,
@@ -71,15 +73,20 @@ function useRouteNavigator(
   const openPane = useOpenPane();
   const { canBack, canForward } = useRoutedHistory(location);
   return useMemo(() => {
-    const go = (next: ExplorerLocation) =>
-      openPane(filesAtPane, paramsOf(next), { mode: "root" });
+    const go = (next: ExplorerLocation): LinkTarget =>
+      openPane.to(filesAtPane, paramsOf(next), { mode: "root" });
     return {
       location,
-      navigate: (dir, open = null) => go({ dir, open }),
-      openFile: (open) => {
-        const next = { dir: location.dir, open };
-        if (setParams) setParams(paramsOf(next));
-        else go(next);
+      to: (dir, open = null) => go({ dir, open }),
+      fileTo: (open) => {
+        const next = go({ dir: location.dir, open });
+        if (!setParams) return next;
+        // Same place, reached in place: this instance keeps its scroll and
+        // expansion. A new browser tab simply boots the route.
+        return {
+          open: () => setParams(paramsOf({ dir: location.dir, open })),
+          href: () => next.href(),
+        };
       },
       back: () => filesAtPane.back(),
       forward: () => filesAtPane.forward(),
@@ -125,8 +132,11 @@ export function useExplorerLocation(): ExplorerLocation {
   };
 }
 
-/** Open the routed explorer on `dir` (a new history entry). */
-export function useOpenExplorerFolder(): (dir: string) => void {
+/**
+ * The routed explorer on `dir` as a link (a new history entry; ⌘/middle-click
+ * opens it in a new browser tab).
+ */
+export function useExplorerFolderTarget(): (dir: string) => LinkTarget {
   const openPane = useOpenPane();
-  return (dir) => openPane(filesAtPane, { dir }, { mode: "root" });
+  return (dir) => openPane.to(filesAtPane, { dir }, { mode: "root" });
 }

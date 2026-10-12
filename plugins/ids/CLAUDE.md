@@ -81,8 +81,8 @@ a list:
   BOTH runtimes (`ids:kind-both-runtimes`); `useIdKinds()` / `getIdKinds()` read
   them at call time.
 - **`IdKinds.Presenter`** (web): how a kind's ids are shown and opened — `icon?`,
-  `useReferent(id)` → `loading | found{title} | missing | failed`, `useOpen()` →
-  `(id) => void`. Optional per kind, and separate from the kind so `ids` stays
+  `useReferent(id)` → `loading | found{title} | missing | failed`, `useTarget()` →
+  `(id) => LinkTarget` (a link, so a chip honours ⌘/middle-click). Optional per kind, and separate from the kind so `ids` stays
   below the UI.
 - **`IdKinds.Referent`** (server): `resolve(id)` → `{found, title}`. Every
   presented kind has one (`ids:presenter-has-referent`, joined on the prefix).
@@ -125,7 +125,7 @@ is reported by the schema file that exports it, which is where its plugin's
 
 ## Plugin reference
 
-- Description: The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, useOpen); useIdKinds() / useIdPresenters() read them at render time. The id-kind registry, server half: IdKinds.Kind registers a declared kind and IdKinds.Referent resolves a kind's id to its title; getIdKinds() reads them at call time. idColumn / idRef are a kind's drizzle primary-key and foreign-key columns (typed Id<P>; idRef cascades on update).
+- Description: The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, useTarget); useIdKinds() / useIdPresenters() read them at render time. The id-kind registry, server half: IdKinds.Kind registers a declared kind and IdKinds.Referent resolves a kind's id to its title; getIdKinds() reads them at call time. idColumn / idRef are a kind's drizzle primary-key and foreign-key columns (typed Id<P>; idRef cascades on update).
 - Web:
   - Slots:
     - `IdKinds.Kind`

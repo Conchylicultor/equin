@@ -57,13 +57,41 @@ export function linkProps({ open, href }: LinkTarget): LinkGestureProps {
  * nothing at all — so a component that infers "is this a button" from
  * `onClick` (`Row`) still sees a non-activating element as a plain container.
  * Spread it; never wrap the activation in a closure first.
+ *
+ * `isolate` makes `onClick` and `onAuxClick` stop propagation before acting —
+ * the one answer for a control nested inside another clickable thing (a chip
+ * in a clickable row, a chip inside the page editor), whose activation must
+ * not also activate its container. `onMouseDown` is left to propagate: drag
+ * and text selection in the container start there and still need it.
  */
 export function activationProps(
   activation: Activation | undefined,
+  opts?: { isolate?: boolean },
 ): Partial<LinkGestureProps> {
   if (activation === undefined) return {};
-  if (typeof activation === "function") return { onClick: activation };
-  return linkProps(activation);
+  const isolate = opts?.isolate === true;
+  if (typeof activation === "function") {
+    if (!isolate) return { onClick: activation };
+    return {
+      onClick(e) {
+        e.stopPropagation();
+        activation();
+      },
+    };
+  }
+  const props = linkProps(activation);
+  if (!isolate) return props;
+  return {
+    onClick(e) {
+      e.stopPropagation();
+      props.onClick(e);
+    },
+    onAuxClick(e) {
+      e.stopPropagation();
+      props.onAuxClick(e);
+    },
+    onMouseDown: props.onMouseDown,
+  };
 }
 
 /**

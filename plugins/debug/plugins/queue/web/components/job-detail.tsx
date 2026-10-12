@@ -25,6 +25,7 @@ import {
   Note,
   TimeCell,
 } from "./detail-kit";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { RunStrip } from "./run-strip";
 
 const playIcon = symbol("play-arrow");
@@ -41,14 +42,15 @@ export function JobDetail({
   row,
   followed,
   jobRows,
-  onSelect,
+  runTarget,
 }: {
   row: JobListRow;
   /** The opened key was a queue row that has since finished: `row` is the run it became. */
   followed: boolean;
   /** Every Jobs row of the same job name, for the strip. */
   jobRows: readonly JobListRow[];
-  onSelect: (key: string) => void;
+  /** The link a bar of the recent-runs strip opens: that row's detail. */
+  runTarget: (key: string) => LinkTarget;
 }) {
   return (
     <Stack gap="lg">
@@ -57,7 +59,7 @@ export function JobDetail({
       ) : (
         <RunDetail row={row} followed={followed} />
       )}
-      <RunStrip rows={jobRows} current={row.key} onSelect={onSelect} />
+      <RunStrip rows={jobRows} current={row.key} runTarget={runTarget} />
     </Stack>
   );
 }

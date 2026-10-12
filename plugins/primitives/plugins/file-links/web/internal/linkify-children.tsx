@@ -6,6 +6,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import { FileLinkText } from "./file-link-text";
 
 const SKIP_TYPES = new Set(["code", "pre", "a"]);
@@ -23,7 +24,7 @@ const SKIP_TYPES = new Set(["code", "pre", "a"]);
 // then walks. Never throws, so the rendered output is unchanged.
 export function linkifyChildren(
   children: ReactNode,
-  onFileOpen?: (path: string, line?: number) => void,
+  fileTarget?: (path: string, line?: number) => Activation,
 ): ReactNode {
   if (process.env.NODE_ENV !== "production") {
     if (
@@ -36,21 +37,21 @@ export function linkifyChildren(
       );
     }
   }
-  return walkLinkify(children, onFileOpen);
+  return walkLinkify(children, fileTarget);
 }
 
 function walkLinkify(
   children: ReactNode,
-  onFileOpen?: (path: string, line?: number) => void,
+  fileTarget?: (path: string, line?: number) => Activation,
 ): ReactNode {
   if (children == null || typeof children === "boolean") return children;
   if (typeof children === "string") {
-    return <FileLinkText text={children} onFileOpen={onFileOpen} />;
+    return <FileLinkText text={children} fileTarget={fileTarget} />;
   }
   if (typeof children === "number") return children;
   if (Array.isArray(children)) {
     return Children.map(children, (child, i) => (
-      <Fragment key={i}>{walkLinkify(child, onFileOpen)}</Fragment>
+      <Fragment key={i}>{walkLinkify(child, fileTarget)}</Fragment>
     ));
   }
   if (isValidElement(children)) {
@@ -59,13 +60,13 @@ function walkLinkify(
     // active-data linkify) can wrap text in fragments and we still see the
     // strings inside.
     if (el.type === Fragment) {
-      return <Fragment>{walkLinkify(el.props.children, onFileOpen)}</Fragment>;
+      return <Fragment>{walkLinkify(el.props.children, fileTarget)}</Fragment>;
     }
     if (typeof el.type !== "string") return el;
     if (SKIP_TYPES.has(el.type)) return el;
     const inner = el.props.children;
     if (inner === undefined) return el;
-    return cloneElement(el, undefined, walkLinkify(inner, onFileOpen));
+    return cloneElement(el, undefined, walkLinkify(inner, fileTarget));
   }
   return children;
 }

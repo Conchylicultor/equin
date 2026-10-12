@@ -77,6 +77,11 @@ export function PageBreadcrumb({
   const segments: BreadcrumbSegment[] = chain.map((page) => ({
     key: page.id,
     label: <SegmentLabel page={page} />,
+    activation: openPane.to(
+      pageDetailPane,
+      { pageId: page.id },
+      { mode: "swap" },
+    ),
   }));
   if (leaf !== undefined) segments.push(leaf);
 
@@ -90,9 +95,6 @@ export function PageBreadcrumb({
       // The trail is the page's address, set in the body role like the
       // sidebar rows that name the same pages.
       text="body"
-      onNavigate={(_i, seg) =>
-        openPane(pageDetailPane, { pageId: seg.key }, { mode: "swap" })
-      }
     />
   );
 }

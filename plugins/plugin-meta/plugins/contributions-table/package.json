@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-plugin-meta-contributions-table",
-  "description": "Registry for the Studio Contributions aggregated-table surface: the FacetTable + RowClick slots, the defineFacetTable/defineRowClick factories, and the PluginChip.",
+  "description": "Registry for the Studio Contributions aggregated-table surface: the FacetTable + RowActivation slots, the defineFacetTable/defineRowActivation factories, and the PluginChip.",
   "private": true,
   "version": "0.0.1"
 }

@@ -33,6 +33,12 @@ import {
   type PathTarget,
 } from "@plugins/primitives/plugins/path-bar/web";
 import { SurfaceChromeContext } from "@plugins/primitives/plugins/pane/web";
+import {
+  beforeOpen,
+  runActivation,
+  type Activation,
+} from "@plugins/primitives/plugins/link-gesture/core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -93,11 +99,12 @@ export interface FileBrowserProps {
    */
   root?: string;
   /**
-   * Open a file somewhere else (a consumer with its own preview), given its
-   * absolute path. When set, the browser has no preview pane of its own:
-   * selecting or opening a file calls this instead.
+   * Where a file opens instead, given its absolute path (a consumer with its
+   * own preview) — a `LinkTarget` when that is a place, so ⌘/middle-click
+   * opens it in a new browser tab. When set, the browser has no preview pane
+   * of its own: selecting or opening a file activates this instead.
    */
-  onOpenFile?: (path: string) => void;
+  fileTarget?: (path: string) => Activation;
 }
 
 /**
@@ -126,7 +133,7 @@ function FileBrowserReady({
   navigator,
   initialPath = HOME,
   root,
-  onOpenFile,
+  fileTarget,
   home,
 }: FileBrowserProps & { home: string }): ReactNode {
   const local = useLocalNavigator({ dir: initialPath, open: null });
@@ -159,7 +166,7 @@ function FileBrowserReady({
             nav={nav}
             home={home}
             root={root}
-            onOpenFile={onOpenFile}
+            fileTarget={fileTarget}
             lens={lens}
             showHidden={showHidden}
             onToggleHidden={() => setShowHidden(!showHidden)}
@@ -176,7 +183,7 @@ function FileBrowserReady({
   );
 
   // A consumer bringing its own preview gets the listing alone.
-  if (onOpenFile !== undefined) return listing;
+  if (fileTarget !== undefined) return listing;
 
   const preview =
     open === null ? null : (
@@ -187,7 +194,7 @@ function FileBrowserReady({
             path={open}
             home={home}
             git={lens.fileGit(absolutePath(open, home))}
-            onClose={() => nav.openFile(null)}
+            onClose={() => runActivation(nav.fileTo(null))}
             endSafeArea={atTopEdge}
           />
         )}
@@ -233,7 +240,7 @@ function Listing({
   nav,
   home,
   root,
-  onOpenFile,
+  fileTarget,
   lens,
   showHidden,
   onToggleHidden,
@@ -245,7 +252,7 @@ function Listing({
   nav: ExplorerNavigator;
   home: string;
   root: string | undefined;
-  onOpenFile: ((path: string) => void) | undefined;
+  fileTarget: ((path: string) => Activation) | undefined;
   lens: ComposedLens;
   showHidden: boolean;
   onToggleHidden: () => void;
@@ -284,10 +291,6 @@ function Listing({
   const atRoot =
     root !== undefined && absolutePath(dir, home) === absolutePath(root, home);
   const up = atRoot ? null : parentPath(dir, home);
-  const goTo = (target: PathTarget) => {
-    if (target.kind === "dir") nav.navigate(target.path, open);
-    else nav.navigate(parentPath(target.path, home) ?? "/", target.path);
-  };
 
   const shortcuts = useMemo(
     () => [
@@ -296,7 +299,7 @@ function Listing({
         keys: "escape",
         label: "Close the preview",
         when: () => open !== null,
-        handler: () => nav.openFile(null),
+        handler: () => runActivation(nav.fileTo(null)),
       },
       {
         id: "file-explorer.up",
@@ -304,7 +307,7 @@ function Listing({
         label: "Go to the enclosing folder",
         when: () => up !== null,
         handler: () => {
-          if (up !== null) nav.navigate(up, open);
+          if (up !== null) runActivation(nav.to(up, open));
         },
       },
       {
@@ -321,18 +324,27 @@ function Listing({
   );
   useSurfaceShortcuts(shortcuts);
 
-  const openFile = (path: string) => {
-    if (onOpenFile !== undefined) onOpenFile(absolutePath(path, home));
-    else nav.openFile(path);
+  // After the shortcuts' memo: handing `up` to `nav.to` before it would read,
+  // to the React Compiler, as a possible mutation of a memo dependency.
+  const upTarget = up === null ? undefined : nav.to(up, open);
+  const pathTarget = (target: PathTarget): Activation =>
+    target.kind === "dir"
+      ? nav.to(target.path, open)
+      : nav.to(parentPath(target.path, home) ?? "/", target.path);
+
+  const fileAt = (path: string): Activation =>
+    fileTarget !== undefined
+      ? fileTarget(absolutePath(path, home))
+      : nav.fileTo(path);
+  // A click selects; on a file it also opens it beside the listing — a link,
+  // so ⌘/middle-click previews it in a new browser tab instead. A folder's
+  // click descends (the tree's `openOnActivate`), through `onOpen`.
+  const rowActivation = (row: EntryRow): Activation => {
+    const select = () => setSelected(row.path);
+    return row.browsable ? select : beforeOpen(fileAt(row.path), select);
   };
-  const onActivate = (row: EntryRow) => {
-    setSelected(row.path);
-    if (!row.browsable) openFile(row.path);
-  };
-  const onOpen = (row: EntryRow) => {
-    if (row.browsable) nav.navigate(row.path, open);
-    else openFile(row.path);
-  };
+  const onOpen = (row: EntryRow) =>
+    runActivation(row.browsable ? nav.to(row.path, open) : fileAt(row.path));
 
   const rootListing = listings.get(dir);
   const result = rootListing?.result ?? null;
@@ -372,7 +384,7 @@ function Listing({
         onQueryChange={setQuery}
         selectedPath={selected}
         openPath={open}
-        onActivate={onActivate}
+        rowActivation={rowActivation}
         onOpen={onOpen}
         emptyState={<Placeholder>This folder is empty</Placeholder>}
       />
@@ -406,10 +418,8 @@ function Listing({
             icon={upIcon}
             label="Enclosing folder"
             variant="ghost"
-            disabled={up === null}
-            onClick={() => {
-              if (up !== null) nav.navigate(up, open);
-            }}
+            disabled={upTarget === undefined}
+            {...activationProps(upTarget)}
           />
           {/* The mockup sets the first crumb's text 18px past Up and leaves
               only the bar's 4px gap before Filter: the crumbs' own insets
@@ -418,7 +428,7 @@ function Listing({
             <PathBar
               path={dir}
               source={source}
-              onNavigate={goTo}
+              activationFor={pathTarget}
               text="body"
               leafWeight="semibold"
             />

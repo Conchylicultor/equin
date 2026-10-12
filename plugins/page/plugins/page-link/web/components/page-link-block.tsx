@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -263,7 +264,9 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
   return (
     <div className="px-md py-xs">
       <Row
-        onClick={() => nav?.open(pageId)}
+        // A link (⌘/middle-click opens a browser tab); with no declared
+        // navigation, a plain row that opens nothing.
+        {...activationProps(nav?.open(pageId))}
         actions={actions}
         icon={
           <Center as="span" className="size-4 text-muted-foreground">

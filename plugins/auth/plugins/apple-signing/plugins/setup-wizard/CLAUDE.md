@@ -11,7 +11,7 @@
   - Contributes:
     - `Pane.Register` "apple-setup"
     - `Auth.Provider` "Apple Developer"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/setup-steps` ×5
     - `primitives/live-state` ×3
     - `primitives/pane` ×3
@@ -24,6 +24,7 @@
     - `primitives/css/fill.Fill`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/link-gesture.linkProps`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
   - Exports (values): `appleSetupPane`

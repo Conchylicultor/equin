@@ -18,6 +18,7 @@
     - `primitives/css/ui-kit.SURFACE_LEVELS`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/lazy-component.lazyComponent`
+    - `primitives/link-gesture.activationProps`
   - Exports (types):
     - `GraphCanvasEdge`
     - `GraphCanvasEdgeTone`

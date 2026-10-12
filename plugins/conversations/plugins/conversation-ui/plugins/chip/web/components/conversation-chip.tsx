@@ -4,6 +4,7 @@ import {
   type ConversationItemConv,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { useConversationOpener } from "@plugins/conversations/plugins/conversation-view/web";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 
 export type ConversationChipProps = {
@@ -37,7 +38,7 @@ export function ConversationChip({ conv }: ConversationChipProps) {
       variant="ghost"
       active={opener.isOpen(conv.id)}
       title={conversationTitle(conv)}
-      onClick={() => opener.toggle(conv.id)}
+      {...activationProps(opener.toggle(conv.id))}
     >
       <ConversationItem conv={conv} layout="inline" />
     </ToggleChip>

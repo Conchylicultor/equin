@@ -3,8 +3,12 @@
 A Dolphin-style path bar: a breadcrumb that turns into a text field.
 
 ```tsx
-<PathBar path={cwd} source={hostFsPathSource} onNavigate={(t) => t.kind === "dir" ? go(t.path) : open(t.path)} />
+<PathBar path={cwd} source={hostFsPathSource} activationFor={(t) => t.kind === "dir" ? dirTo(t.path) : fileTo(t.path)} />
 ```
+
+`activationFor` maps a resolved place to an `Activation` (`link-gesture/core`):
+each crumb spreads it (a `LinkTarget` gets ⌘/middle-click → new browser tab),
+and a committed typed path runs it with `runActivation`.
 
 ## Generic over a source
 

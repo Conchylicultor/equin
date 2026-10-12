@@ -5,7 +5,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { EVENT_SOURCE_CHIP_SURFACES } from "../core";
 import {
   useEventSourceReferent,
-  useOpenEventSource,
+  useEventSourceTarget,
 } from "./internal/presenter";
 
 export default {
@@ -17,7 +17,7 @@ export default {
         kind: eventSourceIdKind,
         icon: symbol("event"),
         useReferent: useEventSourceReferent,
-        useOpen: useOpenEventSource,
+        useTarget: useEventSourceTarget,
       },
       surfaces: EVENT_SOURCE_CHIP_SURFACES,
     }),

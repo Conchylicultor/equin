@@ -5,7 +5,8 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 
 /**
  * The chip a presenter renders by default: the referent's title, led by the
- * kind's icon, opening it on click (a push beside the surface holding the text).
+ * kind's icon, opening it on click (a push beside the surface holding the
+ * text) — a link, so ⌘/middle-click opens it in a new browser tab.
  *
  * Every arm that is not a found referent — loading, failed, missing — renders
  * the id exactly as written, unstyled: it is spliced into a sentence, so a
@@ -18,18 +19,15 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 export function genericIdChip(
   presenter: IdPresenter,
 ): ComponentType<{ content: string; attrs: Record<string, string> }> {
-  const { useReferent, useOpen, icon } = presenter;
+  const { useReferent, useTarget, icon } = presenter;
   function GenericIdChip({ content }: { content: string }) {
     const id = content.trim();
     const referent = useReferent(id);
-    const open = useOpen();
+    const target = useTarget();
     if (referent.status !== "found") return <>{id}</>;
     return (
       <LinkChip
-        onClick={(e) => {
-          e.stopPropagation();
-          open(id);
-        }}
+        activation={target(id)}
         title={`${referent.title} · ${id}`}
         leading={icon ? <Icon icon={icon} /> : undefined}
       >

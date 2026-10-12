@@ -3,7 +3,7 @@ import { idChip } from "@plugins/active-data/plugins/id-chip/web";
 import { reportIdKind } from "@plugins/reports/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { REPORT_CHIP_SURFACES } from "../core";
-import { useOpenReport, useReportReferent } from "./internal/presenter";
+import { useReportTarget, useReportReferent } from "./internal/presenter";
 
 export default {
   description:
@@ -14,7 +14,7 @@ export default {
         kind: reportIdKind,
         icon: symbol("bug-report"),
         useReferent: useReportReferent,
-        useOpen: useOpenReport,
+        useTarget: useReportTarget,
       },
       surfaces: REPORT_CHIP_SURFACES,
     }),

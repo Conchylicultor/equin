@@ -38,8 +38,8 @@ export function FileTreeSection({ node }: { node: PluginNode }) {
         key={pluginDir}
         initialPath={pluginDir}
         root={pluginDir}
-        onOpenFile={(path) =>
-          openPane(
+        fileTarget={(path) =>
+          openPane.to(
             filePeekPane,
             {
               worktree: SELF_WORKTREE,

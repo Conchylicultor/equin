@@ -19,14 +19,10 @@ export function FilepathBreadcrumb({
   const segments: BreadcrumbSegment[] = pathSegments.map((seg, i) => ({
     key: String(i),
     label: seg,
+    activation: onNavigate
+      ? () => onNavigate(pathSegments.slice(0, i + 1).join("/"))
+      : undefined,
   }));
-
-  const handleNavigate = onNavigate
-    ? (index: number) => {
-        const dirPath = pathSegments.slice(0, index + 1).join("/");
-        onNavigate(dirPath);
-      }
-    : undefined;
 
   const copyAction = showCopy ? (
     <CopyButton
@@ -37,11 +33,5 @@ export function FilepathBreadcrumb({
     />
   ) : undefined;
 
-  return (
-    <Breadcrumb
-      segments={segments}
-      onNavigate={handleNavigate}
-      actions={copyAction}
-    />
-  );
+  return <Breadcrumb segments={segments} actions={copyAction} />;
 }

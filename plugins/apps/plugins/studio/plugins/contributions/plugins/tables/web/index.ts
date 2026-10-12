@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import {
   Contributions,
-  defineRowClick,
+  defineRowActivation,
 } from "@plugins/plugin-meta/plugins/contributions-table/web";
 import type { DbSchemaTableRow } from "@plugins/plugin-meta/plugins/facets/plugins/db-schema/core";
 import { tableDetailPane } from "./panes";
@@ -18,11 +18,11 @@ export default {
     Pane.Register({ pane: tableDetailPane }),
     // The db-schema Tables tab lists rows (meta); clicking one opens this app's
     // live-SQL detail pane. Keyed by facetId so the meta renderer stays pane-blind.
-    Contributions.RowClick(
-      defineRowClick<DbSchemaTableRow>({
+    Contributions.RowActivation(
+      defineRowActivation<DbSchemaTableRow>({
         facetId: "db-schema",
-        onRowClick: (row, { openPane }) =>
-          openPane(
+        rowActivation: (row, { openPane }) =>
+          openPane.to(
             tableDetailPane,
             { tableName: row.name, pluginId: row.pluginId },
             { mode: "push" },

@@ -121,7 +121,7 @@ live-state-churn's accumulator + scheduled job.)
     - `Reports.KindView` → `OpRateSummary`
     - `Reports.KindView` → `OpTimeSummary`
   - Uses:
-    - `apps-core/tabs.navigate`
+    - `apps-core/tabs.appLink`
     - `config_v2.ConfigV2`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`

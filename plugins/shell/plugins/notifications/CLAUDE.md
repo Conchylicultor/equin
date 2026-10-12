@@ -36,12 +36,12 @@
   - Contributes:
     - `IdKinds.Kind` "notif"
     - `ActionBar.Item` → `BellButton`
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/endpoints` ×2
     - `primitives/css/coords` ×2
     - `primitives/cursor-pagination` ×2
     - `primitives/live-state` ×2
-    - `apps-core/tabs.navigate`
+    - `apps-core/tabs.appLink`
     - `ids.IdKinds`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
@@ -55,6 +55,7 @@
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/relative-time.RelativeTime`

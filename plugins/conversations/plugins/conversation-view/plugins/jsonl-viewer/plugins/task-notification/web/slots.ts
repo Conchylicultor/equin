@@ -2,6 +2,7 @@ import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 
 export type TaskNotificationEvent = Extract<
   JsonlEvent,
@@ -13,7 +14,8 @@ export interface TaskNotificationTarget {
   /** The button's label (sentence case), e.g. "View sub-agent". */
   label: string;
   icon: IconRef;
-  open: () => void;
+  /** What the button does — a pane's `LinkTarget`, so ⌘/middle-click opens it in a browser tab. */
+  activation: Activation;
 }
 
 /**

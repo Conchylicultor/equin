@@ -20,10 +20,7 @@ export function ConvChip({
   if (!sideConvId) return null;
   return (
     <LinkChip
-      onClick={(e) => {
-        e.stopPropagation();
-        opener.toggle(sideConvId);
-      }}
+      activation={opener.toggle(sideConvId)}
       title={title ? `${title} · ${sideConvId}` : sideConvId}
       leading={conv ? undefined : <StatusDot {...CONV_STATUS_DOT.gone} />}
       mono={!conv}

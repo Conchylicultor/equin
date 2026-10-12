@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   blockLocations,
@@ -62,26 +63,28 @@ export function useBlockTarget(blockId: string): BlockTarget {
 }
 
 /**
- * Opens a resolved target in the pane that shows it, as a column to the RIGHT
- * of the current surface (`push`) — so the transcript, or the page, the id was
- * found in stays beside it.
+ * The link to a resolved target in the pane that shows it, as a column to the
+ * RIGHT of the current surface (`push`) — so the transcript, or the page, the
+ * id was found in stays beside it. A link, so ⌘/middle-click opens it in a new
+ * browser tab.
  */
-export function useOpenBlockTarget(): (
+export function useBlockTargetLink(): (
   target: Extract<BlockTarget, { kind: "page" | "block" }>,
-) => void {
+) => LinkTarget {
   const openPane = useOpenPane();
   return useCallback(
-    (target) => {
-      if (target.kind === "page") {
-        openPane(pageDetailPane, { pageId: target.pageId }, { mode: "push" });
-      } else {
-        openPane(
-          blockDetailPane,
-          { blockId: target.blockId },
-          { mode: "push" },
-        );
-      }
-    },
+    (target) =>
+      target.kind === "page"
+        ? openPane.to(
+            pageDetailPane,
+            { pageId: target.pageId },
+            { mode: "push" },
+          )
+        : openPane.to(
+            blockDetailPane,
+            { blockId: target.blockId },
+            { mode: "push" },
+          ),
     [openPane],
   );
 }

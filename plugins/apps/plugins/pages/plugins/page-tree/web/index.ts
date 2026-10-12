@@ -27,7 +27,7 @@ export {
   useBlockTarget,
   useBlockTargetTitle,
   useBlockTypeLabel,
-  useOpenBlockTarget,
+  useBlockTargetLink,
   type BlockTarget,
 } from "./internal/block-target";
 export {

@@ -5,7 +5,7 @@ chip — the song's title, led by a note glyph — that opens the song in Sonata
 player (`navigate(sonataSongLink(id))`: the player is another app's
 full-surface pane). The id's shape is the song kind's (`songIdKind`,
 `sonata/library/core`); this plugin only supplies the presenter
-(`useSongReferent` over the `sonata.songs` by-id row, and `useOpenSong`) and the
+(`useSongReferent` over the `sonata.songs` by-id row, and `useSongTarget`) and the
 server referent (a `sonata_songs` lookup), through `active-data/id-chip`'s
 `idChip` / `idChipServer`. Bundled starters (`seed-…`) are not ids of the kind's
 shape and stay plain text.
@@ -22,7 +22,7 @@ shape and stay plain text.
   - Uses:
     - `active-data/id-chip.idChip`
     - `active-data/id-chip.rowReferent`
-    - `apps-core/tabs.navigate`
+    - `apps-core/tabs.appLink`
     - `network/live.useLiveRow`
 - Server:
   - Contributes:

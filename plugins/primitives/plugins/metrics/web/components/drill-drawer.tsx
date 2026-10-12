@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { navigate } from "@plugins/apps-core/plugins/tabs/web";
+import { appLink } from "@plugins/apps-core/plugins/tabs/web";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -309,9 +310,9 @@ function DrillRow({
 }): ReactNode {
   return (
     <Row
-      onClick={
-        item.link === undefined ? undefined : () => navigate(item.link!.href)
-      }
+      {...activationProps(
+        item.link === undefined ? undefined : appLink(item.link.href),
+      )}
     >
       <Fill>
         <Stack gap="none">

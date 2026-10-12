@@ -16,17 +16,30 @@ import { TrailSeparator } from "./trail-separator";
 import { useAncestorCollapse } from "./use-ancestor-collapse";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 
 const moreHorizIcon = symbol("more-horiz");
 
 export interface BreadcrumbSegment {
   key: string;
   label: ReactNode;
+  /**
+   * What activating this crumb does — omit it and the crumb is plain text (the
+   * leaf ignores it: it is where you already are).
+   *
+   * An {@link Activation}, not an `onNavigate` callback on the trail, so a
+   * crumb that goes to a PLACE can say where: hand it a `LinkTarget`
+   * (`openPane.to(…)`) and ⌘/Ctrl- and middle-click open that place in a new
+   * browser tab, from the crumb and from the folded menu alike. A plain
+   * function is for a trail that moves local state no URL names (a folder
+   * picker's browse path).
+   */
+  activation?: Activation;
 }
 
 export interface BreadcrumbProps {
   segments: BreadcrumbSegment[];
-  onNavigate?: (index: number, segment: BreadcrumbSegment) => void;
   actions?: ReactNode;
   /**
    * The weight the current page's name is set in. `medium` (the default) lets
@@ -79,26 +92,26 @@ const LEAF_TONE: Record<NonNullable<BreadcrumbProps["leafTone"]>, string> = {
  * rather than an underline — at the size chrome text runs at, an underline on a
  * muted label reads as a defect rather than as a link.
  *
- * A trail with no `onNavigate` is a path, not a set of links, so it renders
- * plain text: a button that goes nowhere is worse than no button.
+ * A crumb with no `activation` is a path, not a link, so it renders plain
+ * text: a button that goes nowhere is worse than no button.
  */
 function Crumb({
   label,
-  onSelect,
+  activation,
   textClass,
 }: {
   label: ReactNode;
-  onSelect?: () => void;
+  activation?: Activation;
   textClass: string;
 }) {
-  if (!onSelect) {
+  if (!activation) {
     return <span className="font-normal text-muted-foreground">{label}</span>;
   }
   return (
     <Button
       variant="ghost"
       aspect="inline"
-      onClick={onSelect}
+      {...activationProps(activation)}
       className={cn(
         "px-2xs font-normal text-muted-foreground hover:text-strong-foreground",
         textClass,
@@ -115,13 +128,7 @@ function Crumb({
  * Folding is what a breadcrumb does INSTEAD of taking letters off the page's
  * name — the ancestors are one click from being read in full, the name is not.
  */
-function FoldedCrumbs({
-  segments,
-  onNavigate,
-}: {
-  segments: BreadcrumbSegment[];
-  onNavigate?: (index: number, segment: BreadcrumbSegment) => void;
-}) {
+function FoldedCrumbs({ segments }: { segments: BreadcrumbSegment[] }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -137,15 +144,11 @@ function FoldedCrumbs({
         }
       />
       <DropdownMenuContent align="start">
-        {segments.map((seg, i) => (
+        {segments.map((seg) => (
           <DropdownMenuItem
             key={seg.key}
-            // `i` is the segment's index in the WHOLE trail — the folded run is
-            // its leading slice, so the two coincide. Consumers derive their
-            // target from that index (a file path's directory prefix), so it
-            // must never become an index into some folded subset.
-            disabled={onNavigate === undefined}
-            onClick={() => onNavigate?.(i, seg)}
+            disabled={seg.activation === undefined}
+            {...activationProps(seg.activation)}
           >
             {seg.label}
           </DropdownMenuItem>
@@ -179,7 +182,6 @@ function FoldedCrumbs({
  */
 export function Breadcrumb({
   segments,
-  onNavigate,
   actions,
   leafWeight = "medium",
   leafTone = "inherit",
@@ -231,15 +233,15 @@ export function Breadcrumb({
         >
           {folded ? (
             <>
-              <FoldedCrumbs segments={prefix} onNavigate={onNavigate} />
+              <FoldedCrumbs segments={prefix} />
               <TrailSeparator />
             </>
           ) : (
-            prefix.map((seg, i) => (
+            prefix.map((seg) => (
               <Fragment key={seg.key}>
                 <Crumb
                   label={seg.label}
-                  onSelect={onNavigate ? () => onNavigate(i, seg) : undefined}
+                  activation={seg.activation}
                   textClass={textClass}
                 />
                 <TrailSeparator />

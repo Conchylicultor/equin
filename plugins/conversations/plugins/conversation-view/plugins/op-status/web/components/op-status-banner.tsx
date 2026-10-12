@@ -24,6 +24,7 @@ import type {
 } from "@plugins/primitives/plugins/data-view/core";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useConversationTitleBySlug } from "@plugins/conversations/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -192,10 +193,10 @@ export function OpenConversationAction({
     <IconButton
       icon={navIcons.sidePane}
       label="Open conversation"
-      onClick={(e) => {
-        e.stopPropagation();
-        openPane(conversationPane, { convId }, { mode: "push" });
-      }}
+      {...activationProps(
+        openPane.to(conversationPane, { convId }, { mode: "push" }),
+        { isolate: true },
+      )}
     />
   );
 }

@@ -3,7 +3,7 @@ import { idChip } from "@plugins/active-data/plugins/id-chip/web";
 import { songIdKind } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { SONG_CHIP_SURFACES } from "../core";
-import { useOpenSong, useSongReferent } from "./internal/presenter";
+import { useSongTarget, useSongReferent } from "./internal/presenter";
 
 export default {
   description:
@@ -14,7 +14,7 @@ export default {
         kind: songIdKind,
         icon: symbol("music-note"),
         useReferent: useSongReferent,
-        useOpen: useOpenSong,
+        useTarget: useSongTarget,
       },
       surfaces: SONG_CHIP_SURFACES,
     }),

@@ -16,6 +16,7 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSize`
     - `primitives/css/ui-kit.useControlSize`
+    - `primitives/link-gesture.activationProps`
     - `primitives/row-actions.RowActions`
     - `primitives/row-actions.rowActionsAnchor`
   - Exports (types): `CommitRow`

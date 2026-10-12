@@ -2,10 +2,11 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   useMemo,
   useState,
-  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactElement,
 } from "react";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
@@ -90,16 +91,24 @@ export interface OpGanttProps {
   totalMs: number;
   title?: string;
   highlightWorktree?: string;
-  onWorktreeClick?: (worktree: string, conversationId: string | null) => void;
   /**
-   * Handle a click on an op bar. Always fired (so the click never silently falls
-   * through to the row's onWorktreeClick); the consumer dispatches on
-   * `op.kind` — and, for a build, decides what to do when `op.buildId` is null
-   * (legacy log entries predating the field have no profile to open).
-   * `worktree` is the row's canonical worktree id, which the build-profile pane
-   * needs and the op itself does not carry.
+   * What activating a worktree row does, given the conversation it ran under
+   * when every op on the row shares one (else `null`). A `LinkTarget` makes
+   * the row a link: ⌘/middle-click opens it in a new browser tab.
    */
-  onOpClick?: (op: OpEntry, worktree: string) => void;
+  worktreeActivation?: (
+    worktree: string,
+    conversationId: string | null,
+  ) => Activation;
+  /**
+   * What activating an op bar does. Its click never falls through to the row's
+   * `worktreeActivation`; the consumer dispatches on `op.kind` — and, for a
+   * build, decides what to do when `op.buildId` is null (legacy log entries
+   * predating the field have no profile to open). `worktree` is the row's
+   * canonical worktree id, which the build-profile pane needs and the op itself
+   * does not carry.
+   */
+  opActivation?: (op: OpEntry, worktree: string) => Activation;
 }
 
 // ── The render model ────────────────────────────────────────────────────────
@@ -270,8 +279,8 @@ export function OpGantt({
   totalMs,
   title = "Ops",
   highlightWorktree,
-  onWorktreeClick,
-  onOpClick,
+  worktreeActivation,
+  opActivation,
 }: OpGanttProps): ReactElement {
   const [hovered, setHovered] = useState<Span | null>(null);
 
@@ -286,8 +295,8 @@ export function OpGantt({
               hovered={hovered}
               setHovered={setHovered}
               highlighted={group.worktree === highlightWorktree}
-              onWorktreeClick={onWorktreeClick}
-              onOpClick={onOpClick}
+              worktreeActivation={worktreeActivation}
+              opActivation={opActivation}
             />
           ))}
         </div>
@@ -373,15 +382,18 @@ function OpRow({
   hovered,
   setHovered,
   highlighted,
-  onWorktreeClick,
-  onOpClick,
+  worktreeActivation,
+  opActivation,
 }: {
   group: WorktreeGroup;
   hovered: Span | null;
   setHovered: (span: Span | null) => void;
   highlighted: boolean;
-  onWorktreeClick?: (worktree: string, conversationId: string | null) => void;
-  onOpClick?: (op: OpEntry, worktree: string) => void;
+  worktreeActivation?: (
+    worktree: string,
+    conversationId: string | null,
+  ) => Activation;
+  opActivation?: (op: OpEntry, worktree: string) => Activation;
 }): ReactElement {
   const lastOp = group.ops[group.ops.length - 1];
   const dotColor = lastOp ? STATUS_DOT[opStatus(lastOp)] : TYPE_FILL.build;
@@ -393,8 +405,8 @@ function OpRow({
   // label shows the bare id either way.
   const worktreeLabel = stripAttemptBranchPrefix(group.worktree);
 
-  const handleClick = useMemo(() => {
-    if (!onWorktreeClick) return undefined;
+  const activation = useMemo(() => {
+    if (!worktreeActivation) return undefined;
     const uniqueConvIds = [
       ...new Set(
         group.ops
@@ -403,8 +415,8 @@ function OpRow({
       ),
     ];
     const singleConvId = uniqueConvIds.length === 1 ? uniqueConvIds[0]! : null;
-    return () => onWorktreeClick(group.worktree, singleConvId);
-  }, [group, onWorktreeClick]);
+    return worktreeActivation(group.worktree, singleConvId);
+  }, [group, worktreeActivation]);
 
   return (
     <Stack
@@ -413,10 +425,10 @@ function OpRow({
       gap="sm"
       className={cn(
         "px-lg py-xs hover:bg-muted/50",
-        handleClick && "cursor-pointer",
+        activation && "cursor-pointer",
         highlighted && "ring-1 ring-inset ring-primary/40 bg-primary/5",
       )}
-      onClick={handleClick}
+      {...activationProps(activation)}
     >
       <div
         // eslint-disable-next-line layout/no-adhoc-layout -- fixed 160px (w-40) worktree-label column kept rigid (shrink-0) to align with the Gantt time axis (LABEL_WIDTH)
@@ -444,7 +456,7 @@ function OpRow({
             worktree={group.worktree}
             hovered={hovered}
             setHovered={setHovered}
-            onOpClick={onOpClick}
+            opActivation={opActivation}
           />
         ))}
       </div>
@@ -462,18 +474,19 @@ function OpBar({
   worktree,
   hovered,
   setHovered,
-  onOpClick,
+  opActivation,
 }: {
   op: OpEntry;
   worktree: string;
   hovered: Span | null;
   setHovered: (span: Span | null) => void;
-  onOpClick?: (op: OpEntry, worktree: string) => void;
+  opActivation?: (op: OpEntry, worktree: string) => Activation;
 }): ReactElement {
   const { toLeftFraction, toWidthFraction, totalMs } =
     useGanttContainerContext();
   const status = opStatus(op);
-  const clickable = onOpClick !== undefined;
+  const activation = opActivation?.(op, worktree);
+  const clickable = activation !== undefined;
 
   // The lane explains WHY an op waited (interactive draws from a reserved
   // floor; background does not), so it rides the hover label rather than taking
@@ -484,15 +497,13 @@ function OpBar({
   // Shared handlers: the whole op — base bar and every wait segment — is one
   // click target. stopPropagation on pointerdown keeps GanttContainer's
   // drag-zoom from setPointerCapture'ing and retargeting the click off the bar;
-  // stopPropagation on click keeps it from falling through to the row's
-  // onWorktreeClick (a surprising silent redirect into the conversation).
+  // `isolate` keeps the click (and a middle-click) from falling through to
+  // the row's worktreeActivation (a surprising silent redirect into the
+  // conversation).
   const interactions = clickable
     ? {
         onPointerDown: (e: ReactPointerEvent) => e.stopPropagation(),
-        onClick: (e: ReactMouseEvent) => {
-          e.stopPropagation();
-          onOpClick(op, worktree);
-        },
+        ...activationProps(activation, { isolate: true }),
       }
     : {};
 

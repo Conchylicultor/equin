@@ -1,6 +1,6 @@
 import {
   defineFacetTable,
-  defineRowClick,
+  defineRowActivation,
   type FacetTableEntry,
   PluginChip,
 } from "@plugins/plugin-meta/plugins/contributions-table/web";
@@ -108,9 +108,9 @@ export const structureFacetTable = defineFacetTable<StructureRow>({
 
 // Clicking a row opens that plugin's detail pane, where the migrated Structure
 // section shows the same anomalies in context. `pluginViewPane` is a meta pane
-// (plugin-view/web), so this row-click stays co-located with the renderer.
-export const structureRowClick = defineRowClick<StructureRow>({
+// (plugin-view/web), so this row activation stays co-located with the renderer.
+export const structureRowActivation = defineRowActivation<StructureRow>({
   facetId: "structure",
-  onRowClick: (r, { openPane }) =>
-    openPane(pluginViewPane, { pluginId: r.plugin.id }, { mode: "push" }),
+  rowActivation: (r, { openPane }) =>
+    openPane.to(pluginViewPane, { pluginId: r.plugin.id }, { mode: "push" }),
 });

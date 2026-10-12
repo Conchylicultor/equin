@@ -43,10 +43,10 @@ export function ImgEnhancer({ children }: { children: ReactNode }) {
   // from git; any other absolute or `~` path reads from the host.
   const worktreePath = conversation?.worktreePath;
 
-  const onFileOpen = useMemo(() => {
+  const fileTarget = useMemo(() => {
     if (!worktree) return undefined;
     return (path: string) =>
-      openPane(filePeekPane, { worktree, filePath: path }, { mode: "push" });
+      openPane.to(filePeekPane, { worktree, filePath: path }, { mode: "push" });
   }, [worktree, openPane]);
 
   const enhancement = useMemo((): MarkdownEnhancement | null => {
@@ -78,15 +78,9 @@ export function ImgEnhancer({ children }: { children: ReactNode }) {
               />
             );
           }
-          if (onFileOpen) {
+          if (fileTarget) {
             return (
-              <LinkChip
-                mono
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onFileOpen(src);
-                }}
-              >
+              <LinkChip mono activation={fileTarget(src)}>
                 {alt || src}
               </LinkChip>
             );
@@ -95,7 +89,7 @@ export function ImgEnhancer({ children }: { children: ReactNode }) {
         },
       },
     };
-  }, [worktree, worktreePath, onFileOpen]);
+  }, [worktree, worktreePath, fileTarget]);
 
   const value = useMarkdownEnhancement(enhancement);
   return (

@@ -214,10 +214,7 @@ function RemoteDeploy({
                 key={url}
                 mono
                 title={`Open ${url}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.open(url, "_blank", "noopener");
-                }}
+                activation={() => window.open(url, "_blank", "noopener")}
               >
                 {url}
               </LinkChip>

@@ -1,7 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { useOpenConfig } from "./internal/use-open-config";
-export { ConfigGearButton, type ConfigGearButtonProps } from "./components/config-gear-button";
+export { useConfigLink } from "./internal/use-config-link";
+export {
+  ConfigGearButton,
+  type ConfigGearButtonProps,
+} from "./components/config-gear-button";
 export {
   ConfigPopoverHeader,
   type ConfigPopoverHeaderProps,
@@ -21,6 +24,6 @@ export {
 
 export default {
   description:
-    "Deep-link affordances from any config-backed surface to its settings section. useOpenConfig() navigates to a descriptor's config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear; ConfigSelectContent / ConfigMenuContent bake the gear into Select / DropdownMenu picker chrome.",
+    "Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear; ConfigSelectContent / ConfigMenuContent bake the gear into Select / DropdownMenu picker chrome.",
   contributions: [],
 } satisfies PluginDefinition;

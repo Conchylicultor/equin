@@ -28,21 +28,20 @@ export function SkillToolView({ event }: ToolRendererProps) {
 
   // Project skills live at `.claude/skills/<name>/SKILL.md` (git-tracked, so the
   // file-peek pane's fuzzy resolver finds them). Clicking the chip opens the
-  // markdown file view in a side pane.
+  // markdown file view in a side pane. Inert until the conversation (and so
+  // its worktree) is known.
   const skillFilePath = `.claude/skills/${skillName}/SKILL.md`;
-  const openSkillFile = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!conversation) return;
-    openPane(
-      filePeekPane,
-      { worktree: conversation.attemptId, filePath: skillFilePath },
-      { mode: "push" },
-    );
-  };
+  const skillFile = conversation
+    ? openPane.to(
+        filePeekPane,
+        { worktree: conversation.attemptId, filePath: skillFilePath },
+        { mode: "push" },
+      )
+    : undefined;
 
   const skillChip = (
     <LinkChip
-      onClick={openSkillFile}
+      activation={skillFile}
       mono
       leading={<Icon icon={descriptionIcon} />}
       title={`Open ${skillFilePath}`}

@@ -21,6 +21,7 @@ import {
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import {
   archiveReasonMessage,
   ENTRY_CATEGORY_OPTIONS,
@@ -295,7 +296,8 @@ export interface FileTreeProps {
   onQueryChange: (q: string) => void;
   selectedPath: string | null;
   openPath: string | null;
-  onActivate: (row: EntryRow) => void;
+  /** A row's click (and arrow-key) activation — a link where it opens a place. */
+  rowActivation: (row: EntryRow) => Activation;
   onOpen: (row: EntryRow) => void;
   /** What an empty folder shows. */
   emptyState: ReactNode;
@@ -317,7 +319,7 @@ export function FileTree({
   onQueryChange,
   selectedPath,
   openPath,
-  onActivate,
+  rowActivation,
   onOpen,
   emptyState,
 }: FileTreeProps): ReactNode {
@@ -435,7 +437,7 @@ export function FileTree({
       search={{ query, onQueryChange }}
       searchAccessor={(r) => r.name}
       selectedRowId={selectedPath ?? undefined}
-      onRowActivate={onActivate}
+      rowActivation={rowActivation}
       onRowOpen={onOpen}
       viewOptions={{ tree: treeOptions }}
       emptyState={emptyState}

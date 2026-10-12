@@ -7,6 +7,7 @@ import {
   useJsonlConversationId,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import {
   TaskNotification,
@@ -104,10 +105,7 @@ function ClaimStep({
         <IconButton
           icon={target.icon}
           label={target.label}
-          onClick={(e) => {
-            e.stopPropagation();
-            target.open();
-          }}
+          {...activationProps(target.activation, { isolate: true })}
         />
       );
     }
