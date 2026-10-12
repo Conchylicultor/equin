@@ -5829,38 +5829,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `apps/sonata/audio/engine`
                   - `apps/sonata/primitives/jog-wheel`
-        - **`progress`** — Song-navigation progress bar for Sonata: scrubber + contributed timeline markers.
+        - **`progress`** — Song-navigation progress bar for Sonata: a thin scrubber rail with contributed chapters, labels, hover descriptions and timeline markers (bars, sections, keys, loop).
           - Plugins:
-            - **`bars`** — Sonata progress marker: bar/measure tick marks along the progression bar, derived from the score's time signatures via bars().
+            - **`bars`** — Sonata progress marker: bar notches cut into the progression rail at every bar line (every 4th bar stronger), derived from the score's time signatures via bars(), plus the hover preview's `Bar n` readout.
               - Web:
-                - Contributes: `SonataProgress.Marker` "bars" → `BarTicks`
+                - Contributes:
+                  - `SonataProgress.Marker` "bars" → `BarTicks`
+                  - `SonataProgress.Describe` "bars"
                 - Uses:
                   - `apps/sonata/progress/scrubber.RAIL_BAND_Y`
                   - `apps/sonata/progress/scrubber.SonataProgress`
                   - `primitives/css/coords.pct`
                   - `primitives/css/coords.Placed`
                   - `primitives/css/layer.Layer`
-            - **`chords`** — Sonata progress marker: the chord lane — one chip per chord above the progression bar, sized by its duration and labelled in the shared chord-label mode, the chord under the playhead highlighted.
+            - **`keys`** — Sonata progress keys: a thin key-coloured line on the progression rail at each key change, the key names in the label lane under it (starting key muted), and the hover preview's key line (key in force, or 'Key change → …' snapped onto a change). Keys come from the starting key + 'key' annotations.
               - Web:
-                - Contributes: `SonataProgress.Marker` "chords" → `ChordLane`
+                - Contributes:
+                  - `SonataProgress.Marker` "keys" → `KeyFlags`
+                  - `SonataProgress.Label` "keys"
+                  - `SonataProgress.Describe` "keys"
                 - Uses:
-                  - `apps/sonata/progress/scrubber.LANE_ABOVE_Y`
-                  - `apps/sonata/progress/scrubber.LANE_HEIGHT`
-                  - `apps/sonata/progress/scrubber.SonataProgress`
-                  - `apps/sonata/rich/chord-label.useChordDisplayMode`
-                  - `apps/sonata/session.useCursorSelector`
-                  - `primitives/css/clip.Clip`
-                  - `primitives/css/coords.pct`
-                  - `primitives/css/coords.Placed`
-                  - `primitives/css/layer.Layer`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.Text`
-                  - `primitives/css/ui-kit.ControlSizeProvider`
-            - **`keys`** — Sonata progress marker: key-signature change markers along the progression bar — a strong vertical bar at each key change captioned by a small neutral key chip (starting key + 'key' annotation changes).
-              - Web:
-                - Contributes: `SonataProgress.Marker` "keys" → `KeyFlags`
-                - Uses:
-                  - `apps/sonata/progress/scrubber.RAIL_BAND_Y`
+                  - `apps/sonata/progress/scrubber.railBand`
                   - `apps/sonata/progress/scrubber.SonataProgress`
                   - `primitives/css/coords.pct`
                   - `primitives/css/coords.Placed`
@@ -5890,53 +5879,76 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/latest-ref.useEventCallback`
                   - `primitives/shortcuts.useSurfaceShortcuts`
                   - `ui/icons.Icon`
-            - **`scrubber`** — Sonata Transport: a draggable progression bar for song navigation. Click/drag to seek; hosts the open SonataProgress.Marker slot for timeline markers (bars, sections, keys, …).
+            - **`scrubber`** — Sonata Transport: a draggable progression bar for song navigation. Click/drag to seek; hosts the open SonataProgress slots — Marker (rail overlays), Chapters (rail segments), Label (the label lane under the rail) and Describe (hover-preview lines).
               - Web:
-                - Slots: `SonataProgress.Marker`
+                - Slots:
+                  - `SonataProgress.Marker`
+                  - `SonataProgress.Chapters`
+                  - `SonataProgress.Label`
+                  - `SonataProgress.Describe`
                 - Slot contributors:
                   - `SonataProgress.Marker` ← `apps.sonata.progress.bars`
-                  - `SonataProgress.Marker` ← `apps.sonata.progress.chords`
                   - `SonataProgress.Marker` ← `apps.sonata.progress.keys`
                   - `SonataProgress.Marker` ← `apps.sonata.progress.loop`
-                  - `SonataProgress.Marker` ← `apps.sonata.progress.sections`
+                  - `SonataProgress.Chapters` ← `apps.sonata.progress.sections`
+                  - `SonataProgress.Label` ← `apps.sonata.progress.keys`
+                  - `SonataProgress.Label` ← `apps.sonata.progress.sections`
+                  - `SonataProgress.Describe` ← `apps.sonata.progress.bars`
+                  - `SonataProgress.Describe` ← `apps.sonata.progress.keys`
+                  - `SonataProgress.Describe` ← `apps.sonata.progress.sections`
                 - Contributes: `SonataPlayer.Transport` "progress-bar" → `ProgressBar`
                 - Uses:
                   - `apps/sonata/player.SonataPlayer`
                   - `apps/sonata/session.useCursorApi`
                   - `apps/sonata/session.useSession`
                   - `primitives/css/clip.Clip`
+                  - `primitives/css/coords.pct`
                   - `primitives/css/coords.Placed`
+                  - `primitives/css/coords.placedClasses`
+                  - `primitives/css/coords.placedStyle`
                   - `primitives/css/fill.fillClasses`
                   - `primitives/css/layer.Layer`
+                  - `primitives/css/line.Line`
+                  - `primitives/css/rigid.rigidClass`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.cn`
+                  - `primitives/hover-reveal.hoverRevealGroup`
+                  - `primitives/overlay/floating-surface.FloatingSurface`
                   - `primitives/slot-render.renderIsolated`
+                - Exports (types):
+                  - `BeatSpan`
+                  - `ProgressLabel`
                 - Exports (values):
-                  - `LANE_ABOVE_Y`
-                  - `LANE_HEIGHT`
+                  - `LABEL_LANE_HEIGHT`
                   - `RAIL_BAND_Y`
                   - `RAIL_HEIGHT`
+                  - `railBand`
                   - `SonataProgress`
+                  - `ZONE_HEIGHT`
               - Cross-plugin:
                 - Imported by:
                   - `apps/sonata/progress/bars`
-                  - `apps/sonata/progress/chords`
                   - `apps/sonata/progress/keys`
                   - `apps/sonata/progress/loop`
                   - `apps/sonata/progress/sections`
-            - **`sections`** — Sonata progress marker: labeled section-region bands along the progression bar, drawn from 'section' annotations.
+            - **`sections`** — Sonata progress sections: the song's 'section' annotations as the progression bar's chapters (rail segments), as labels in its label lane (coloured dot + name, current one strong, click to seek, hover to loop the section) and as the '● name' line of its hover preview.
               - Web:
-                - Contributes: `SonataProgress.Marker` "sections" → `SectionBands`
+                - Contributes:
+                  - `SonataProgress.Chapters` "sections"
+                  - `SonataProgress.Label` "sections"
+                  - `SonataProgress.Describe` "sections"
                 - Uses:
                   - `apps/sonata/progress/scrubber.SonataProgress`
+                  - `apps/sonata/session.useCursorSelector`
                   - `apps/sonata/session.useSession`
-                  - `primitives/css/coords.pct`
-                  - `primitives/css/coords.Placed`
+                  - `primitives/css/inline.Inline`
+                  - `primitives/css/status-dot.StatusDot`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
                   - `primitives/css/ui-kit.ControlSizeProvider`
                   - `primitives/css/ui-kit.SingleLineProvider`
-                  - `primitives/hover-reveal.hoverRevealGroup`
+                  - `primitives/css/yield.yieldClass`
                   - `primitives/hover-reveal.hoverRevealTarget`
                   - `primitives/icon-button.IconButton`
         - **`recording`** — Sonata recording: the session's recording player — the YouTube video whoever shows a song's recording declares (useShowRecording), owned by the playback session so it outlives what shows it: RecordingVideo is only a viewport the playing iframe is moved into (Element.moveBefore, never reloaded) and out of, to an off-screen parking spot, so collapsing its section or switching the display neither stops nor reloads it. When the open score is timed on that video (Score.meta.recording) it is the session's transport driver while ready — the cursor, the synth and the A–B loop follow the video, its rate is the tempo; otherwise it plays on its own with YouTube's controls under a “Not synced” badge. RecordingSwitch turns the video off (the synth plays alone, same timing) and on. The video's on/off persists in the sonata.recording-video config; its sound, level and the sync offset (no control in the card; Settings → Config) in the sonata.recording config. Owns the SonataRecording.Refused seam for whoever picked a video YouTube refuses to embed. Server registration of the Sonata recording mix config and the video on/off config.
@@ -6043,7 +6055,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Imported by:
                   - `apps/sonata/chord-chart`
-                  - `apps/sonata/progress/chords`
                   - `apps/sonata/rich/chord-list`
                   - `apps/sonata/rich/chord-overlay`
                   - `apps/sonata/rich/chord-progression`
@@ -6434,8 +6445,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useCursorSelector`
               - `useSession`
           - Cross-plugin:
-            - Imported by: 31 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
-              - `apps` ×31
+            - Imported by: 30 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
+              - `apps` ×30
         - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots.
           - Web:
             - Slots:
@@ -19922,8 +19933,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 146 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
-              - `apps` ×45
+            - Imported by: 147 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+              - `apps` ×46
               - `primitives` ×24
               - `page` ×23
               - `conversations` ×16
@@ -28941,8 +28952,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Clip`
               - `clipClasses`
           - Cross-plugin:
-            - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
-              - `apps` ×18
+            - Imported by: 54 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+              - `apps` ×17
               - `primitives` ×8
               - `conversations` ×7
               - `debug` ×6
@@ -29138,8 +29149,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placedClasses`
               - `placedStyle`
           - Cross-plugin:
-            - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
-              - `apps` ×18
+            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
+              - `apps` ×16
               - `primitives` ×7
               - `debug` ×3
               - `page` ×2
@@ -29234,9 +29245,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 85 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+              - `apps` ×16
               - `debug` ×16
-              - `apps` ×15
               - `reports` ×12
               - `conversations` ×9
               - `primitives` ×9
@@ -29272,7 +29283,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/piano-roll`
               - `apps/sonata/primitives/keyboard`
               - `apps/sonata/progress/bars`
-              - `apps/sonata/progress/chords`
               - `apps/sonata/progress/keys`
               - `apps/sonata/progress/loop`
               - `apps/sonata/progress/scrubber`
@@ -29329,8 +29339,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 103 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
-              - `apps` ×27
+            - Imported by: 104 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+              - `apps` ×28
               - `primitives` ×17
               - `conversations` ×14
               - `debug` ×7
@@ -29482,9 +29492,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 109 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 110 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+              - `apps` ×20
               - `conversations` ×20
-              - `apps` ×19
               - `primitives` ×18
               - `debug` ×10
               - `page` ×7
@@ -29628,8 +29638,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 389 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×99
+            - Imported by: 388 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×98
               - `conversations` ×61
               - `primitives` ×50
               - `debug` ×34
@@ -29695,8 +29705,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `StatusDot`
               - `statusDotPaintClass`
           - Cross-plugin:
-            - Imported by: 38 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
-              - `apps` ×10
+            - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
+              - `apps` ×11
               - `conversations` ×8
               - `debug` ×8
               - `active-data` ×3
@@ -29820,8 +29830,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 359 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×94
+            - Imported by: 358 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×93
               - `conversations` ×70
               - `primitives` ×40
               - `debug` ×32
@@ -30148,9 +30158,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempted by: `primitives/css/ui-kit` (0 debt)
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `primitives` ×8
-              - `apps` ×5
+              - `apps` ×6
               - `conversations` ×4
               - `debug` ×4
               - `ui` ×3
@@ -31659,8 +31669,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hoverRevealTargetWithGroupFocus`
           - `useHoverReveal`
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
-          - `apps` ×8
+        - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
+          - `apps` ×9
           - `page` ×8
           - `primitives` ×7
           - `ui` ×4
@@ -32703,6 +32713,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `FloatingSurface`
           - Cross-plugin:
             - Imported by:
+              - `apps/sonata/progress/scrubber`
               - `conversations/conversation-view/selection-actions`
               - `page/formatting/link`
               - `primitives/path-bar`

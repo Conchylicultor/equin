@@ -6,7 +6,7 @@ import {
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
-import { RAIL_BAND_Y } from "@plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber/web";
+import { railBand } from "@plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber/web";
 import {
   pct,
   Placed,
@@ -25,18 +25,24 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const closeIcon = symbol("close");
 
+/** The handles and the outside-shade stand this far proud of the hot rail. */
+const HANDLE_BAND = railBand(3);
+const SHADE_BAND = railBand(1);
+
 /**
- * The A–B practice-loop region marker. Draws the loop `[start, end]` as a band
- * with two draggable edge handles in the TOP half of the marker layer (sections
- * own the bottom half), plus rail-aligned vertical guides through the track and
- * a hover-revealed clear button.
+ * The A–B practice-loop region marker, drawn in the rail zone. The loop
+ * `[start, end]` is a rounded band covering the zone (a little taller than the
+ * rail), with a draggable accent pill on the rail at A and at B, the rail
+ * outside `[A, B]` dimmed while the loop is enabled, and a hover-revealed clear
+ * button above the band's top-right.
  *
  * Pointer model (load-bearing): the marker layer the scrubber hosts is
- * `pointer-events-none`, so clicks fall through to the seek track. We keep the
- * root and the guides pointer-transparent and make ONLY the band (for hover +
- * clear) and the handles (for drag) interactive (`pointer-events-auto`). Every
- * interactive element `stopPropagation()`s its `pointerdown` so grabbing a
- * handle (or the band) never also fires the parent slider's `seekToPointer`.
+ * `pointer-events-none`, so clicks fall through to the seek track. The root and
+ * the shades stay pointer-transparent; the band is interactive only for hover
+ * (revealing the clear button) and does NOT stop propagation, so a click
+ * inside the loop still seeks. Only the handles (drag) and the clear button
+ * `stopPropagation()` their `pointerdown`, so grabbing them never also fires
+ * the parent slider's `seekToPointer`.
  *
  * Beat projection: handle drags read the root's `getBoundingClientRect()` and
  * map `clientX` exactly the way the scrubber's `seekToPointer` does
@@ -87,97 +93,99 @@ export function LoopRegion({
   };
 
   return (
-    // Full-region root (pointer-transparent) so the guides can align to the rail
-    // band via RAIL_BAND_Y (centred on the rail); the band + handles live in
-    // a top-half lane below.
     <Layer ref={rootRef} decorative>
-      {/* Rail-aligned vertical guides at A and B, drawn through the rail band so
-          they line up pixel-for-pixel with the bar ticks. */}
-      <Placed
-        x={{ start: pct(startF), size: 1 }}
-        y={RAIL_BAND_Y}
-        className="bg-primary/60"
-      />
-      <Placed
-        x={{ start: pct(endF), size: 1 }}
-        y={RAIL_BAND_Y}
-        className="bg-primary/60"
-      />
+      {/* While enabled, dim the rail outside [A, B] (pointer-transparent). */}
+      {loop.enabled && (
+        <>
+          <Placed
+            x={{ start: 0, size: pct(startF) }}
+            y={SHADE_BAND}
+            className="bg-background/60"
+          />
+          <Placed
+            x={{ start: pct(endF), end: 0 }}
+            y={SHADE_BAND}
+            className="bg-background/60"
+          />
+        </>
+      )}
 
-      {/* Top-half lane (mirrors the sections bottom-half) hosting the band +
-          handles, so it never overlaps the rail seek track. */}
-      <Placed x={{ start: 0, end: 0 }} y={{ start: 0, size: "50%" }}>
-        {/* The loop band [A,B]. Interactive (hover reveals the clear button);
-            stopPropagation keeps a click on the band from seeking. Faded +
-            outline-only while disabled so the bounds stay visible during a
-            play-through. */}
+      {/* The loop band [A, B] over the rail zone. Interactive only so hovering
+          reveals the clear button — no stopPropagation, so a click inside it
+          still seeks. Transparent with a faint ring while disabled, so the
+          bounds stay visible during a play-through. */}
+      <Placed
+        {...groupProps}
+        x={{ start: pct(startF), size: pct(widthF) }}
+        y="fill"
+        className={cn(
+          "pointer-events-auto rounded-md",
+          loop.enabled
+            ? "bg-primary/15 ring-1 ring-inset ring-primary/45"
+            : "opacity-70 ring-1 ring-inset ring-primary/35",
+        )}
+        title={loop.enabled ? "Loop A–B" : "Loop A–B (off)"}
+      >
+        {/* Hover-revealed clear button, pinned above the band's top-right. It
+            must re-enable pointer events explicitly (the marker layer is
+            pointer-events-none) AND only while revealed — hoverRevealClass owns
+            the opacity↔pointer-events coupling, we add the auto needed to punch
+            through the inert ancestor only in the revealed branch. */}
         <Placed
-          {...groupProps}
-          onPointerDown={(e) => e.stopPropagation()}
-          x={{ start: pct(startF), size: pct(widthF) }}
+          x={{ end: 0 }}
+          y={{ start: 0, shift: "-100%" }}
+          className={cn(
+            hoverRevealClass(revealed),
+            revealed && "pointer-events-auto",
+          )}
+        >
+          <ControlSizeProvider size="xs">
+            <IconButton
+              icon={closeIcon}
+              label="Clear loop"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => setLoop(null)}
+            />
+          </ControlSizeProvider>
+        </Placed>
+      </Placed>
+
+      {/* Edge handles on the rail. Each is a wide invisible hit area with a
+          4px accent pill; pointer-capture keeps the drag tracking off the
+          handle. */}
+      <Placed
+        onPointerDown={grabPointer}
+        onPointerMove={startHandleDrag}
+        x={{ center: pct(startF), size: 14 }}
+        y={HANDLE_BAND}
+        className="pointer-events-auto cursor-ew-resize"
+        aria-label="Loop start"
+      >
+        <Placed
+          x={{ center: "50%", size: 4 }}
           y="fill"
           className={cn(
-            "pointer-events-auto rounded-sm ring-1 ring-primary/40",
-            loop.enabled ? "bg-primary/15" : "opacity-50",
+            "rounded-full bg-primary",
+            !loop.enabled && "opacity-50",
           )}
-          title={loop.enabled ? "Loop A–B" : "Loop A–B (off)"}
-        >
-          {/* Hover-revealed clear button, pinned to the band's top-right. It must
-              re-enable pointer events explicitly (the marker layer is
-              pointer-events-none) AND only while revealed — hoverRevealClass owns
-              the opacity↔pointer-events coupling, we add the auto needed to punch
-              through the inert ancestor only in the revealed branch. */}
-          <Placed
-            x={{ end: 0 }}
-            y={{ start: 0, shift: "-100%" }}
-            className={cn(
-              hoverRevealClass(revealed),
-              revealed && "pointer-events-auto",
-            )}
-          >
-            <ControlSizeProvider size="xs">
-              <IconButton
-                icon={closeIcon}
-                label="Clear loop"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={() => setLoop(null)}
-              />
-            </ControlSizeProvider>
-          </Placed>
-        </Placed>
-
-        {/* Edge handles. Each is a wide invisible hit area with a thin visible
-            bar; pointer-capture keeps the drag tracking off the handle. */}
+        />
+      </Placed>
+      <Placed
+        onPointerDown={grabPointer}
+        onPointerMove={endHandleDrag}
+        x={{ center: pct(endF), size: 14 }}
+        y={HANDLE_BAND}
+        className="pointer-events-auto cursor-ew-resize"
+        aria-label="Loop end"
+      >
         <Placed
-          onPointerDown={grabPointer}
-          onPointerMove={startHandleDrag}
-          x={{ center: pct(startF), size: 12 }}
+          x={{ center: "50%", size: 4 }}
           y="fill"
-          className="pointer-events-auto cursor-ew-resize"
-          aria-label="Loop start"
-        >
-          {/* The visible bar, centered in its hit area. */}
-          <Placed
-            x={{ center: "50%", size: 4 }}
-            y="fill"
-            className="rounded-full bg-primary"
-          />
-        </Placed>
-        <Placed
-          onPointerDown={grabPointer}
-          onPointerMove={endHandleDrag}
-          x={{ center: pct(endF), size: 12 }}
-          y="fill"
-          className="pointer-events-auto cursor-ew-resize"
-          aria-label="Loop end"
-        >
-          {/* The visible bar, centered in its hit area. */}
-          <Placed
-            x={{ center: "50%", size: 4 }}
-            y="fill"
-            className="rounded-full bg-primary"
-          />
-        </Placed>
+          className={cn(
+            "rounded-full bg-primary",
+            !loop.enabled && "opacity-50",
+          )}
+        />
       </Placed>
     </Layer>
   );

@@ -4,11 +4,14 @@
 
 ## Plugin reference
 
-- Description: Sonata progress marker: key-signature change markers along the progression bar — a strong vertical bar at each key change captioned by a small neutral key chip (starting key + 'key' annotation changes).
+- Description: Sonata progress keys: a thin key-coloured line on the progression rail at each key change, the key names in the label lane under it (starting key muted), and the hover preview's key line (key in force, or 'Key change → …' snapped onto a change). Keys come from the starting key + 'key' annotations.
 - Web:
-  - Contributes: `SonataProgress.Marker` "keys" → `KeyFlags`
+  - Contributes:
+    - `SonataProgress.Marker` "keys" → `KeyFlags`
+    - `SonataProgress.Label` "keys"
+    - `SonataProgress.Describe` "keys"
   - Uses:
-    - `apps/sonata/progress/scrubber.RAIL_BAND_Y`
+    - `apps/sonata/progress/scrubber.railBand`
     - `apps/sonata/progress/scrubber.SonataProgress`
     - `primitives/css/coords.pct`
     - `primitives/css/coords.Placed`

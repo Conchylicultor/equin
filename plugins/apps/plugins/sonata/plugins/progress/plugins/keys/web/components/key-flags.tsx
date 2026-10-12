@@ -1,36 +1,33 @@
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { collectKeyEntries } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import type {
-  KeySignature,
-  Score,
-} from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { RAIL_BAND_Y } from "@plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber/web";
+import type { Score } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { railBand } from "@plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber/web";
 import {
   pct,
   Placed,
 } from "@plugins/primitives/plugins/css/plugins/coords/web";
+import { keyChanges } from "../key-names";
+import { KEY_TONE } from "../key-tone";
 
 /**
- * Key-signature markers along the progression bar.
+ * Key-change lines along the progression bar.
  *
  * A song's tonal centre is meaning layered on top of the notes: the *starting*
  * key (`score.meta.key`) plus any mid-song key changes, which the IR models as
  * `type:"key"` annotations. `collectKeyEntries` reconciles both into a sorted
- * list of "key established at beat X" entries; here we mark each one with a
- * strong vertical bar at the boundary where the key takes hold — a highlighted
- * sibling of the muted bar ticks, drawn on the SAME shared rail band so the two
- * line up pixel-for-pixel. The key's name is the bar's hover tooltip, not a
- * floating caption: the band above the rail belongs to the chord lane.
+ * list of "key established at beat X" entries. Only the CHANGES are drawn: the
+ * starting key has no boundary to mark, and its name already sits in the
+ * label lane.
+ *
+ * Each change is a thin key-coloured line standing a few px proud of the hot
+ * rail (`railBand(3)`) — no glow, no chip; the name lives in the label lane and
+ * the hover preview (which snaps onto the line and reads "Key change → …").
+ * So the layer is purely decorative: no hit box, every press falls through to
+ * the scrubber's seek track.
  */
 
-/** Width of a key bar's hover hit box, and where the 2px bar sits inside it. */
-const HIT_PX = 8;
-const BAR_INSET_PX = 3;
-
-/** Compact label, e.g. `C maj` / `A min`. */
-function keyLabel(key: KeySignature): string {
-  return `${key.tonic} ${key.mode === "major" ? "maj" : "min"}`;
-}
+/** Width of a key-change line, in px. */
+const LINE_PX = 1.5;
 
 export function KeyFlags({
   score,
@@ -40,38 +37,20 @@ export function KeyFlags({
   /** beat → [0,1] position along the track. */
   beatToFraction: (beat: number) => number;
 }) {
-  const entries = collectKeyEntries(score);
+  const changes = keyChanges(collectKeyEntries(score));
 
-  // Common case today: meta.key unset and no `key` annotations → render nothing
-  // rather than an empty overlay artifact.
-  if (entries.length === 0) return null;
+  // Common case: a single key (or none) → nothing to mark.
+  if (changes.length === 0) return null;
 
   return (
     <Layer decorative>
-      {entries.map((e) => (
-        // A hit box a few px wider than the bar, over the rail band, so the
-        // tooltip is reachable; it re-enables pointer events for its own box
-        // only, and a press still bubbles to the scrubber and seeks.
+      {changes.map((e) => (
         <Placed
-          key={`${e.beat}-${keyLabel(e.key)}`}
-          x={{
-            start: pct(beatToFraction(e.beat)),
-            size: HIT_PX,
-            shift: -BAR_INSET_PX,
-          }}
-          y={RAIL_BAND_Y}
-          className="pointer-events-auto"
-          title={`Key: ${keyLabel(e.key)}`}
-        >
-          {/* Strong vertical bar marking where this key takes hold — a
-              highlighted sibling of the muted bar ticks, spanning the shared
-              rail band so the two align pixel-for-pixel. */}
-          <Placed
-            x={{ start: BAR_INSET_PX, size: 2 }}
-            y="fill"
-            className="bg-foreground/60"
-          />
-        </Placed>
+          key={e.beat}
+          x={{ center: pct(beatToFraction(e.beat)), size: LINE_PX }}
+          y={railBand(3)}
+          className={`rounded-full ${KEY_TONE.line}`}
+        />
       ))}
     </Layer>
   );

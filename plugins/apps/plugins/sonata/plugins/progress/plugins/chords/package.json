@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-apps-sonata-progress-chords",
-  "description": "Sonata progress marker: the chord lane — one chip per chord above the progression bar, sized by duration, the current chord highlighted.",
-  "private": true,
-  "version": "0.0.1"
-}

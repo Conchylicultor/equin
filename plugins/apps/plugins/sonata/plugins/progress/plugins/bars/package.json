@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-apps-sonata-progress-bars",
-  "description": "Sonata progress marker: bar/measure tick marks along the progression bar, derived from the score's time signatures.",
+  "description": "Sonata progress marker: bar notches cut into the progression rail at every bar line (every 4th bar stronger), derived from the score's time signatures, plus the hover preview's bar number.",
   "private": true,
   "version": "0.0.1"
 }

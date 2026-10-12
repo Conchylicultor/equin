@@ -4,9 +4,11 @@
 
 ## Plugin reference
 
-- Description: Sonata progress marker: bar/measure tick marks along the progression bar, derived from the score's time signatures via bars().
+- Description: Sonata progress marker: bar notches cut into the progression rail at every bar line (every 4th bar stronger), derived from the score's time signatures via bars(), plus the hover preview's `Bar n` readout.
 - Web:
-  - Contributes: `SonataProgress.Marker` "bars" → `BarTicks`
+  - Contributes:
+    - `SonataProgress.Marker` "bars" → `BarTicks`
+    - `SonataProgress.Describe` "bars"
   - Uses:
     - `apps/sonata/progress/scrubber.RAIL_BAND_Y`
     - `apps/sonata/progress/scrubber.SonataProgress`

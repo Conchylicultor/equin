@@ -90,7 +90,6 @@ has the vocabulary for it.
     - `apps/sonata/piano-roll`
     - `apps/sonata/primitives/keyboard`
     - `apps/sonata/progress/bars`
-    - `apps/sonata/progress/chords`
     - `apps/sonata/progress/keys`
     - `apps/sonata/progress/loop`
     - `apps/sonata/progress/scrubber`

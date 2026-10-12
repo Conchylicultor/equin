@@ -912,10 +912,6 @@
       "name": "@singularity/plugin-apps-sonata-progress-bars",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/sonata/plugins/progress/plugins/chords": {
-      "name": "@singularity/plugin-apps-sonata-progress-chords",
-      "version": "0.0.1",
-    },
     "plugins/apps/plugins/sonata/plugins/progress/plugins/keys": {
       "name": "@singularity/plugin-apps-sonata-progress-keys",
       "version": "0.0.1",
@@ -6953,7 +6949,6 @@
 
     "@singularity/plugin-apps-sonata-progress-bars": ["@singularity/plugin-apps-sonata-progress-bars@workspace:plugins/apps/plugins/sonata/plugins/progress/plugins/bars"],
 
-    "@singularity/plugin-apps-sonata-progress-chords": ["@singularity/plugin-apps-sonata-progress-chords@workspace:plugins/apps/plugins/sonata/plugins/progress/plugins/chords"],
 
     "@singularity/plugin-apps-sonata-progress-keys": ["@singularity/plugin-apps-sonata-progress-keys@workspace:plugins/apps/plugins/sonata/plugins/progress/plugins/keys"],
 

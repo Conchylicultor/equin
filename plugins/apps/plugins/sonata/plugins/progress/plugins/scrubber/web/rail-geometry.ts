@@ -3,48 +3,44 @@ import type { Extent } from "@plugins/primitives/plugins/css/plugins/coords/web"
 /**
  * Geometry of the progression rail — the single source of truth for where the
  * rail sits vertically. The scrubber draws the rail; any marker drawing a
- * vertical element *on* the rail (measure ticks, key-change bars, loop guides)
- * places itself with `RAIL_BAND_Y` so every on-rail mark shares one vertical
- * band and stays pixel-aligned with the rail and with each other. Change the
- * thickness here and the rail, the ticks, and the key bars all follow — they
- * cannot drift apart.
+ * vertical element *on* the rail (bar notches, key-change lines, loop handles)
+ * places itself with `RAIL_BAND_Y` / `railBand()` so every on-rail mark shares
+ * one vertical band and stays pixel-aligned with the rail and with each other.
  *
- * This exists because the alternative — each marker re-hardcoding `h-2.5` +
- * centering — let the strata diverge: a marker that picked the "top half"
- * instead of the rail band floated above the ticks. Funnelling on-rail verticals
- * through one declaration makes that class of bug unrepresentable.
+ * The rail thickens on hover/drag. Rather than every marker tracking that
+ * state, the thickness is a CSS custom property the scrubber sets on the
+ * slider (`RAIL_THICKNESS_VAR`: 6px at rest, 10px hot), and the extents below
+ * are written against it — so every on-rail mark follows the thickening with
+ * no React state and no per-marker code.
  */
 
-/**
- * Rail thickness, as a LENGTH rather than a Tailwind class — one number both
- * the rail's own box and every on-rail mark's extent read. (0.625rem is
- * Tailwind's `2.5` step, which this used to be spelled as.)
- */
-export const RAIL_HEIGHT = "0.625rem";
+/** The custom property holding the rail's current thickness. */
+export const RAIL_THICKNESS_VAR = "--sonata-rail-h";
+/** Rail thickness at rest and while hovered/dragged. */
+export const RAIL_REST = "6px";
+export const RAIL_HOT = "10px";
+
+/** Rail thickness, as a LENGTH (follows hover). */
+export const RAIL_HEIGHT = `var(${RAIL_THICKNESS_VAR}, ${RAIL_REST})`;
 
 /**
  * The vertical extent that makes a placed box exactly cover the rail's band:
- * centered on the region's mid-line, rail-height tall. Pair it with whatever
+ * centered on the zone's mid-line, rail-height tall. Pair it with whatever
  * horizontal extent the mark wants, e.g.
  * `<Placed x={{ center: pct(f), size: 1 }} y={RAIL_BAND_Y} />`.
  */
 export const RAIL_BAND_Y: Extent = { center: "50%", size: RAIL_HEIGHT };
 
 /**
- * Height of the lane band above the rail (the chord lane's chips), as a LENGTH.
- * The scrubber reserves exactly this much room above its rail region ALWAYS —
- * whether or not any marker draws in the lane — so the transport strip's height
- * never jumps when a song with (or without) chords loads.
+ * The rail band at its HOT thickness plus `outset` px above and below — a
+ * fixed extent for marks that should stand a little proud of the rail (key
+ * change lines, loop handles) without moving when the rail thickens.
  */
-export const LANE_HEIGHT = "1rem";
+export function railBand(outset: number): Extent {
+  return { center: "50%", size: `calc(${RAIL_HOT} + ${outset * 2}px)` };
+}
 
-/**
- * The vertical extent of the lane band above the rail: `LANE_HEIGHT` tall,
- * its bottom edge on the top edge of the marker region (the rail region the
- * on-rail marks centre in). It therefore sits in the room the scrubber reserves
- * above that region, separated from the rail by the region's own headroom, and
- * can never overlap the rail, the loop band or the section bands, which all
- * live inside the region. Pair it with a horizontal extent, e.g.
- * `<Placed x={{ start: pct(f), size: pct(w) }} y={LANE_ABOVE_Y} />`.
- */
-export const LANE_ABOVE_Y: Extent = { end: "100%", size: LANE_HEIGHT };
+/** Height of the rail zone (the slider's interactive band). */
+export const ZONE_HEIGHT = "1rem";
+/** Height of the label lane under the rail (13px). */
+export const LABEL_LANE_HEIGHT = "0.8125rem";

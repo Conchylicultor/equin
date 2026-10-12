@@ -4,19 +4,23 @@
 
 ## Plugin reference
 
-- Description: Sonata progress marker: labeled section-region bands along the progression bar, drawn from 'section' annotations.
+- Description: Sonata progress sections: the song's 'section' annotations as the progression bar's chapters (rail segments), as labels in its label lane (coloured dot + name, current one strong, click to seek, hover to loop the section) and as the '● name' line of its hover preview.
 - Web:
-  - Contributes: `SonataProgress.Marker` "sections" → `SectionBands`
+  - Contributes:
+    - `SonataProgress.Chapters` "sections"
+    - `SonataProgress.Label` "sections"
+    - `SonataProgress.Describe` "sections"
   - Uses:
     - `apps/sonata/progress/scrubber.SonataProgress`
+    - `apps/sonata/session.useCursorSelector`
     - `apps/sonata/session.useSession`
-    - `primitives/css/coords.pct`
-    - `primitives/css/coords.Placed`
+    - `primitives/css/inline.Inline`
+    - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.SingleLineProvider`
-    - `primitives/hover-reveal.hoverRevealGroup`
+    - `primitives/css/yield.yieldClass`
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/icon-button.IconButton`
 

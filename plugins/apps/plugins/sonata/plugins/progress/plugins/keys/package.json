@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-apps-sonata-progress-keys",
-  "description": "Sonata progress marker: key-signature flags along the progression bar (starting key + 'key' annotation changes).",
+  "description": "Sonata progress keys: key-change lines on the progression rail, key names in the label lane, and the hover preview's key line (starting key + 'key' annotation changes).",
   "private": true,
   "version": "0.0.1"
 }

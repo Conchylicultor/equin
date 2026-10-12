@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-apps-sonata-progress-scrubber",
-  "description": "Sonata Transport: draggable progression bar + open SonataProgress.Marker slot for timeline markers.",
+  "description": "Sonata Transport: the thin progression bar — [elapsed][rail][total], click/drag to seek, the rail split into chapters that thicken on hover, a label lane under it and a hover preview above; hosts the open SonataProgress slots (Marker, Chapters, Label, Describe).",
   "private": true,
   "version": "0.0.1"
 }

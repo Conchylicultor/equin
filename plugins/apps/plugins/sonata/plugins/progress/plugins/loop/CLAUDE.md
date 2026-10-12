@@ -4,6 +4,12 @@ Sonata A–B practice loop: a draggable loop region on the progression bar, a
 Loop toggle closing the player's transport strip (`SonataPlayer.Transport`,
 after the scrubber), and `L`/`[`/`]` shortcuts that cycle playback within `[A, B]`.
 
+On the progression bar the loop is a rounded band over the rail zone, with an
+accent pill handle on the rail at `A` and at `B` (`railBand(3)`); while enabled
+the rail outside `[A, B]` is dimmed, and hovering the band reveals a clear
+button above its top-right. Only the handles and the clear button stop the
+pointer — a click inside the band still seeks.
+
 The loop is also surfaced on the piano roll's falling-note timeline — a
 scroll-synced `[A, B]` band with `A`/`B` boundary lines, contributed through the
 generic `Sonata.TransportOverlay` slot so it scrolls glued to the notes. Each

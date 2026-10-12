@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-apps-sonata-progress",
-  "description": "Song-navigation progress bar for Sonata: scrubber + contributed timeline markers.",
+  "description": "Song-navigation progress bar for Sonata: a thin scrubber rail with contributed chapters, labels, hover descriptions and timeline markers (bars, sections, keys, loop).",
   "private": true,
   "version": "0.0.1",
   "singularity": { "collapsed": true }

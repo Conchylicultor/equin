@@ -143,7 +143,6 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/sonata/plugins/primitives/plugins/source-line",
   "apps/plugins/sonata/plugins/primitives/plugins/toolbar-control",
   "apps/plugins/sonata/plugins/progress/plugins/bars",
-  "apps/plugins/sonata/plugins/progress/plugins/chords",
   "apps/plugins/sonata/plugins/progress/plugins/keys",
   "apps/plugins/sonata/plugins/progress/plugins/loop",
   "apps/plugins/sonata/plugins/progress/plugins/scrubber",

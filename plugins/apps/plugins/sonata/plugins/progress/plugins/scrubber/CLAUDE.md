@@ -4,37 +4,56 @@
 
 ## Plugin reference
 
-- Description: Sonata Transport: a draggable progression bar for song navigation. Click/drag to seek; hosts the open SonataProgress.Marker slot for timeline markers (bars, sections, keys, …).
+- Description: Sonata Transport: a draggable progression bar for song navigation. Click/drag to seek; hosts the open SonataProgress slots — Marker (rail overlays), Chapters (rail segments), Label (the label lane under the rail) and Describe (hover-preview lines).
 - Web:
-  - Slots: `SonataProgress.Marker`
+  - Slots:
+    - `SonataProgress.Marker`
+    - `SonataProgress.Chapters`
+    - `SonataProgress.Label`
+    - `SonataProgress.Describe`
   - Slot contributors:
     - `SonataProgress.Marker` ← `apps.sonata.progress.bars`
-    - `SonataProgress.Marker` ← `apps.sonata.progress.chords`
     - `SonataProgress.Marker` ← `apps.sonata.progress.keys`
     - `SonataProgress.Marker` ← `apps.sonata.progress.loop`
-    - `SonataProgress.Marker` ← `apps.sonata.progress.sections`
+    - `SonataProgress.Chapters` ← `apps.sonata.progress.sections`
+    - `SonataProgress.Label` ← `apps.sonata.progress.keys`
+    - `SonataProgress.Label` ← `apps.sonata.progress.sections`
+    - `SonataProgress.Describe` ← `apps.sonata.progress.bars`
+    - `SonataProgress.Describe` ← `apps.sonata.progress.keys`
+    - `SonataProgress.Describe` ← `apps.sonata.progress.sections`
   - Contributes: `SonataPlayer.Transport` "progress-bar" → `ProgressBar`
   - Uses:
     - `apps/sonata/player.SonataPlayer`
     - `apps/sonata/session.useCursorApi`
     - `apps/sonata/session.useSession`
     - `primitives/css/clip.Clip`
+    - `primitives/css/coords.pct`
     - `primitives/css/coords.Placed`
+    - `primitives/css/coords.placedClasses`
+    - `primitives/css/coords.placedStyle`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/layer.Layer`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/hover-reveal.hoverRevealGroup`
+    - `primitives/overlay/floating-surface.FloatingSurface`
     - `primitives/slot-render.renderIsolated`
+  - Exports (types):
+    - `BeatSpan`
+    - `ProgressLabel`
   - Exports (values):
-    - `LANE_ABOVE_Y`
-    - `LANE_HEIGHT`
+    - `LABEL_LANE_HEIGHT`
     - `RAIL_BAND_Y`
     - `RAIL_HEIGHT`
+    - `railBand`
     - `SonataProgress`
+    - `ZONE_HEIGHT`
 - Cross-plugin:
   - Imported by:
     - `apps/sonata/progress/bars`
-    - `apps/sonata/progress/chords`
     - `apps/sonata/progress/keys`
     - `apps/sonata/progress/loop`
     - `apps/sonata/progress/sections`
