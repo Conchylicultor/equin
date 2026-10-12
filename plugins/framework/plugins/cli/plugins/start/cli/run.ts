@@ -1,7 +1,11 @@
 import { writeFileSync } from "node:fs";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { assertPrerequisites } from "@plugins/framework/plugins/cli/plugins/doctor/cli";
-import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
+import { installLockedToolchain } from "@plugins/infra/plugins/deps/plugins/mise/core";
+import {
+  getMainRepoRoot,
+  getWorktreeRoot,
+} from "@plugins/infra/plugins/spawn/core";
 import { ensureDep, holdDep } from "@plugins/infra/plugins/deps/deps";
 import { cliExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 import { gatewayBinary } from "@plugins/infra/plugins/launcher/deps";
@@ -36,6 +40,12 @@ const DEFAULT_PORT = 9000;
 type Opts = { force?: boolean; logLevel: string };
 
 const run: CliAction<[], Opts> = async (opts) => {
+  // The releases mise.lock records, installed if a lock arrived without them
+  // (a clone, a pull, an upstream merge) — before the doctor, which would
+  // otherwise only report them missing.
+  const installed = await installLockedToolchain(await getWorktreeRoot());
+  if (installed.length > 0)
+    console.log(`Installed the locked toolchain: ${installed.join(", ")}`);
   // Every missing dev prerequisite at once, before the gateway compile.
   await assertPrerequisites();
   // Same host preconditions as a release launch: the dev gateway supervises

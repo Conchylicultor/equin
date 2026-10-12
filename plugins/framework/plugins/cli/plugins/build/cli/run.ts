@@ -74,6 +74,7 @@ import {
 } from "@plugins/infra/plugins/spawn/core";
 import { registerMergeDrivers } from "@plugins/framework/plugins/cli/plugins/git-artifacts/cli";
 import { assertPrerequisites } from "@plugins/framework/plugins/cli/plugins/doctor/cli";
+import { installLockedToolchain } from "@plugins/infra/plugins/deps/plugins/mise/core";
 import { clearMergeMarkers } from "@plugins/framework/plugins/cli/core";
 import { markBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
@@ -494,6 +495,12 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     });
   }
 
+  // The releases mise.lock records, installed if a lock arrived without them
+  // (a clone, a pull, an upstream merge) — before the doctor, which would
+  // otherwise only report them missing.
+  const installed = await installLockedToolchain(await getWorktreeRoot());
+  if (installed.length > 0)
+    console.log(`Installed the locked toolchain: ${installed.join(", ")}`);
   // Every missing dev prerequisite at once, before any of the ~10 minutes
   // below — the hermetic posture above launches no agent and needs none.
   await assertPrerequisites();

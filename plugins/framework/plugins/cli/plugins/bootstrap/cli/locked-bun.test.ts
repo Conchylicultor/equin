@@ -102,18 +102,44 @@ test("re-execs under the locked install with a shims-first PATH and the marker",
   expect(calls[0]!.env[LOCKED_BUN_REEXEC_ENV]).toBe("1");
 });
 
-test("runs on, naming the fix, when the locked release is not installed", async () => {
-  const { root, home } = fixture(["1.4.2"]);
+test("installs a missing locked release, then re-execs under it", async () => {
+  const { root, home, binOf } = fixture(["1.4.2"]);
   const { calls, spawn } = recordingSpawn();
+  const installs: string[] = [];
   const outcome = await reexecUnderLockedBun("/e.ts", {
     root,
     running: "1.4.2",
     env: { HOME: home },
+    install: (version) => {
+      installs.push(version);
+      mkdirSync(join(binOf(version), ".."), { recursive: true });
+      writeFileSync(binOf(version), "");
+      return Promise.resolve(0);
+    },
     spawn,
   });
-  expect(outcome.kind).toBe("mismatch");
-  if (outcome.kind === "mismatch")
-    expect(outcome.reason).toContain("mise install");
+  expect(installs).toEqual(["1.4.3"]);
+  expect(outcome).toEqual({ kind: "reexeced", exitCode: 0 });
+  expect(calls[0]!.argv[0]).toBe(binOf("1.4.3"));
+});
+
+test("runs on, saying why, when the missing release cannot be installed", async () => {
+  const { root, home } = fixture(["1.4.2"]);
+  const { calls, spawn } = recordingSpawn();
+  for (const [exit, says] of [
+    [null, "mise is not installed"],
+    [1, "failed (exit 1)"],
+  ] as const) {
+    const outcome = await reexecUnderLockedBun("/e.ts", {
+      root,
+      running: "1.4.2",
+      env: { HOME: home },
+      install: () => Promise.resolve(exit),
+      spawn,
+    });
+    expect(outcome.kind).toBe("mismatch");
+    if (outcome.kind === "mismatch") expect(outcome.reason).toContain(says);
+  }
   expect(calls).toHaveLength(0);
 });
 

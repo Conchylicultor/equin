@@ -21015,7 +21015,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `toolchain.setLockedVersion`
               - `toolchain.TOOLS`
               - `toolchain.upgradeTarget`
-            - Exports (values): `miseUpdater`
+            - Exports (values):
+              - `installLockedToolchain`
+              - `miseUpdater`
         - **`playwright-browser`** — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that version (resolved through this plugin's module graph) plus the platform — installed by the workspace's own playwright CLI with PLAYWRIGHT_BROWSERS_PATH = the install's env/, which then records the headed and headless-shell executables as Playwright reports them in env/executables.json (what isIntact checks); launchChromium(ready, opts) launches the recorded binary for the mode.
           - Cross-plugin:
             - Imported by: `infra/safe-fetch/browser-fetch`

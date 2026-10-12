@@ -27,6 +27,13 @@ const OutdatedSchema = z.record(
   z.object({ current: z.string().nullable(), latest: z.string() }),
 );
 
+/**
+ * `mise version --json`: the running mise and the newest release it knows of.
+ * `latest` is required — a mise that cannot say (offline, version checks off)
+ * fails the detection loudly rather than reading as up to date.
+ */
+const MiseVersionSchema = z.object({ version: z.string(), latest: z.string() });
+
 function miseVersion(output: string): string {
   return output.trim().split(/\s+/)[0] ?? "";
 }
@@ -101,20 +108,35 @@ export const miseUpdater: Updater = {
 
   // A held latest release is not "outdated": there is nothing newer to move
   // to past it until upstream ships again.
+  //
+  // mise itself is reported too. It has no lock entry, so no tool move ever
+  // says it is behind — and `prepare` (its self-update) only runs inside an
+  // upgrade a tool move started. Without this row a new mise reached the
+  // machine only when Bun or Go happened to ship the same week.
   async detect(root): Promise<Outdated[]> {
+    const self = MiseVersionSchema.parse(
+      JSON.parse(await mise(root, ["version", "--json"], MINUTE)),
+    );
+    const running = miseVersion(self.version);
+    const miseRow: Outdated[] =
+      isExactRelease(self.latest) && self.latest !== running
+        ? [{ name: "mise", current: running, latest: self.latest }]
+        : [];
     const raw = await mise(root, ["outdated", "--json"], 5 * MINUTE);
-    return Object.entries(OutdatedSchema.parse(JSON.parse(raw)))
-      .filter(([tool]) => TOOLS.some((t) => t.name === tool))
-      .filter(([, o]) => isExactRelease(o.latest))
-      .filter(
-        ([tool, o]) =>
-          !HOLDS.some((h) => h.tool === tool && h.version === o.latest),
-      )
-      .map(([tool, o]) => ({
-        name: tool,
-        current: o.current,
-        latest: o.latest,
-      }));
+    return miseRow.concat(
+      Object.entries(OutdatedSchema.parse(JSON.parse(raw)))
+        .filter(([tool]) => TOOLS.some((t) => t.name === tool))
+        .filter(([, o]) => isExactRelease(o.latest))
+        .filter(
+          ([tool, o]) =>
+            !HOLDS.some((h) => h.tool === tool && h.version === o.latest),
+        )
+        .map(([tool, o]) => ({
+          name: tool,
+          current: o.current,
+          latest: o.latest,
+        })),
+    );
   },
 
   async plan(root, only): Promise<Move[]> {

@@ -18,9 +18,19 @@
  * the checkout root), hand the command to mise's install of that release and
  * exit with its status.
  *
- * `bun-runtime` stays the guard: when the locked release is not installed, this
- * says so and runs on, so a build fails that check with its `mise install` hint
- * while commands that do not care still work.
+ * When the locked release is not installed — a lock that arrived by clone,
+ * pull or upstream merge rather than through the updater on this machine — it
+ * is installed first, with the REAL mise binary (`mise install bun@<locked>`),
+ * never through a shim: a shim that installs then reshims can point every shim
+ * at itself (research/2026-09-27-global-mise-shim-self-loop.md), which is why
+ * shims are set never to install. Bun is the one tool the CLI cannot install
+ * once it is running on the right one, because it is what the CLI runs on; the
+ * rest of the toolchain is installed by `build` / `start`
+ * (`installLockedToolchain`, infra/deps/mise).
+ *
+ * `bun-runtime` stays the guard: when no mise exists or the install fails, this
+ * says so and runs on, so a build fails that check while commands that do not
+ * care still work.
  *
  * Same import constraint as the rest of the bootstrap: node builtins and
  * package-free `@plugins/*` cores only. The lock is read with a small local
@@ -82,6 +92,11 @@ export interface LockedBunOptions {
   env?: Record<string, string | undefined>;
   /** Defaults to `Bun.version`. */
   running?: string;
+  /**
+   * @internal TEST SEAM: installs `bun@<version>` and returns mise's exit code,
+   * or null when there is no mise to install with.
+   */
+  install?: (version: string, root: string) => Promise<number | null>;
   /** @internal TEST SEAM, mirrors `reexecAfterInstall`'s. */
   spawn?: (
     argv: string[],
@@ -97,7 +112,8 @@ export async function reexecUnderLockedBun(
   const alreadyReexeced = env[LOCKED_BUN_REEXEC_ENV] !== undefined;
   delete env[LOCKED_BUN_REEXEC_ENV];
 
-  const lockPath = join(opts.root ?? process.cwd(), "mise.lock");
+  const root = opts.root ?? process.cwd();
+  const lockPath = join(root, "mise.lock");
   if (!existsSync(lockPath)) return { kind: "no-lock" };
   const locked = lockedBunVersion(readFileSync(lockPath, "utf8"));
   if (locked === null) return { kind: "no-lock" };
@@ -105,27 +121,44 @@ export async function reexecUnderLockedBun(
   const running = opts.running ?? Bun.version;
   if (running === locked) return { kind: "running-locked" };
 
-  // Directly the locked install's binary, not the `bun` shim: shims never
-  // install (`mise.toml`), so a shim asked for a release that is missing fails
-  // every command with mise's error — including the `mise install`-free
-  // commands that would still work on the running Bun. Missing ⇒ run on, and
-  // let `bun-runtime` fail a build with its `mise install` hint.
+  // Directly the locked install's binary, not the `bun` shim: the shim would
+  // re-resolve from the cwd, and fail with mise's error if the release is
+  // missing rather than letting this install it first.
   const shims = runtimeShimsDir(env);
   const lockedBin =
     shims === undefined
       ? undefined
       : join(dirname(shims), "installs", "bun", locked, "bin", "bun");
-  if (alreadyReexeced || lockedBin === undefined || !existsSync(lockedBin)) {
+  if (lockedBin === undefined) {
     return {
       kind: "mismatch",
       locked,
-      reason:
-        `mise.lock records bun ${locked}, but this is ${running}` +
-        (alreadyReexeced
-          ? ` even after re-exec'ing under ${lockedBin ?? "it"}`
-          : ` and ${lockedBin ?? `mise's install of ${locked}`} does not exist — run \`mise install\``) +
-        `. Continuing on ${running}.`,
+      reason: `mise.lock records bun ${locked}, but this is ${running} and there is no mise data dir (HOME unset?). Continuing on ${running}.`,
     };
+  }
+  if (alreadyReexeced) {
+    return {
+      kind: "mismatch",
+      locked,
+      reason: `mise.lock records bun ${locked}, but this is ${running} even after re-exec'ing under ${lockedBin}. Continuing on ${running}.`,
+    };
+  }
+  if (!existsSync(lockedBin)) {
+    console.error(
+      `singularity: installing bun ${locked}, the release mise.lock records…`,
+    );
+    const exit = await (opts.install ?? installBun)(locked, root);
+    if (exit !== 0 || !existsSync(lockedBin)) {
+      return {
+        kind: "mismatch",
+        locked,
+        reason:
+          (exit === null
+            ? `mise.lock records bun ${locked}, but mise is not installed to install it`
+            : `\`mise install bun@${locked}\` ${exit === 0 ? `left no ${lockedBin}` : `failed (exit ${exit})`}`) +
+          `. Continuing on ${running}.`,
+      };
+    }
   }
 
   const spawn =
@@ -143,4 +176,35 @@ export async function reexecUnderLockedBun(
     },
   );
   return { kind: "reexeced", exitCode };
+}
+
+/**
+ * The real mise binary — never a shim (see the module docblock): PATH, unless
+ * that is mise's own shims dir, then the installer's default location. Same
+ * lookup as `toolchain/core`'s `findMiseBin`, which this closure cannot import.
+ */
+function realMise(env: Record<string, string | undefined>): string | null {
+  const onPath = Bun.which("mise", { PATH: env.PATH ?? "" });
+  if (onPath !== null && !/\/mise\/shims\//.test(onPath)) return onPath;
+  const installed = env.HOME ? join(env.HOME, ".local", "bin", "mise") : null;
+  return installed !== null && existsSync(installed) ? installed : null;
+}
+
+async function installBun(
+  version: string,
+  root: string,
+): Promise<number | null> {
+  const bin = realMise(process.env);
+  if (bin === null) return null;
+  // Output passed through: an install is minutes on a slow link, and its
+  // progress is the only sign this command is not hung. MISE_CEILING_PATHS keeps
+  // a worktree from also loading main's mise.toml (see infra/deps/mise `mise()`).
+  const { exitCode } = await spawnPassthrough(
+    [bin, "install", `bun@${version}`],
+    {
+      cwd: root,
+      env: { ...process.env, MISE_CEILING_PATHS: dirname(root) },
+    },
+  );
+  return exitCode;
 }
