@@ -23660,12 +23660,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LET_IT_BE_VERSE` — `GET /v1/songs/public/_NgbRXeYgQA?fields=ID,song,jsonData` — the verse of "Let It Be", captured 2026-09-15. `jsonData` is the Hookpad document as a JSON string, editor state (bands, lyrics, cursor, settings, mixer) included; `youtube.id` is a `youtu.be` share link, not a bare id.
           - `TRENDS_NODES_401_HTML` — `GET /v1/trends/nodes?cp=1,4` with no Authorization header, captured 2026-09-16: a 401 whose body is Hooktheory's HTML error page, not its JSON envelope.
           - `UNKNOWN_SECTION_400_JSON` — `GET /v1/songs/public/1?fields=ID,song,jsonData`, captured 2026-09-16: the JSON envelope Hooktheory answers an unknown section id with.
-    - **`youtube`** — Embedded YouTube player the app controls: loadYouTubeIframeApi (the IFrame API, loaded once), <YouTubePlayer controller videoId loop autoplay audio onReady onPlaying onError onStateChange/> bound to a useYouTubePlayer() controller (without controls the iframe takes no pointer, so YouTube draws no hover chrome, and a click opens the video on youtube.com at the playhead) (play, pause, isPlaying, isAdvancing, playRange for one pass then back to the loop, seek — re-cueing a video that has not started rather than starting it — getCurrentTime, getDuration, getPlaybackRate, setPlaybackRate resolving to the rate the video took), useYouTubePlayerState, useYouTubePlayhead (one read per animation frame while playing), and createMediaClock (a smoothed, slewed reading of the playhead for something slaved to it). Loops without polling: one timer to the loop's end, reset on every state change. Server-side YouTube: checkOembed(videoId) asks oEmbed whether a video plays in an embed (status code mapped by the core's statusFromOembedCode, plus the title and channel of a 200), and searchYouTube(query, exec) lists YouTube's results for a query (id, title, channel, duration, views, verified, art track) through yt-dlp's flat search, from the on-demand `youtube-audio` dependency this plugin owns.
+    - **`youtube`** — Embedded YouTube player the app controls: loadYouTubeIframeApi (the IFrame API, loaded once), <YouTubePlayer controller videoId loop autoplay audio onReady onPlaying onError onStateChange/> bound to a useYouTubePlayer() controller (without controls the iframe takes no pointer and its thumbnail covers it while not playing, so none of YouTube's chrome shows, and a click opens the video on youtube.com at the playhead) (play, pause, isPlaying, isAdvancing, playRange for one pass then back to the loop, seek — re-cueing a video that has not started rather than starting it — getCurrentTime, getDuration, getPlaybackRate, setPlaybackRate resolving to the rate the video took), useYouTubePlayerState, useYouTubePlayhead (one read per animation frame while playing), and createMediaClock (a smoothed, slewed reading of the playhead for something slaved to it). Loops without polling: one timer to the loop's end, reset on every state change. Server-side YouTube: checkOembed(videoId) asks oEmbed whether a video plays in an embed (status code mapped by the core's statusFromOembedCode, plus the title and channel of a 200), and searchYouTube(query, exec) lists YouTube's results for a query (id, title, channel, duration, views, verified, art track) through yt-dlp's flat search, from the on-demand `youtube-audio` dependency this plugin owns.
       - Web:
         - Uses:
           - `primitives/css/center.Center`
+          - `primitives/css/layer.Layer`
           - `primitives/css/layer.layerClasses`
-          - `primitives/css/pin.Pin`
+          - `primitives/css/line.Line`
+          - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
@@ -23727,6 +23729,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `statusFromOembedCode`
           - `statusFromPlayerCode`
           - `VideoIdSchema`
+          - `youtubeThumbnailUrl`
           - `youtubeVideoId`
           - `youtubeWatchUrl`
       - Plugins:
@@ -29056,7 +29059,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 99 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 100 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×25
               - `primitives` ×16
               - `conversations` ×14
@@ -29072,6 +29075,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reorder` ×2
               - `shell` ×2
               - `code-explorer/commit-detail`
+              - `integrations/youtube`
               - `map`
         - **`link-chip`** — Inline, clickable navigational chip — a clickable Badge drawn as an outlined tile (bg-muted, hairline border, hover:bg-accent) rather than as underlined link text, its label sitting on the baseline of the sentence holding it. A proportional label takes one text rung above a plain Badge so it holds up beside body copy; a monospace label keeps Badge's own rung, the size markdown gives inline code in the same prose, because the mono face already sets wider at any given rung. Its passthrough lands on the chip's own button, so it can be an overlay trigger.
           - Web:
@@ -29130,7 +29134,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pin`
               - `pinClasses`
           - Cross-plugin:
-            - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×17
               - `apps` ×14
               - `page` ×9
@@ -29139,7 +29143,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×2
               - `ui` ×2
               - `debug/logs`
-              - `integrations/youtube`
               - `reorder/editor`
               - `screenshot/draw-on-app`
         - **`placeholder`** — Muted text placeholder for loading, empty, and error states. Props: children, tone (muted | error).
@@ -29546,7 +29549,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 357 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 358 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×93
               - `conversations` ×70
               - `primitives` ×40
@@ -29563,11 +29566,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `auth` ×4
               - `review` ×4
               - `infra` ×3
+              - `integrations` ×3
               - `reorder` ×3
               - `backup` ×2
               - `code-explorer` ×2
               - `config_v2` ×2
-              - `integrations` ×2
               - `map` ×2
               - `screenshot` ×2
               - `shell` ×2

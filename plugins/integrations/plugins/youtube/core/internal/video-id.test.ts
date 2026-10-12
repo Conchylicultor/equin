@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { youtubeVideoId, youtubeWatchUrl } from "./video-id";
+import {
+  youtubeThumbnailUrl,
+  youtubeVideoId,
+  youtubeWatchUrl,
+} from "./video-id";
 
 describe("youtubeVideoId", () => {
   // The first three are spellings found in real TheoryTab sections.
@@ -46,6 +50,18 @@ describe("youtubeWatchUrl", () => {
   it("leaves the start off under a second in", () => {
     expect(youtubeWatchUrl("CGj85pVzRJs", 0.4)).toBe(
       "https://www.youtube.com/watch?v=CGj85pVzRJs",
+    );
+  });
+});
+
+describe("youtubeThumbnailUrl", () => {
+  it.each([
+    ["default", "default.jpg"],
+    ["mq", "mqdefault.jpg"],
+    ["hq", "hqdefault.jpg"],
+  ] as const)("names the %p still %p", (size, file) => {
+    expect(youtubeThumbnailUrl("CGj85pVzRJs", size)).toBe(
+      `https://i.ytimg.com/vi/CGj85pVzRJs/${file}`,
     );
   });
 });

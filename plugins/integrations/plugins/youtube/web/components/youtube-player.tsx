@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import {
+  Layer,
+  layerClasses,
+} from "@plugins/primitives/plugins/css/plugins/layer/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   hoverRevealGroup,
@@ -10,7 +14,7 @@ import {
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { youtubeWatchUrl } from "../../core";
+import { youtubeThumbnailUrl, youtubeWatchUrl } from "../../core";
 import {
   YouTubePlayerControllerImpl,
   type YouTubePlayerCallbacks,
@@ -18,6 +22,7 @@ import {
   type YouTubePlayerController,
   type YouTubeRange,
 } from "../internal/controller";
+import { useYouTubePlayerState } from "../internal/hooks";
 import { loadYouTubeIframeApi } from "../internal/iframe-api";
 
 export interface YouTubePlayerProps extends YouTubePlayerCallbacks {
@@ -44,9 +49,10 @@ export interface YouTubePlayerProps extends YouTubePlayerCallbacks {
   /**
    * Show YouTube's own control bar (play, seek, volume), for a video the viewer
    * plays by hand. Off by default: the app owns the transport, so the iframe
-   * takes no pointer at all — YouTube's hover chrome (title, channel, share,
-   * watch later, logo, play button) never shows — and a click on the video
-   * opens it on youtube.com, in a new tab, where it is now. Read when the
+   * takes no pointer at all and the video's thumbnail covers it while it is
+   * not playing — so YouTube's chrome (title, channel, share, watch later,
+   * logo, play button) never shows — and a click on the video opens it on
+   * youtube.com, in a new tab, where it is now. Read when the
    * player is created — changing it re-creates the player.
    */
   controls?: boolean;
@@ -142,6 +148,11 @@ export function YouTubePlayer({
  * youtube.com — a real link, so a middle- or cmd-click works too. The link
  * starts where the video is: the playhead is read on press, which React
  * flushes before the click that follows it.
+ *
+ * While the video is not playing (loading, cued, paused) the video's own
+ * thumbnail covers the iframe: that is when YouTube paints its title, channel,
+ * share / watch-later buttons and big play button, none of which this app can
+ * use. Hovering dims the picture and names where a click goes.
  */
 function OpenOnYouTube({
   controller,
@@ -150,6 +161,8 @@ function OpenOnYouTube({
   controller: YouTubePlayerControllerImpl;
   videoId: string;
 }) {
+  const state = useYouTubePlayerState(controller);
+  const playing = state.kind === "ready" && state.playing;
   const [at, setAt] = useState<number | null>(null);
   const readPlayhead = () =>
     setAt(
@@ -171,16 +184,27 @@ function OpenOnYouTube({
       onPointerDown={readPlayhead}
       onKeyDown={readPlayhead}
     >
-      {/* The link is the trigger, so its focus reveals the mark too. */}
-      <Pin
-        to="top-right"
-        offset="xs"
-        className={hoverRevealTargetWithGroupFocus}
-      >
-        <Center as="span" className="size-6 rounded-md bg-black/60 text-white">
-          <Icon icon={navIcons.newTab} />
+      <img
+        src={youtubeThumbnailUrl(videoId)}
+        alt=""
+        draggable={false}
+        className={cn(
+          layerClasses({ decorative: true }),
+          "size-full object-cover transition-opacity duration-300",
+          playing ? "opacity-0" : "opacity-100",
+        )}
+      />
+      {/* The link is the trigger, so its focus reveals the hint too. */}
+      <Layer className={cn(hoverRevealTargetWithGroupFocus, "bg-black/45")}>
+        <Center className="size-full">
+          <Line className="gap-2xs rounded-full bg-black/70 px-sm py-2xs text-white">
+            <Icon icon={navIcons.newTab} />
+            <Text variant="caption" className="font-medium text-white">
+              Open on YouTube
+            </Text>
+          </Line>
         </Center>
-      </Pin>
+      </Layer>
     </a>
   );
 }

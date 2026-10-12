@@ -62,3 +62,16 @@ export function youtubeWatchUrl(
   }
   return url.toString();
 }
+
+/**
+ * YouTube's still of the video, at one of the sizes every video has:
+ * `default` 120×90, `mq` 320×180, `hq` 480×360. The 4:3 ones letterbox a 16:9
+ * video, so cover-fit them into a 16:9 box.
+ */
+export function youtubeThumbnailUrl(
+  videoId: string,
+  size: "default" | "mq" | "hq" = "hq",
+): string {
+  const file = size === "default" ? "default" : `${size}default`;
+  return `https://i.ytimg.com/vi/${videoId}/${file}.jpg`;
+}

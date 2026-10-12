@@ -275,7 +275,7 @@ to reconcile them; they never needed reconciling.
     - `Text`
     - `textVariantClass`
 - Cross-plugin:
-  - Imported by: 357 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 358 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×93
     - `conversations` ×70
     - `primitives` ×40
@@ -292,11 +292,11 @@ to reconcile them; they never needed reconciling.
     - `auth` ×4
     - `review` ×4
     - `infra` ×3
+    - `integrations` ×3
     - `reorder` ×3
     - `backup` ×2
     - `code-explorer` ×2
     - `config_v2` ×2
-    - `integrations` ×2
     - `map` ×2
     - `screenshot` ×2
     - `shell` ×2

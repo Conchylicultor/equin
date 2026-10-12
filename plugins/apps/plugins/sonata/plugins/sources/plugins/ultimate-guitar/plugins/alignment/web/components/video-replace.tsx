@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { youtubeThumbnailUrl } from "@plugins/integrations/plugins/youtube/core";
 import {
   Button,
   Input,
@@ -73,7 +74,7 @@ function CandidateRow({
       >
         <Line className="gap-sm">
           <img
-            src={`https://i.ytimg.com/vi/${candidate.videoId}/default.jpg`}
+            src={youtubeThumbnailUrl(candidate.videoId, "default")}
             alt=""
             loading="lazy"
             className={cn(

@@ -1,5 +1,6 @@
 export {
   VideoIdSchema,
+  youtubeThumbnailUrl,
   youtubeVideoId,
   youtubeWatchUrl,
 } from "./internal/video-id";

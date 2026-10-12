@@ -163,12 +163,14 @@ calls the controller makes; `@types/youtube` is not a dependency.
 
 ## Plugin reference
 
-- Description: Embedded YouTube player the app controls: loadYouTubeIframeApi (the IFrame API, loaded once), <YouTubePlayer controller videoId loop autoplay audio onReady onPlaying onError onStateChange/> bound to a useYouTubePlayer() controller (without controls the iframe takes no pointer, so YouTube draws no hover chrome, and a click opens the video on youtube.com at the playhead) (play, pause, isPlaying, isAdvancing, playRange for one pass then back to the loop, seek — re-cueing a video that has not started rather than starting it — getCurrentTime, getDuration, getPlaybackRate, setPlaybackRate resolving to the rate the video took), useYouTubePlayerState, useYouTubePlayhead (one read per animation frame while playing), and createMediaClock (a smoothed, slewed reading of the playhead for something slaved to it). Loops without polling: one timer to the loop's end, reset on every state change. Server-side YouTube: checkOembed(videoId) asks oEmbed whether a video plays in an embed (status code mapped by the core's statusFromOembedCode, plus the title and channel of a 200), and searchYouTube(query, exec) lists YouTube's results for a query (id, title, channel, duration, views, verified, art track) through yt-dlp's flat search, from the on-demand `youtube-audio` dependency this plugin owns.
+- Description: Embedded YouTube player the app controls: loadYouTubeIframeApi (the IFrame API, loaded once), <YouTubePlayer controller videoId loop autoplay audio onReady onPlaying onError onStateChange/> bound to a useYouTubePlayer() controller (without controls the iframe takes no pointer and its thumbnail covers it while not playing, so none of YouTube's chrome shows, and a click opens the video on youtube.com at the playhead) (play, pause, isPlaying, isAdvancing, playRange for one pass then back to the loop, seek — re-cueing a video that has not started rather than starting it — getCurrentTime, getDuration, getPlaybackRate, setPlaybackRate resolving to the rate the video took), useYouTubePlayerState, useYouTubePlayhead (one read per animation frame while playing), and createMediaClock (a smoothed, slewed reading of the playhead for something slaved to it). Loops without polling: one timer to the loop's end, reset on every state change. Server-side YouTube: checkOembed(videoId) asks oEmbed whether a video plays in an embed (status code mapped by the core's statusFromOembedCode, plus the title and channel of a 200), and searchYouTube(query, exec) lists YouTube's results for a query (id, title, channel, duration, views, verified, art track) through yt-dlp's flat search, from the on-demand `youtube-audio` dependency this plugin owns.
 - Web:
   - Uses:
     - `primitives/css/center.Center`
+    - `primitives/css/layer.Layer`
     - `primitives/css/layer.layerClasses`
-    - `primitives/css/pin.Pin`
+    - `primitives/css/line.Line`
+    - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
@@ -230,6 +232,7 @@ calls the controller makes; `@types/youtube` is not a dependency.
     - `statusFromOembedCode`
     - `statusFromPlayerCode`
     - `VideoIdSchema`
+    - `youtubeThumbnailUrl`
     - `youtubeVideoId`
     - `youtubeWatchUrl`
 - Sub-plugins:
