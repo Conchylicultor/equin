@@ -136,9 +136,9 @@ function GoogleMapCanvas({
           colorScheme={GOOGLE_COLOR_SCHEME[GOOGLE_TILES]}
           defaultCenter={center}
           defaultZoom={initial.kind === "point" ? initial.zoom : 2}
-          // A map inside a scrolling page: a plain wheel scrolls the page, and
-          // zooming takes Ctrl/⌘ + wheel — Google's own hint says so.
-          gestureHandling="cooperative"
+          // The wheel always zooms the map (no "Use ⌘ + scroll" hint), even
+          // when the map sits inside a scrolling page.
+          gestureHandling="greedy"
           clickableIcons={false}
           streetViewControl={false}
           mapTypeControl={false}
