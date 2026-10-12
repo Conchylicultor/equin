@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { goDraft, goWire, parseGo } from "./parse-go";
+import {
+  goDraft,
+  goWire,
+  isGoBlockBody,
+  parseGo,
+  parseGoItem,
+} from "./parse-go";
 
 describe("parseGo", () => {
   test("plain prose has no items", () => {
@@ -59,5 +65,32 @@ describe("goDraft", () => {
 
   test("one line is followed by a space", () => {
     expect(goDraft("<go>Implement it</go>")).toBe("<go>Implement it</go> ");
+  });
+});
+
+describe("isGoBlockBody", () => {
+  const body = (sent: string) => /^<go>([\s\S]*)<\/go>\s*$/.exec(sent)![1]!;
+
+  test("one inline line is not a block", () => {
+    expect(isGoBlockBody(body(goDraft(goWire("Implement it", []))))).toBe(
+      false,
+    );
+  });
+
+  test("a single picked item sent from the draft is still a block", () => {
+    const sent = goDraft(goWire("- [x] A\n- [ ] B", [true, false]));
+    expect(sent).toBe("<go>\n- [x] A</go>\n");
+    expect(isGoBlockBody(body(sent))).toBe(true);
+  });
+
+  test("a single picked item sent directly is a block", () => {
+    expect(isGoBlockBody(body(goWire("- [ ] A", [true])))).toBe(true);
+  });
+});
+
+describe("parseGoItem", () => {
+  test("reads a checklist line, rejects prose", () => {
+    expect(parseGoItem("- [x] A")).toEqual({ text: "A", checked: true });
+    expect(parseGoItem("- A")).toBeNull();
   });
 });

@@ -19,13 +19,19 @@ export interface GoBody {
 
 const ITEM_RE = /^\s*[-*+] \[( |x|X)\] (.*)$/;
 
+/** One line of a `<go>` body as a checklist item, or `null` for prose. */
+export function parseGoItem(line: string): GoItem | null {
+  const m = ITEM_RE.exec(line);
+  return m ? { text: m[2]!.trim(), checked: m[1] !== " " } : null;
+}
+
 export function parseGo(content: string): GoBody {
   const lead: string[] = [];
   const tail: string[] = [];
   const items: GoItem[] = [];
   for (const line of content.split("\n")) {
-    const m = ITEM_RE.exec(line);
-    if (m) items.push({ text: m[2]!.trim(), checked: m[1] !== " " });
+    const item = parseGoItem(line);
+    if (item) items.push(item);
     else (items.length ? tail : lead).push(line);
   }
   return {
@@ -52,6 +58,17 @@ export function goWire(content: string, picked: readonly boolean[]): string {
     .filter((_, i) => picked[i])
     .map((item) => `- [x] ${item.text}`);
   return `<go>\n${lines.join("\n")}\n</go>`;
+}
+
+/**
+ * Whether a sent `<go>` body (the text between the tags) is a block — drawn as
+ * a card — rather than one inline line. The tag's own shape decides, not the
+ * line count: a block opens with `<go>` on a line of its own (`goWire`), so
+ * its body holds a line break even when it is one picked item whose `</go>`
+ * the draft pulled onto that line (`goDraft`).
+ */
+export function isGoBlockBody(body: string): boolean {
+  return body.includes("\n");
 }
 
 /**

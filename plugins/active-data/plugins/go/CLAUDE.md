@@ -83,7 +83,7 @@ picked items are in the draft: a line is dropped by deleting it.
 
 **In the sent message** an `InlineText` walker (`web/internal/go-walker.tsx`,
 order -1 so it sees the raw string) renders each `<go>` region in full, in the
-same tint (`GoEcho`): one line inline, several as a card whose `- [x]` lines
+same tint (`GoEcho`): one line inline, a block (`<go>` on its own line, even around one picked item) as a card whose `- [x]` lines
 read as checked boxes.
 
 Rules for agents are in the root `CLAUDE.md`.
