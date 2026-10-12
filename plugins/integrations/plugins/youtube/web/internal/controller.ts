@@ -26,6 +26,11 @@ export type YouTubePlayerState =
       videoId: string;
       /** Playing, or buffering on the way to playing. */
       playing: boolean;
+      /**
+       * This video has played at least once since it loaded — so the iframe
+       * holds one of its frames, not YouTube's cued title card.
+       */
+      started: boolean;
       /** Seconds, or `null` until the video's metadata has loaded. */
       duration: number | null;
     }
@@ -750,6 +755,7 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
       prev.kind === "ready" &&
       prev.videoId === a.videoId &&
       prev.playing === a.playing &&
+      prev.started === a.playingAnnounced &&
       prev.duration === a.duration
     ) {
       return prev;
@@ -758,6 +764,7 @@ export class YouTubePlayerControllerImpl implements YouTubePlayerController {
       kind: "ready",
       videoId: a.videoId,
       playing: a.playing,
+      started: a.playingAnnounced,
       duration: a.duration,
     };
   }

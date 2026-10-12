@@ -52,6 +52,7 @@ const READY: YouTubePlayerState = {
   kind: "ready",
   videoId: "QDYfEBY9NM4",
   playing: false,
+  started: false,
   duration: 243,
 };
 

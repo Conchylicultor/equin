@@ -49,10 +49,10 @@ export interface YouTubePlayerProps extends YouTubePlayerCallbacks {
   /**
    * Show YouTube's own control bar (play, seek, volume), for a video the viewer
    * plays by hand. Off by default: the app owns the transport, so the iframe
-   * takes no pointer at all and the video's thumbnail covers it while it is
-   * not playing — so YouTube's chrome (title, channel, share, watch later,
-   * logo, play button) never shows — and a click on the video opens it on
-   * youtube.com, in a new tab, where it is now. Read when the
+   * takes no pointer at all — so YouTube's hover chrome never shows — the
+   * video's thumbnail stands in for YouTube's title card until it first plays,
+   * and a click on the video opens it on youtube.com, in a new tab, where it is
+   * now. Read when the
    * player is created — changing it re-creates the player.
    */
   controls?: boolean;
@@ -149,10 +149,12 @@ export function YouTubePlayer({
  * starts where the video is: the playhead is read on press, which React
  * flushes before the click that follows it.
  *
- * While the video is not playing (loading, cued, paused) the video's own
- * thumbnail covers the iframe: that is when YouTube paints its title, channel,
- * share / watch-later buttons and big play button, none of which this app can
- * use. Hovering dims the picture and names where a click goes.
+ * Until the video first plays (loading, cued) its own thumbnail covers the
+ * iframe: there is no frame of it to show yet, only YouTube's title card
+ * (title, channel, share / watch later, big play button). Once it has played,
+ * the iframe always shows — a paused video keeps its frame, under whatever
+ * pause overlay YouTube itself paints, which an embed cannot turn off.
+ * Hovering dims the picture and names where a click goes.
  */
 function OpenOnYouTube({
   controller,
@@ -162,7 +164,7 @@ function OpenOnYouTube({
   videoId: string;
 }) {
   const state = useYouTubePlayerState(controller);
-  const playing = state.kind === "ready" && state.playing;
+  const started = state.kind === "ready" && state.started;
   const [at, setAt] = useState<number | null>(null);
   const readPlayhead = () =>
     setAt(
@@ -191,7 +193,7 @@ function OpenOnYouTube({
         className={cn(
           layerClasses({ decorative: true }),
           "size-full object-cover transition-opacity duration-300",
-          playing ? "opacity-0" : "opacity-100",
+          started ? "opacity-0" : "opacity-100",
         )}
       />
       {/* The link is the trigger, so its focus reveals the hint too. */}

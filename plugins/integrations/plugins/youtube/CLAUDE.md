@@ -14,7 +14,7 @@ sub-plugin downloads a video's audio on the server; `song-videos` answers
 
 ```tsx
 const player = useYouTubePlayer();              // stable controller for this component
-const state = useYouTubePlayerState(player);    // loading | ready { videoId, playing, duration } | error { code }
+const state = useYouTubePlayerState(player);    // loading | ready { videoId, playing, started, duration } | error { code }
 
 <div className="aspect-video w-48">             {/* the size is yours; the iframe fills it */}
   <YouTubePlayer
@@ -163,7 +163,7 @@ calls the controller makes; `@types/youtube` is not a dependency.
 
 ## Plugin reference
 
-- Description: Embedded YouTube player the app controls: loadYouTubeIframeApi (the IFrame API, loaded once), <YouTubePlayer controller videoId loop autoplay audio onReady onPlaying onError onStateChange/> bound to a useYouTubePlayer() controller (without controls the iframe takes no pointer and its thumbnail covers it while not playing, so none of YouTube's chrome shows, and a click opens the video on youtube.com at the playhead) (play, pause, isPlaying, isAdvancing, playRange for one pass then back to the loop, seek — re-cueing a video that has not started rather than starting it — getCurrentTime, getDuration, getPlaybackRate, setPlaybackRate resolving to the rate the video took), useYouTubePlayerState, useYouTubePlayhead (one read per animation frame while playing), and createMediaClock (a smoothed, slewed reading of the playhead for something slaved to it). Loops without polling: one timer to the loop's end, reset on every state change. Server-side YouTube: checkOembed(videoId) asks oEmbed whether a video plays in an embed (status code mapped by the core's statusFromOembedCode, plus the title and channel of a 200), and searchYouTube(query, exec) lists YouTube's results for a query (id, title, channel, duration, views, verified, art track) through yt-dlp's flat search, from the on-demand `youtube-audio` dependency this plugin owns.
+- Description: Embedded YouTube player the app controls: loadYouTubeIframeApi (the IFrame API, loaded once), <YouTubePlayer controller videoId loop autoplay audio onReady onPlaying onError onStateChange/> bound to a useYouTubePlayer() controller (without controls the iframe takes no pointer and its thumbnail covers it until it first plays, so none of YouTube's chrome shows, and a click opens the video on youtube.com at the playhead) (play, pause, isPlaying, isAdvancing, playRange for one pass then back to the loop, seek — re-cueing a video that has not started rather than starting it — getCurrentTime, getDuration, getPlaybackRate, setPlaybackRate resolving to the rate the video took), useYouTubePlayerState, useYouTubePlayhead (one read per animation frame while playing), and createMediaClock (a smoothed, slewed reading of the playhead for something slaved to it). Loops without polling: one timer to the loop's end, reset on every state change. Server-side YouTube: checkOembed(videoId) asks oEmbed whether a video plays in an embed (status code mapped by the core's statusFromOembedCode, plus the title and channel of a 200), and searchYouTube(query, exec) lists YouTube's results for a query (id, title, channel, duration, views, verified, art track) through yt-dlp's flat search, from the on-demand `youtube-audio` dependency this plugin owns.
 - Web:
   - Uses:
     - `primitives/css/center.Center`
