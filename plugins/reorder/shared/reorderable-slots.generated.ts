@@ -82,6 +82,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "apps.pages.shell.sidebar", pluginId: "apps.pages.shell", configName: "sidebar" },
   { slotId: "apps.pages.welcome.pages-root.actions", pluginId: "apps.pages.welcome", configName: "pages-root.actions" },
   { slotId: "apps.pages.welcome.section", pluginId: "apps.pages.welcome", configName: "section" },
+  { slotId: "apps.places.places-map.places-map.actions", pluginId: "apps.places.places-map", configName: "places-map.actions" },
   { slotId: "apps.prototypes.canvas.frame-actions", pluginId: "apps.prototypes.canvas", configName: "frame-actions" },
   { slotId: "apps.prototypes.canvas.prototypes-detail.actions", pluginId: "apps.prototypes.canvas", configName: "prototypes-detail.actions" },
   { slotId: "apps.prototypes.canvas.version-actions", pluginId: "apps.prototypes.canvas", configName: "version-actions" },

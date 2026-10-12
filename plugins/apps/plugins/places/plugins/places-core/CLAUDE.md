@@ -62,7 +62,7 @@
     - `places.places` (keyed, window)
     - `places.places:groups` (push)
     - `places.places:rows` (keyed, point)
-    - `places.search` (invalidate)
+    - `places.search` (invalidate, fixed)
     - `places.tags` (keyed, window)
     - `places.tags:groups` (push)
     - `places.tags:rows` (keyed, point)

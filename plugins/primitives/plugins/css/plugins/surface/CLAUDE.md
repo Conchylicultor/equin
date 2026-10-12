@@ -121,9 +121,9 @@ never be clobbered.
   - Exports (types): `SurfaceProps`
   - Exports (values): `Surface`
 - Cross-plugin:
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×7
-    - `primitives` ×5
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×9
+    - `primitives` ×7
     - `page` ×4
     - `apps-core` ×2
     - `infra` ×2

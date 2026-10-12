@@ -131,6 +131,7 @@ the live registry suffices.)
     - `fields/float/storage`
     - `fields/int/storage`
     - `fields/json/storage`
+    - `fields/location/storage`
     - `fields/number/text-cast`
     - `fields/rank/storage`
     - `fields/tags/storage`

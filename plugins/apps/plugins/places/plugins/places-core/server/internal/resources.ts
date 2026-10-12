@@ -20,5 +20,11 @@ export const placeTagsServed = serveCollection(placeTags, {
 // change, so the value is on-demand and re-asked only by a new question.
 export const placeSearchServed = serveValue(placeSearch, {
   source: "external",
+  changes: {
+    fixed: {
+      reason:
+        "a Google Places autocomplete answer for one query: a third-party answer with no change signal",
+    },
+  },
   loader: ({ q, session }) => searchPlaces(q, session),
 });

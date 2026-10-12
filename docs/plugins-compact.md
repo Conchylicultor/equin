@@ -18,6 +18,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`home`** [3 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
     - **`mail`** [exempt] [12 sub-plugins] — Mail — a Gmail-class client.
     - **`pages`** [exempt] [16 sub-plugins] — Notion-like pages app.
+    - **`places`** [4 sub-plugins] — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
     - **`prototypes`** [11 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
     - **`settings`** [4 sub-plugins] — Settings app.
     - **`sonata`** [test helpers] [exempt] [76 sub-plugins] — Sonata — extensible piano and music app.
@@ -94,7 +95,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`debug`** [exempt] [56 sub-plugins] — Debug tools umbrella plugin.
 
-- **`fields`** [test helpers] [90 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
+- **`fields`** [test helpers] [94 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
   - Plugins:
@@ -213,7 +214,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`plugin-view`** [exempt] [6 sub-plugins] — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
     - **`relocate`** — `./singularity plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator…
 
-- **`primitives`** [test helpers] [exempt] [192 sub-plugins] — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
+- **`primitives`** [test helpers] [exempt] [194 sub-plugins] — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
 
 - **`release`** [3 sub-plugins] — Release engine web presence: eagerly registers the boot-critical release.previews live value so boot-snapshot can hydrate it before first paint, independent of the (lazy) Studio release UI. Local…
 

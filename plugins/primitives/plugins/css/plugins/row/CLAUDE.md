@@ -193,8 +193,8 @@ genuine transient-chrome list escapes with
     - `Row`
     - `SectionHeaderRow`
 - Cross-plugin:
-  - Imported by: 61 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×15
+  - Imported by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×16
     - `ui` ×11
     - `page` ×9
     - `primitives` ×9

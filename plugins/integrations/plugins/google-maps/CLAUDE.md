@@ -164,6 +164,8 @@ over:
     - `setMapsBrowserConfig`
 - Cross-plugin:
   - Imported by:
+    - `apps/places/places-core`
+    - `apps/places/places-map`
     - `map/google`
     - `page/place/google`
 - Sub-plugins:

@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS "place_tags" (
 	"icon" text,
 	"google_types" jsonb DEFAULT '[]'::jsonb NOT NULL,
 	"rank" integer DEFAULT 0 NOT NULL,
+	"role" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -28,5 +29,6 @@ CREATE TABLE IF NOT EXISTS "places" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 -- singularity:phase contract
+CREATE UNIQUE INDEX IF NOT EXISTS "place_tags_role_idx" ON "place_tags" USING btree ("role") WHERE "place_tags"."role" IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS "places_google_place_id_idx" ON "places" USING btree ("google_place_id");
 -- singularity:claims

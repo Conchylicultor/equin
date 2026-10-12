@@ -804,9 +804,9 @@ See "Open questions" in the design doc.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 88 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×88
-  - Contributes: 111 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 89 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×89
+  - Contributes: 112 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountsPane.Actions` "title" → `PaneTitleItem`
     - `agentDetailPane.Actions` "title" → `PaneTitleItem`
@@ -881,6 +881,7 @@ See "Open questions" in the design doc.
     - `pageDetailPane.Actions` "title" → `PaneTitleItem`
     - `pages-root.actions` "title" → `PaneTitleItem`
     - `pagesTreePane.Actions` "title" → `PaneTitleItem`
+    - `places-map.actions` "title" → `PaneTitleItem`
     - `plugin-conv-side.actions` "title" → `PaneTitleItem`
     - `pluginViewPane.Actions` "title" → `PaneTitleItem`
     - `profilingPane.Actions` "title" → `PaneTitleItem`
@@ -1028,8 +1029,8 @@ See "Open questions" in the design doc.
     - `useSurfaceAppId`
     - `useSyncPaneRegistry`
 - Cross-plugin:
-  - Imported by: 165 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×57
+  - Imported by: 167 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×59
     - `conversations` ×29
     - `debug` ×23
     - `active-data` ×10

@@ -1559,8 +1559,8 @@ never add one.
     - `liveValue`
     - `scopedLiveColumns`
 - Cross-plugin:
-  - Imported by: 199 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×58
+  - Imported by: 200 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×59
     - `conversations` ×35
     - `tasks` ×26
     - `active-data` ×11

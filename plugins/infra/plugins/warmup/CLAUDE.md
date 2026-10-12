@@ -22,6 +22,7 @@
   - Imported by:
     - `apps/pages/auto-icon`
     - `apps/pages/content-search`
+    - `apps/places/places-core`
     - `apps/sonata/sources/midi/folders`
     - `conversations/usage`
     - `infra/corpus-index`

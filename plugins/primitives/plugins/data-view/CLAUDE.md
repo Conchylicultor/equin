@@ -2294,11 +2294,11 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.ValueCodec`
     - `DataViewSlots.Grouping`
     - `DataViewSlots.ColumnConfig`
-  - Slot contributors: 38 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `DataViewSlots.Cell` ×9
+  - Slot contributors: 41 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `DataViewSlots.Cell` ×10
+    - `DataViewSlots.Filter` ×7
     - `DataViewSlots.CellEditor` ×6
-    - `DataViewSlots.Filter` ×6
-    - `DataViewSlots.View` ×5
+    - `DataViewSlots.View` ×6
     - `DataViewSlots.Grouping` ×3
     - `DataViewSlots.ValueCodec` ×3
     - `DataViewSlots.Setting` ×2
@@ -2306,12 +2306,12 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 61 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×53
+  - Contributes: 63 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×55
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 79 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×11
     - `primitives/data-view/view-core` ×8
     - `network/live` ×5
@@ -2332,11 +2332,15 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/sortable-list` ×2
     - `fields.Fields`
     - `ids.IdKinds`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/inline.Inline`
+    - `primitives/css/overlay.Overlay`
+    - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/surface.Surface`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/auto-scroll.KeepAnchorAcross`
@@ -2482,8 +2486,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useRowFilter`
     - `useSortController`
 - Server:
-  - Contributes: 55 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×53
+  - Contributes: 57 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×55
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getConfig`
@@ -2599,6 +2603,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `IDENTITY_CODEC`
     - `isHostedToolbar`
     - `isSectionsToolbar`
+    - `optionDescendants`
     - `orderFieldsBySection`
     - `presetIdKind`
     - `scopeFilterRows`
@@ -2606,12 +2611,12 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `splitFieldSections`
     - `UNGROUPED_FOLD_KEY`
 - Cross-plugin:
-  - Imported by: 82 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields` ×28
-    - `apps` ×19
+  - Imported by: 87 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×30
+    - `apps` ×21
     - `debug` ×9
+    - `primitives` ×8
     - `conversations` ×7
-    - `primitives` ×7
     - `tasks` ×4
     - `infra` ×2
     - `apps-core/app-launcher`
@@ -2634,12 +2639,15 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `lowersToMatch` — Does a rule `op(operand)` keep a row whose field projects to `value`? — the in-memory evaluator's exact path for one rule: `op.lower` over a column of `domain` (an incomplete rule, `undefined`, keeps every row), the DataView domain adapter, then the filter language's `matchesFilter`.
     - `renameColumns` — Rename every clause's column through `rename` (field id → column name).
     - `resolveLiveFields` — Resolve a schema against a live source — and check it where it is declared.
+    - `testField` — A minimal option-less field for a test that calls `op.lower` directly.
 - Sub-plugins:
   - **`capsule-toolbar`** — Capsule toolbar arrangement for the data-view primitive: the collapsed view chip, a borderless search field (focused by /), the control triggers as circles and a round filled create button, all in…
   - **`custom-columns`** — User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Persists per-row…
+  - **`floating-toolbar`** — Floating toolbar arrangement for the data-view primitive: the band floats over the view (a full-bleed map under it) — the view tabs as a floating card top-left, past the surface's aside, and search…
   - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
   - **`icons`** — Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
   - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
+  - **`map`** — Map view child for the data-view primitive: every row with a location as a pin on a full-bleed map, clustered, with clicking a pin activating its row.
   - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
   - **`tree`** — Tree view child for the data-view primitive: adapts the shared field schema + hierarchy config onto the tree primitive (buildTree, TreeList, RowChrome, RenameInput).
   - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance…
