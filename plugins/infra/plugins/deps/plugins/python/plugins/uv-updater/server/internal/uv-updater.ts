@@ -28,7 +28,16 @@ export const UV_COOLDOWN_DAYS = 3;
  * it. The updater never plans a move onto a held release. A CPython release is
  * held by the name {@link CPYTHON} (`{ name: "cpython", version: "3.15.0" }`).
  */
-export const UV_HOLDS: readonly UpdaterHold[] = [];
+export const UV_HOLDS: readonly UpdaterHold[] = [
+  {
+    name: "cpython",
+    version: "3.15.0",
+    reason:
+      "torch 2.14 ships no cp315 wheels, so `uv sync` of audio-analysis fails on CPython 3.15; cp315 wheels arrive with torch 2.15 (GA 2026-10-28)",
+    issue:
+      "https://dev-discuss.pytorch.org/t/notice-python-3-10-support-is-being-removed-from-pytorch-2-15-2-14-is-the-last-release-with-3-10-wheels/3440",
+  },
+];
 
 /**
  * The newest upload a resolution may use: the start of today (UTC) minus the
