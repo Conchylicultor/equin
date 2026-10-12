@@ -4369,7 +4369,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "places-map"
               - `GeoMap.Pin` → `SavedPlacePin`
               - `GeoMap.Cluster` → `SavedPlaceCluster`
-            - Uses: 55 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 56 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `apps/places/places-core` ×8
               - `primitives/css/ui-kit` ×4
               - `primitives/data-view` ×4
@@ -4398,6 +4398,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view/floating-toolbar.floatingToolbar`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/icon-button.IconButton`
+              - `primitives/latest-ref.useEventCallback`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `ui/icons.Icon`
@@ -31782,9 +31783,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SortDirection`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 64 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×31
-          - `apps` ×19
+          - `apps` ×20
           - `page` ×3
           - `apps-core` ×2
           - `conversations` ×2

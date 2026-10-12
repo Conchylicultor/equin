@@ -23,7 +23,11 @@ Then `PlacesSurface` renders, inside a `relative h-full` box:
   tools card (`BELOW_TOOLBAR`); the manager starts past the sidebar
   (`PAST_SIDEBAR`, matching the sidebar's `w-72`). Selection is local state:
   `onRowActivate` (a pin, a card, a row) selects; `selectedRowId` makes the
-  pin active and pans to it.
+  pin active and pans to it. A click anywhere else on the screen — the map,
+  the sidebar, the toolbar — closes the card (`web/internal/use-click-away.ts`):
+  not a drag (a map pan), not a click that selected another row (it `claim()`s),
+  and nothing portalled outside the screen (the card's own pickers, the delete
+  confirm).
 
 ## Fields (`web/internal/fields.tsx`)
 
@@ -98,7 +102,7 @@ Picking saves (`savePlace`) and selects the place; `maps-not-configured`
     - `Pane.Register` "places-map"
     - `GeoMap.Pin` → `SavedPlacePin`
     - `GeoMap.Cluster` → `SavedPlaceCluster`
-  - Uses: 55 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/places/places-core` ×8
     - `primitives/css/ui-kit` ×4
     - `primitives/data-view` ×4
@@ -127,6 +131,7 @@ Picking saves (`savePlace`) and selects the place; `maps-not-configured`
     - `primitives/data-view/floating-toolbar.floatingToolbar`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/icon-button.IconButton`
+    - `primitives/latest-ref.useEventCallback`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `ui/icons.Icon`

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   DataView,
   defineDataView,
@@ -25,6 +25,7 @@ import {
 } from "@plugins/apps/plugins/places/plugins/places-core/web";
 import { TagManagerPanel } from "@plugins/apps/plugins/places/plugins/tag-manager/web";
 import { placeFieldDefs } from "../internal/fields";
+import { useClickAway } from "../internal/use-click-away";
 import { useCoveredEdges } from "../internal/use-covered-edges";
 import { SAVED_PLACE_PIN_TYPE, placeVisual } from "../internal/place-visual";
 import { AddPlaceButton } from "./add-place";
@@ -56,8 +57,9 @@ const PAST_CARD = `calc(${spaceLength("md")} * 2 + ${PLACE_CARD_WIDTH})`;
  * Gallery and List over the same filtered rows — with its chrome floating on
  * the map (`floatingToolbar`): the tag sidebar as the surface's `aside`, the
  * view tabs top-left, search / filter / Add place top-right. Selecting a place
- * (a pin, a card, a row) opens its card on the right; Manage tags lays the tag
- * manager over the map.
+ * (a pin, a card, a row) opens its card on the right, and a click anywhere
+ * else on the screen (the map, the sidebar, the toolbar) closes it; Manage tags
+ * lays the tag manager over the map.
  *
  * The places and the tag tree are two live reads, and every part of the
  * screen (pins, sidebar counts, card) needs both — so the screen waits for
@@ -96,6 +98,13 @@ function PlacesSurface({
   // open, hides the card (the selection is kept and comes back on close).
   const showCard = selected !== undefined && manager === null;
   const { containerRef, probeRef, padding: fitPadding } = useCoveredEdges();
+  const cardRef = useRef<HTMLElement>(null);
+  const { claim } = useClickAway({
+    active: showCard,
+    region: containerRef,
+    panel: cardRef,
+    onDismiss: () => setSelectedId(null),
+  });
 
   const viewOptions = useMemo(
     () => ({
@@ -159,7 +168,11 @@ function PlacesSurface({
           <AddPlaceButton onSaved={(place) => setSelectedId(place.id)} />
         }
         viewOptions={viewOptions}
-        onRowActivate={(p) => setSelectedId(p.id)}
+        onRowActivate={(p) => {
+          // Selecting another place swaps the card; it is not a click away.
+          claim();
+          setSelectedId(p.id);
+        }}
         selectedRowId={selected?.id}
         emptyState={
           <Placeholder>
@@ -186,6 +199,7 @@ function PlacesSurface({
       ) : null}
       {showCard && selected !== undefined ? (
         <Pin
+          ref={cardRef}
           to="right"
           stretch
           offset="md"
