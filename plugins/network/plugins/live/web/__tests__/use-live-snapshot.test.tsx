@@ -13,14 +13,12 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 }));
 
 import { renderHook, waitFor, act } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
-import { type ReactNode } from "react";
 import { z } from "zod";
 import {
-  NotificationsProvider,
-  getNotificationsClient,
-} from "@plugins/primitives/plugins/live-state/web";
-import { NotificationsClient } from "@plugins/primitives/plugins/live-state/web/testing";
+  createLiveStateHarness,
+  type LiveStateHarness,
+  NotificationsClient,
+} from "@plugins/primitives/plugins/live-state/web/testing";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 
@@ -30,24 +28,11 @@ const Query = z.object({ metric: z.string() });
 let seq = 0;
 const key = () => `test.use-live-snapshot.${seq++}`;
 
-function makeClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
-}
-
-function mount<R>(client: QueryClient, useHook: () => R) {
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>
-      {children}
-    </NotificationsProvider>
-  );
-  const rendered = renderHook(useHook, { wrapper });
-  const notifications = getNotificationsClient();
-  if (!notifications) throw new Error("NotificationsClient not created");
+function mount<R>(live: LiveStateHarness, useHook: () => R) {
+  const notifications = live.notifications;
+  // Before the first render: a fresh client would cold-start prime over HTTP.
   vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
+  const rendered = renderHook(useHook, { wrapper: live.Wrapper });
   return { ...rendered, notifications };
 }
 
@@ -60,8 +45,8 @@ describe("useLive — snapshot value", () => {
       .spyOn(NotificationsClient.prototype, "fetchOverHttp")
       .mockImplementation(() => Promise.resolve({ n: current }) as never);
     const reads = () => fetch.mock.calls.filter(([k]) => k === v.key).length;
-    const client = makeClient();
-    const { result } = mount(client, () => useLive(v));
+    const live = createLiveStateHarness();
+    const { result } = mount(live, () => useLive(v));
     await waitFor(() =>
       expect(result.current).toMatchObject({ status: "ready", data: { n: 1 } }),
     );
@@ -87,8 +72,8 @@ describe("useLive — snapshot value", () => {
     const fetch = vi
       .spyOn(NotificationsClient.prototype, "fetchOverHttp")
       .mockResolvedValue({ n: 7 } as never);
-    const client = makeClient();
-    const { result } = mount(client, () => useLive(v, { metric: "m" }));
+    const live = createLiveStateHarness();
+    const { result } = mount(live, () => useLive(v, { metric: "m" }));
     await waitFor(() =>
       expect(result.current).toMatchObject({ status: "ready", data: { n: 7 } }),
     );

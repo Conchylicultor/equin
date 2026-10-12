@@ -206,17 +206,17 @@ describe("useResources", () => {
 
   it("a kept tuple's data keeps its identity across a reorder, a grow and a shrink", async () => {
     const d = descriptor();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(d.key, tuple("a")), [1]);
-    client.setQueryData(queryKeyFor(d.key, tuple("b")), [2]);
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(d.key, tuple("a")), [1]);
+    live.queryClient.setQueryData(queryKeyFor(d.key, tuple("b")), [2]);
     const { result, rerender } = renderHook(
       ({ list }: { list: { n: string }[] }) => useResources(d, list),
       {
-        wrapper: wrapperFor(client),
+        wrapper: live.Wrapper,
         initialProps: { list: [tuple("a"), tuple("b")] },
       },
     );
-    spyNotifications();
+    spyNotifications(live.notifications);
     const dataOf = (i: number) => {
       const r = result.current[i]!;
       return r.status === "ready" ? r.data : undefined;
@@ -239,19 +239,19 @@ describe("useResources", () => {
 
   it("an unchanged tuple keeps its result object when another tuple changes", async () => {
     const d = descriptor();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(d.key, tuple("a")), [1]);
-    client.setQueryData(queryKeyFor(d.key, tuple("b")), [2]);
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(d.key, tuple("a")), [1]);
+    live.queryClient.setQueryData(queryKeyFor(d.key, tuple("b")), [2]);
     const { result } = renderHook(
       () => useResources(d, [tuple("a"), tuple("b")]),
-      { wrapper: wrapperFor(client) },
+      { wrapper: live.Wrapper },
     );
-    spyNotifications();
+    spyNotifications(live.notifications);
     await waitFor(() => expect(result.current[1]!.status).toBe("ready"));
     const a = result.current[0]!;
     const b = result.current[1]!;
     act(() => {
-      client.setQueryData(queryKeyFor(d.key, tuple("b")), [3]);
+      live.queryClient.setQueryData(queryKeyFor(d.key, tuple("b")), [3]);
     });
     await waitFor(() => {
       const r = result.current[1]!;
@@ -264,12 +264,12 @@ describe("useResources", () => {
 
   it("refetch starts a new read even while one is in flight", async () => {
     const d = descriptor();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(d.key, tuple("a")), [1]);
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(d.key, tuple("a")), [1]);
     const { result } = renderHook(() => useResources(d, [tuple("a")]), {
-      wrapper: wrapperFor(client),
+      wrapper: live.Wrapper,
     });
-    const { notifications } = spyNotifications();
+    const { notifications } = spyNotifications(live.notifications);
     await waitFor(() => expect(result.current[0]!.status).toBe("ready"));
     let reads = 0;
     vi.spyOn(notifications, "fetchOverHttp").mockImplementation(() => {

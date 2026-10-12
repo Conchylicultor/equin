@@ -59,8 +59,8 @@ describe("NotificationsClient — the frame protocol", () => {
     expect(hub.server.all()).toHaveLength(1);
 
     const socket = hub.server.all()[0]!;
-    a.observe("k", { p: "1" }, undefined, z.number());
-    b.observe("k", { p: "2" }, undefined, z.number());
+    a.observe("k", { p: "1" }, undefined, { schema: z.number() });
+    b.observe("k", { p: "2" }, undefined, { schema: z.number() });
     socket.open(); // each tab replays its set in one batch
     await flush();
     const sent = socket.sentJson();

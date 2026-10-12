@@ -243,10 +243,10 @@ describe("NotificationsClient — seeded derivation", () => {
     // A hydrated source: a cached value, its sub sent, no sub-ack yet.
     const BOOT = { limit: "2" };
     qc.setQueryData(queryKeyFor(KEY, BOOT), [{ id: "a", n: 1 }]);
-    client.observe(KEY, BOOT, undefined, rowsSchema, keyOf);
+    client.observe(KEY, BOOT, undefined, { schema: rowsSchema }, keyOf);
     expect(client.appliedSeq(KEY, BOOT)).toBe(0);
     logged.length = 0;
-    client.observe(KEY, NEW, undefined, rowsSchema, keyOf, {
+    client.observe(KEY, NEW, undefined, { schema: rowsSchema }, keyOf, {
       from: [{ params: BOOT, appliedSeq: 0, after: null, until: "a" }],
     });
     await flush();
@@ -262,10 +262,10 @@ describe("NotificationsClient — seeded derivation", () => {
     const { client, socket } = await setup();
     // A fresh sub, its first answer not landed and nothing cached.
     const FRESH = { limit: "2" };
-    client.observe(KEY, FRESH, undefined, rowsSchema, keyOf);
+    client.observe(KEY, FRESH, undefined, { schema: rowsSchema }, keyOf);
     expect(client.appliedSeq(KEY, FRESH)).toBe(0);
     logged.length = 0;
-    client.observe(KEY, NEW, undefined, rowsSchema, keyOf, {
+    client.observe(KEY, NEW, undefined, { schema: rowsSchema }, keyOf, {
       from: [{ params: FRESH, appliedSeq: 0, after: null, until: "a" }],
     });
     await flush();

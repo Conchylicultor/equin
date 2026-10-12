@@ -15,14 +15,12 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 }));
 
 import { renderHook, waitFor } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
-import { type ReactNode } from "react";
 import { z } from "zod";
 import {
-  NotificationsProvider,
-  getNotificationsClient,
-} from "@plugins/primitives/plugins/live-state/web";
-import { resetResourceContractMismatches } from "@plugins/primitives/plugins/live-state/web/testing";
+  createLiveStateHarness,
+  type LiveStateHarness,
+  resetResourceContractMismatches,
+} from "@plugins/primitives/plugins/live-state/web/testing";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 
@@ -31,24 +29,11 @@ const Result = z.object({ n: z.number() });
 let seq = 0;
 const key = () => `test.use-live-refusal.${seq++}`;
 
-function makeClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
-}
-
-function mount<R>(client: QueryClient, useHook: () => R) {
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>
-      {children}
-    </NotificationsProvider>
-  );
-  const rendered = renderHook(useHook, { wrapper });
-  const notifications = getNotificationsClient();
-  if (!notifications) throw new Error("NotificationsClient not created");
+function mount<R>(live: LiveStateHarness, useHook: () => R) {
+  const notifications = live.notifications;
+  // Before the first render: a fresh client would cold-start prime over HTTP.
   vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
+  const rendered = renderHook(useHook, { wrapper: live.Wrapper });
   return rendered;
 }
 
@@ -81,7 +66,9 @@ describe("useLive — a value's declared refusals", () => {
       refusals: z.enum(["missing", "denied"]),
     });
     refuseWith({ code: "missing", detail: "no such file" });
-    const { result } = mount(makeClient(), () => useLive(v, { path: "/x" }));
+    const { result } = mount(createLiveStateHarness(), () =>
+      useLive(v, { path: "/x" }),
+    );
     await waitFor(() => expect(result.current.status).toBe("error"));
     const r = result.current;
     if (r.status !== "error") throw new Error("unreachable");
@@ -99,7 +86,7 @@ describe("useLive — a value's declared refusals", () => {
       refusals: ["missing"],
     });
     refuseWith({ code: "gone", detail: "it went away" });
-    const { result } = mount(makeClient(), () => useLive(v));
+    const { result } = mount(createLiveStateHarness(), () => useLive(v));
     await waitFor(() => expect(result.current.status).toBe("error"));
     const r = result.current;
     if (r.status !== "error") throw new Error("unreachable");
@@ -110,7 +97,7 @@ describe("useLive — a value's declared refusals", () => {
   it("a value that declares none takes any refusal as a contract mismatch", async () => {
     const v = liveValue(key(), { schema: Result, load: "on-demand" });
     refuseWith({ code: "missing", detail: "no such file" });
-    const { result } = mount(makeClient(), () => useLive(v));
+    const { result } = mount(createLiveStateHarness(), () => useLive(v));
     await waitFor(() => expect(result.current.status).toBe("error"));
     const r = result.current;
     if (r.status !== "error") throw new Error("unreachable");

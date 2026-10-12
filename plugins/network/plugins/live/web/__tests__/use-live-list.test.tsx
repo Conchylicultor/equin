@@ -4,7 +4,7 @@
  * per entry in order, `null` entries skipped, the set moved by diff so a kept
  * tuple stays subscribed and settled, a duplicate read once, and the typed-query
  * form encoding each question. Harness: a real NotificationsProvider +
- * QueryClient; values land with `client.setQueryData` on the exact tuple (the
+ * QueryClient; values land with `live.queryClient.setQueryData` on the exact tuple (the
  * call a WS sub-ack makes), as in use-live-query.test.tsx.
  */
 
@@ -15,16 +15,16 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 }));
 
 import { renderHook, waitFor, act } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
-import { type ReactNode } from "react";
 import { z } from "zod";
 import {
-  NotificationsProvider,
-  getNotificationsClient,
   queryKeyFor,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
-import { NotificationsClient } from "@plugins/primitives/plugins/live-state/web/testing";
+import {
+  createLiveStateHarness,
+  type LiveStateHarness,
+  NotificationsClient,
+} from "@plugins/primitives/plugins/live-state/web/testing";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { LiveSnapshotResult } from "../internal/use-live";
@@ -35,28 +35,15 @@ const Query = z.object({ metric: z.string(), days: z.number().default(7) });
 let seq = 0;
 const key = () => `test.use-live-list.${seq++}`;
 
-function makeClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
-}
-
 function mount<Props, R>(
-  client: QueryClient,
+  live: LiveStateHarness,
   useHook: (props: Props) => R,
   initialProps: Props,
 ) {
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>
-      {children}
-    </NotificationsProvider>
-  );
-  const rendered = renderHook(useHook, { wrapper, initialProps });
-  const notifications = getNotificationsClient();
-  if (!notifications) throw new Error("NotificationsClient not created");
+  const notifications = live.notifications;
+  // Before the first render: a fresh client would cold-start prime over HTTP.
   vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
+  const rendered = renderHook(useHook, { wrapper: live.Wrapper, initialProps });
   return { ...rendered, notifications };
 }
 
@@ -70,16 +57,16 @@ const shape = (results: readonly ResourceResult<{ n: number }>[]) =>
 describe("useLive(value, [p1, p2, …])", () => {
   it("returns one result per tuple, in order", async () => {
     const v = liveValue(key(), { schema: Result, params: ["dir"] });
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const { result } = mount(
-      client,
+      live,
       ({ list }: { list: Dir[] }) => useLive(v, list),
       { list: [dir("a"), dir("b"), dir("c")] },
     );
     expect(shape(result.current)).toEqual(["loading", "loading", "loading"]);
     act(() => {
-      client.setQueryData(queryKeyFor(v.key, dir("c")), { n: 3 });
-      client.setQueryData(queryKeyFor(v.key, dir("a")), { n: 1 });
+      live.queryClient.setQueryData(queryKeyFor(v.key, dir("c")), { n: 3 });
+      live.queryClient.setQueryData(queryKeyFor(v.key, dir("a")), { n: 1 });
     });
     await waitFor(() =>
       expect(shape(result.current)).toEqual([1, "loading", 3]),
@@ -88,11 +75,11 @@ describe("useLive(value, [p1, p2, …])", () => {
 
   it("a growing, shrinking or reordered list keeps settled tuples — subscribed once, never re-observed", async () => {
     const v = liveValue(key(), { schema: Result, params: ["dir"] });
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(v.key, dir("a")), { n: 1 });
-    client.setQueryData(queryKeyFor(v.key, dir("b")), { n: 2 });
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(v.key, dir("a")), { n: 1 });
+    live.queryClient.setQueryData(queryKeyFor(v.key, dir("b")), { n: 2 });
     const { result, rerender, unmount } = mount(
-      client,
+      live,
       ({ list }: { list: Dir[] }) => useLive(v, list),
       { list: [dir("a"), dir("b")] },
     );
@@ -128,12 +115,12 @@ describe("useLive(value, [p1, p2, …])", () => {
 
   it("a null entry is a skip: loading, nothing read; it fills in when its subject arrives", async () => {
     const v = liveValue(key(), { schema: Result, params: ["dir"] });
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(v.key, dir("a")), { n: 1 });
-    client.setQueryData(queryKeyFor(v.key, dir("b")), { n: 2 });
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(v.key, dir("a")), { n: 1 });
+    live.queryClient.setQueryData(queryKeyFor(v.key, dir("b")), { n: 2 });
     const observe = vi.spyOn(NotificationsClient.prototype, "observe");
     const { result, rerender } = mount(
-      client,
+      live,
       ({ list }: { list: (Dir | null)[] }) => useLive(v, list),
       { list: [null, dir("a"), null] },
     );
@@ -155,10 +142,10 @@ describe("useLive(value, [p1, p2, …])", () => {
       schema: Result,
       params: ["dir", "scope?"],
     });
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const observe = vi.spyOn(NotificationsClient.prototype, "observe");
     const { result } = mount(
-      client,
+      live,
       () => useLive(v, [{ dir: "a" }, { dir: "a", scope: "" }, { dir: "a" }]),
       undefined,
     );
@@ -167,34 +154,41 @@ describe("useLive(value, [p1, p2, …])", () => {
     ).toEqual([{ dir: "a" }]);
     observe.mockRestore();
     act(() => {
-      client.setQueryData(queryKeyFor(v.key, { dir: "a" }), { n: 5 });
+      live.queryClient.setQueryData(queryKeyFor(v.key, { dir: "a" }), { n: 5 });
     });
     await waitFor(() => expect(shape(result.current)).toEqual([5, 5, 5]));
   });
 
   it("an empty list reads nothing and returns no results", () => {
     const v = liveValue(key(), { schema: Result, params: ["dir"] });
-    const { result } = mount(makeClient(), () => useLive(v, []), undefined);
+    const { result } = mount(
+      createLiveStateHarness(),
+      () => useLive(v, []),
+      undefined,
+    );
     expect(result.current).toEqual([]);
   });
 
   it("a typed-query value takes a list of questions, each encoded to its one tuple", async () => {
     const v = liveValue(key(), { schema: Result, query: Query });
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const { result } = mount(
-      client,
+      live,
       () => useLive(v, [{ metric: "x" }, null, { metric: "y", days: 3 }]),
       undefined,
     );
     expect(shape(result.current)).toEqual(["loading", "loading", "loading"]);
     act(() => {
-      client.setQueryData(
+      live.queryClient.setQueryData(
         queryKeyFor(v.key, { q: '{"days":3,"metric":"y"}' }),
         { n: 3 },
       );
-      client.setQueryData(queryKeyFor(v.key, v.query.encode({ metric: "x" })), {
-        n: 7,
-      });
+      live.queryClient.setQueryData(
+        queryKeyFor(v.key, v.query.encode({ metric: "x" })),
+        {
+          n: 7,
+        },
+      );
     });
     await waitFor(() =>
       expect(shape(result.current)).toEqual([7, "loading", 3]),
@@ -215,7 +209,7 @@ describe("useLive(value, [p1, p2, …])", () => {
         } as never),
       );
     const { result } = mount(
-      makeClient(),
+      createLiveStateHarness(),
       () => useLive(v, [dir("a"), dir("b")]),
       undefined,
     );

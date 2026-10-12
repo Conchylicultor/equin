@@ -2172,6 +2172,13 @@ export class NotificationsClient {
       this.applyInvalidate(msg.key, msg.params);
       return;
     }
+    if (msg.kind === "sub-ack" && !("value" in msg)) {
+      // Only a bytes read's sub-ack carries no value (handled above): one for
+      // any other read is a server bug, never an `undefined` to cache.
+      throw new Error(
+        `live-state: a value-less sub-ack for non-bytes resource ${msg.key}`,
+      );
+    }
     if (msg.kind === "sub-ack" || msg.kind === "update") {
       // A value-carrying sub-ack answers a derivation too: the server loaded.
       if (msg.kind === "sub-ack") entry.derivation = undefined;

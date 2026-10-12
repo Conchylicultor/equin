@@ -14,15 +14,13 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 }));
 
 import { renderHook, waitFor } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
-import { type ReactNode } from "react";
 import { z } from "zod";
+import { type ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import {
-  NotificationsProvider,
-  getNotificationsClient,
-  type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
-import { resetResourceContractMismatches } from "@plugins/primitives/plugins/live-state/web/testing";
+  createLiveStateHarness,
+  type LiveStateHarness,
+  resetResourceContractMismatches,
+} from "@plugins/primitives/plugins/live-state/web/testing";
 import { resourceBytesHeaders } from "@plugins/packages/plugins/resource-protocol/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -30,24 +28,11 @@ import { useLive } from "@plugins/network/plugins/live/web";
 let seq = 0;
 const key = () => `test.use-live-bytes.${seq++}`;
 
-function makeClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
-}
-
-function mount<R>(client: QueryClient, useHook: () => R) {
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>
-      {children}
-    </NotificationsProvider>
-  );
-  const rendered = renderHook(useHook, { wrapper });
-  const notifications = getNotificationsClient();
-  if (!notifications) throw new Error("NotificationsClient not created");
+function mount<R>(live: LiveStateHarness, useHook: () => R) {
+  const notifications = live.notifications;
+  // Before the first render: a fresh client would cold-start prime over HTTP.
   vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
+  const rendered = renderHook(useHook, { wrapper: live.Wrapper });
   return rendered;
 }
 
@@ -72,7 +57,9 @@ describe("useLive — a bytes value", () => {
           headers: resourceBytesHeaders({ version: 3, epoch: "boot" }),
         }),
     );
-    const { result } = mount(makeClient(), () => useLive(v, { path: "a.png" }));
+    const { result } = mount(createLiveStateHarness(), () =>
+      useLive(v, { path: "a.png" }),
+    );
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const r = result.current;
     if (r.status !== "ready") throw new Error("unreachable");
@@ -91,7 +78,9 @@ describe("useLive — a bytes value", () => {
           headers: { "content-type": "application/json" },
         }),
     );
-    const { result } = mount(makeClient(), () => useLive(v, { path: "p" }));
+    const { result } = mount(createLiveStateHarness(), () =>
+      useLive(v, { path: "p" }),
+    );
     await waitFor(() => expect(result.current.status).toBe("error"));
   });
 
@@ -113,7 +102,9 @@ describe("useLive — a bytes value", () => {
           { status: 422, headers: { "content-type": "application/json" } },
         ),
     );
-    const { result } = mount(makeClient(), () => useLive(v, { path: "p" }));
+    const { result } = mount(createLiveStateHarness(), () =>
+      useLive(v, { path: "p" }),
+    );
     await waitFor(() => expect(result.current.status).toBe("error"));
     const r = result.current;
     if (r.status !== "error") throw new Error("unreachable");

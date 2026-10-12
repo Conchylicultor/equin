@@ -2376,10 +2376,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `ids.IdKinds`
               - `infra/endpoints.useEndpointMutation`
-              - `network/live.LiveListResult`
               - `network/live.LiveRowResult`
               - `network/live.useLive`
               - `network/live.useLiveRow`
+              - `primitives/live-state.ResourceResult`
             - Exports (values):
               - `EventSources`
               - `useCreateEventSource`
@@ -2401,9 +2401,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "events.source-runs"
               - `resource.declare` "events.source-runs:groups"
               - `resource.declare` "events.source-runs:rows"
-              - `resource.declare` "events.sources"
-              - `resource.declare` "events.sources:groups"
-              - `resource.declare` "events.sources:rows"
+              - `resource.declare` "events.sources.all"
+              - `resource.declare` "events.sources.all:rows"
             - Uses:
               - `database.db`
               - `ids.IdKinds`
@@ -2448,9 +2447,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `events.source-runs` (keyed, window)
               - `events.source-runs:groups` (push)
               - `events.source-runs:rows` (keyed, point)
-              - `events.sources` (keyed, window)
-              - `events.sources:groups` (push)
-              - `events.sources:rows` (keyed, point)
+              - `events.sources.all` (keyed)
+              - `events.sources.all:rows` (keyed, point)
             - Routes:
               - `GET /api/events/sources`
               - `POST /api/events/sources`
@@ -2460,18 +2458,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/events/sources/:id/refresh`
               - `POST /api/events/sources/refresh-all`
           - Core:
-            - Uses: 21 symbols — full list in [`plugins/apps/plugins/events/plugins/events-core/REFERENCE.md`](../plugins/apps/plugins/events/plugins/events-core/REFERENCE.md)
-              - `network/live/filter` ×4
-              - `fields` ×3
-              - `ids` ×3
-              - `apps/events/event-date` ×2
-              - `fields/text/config` ×2
-              - `network/live` ×2
+            - Uses:
+              - `apps/events/event-date.EventDate`
+              - `apps/events/event-date.EventDateSchema`
+              - `fields.FieldsRecord`
+              - `fields.fieldsToZodObject`
+              - `fields.nullable`
               - `fields/bool/config.boolField`
               - `fields/date/config.dateField`
               - `fields/int/config.intField`
               - `fields/json/config.jsonField`
+              - `fields/text/config.enumTextField`
+              - `fields/text/config.textField`
+              - `ids.defineIdKind`
+              - `ids.idKindField`
+              - `ids.IdOf`
               - `infra/endpoints.defineEndpoint`
+              - `network/live.liveCollection`
+              - `network/live.liveValue`
+              - `network/live/filter.liveInstant`
+              - `network/live/filter.liveNumber`
+              - `network/live/filter.liveText`
             - Exports (types):
               - `CreateEventSourceBody`
               - `EventCategory`
@@ -3730,9 +3737,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `AgentPageRowSchema`
           - Server:
             - Contributes:
-              - `resource.declare` "pages-origin"
-              - `resource.declare` "pages-origin:groups"
-              - `resource.declare` "pages-origin:rows"
+              - `resource.declare` "pages-origin.all"
+              - `resource.declare` "pages-origin.all:rows"
               - `page.editor.block.afterCreate`
             - Uses:
               - `database.db`
@@ -3748,9 +3754,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `pageBlocksOrigin`
             - Register: `defineJob('retention.page_blocks_ext_origin')`
             - Resources:
-              - `pages-origin` (keyed, window)
-              - `pages-origin:groups` (push)
-              - `pages-origin:rows` (keyed, point)
+              - `pages-origin.all` (keyed)
+              - `pages-origin.all:rows` (keyed, point)
         - **`auto-icon`** — Regenerate action for the page icon picker: a footer row that forces a new auto-picked emoji for the page pending while the pick runs in the request. Auto-generated page emoji icons: once a page's edits settle (10 s after the last blocksChanged), Haiku picks an emoji from its title + content, avoiding its siblings' icons, and writes it only if the page still has none. A page_blocks_ext_auto_icon row records that generation ran, so it never runs again unasked; Regenerate forces a new pick; a boot backfill covers existing pages.
           - Server:
             - Contributes: `trigger` "pages.auto-icon.schedule"
@@ -4119,9 +4124,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `StarredPageRowSchema`
           - Server:
             - Contributes:
-              - `resource.declare` "pages-starred"
-              - `resource.declare` "pages-starred:groups"
-              - `resource.declare` "pages-starred:rows"
+              - `resource.declare` "pages-starred.all"
+              - `resource.declare` "pages-starred.all:rows"
             - Uses:
               - `infra/endpoints.implement`
               - `infra/entity-extensions.defineExtension`
@@ -4133,9 +4137,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pageBlocksStarred`
               - `setPageStarred`
             - Resources:
-              - `pages-starred` (keyed, window)
-              - `pages-starred:groups` (push)
-              - `pages-starred:rows` (keyed, point)
+              - `pages-starred.all` (keyed)
+              - `pages-starred.all:rows` (keyed, point)
             - Routes: `PUT /api/pages/:pageId/starred`
         - **`trash`** — Pages trash consumer: contributes a Trash entry into the Pages sidebar, opening a dialog that lists soft-deleted pages with restore and permanent-delete actions.
           - Web:
@@ -19330,11 +19333,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/resource-protocol.BUILD_GRAPH_HEADER`
           - `packages/resource-protocol.contractVerdict`
           - `packages/resource-protocol.ContractVerdict`
+          - `packages/resource-protocol.Derivation`
+          - `packages/resource-protocol.DERIVE_MAX_ID`
+          - `packages/resource-protocol.DERIVE_MAX_SOURCES`
+          - `packages/resource-protocol.DeriveSource`
+          - `packages/resource-protocol.ExactServerFrame`
+          - `packages/resource-protocol.PROTOCOL`
+          - `packages/resource-protocol.ReceivedFrame`
           - `packages/resource-protocol.resourceBytesHeaders`
           - `packages/resource-protocol.ResourceContractError`
           - `packages/resource-protocol.ResourceHttpErrorBody`
           - `packages/resource-protocol.ResourceRefusal`
-          - `packages/resource-protocol.SubErrorFrame`
+          - `packages/resource-protocol.ServerFrame`
           - `packages/semaphore.createSemaphore`
         - Exports (types):
           - `AliasMembership`
@@ -24765,24 +24775,34 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HubStop`
           - `RefcountHub`
         - Exports (values): `createRefcountHub`
-    - **`resource-protocol`** — The live-resource wire protocol's failure vocabulary, shared by the resource runtime (server, central) and the live-state client: the sub-error reasons (contract-mismatch included), the contract verdict (skew / same-build / unknown), the sub-error frame and HTTP error body, the client build-graph header, ResourceContractError — the typed throw a params decode raises when a subscription does not match the declaration — and ResourceRefusal, the expected caller-caused refusal a loader throws, whose message reaches the reader and is never reported as a server failure.
+    - **`resource-protocol`** — The live-resource wire protocol, shared by the resource runtime (server, central) and the live-state client: the socket's frame vocabulary declared once as data — ServerFrame / ClientFrame / Derivation types derived from it, and PROTOCOL, a pure-JS hash of its canonical JSON that splits the shared socket and gates seeded derivations exactly when the vocabulary changes — plus the failure vocabulary: the sub-error reasons (contract-mismatch included), the contract verdict (skew / same-build / unknown), the HTTP error body, the client build-graph header, ResourceContractError — the typed throw a params decode raises when a subscription does not match the declaration — and ResourceRefusal, the expected caller-caused refusal a loader throws, whose message reaches the reader and is never reported as a server failure.
       - Cross-plugin:
         - Imported by:
           - `framework/resource-runtime`
           - `network/live`
       - Core:
         - Exports (types):
+          - `ClientFrame`
           - `ContractVerdict`
+          - `Derivation`
+          - `DeriveSource`
+          - `ExactClientFrame`
+          - `ExactServerFrame`
+          - `ReceivedFrame`
           - `ResourceHttpErrorBody`
           - `ResourceReadEnvelope`
+          - `ServerFrame`
           - `SubErrorFrame`
           - `SubErrorReason`
         - Exports (values):
           - `BUILD_GRAPH_HEADER`
           - `contractVerdict`
+          - `DERIVE_MAX_ID`
+          - `DERIVE_MAX_SOURCES`
           - `DEV_BUILD`
           - `parseResourceBytesHeaders`
           - `parseResourceHttpErrorBody`
+          - `PROTOCOL`
           - `RESOURCE_BYTES_CONTENT_TYPE`
           - `RESOURCE_BYTES_HEADERS`
           - `resourceBytesHeaders`
@@ -31925,8 +31945,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runActivation`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a local async load (not a server read — those are live) as a ResourceResult.
       - Web:
-        - Uses: 25 symbols — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `primitives/networking` ×9
+        - Uses: 26 symbols — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `primitives/networking` ×10
           - `infra/endpoints` ×4
           - `primitives/css/spacing` ×2
           - `primitives/css/ui-kit` ×2
@@ -32015,8 +32035,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 218 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×65
+        - Imported by: 219 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×66
           - `conversations` ×38
           - `ui` ×22
           - `tasks` ×20
@@ -32070,12 +32090,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unresolved`
       - Test helpers:
         - Web: `@plugins/primitives/plugins/live-state/web/testing`
+          - `createLiveStateHarness` — A fresh `NotificationsClient` and the `QueryClient` it owns, for ONE test — what the app's `NotificationsProvider` mounts, minus the tab singleton (which keeps the first cache it was built with, so a second test would mount a cache nothing writes).
           - `markResourceContractMismatch` — Record that the server refused `key` for this tab.
           - `mergeKeyedDelta` — Merge a row-keyed delta into the prior cached array.
           - `noteResourceTxAcks` — Record the server-acknowledged source-transaction ids for (key, params), then notify subscribers (emit-after-note: a listener reading `hasResourceTxAck` inside its callback already sees the freshly-noted acks).
           - `noteResourceWatermark` — Adopt a frame's commit watermark for (key, params), monotonically: an equal or older watermark than the stored one is a no-op (compared causally via `compareTxWatermark`, never as strings).
           - `NotificationsClient`
           - `resetResourceContractMismatches` — Forget every mismatch — tests only (via `web/testing`).
+          - Types: `LiveStateHarness`, `LiveStateHarnessOptions`
     - **`loading`** — Single entry point for the loading state: text / spinner / skeleton-rows / skeleton-cards / shimmer-block variants composing Placeholder and Spinner, with a built-in CSS delay-before-show (~120ms) so fast loads never flash.
       - Web:
         - Uses:
@@ -36801,7 +36823,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/model-provider.ModelChoiceSchema`
               - `tasks/launch-options.defineLaunchOption`
             - Exports (values): `autoStartLaunchOption`
-    - **`automations`** — Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the `origin` Automation field in every task DataView, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, written by the decide-launch endpoint alone — concurrency slots held until a task settles or releaseLaunchedTask, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value, the automations.tasks collection (the origin side-table) and the automations.launch-decisions collection, and notifies the bell when an automated task needs its person.
+    - **`automations`** — Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the `origin` Automation field in every task DataView, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, written by the decide-launch endpoint alone — concurrency slots held until a task settles or releaseLaunchedTask, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value, the automations.tasks collection (the origin side-table, an automation's history), the automations.origins set (the same rows, every task's automation) and the automations.launch-decisions.all set, and notifies the bell when an automated task needs its person.
       - Web:
         - Slots:
           - `Automations.Config`
@@ -36862,9 +36884,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `resource.declare` "automations.catalog"
-          - `resource.declare` "automations.launch-decisions"
-          - `resource.declare` "automations.launch-decisions:groups"
-          - `resource.declare` "automations.launch-decisions:rows"
+          - `resource.declare` "automations.launch-decisions.all"
+          - `resource.declare` "automations.launch-decisions.all:rows"
+          - `resource.declare` "automations.origins"
+          - `resource.declare` "automations.origins:rows"
           - `resource.declare` "automations.tasks"
           - `resource.declare` "automations.tasks:groups"
           - `resource.declare` "automations.tasks:rows"
@@ -36905,9 +36928,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `defineJob('automations.task-status')`
         - Resources:
           - `automations.catalog` (push, notified)
-          - `automations.launch-decisions` (keyed, window)
-          - `automations.launch-decisions:groups` (push)
-          - `automations.launch-decisions:rows` (keyed, point)
+          - `automations.launch-decisions.all` (keyed)
+          - `automations.launch-decisions.all:rows` (keyed, point)
+          - `automations.origins` (keyed)
+          - `automations.origins:rows` (keyed, point)
           - `automations.tasks` (keyed, window)
           - `automations.tasks:groups` (push)
           - `automations.tasks:rows` (keyed, point)
@@ -36937,6 +36961,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AutomationConfigFields`
           - `AutomationEntry`
           - `AutomationKind`
+          - `AutomationOriginRow`
           - `AutomationSettings`
           - `AutomationSource`
           - `AutomationTaskRow`
@@ -36959,6 +36984,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `automationDetailRoute`
           - `AutomationEntrySchema`
           - `automationModelField`
+          - `AutomationOriginRowSchema`
+          - `automationOrigins`
           - `AUTOMATIONS_CONFIG_PLUGIN_ID`
           - `automationsCatalog`
           - `AutomationSettingsSchema`
@@ -37164,7 +37191,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core.getTask`
         - Register: `defineAutomation('report-investigations')`
         - Resources: `report-investigations.scope` (push)
-    - **`sidequest-autopilot`** — The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, in total, push policy, model, prompt, triage, stale after, triage prompt) and contributes its sections — Launch list (a DataView of every ready sidequest in launch order, grouped Approved / Proposed by triage / Needs your call / Looks obsolete / Triaging / Excluded; each row expands to triage's context, its one-click question and Re-triage; triage may tick a row, only Approve selected approves), Run until (until you turn it off, or until a date and time after which it turns itself off) and Triage (the switch, stale after, the triage prompt). Declares the Sidequest autopilot automation (launch kind, off by default): while on, it starts agents on the ready sidequests (no attempt, not held, dropped or blocked) a person APPROVED in its launch list — best first by triage's value for size, `concurrency` at a time (default 2), at most `maxLaunches` per turn-on (default 5) — each with the autopilot prompt (triage's context and the person's answer included; never ask, check obsolescence first, stay in scope, push only what the push policy allows, finish with submit_outcome_report). Triage (on by default, main only): each ready sidequest is read once by a read-only Sonnet run (Read / Grep / Glob over the main checkout) — verdict ready / decide / split / obsolete, risk, size, value, areas, a free-form context and at most one one-click question — stored in tasks_ext_sidequest_triage and served as sidequest-autopilot.triage; queued when a task becomes a sidequest or a sidequest becomes ready, backfilled at boot, re-run only by the person's Re-triage. Triage approves nothing. Turns itself off at its `runUntil`.
+    - **`sidequest-autopilot`** — The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, in total, push policy, model, prompt, triage, stale after, triage prompt) and contributes its sections — Launch list (a DataView of every ready sidequest in launch order, grouped Approved / Proposed by triage / Needs your call / Looks obsolete / Triaging / Excluded; each row expands to triage's context, its one-click question and Re-triage; triage may tick a row, only Approve selected approves), Run until (until you turn it off, or until a date and time after which it turns itself off) and Triage (the switch, stale after, the triage prompt). Declares the Sidequest autopilot automation (launch kind, off by default): while on, it starts agents on the ready sidequests (no attempt, not held, dropped or blocked) a person APPROVED in its launch list — best first by triage's value for size, `concurrency` at a time (default 2), at most `maxLaunches` per turn-on (default 5) — each with the autopilot prompt (triage's context and the person's answer included; never ask, check obsolescence first, stay in scope, push only what the push policy allows, finish with submit_outcome_report). Triage (on by default, main only): each ready sidequest is read once by a read-only Sonnet run (Read / Grep / Glob over the main checkout) — verdict ready / decide / split / obsolete, risk, size, value, areas, a free-form context and at most one one-click question — stored in tasks_ext_sidequest_triage and served as the sidequest-autopilot.triage.all set; queued when a task becomes a sidequest or a sidequest becomes ready, backfilled at boot, re-run only by the person's Re-triage. Triage approves nothing. Turns itself off at its `runUntil`.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "sidequest-autopilot"
@@ -37198,9 +37225,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `ConfigV2.Register` "sidequest-autopilot"
-          - `resource.declare` "sidequest-autopilot.triage"
-          - `resource.declare` "sidequest-autopilot.triage:groups"
-          - `resource.declare` "sidequest-autopilot.triage:rows"
+          - `resource.declare` "sidequest-autopilot.triage.all"
+          - `resource.declare` "sidequest-autopilot.triage.all:rows"
           - `trigger` "sidequest-autopilot.task-ready"
           - `trigger` "sidequest-autopilot.triage-on-task"
           - `trigger` "sidequest-autopilot.triage-on-task"
@@ -37231,9 +37257,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineJob('sidequest-autopilot.triage-backfill')`
           - `defineWarmup('sidequest-autopilot.triage-backfill')`
         - Resources:
-          - `sidequest-autopilot.triage` (keyed, window)
-          - `sidequest-autopilot.triage:groups` (push)
-          - `sidequest-autopilot.triage:rows` (keyed, point)
+          - `sidequest-autopilot.triage.all` (keyed)
+          - `sidequest-autopilot.triage.all:rows` (keyed, point)
         - Routes:
           - `POST /api/sidequest-autopilot/triage/:taskId/run`
           - `PUT /api/sidequest-autopilot/triage/:taskId/answer`
@@ -37838,7 +37863,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/annotations/todo/task-link`
           - `page/prompt/link`
           - `tasks`
-    - **`task-track`** — Per-task track (main | sidequest): the track badge, a `track` enum field in the tasks DataView (badge cell, groupable, filterable), and the clickable Track control the task detail header renders to switch it. Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (window for the task list, point reads for one task), and the endpoint that switches a task's track, and the tasks.trackChanged trigger event every track write emits.
+    - **`task-track`** — Per-task track (main | sidequest): the track badge, a `track` enum field in the tasks DataView (badge cell, groupable, filterable), and the clickable Track control the task detail header renders to switch it. Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (the whole set for the task list, point reads for one task), and the endpoint that switches a task's track, and the tasks.trackChanged trigger event every track write emits.
       - Web:
         - Contributes: `Tasks.Fields` "track" → `TrackField`
         - Uses:
@@ -37848,9 +37873,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.useLiveRow`
           - `primitives/css/badge.Badge`
           - `primitives/live-state.foldResource`
-          - `primitives/live-state.mapResource`
           - `primitives/live-state.ResourceErrorInline`
-          - `primitives/live-state.ResourceResult`
           - `primitives/loading.Loading`
           - `shell/notifications.toast`
           - `tasks/task-list.Tasks`
@@ -37860,9 +37883,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTaskTrack`
       - Server:
         - Contributes:
-          - `resource.declare` "task-tracks"
-          - `resource.declare` "task-tracks:groups"
-          - `resource.declare` "task-tracks:rows"
+          - `resource.declare` "task-tracks.all"
+          - `resource.declare` "task-tracks.all:rows"
         - Uses:
           - `database.db`
           - `database.DbExecutor`
@@ -37889,9 +37911,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskTrackChanged`
         - Register: `defineTriggerEvent('tasks.trackChanged')`
         - Resources:
-          - `task-tracks` (keyed, window)
-          - `task-tracks:groups` (push)
-          - `task-tracks:rows` (keyed, point)
+          - `task-tracks.all` (keyed)
+          - `task-tracks.all:rows` (keyed, point)
         - Routes: `PUT /api/tasks/:taskId/track`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
