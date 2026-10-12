@@ -11,7 +11,9 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
 import {
   DEFAULT_BASS_FIGURATION_ID,
+  DEFAULT_BASS_VOICING,
   DEFAULT_CHORD_FIGURATION_ID,
+  DEFAULT_CHORD_VOICING,
 } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
 import {
@@ -58,8 +60,8 @@ export type Groove = ResourceResult<GrooveState>;
  *
  * Two halves, both needed before anything is shown: the setting carries
  * whether the groove is on and its optimistic live value (instant playback),
- * and the song's `rhythms` row is display truth (it remembers both patterns +
- * figuration ids even while the groove is off). An absent row is a song whose
+ * and the song's `rhythms` row is display truth (it remembers both patterns,
+ * figuration ids and voicings even while the groove is off). An absent row is a song whose
  * groove was never configured: the default patterns ARE its patterns.
  *
  * `presetId` (the preset the groove was last applied from) is the row's
@@ -103,6 +105,8 @@ export function useGroove(): Groove {
               hands: { bass: next.bass, chord: next.chord },
               bassFigurationId: next.bassFigurationId,
               chordFigurationId: next.chordFigurationId,
+              bassVoicing: next.bassVoicing,
+              chordVoicing: next.chordVoicing,
             }
           : null,
       );
@@ -115,6 +119,8 @@ export function useGroove(): Groove {
         chord: next.chord,
         bassPatternId: next.bassFigurationId,
         chordPatternId: next.chordFigurationId,
+        bassVoicing: next.bassVoicing,
+        chordVoicing: next.chordVoicing,
         groovePresetId: next.presetId,
       });
     },
@@ -157,6 +163,10 @@ export function useGroove(): Groove {
         live?.chordFigurationId ??
         persisted?.chordPatternId ??
         DEFAULT_CHORD_FIGURATION_ID,
+      bassVoicing:
+        live?.bassVoicing ?? persisted?.bassVoicing ?? DEFAULT_BASS_VOICING,
+      chordVoicing:
+        live?.chordVoicing ?? persisted?.chordVoicing ?? DEFAULT_CHORD_VOICING,
       commit,
     };
   });

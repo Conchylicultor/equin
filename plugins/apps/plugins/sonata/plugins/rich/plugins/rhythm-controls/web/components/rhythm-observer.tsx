@@ -57,6 +57,8 @@ export function RhythmObserver() {
             hands: { bass: persisted.bass, chord: persisted.chord },
             bassFigurationId: persisted.bassPatternId,
             chordFigurationId: persisted.chordPatternId,
+            bassVoicing: persisted.bassVoicing,
+            chordVoicing: persisted.chordVoicing,
           }
         : null,
     );

@@ -41,12 +41,60 @@ describe("block-full — no rhythm regression", () => {
     // per event, id `${idPrefix}-${i}-${k}`, start = ev.start, duration =
     // ev.end - ev.start, velocity 80, track "chords", voice undefined, no bass.
     expect(notes).toEqual([
-      { id: "chord-0-0", pitch: 60, start: 0, duration: 4, velocity: 80, track: "chords", voice: undefined },
-      { id: "chord-0-1", pitch: 64, start: 0, duration: 4, velocity: 80, track: "chords", voice: undefined },
-      { id: "chord-0-2", pitch: 67, start: 0, duration: 4, velocity: 80, track: "chords", voice: undefined },
-      { id: "chord-1-0", pitch: 67, start: 4, duration: 4, velocity: 80, track: "chords", voice: undefined },
-      { id: "chord-1-1", pitch: 71, start: 4, duration: 4, velocity: 80, track: "chords", voice: undefined },
-      { id: "chord-1-2", pitch: 74, start: 4, duration: 4, velocity: 80, track: "chords", voice: undefined },
+      {
+        id: "chord-0-0",
+        pitch: 60,
+        start: 0,
+        duration: 4,
+        velocity: 80,
+        track: "chords",
+        voice: undefined,
+      },
+      {
+        id: "chord-0-1",
+        pitch: 64,
+        start: 0,
+        duration: 4,
+        velocity: 80,
+        track: "chords",
+        voice: undefined,
+      },
+      {
+        id: "chord-0-2",
+        pitch: 67,
+        start: 0,
+        duration: 4,
+        velocity: 80,
+        track: "chords",
+        voice: undefined,
+      },
+      {
+        id: "chord-1-0",
+        pitch: 67,
+        start: 4,
+        duration: 4,
+        velocity: 80,
+        track: "chords",
+        voice: undefined,
+      },
+      {
+        id: "chord-1-1",
+        pitch: 71,
+        start: 4,
+        duration: 4,
+        velocity: 80,
+        track: "chords",
+        voice: undefined,
+      },
+      {
+        id: "chord-1-2",
+        pitch: 74,
+        start: 4,
+        duration: 4,
+        velocity: 80,
+        track: "chords",
+        voice: undefined,
+      },
     ]);
   });
 });
@@ -63,12 +111,60 @@ describe("block-full — bar-anchored rhythm", () => {
     // Two strikes (beats 0, 2), each the full triad, duration 2 (clipped to the
     // next onset). ids onset-indexed `-c${i}-${k}`; voice 1 (bass present).
     expect(notes).toEqual([
-      { id: "chord-c0-0", pitch: 60, start: 0, duration: 2, velocity: 80, track: "chords", voice: 1 },
-      { id: "chord-c0-1", pitch: 64, start: 0, duration: 2, velocity: 80, track: "chords", voice: 1 },
-      { id: "chord-c0-2", pitch: 67, start: 0, duration: 2, velocity: 80, track: "chords", voice: 1 },
-      { id: "chord-c1-0", pitch: 60, start: 2, duration: 2, velocity: 80, track: "chords", voice: 1 },
-      { id: "chord-c1-1", pitch: 64, start: 2, duration: 2, velocity: 80, track: "chords", voice: 1 },
-      { id: "chord-c1-2", pitch: 67, start: 2, duration: 2, velocity: 80, track: "chords", voice: 1 },
+      {
+        id: "chord-c0-0",
+        pitch: 60,
+        start: 0,
+        duration: 2,
+        velocity: 80,
+        track: "chords",
+        voice: 1,
+      },
+      {
+        id: "chord-c0-1",
+        pitch: 64,
+        start: 0,
+        duration: 2,
+        velocity: 80,
+        track: "chords",
+        voice: 1,
+      },
+      {
+        id: "chord-c0-2",
+        pitch: 67,
+        start: 0,
+        duration: 2,
+        velocity: 80,
+        track: "chords",
+        voice: 1,
+      },
+      {
+        id: "chord-c1-0",
+        pitch: 60,
+        start: 2,
+        duration: 2,
+        velocity: 80,
+        track: "chords",
+        voice: 1,
+      },
+      {
+        id: "chord-c1-1",
+        pitch: 64,
+        start: 2,
+        duration: 2,
+        velocity: 80,
+        track: "chords",
+        voice: 1,
+      },
+      {
+        id: "chord-c1-2",
+        pitch: 67,
+        start: 2,
+        duration: 2,
+        velocity: 80,
+        track: "chords",
+        voice: 1,
+      },
     ]);
   });
 
@@ -83,9 +179,33 @@ describe("block-full — bar-anchored rhythm", () => {
     // Onset at beat 0 is silence (no chord in force) and skipped; only beat 2
     // strikes — and it keeps onset index 1, proving ids are onset-indexed.
     expect(notes).toEqual([
-      { id: "chord-c1-0", pitch: 60, start: 2, duration: 2, velocity: 80, track: "chords", voice: 1 },
-      { id: "chord-c1-1", pitch: 64, start: 2, duration: 2, velocity: 80, track: "chords", voice: 1 },
-      { id: "chord-c1-2", pitch: 67, start: 2, duration: 2, velocity: 80, track: "chords", voice: 1 },
+      {
+        id: "chord-c1-0",
+        pitch: 60,
+        start: 2,
+        duration: 2,
+        velocity: 80,
+        track: "chords",
+        voice: 1,
+      },
+      {
+        id: "chord-c1-1",
+        pitch: 64,
+        start: 2,
+        duration: 2,
+        velocity: 80,
+        track: "chords",
+        voice: 1,
+      },
+      {
+        id: "chord-c1-2",
+        pitch: 67,
+        start: 2,
+        duration: 2,
+        velocity: 80,
+        track: "chords",
+        voice: 1,
+      },
     ]);
   });
 });
@@ -103,7 +223,15 @@ describe("bass decoupling", () => {
     // voice 0, id `-b${onset}-${k}` (the `-${k}` since a bass figuration can
     // strike a dyad), duration spanning to the chord end.
     expect(notes).toEqual([
-      { id: "chord-b0-0", pitch: 36, start: 0, duration: 4, velocity: 80, track: "chords", voice: 0 },
+      {
+        id: "chord-b0-0",
+        pitch: 36,
+        start: 0,
+        duration: 4,
+        velocity: 80,
+        track: "chords",
+        voice: 0,
+      },
     ]);
   });
 });
@@ -142,7 +270,8 @@ describe("per-hand figuration", () => {
     for (const n of chord) expect(n.track).toBe("chords");
 
     // The two hands genuinely differ: no bass pitch appears in the chord hand.
-    for (const b of bass) expect(chord.some((c) => c.pitch === b.pitch)).toBe(false);
+    for (const b of bass)
+      expect(chord.some((c) => c.pitch === b.pitch)).toBe(false);
   });
 });
 
@@ -199,5 +328,78 @@ describe("duration clipping", () => {
     // The beat-3 note sounds the C triad; the beat-5 note the G triad.
     expect(at3.map((n) => n.pitch).sort((a, b) => a - b)).toEqual([60, 64, 67]);
     expect(at5.map((n) => n.pitch).sort((a, b) => a - b)).toEqual([67, 71, 74]);
+  });
+});
+
+describe("per-hand voicing (opts.hands)", () => {
+  const on = { enabled: true, voiceLead: false, doubleOctave: false };
+  const hands = {
+    chord: { ...on, octave: 4 },
+    bass: { ...on, octave: 2 },
+  };
+  const fig = {
+    bass: findFiguration("root"),
+    chord: findFiguration("block"),
+  };
+
+  it("places each hand at its own octave", () => {
+    const notes = voiceChords([cMaj(0, 4)], {
+      ...OPTS,
+      rhythm: { bass: [0], chord: [0] },
+      figuration: fig,
+      hands: { chord: { ...on, octave: 5 }, bass: { ...on, octave: 1 } },
+    });
+    // C5 triad = [72, 76, 79]; bass root C1 = 24.
+    expect(notes.filter((n) => n.voice !== 0).map((n) => n.pitch)).toEqual([
+      72, 76, 79,
+    ]);
+    expect(notes.filter((n) => n.voice === 0).map((n) => n.pitch)).toEqual([
+      24,
+    ]);
+  });
+
+  it("a hand that is off strikes nothing", () => {
+    const notes = voiceChords([cMaj(0, 4)], {
+      ...OPTS,
+      rhythm: { bass: [0], chord: [0] },
+      figuration: fig,
+      hands: { ...hands, chord: { ...hands.chord, enabled: false } },
+    });
+    expect(notes.map((n) => n.pitch)).toEqual([36]);
+  });
+
+  it("octave doubling adds each struck pitch an octave above, on a distinct id", () => {
+    const notes = voiceChords([cMaj(0, 4)], {
+      ...OPTS,
+      rhythm: { bass: [0], chord: [] },
+      figuration: fig,
+      hands: {
+        ...hands,
+        bass: { ...hands.bass, octave: 1, doubleOctave: true },
+      },
+    });
+    // C1 + C2.
+    expect(notes.map((n) => [n.id, n.pitch])).toEqual([
+      ["chord-b0-0", 24],
+      ["chord-b0-0o", 36],
+    ]);
+  });
+
+  it("bass voice-leading moves the root to the nearest octave", () => {
+    // C2 (36) then B: placed at B2 (47), but B1 (35) is nearer the C2 before it.
+    const bMaj: ChordEvent = {
+      data: { symbol: "B", root: 11, quality: "maj" },
+      start: 4,
+      end: 8,
+    };
+    const play = (voiceLead: boolean) =>
+      voiceChords([cMaj(0, 4), bMaj], {
+        ...OPTS,
+        rhythm: { bass: [0, 4], chord: [] },
+        figuration: fig,
+        hands: { ...hands, bass: { ...hands.bass, voiceLead } },
+      }).map((n) => n.pitch);
+    expect(play(false)).toEqual([36, 47]);
+    expect(play(true)).toEqual([36, 35]);
   });
 });

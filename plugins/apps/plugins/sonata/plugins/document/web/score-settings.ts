@@ -1,4 +1,5 @@
 import type { RhythmHands } from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
+import type { HandVoicing } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { defineSongSetting, type SongSetting } from "./song-setting";
 import { useSettledSongSettings } from "./loaded-song";
 
@@ -38,15 +39,19 @@ export const keyAutoDetectSetting = defineSongSetting<boolean>(
 export const chordModeSetting = defineSongSetting<boolean>("chord mode", false);
 
 /**
- * Per-song groove — the two-hand onset necklace (`hands`) plus each hand's
- * tone-order figuration id (`bassFigurationId`/`chordFigurationId`). The
- * rhythm-grid (the *when*) and the figuration (the *what*) are the two halves of
- * one accompaniment pattern, so they travel together into `reVoiceChords`.
+ * Per-song groove — the two-hand onset necklace (`hands`), each hand's
+ * tone-order figuration id (`bassFigurationId`/`chordFigurationId`) and each
+ * hand's voicing (`bassVoicing`/`chordVoicing`: on/off, octave, voice-leading,
+ * octave doubling). The rhythm-grid (the *when*), the figuration (the *what*)
+ * and the voicing (the *where*) are one accompaniment pattern, so they travel
+ * together into `reVoiceChords`.
  */
 export interface RhythmGroove {
   hands: RhythmHands;
   bassFigurationId: string;
   chordFigurationId: string;
+  bassVoicing: HandVoicing;
+  chordVoicing: HandVoicing;
 }
 
 /**

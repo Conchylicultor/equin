@@ -33,6 +33,7 @@ import {
   nearestVoicing,
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import type { Figuration, FigurationContext } from "./figuration";
+import type { HandVoicing } from "./hand-voicing";
 import {
   findFiguration,
   DEFAULT_BASS_FIGURATION_ID,
@@ -88,6 +89,13 @@ export interface VoicingOptions {
    * onset, the whole chord per chord onset).
    */
   figuration?: { bass: Figuration; chord: Figuration };
+  /**
+   * Each hand's own voicing on the groove path (see {@link HandVoicing}): on/off,
+   * register, voice-leading and octave doubling. Read ONLY alongside `rhythm`.
+   * When absent, the chord hand takes `octave` / `voiceLead` and the bass hand
+   * sits at {@link BASS_OCTAVE} without voice-leading — today's groove sound.
+   */
+  hands?: { bass: HandVoicing; chord: HandVoicing };
 }
 
 /**
@@ -101,6 +109,45 @@ const DEFAULT_VELOCITY = 80;
 
 /** Octave the bass root sits in — roughly 1–2 octaves below the voiced chord. */
 const BASS_OCTAVE = 2;
+
+/** Highest MIDI pitch; an octave double above it is dropped, never wrapped. */
+const MAX_PITCH = 127;
+
+/**
+ * Shift a root-position bass register by whole octaves so its root lands nearest
+ * `prevRoot`, never more than an octave from where the register was placed
+ * (`tones`, at the hand's own octave) — so a line of falling fourths cannot walk
+ * the bass off the keyboard. A tie keeps the placed register.
+ */
+function nearestOctave(tones: number[], prevRoot: number | null): number[] {
+  const root = tones[0];
+  if (prevRoot === null || root === undefined) return tones;
+  let best = 0;
+  for (const shift of [-12, 12]) {
+    if (Math.abs(root + shift - prevRoot) < Math.abs(root + best - prevRoot)) {
+      best = shift;
+    }
+  }
+  return best === 0 ? tones : tones.map((p) => p + best);
+}
+
+/**
+ * The struck tones plus, when the hand doubles at the octave, each one an octave
+ * above (`k` suffixed `o`, so a doubled pitch never collides on id).
+ */
+function withOctaveDouble(
+  struck: readonly { pitch: number; k: number }[],
+  double: boolean,
+): { pitch: number; k: string }[] {
+  const base = struck.map(({ pitch, k }) => ({ pitch, k: String(k) }));
+  if (!double) return base;
+  return [
+    ...base,
+    ...struck
+      .filter(({ pitch }) => pitch + 12 <= MAX_PITCH)
+      .map(({ pitch, k }) => ({ pitch: pitch + 12, k: `${k}o` })),
+  ];
+}
 
 /**
  * Place a bass pitch-class in the low register: the given pitch-class at
@@ -269,9 +316,14 @@ function emitRhythmicHand(
  * `opts.track` (`voice: upperVoice`); bass notes on `opts.bassTrack ?? opts.track`
  * (`voice: 0`). Ids are onset-indexed: chord `${idPrefix}-c${onset}-${k}`, bass
  * `${idPrefix}-b${onset}-${k}` (the `-${k}` since a bass figuration can strike a
- * dyad / stab). Absent `opts.figuration` defaults to `{bass:"root",chord:"block"}`.
+ * dyad / stab; a doubled pitch's `k` ends in `o`). Absent `opts.figuration`
+ * defaults to `{bass:"root",chord:"block"}`; each hand's register, voice-leading,
+ * octave doubling and on/off come from `opts.hands`.
  */
-export function voiceChords(events: ChordEvent[], opts: VoicingOptions): Note[] {
+export function voiceChords(
+  events: ChordEvent[],
+  opts: VoicingOptions,
+): Note[] {
   const { track, bassTrack, idPrefix, velocity = DEFAULT_VELOCITY } = opts;
   const voice = upperVoice(opts);
 
@@ -300,20 +352,43 @@ export function voiceChords(events: ChordEvent[], opts: VoicingOptions): Note[] 
     bass: findFiguration(DEFAULT_BASS_FIGURATION_ID),
     chord: findFiguration(DEFAULT_CHORD_FIGURATION_ID),
   };
+  const hands = opts.hands ?? {
+    chord: {
+      enabled: true,
+      octave: opts.octave,
+      voiceLead: !!opts.voiceLead,
+      doubleOctave: false,
+    },
+    bass: {
+      enabled: true,
+      octave: BASS_OCTAVE,
+      voiceLead: false,
+      doubleOctave: false,
+    },
+  };
 
-  // Place BOTH registers per event: the voice-led chord register (voice-leading
-  // stays a chord-hand modifier) and a low root-position bass register.
+  // Place BOTH registers per event, each at its hand's octave: the chord
+  // register (voice-led to the nearest inversion when the chord hand asks) and
+  // the root-position bass register (moved by whole octaves to the nearest root
+  // when the bass hand asks). Both are placed even for a hand that is off, since
+  // a figuration may reach across registers.
   let prevVoiced: number[] | null = null;
+  let prevBassRoot: number | null = null;
   const chordPlaced: number[][] = [];
   const bassPlaced: number[][] = [];
   for (const ev of events) {
-    const tones = chordPitches(ev.data, opts.octave);
-    const voiced: number[] = opts.voiceLead
+    const tones = chordPitches(ev.data, hands.chord.octave);
+    const voiced: number[] = hands.chord.voiceLead
       ? nearestVoicing(tones, prevVoiced)
       : tones;
-    if (opts.voiceLead) prevVoiced = voiced;
+    if (hands.chord.voiceLead) prevVoiced = voiced;
     chordPlaced.push(voiced);
-    bassPlaced.push(chordPitches(ev.data, BASS_OCTAVE));
+    const bassTones = chordPitches(ev.data, hands.bass.octave);
+    const bass: number[] = hands.bass.voiceLead
+      ? nearestOctave(bassTones, prevBassRoot)
+      : bassTones;
+    if (hands.bass.voiceLead) prevBassRoot = bass[0] ?? null;
+    bassPlaced.push(bass);
   }
 
   // Build the per-onset context for the hand whose register is `active`: `tones`
@@ -343,28 +418,41 @@ export function voiceChords(events: ChordEvent[], opts: VoicingOptions): Note[] 
     };
   };
 
-  const chordNotes = emitRhythmicHand(events, rhythm.chord, (slot) =>
-    figuration.chord.select(contextAt(slot, "chord")).map(({ pitch, k }) => ({
-      id: `${idPrefix}-c${slot.onsetIndex}-${k}`,
-      pitch,
-      start: slot.start,
-      duration: slot.duration,
-      velocity,
-      track,
-      voice,
-    })),
+  // A hand that is off strikes nothing: its necklace is walked over no onsets.
+  const chordNotes = emitRhythmicHand(
+    events,
+    hands.chord.enabled ? rhythm.chord : [],
+    (slot) =>
+      withOctaveDouble(
+        figuration.chord.select(contextAt(slot, "chord")),
+        hands.chord.doubleOctave,
+      ).map(({ pitch, k }) => ({
+        id: `${idPrefix}-c${slot.onsetIndex}-${k}`,
+        pitch,
+        start: slot.start,
+        duration: slot.duration,
+        velocity,
+        track,
+        voice,
+      })),
   );
 
-  const bassNotes = emitRhythmicHand(events, rhythm.bass, (slot) =>
-    figuration.bass.select(contextAt(slot, "bass")).map(({ pitch, k }) => ({
-      id: `${idPrefix}-b${slot.onsetIndex}-${k}`,
-      pitch,
-      start: slot.start,
-      duration: slot.duration,
-      velocity,
-      track: bassTrack ?? track,
-      voice: 0,
-    })),
+  const bassNotes = emitRhythmicHand(
+    events,
+    hands.bass.enabled ? rhythm.bass : [],
+    (slot) =>
+      withOctaveDouble(
+        figuration.bass.select(contextAt(slot, "bass")),
+        hands.bass.doubleOctave,
+      ).map(({ pitch, k }) => ({
+        id: `${idPrefix}-b${slot.onsetIndex}-${k}`,
+        pitch,
+        start: slot.start,
+        duration: slot.duration,
+        velocity,
+        track: bassTrack ?? track,
+        voice: 0,
+      })),
   );
 
   return [...chordNotes, ...bassNotes];

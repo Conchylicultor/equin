@@ -33,36 +33,36 @@ export function AccompanimentActions() {
 
 /**
  * The Accompaniment body: the chord-mode row, then (when the song's chords are
- * voiced) the groove body and the voicing rows, separated by rules.
+ * voiced) EITHER the groove body — whose hands carry their own octave and
+ * voice-leading — OR, while the groove is off, the block-chord voicing rows.
+ * Never both: the two voice the chords on different paths, so showing both
+ * would offer two Octave controls of which one does nothing.
  */
 export function AccompanimentSection() {
   const chordModeAvailable = useChordModeAvailable();
   const voiced = useHasVoicedChords();
-  const grooveShown = useGrooveBodyShown();
+  const part = useVoicedPart();
 
   return (
     <Stack gap="md">
       {chordModeAvailable && <ChordModeRow />}
       {chordModeAvailable && voiced && <Separator />}
-      {voiced && grooveShown && (
-        <>
-          <RhythmControls />
-          <Separator />
-        </>
-      )}
-      {voiced && <VoicingControls />}
+      {voiced && part === "groove" && <RhythmControls />}
+      {voiced && part === "voicing" && <VoicingControls />}
     </Stack>
   );
 }
 
 /**
- * Whether `RhythmControls` draws anything — it renders nothing for a file
- * document and while the groove is known to be off, and a rule after an empty
- * body would dangle.
+ * Which voiced part the body shows. A file document has no groove, so its
+ * chords are block chords: the voicing rows. A library song shows the groove
+ * body while its groove is on — or not known yet (the body's loading / error
+ * state) — and the voicing rows once it is known to be off.
  */
-function useGrooveBodyShown(): boolean {
+function useVoicedPart(): "groove" | "voicing" {
   const song = useLibrarySong();
   const groove = useGroove();
-  if (song.kind === "none") return false;
-  return groove.status !== "ready" || groove.data.enabled;
+  if (song.kind === "none") return "voicing";
+  if (groove.status !== "ready") return "groove";
+  return groove.data.enabled ? "groove" : "voicing";
 }

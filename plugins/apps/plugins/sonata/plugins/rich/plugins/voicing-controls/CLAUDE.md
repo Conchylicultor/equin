@@ -15,6 +15,10 @@ config is not per song.
 - **No gate here.** The gate is the song document's `useHasVoicedChords`
   (`apps/sonata/document/web`: an authored chord, or chord mode on with any
   chord); the composing section reads it. This component never returns null.
+- **Block chords only.** These rows voice the no-groove block path; with a
+  groove on, each hand carries its own octave and voice-leading (per song, in
+  `rhythm-controls`' hand blocks), so the Accompaniment section shows these rows
+  only while the groove is off.
 - **The tone order is not here.** Which figuration each hand plays is per song
   and lives in the rhythm groove panel (`rhythm-controls`).
 

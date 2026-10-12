@@ -10,7 +10,9 @@ with the playhead.
 
 - **Per-song, DB-persisted** in `sonata_songs_ext_rhythm` (an `entity-extensions`
   1:1 side-table; an absent row reads as disabled). One row holds `enabled`,
-  both hands' `RhythmPattern`s as jsonb, their figuration ids, and the groove
+  both hands' `RhythmPattern`s as jsonb, their figuration ids, their
+  `HandVoicing`s as jsonb (`bassVoicing` / `chordVoicing`: on/off, octave,
+  voice-leading, octave doubling — column defaults are today's sound), and the groove
   preset it was applied from (see *Groove presets*). Both patterns are remembered even while
   disabled, so re-enabling restores the groove rather than resetting. It is
   served as a lookup-only collection, `rhythms = liveCollection("sonata-rhythm",
@@ -44,11 +46,19 @@ with the playhead.
   renders nothing — the switch is the whole control.
 - **The body, top to bottom.** The groove preset picker
   (`groove-preset-picker.tsx`; see *Groove presets*), the rhythm circle, then
-  one `HandRow` per hand (right hand first): its colour dot (the ring it owns
-  on the circle — `hand-colors.ts` is the one table both read), a Pattern
-  select (the figuration — *what*), a Rhythm select (the necklace — *when*;
-  "Custom" once the necklace no longer strikes its rhythm's own onsets) and a
-  `⋯` panel with the rarer dials, Rotate and Steps (1–48).
+  one expanded `HandBlock` per hand (right hand first). Its header: a colour
+  chip that turns the hand on/off (off folds the block to its header, and the
+  engine strikes nothing for it — a preset can be one-handed), the hand's name
+  and its track's name. Below: a Pattern select (the figuration — *what*), a
+  Rhythm select (the necklace — *when*; "Custom" once the necklace no longer
+  strikes its rhythm's own onsets), then a two-column grid of the hand's dials
+  — Octave, Voice-leading, Rotate, Steps (1–48), Octave doubling.
+- **A hand wears its track's colour.** Each hand plays on a generated track
+  (`hands.ts`: right → `CHORD_TRACK` "Chords", left → `CHORD_BASS_TRACK`
+  "Bass"); `useHandTracks()` reads its name and colour from the track mixer
+  (the swatch's `accidentalColor` shade), so the chip, the ring on the circle
+  and the mixer swatch are one colour, and recolouring the track recolours the
+  hand. An off hand's ring is drawn in the muted foreground.
 - **The circle spins for free.** The panel derives a bar grid from
   `bars(score)` + `scoreEndBeat(score)` (existing `score/core` exports, time-sig
   aware) and drives `RhythmCircle.setPhase()` imperatively from the transport
@@ -70,12 +80,15 @@ with the playhead.
 
 - **Global, in config_v2.** `groovePresetsConfig` (`shared/groove-presets.ts`,
   name `groove-presets`) is one `listField` of saved grooves — `{ name, chord,
-  bass, chordFigurationId, bassFigurationId }`, each pattern a `jsonField`
-  validated by the same `RhythmPatternSchema` as the row and the endpoint. The
+  bass, chordFigurationId, bassFigurationId, chordVoicing, bassVoicing }`, each
+  pattern / voicing a `jsonField` validated by the same `RhythmPatternSchema` /
+  `HandVoicingSchema` as the row and the endpoint (a preset saved before the
+  voicings existed heals to the defaults). The
   list is `stableIdentity`: a song's `groovePresetId` is a durable key into it,
   so every row (seeds included) carries an explicit `id`. Seeds (`default`,
-  `bossa-nova`, `pop-ballad`, `son-clave`, `stride`, `waltz`) are built from the
-  real `RHYTHMS` / figuration ids. Registered on both runtimes
+  `bossa-nova`, `pop-ballad`, `son-clave`, `stride`, `waltz`, and the
+  one-handed `walking-bass` (left only) and `harp` (right only)) are built from
+  the real `RHYTHMS` / figuration ids. Registered on both runtimes
   (`ConfigV2.Register` / `ConfigV2.WebRegister`).
 - **Per-song provenance, not state.** The row's nullable `groovePresetId` (sent
   by every `setRhythmEndpoint` write) records which preset the groove was last
@@ -95,9 +108,9 @@ with the playhead.
   footer "Save current as a preset…" that turns into a name field + Save
   (`save`, then commit the new id). Apply commits `presetGroove(p)`.
 - **Pure helpers** (`shared/groove.ts`, tested): `grooveEquals` compares what a
-  groove sounds like (both hands' subdivisions + effective onsets, both
-  figuration ids), ignoring provenance and how a rotation is spelt;
-  `grooveSummary` ("Block · Root–fifth", right hand first); `presetGroove` (a
+  groove sounds like (both hands' subdivisions + effective onsets, figuration
+  ids and voicings), ignoring provenance and how a rotation is spelt;
+  `grooveSummary` ("Block · Root–fifth", right hand first, an off hand "—"); `presetGroove` (a
   preset as `GrooveFields`, the preset as its `presetId`).
 - **`useGroove().presetId` never flickers.** The patterns' optimistic home is
   the shell's `grooveSetting`, but the preset id is this plugin's column, so
@@ -123,12 +136,12 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
 
 ## Plugin reference
 
-- Description: Sonata accompaniment part: the per-song groove. Exports its on/off switch (GrooveSwitch) and its body (RhythmControls: a groove preset picker, a left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, and one pattern/rhythm row per hand) for the Accompaniment section to compose; contributes no section of its own. Persists the groove per song and feeds the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the global groove presets (config sonata groove-presets: useGroovePresets) and the per-song preset provenance useGroove carries. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern + the groove preset it was applied from). Serves it as a per-song lookup collection. Server registration of the global groove-presets config.
+- Description: Sonata accompaniment part: the per-song groove. Exports its on/off switch (GrooveSwitch) and its body (RhythmControls: a groove preset picker, a left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, and one expanded block per hand: on/off chip in its track's colour, pattern, rhythm, octave, voice-leading, rotate, steps, octave doubling) for the Accompaniment section to compose; contributes no section of its own. Persists the groove per song and feeds the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the global groove presets (config sonata groove-presets: useGroovePresets) and the per-song preset provenance useGroove carries. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern, figuration and HandVoicing + the groove preset it was applied from). Serves it as a per-song lookup collection. Server registration of the global groove-presets config.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "groove-presets"
     - `SonataDocument.SongSetting` "rhythm-sync" → `RhythmObserver`
-  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 54 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×10
     - `apps/sonata/document` ×7
     - `primitives/live-state` ×6
@@ -136,19 +149,22 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
     - `config_v2` ×3
     - `primitives/sortable-list` ×3
     - `apps/sonata/session` ×2
+    - `apps/sonata/track-mixer` ×2
     - `primitives/css/control-panel` ×2
+    - `primitives/css/spacing` ×2
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/status-dot.StatusDot`
+    - `primitives/css/grid.Grid`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/switch.Switch`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/loading.Loading`
+    - `primitives/overlay/tooltip.WithTooltip`
     - `ui/icons.Icon`
   - Exports (types):
     - `Groove`

@@ -19,8 +19,9 @@ const MAX_OCTAVE = 7;
 const GLOBAL_HINT = "Applies to every song";
 
 /**
- * The voicing PART of the Accompaniment section: two rows over the GLOBAL
- * chord-voicing config — "Voice-leading" (realistic voice-leading on/off) and
+ * The block-chord voicing PART of the Accompaniment section, shown while the
+ * groove is off (with a groove, each hand carries its own octave and
+ * voice-leading): two rows over the GLOBAL chord-voicing config — "Voice-leading" (realistic voice-leading on/off) and
  * "Octave" (a − C4 + stepper, 1–7). Writes go to `voicingConfig`, so the
  * shell's `baseScore` re-derives the chord notes from the chord annotations.
  * The tone-order (which figuration each hand plays) is per-song and lives in

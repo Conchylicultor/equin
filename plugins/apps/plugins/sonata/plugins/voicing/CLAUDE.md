@@ -27,6 +27,14 @@ Two orthogonal axes drive emission:
   directly. The §5.4 fallback (a missing stacked-third substitutes the octave
   root) lives in the single degree resolver.
 
+A third, per-hand axis rides with the groove: a `HandVoicing`
+(`hand-voicing.ts`, `opts.hands`) — on/off (an off hand strikes nothing),
+octave (the hand's register), voice-leading (chord hand: nearest inversion;
+bass hand: the whole octave nearest the previous root, never beyond an octave
+from its register) and octave doubling (each struck pitch also an octave up, id
+`k` suffixed `o`). The no-groove block path ignores it and keeps the global
+`voicingConfig`.
+
 The `ChordEvent` / `Figuration` shapes are the stable contract: when cross-source
 voicing selection is wanted, the figuration registry can be promoted to a slot
 without changing those types.
@@ -58,6 +66,7 @@ without changing those types.
     - `Figuration`
     - `FigurationContext`
     - `HandRole`
+    - `HandVoicing`
     - `Register`
     - `ReVoiceInclude`
     - `ReVoiceOptions`
@@ -67,10 +76,15 @@ without changing those types.
     - `CHORD_BASS_TRACK`
     - `CHORD_TRACK`
     - `DEFAULT_BASS_FIGURATION_ID`
+    - `DEFAULT_BASS_VOICING`
     - `DEFAULT_CHORD_FIGURATION_ID`
+    - `DEFAULT_CHORD_VOICING`
     - `FIGURATIONS`
     - `figurationsForHand`
     - `findFiguration`
+    - `handVoicingEquals`
+    - `MAX_HAND_OCTAVE`
+    - `MIN_HAND_OCTAVE`
     - `reVoiceChords`
     - `voiceChords`
     - `voicingConfig`

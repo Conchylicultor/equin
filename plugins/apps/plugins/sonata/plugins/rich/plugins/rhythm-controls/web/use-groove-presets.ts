@@ -38,6 +38,8 @@ function contentOf(from: GrooveFields) {
     bass: from.bass,
     chordFigurationId: from.chordFigurationId,
     bassFigurationId: from.bassFigurationId,
+    chordVoicing: from.chordVoicing,
+    bassVoicing: from.bassVoicing,
   };
 }
 

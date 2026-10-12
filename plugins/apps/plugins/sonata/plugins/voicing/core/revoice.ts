@@ -31,6 +31,7 @@ import type {
 import { effectiveOnsets } from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
 import { voiceChords, type ChordEvent, type VoicingOptions } from "./voicing";
 import { findFiguration } from "./figuration";
+import type { HandVoicing } from "./hand-voicing";
 
 /**
  * The synthesized track the re-voiced chord (upper-structure) notes live on.
@@ -148,7 +149,9 @@ function resolvePattern(score: Score, pattern: RhythmPattern): number[] {
  * pattern is resolved to absolute onset beats on the bar grid (`opts.rhythm`) and
  * its figuration id resolved to a {@link Figuration} (`opts.figuration`), so each
  * hand strikes its own bar-anchored, tone-ordered groove instead of one block
- * note per chord.
+ * note per chord. With a groove, each hand's register, voice-leading, octave
+ * doubling and on/off are its own (`bassVoicing` / `chordVoicing`); `cfg` then
+ * voices only the no-groove block path.
  */
 export function reVoiceChords(
   score: Score,
@@ -157,6 +160,8 @@ export function reVoiceChords(
     hands: RhythmHands;
     bassFigurationId: string;
     chordFigurationId: string;
+    bassVoicing: HandVoicing;
+    chordVoicing: HandVoicing;
   } | null,
   opts?: ReVoiceOptions,
 ): Score {
@@ -184,6 +189,10 @@ export function reVoiceChords(
     voicingOpts.figuration = {
       bass: findFiguration(groove.bassFigurationId),
       chord: findFiguration(groove.chordFigurationId),
+    };
+    voicingOpts.hands = {
+      bass: groove.bassVoicing,
+      chord: groove.chordVoicing,
     };
   }
 

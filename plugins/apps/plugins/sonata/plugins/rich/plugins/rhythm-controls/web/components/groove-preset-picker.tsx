@@ -83,6 +83,8 @@ function fieldsOf(groove: GrooveState): GrooveFields {
     chord: groove.chord,
     bassFigurationId: groove.bassFigurationId,
     chordFigurationId: groove.chordFigurationId,
+    bassVoicing: groove.bassVoicing,
+    chordVoicing: groove.chordVoicing,
   };
 }
 

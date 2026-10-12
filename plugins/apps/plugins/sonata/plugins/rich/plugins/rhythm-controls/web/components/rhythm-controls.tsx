@@ -23,14 +23,16 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useGroove, type GrooveState } from "../use-groove";
 import { GroovePresetPicker } from "./groove-preset-picker";
-import { HAND_COLORS } from "./hand-colors";
-import { HandRow } from "./hand-row";
+import { HandBlock } from "./hand-block";
+import { HANDS, useHandTracks } from "./hands";
 
 /**
  * The groove body — composed under a section whose header holds
  * `GrooveSwitch`, top to bottom: the groove preset picker, the rhythm circle
  * (one revolution per bar with the playhead, its beads clickable to toggle
- * onsets) and one row per hand (pattern, rhythm, rotate/steps). The persisted
+ * onsets, each ring in its hand's track colour) and one expanded block per
+ * hand (on/off, pattern, rhythm, octave, voice-leading, rotate, steps, octave
+ * doubling). The persisted
  * groove feeds the song document's score pipeline (via the rhythm observer),
  * so `reVoiceChords` renders the chords with real groove.
  *
@@ -64,11 +66,20 @@ export function RhythmControls() {
   }
 }
 
-/** The preset picker, circle and per-hand rows over a KNOWN, enabled groove. */
+/** The preset picker, circle and per-hand blocks over a KNOWN, enabled groove. */
 function GrooveEditor({ groove }: { groove: GrooveState }) {
   const { score } = useSession();
-  const { presetId, bass, chord, bassFigurationId, chordFigurationId, commit } =
-    groove;
+  const handTracks = useHandTracks();
+  const {
+    presetId,
+    bass,
+    chord,
+    bassFigurationId,
+    chordFigurationId,
+    bassVoicing,
+    chordVoicing,
+    commit,
+  } = groove;
   const cursor = useCursorApi();
   const circleRef = useRef<RhythmCircleHandle>(null);
 
@@ -110,27 +121,58 @@ function GrooveEditor({ groove }: { groove: GrooveState }) {
     });
   }, [cursor, barList, endBeat]);
 
+  // The full groove payload with one field overridden — every commit carries
+  // both hands' patterns, figuration ids, voicings AND the preset provenance,
+  // so nothing is dropped.
+  const fields = {
+    presetId,
+    bass,
+    chord,
+    bassFigurationId,
+    chordFigurationId,
+    bassVoicing,
+    chordVoicing,
+  };
+
+  // The hands wear their tracks' colours; until the mixer has the song's
+  // tracks, the editor is not known yet.
+  if (handTracks.kind === "pending") {
+    return <Loading variant="rows" count={3} />;
+  }
+  if (handTracks.kind === "failed") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="this song's tracks"
+        error={handTracks.error}
+        refetch={handTracks.refetch}
+      />
+    );
+  }
+  const hands = handTracks.value;
+
+  // An off hand keeps its ring (its beads still edit its rhythm), drawn in the
+  // muted foreground so the circle reads which hands play.
   const tracks: RhythmCircleTrack[] = [
     {
       id: "chord",
       subdivisions: chord.subdivisions,
       onsets: effectiveOnsets(chord),
-      colorVar: HAND_COLORS.chord.colorVar,
-      label: "Right hand (chords)",
+      colorVar: chordVoicing.enabled
+        ? hands.chord.color
+        : "var(--muted-foreground)",
+      label: `${HANDS.chord.label} (${hands.chord.name})`,
     },
     {
       id: "bass",
       subdivisions: bass.subdivisions,
       onsets: effectiveOnsets(bass),
-      colorVar: HAND_COLORS.bass.colorVar,
-      label: "Left hand (bass)",
+      colorVar: bassVoicing.enabled
+        ? hands.bass.color
+        : "var(--muted-foreground)",
+      label: `${HANDS.bass.label} (${hands.bass.name})`,
     },
   ];
-
-  // The full groove payload with one field overridden — every commit carries
-  // both hands' patterns, figuration ids AND the preset provenance, so nothing
-  // is dropped.
-  const fields = { presetId, bass, chord, bassFigurationId, chordFigurationId };
 
   const onToggleOnset = (trackId: string, index: number) => {
     if (trackId === "bass") {
@@ -151,23 +193,33 @@ function GrooveEditor({ groove }: { groove: GrooveState }) {
           size={180}
         />
       </Center>
-      <Stack gap="xs">
-        <HandRow
+      <Stack gap="md">
+        <HandBlock
           hand="chord"
+          track={hands.chord}
           pattern={chord}
           onChange={(next) => commit({ ...fields, chord: next }, true)}
           figurationId={chordFigurationId}
           onFigurationChange={(id) =>
             commit({ ...fields, chordFigurationId: id }, true)
           }
+          voicing={chordVoicing}
+          onVoicingChange={(next) =>
+            commit({ ...fields, chordVoicing: next }, true)
+          }
         />
-        <HandRow
+        <HandBlock
           hand="bass"
+          track={hands.bass}
           pattern={bass}
           onChange={(next) => commit({ ...fields, bass: next }, true)}
           figurationId={bassFigurationId}
           onFigurationChange={(id) =>
             commit({ ...fields, bassFigurationId: id }, true)
+          }
+          voicing={bassVoicing}
+          onVoicingChange={(next) =>
+            commit({ ...fields, bassVoicing: next }, true)
           }
         />
       </Stack>

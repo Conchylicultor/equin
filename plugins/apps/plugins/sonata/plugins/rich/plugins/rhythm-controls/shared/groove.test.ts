@@ -6,7 +6,11 @@ import {
   toggleOnset,
   type RhythmPattern,
 } from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
-import { findFiguration } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
+import {
+  DEFAULT_BASS_VOICING,
+  DEFAULT_CHORD_VOICING,
+  findFiguration,
+} from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import {
   grooveEquals,
   grooveSummary,
@@ -21,6 +25,8 @@ const base: GrooveFields = {
   chord: patternFromPreset("son"),
   bassFigurationId: "root",
   chordFigurationId: "block",
+  bassVoicing: DEFAULT_BASS_VOICING,
+  chordVoicing: DEFAULT_CHORD_VOICING,
 };
 
 describe("grooveEquals", () => {
@@ -78,7 +84,34 @@ describe("grooveEquals", () => {
   });
 });
 
+describe("grooveEquals — voicing", () => {
+  test("a different octave, voice-leading, doubling or on/off differs", () => {
+    for (const change of [
+      { octave: 3 },
+      { voiceLead: true },
+      { doubleOctave: true },
+      { enabled: false },
+    ]) {
+      expect(
+        grooveEquals(base, {
+          ...base,
+          bassVoicing: { ...base.bassVoicing, ...change },
+        }),
+      ).toBe(false);
+    }
+  });
+});
+
 describe("grooveSummary", () => {
+  test("a hand that is off reads as a dash", () => {
+    expect(
+      grooveSummary({
+        ...base,
+        bassVoicing: { ...base.bassVoicing, enabled: false },
+      }),
+    ).toBe("Block · —");
+  });
+
   test("names the right hand, then the left, by figuration label", () => {
     expect(grooveSummary({ ...base, bassFigurationId: "root-fifth" })).toBe(
       "Block · Root–fifth",

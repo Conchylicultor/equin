@@ -9,7 +9,7 @@ import {
 
 export default {
   description:
-    "Sonata Section: Accompaniment — composes the chord-mode row ('Play the detected chords'), the groove (GrooveSwitch in the header, RhythmControls in the body) and the voicing rows (VoicingControls) into one section, available when chord mode can be offered or the song's chords are voiced.",
+    "Sonata Section: Accompaniment — composes the chord-mode row ('Play the detected chords'), the groove (GrooveSwitch in the header, RhythmControls in the body while it is on) and, while the groove is off, the block-chord voicing rows (VoicingControls) into one section, available when chord mode can be offered or the song's chords are voiced.",
   contributions: [
     Sonata.Section({
       id: "accompaniment",

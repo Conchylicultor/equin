@@ -10,6 +10,13 @@ import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { nullable } from "@plugins/fields/core";
+import {
+  DEFAULT_BASS_VOICING,
+  DEFAULT_CHORD_VOICING,
+  MAX_HAND_OCTAVE,
+  MIN_HAND_OCTAVE,
+  type HandVoicing,
+} from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 
 /**
  * Wire/DB shape of one hand's rhythm pattern. Mirrors `RhythmPattern` from
@@ -31,6 +38,18 @@ export const RhythmPatternSchema = z
   .refine((p) => p.onsets.every((o) => o < p.subdivisions), {
     message: "every onset must be < subdivisions",
   });
+
+/**
+ * Wire/DB shape of one hand's voicing (`HandVoicing` from `voicing/core`): on/off,
+ * octave (C1–C7), voice-leading, octave doubling. Shared by the per-song row,
+ * the write endpoint and the groove presets, like `RhythmPatternSchema`.
+ */
+export const HandVoicingSchema = z.object({
+  enabled: z.boolean(),
+  octave: z.number().int().min(MIN_HAND_OCTAVE).max(MAX_HAND_OCTAVE),
+  voiceLead: z.boolean(),
+  doubleOctave: z.boolean(),
+});
 
 /**
  * One song's persisted rhythm groove: whether it is active plus the two hands'
@@ -61,6 +80,17 @@ export const rhythmShape = defineExtensionShape({
     // `findFiguration`, not an absorbable value here.
     bassPatternId: textField(),
     chordPatternId: textField(),
+    // Each hand's voicing (on/off, octave, voice-leading, octave doubling) as
+    // jsonb decoded by `HandVoicingSchema`; a row stored before these columns
+    // existed reads today's sound (the column defaults).
+    bassVoicing: jsonField<HandVoicing>({
+      schema: HandVoicingSchema,
+      default: DEFAULT_BASS_VOICING,
+    }),
+    chordVoicing: jsonField<HandVoicing>({
+      schema: HandVoicingSchema,
+      default: DEFAULT_CHORD_VOICING,
+    }),
     // The groove preset (`groovePresetsConfig` list id) this song's groove was
     // last applied from — provenance only; NULL when never applied from one.
     // Whether the groove still matches it ("edited") is derived by comparing

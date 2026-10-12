@@ -1,11 +1,12 @@
 import { useCallback } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { RhythmPattern } from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
+import type { HandVoicing } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { setRhythmEndpoint } from "../shared/endpoints";
 
 /**
- * The persisted groove: the toggle, both hands' patterns, their figuration ids,
- * and the preset it was applied from.
+ * The persisted groove: the toggle, both hands' patterns, their figuration ids
+ * and voicings, and the preset it was applied from.
  */
 export interface RhythmGroove {
   enabled: boolean;
@@ -13,6 +14,8 @@ export interface RhythmGroove {
   chord: RhythmPattern;
   bassPatternId: string;
   chordPatternId: string;
+  bassVoicing: HandVoicing;
+  chordVoicing: HandVoicing;
   /** The groove preset this groove was applied from; `null` when none. */
   groovePresetId: string | null;
 }
@@ -60,6 +63,8 @@ export function useSaveRhythm(): (
           chord: wirePattern(groove.chord),
           bassPatternId: groove.bassPatternId,
           chordPatternId: groove.chordPatternId,
+          bassVoicing: groove.bassVoicing,
+          chordVoicing: groove.chordVoicing,
           groovePresetId: groove.groovePresetId,
         },
       }),

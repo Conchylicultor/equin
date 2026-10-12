@@ -13,6 +13,8 @@ export const handleSetRhythm = implement(
       chord: body.chord,
       bassPatternId: body.bassPatternId,
       chordPatternId: body.chordPatternId,
+      bassVoicing: body.bassVoicing,
+      chordVoicing: body.chordVoicing,
       groovePresetId: body.groovePresetId,
     });
   },

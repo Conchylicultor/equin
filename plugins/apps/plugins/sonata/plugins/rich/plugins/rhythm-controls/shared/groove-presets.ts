@@ -10,9 +10,18 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
 import {
   DEFAULT_BASS_FIGURATION_ID,
+  DEFAULT_BASS_VOICING,
   DEFAULT_CHORD_FIGURATION_ID,
+  DEFAULT_CHORD_VOICING,
+  type HandVoicing,
 } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
-import { RhythmPatternSchema } from "./resources";
+import { HandVoicingSchema, RhythmPatternSchema } from "./resources";
+
+/** Both hands at today's voicing — what every two-hand seed plays. */
+const BOTH_HANDS = {
+  chordVoicing: DEFAULT_CHORD_VOICING,
+  bassVoicing: DEFAULT_BASS_VOICING,
+};
 
 /**
  * The code-authored starting set of groove presets. Each row carries an
@@ -30,6 +39,7 @@ const SEED_GROOVE_PRESETS = [
     bass: defaultBassPattern(),
     chordFigurationId: DEFAULT_CHORD_FIGURATION_ID,
     bassFigurationId: DEFAULT_BASS_FIGURATION_ID,
+    ...BOTH_HANDS,
   },
   {
     id: "bossa-nova",
@@ -38,6 +48,7 @@ const SEED_GROOVE_PRESETS = [
     bass: patternFromPreset("basic-2"),
     chordFigurationId: "block",
     bassFigurationId: "root-fifth",
+    ...BOTH_HANDS,
   },
   {
     id: "pop-ballad",
@@ -46,6 +57,7 @@ const SEED_GROOVE_PRESETS = [
     bass: patternFromPreset("basic-1"),
     chordFigurationId: "arpeggio-up",
     bassFigurationId: "root",
+    ...BOTH_HANDS,
   },
   {
     id: "son-clave",
@@ -54,6 +66,7 @@ const SEED_GROOVE_PRESETS = [
     bass: patternFromPreset("tresillo"),
     chordFigurationId: "block",
     bassFigurationId: "root-fifth",
+    ...BOTH_HANDS,
   },
   {
     id: "stride",
@@ -62,6 +75,7 @@ const SEED_GROOVE_PRESETS = [
     bass: patternFromPreset("basic-4"),
     chordFigurationId: "block",
     bassFigurationId: "stride",
+    ...BOTH_HANDS,
   },
   {
     id: "waltz",
@@ -70,12 +84,34 @@ const SEED_GROOVE_PRESETS = [
     bass: patternFromPreset("basic-3"),
     chordFigurationId: "block",
     bassFigurationId: "waltz",
+    ...BOTH_HANDS,
+  },
+  {
+    id: "walking-bass",
+    name: "Walking bass",
+    chord: patternFromPreset("basic-2"),
+    bass: patternFromPreset("basic-4"),
+    chordFigurationId: "block",
+    bassFigurationId: "walking",
+    chordVoicing: { ...DEFAULT_CHORD_VOICING, enabled: false },
+    bassVoicing: DEFAULT_BASS_VOICING,
+  },
+  {
+    id: "harp",
+    name: "Harp",
+    chord: patternFromPreset("basic-1"),
+    bass: patternFromPreset("basic-2"),
+    chordFigurationId: "harp-roll",
+    bassFigurationId: DEFAULT_BASS_FIGURATION_ID,
+    chordVoicing: DEFAULT_CHORD_VOICING,
+    bassVoicing: { ...DEFAULT_BASS_VOICING, enabled: false },
   },
 ];
 
 /**
  * Global (not per-song) saved grooves: a name plus both hands' rhythm
- * necklaces and figuration ids — everything `GrooveFields` holds except the
+ * necklaces, figuration ids and voicings (a hand that is off makes a
+ * one-hand groove) — everything `GrooveFields` holds except the
  * provenance. Applying one writes its content into the open song's groove and
  * records its id as the song's `groovePresetId`; "edited" is then derived by
  * comparing the song's groove against the preset (`grooveEquals`), never stored.
@@ -89,7 +125,7 @@ export const groovePresetsConfig = defineConfig({
     presets: listField({
       label: "Groove presets",
       description:
-        "Saved grooves offered by the Rhythm section's preset menu: both hands' rhythm patterns and figurations.",
+        "Saved grooves offered by the Rhythm section's preset menu: both hands' rhythm patterns, figurations and voicings.",
       stableIdentity: true,
       itemFields: {
         name: textField({ label: "Name" }),
@@ -110,6 +146,16 @@ export const groovePresetsConfig = defineConfig({
         bassFigurationId: textField({
           label: "Left hand figuration",
           default: DEFAULT_BASS_FIGURATION_ID,
+        }),
+        chordVoicing: jsonField<HandVoicing>({
+          label: "Right hand voicing",
+          schema: HandVoicingSchema,
+          default: DEFAULT_CHORD_VOICING,
+        }),
+        bassVoicing: jsonField<HandVoicing>({
+          label: "Left hand voicing",
+          schema: HandVoicingSchema,
+          default: DEFAULT_BASS_VOICING,
         }),
       },
       default: SEED_GROOVE_PRESETS,

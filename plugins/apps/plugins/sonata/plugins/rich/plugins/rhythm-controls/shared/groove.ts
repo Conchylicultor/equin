@@ -2,12 +2,17 @@ import {
   effectiveOnsets,
   type RhythmPattern,
 } from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
-import { findFiguration } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
+import {
+  findFiguration,
+  handVoicingEquals,
+  type HandVoicing,
+} from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import type { GroovePreset } from "./groove-presets";
 
 /**
  * A song's groove content plus its provenance — each hand's rhythm necklace
- * (*when*) and tone-order figuration id (*what*), and the preset it was last
+ * (*when*), tone-order figuration id (*what*) and voicing (on/off, octave,
+ * voice-leading, octave doubling), and the preset it was last
  * applied from (`null`: never applied from one). The `commit` payload: callers
  * spread the resolved groove and override one field.
  */
@@ -17,6 +22,8 @@ export interface GrooveFields {
   chord: RhythmPattern;
   bassFigurationId: string;
   chordFigurationId: string;
+  bassVoicing: HandVoicing;
+  chordVoicing: HandVoicing;
 }
 
 /**
@@ -36,7 +43,7 @@ function patternEquals(a: RhythmPattern, b: RhythmPattern): boolean {
 
 /**
  * Whether two grooves sound the same: both hands' subdivisions and effective
- * onsets, and both figuration ids. Provenance is ignored (a pattern's
+ * onsets, figuration ids and voicings. Provenance is ignored (a pattern's
  * `presetId`, a groove's `presetId`), and so is how a rotation is represented
  * (`rotation: 2` over raw onsets vs. the pre-rotated onsets) — the basis of a
  * preset's "edited" mark.
@@ -45,6 +52,8 @@ export function grooveEquals(a: GrooveContent, b: GrooveContent): boolean {
   return (
     a.bassFigurationId === b.bassFigurationId &&
     a.chordFigurationId === b.chordFigurationId &&
+    handVoicingEquals(a.bassVoicing, b.bassVoicing) &&
+    handVoicingEquals(a.chordVoicing, b.chordVoicing) &&
     patternEquals(a.bass, b.bass) &&
     patternEquals(a.chord, b.chord)
   );
@@ -52,10 +61,13 @@ export function grooveEquals(a: GrooveContent, b: GrooveContent): boolean {
 
 /**
  * One-line description of a groove's hands, right hand first: "Block ·
- * Root–fifth". Throws on an unknown figuration id (via `findFiguration`).
+ * Root–fifth", a hand that is off reading "—" ("Harp roll · —"). Throws on an
+ * unknown figuration id (via `findFiguration`).
  */
 export function grooveSummary(g: GrooveContent): string {
-  return `${findFiguration(g.chordFigurationId).label} · ${findFiguration(g.bassFigurationId).label}`;
+  const hand = (voicing: HandVoicing, figurationId: string) =>
+    voicing.enabled ? findFiguration(figurationId).label : "—";
+  return `${hand(g.chordVoicing, g.chordFigurationId)} · ${hand(g.bassVoicing, g.bassFigurationId)}`;
 }
 
 /** The groove a preset applies: its content, with the preset as provenance. */
@@ -66,5 +78,7 @@ export function presetGroove(p: GroovePreset): GrooveFields {
     chord: p.chord,
     bassFigurationId: p.bassFigurationId,
     chordFigurationId: p.chordFigurationId,
+    bassVoicing: p.bassVoicing,
+    chordVoicing: p.chordVoicing,
   };
 }
