@@ -120,12 +120,14 @@ back.
     - `JsonlViewer.EventFilter`
     - `JsonlViewer.Overlay`
     - `JsonlViewer.PendingPromptAction`
-  - Slot contributors: 22 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `JsonlViewer.TranscriptEnd`
+  - Slot contributors: 23 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `JsonlViewer.EventRenderer` ×13
     - `JsonlViewer.Overlay` ×4
     - `JsonlViewer.EventFilter` ×2
     - `JsonlViewer.PendingPrompt` ×2
     - `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
+    - `JsonlViewer.TranscriptEnd` ← `tasks.outcome-report`
   - Contributes:
     - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
     - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
@@ -196,8 +198,9 @@ back.
     - `eventKey`
     - `jsonlEvents`
 - Cross-plugin:
-  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×38
+    - `tasks/outcome-report`
 - Exemptions:
   - Exempts itself from: `no-db-backed-notify` — `server/internal/jsonl-events-resource.ts` (debt)
 - Sub-plugins:

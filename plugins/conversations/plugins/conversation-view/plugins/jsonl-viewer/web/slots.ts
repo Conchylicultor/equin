@@ -5,6 +5,7 @@ import {
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { UnknownEventRow } from "./components/unknown-event-row";
 import { PendingContentIndicator } from "./components/pending-content-indicator";
 
@@ -46,6 +47,17 @@ export interface EventFilterContribution {
   hide: (event: JsonlEvent) => boolean;
 }
 
+/**
+ * Rendered at the end of a conversation's transcript, inside the scroller —
+ * it scrolls with the transcript instead of staying pinned like the composer
+ * dock (`Conversation.AbovePromptInput`). For a conversation's closing card
+ * (e.g. the outcome report), which must not hide the transcript above it.
+ */
+export interface TranscriptEndContribution {
+  id: string;
+  component: ComponentType<{ conversation: Conversation }>;
+}
+
 export const JsonlViewer = {
   EventRenderer: defineDispatchSlot<{ event: JsonlEvent }, JsonlEvent["kind"]>({
     key: (p) => p.event.kind,
@@ -63,6 +75,9 @@ export const JsonlViewer = {
   EventFilter: defineSlot<EventFilterContribution>({ docLabel: (p) => p.id }),
   Overlay: defineRenderSlot<OverlayContribution>({ docLabel: (p) => p.id }),
   PendingPromptAction: defineRenderSlot<PendingPromptActionContribution>({
+    docLabel: (p) => p.id,
+  }),
+  TranscriptEnd: defineRenderSlot<TranscriptEndContribution>({
     docLabel: (p) => p.id,
   }),
 };

@@ -10825,7 +10825,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Conversation.AbovePromptInput` ← `conversations.conversation-view.op-status`
           - `Conversation.AbovePromptInput` ← `conversations.conversation-view.running-agents`
           - `Conversation.AbovePromptInput` ← `conversations.conversation-view.turn-summary`
-          - `Conversation.AbovePromptInput` ← `tasks.outcome-report`
           - `conversationPane.Actions` ← `conversations.agents`
           - `conversationPane.Actions` ← `conversations.conversation-preprompt`
           - `conversationPane.Actions` ← `conversations.conversation-progress`
@@ -10867,10 +10866,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `usePromptComposer`
           - `useRegisterPromptComposer`
       - Cross-plugin:
-        - Imported by: 62 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
+        - Imported by: 61 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
           - `conversations` ×50
           - `active-data` ×5
-          - `tasks` ×3
+          - `tasks` ×2
           - `debug/profiling/ops`
           - `primitives/launch`
           - `review`
@@ -11403,12 +11402,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JsonlViewer.EventFilter`
               - `JsonlViewer.Overlay`
               - `JsonlViewer.PendingPromptAction`
-            - Slot contributors: 22 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `JsonlViewer.TranscriptEnd`
+            - Slot contributors: 23 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `JsonlViewer.EventRenderer` ×13
               - `JsonlViewer.Overlay` ×4
               - `JsonlViewer.EventFilter` ×2
               - `JsonlViewer.PendingPrompt` ×2
               - `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
+              - `JsonlViewer.TranscriptEnd` ← `tasks.outcome-report`
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
@@ -11479,8 +11480,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `eventKey`
               - `jsonlEvents`
           - Cross-plugin:
-            - Imported by: 38 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Imported by: 39 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `conversations` ×38
+              - `tasks/outcome-report`
           - Exemptions:
             - Exempts itself from: `no-db-backed-notify` — `server/internal/jsonl-events-resource.ts` (debt)
           - Plugins:
@@ -34453,8 +34455,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 241 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×241
+    - Contributes: 242 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×242
     - Uses: 21 symbols — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
       - `reorder/editor` ×5
       - `config_v2` ×3
@@ -34479,8 +34481,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 240 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×240
+    - Contributes: 241 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×241
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -36686,13 +36688,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types): `LaunchOptionDef`
         - Exports (values): `defineLaunchOption`
-    - **`outcome-report`** — The outcome report an automated task's agent submitted: a card above the prompt input of the conversation that wrote it (markdown body, pushed / branch-waiting / no-changes standing, and its question as one-click answers sent as the next turn), and OutcomeReportDetail — the same report read-only, shown in an expanded row of an automation's History (Automations.TaskDetail). Outcome reports for automated tasks: the submit_outcome_report MCP tool (visible only to conversations whose task an automation filed or launched) stores one report per task in tasks_ext_outcome_report — markdown body, the attempt's git-measured standing, an optional question with one-click answers — releases the task's automation slot, and rings the bell when a question waits. Serves the outcome-reports lookup collection.
+    - **`outcome-report`** — The outcome report an automated task's agent submitted: a card at the end of the transcript of the conversation that wrote it (scrolling with it, not pinned over it) (markdown body, pushed / branch-waiting / no-changes standing, and its question as one-click answers sent as the next turn), and OutcomeReportDetail — the same report read-only, shown in an expanded row of an automation's History (Automations.TaskDetail). Outcome reports for automated tasks: the submit_outcome_report MCP tool (visible only to conversations whose task an automation filed or launched) stores one report per task in tasks_ext_outcome_report — markdown body, the attempt's git-measured standing, an optional question with one-click answers — releases the task's automation slot, and rings the bell when a question waits. Serves the outcome-reports lookup collection.
       - Web:
         - Contributes:
-          - `Conversation.AbovePromptInput` → `OutcomeReportCard`
+          - `JsonlViewer.TranscriptEnd` "outcome-report" → `OutcomeReportCard`
           - `Automations.TaskDetail` → `OutcomeReportDetail`
         - Uses:
-          - `conversations/conversation-view.Conversation`
+          - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
           - `conversations/conversation-view/pending-turn.sendConversationTurn`
           - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
           - `network/live.useLiveRow`

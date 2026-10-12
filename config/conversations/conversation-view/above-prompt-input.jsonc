@@ -1,4 +1,4 @@
-// @hash e4e00b4f2f79
+// @hash f9b900e5aa51
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -9,9 +9,6 @@
 {
   "items": [
     "conversations.conversation-view.op-status:op-status",
-    // An automated agent's final report and its one question: what the reader
-    // came for, above the per-turn summary it supersedes.
-    "tasks.outcome-report:outcome-report",
     "conversations.conversation-view.turn-summary:turn-summary",
     "conversations.conversation-view.notes:notes",
     // Closest to the composer: the one card that is about work happening right

@@ -168,6 +168,9 @@ function JsonlPaneInner({
       // view draws via `useTranscriptEvents()`.
       overlay={<JsonlViewer.Overlay.Render />}
     >
+      <JsonlViewer.TranscriptEnd.Render>
+        {(item) => <item.component conversation={conversation} />}
+      </JsonlViewer.TranscriptEnd.Render>
       {isWorking && !isStarting && workingStartAt != null && (
         <WorkingIndicator startAt={workingStartAt} />
       )}

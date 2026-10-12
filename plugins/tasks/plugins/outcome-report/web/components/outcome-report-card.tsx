@@ -13,7 +13,8 @@ import { outcomeReportRows } from "../../core";
 import { OutcomeReportView } from "./outcome-report-view";
 
 /**
- * The report above the prompt input of the conversation that submitted it.
+ * The report at the end of the transcript of the conversation that submitted
+ * it — scrolling with the transcript, never pinned over it.
  * Answering its question sends the chosen label as the user's next turn,
  * through the ordinary send path; the buttons are live only while the agent
  * waits for input (the optimistic status flips to working on click).
