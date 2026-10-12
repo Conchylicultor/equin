@@ -1,4 +1,5 @@
 import { WORKTREES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
+import { renderPrompt } from "@plugins/tasks/plugins/automations/core";
 
 /** What the instructions need to name. A structural shape, so this module is a
  * pure function of plain data — no zod, no report row, no database. */
@@ -20,29 +21,50 @@ function commitLines(d: UpstreamUpdates): string {
   return lines.join("\n");
 }
 
+/** The task title, whoever files it. */
+export function upstreamMergeTitle(d: UpstreamUpdates): string {
+  return `[upstream] ${d.count} new commit${d.count === 1 ? "" : "s"} on ${d.ref}`;
+}
+
 /**
- * The standing instructions of an upstream-update task.
+ * The template's variables for one set of updates — what the Upstream merges
+ * automation fills its (editable) prompt with, and what the report's
+ * Investigate fills the default one with.
+ */
+export function upstreamMergeVariables(d: UpstreamUpdates): {
+  updates: string;
+  ref: string;
+} {
+  return {
+    updates: `Upstream has ${d.count} commit${d.count === 1 ? "" : "s"} this checkout does not, on \`${d.ref}\` (${d.url}).
+
+Newest first:
+
+${commitLines(d)}`,
+    ref: d.ref,
+  };
+}
+
+/**
+ * The standing instructions of an upstream-merge task, as a template:
+ * `{{updates}}` (the gap and its newest commits), `{{ref}}` (the
+ * remote-tracking ref merged) and `{{pushPolicy}}` (what the agent may do with
+ * the merged branch). The Upstream merges automation commits it as its config's
+ * default `prompt`; Investigate on the report fills it with
+ * {@link INVESTIGATE_PUSH_TEXT}.
  *
  * Fixed text, and deliberately short on judgement calls: the mechanical half is
  * one command (`./singularity upstream merge`), so the agent never re-derives
  * the fetch/merge/refspec dance from prose. What is left is the part only a
- * person present can decide — a conflicted migration — and the part the agent
- * must NOT do, which is land it.
- *
- * Nothing files this automatically. The daily job files a report; the task is
- * minted on demand when the user presses Investigate, and this is what it says.
+ * person present can decide — a conflicted migration — and whether it lands,
+ * which the push policy says.
  */
-export function upstreamMergeInstructions(d: UpstreamUpdates): string {
-  return `Upstream has ${d.count} commit${d.count === 1 ? "" : "s"} this checkout does not, on \`${d.ref}\` (${d.url}).
+export const UPSTREAM_MERGE_PROMPT = `{{updates}}
 
-Newest first:
-
-${commitLines(d)}
-
-Bring them into THIS worktree and stop there. You are not landing them — the user is.
+Bring them into THIS worktree. You own proving the merged tree works.
 
 1. Run \`./singularity upstream merge\` in this worktree. It fetches upstream and merges
-   \`${d.ref}\` into the branch you are on.
+   \`{{ref}}\` into the branch you are on.
    This is the one sanctioned merge in this repo: rebasing the user's own trunk onto
    upstream would replay their entire history on every update and rewrite \`main\` under
    every open worktree.
@@ -73,9 +95,29 @@ Bring them into THIS worktree and stop there. You are not landing them — the u
    screens you can reach render, and Debug → Reports holds nothing new.
 
 5. Report what changed — what the merge brought in, what you had to resolve, and anything
-   that looked off — and then **wait. Do not push.** The user lands this.
+   that looked off. Then:
+   {{pushPolicy}}
 
 If the merge cannot be completed (a conflict you cannot resolve, a build that will not come
-up, a migration clash), leave the tree as it is, say so, and wait for instructions. Do not
-abandon the merge to make the tree look clean.`;
+up, a migration clash), do NOT push: leave the tree as it is, say so, and wait for
+instructions. Do not abandon the merge to make the tree look clean.`;
+
+/**
+ * Step 5 of a task the user minted by pressing Investigate: they asked for the
+ * merge, not for it to land — they land it themselves.
+ */
+export const INVESTIGATE_PUSH_TEXT =
+  "**Wait. Do not push.** The user lands this.";
+
+/** The default template filled for the report's Investigate button. */
+export function upstreamMergeInstructions(d: UpstreamUpdates): string {
+  const rendered = renderPrompt(UPSTREAM_MERGE_PROMPT, {
+    ...upstreamMergeVariables(d),
+    pushPolicy: INVESTIGATE_PUSH_TEXT,
+  });
+  if (!rendered.ok)
+    throw new Error(
+      `upstream merge prompt names unfilled variables: ${rendered.unknown.join(", ")}`,
+    );
+  return rendered.text;
 }

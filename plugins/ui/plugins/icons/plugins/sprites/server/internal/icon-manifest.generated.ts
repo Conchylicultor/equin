@@ -54,6 +54,7 @@ export const ICON_MANIFEST: {
     "bug-report",
     "build",
     "calendar-today",
+    "call-merge",
     "call-split",
     "campaign",
     "cancel",

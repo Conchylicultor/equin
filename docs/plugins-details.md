@@ -9662,8 +9662,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 84 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×84
+    - Slot contributors: 85 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×85
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -36422,6 +36422,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Automations.Config` ← `infra.deps.updates`
           - `Automations.Config` ← `tasks.reports-investigation`
           - `Automations.Config` ← `tasks.sidequest-autopilot`
+          - `Automations.Config` ← `upstream`
           - `Automations.Section` ← `tasks.reports-investigation`
           - `Automations.Section` ← `tasks.sidequest-autopilot`
           - `Automations.TaskDetail` ← `tasks.outcome-report`
@@ -36615,6 +36616,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/outcome-report`
           - `tasks/reports-investigation`
           - `tasks/sidequest-autopilot`
+          - `upstream`
       - Exemptions:
         - Exempts itself from: `no-db-backed-notify` — `server/internal/live.ts` (debt)
     - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.
@@ -36909,6 +36911,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/reports-investigation`
           - `tasks/task-dependencies`
           - `toolchain`
+          - `upstream`
       - Core:
         - Exports (types): `TaskCategoryDef`
         - Exports (values): `TaskCategoryDefSchema`
@@ -39231,19 +39234,34 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/sidebar-framing`
           - `ui/tree-disclosure`
 
-- **`upstream`** — Daily upstream.detect-updates job (main only): when the repo this checkout was cloned from has commits local `main` does not, it records one rolling `upstream-updates-available` report — the bell and Debug → Reports. It files no task and merges nothing; the user presses Investigate, and the task minted then carries the `./singularity upstream merge` instructions.
+- **`upstream`** — Registers the Upstream merges automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. Daily upstream.detect-updates job (main only): when the repo this checkout was cloned from has commits local `main` does not, it records one rolling `upstream-updates-available` report — the bell and Debug → Reports, whose Investigate mints a merge task. And the Upstream merges automation (upstream-merge; off by default, daily once on, editable from the Automations pane): when upstream is ahead and no merge task is open, it files ONE auto-started task (Upstream category, linked to the report) whose agent runs `./singularity upstream merge`, builds and checks the app, and lands it only as far as its Push setting allows (never, by default).
+  - Web:
+    - Contributes:
+      - `ConfigV2.WebRegister` "upstream-merge"
+      - `Automations.Config` "upstream-merge"
+    - Uses: `tasks/automations.automationConfigContributions`
   - Server:
-    - Contributes: `report-kind` "upstream-updates-available"
+    - Contributes:
+      - `report-kind` "upstream-updates-available"
+      - `ConfigV2.Register` "upstream-merge"
+      - `taskCategory` "upstream"
     - Uses:
       - `infra/jobs.defineJob`
       - `primitives/log-channels.Log`
+      - `reports.linkReportsToTask`
       - `reports.recordReport`
       - `reports.ReportKind`
+      - `reports.uninvestigatedReports`
+      - `tasks/automations.automationConfigRegistration`
+      - `tasks/automations.defineAutomation`
+      - `tasks/task-category.TaskCategory`
     - Exports (types): `UpstreamUpdatesPayload`
     - Exports (values):
       - `UPSTREAM_UPDATES_KIND`
       - `upstreamUpdatesKind`
-    - Register: `defineJob('upstream.detect-updates')`
+    - Register:
+      - `defineJob('upstream.detect-updates')`
+      - `defineAutomation('upstream-merge')`
   - Core:
     - Uses:
       - `infra/git/remotes.classifyRemoteFailure`

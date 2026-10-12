@@ -120,6 +120,7 @@ Consumers read only the generic aggregate:
     - `tasks/reports-investigation`
     - `tasks/task-dependencies`
     - `toolchain`
+    - `upstream`
 - Core:
   - Exports (types): `TaskCategoryDef`
   - Exports (values): `TaskCategoryDefSchema`

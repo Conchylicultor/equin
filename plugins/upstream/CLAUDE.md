@@ -20,20 +20,30 @@ that notices.
   only (no `perWorktree` on the schedule) — "is there an update?" is a question
   about the clone, not about one agent's branch.
 - `server/internal/report-kind.ts`: the `upstream-updates-available` kind.
-- `server/internal/merge-prompt.ts`: the task text, as a pure function of the
-  payload.
+- `server/internal/merge-automation.ts`: the **Upstream merges** automation
+  (`upstream-merge`, see below).
+- `shared/merge-prompt.ts`: the task text — one template
+  (`UPSTREAM_MERGE_PROMPT`: `{{updates}}`, `{{ref}}`, `{{pushPolicy}}`), the
+  automation's default prompt, filled with "do not push" for Investigate.
+- `shared/config.ts`: the automation's config document
+  (`config/tasks/automations/upstream-merge.origin.jsonc`).
 
-## It files no task
+## The report files no task; the automation does
 
-An update is news, not work assigned. The job records a report; the bell rings;
-Debug → Reports holds a row with an **Investigate** button, and pressing it is
-what mints the task — carrying the merge instructions from `merge-prompt.ts`.
-Nothing merges anything on its own, and nothing touches a working tree.
+An update is news. The job records a report; the bell rings; Debug → Reports
+holds a row with an **Investigate** button, and pressing it mints the task —
+carrying the merge instructions from `merge-prompt.ts`, ending on "do not push".
+The job itself merges nothing and touches no working tree.
 
-That is the whole difference from `infra/deps/updates`, whose daily job files an
-auto-started task: a dependency that has fallen behind is a chore with a proven
-gate, and an upstream merge is a change to the user's own trunk that only they
-decide to take.
+The **Upstream merges** automation (Automations pane; off by default — daily at
+07:00 local and Push = never once turned on) is the hands-off path for a clone user: it asks
+`fetchUpstreamStatus` itself and, when `behind` with no merge task open, files
+ONE auto-started task (Upstream category) whose agent merges in its own
+worktree, builds and checks the app. It lands the change only as far as Push
+allows — by default it raises a flag and the user lands it, because an upstream
+merge is a change to the user's own trunk. The filed task is linked to the
+rolling report, so Investigate does not mint a second one. On the canonical
+repo (`no-upstream`) and offline (`unreachable`) it files nothing.
 
 ## Being offline is not an incident
 
@@ -69,7 +79,7 @@ snapshot chains fork at the merge base; the first `./singularity build` (or
 push's normalize) after the merge joins them with a **merge node** — a no-op
 migration whose snapshot is the 3-way merge of the two tips — and fails, naming
 the schema paths, when both sides changed the same column differently. See
-`database/migrations/CLAUDE.md` → **Merge nodes**. `merge-prompt.ts` tells the
+`database/migrations/CLAUDE.md` → **Merge nodes**. `shared/merge-prompt.ts` tells the
 agent to keep the node and to stop and report on a conflict.
 
 ## What it does not do yet
@@ -82,19 +92,34 @@ reading as stale, the job should resolve the row when the count reaches zero.
 
 ## Plugin reference
 
-- Description: Daily upstream.detect-updates job (main only): when the repo this checkout was cloned from has commits local `main` does not, it records one rolling `upstream-updates-available` report — the bell and Debug → Reports. It files no task and merges nothing; the user presses Investigate, and the task minted then carries the `./singularity upstream merge` instructions.
+- Description: Registers the Upstream merges automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. Daily upstream.detect-updates job (main only): when the repo this checkout was cloned from has commits local `main` does not, it records one rolling `upstream-updates-available` report — the bell and Debug → Reports, whose Investigate mints a merge task. And the Upstream merges automation (upstream-merge; off by default, daily once on, editable from the Automations pane): when upstream is ahead and no merge task is open, it files ONE auto-started task (Upstream category, linked to the report) whose agent runs `./singularity upstream merge`, builds and checks the app, and lands it only as far as its Push setting allows (never, by default).
+- Web:
+  - Contributes:
+    - `ConfigV2.WebRegister` "upstream-merge"
+    - `Automations.Config` "upstream-merge"
+  - Uses: `tasks/automations.automationConfigContributions`
 - Server:
-  - Contributes: `report-kind` "upstream-updates-available"
+  - Contributes:
+    - `report-kind` "upstream-updates-available"
+    - `ConfigV2.Register` "upstream-merge"
+    - `taskCategory` "upstream"
   - Uses:
     - `infra/jobs.defineJob`
     - `primitives/log-channels.Log`
+    - `reports.linkReportsToTask`
     - `reports.recordReport`
     - `reports.ReportKind`
+    - `reports.uninvestigatedReports`
+    - `tasks/automations.automationConfigRegistration`
+    - `tasks/automations.defineAutomation`
+    - `tasks/task-category.TaskCategory`
   - Exports (types): `UpstreamUpdatesPayload`
   - Exports (values):
     - `UPSTREAM_UPDATES_KIND`
     - `upstreamUpdatesKind`
-  - Register: `defineJob('upstream.detect-updates')`
+  - Register:
+    - `defineJob('upstream.detect-updates')`
+    - `defineAutomation('upstream-merge')`
 - Core:
   - Uses:
     - `infra/git/remotes.classifyRemoteFailure`

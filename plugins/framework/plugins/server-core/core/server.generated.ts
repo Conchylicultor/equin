@@ -464,5 +464,5 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "ui/plugins/tweakcn/plugins/community-browser", id: "ui.tweakcn.community-browser", loader: () => import("@plugins/ui/plugins/tweakcn/plugins/community-browser/server"), dependsOn: ["infra/plugins/endpoints", "ui/plugins/theme-engine/plugins/saved-themes", "ui/plugins/tweakcn"] },
   { pluginPath: "ui/plugins/tweakcn", id: "ui.tweakcn", loader: () => import("@plugins/ui/plugins/tweakcn/server"), dependsOn: ["infra/plugins/endpoints", "ui/plugins/theme-engine/plugins/saved-themes"] },
   { pluginPath: "ui/plugins/variant-region", id: "ui.variant-region", loader: () => import("@plugins/ui/plugins/variant-region/server"), dependsOn: ["config_v2"] },
-  { pluginPath: "upstream", id: "upstream", loader: () => import("@plugins/upstream/server"), dependsOn: ["infra/plugins/jobs", "infra/plugins/spawn", "primitives/plugins/log-channels", "reports"] },
+  { pluginPath: "upstream", id: "upstream", loader: () => import("@plugins/upstream/server"), dependsOn: ["infra/plugins/jobs", "infra/plugins/spawn", "primitives/plugins/log-channels", "reports", "tasks/plugins/automations", "tasks/plugins/task-category", "ui/plugins/icons"] },
 ];

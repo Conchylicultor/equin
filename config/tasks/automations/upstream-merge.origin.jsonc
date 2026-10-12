@@ -1,0 +1,29 @@
+// @hash 99035da6560f
+{
+  // Off, it files nothing.
+  "enabled": false,
+  // What the agent may do with its finished work: never push, push only an uncontroversial change, or push once checks pass.
+  // Allowed values: "never", "safe", "checks"
+  "push": "never",
+  // The model every agent this automation launches runs with.
+  "model": "opus",
+  // The sources that do not take part.
+  "excludedSources": [],
+  // Run on a schedule, or when its event fires.
+  // Allowed values: "schedule", "event"
+  "trigger": "schedule",
+  // hour, day (at), days (every N days at), week (weekday at), or cron.
+  // Allowed values: "hour", "day", "days", "week", "cron"
+  "cadence": "day",
+  // Local time, HH:MM.
+  "at": "07:00",
+  "everyDays": 2,
+  // Allowed values: "mon", "tue", "wed", "thu", "fri", "sat", "sun"
+  "weekday": "mon",
+  // 5-field crontab in UTC (m h dom mon dow), for the cron schedule.
+  "cron": "0 6 * * *",
+  // An event-triggered run starts this long after the last event of a burst — at most 6× it after the first.
+  "settleMinutes": 10,
+  // What the agent is told: the filed task's description, or the first prompt of an agent it launches on an existing task. {{variable}} placeholders are filled per task; {{pushPolicy}} says what the Push setting allows.
+  "prompt": "{{updates}}\n\nBring them into THIS worktree. You own proving the merged tree works.\n\n1. Run `./singularity upstream merge` in this worktree. It fetches upstream and merges\n   `{{ref}}` into the branch you are on.\n   This is the one sanctioned merge in this repo: rebasing the user's own trunk onto\n   upstream would replay their entire history on every update and rewrite `main` under\n   every open worktree.\n\n2. Resolve whatever conflicts it leaves in the tree.\n   - **Generated files re-derive themselves.** The `.gitattributes` merge drivers take the\n     upstream side, and `./singularity push` re-runs the generators over the merged tree.\n     Do not hand-resolve a generated artifact.\n   - **A conflicted migration is the one thing to stop on.** Two sides altering the same\n     table is a decision a person makes, not a merge you resolve. Report it and wait.\n   Then `git add` what you resolved and run `./singularity upstream merge --continue`, which\n   concludes the merge for you.\n\n3. Run `./singularity build` in the background, then confirm the deploy receipt at\n   `~/.singularity/worktrees/<worktree>/build-status.json` says `\"status\": \"ok\"`.\n\n   **Migrations.** When both sides added schema migrations, the build writes one new\n   migration itself: a *merge node* (`…__merge_snapshot.sql`, whose SQL is only a\n   `-- singularity:merge-snapshot parents=…` header, plus its snapshot) that joins the two\n   snapshot chains. That file is expected — keep it. If the build instead stops on a\n   **snapshot merge conflict** (it lists schema paths like\n   `tables.public.<table>.columns.<column>.type`) or `migration-applies-clean` fails, stop\n   and report that output verbatim. Never delete, rename or edit a file under\n   `plugins/database/plugins/migrations/data` — both sides' migrations are already applied\n   somewhere and are immutable.\n\n4. Open `http://<worktree>.localhost:9000` and check the app still works: it comes up, the\n   screens you can reach render, and Debug → Reports holds nothing new.\n\n5. Report what changed — what the merge brought in, what you had to resolve, and anything\n   that looked off. Then:\n   {{pushPolicy}}\n\nIf the merge cannot be completed (a conflict you cannot resolve, a build that will not come\nup, a migration clash), do NOT push: leave the tree as it is, say so, and wait for\ninstructions. Do not abandon the merge to make the tree look clean."
+}

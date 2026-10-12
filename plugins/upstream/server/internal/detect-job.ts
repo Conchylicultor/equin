@@ -15,7 +15,8 @@ const log = Log.channel("upstream");
  *
  * **It files no task, and it merges nothing.** An update is news, not work
  * assigned: the user presses Investigate when they want it, and the task minted
- * then carries the merge instructions (`./internal/merge-prompt.ts`). Nothing
+ * then carries the merge instructions (`shared/merge-prompt.ts`) — or the
+ * Upstream merges automation, when on, files that task itself. Nothing
  * here writes to the working tree or moves a ref of ours; the only side effect
  * is a `git fetch` inside `fetchUpstreamStatus`.
  *

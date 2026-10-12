@@ -63,6 +63,7 @@ export const LUCIDE_MAP = {
   "bug-report": "bug",
   build: "wrench",
   "calendar-today": "calendar",
+  "call-merge": "git-merge",
   "call-split": "split",
   campaign: "megaphone",
   cancel: "circle-x",

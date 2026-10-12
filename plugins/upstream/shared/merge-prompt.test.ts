@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import { templateVariables } from "@plugins/tasks/plugins/automations/core";
 import {
+  UPSTREAM_MERGE_PROMPT,
   upstreamMergeInstructions,
+  upstreamMergeVariables,
   type UpstreamUpdates,
 } from "./merge-prompt";
 
@@ -88,5 +91,21 @@ describe("upstreamMergeInstructions", () => {
     expect(text).toContain(
       "Never delete, rename or edit a file under\n   `plugins/database/plugins/migrations/data`",
     );
+  });
+});
+
+describe("UPSTREAM_MERGE_PROMPT", () => {
+  test("names exactly the variables the automation fills", () => {
+    // `updates` and `ref` come from upstreamMergeVariables, `pushPolicy` from
+    // the automation's Push setting — anything else would refuse to render.
+    expect(templateVariables(UPSTREAM_MERGE_PROMPT).sort()).toEqual(
+      [...Object.keys(upstreamMergeVariables(base)), "pushPolicy"].sort(),
+    );
+  });
+
+  test("leaves landing to the push policy", () => {
+    // Step 5 is the push policy; the template itself never decides it.
+    expect(UPSTREAM_MERGE_PROMPT).not.toContain("Do not push");
+    expect(UPSTREAM_MERGE_PROMPT).toContain("{{pushPolicy}}");
   });
 });

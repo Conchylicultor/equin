@@ -232,6 +232,7 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `Automations.Config` ← `infra.deps.updates`
     - `Automations.Config` ← `tasks.reports-investigation`
     - `Automations.Config` ← `tasks.sidequest-autopilot`
+    - `Automations.Config` ← `upstream`
     - `Automations.Section` ← `tasks.reports-investigation`
     - `Automations.Section` ← `tasks.sidequest-autopilot`
     - `Automations.TaskDetail` ← `tasks.outcome-report`
@@ -425,6 +426,7 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `tasks/outcome-report`
     - `tasks/reports-investigation`
     - `tasks/sidequest-autopilot`
+    - `upstream`
 - Exemptions:
   - Exempts itself from: `no-db-backed-notify` — `server/internal/live.ts` (debt)
 

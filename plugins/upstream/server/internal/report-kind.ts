@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { ReportKind } from "@plugins/reports/server";
 import type { ReportRow } from "@plugins/reports/server";
-import { upstreamMergeInstructions } from "./merge-prompt";
+import {
+  upstreamMergeInstructions,
+  upstreamMergeTitle,
+} from "../../shared/merge-prompt";
 
 /** The kind string, named once and imported by whoever files one. */
 export const UPSTREAM_UPDATES_KIND = "upstream-updates-available";
@@ -35,7 +38,8 @@ export type UpstreamUpdatesPayload = z.infer<
  * **It files no task.** An update is not a failure and not an emergency; it is
  * news. Reports already mint an investigation task on demand, so the user gets
  * a row in the bell and an Investigate button, and the merge happens when they
- * decide it does. `renderTask` below is what that button hands the agent.
+ * decide it does. `renderTask` below is what that button hands the agent. (The
+ * Upstream merges automation, when on, files the task itself.)
  *
  * Variant `info` for the same reason: nothing is broken.
  *
@@ -81,5 +85,5 @@ export const upstreamUpdatesKind = ReportKind({
 
 /** The one-line summary, also used as the report's `message`. */
 export function upstreamUpdatesTitle(d: UpstreamUpdatesPayload): string {
-  return `[upstream] ${d.count} new commit${d.count === 1 ? "" : "s"} on ${d.ref}`;
+  return upstreamMergeTitle(d);
 }

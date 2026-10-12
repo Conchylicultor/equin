@@ -2,5 +2,5 @@
   "name": "@singularity/plugin-upstream",
   "private": true,
   "version": "0.0.1",
-  "description": "The repo this checkout was cloned from, watched: one definition of how far behind local `main` is, and a daily main-only job that records new upstream commits as a single rolling report (bell + Debug → Reports). It files no task — the merge instructions ride on the on-demand investigation task."
+  "description": "The repo this checkout was cloned from, watched: one definition of how far behind local `main` is, a daily main-only job that records new upstream commits as a single rolling report (bell + Debug → Reports, whose Investigate mints a merge task), and the Upstream merges automation (off by default; daily once on, configurable) that files one auto-started task merging them with `./singularity upstream merge`, landed only as far as its Push setting allows (never, by default)."
 }
