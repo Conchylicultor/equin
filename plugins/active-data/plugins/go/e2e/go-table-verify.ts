@@ -100,7 +100,9 @@ await withBrowser(async (h) => {
   r.ok("the draft holds no table", !draft.includes("|"));
   const firstCells = await table
     .locator("tbody td:first-child")
-    .evaluateAll((tds) => tds.map((td) => (td as HTMLElement).innerText.trim()));
+    .evaluateAll((tds) =>
+      tds.map((td) => (td as HTMLElement).innerText.trim()),
+    );
   r.ok(
     "the draft names every checked row by its first cell",
     firstCells.every((cell) => draft.includes(cell.replace(/\*/g, ""))),
