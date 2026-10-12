@@ -5,7 +5,6 @@ import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web"
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { usePromptComposer } from "@plugins/conversations/plugins/conversation-view/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
-import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
@@ -25,6 +24,8 @@ import {
   type GoItem,
 } from "../internal/parse-go";
 import { editIcon, GO_TINT, GoRailCap, sendIcon } from "./go-cap";
+import { GoItemText } from "./go-item-text";
+import { GoTable } from "./go-table";
 import { PickedBox } from "./picked-box";
 
 const resetIcon = symbol("restart-alt");
@@ -35,7 +36,8 @@ const BOX_HANG = "calc(0.75rem + var(--space-xs))";
  * A multi-line `<go>`: the suggestion as a tinted card with its actions as a
  * rail on the right — ✎ puts it in the draft, ▶ sends it (a checklist has no
  * text to click, unlike an inline Go). A `- [ ]` checklist inside becomes
- * pickable rows; ▶ sends only the picked lines (the prose is for the reader)
+ * pickable rows, and so does a table whose rows lead with `[ ]` / `[x]` (a
+ * pick table); ▶ sends only the picked lines (the prose is for the reader)
  * and stays unsendable until one is picked (✎ with none picked hands over
  * every item to trim). Once the picks differ from the agent's own, Reset
  * puts them back.
@@ -104,16 +106,26 @@ function GoChecklist({ content, body }: { content: string; body: GoBody }) {
       ready={count > 0}
     >
       {body.lead && <Markdown>{body.lead}</Markdown>}
-      <Stack gap="none">
-        {body.items.map((item, i) => (
-          <GoItemRow
-            key={i}
-            item={item}
-            checked={picked[i]!}
-            onToggle={() => toggle(i)}
-          />
-        ))}
-      </Stack>
+      {body.head ? (
+        <GoTable
+          head={body.head}
+          items={body.items}
+          picked={picked}
+          onToggle={toggle}
+          onToggleAll={() => pick(picked.map(() => !picked.every(Boolean)))}
+        />
+      ) : (
+        <Stack gap="none">
+          {body.items.map((item, i) => (
+            <GoItemRow
+              key={i}
+              item={item}
+              checked={picked[i]!}
+              onToggle={() => toggle(i)}
+            />
+          ))}
+        </Stack>
+      )}
       {body.tail && <Markdown>{body.tail}</Markdown>}
       <Stack direction="row" gap="sm" align="center">
         <Text variant="caption" tone="muted" className="select-none">
@@ -224,7 +236,7 @@ function GoItemRow({
       className="block cursor-pointer rounded-sm px-xs py-2xs transition-colors hover:bg-primary/10 [&_*]:indent-0"
     >
       <PickedBox checked={checked} />
-      <InlineText text={item.text} />
+      <GoItemText text={item.text} />
     </span>
   );
 }

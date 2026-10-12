@@ -1,6 +1,7 @@
 import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { GO_TINT, GoInlineUnit } from "./go-cap";
+import { GoItemText } from "./go-item-text";
 import { PickedBox } from "./picked-box";
 import { isBlockForm } from "@plugins/active-data/core";
 import { parseGoItem } from "../internal/parse-go";
@@ -29,7 +30,11 @@ export function GoEcho({ body }: { body: string }) {
         return (
           <span key={i} className="block">
             {picked ? <PickedBox /> : null}
-            <InlineText text={picked ? picked.text : line} />
+            {picked ? (
+              <GoItemText text={picked.text} />
+            ) : (
+              <InlineText text={line} />
+            )}
           </span>
         );
       })}

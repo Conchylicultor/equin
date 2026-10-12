@@ -13,7 +13,7 @@ export const MarkdownEnhancerSlot: Slot<{
 // wave — it loads on the first markdown render of the session. `fallback: null`
 // because markdown is inline in transcripts: a spinner would be jarring, so it
 // just pops in once the chunk resolves (only the first render suspends).
-const MarkdownRenderer = lazyComponent<{ children: string }>(
+const MarkdownRenderer = lazyComponent<{ children: string; inline?: boolean }>(
   () =>
     import("./markdown-renderer").then((m) => ({
       default: m.MarkdownRenderer,
@@ -24,9 +24,16 @@ const MarkdownRenderer = lazyComponent<{ children: string }>(
 export function Markdown({
   children,
   className,
+  inline,
 }: {
   children: string;
   className?: string;
+  /**
+   * Phrasing content only: paragraphs are unwrapped into their words, so the
+   * text sits in a line beside other inline content (a table cell, a checklist
+   * row) instead of opening a block with its own margins.
+   */
+  inline?: boolean;
 }) {
   const enhancers = MarkdownEnhancerSlot.useContributions();
 
@@ -35,7 +42,9 @@ export function Markdown({
     [enhancers],
   );
 
-  let content: ReactNode = <MarkdownRenderer>{children}</MarkdownRenderer>;
+  let content: ReactNode = (
+    <MarkdownRenderer inline={inline}>{children}</MarkdownRenderer>
+  );
 
   for (let i = sorted.length - 1; i >= 0; i--) {
     const { Component } = sorted[i]!;

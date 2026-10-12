@@ -53,6 +53,28 @@ Possible follow-ups:
 </go>
 ```
 
+**Table** — when each item carries columns (a review, an audit, a comparison),
+the table IS the choice: a Markdown table inside `<go>` whose rows each start
+their first cell with the checklist's mark. Don't follow a table with a
+checklist repeating its row names.
+
+```
+<go>
+| Item | Problem | Proposed |
+|---|---|---|
+| [x] **Themes** | "wear" | Each app can have its own theme, … |
+| [ ] **Music** | Too much detail | A piano app and a chord ear trainer, … |
+</go>
+```
+
+A table is a pick table only with a header, its `|---|` rule, and a mark
+leading EVERY row's first cell; any other table in a Go is prose. One set of
+items per Go: a checklist after a pick table (or a table after a checklist) is
+prose too. In the reply (`GoTable`) the whole row is the target, an unpicked
+row is dimmed, and the header's box checks or clears every row. Cells — like
+every item's words, on every surface — render as inline markdown
+(`GoItemText`: `<Markdown inline>`).
+
 ## What is sent back
 
 Picking it sends it back **wrapped in `<go>`**, so the agent reads the part of
@@ -69,6 +91,10 @@ its own answer the user picked, rather than a question from the user (`goWire` i
   - [x] Improve popover ignores ⌘↵ with a chip attached
   </go>
   ```
+
+- a table → the same checklist: each picked row as a `- [x]` line of its
+  FIRST cell. The other columns are the agent's own words, in its history, so
+  the draft and the sent message hold just the item names.
 
 ▶ is disabled until an item is picked; ✎ with none picked hands every item
 over to trim. Once the picks differ from the agent's own (`- [x]`), **Reset**
@@ -119,7 +145,7 @@ back the same way.
 
 ## Plugin reference
 
-- Description: Renders <go>…</go> in an agent's reply — a part of the answer the user can pick as their reply — as one tinted unit, [text | ▶]: ▶ sends it back as <go>…</go> (the agent reads the part of its answer the user picked), clicking the text puts it in the draft as an editable tinted region closed by a ✕. One line is inline wherever it is written; a multi-line block is a card with a ✎ / ▶ rail, its `- [ ]` lines pickable rows (only the picked ones are sent, Reset restores the agent's picks). The user's sent message shows the accepted <go> in full, in the same tint.
+- Description: Renders <go>…</go> in an agent's reply — a part of the answer the user can pick as their reply — as one tinted unit, [text | ▶]: ▶ sends it back as <go>…</go> (the agent reads the part of its answer the user picked), clicking the text puts it in the draft as an editable tinted region closed by a ✕. One line is inline wherever it is written; a multi-line block is a card with a ✎ / ▶ rail, its `- [ ]` lines pickable rows, or a table whose rows lead with `[ ]` / `[x]` a pickable table (only the picked items are sent — a row as a `- [x]` line of its first cell — and Reset restores the agent's picks). The user's sent message shows the accepted <go> in full, in the same tint.
 - Web:
   - Contributes:
     - `ActiveData.Tag` "go" → `GoBlock`

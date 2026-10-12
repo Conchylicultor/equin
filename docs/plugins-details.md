@@ -205,7 +205,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database.db`
       - Core:
         - Exports (values): `EVENT_SOURCE_CHIP_SURFACES`
-    - **`go`** — Renders <go>…</go> in an agent's reply — a part of the answer the user can pick as their reply — as one tinted unit, [text | ▶]: ▶ sends it back as <go>…</go> (the agent reads the part of its answer the user picked), clicking the text puts it in the draft as an editable tinted region closed by a ✕. One line is inline wherever it is written; a multi-line block is a card with a ✎ / ▶ rail, its `- [ ]` lines pickable rows (only the picked ones are sent, Reset restores the agent's picks). The user's sent message shows the accepted <go> in full, in the same tint.
+    - **`go`** — Renders <go>…</go> in an agent's reply — a part of the answer the user can pick as their reply — as one tinted unit, [text | ▶]: ▶ sends it back as <go>…</go> (the agent reads the part of its answer the user picked), clicking the text puts it in the draft as an editable tinted region closed by a ✕. One line is inline wherever it is written; a multi-line block is a card with a ✎ / ▶ rail, its `- [ ]` lines pickable rows, or a table whose rows lead with `[ ]` / `[x]` a pickable table (only the picked items are sent — a row as a `- [x]` line of its first cell — and Reset restores the agent's picks). The user's sent message shows the accepted <go> in full, in the same tint.
       - Web:
         - Contributes:
           - `ActiveData.Tag` "go" → `GoBlock`

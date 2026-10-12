@@ -233,6 +233,7 @@ Possible follow-ups:
 
 - One line is inline, wherever it is written; a multi-line `<go>` is a block.
 - In a block, `- [ ]` lines become a checklist and only the **picked lines** are sent; any other text in the block is for the reader. `- [x]` pre-picks the ones you recommend.
+- **Items with columns → a table inside `<go>`**, each row's first cell starting `[ ]` / `[x]` (`| [x] **Themes** | problem | proposal |`). The table is the choice — never follow a table with a checklist repeating its rows. A picked row comes back as `- [x] <first cell>`.
 - **One choice per item — never cluster.** `- [ ] File the 3 follow-ups` is wrong: list each follow-up on its own `- [ ]` line.
 - **A `<go>` in a USER message is the part of your answer the user picked** (possibly reworded) — do it, don't answer it as a question. A checklist comes back as just the picked `- [x]` lines; anything you listed that is missing was declined. Text around it is the user's own addition and wins over it.
 

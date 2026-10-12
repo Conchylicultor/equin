@@ -12,7 +12,16 @@ const BASE_REMARK_PLUGINS = [remarkGfm];
 // `markdown.tsx` can load it through a `lazyComponent()` dynamic import,
 // keeping react-markdown (~151KB) off the eager plugin-boot wave — it loads
 // once, on the first markdown render of the session.
-export function MarkdownRenderer({ children }: { children: string }) {
+// An inline render unwraps paragraphs: their words stay, the <p> goes.
+const INLINE_DISALLOWED = ["p"];
+
+export function MarkdownRenderer({
+  children,
+  inline,
+}: {
+  children: string;
+  inline?: boolean;
+}) {
   const enhancement = useContext(MarkdownEnhancementContext);
   const { components: overrides, remarkPlugins: extraRemarkPlugins } =
     enhancement;
@@ -74,10 +83,15 @@ export function MarkdownRenderer({ children }: { children: string }) {
   // subscriptions; they don't depend on this component re-rendering.
   return useMemo(
     () => (
-      <ReactMarkdownLib remarkPlugins={remarkPlugins} components={components}>
+      <ReactMarkdownLib
+        remarkPlugins={remarkPlugins}
+        components={components}
+        disallowedElements={inline ? INLINE_DISALLOWED : undefined}
+        unwrapDisallowed={inline}
+      >
         {children}
       </ReactMarkdownLib>
     ),
-    [children, components, remarkPlugins],
+    [children, components, remarkPlugins, inline],
   );
 }

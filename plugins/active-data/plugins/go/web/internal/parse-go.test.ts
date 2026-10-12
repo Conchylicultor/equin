@@ -7,6 +7,7 @@ describe("parseGo", () => {
     expect(parseGo("Implement it")).toEqual({
       lead: "Implement it",
       items: [],
+      head: null,
       tail: "",
     });
   });
@@ -18,18 +19,71 @@ describe("parseGo", () => {
     expect(body).toEqual({
       lead: "File tasks for:",
       items: [
-        { text: "A", checked: false },
-        { text: "B", checked: true },
-        { text: "C", checked: true },
+        { text: "A", checked: false, cells: [] },
+        { text: "B", checked: true, cells: [] },
+        { text: "C", checked: true, cells: [] },
       ],
+      head: null,
       tail: "Then push.",
     });
   });
 
   test("a plain list item is prose, not a choice", () => {
     expect(parseGo("- A\n- [ ] B").items).toEqual([
-      { text: "B", checked: false },
+      { text: "B", checked: false, cells: [] },
     ]);
+  });
+});
+
+describe("parseGo — pick tables", () => {
+  const table = [
+    "Pick which to apply:",
+    "| Item | Problem | Proposed |",
+    "|---|:--|---|",
+    '| [x] **Themes** | "wear" | Each app \\| its theme |',
+    "| [ ] Music | Too much detail | A piano app |",
+    "",
+    "The rest are fine.",
+  ].join("\n");
+
+  test("rows leading with a mark are the items; the header is kept", () => {
+    expect(parseGo(table)).toEqual({
+      lead: "Pick which to apply:",
+      items: [
+        {
+          text: "**Themes**",
+          checked: true,
+          cells: ['"wear"', "Each app | its theme"],
+        },
+        {
+          text: "Music",
+          checked: false,
+          cells: ["Too much detail", "A piano app"],
+        },
+      ],
+      head: ["Item", "Problem", "Proposed"],
+      tail: "The rest are fine.",
+    });
+  });
+
+  test("a table with an unmarked row is prose", () => {
+    const body = parseGo("| A | B |\n|---|---|\n| [x] a | b |\n| c | d |");
+    expect(body.items).toEqual([]);
+    expect(body.head).toBeNull();
+  });
+
+  test("a table without a header rule is prose", () => {
+    expect(parseGo("| [x] a | b |\n| [ ] c | d |").items).toEqual([]);
+  });
+
+  test("one set of items per Go: a checklist after a pick table is prose", () => {
+    const body = parseGo("| A |\n|---|\n| [x] a |\n- [x] b");
+    expect(body.items.map((i) => i.text)).toEqual(["a"]);
+    expect(body.tail).toBe("- [x] b");
+  });
+
+  test("a picked row is sent as a checklist line of its first cell", () => {
+    expect(goWire(table, [true, false])).toBe("<go>\n- [x] **Themes**\n</go>");
   });
 });
 
@@ -85,7 +139,11 @@ describe("block form of what Go sends", () => {
 
 describe("parseGoItem", () => {
   test("reads a checklist line, rejects prose", () => {
-    expect(parseGoItem("- [x] A")).toEqual({ text: "A", checked: true });
+    expect(parseGoItem("- [x] A")).toEqual({
+      text: "A",
+      checked: true,
+      cells: [],
+    });
     expect(parseGoItem("- A")).toBeNull();
   });
 
