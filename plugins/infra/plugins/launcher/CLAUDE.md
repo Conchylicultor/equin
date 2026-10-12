@@ -173,8 +173,13 @@ A shim resolves from its **cwd**, so the shims alone are not enough. With no
 on PATH (Homebrew's tmux, unlocked) or, with none, fails:
 `mise ERROR No version is set for shim: bun`. So each backend and central pins
 its own checkout at boot — `toolchainPin()` (paths/core), i.e.
-`MISE_GLOBAL_CONFIG_FILE=<checkout>/mise.toml` on its own `process.env`
-(`server-core/bin/pin-toolchain.ts`, `central-core/bin/index.ts`). mise reads
+`MISE_GLOBAL_CONFIG_FILE=<checkout>/mise.toml`, plus a re-normalised
+`runtimePath` PATH, on its own `process.env`
+(`server-core/bin/pin-toolchain.ts`, `central-core/bin/index.ts`). The PATH half
+matters because the shim that launched the backend prepended its resolved
+`…/mise/installs/…/bin` dirs again; left in place, every build the backend
+spawns would run its boot-time Bun, so a `mise.lock` bump could never pass
+`bun-runtime` and restart it (2026-10-12). mise reads
 the global config and the `mise.lock` beside it only when the walk finds no
 local config, so inside a checkout nothing changes, and anything the backend
 spawns from `/tmp` or `~/.singularity/…` gets that checkout's locked release. The

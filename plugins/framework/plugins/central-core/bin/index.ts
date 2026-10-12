@@ -16,6 +16,7 @@ import {
   topoSortPlugins,
 } from "@plugins/framework/plugins/plugin-loader/core";
 import { PLUGINS_DIR, toolchainPin } from "@plugins/infra/plugins/paths/core";
+import { runtimePath } from "@plugins/infra/plugins/launcher/core";
 import { readServingSocket } from "@plugins/infra/plugins/runtime-identity/core";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -26,7 +27,11 @@ import {
 
 // Before any plugin loads (or spawns): a mise tool central runs resolves this
 // checkout's locked toolchain whatever cwd it runs in. See `toolchainPin`.
-Object.assign(process.env, toolchainPin());
+// PATH re-normalised for the reason in server-core's `bin/pin-toolchain.ts`:
+// the launching mise shim pinned its boot-time tool dirs in front again.
+Object.assign(process.env, toolchainPin(), {
+  PATH: runtimePath(process.env),
+});
 
 // ── Load all central plugins (topological waves) ───────────────
 // Import in dependency-ordered waves over `dependsOn` rather than one flat

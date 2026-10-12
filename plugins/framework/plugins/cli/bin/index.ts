@@ -4,6 +4,7 @@ import {
   ensureDeps,
   installOrphanGuard,
   reexecAfterInstall,
+  reexecUnderLockedBun,
   takeReexecBudget,
 } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
 
@@ -81,6 +82,17 @@ installOrphanGuard(() => process.exit(ORPHAN_EXIT_CODE));
 // is spawned (the install below included): it counts THIS chain of re-execs, and
 // a descendant `./singularity` is a new invocation with a budget of its own.
 const reexecBudget = takeReexecBudget();
+
+// Run on the Bun `mise.lock` records, not whichever one the caller's PATH found.
+// A long-lived caller (a backend booted before a lock bump, an old shell) hands
+// us its boot-time Bun, and a build on the wrong Bun fails `bun-runtime` — on
+// main that was the build meant to restart the backend onto the new Bun, so
+// nothing recovered (2026-10-12). Before the install, so `bun install` runs on
+// the locked Bun too. See `./locked-bun.ts` in the bootstrap plugin.
+const lockedBun = await reexecUnderLockedBun(import.meta.path);
+if (lockedBun.kind === "reexeced") process.exit(lockedBun.exitCode);
+if (lockedBun.kind === "mismatch")
+  console.error(`singularity: ${lockedBun.reason}`);
 
 // The one dependency chokepoint: freshness-gated (the common case is ~140 ms and
 // silent — see its docblock for the measured breakdown), serialized against

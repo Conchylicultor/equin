@@ -35,6 +35,13 @@ export { REEXEC_ENV, reexecAfterInstall, takeReexecBudget } from "./reexec";
 export type { ReexecBudget, ReexecOptions, ReexecOutcome } from "./reexec";
 
 export {
+  LOCKED_BUN_REEXEC_ENV,
+  lockedBunVersion,
+  reexecUnderLockedBun,
+} from "./locked-bun";
+export type { LockedBunOptions, LockedBunOutcome } from "./locked-bun";
+
+export {
   ORPHAN_EXIT_CODE,
   disarmOrphanGuard,
   installOrphanGuard,

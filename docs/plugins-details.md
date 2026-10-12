@@ -18738,6 +18738,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `EnsureDepsResult`
               - `HolderObservation`
               - `InstallOutcome`
+              - `LockedBunOptions`
+              - `LockedBunOutcome`
               - `ReexecBudget`
               - `ReexecOptions`
               - `ReexecOutcome`
@@ -18747,9 +18749,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `disarmOrphanGuard`
               - `ensureDeps`
               - `installOrphanGuard`
+              - `LOCKED_BUN_REEXEC_ENV`
+              - `lockedBunVersion`
               - `ORPHAN_EXIT_CODE`
               - `REEXEC_ENV`
               - `reexecAfterInstall`
+              - `reexecUnderLockedBun`
               - `takeReexecBudget`
         - **`build`** — `./singularity build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
