@@ -23,6 +23,7 @@ import {
   nextVisibleLine,
   prevVisibleLine,
   visibleChildrenOf,
+  type BlockHandle,
   type BlockNode,
   type Mark,
 } from "../../core";
@@ -63,6 +64,12 @@ export type KeyIntent =
        * `tailData`; the reducer overwrites `.text` regardless. Absent = inherit.
        */
       tailData?: unknown;
+      /**
+       * The end of the selected range `[position, deleteTo)` the Enter REPLACES
+       * — a non-collapsed selection is deleted and the line split where it
+       * started, as typing over a selection replaces it. Absent for a caret.
+       */
+      deleteTo?: number;
     }
   | { type: "convertTo"; to: string } // reset block type (Backspace-at-start / empty-Enter)
   | { type: "merge" } // backspace at start, top-level → merge into prev sibling
@@ -218,6 +225,47 @@ export interface IntentContext {
      * heading's transform against the text schema.
      */
     dataOnSplit?: (data: unknown) => unknown;
+  };
+}
+
+/**
+ * The resolver's context for `blockId`, its type facts and edit policy read
+ * off the block-handle registry (`handleOf`). The one derivation of it — the
+ * keyboard's (a keystroke in a block) and a text span's Enter (resolved
+ * against the forest the span's deletion leaves) cannot disagree about what a
+ * line's Enter does. `nodes` is the view (`scopeNodes` when zoomed).
+ *
+ * An unregistered type is text-less and not an anchor: refusing only demotes a
+ * structural keystroke to a caret move, whereas assuming text would hand the
+ * write boundary a payload it rejects.
+ */
+export function intentContextOf(
+  nodes: BlockNode[],
+  blockId: string,
+  scopeRootId: string | null,
+  handleOf: (type: string) => BlockHandle<unknown> | undefined,
+): IntentContext {
+  const node = nodes.find((b) => b.id === blockId);
+  const handle = handleOf(node?.type ?? "");
+  return {
+    nodes,
+    scopeRootId,
+    blockId,
+    acceptsText: (n) => handleOf(n.type)?.acceptsText === true,
+    isAnchor: (n) => handleOf(n.type)?.anchor === true,
+    // `splitChildWhenExpanded` is render-state-dependent (the live `expanded`
+    // flag), so it folds into the same policy here rather than being drilled.
+    editPolicy: {
+      asChild:
+        handle?.splitChildWhenExpanded && node?.expanded ? true : undefined,
+      childType: handle?.splitChildWhenExpanded?.childType,
+      splitInto: handle?.splitInto,
+      resetToOnBackspaceAtStart: handle?.resetToOnBackspaceAtStart,
+      breakOutOnEmptyEnter: handle?.breakOutOnEmptyEnter,
+      // The tail's `data` transform (e.g. checked to-do → unchecked tail),
+      // bound to its handle so the resolver can invoke it without the handle.
+      dataOnSplit: handle?.dataOnSplit?.bind(handle),
+    },
   };
 }
 
@@ -469,6 +517,90 @@ export function resolveTab(
     : { type: "noop" };
 }
 
+/**
+ * The split an Enter makes at `position` — the line's start / end edges as
+ * the split will see them (`atStart` / `atEnd`), and the range it replaces
+ * (`deleteTo`). The empty-line escapes are the caller's, so this is the arm
+ * every Enter ends on: a caret's, a selected range's, and a text span's
+ * (`enterReplacingIntent`).
+ */
+function splitIntentAt(
+  node: BlockNode,
+  ctx: IntentContext,
+  at: { position: number; atStart: boolean; atEnd: boolean; deleteTo?: number },
+): Extract<KeyIntent, { type: "split" }> {
+  const { position, atStart, atEnd, deleteTo } = at;
+  const p = ctx.editPolicy;
+  // Every "is the caret at the end of the block?" decision gates on the live
+  // caret edge (`atEnd`, read off the editor), never the reducer node length: the latter lags
+  // a just-applied markdown conversion (`### ` → heading) by one keystroke,
+  // which would make the very next Enter miss the type swap or the nest.
+  //
+  // Honor an explicit policy `asChild`; otherwise nest the split-off content
+  // as the first child only when splitting at the very end of a block that
+  // has visible children (Notion's Enter-at-end behavior). The zoom root
+  // always nests: a sibling of the root is outside the view.
+  const asChild =
+    node.id === ctx.scopeRootId ||
+    (p?.asChild ?? (hasVisibleChildren(ctx, node) && atEnd));
+  // Enter mints a TAIL: the block that carries the text after the caret, or
+  // — when the caret is at the end of the line — the empty block the user
+  // types the next thing into. `splitInto` is that tail's type (a heading
+  // yields a body paragraph), and it holds wherever the tail lands: as the
+  // next sibling, or nested as the first child. Where the caret sits inside
+  // the line does not change what the tail IS, so a mid-heading Enter yields
+  // a paragraph too.
+  //
+  // The one split that mints a HEAD instead of a tail is Enter at the START
+  // of a non-empty block: the reducer inserts an empty sibling ABOVE and
+  // leaves the origin (text, id, type) untouched. That new line is the part
+  // BEFORE the caret, so it keeps the origin's own type — an empty heading
+  // above the heading, not a paragraph.
+  const tailInto = atStart && !atEnd ? undefined : p?.splitInto;
+  const siblingType = asChild ? undefined : tailInto;
+  const childType = p?.childType ?? (asChild ? tailInto : undefined);
+  // Resolve the tail's `data` transform (e.g. a checked to-do → unchecked
+  // tail) HERE, where block handles are visible. Guarded to the same-type case:
+  // the tail's type is `childType` when nesting, `siblingType` otherwise, and
+  // either may be the swapped-in `splitInto` target. Running the origin's
+  // transform on a tail validated against a DIFFERENT schema would corrupt it
+  // — so apply only when the tail type equals the origin type.
+  const tailType = (asChild ? childType : siblingType) ?? node.type;
+  const tailData =
+    p?.dataOnSplit && tailType === node.type
+      ? p.dataOnSplit(node.data)
+      : undefined;
+  return {
+    type: "split",
+    position,
+    asChild,
+    childType,
+    siblingType,
+    tailData,
+    ...(deleteTo !== undefined && deleteTo > position ? { deleteTo } : {}),
+  };
+}
+
+/**
+ * Enter over a text span, resolved against the line the span's deletion
+ * leaves (`ctx.nodes` predicted, `ctx.blockId` the join line): a split at the
+ * join. Like Enter over a range inside one line, it replaces text, so the
+ * empty-line escapes never run.
+ */
+export function enterReplacingIntent(
+  ctx: IntentContext,
+  position: number,
+  length: number,
+): Extract<KeyIntent, { type: "split" }> | null {
+  const node = ctx.nodes.find((b) => b.id === ctx.blockId);
+  if (!node) return null;
+  return splitIntentAt(node, ctx, {
+    position,
+    atStart: position === 0,
+    atEnd: position === length,
+  });
+}
+
 export function resolveKeystroke(
   key: KeystrokeKey,
   mods: { shift: boolean },
@@ -483,7 +615,21 @@ export function resolveKeystroke(
       // Shift+Enter inserts a soft newline (native).
       if (mods.shift) return { type: "passthrough" };
       const p = ctx.editPolicy;
-      const position = caret.offset;
+      // A selected RANGE is replaced by the line break: deleted, then the line
+      // split where it started. The split is resolved against the line as the
+      // deletion leaves it — the caret at the range's start, at the line's
+      // start / end when the range began / ended there — and the empty-Enter
+      // ladder below never runs: Enter over a selection replaces text, it is
+      // not an escape from an empty line.
+      const ranged = !caret.collapsed;
+      const position = ranged
+        ? Math.min(caret.offset, caret.focus.offset)
+        : caret.offset;
+      const deleteTo = ranged
+        ? Math.max(caret.offset, caret.focus.offset)
+        : undefined;
+      const atStart = ranged ? position === 0 : caret.atStart;
+      const atEnd = ranged ? deleteTo === caret.length : caret.atEnd;
       // Empty-Enter escapes one structural level per press: indentation first
       // (outdent, keeping the type), then the type (convertTo), then ordinary
       // split. Note the convertTo/outdent order is deliberately OPPOSITE to
@@ -499,7 +645,7 @@ export function resolveKeystroke(
       // "Enter, Enter leaves the box" is the box's affordance, not the line's.
       // Anywhere else in the box the outdent rung is skipped: empty-Enter there
       // is a type escape or an ordinary split, which mints another line inside.
-      if (caret.atStart && caret.atEnd) {
+      if (!ranged && caret.atStart && caret.atEnd) {
         const box = containerOf(ctx, node);
         if (box) {
           if (
@@ -517,53 +663,7 @@ export function resolveKeystroke(
           // Already top-level and already the target type: fall through to split.
         }
       }
-      // Every "is the caret at the end of the block?" decision gates on the live
-      // caret edge (`caret.atEnd`), never the reducer node length: the latter lags
-      // a just-applied markdown conversion (`### ` → heading) by one keystroke,
-      // which would make the very next Enter miss the type swap or the nest.
-      //
-      // Honor an explicit policy `asChild`; otherwise nest the split-off content
-      // as the first child only when splitting at the very end of a block that
-      // has visible children (Notion's Enter-at-end behavior). The zoom root
-      // always nests: a sibling of the root is outside the view.
-      const asChild =
-        node.id === ctx.scopeRootId ||
-        (p?.asChild ?? (hasVisibleChildren(ctx, node) && caret.atEnd));
-      // Enter mints a TAIL: the block that carries the text after the caret, or
-      // — when the caret is at the end of the line — the empty block the user
-      // types the next thing into. `splitInto` is that tail's type (a heading
-      // yields a body paragraph), and it holds wherever the tail lands: as the
-      // next sibling, or nested as the first child. Where the caret sits inside
-      // the line does not change what the tail IS, so a mid-heading Enter yields
-      // a paragraph too.
-      //
-      // The one split that mints a HEAD instead of a tail is Enter at the START
-      // of a non-empty block: the reducer inserts an empty sibling ABOVE and
-      // leaves the origin (text, id, type) untouched. That new line is the part
-      // BEFORE the caret, so it keeps the origin's own type — an empty heading
-      // above the heading, not a paragraph.
-      const tailInto = caret.atStart && !caret.atEnd ? undefined : p?.splitInto;
-      const siblingType = asChild ? undefined : tailInto;
-      const childType = p?.childType ?? (asChild ? tailInto : undefined);
-      // Resolve the tail's `data` transform (e.g. a checked to-do → unchecked
-      // tail) HERE, where block handles are visible. Guarded to the same-type case:
-      // the tail's type is `childType` when nesting, `siblingType` otherwise, and
-      // either may be the swapped-in `splitInto` target. Running the origin's
-      // transform on a tail validated against a DIFFERENT schema would corrupt it
-      // — so apply only when the tail type equals the origin type.
-      const tailType = (asChild ? childType : siblingType) ?? node.type;
-      const tailData =
-        p?.dataOnSplit && tailType === node.type
-          ? p.dataOnSplit(node.data)
-          : undefined;
-      return {
-        type: "split",
-        position,
-        asChild,
-        childType,
-        siblingType,
-        tailData,
-      };
+      return splitIntentAt(node, ctx, { position, atStart, atEnd, deleteTo });
     }
     case "Backspace": {
       // The nearest thing to the LEFT may be a virtual mark delimiter the caret

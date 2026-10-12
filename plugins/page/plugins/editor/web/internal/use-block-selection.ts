@@ -438,8 +438,10 @@ export function useBlockSelection({
    *
    * - Escape climbs the ladder to the touched blocks; Cmd+A selects them all.
    * - Backspace / Delete delete the span; a printable key or Enter types OVER
-   *   it — the span is deleted and the key replayed at the join through the
-   *   caret authority's flight buffer, the path every buffered key takes.
+   *   it — the span is deleted and the key applied at the join as part of the
+   *   same undo entry (a character or Shift+Enter's soft break joins the
+   *   span's own edit; Enter splits the join line — `BlockEditorContext.
+   *   deleteSpan`).
    *   A composition key (an IME's `Process`, a dead key) carries no character
    *   to replay: the span is deleted and the caret landed, and the composition
    *   begins with the next key in the landed editor (the flight's own known

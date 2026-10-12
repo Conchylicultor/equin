@@ -1415,6 +1415,19 @@ deletion and to escaping structure:
 > (outdent, keeping the type), then the type (convertTo), then ordinary split.
 > Inside a container the box is not indentation: it is left only from its last
 > line (see *Empty-Enter leaves a container only where its flow ends*).
+>
+> **Enter over a selection REPLACES it** — a native range inside the line (a
+> double / triple click, Shift+Arrow) as a text span across lines: the text goes
+> and the line splits where it started, as ONE undo entry. The split is resolved
+> against the line as the deletion leaves it (the caret at the range's start, at
+> the line's start / end when the range began / ended there), and the
+> empty-Enter ladder never runs — a selection is text being replaced, not an
+> empty line to escape. The range rides the split op (`KeyIntent.deleteTo`): the
+> op's `runs` are the line with the range cut, so the tail seeds from the text
+> AFTER it; the origin's doc loses the range by the split's own truncation, or —
+> for a range from the line's start, where the split keeps the origin and mints
+> the empty line above — by an explicit `deleteRange` recorded on the same entry.
+> It used to split at the selection's ANCHOR and delete nothing.
 
 Backspace's and empty-Enter's ladders order `convertTo`/`outdent`
 **oppositely, deliberately**: Backspace strips what's visually nearest the caret
@@ -1776,10 +1789,16 @@ key a selection answers (`onSpanKeyDown`):
   part of the span's own edit (`joinAroundSpan(…, typed)`: head + character +
   tail, the character wearing the marks typing there would), so it is one op and
   ONE undo step — as typing over a selection inside one block is one typing run.
-  Enter (and Shift+Enter) is replayed at the join through the caret authority's
-  flight buffer (`landWithInput`: a flight whose buffer starts non-empty), so it
-  splits there exactly as a typed Enter does, and anything typed before the caret
-  lands queues behind it. A composition key (an IME's `Process`, a dead key)
+  Shift+Enter is the same: its soft line break is a character of the line.
+  **Enter is one entry too** (`breakSpan`): the `deleteSpan` op then the
+  `split` op the join would make, both predicted before either is dispatched
+  (`replaceSpan`'s shape), the split resolved by the keyboard's own resolver
+  against the rows the delete leaves (`enterReplacingIntent` over
+  `intentContextOf` — the one context builder the keyboard uses too), so the
+  tail's type, data and nesting are a typed Enter's. It used to be replayed at
+  the join through the flight buffer, which recorded the split as a SECOND
+  entry: one Cmd+Z put the line break back and left the span deleted. Other
+  keys still ride the buffer (`landWithInput`). A composition key (an IME's `Process`, a dead key)
   carries no character: the span is deleted and the caret landed, and the
   composition starts with the NEXT key — the flight's own documented bound (*The
   caret authority*), for the same reason (the container is no editing host).

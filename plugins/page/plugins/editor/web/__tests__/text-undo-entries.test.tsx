@@ -461,6 +461,88 @@ describe("split is ONE entry: patch + the origin's truncation", () => {
   });
 });
 
+describe("Enter over a selected range is ONE entry: the range goes, the line splits", () => {
+  it("mid-line: the tail starts after the range, one Ctrl+Z restores both", async () => {
+    const h = mount();
+    const id = h.id("B");
+    await withOpen(h, id, [{ text: "bravo" }], async (b) => {
+      await act(async () =>
+        h.ctx().projectText(id, docRuns([{ text: "bravo" }])),
+      );
+      const unregister = h.ctx().registerFocusHandle(id, {
+        focus: () => {},
+        truncateAt: (offset) => {
+          const [head] = splitRuns(docOf(b.owner), offset);
+          typeInto(b.owner, head);
+        },
+      });
+      const countBefore = h.ctx().blocks.length;
+
+      // "b[ra]vo" + Enter → "b" | "vo".
+      await act(async () =>
+        h
+          .ctx()
+          .makeBlockAPI(id)
+          .split(1, { runs: [{ text: "bravo" }], deleteTo: 3 }),
+      );
+      await settle();
+      expect(h.ctx().blocks).toHaveLength(countBefore + 1);
+      expect(docOf(b.owner)).toEqual([{ text: "b" }]);
+      const tail = h.ctx().blocks.find((row) => h.rowText(row.id) === "vo");
+      expect(tail).toBeDefined();
+      expect(b.emitted).toHaveLength(0);
+
+      await undo(h);
+      expect(h.ctx().canUndo).toBe(false); // exactly one entry
+      expect(h.has(tail!.id)).toBe(false);
+      expect(docOf(b.owner)).toEqual([{ text: "bravo" }]);
+
+      unregister();
+    });
+  });
+
+  it("from the line's start: the origin keeps the text after the range, one Ctrl+Z", async () => {
+    const h = mount();
+    const id = h.id("B");
+    await withOpen(h, id, [{ text: "bravo" }], async (b) => {
+      await act(async () =>
+        h.ctx().projectText(id, docRuns([{ text: "bravo" }])),
+      );
+      const unregister = h.ctx().registerFocusHandle(id, {
+        focus: () => {},
+        deleteRange: (from, to) => {
+          const runs = docOf(b.owner);
+          typeInto(b.owner, [
+            ...splitRuns(runs, from)[0],
+            ...splitRuns(runs, to)[1],
+          ]);
+        },
+      });
+      const countBefore = h.ctx().blocks.length;
+
+      // "[bra]vo" + Enter → "" above, the origin keeps "vo".
+      await act(async () =>
+        h
+          .ctx()
+          .makeBlockAPI(id)
+          .split(0, { runs: [{ text: "bravo" }], deleteTo: 3 }),
+      );
+      await settle();
+      expect(h.ctx().blocks).toHaveLength(countBefore + 1);
+      expect(h.has(id)).toBe(true);
+      expect(docOf(b.owner)).toEqual([{ text: "vo" }]);
+      expect(b.emitted).toHaveLength(0);
+
+      await undo(h);
+      expect(h.ctx().canUndo).toBe(false);
+      expect(h.ctx().blocks).toHaveLength(countBefore);
+      expect(docOf(b.owner)).toEqual([{ text: "bravo" }]);
+
+      unregister();
+    });
+  });
+});
+
 describe("merge into a mounted target is ONE entry", () => {
   it("undo restores the source row and un-appends the target's doc", async () => {
     const h = mount();

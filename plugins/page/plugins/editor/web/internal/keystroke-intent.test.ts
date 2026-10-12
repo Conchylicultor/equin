@@ -104,6 +104,7 @@ function caret(over: Partial<CaretContext> = {}): CaretContext {
     collapsed: true,
     atStart: false,
     atEnd: false,
+    length: 5,
     onTopLine: false,
     onBottomLine: false,
     caretX: 0,
@@ -154,6 +155,70 @@ describe("Enter", () => {
       siblingType: undefined,
       tailData: undefined,
     });
+  });
+
+  /** A selected range `[anchor, focus)` in a block of `length` characters. */
+  function ranged(anchor: number, focus: number, length = 5): CaretContext {
+    return caret({
+      offset: anchor,
+      collapsed: false,
+      length,
+      focus: {
+        offset: focus,
+        atStart: focus === 0,
+        atEnd: focus === length,
+        onTopLine: true,
+        onBottomLine: true,
+        x: 0,
+      },
+    });
+  }
+
+  test("Enter over a range splits where it starts and deletes up to its end", () => {
+    expect(
+      resolveKeystroke("Enter", NO_SHIFT, ranged(1, 3), ctx("B")),
+    ).toMatchObject({ type: "split", position: 1, deleteTo: 3 });
+  });
+
+  test("…whichever way the range was drawn", () => {
+    expect(
+      resolveKeystroke("Enter", NO_SHIFT, ranged(3, 1), ctx("B")),
+    ).toMatchObject({ type: "split", position: 1, deleteTo: 3 });
+  });
+
+  test("a range over the whole line is replaced, never the empty-Enter ladder", () => {
+    // B is top-level and empty-Enter would convert it to the break-out type;
+    // a selection is text being replaced, so the line splits instead.
+    expect(
+      resolveKeystroke(
+        "Enter",
+        NO_SHIFT,
+        ranged(0, 5),
+        ctx("B", { editPolicy: { breakOutOnEmptyEnter: "text" } }),
+      ),
+    ).toMatchObject({ type: "split", position: 0, deleteTo: 5 });
+  });
+
+  test("a range ending at the line's end nests under visible children, as Enter-at-end", () => {
+    expect(
+      resolveKeystroke("Enter", NO_SHIFT, ranged(2, 5), ctx("A")),
+    ).toMatchObject({ type: "split", position: 2, deleteTo: 5, asChild: true });
+    expect(
+      resolveKeystroke("Enter", NO_SHIFT, ranged(2, 4), ctx("A")),
+    ).toMatchObject({ type: "split", asChild: false });
+  });
+
+  test("a range from the line's start mints a head of the line's own type", () => {
+    // As Enter at the start of a non-empty line: the new line is the part
+    // BEFORE the caret, so it keeps the origin's type — no `splitInto` tail.
+    expect(
+      resolveKeystroke(
+        "Enter",
+        NO_SHIFT,
+        ranged(0, 2),
+        ctx("B", { editPolicy: { splitInto: "text" } }),
+      ),
+    ).toMatchObject({ type: "split", position: 0, siblingType: undefined });
   });
 
   test("Enter at start of a NON-EMPTY block still resolves to a plain position-0 split", () => {

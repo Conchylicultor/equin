@@ -63,6 +63,8 @@ export interface CaretContext {
   atStart: boolean;
   /** Structural: collapsed at the end of the last paragraph. */
   atEnd: boolean;
+  /** Linear length of the block's text (stored-runs basis). */
+  length: number;
   /** Visual: the caret sits on the block's first visual line. */
   onTopLine: boolean;
   /** Visual: the caret sits on the block's last visual line. */
@@ -439,6 +441,7 @@ export function readCaretContext(
       focusAtStart: boolean;
       focusAtEnd: boolean;
       collapsed: boolean;
+      length: number;
       atStart: boolean;
       atEnd: boolean;
       boundary: MarkBoundary | null;
@@ -463,6 +466,7 @@ export function readCaretContext(
         focusAtStart: focusOff === 0,
         focusAtEnd: focusOff === total,
         collapsed,
+        length: total,
         atStart: collapsed && off === 0,
         atEnd: collapsed && off === total,
         boundary: $readMarkBoundary(selection),

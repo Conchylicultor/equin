@@ -90,7 +90,11 @@ import type {
   CaretSurfaceRef,
 } from "./caret-surface";
 import { useBlockHandles, useBlockOpContext } from "./internal/block-handles";
-import { scopeAdmits } from "./internal/zoom-scope";
+import { scopeAdmits, scopeNodes } from "./internal/zoom-scope";
+import {
+  enterReplacingIntent,
+  intentContextOf,
+} from "./internal/keystroke-intent";
 import {
   useMemoryBlockStore,
   type BelowFailure,
@@ -645,10 +649,12 @@ interface BlockEditorContextValue {
     from: SpanPoint,
     to: SpanPoint,
     /**
-     * What REPLACES the span (typing over it). One typed CHARACTER is part of
-     * the span's own edit — its result is head + character + tail, so one op
-     * and ONE undo step, as typing over a selection inside one block is one
-     * run. Anything else (Enter, a key) is replayed at the join once the caret
+     * What REPLACES the span (typing over it), always ONE undo step with the
+     * delete, as typing over a selection inside one block is one run. One
+     * typed CHARACTER — or Shift+Enter's soft line break — is part of the
+     * span's own edit (head + character + tail, one op). A plain Enter splits
+     * the join line in the same entry (`breakSpan`: the `deleteSpan` op then
+     * the `split` op). Any other key is replayed at the join once the caret
      * lands there, through the caret authority's flight buffer
      * (`landWithInput`) — the one path buffered input takes into a block.
      */
@@ -2465,15 +2471,131 @@ export function BlockEditorProviderInner({
     [opCtx, admitsRows, advanceRows, store, dropRejectedEntry, recordEntry],
   );
 
-  // See the context field.
-  const deleteSpan = useCallback(
-    (from: SpanPoint, to: SpanPoint, input?: readonly FlightInput[]) => {
+  // Enter over a span: the span deleted and the join line split there, as
+  // ONE entry — the `deleteSpan` op (across blocks) then the `split` op,
+  // both predicted before either is dispatched, `replaceSpan`'s shape. The
+  // split is the one a caret at the join would make (`enterReplacingIntent`,
+  // resolved against the rows the delete leaves), so the tail's type, data and
+  // nesting are Enter's own. Replaying the key at the join instead made it a
+  // second entry: one Cmd+Z put the line break back and left the span deleted.
+  const breakSpan = useCallback(
+    (from: SpanPoint, to: SpanPoint): boolean => {
       const fromRuns = spanEndRuns(from.blockId);
       const joinAt = Math.min(from.offset, runsLength(fromRuns));
       const toRuns =
         from.blockId === to.blockId ? fromRuns : spanEndRuns(to.blockId);
+      const joined = joinAroundSpan(fromRuns, from.offset, toRuns, to.offset);
+      const before = rowsRef.current;
+      let first: ReturnType<typeof predictOp> | null = null;
+      if (from.blockId !== to.blockId) {
+        first = predictOp(
+          {
+            kind: "deleteSpan",
+            targetId: from.blockId,
+            sourceId: to.blockId,
+            runs: joined,
+          },
+          before,
+          opCtx,
+        );
+        if (first.written.length === 0) return false;
+      }
+      const base = first?.after ?? before;
+      const nodes = toNodes(base);
+      const intent = enterReplacingIntent(
+        intentContextOf(
+          scope.rootId === null ? nodes : scopeNodes(nodes, scope.rootId),
+          from.blockId,
+          scope.rootId,
+          (type) => blockHandles.get(type),
+        ),
+        joinAt,
+        runsLength(joined),
+      );
+      if (!intent) return false;
+      const newId = newBlockId();
+      const second = predictOp(
+        {
+          kind: "split",
+          blockId: from.blockId,
+          position: joinAt,
+          newId,
+          asChild: intent.asChild,
+          childType: intent.childType,
+          siblingType: intent.siblingType,
+          tailData: intent.tailData,
+          runs: joined,
+        },
+        base,
+        opCtx,
+      );
+      if (second.written.length === 0) return false;
+      if (!admitsRows(before, second.after)) return false;
+      // The join line's doc ends as the split leaves its row: the head, or —
+      // the split at the START of a non-empty line, which mints the empty
+      // line ABOVE and keeps the origin — the whole joined text.
+      const keepsOrigin =
+        !intent.asChild && joinAt === 0 && runsLength(joined) > 0;
+      const target = keepsOrigin ? joined : splitRuns(joined, joinAt)[0];
+      const owner = spliceOwnerOf(from.blockId);
+      const fromBefore = owner.runsNow();
+      owner.untracked(() => spliceOpenBlockDoc(owner, target));
+      advanceRows(second.after);
+      const entryId = newHistoryEntryId();
+      if (first) store.dispatch(first.vars, dropRejectedEntry(entryId));
+      store.dispatch(second.vars, dropRejectedEntry(entryId));
+      // Enter at a line's start keeps the caret where it is; any other lands
+      // it on the new line — which does not exist yet, so the landing claims.
+      const caretId = keepsOrigin ? from.blockId : newId;
+      focusBlock(caretId, 0, { scroll: true });
+      recordEntry({
+        label: OP_LABELS.split,
+        focusId: caretId,
+        before,
+        after: second.after,
+        id: entryId,
+        runsEdits: runsEqual(fromBefore, target)
+          ? []
+          : [{ blockId: from.blockId, before: fromBefore, after: target }],
+      });
+      return true;
+    },
+    [
+      spanEndRuns,
+      opCtx,
+      scope,
+      blockHandles,
+      admitsRows,
+      advanceRows,
+      store,
+      dropRejectedEntry,
+      focusBlock,
+      recordEntry,
+    ],
+  );
+
+  // See the context field.
+  const deleteSpan = useCallback(
+    (from: SpanPoint, to: SpanPoint, input?: readonly FlightInput[]) => {
       const only = input?.length === 1 ? input[0] : undefined;
-      const typed = only?.kind === "text" ? only.text : undefined;
+      // A plain Enter splits at the join in the same entry (`breakSpan`); a
+      // refused one (the forest moved under the span) changes nothing.
+      if (only?.kind === "key" && only.key === "Enter" && !only.shift) {
+        breakSpan(from, to);
+        return;
+      }
+      const fromRuns = spanEndRuns(from.blockId);
+      const joinAt = Math.min(from.offset, runsLength(fromRuns));
+      const toRuns =
+        from.blockId === to.blockId ? fromRuns : spanEndRuns(to.blockId);
+      // A character typed over the span — or Shift+Enter's soft line break,
+      // which is a character of the line — is part of the span's own edit.
+      const typed =
+        only?.kind === "text"
+          ? only.text
+          : only?.kind === "key" && only.key === "Enter"
+            ? "\n"
+            : undefined;
       const joined = joinAroundSpan(
         fromRuns,
         from.offset,
@@ -2487,7 +2609,7 @@ export function BlockEditorProviderInner({
       if (typed !== undefined) landAtJoin(from.blockId, joinAt + typed.length);
       else landAtJoin(from.blockId, joinAt, input);
     },
-    [spanEndRuns, commitSpanEdit, landAtJoin],
+    [breakSpan, spanEndRuns, commitSpanEdit, landAtJoin],
   );
 
   // See the context field. The splice is planned against the rows the span's
@@ -2744,6 +2866,7 @@ export function BlockEditorProviderInner({
           siblingType?: string;
           tailData?: unknown;
           runs?: RichText;
+          deleteTo?: number;
         },
       ) {
         // Thin executor: the asChild decision is owned by `resolveKeystroke`
@@ -2751,6 +2874,19 @@ export function BlockEditorProviderInner({
         // is minted up front so we can focus it without awaiting the response.
         const asChild = opts?.asChild ?? false;
         const newId = newBlockId();
+        // Enter over a selected range splits the line as the DELETION leaves
+        // it: the op carries those runs, so the tail (seeded from them) starts
+        // after the range. The origin's doc loses the range below, inside the
+        // same entry — by the truncation when it cuts past the range anyway,
+        // by an explicit delete when the origin keeps its text (Enter at start).
+        const deleteTo =
+          opts?.deleteTo !== undefined && opts.deleteTo > position
+            ? opts.deleteTo
+            : null;
+        const runs =
+          deleteTo !== null && opts?.runs
+            ? joinAroundSpan(opts.runs, position, opts.runs, deleteTo)
+            : opts?.runs;
         const op: BlockOp = {
           kind: "split",
           blockId,
@@ -2760,7 +2896,7 @@ export function BlockEditorProviderInner({
           childType: opts?.childType,
           siblingType: opts?.siblingType,
           tailData: opts?.tailData,
-          runs: opts?.runs,
+          runs,
         };
 
         // Enter at the START of a NON-EMPTY block: the reducer inserts an empty
@@ -2777,9 +2913,10 @@ export function BlockEditorProviderInner({
         // mount, exactly like a gutter-`+` insert. `runsLength > 0` isolates this
         // from empty-block Enter (position 0 but nothing after the caret), which
         // must keep spawning a plain empty sibling BELOW with the caret moving down.
-        if (!asChild && position === 0 && runsLength(opts?.runs ?? []) > 0) {
+        if (!asChild && position === 0 && runsLength(runs ?? []) > 0) {
           const applied = applyOverlay(op);
-          if (applied)
+          if (!applied) return;
+          if (deleteTo === null) {
             recordStructural(
               applied.before,
               applied.after,
@@ -2787,6 +2924,34 @@ export function BlockEditorProviderInner({
               blockId,
               applied.entryId,
             );
+            return;
+          }
+          // A range from the line's start: the origin keeps its id and the
+          // text AFTER the range, so the range is cut from its doc — one
+          // entry with the split. Deferred for the truncation's reason below.
+          queueMicrotask(() => {
+            const cut = (): void => {
+              authority.surgeryOf(blockId)?.deleteRange?.(0, deleteTo);
+            };
+            const owner = blockDocOwnerOf(blockId);
+            const originBefore = owner?.runsNow();
+            if (owner) owner.untracked(cut);
+            else cut();
+            const originAfter = owner?.runsNow();
+            recordEntry({
+              label: OP_LABELS.split,
+              focusId: blockId,
+              before: applied.before,
+              after: applied.after,
+              id: applied.entryId,
+              runsEdits:
+                originBefore === undefined ||
+                originAfter === undefined ||
+                runsEqual(originBefore, originAfter)
+                  ? []
+                  : [{ blockId, before: originBefore, after: originAfter }],
+            });
+          });
           return;
         }
 

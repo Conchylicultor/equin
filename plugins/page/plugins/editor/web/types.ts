@@ -57,6 +57,12 @@ export interface BlockEditorAPI {
       siblingType?: string;
       tailData?: unknown;
       runs?: RichText;
+      /**
+       * The end of a selected range `[position, deleteTo)` the Enter replaces:
+       * deleted from the line in the same step, so the split and the deletion
+       * are ONE undo entry. `runs` are the line BEFORE the deletion.
+       */
+      deleteTo?: number;
     },
   ): void;
   /**

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   $getRoot,
@@ -43,6 +43,7 @@ import {
 import { toNodes } from "../internal/optimistic-block-ops";
 import { scopeNodes } from "../internal/zoom-scope";
 import {
+  intentContextOf,
   resolveKeystroke,
   type KeyIntent,
   type KeystrokeKey,
@@ -68,22 +69,16 @@ export function KeyboardPlugin({
     useBlockEditor();
   const scopeRootId = scope.rootId;
   const recordDocEditRef = useLatestRef(recordDocEdit);
-  const unwrapRef = useRef(unwrapBlock);
-  unwrapRef.current = unwrapBlock;
-  const makeBlockAPIRef = useRef(makeBlockAPI);
-  makeBlockAPIRef.current = makeBlockAPI;
+  const unwrapRef = useLatestRef(unwrapBlock);
+  const makeBlockAPIRef = useLatestRef(makeBlockAPI);
   // The block-type registry: every block's static handle config (incl. the edit
   // policy and split-into-child flag). Resolved here, not prop-drilled.
   const contributions = Editor.Block.useContributions();
-  const contributionsRef = useRef(contributions);
-  contributionsRef.current = contributions;
-  const editorRef = useRef(editor);
-  editorRef.current = editor;
+  const contributionsRef = useLatestRef(contributions);
+  const editorRef = useLatestRef(editor);
   const selection = useSelectionControl();
-  const selectionRef = useRef(selection);
-  selectionRef.current = selection;
-  const blockIdRef = useRef(blockId);
-  blockIdRef.current = blockId;
+  const selectionRef = useLatestRef(selection);
+  const blockIdRef = useLatestRef(blockId);
 
   useEffect(() => {
     function execute(
@@ -110,6 +105,7 @@ export function KeyboardPlugin({
             childType: intent.childType,
             siblingType: intent.siblingType,
             tailData: intent.tailData,
+            deleteTo: intent.deleteTo,
             runs,
           });
           return true;
@@ -285,37 +281,14 @@ export function KeyboardPlugin({
       const allNodes = toNodes(rowsRef.current);
       const nodes =
         scopeRootId === null ? allNodes : scopeNodes(allNodes, scopeRootId);
-      // Resolve the current block's declarative edit policy from the registry.
-      // `splitChildWhenExpanded` is render-state-dependent (the live `expanded`
-      // flag), so it folds into the same policy here rather than being drilled.
       const handleOf = (type: string) =>
         contributionsRef.current.find((c) => c.block.type === type)?.block;
-      const node = nodes.find((b) => b.id === blockIdRef.current);
-      const handle = handleOf(node?.type ?? "");
-      const editPolicy = {
-        asChild:
-          handle?.splitChildWhenExpanded && node?.expanded ? true : undefined,
-        childType: handle?.splitChildWhenExpanded?.childType,
-        splitInto: handle?.splitInto,
-        resetToOnBackspaceAtStart: handle?.resetToOnBackspaceAtStart,
-        breakOutOnEmptyEnter: handle?.breakOutOnEmptyEnter,
-        // The tail's `data` transform (e.g. checked to-do → unchecked tail),
-        // bound to its handle so the resolver can invoke it without the handle.
-        dataOnSplit: handle?.dataOnSplit?.bind(handle),
-      };
-      const intent = resolveKeystroke(key, { shift: event.shiftKey }, caret, {
-        nodes,
-        scopeRootId,
-        blockId: blockIdRef.current,
-        // Type facts from the same registry, resolved per node (the ladders ask
-        // about OTHER blocks — the line above, the line below, the parent — not
-        // just this one). An unregistered type is text-less and not an anchor:
-        // refusing only demotes a structural keystroke to a caret move, whereas
-        // assuming text would hand the write boundary a payload it rejects.
-        acceptsText: (n) => handleOf(n.type)?.acceptsText === true,
-        isAnchor: (n) => handleOf(n.type)?.anchor === true,
-        editPolicy,
-      });
+      const intent = resolveKeystroke(
+        key,
+        { shift: event.shiftKey },
+        caret,
+        intentContextOf(nodes, blockIdRef.current, scopeRootId, handleOf),
+      );
       return execute(intent, event, caret);
     }
 
