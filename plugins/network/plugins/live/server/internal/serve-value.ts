@@ -163,8 +163,9 @@ export function serveValue<
   QIn,
   const R extends readonly ExternalServed[] = [],
   C extends PagedChanges = "notified",
+  K extends string = never,
 >(
-  value: LivePagedValue<Item, Meta, Q, QIn>,
+  value: LivePagedValue<Item, Meta, Q, QIn, "worktree", K>,
   opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R, C>,
 ): ServedFor<C, ServedPagedValue<Item, Q>, ServedSilentPagedValue<Item>>;
 export function serveValue<

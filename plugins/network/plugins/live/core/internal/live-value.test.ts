@@ -331,10 +331,38 @@ describe("liveValue", () => {
       expect(q.refusals).toEqual(["missing"]);
       const paged = liveValue("test.live-value.refusals-paged", {
         query: z.object({ id: z.string() }),
-        paged: { item: z.object({ id: z.string() }), id: "id", limit: 10 },
+        paged: {
+          item: z.object({ id: z.string() }),
+          id: "id",
+          key: { of: (i: { id: string }) => [i.id], order: ["asc"] },
+          limit: 10,
+          maxLimit: 20,
+        },
         refusals: ["missing"],
       });
       expect(paged.refusals).toEqual(["missing"]);
+    });
+
+    test("a paged value's meta sibling carries the same codes, typed by the declaration", () => {
+      const paged = liveValue("test.live-value.refusals-paged-meta", {
+        query: z.object({ id: z.string() }),
+        paged: {
+          item: z.object({ id: z.string() }),
+          id: "id",
+          key: { of: (i: { id: string }) => [i.id], order: ["asc"] },
+          limit: 10,
+          maxLimit: 20,
+          meta: z.object({ total: z.number() }),
+        },
+        refusals: ["invalid-query"],
+      });
+      // Typed `readonly "invalid-query"[] | undefined` — what `useLive`'s
+      // `RefusalsDecl<C>` infers a meta read's `error.code` from.
+      const codes: readonly "invalid-query"[] | undefined = paged.meta.refusals;
+      // @ts-expect-error — not a declared code
+      const wrong: readonly "other"[] | undefined = paged.meta.refusals;
+      void wrong;
+      expect(codes).toEqual(["invalid-query"]);
     });
 
     test("none declared: no codes and no refuse", () => {

@@ -432,7 +432,7 @@ export interface LivePagedValueSpec<
   schema?: never;
   query: LiveQuerySchema<Q, QIn>;
   paged: LivePagedSpec<Item, Meta>;
-  /** Never bytes: a page is JSON (its items, cursor and meta). */
+  /** Never bytes: a page is JSON (its keyed items, each with its `$key`). */
   bytes?: undefined;
   params?: never;
   preload?: never;
@@ -547,7 +547,9 @@ export type LiveQueryValue<
 /**
  * A declared paged value: a {@link LiveValue} per page tuple (its payload the
  * page's items), with its codec, its paging and — declared `paged.meta` — its
- * per-question sibling.
+ * per-question sibling — and, as every value form, the non-snapshot brand
+ * and its declared refusal codes (`C`, `never` without any; one alias, so a
+ * serve or read of it infers `Item` / `Meta` from its type arguments).
  */
 export type LivePagedValue<
   Item,
@@ -556,7 +558,10 @@ export type LivePagedValue<
   QIn = Q,
   O extends LiveValueOrigin = "worktree",
   C extends string = never,
-> = LivePagedPages<Item, Q, QIn, O> & LivePagedMeta<Meta, Q, QIn, O, C>;
+> = LivePagedPages<Item, Q, QIn, O> &
+  LivePagedMeta<Meta, Q, QIn, O, C> &
+  LiveSnapshotBrand<"push"> &
+  LiveRefusalsBrand<C>;
 
 /**
  * A paged value without its meta sibling — what a read of its pages needs,
@@ -594,15 +599,27 @@ export type LivePagedPages<
  * question — `useLive(v.meta, query)`), refreshed by the same `notify(q)`;
  * absent when the declaration has no `paged.meta`.
  */
+// Declared `refusals` reach the meta sibling too (it answers the same
+// question), typed by the same `C`: a plain (non-conditional) `refusals`
+// field `useLive` infers its read's `error.code` from. Not the conditional
+// `LiveRefusalsBrand` — a conditional here breaks `LivePagedValue`'s
+// inference of `Item` / `Meta` at serve and read sites.
 type LivePagedMeta<
   Meta,
   Q,
   QIn,
   O extends LiveValueOrigin,
-  C extends string = never,
+  C extends string,
 > = [Meta] extends [undefined]
   ? { meta?: undefined }
-  : { meta: LiveQueryValue<Meta, Q, QIn, O> & LiveRefusalsBrand<C> };
+  : {
+      meta: LiveQueryValue<Meta, Q, QIn, O> & {
+        // `NoInfer`: a read of the PAGES infers `C` from the value's own
+        // brand, never from here (a second candidate widens it to `string`);
+        // erased once `C` is concrete, so a read of the meta infers it.
+        refusals?: readonly NoInfer<C>[];
+      };
+    };
 
 /**
  * A value read by a params tuple — neither a typed-query nor a paged one. The
@@ -730,9 +747,7 @@ export function liveValue<
   spec: LivePagedValueSpec<Item, Meta, Q, QIn, O> & {
     paged: { meta: ZodParser<Meta> };
   } & LiveRefusalsSpec<C>,
-): LivePagedValue<Item, Meta, Q, QIn, O, C> &
-  LiveSnapshotBrand<"push"> &
-  LiveRefusalsBrand<C>;
+): LivePagedValue<Item, Meta, Q, QIn, O, C>;
 export function liveValue<
   Item,
   Q,
@@ -744,9 +759,7 @@ export function liveValue<
   spec: LivePagedValueSpec<Item, undefined, Q, QIn, O> & {
     paged: { meta?: undefined };
   } & LiveRefusalsSpec<C>,
-): LivePagedValue<Item, undefined, Q, QIn, O> &
-  LiveSnapshotBrand<"push"> &
-  LiveRefusalsBrand<C>;
+): LivePagedValue<Item, undefined, Q, QIn, O, C>;
 export function liveValue<
   T,
   Q,
@@ -1082,7 +1095,8 @@ function loadFields(load: LiveValueLoad | undefined): {
 /**
  * The snapshot combinations tsc refuses, for an untyped caller: a snapshot is
  * measured when a reader asks, so it is never preloaded (boot asks nothing)
- * and never paged (a page chain is kept live by `notify`).
+ * and never paged (a page is a keyed window, pushed as deltas — it has no
+ * HTTP refetch to re-measure).
  */
 function checkSnapshotSpec(
   key: string,
@@ -1111,8 +1125,7 @@ function checkSnapshotSpec(
 function queryValue<T>(
   key: string,
   spec: (
-    | LiveQueryValueSpec<T, unknown, unknown, LiveValueOrigin>
-    | AnyPagedValueSpec
+    LiveQueryValueSpec<T, unknown, unknown, LiveValueOrigin> | AnyPagedValueSpec
   ) &
     LiveRefusalsSpec<string>,
   bytes: BytesFields,
@@ -1249,14 +1262,18 @@ function pagedValue(
     meta:
       meta === undefined
         ? undefined
-        : queryValue(`${key}:meta`, {
-            schema: meta,
-            query: s.query,
-            ...(common.origin !== undefined ? { origin: common.origin } : {}),
-            // The meta loader answers the same question, so it refuses it
-            // with the same codes as the pages.
-            ...(s.refusals !== undefined ? { refusals: s.refusals } : {}),
-          }, {}),
+        : queryValue(
+            `${key}:meta`,
+            {
+              schema: meta,
+              query: s.query,
+              ...(common.origin !== undefined ? { origin: common.origin } : {}),
+              // The meta loader answers the same question, so it refuses it
+              // with the same codes as the pages.
+              ...(s.refusals !== undefined ? { refusals: s.refusals } : {}),
+            },
+            {},
+          ),
   } as unknown as LivePagedValue<
     unknown,
     unknown,

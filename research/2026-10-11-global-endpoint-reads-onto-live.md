@@ -50,7 +50,7 @@ They also form a second read path beside `useLive`. That path keeps attracting n
 - Add a **Design rule** section at the top of `network/live/CLAUDE.md`:
   - "A new way to read server data is an option on `liveValue` / `liveCollection` that `useLive` reads (overloaded by the descriptor's type), never a new hook or a new read function.
   - A new hook needs a recorded reason in the research doc that introduced it ('`useLive` cannot express X because …').
-  - Existing exceptions are listed: `useLiveRow` and `useLiveScroll` are pending unification into `useLive` (follow-up `task-1791751944-3ej507`, after this migration); `optimistic-mutation`'s `useOptimisticResource` is a read+write hook."
+  - Existing exceptions are listed: `useLiveRow` is pending unification into `useLive` (follow-up `task-1791751944-3ej507`, after this migration; `useLiveScroll` was removed by main's key-range paging, which reads every page through `useLive`); `optimistic-mutation`'s `useOptimisticResource` is a read+write hook."
 - Mirror it as one line in the root `CLAUDE.md` "Live state is declared through `network/live`" bullet.
 
 ### P0.2 Widen the ratchet (before migrating, so the inventory is complete)
@@ -92,7 +92,7 @@ Every new hit becomes a `debt` entry (same task id). `review/plugin-changes` kee
 - This replaces every `HttpError(400/403/404/413/415)` on a migrated read (host-fs, code-api, studio tables, memory, events, boot-trace, analytics, file bytes).
 
 ### P0.6 Many tuples of one value through `useLive`
-- `useLive(value, [p1, p2, …])` takes a params **array** and returns one result per tuple, in order. It is built on the internal `useResources` that `useLiveScroll` / `useLivePages` already use.
+- `useLive(value, [p1, p2, …])` takes a params **array** and returns one result per tuple, in order. It is built on the internal `useResources` (which `useLiveScroll` / `useLivePages` used before main's key-range paging removed them).
 - It serves dynamic sets such as the file-explorer's expanded folders and per-row folder peeks.
 - An object-shaped params argument stays the single-tuple form, so the overload is unambiguous. A typed-query value takes an array of queries.
 

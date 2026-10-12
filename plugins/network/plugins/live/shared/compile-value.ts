@@ -689,8 +689,9 @@ export function compilePagedValue<
   O extends LiveValueOrigin,
   const R extends readonly ExternalServed[] = [],
   C extends PagedChanges = "notified",
+  K extends string = never,
 >(
-  value: LivePagedValue<Item, Meta, Q, QIn, O>,
+  value: LivePagedValue<Item, Meta, Q, QIn, O, K>,
   opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R, C>,
 ): CompiledPagedValue<Item, Meta, Q> {
   return compilePagedOf(
@@ -1220,9 +1221,10 @@ export function registerPagedValue<
   O extends LiveValueOrigin,
   const R extends readonly ExternalServed[] = [],
   C extends PagedChanges = "notified",
+  K extends string = never,
 >(
   runtime: ValueRuntime,
-  value: LivePagedValue<Item, Meta, Q, QIn, O>,
+  value: LivePagedValue<Item, Meta, Q, QIn, O, K>,
   opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R, C>,
 ): RegisteredPaged<Item, Meta, Q> {
   return registerPagedOf(

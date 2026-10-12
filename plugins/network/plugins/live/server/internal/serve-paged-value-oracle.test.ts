@@ -122,6 +122,7 @@ class Fixture {
   constructor(readonly value: Value) {
     const { resource, compiled } = registerPagedValue(this.h.runtime, value, {
       source: "external",
+      changes: "notified",
       loader: (_q, range) => {
         this.loads.push(JSON.stringify(this.paramsOfRange(range)));
         return sliceRange(value, [...this.store.values()], range);

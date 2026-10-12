@@ -103,8 +103,9 @@ export function serveValue<
   QIn,
   const R extends readonly ExternalServed[] = [],
   C extends PagedChanges = "notified",
+  K extends string = never,
 >(
-  value: LivePagedValue<Item, Meta, Q, QIn, "central">,
+  value: LivePagedValue<Item, Meta, Q, QIn, "central", K>,
   opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R, C>,
 ): ServedFor<
   C,
@@ -214,7 +215,8 @@ export function serveValue<T, P extends Record<string, string>>(
 function servePaged(
   value: LivePagedValue<unknown, unknown, unknown, unknown, "central">,
   opts: AnyServeOptions,
-): CentralServedPagedValue<unknown, unknown> | CentralSilentPagedValue<unknown> {
+):
+  CentralServedPagedValue<unknown, unknown> | CentralSilentPagedValue<unknown> {
   const { resource, compiled, meta } = registerPagedOf(
     { defineResource, defineExternalResource },
     value,

@@ -13,9 +13,9 @@ the filter language: `research/2026-09-25-global-unified-filter-language.md`).
   type) — never a new hook or a new read function.
 - A new hook needs a recorded reason in the research doc that introduced it
   ("`useLive` cannot express X because …").
-- Existing exceptions: `useLiveRow` and `useLiveScroll` are pending
-  unification into `useLive` (follow-up `task-1791751944-3ej507`, after the
-  endpoint-reads migration — `research/2026-10-11-global-endpoint-reads-onto-live.md`);
+- Existing exceptions: `useLiveRow` is pending unification into `useLive`
+  (follow-up `task-1791751944-3ej507`, after the endpoint-reads migration —
+  `research/2026-10-11-global-endpoint-reads-onto-live.md`);
   `optimistic-mutation`'s `useOptimisticResource` is a read+write hook.
 
 ## Usage
@@ -470,10 +470,14 @@ export const metricDetails = liveValue("metrics.details", {
 // server/ — every hook takes the DECODED question
 serveValue(metricDetails, {
   source: "external",                    // the only arm (a "db" paged value is a tsc error)
+  changes: "notified",                   // or { immutable | fixed } — never a snapshot
   loader: (q, range) => readItems(q, range),     // range: LiveKeyRange → readonly Item[]
   meta: (q) => ({ total: count(q) }),    // required exactly with `paged.meta`
   whileSubscribed: (q, notify) => watch(q, notify),  // once per QUESTION
 });
+// A declared `refusals` (e.g. `["invalid-query"]` beside `paged`) reaches the
+// pages and the meta sibling alike: either loader may throw `v.refuse(code, msg)`,
+// and a read of either types its `error.code` by the declaration.
 // web/
 useLive(metricDetails, selector, { limit: 5 });  // no viewport: LiveListResult<Item>, ≤ maxLimit items
 useLive(metricDetails, selector, { viewport });  // under a viewport: LivePagesResult<Item>

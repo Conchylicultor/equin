@@ -61,7 +61,7 @@ describe("NotificationsClient — seeded derivation", () => {
     socket.open();
     await flush();
     // The source tuple, settled over the socket at version 4.
-    client.observe(KEY, SRC, undefined, rowsSchema, keyOf);
+    client.observe(KEY, SRC, undefined, { schema: rowsSchema }, keyOf);
     socket.serverSend({
       kind: "sub-ack",
       key: KEY,
@@ -114,7 +114,14 @@ describe("NotificationsClient — seeded derivation", () => {
 
   test("the sub carries the derivation, and a derived ack adopts the slice — the same row objects — at its version", async () => {
     const { qc, client, socket } = await setup();
-    client.observe(KEY, NEW, undefined, rowsSchema, keyOf, derivation(client));
+    client.observe(
+      KEY,
+      NEW,
+      undefined,
+      { schema: rowsSchema },
+      keyOf,
+      derivation(client),
+    );
     await flush();
     const [sub] = subsOf(socket, NEW);
     expect(sub!.derive).toEqual({ id: expect.any(String), from: sources });
@@ -158,7 +165,14 @@ describe("NotificationsClient — seeded derivation", () => {
 
   test("the fallback: a value-carrying sub-ack applies, and a late derived echo adopts nothing", async () => {
     const { qc, client, socket } = await setup();
-    client.observe(KEY, NEW, undefined, rowsSchema, keyOf, derivation(client));
+    client.observe(
+      KEY,
+      NEW,
+      undefined,
+      { schema: rowsSchema },
+      keyOf,
+      derivation(client),
+    );
     await flush();
     socket.serverSend({
       kind: "sub-ack",
@@ -191,17 +205,24 @@ describe("NotificationsClient — seeded derivation", () => {
       version: 5,
     });
     await flush();
-    client.observe(KEY, NEW, undefined, rowsSchema, keyOf, stale);
-    client.observe(KEY, { limit: "5" }, undefined, rowsSchema, keyOf, {
-      from: [
-        { params: { limit: "9" }, appliedSeq: 1, after: null, until: null },
-      ],
-    });
+    client.observe(KEY, NEW, undefined, { schema: rowsSchema }, keyOf, stale);
+    client.observe(
+      KEY,
+      { limit: "5" },
+      undefined,
+      { schema: rowsSchema },
+      keyOf,
+      {
+        from: [
+          { params: { limit: "9" }, appliedSeq: 1, after: null, until: null },
+        ],
+      },
+    );
     client.observe(
       KEY,
       { limit: "7" },
       undefined,
-      rowsSchema,
+      { schema: rowsSchema },
       keyOf,
       derivation(client, "zz"),
     );
@@ -214,7 +235,7 @@ describe("NotificationsClient — seeded derivation", () => {
   test("a derived ack answering another derivation adopts nothing; the tab's own answer still applies", async () => {
     const { qc, client, socket } = await setup();
     // This tab subscribes plainly; another tab derived the tuple.
-    client.observe(KEY, NEW, undefined, rowsSchema, keyOf);
+    client.observe(KEY, NEW, undefined, { schema: rowsSchema }, keyOf);
     await flush();
     socket.serverSend({
       kind: "sub-ack",
@@ -242,7 +263,7 @@ describe("NotificationsClient — seeded derivation", () => {
       KEY,
       { limit: "8" },
       undefined,
-      rowsSchema,
+      { schema: rowsSchema },
       keyOf,
       derivation(client),
     );
@@ -263,7 +284,14 @@ describe("NotificationsClient — seeded derivation", () => {
 
   test("a socket reopen replays the sub plain, and a late derived ack is dropped while the replay's answer applies", async () => {
     const { qc, client, socket, hub } = await setup();
-    client.observe(KEY, NEW, undefined, rowsSchema, keyOf, derivation(client));
+    client.observe(
+      KEY,
+      NEW,
+      undefined,
+      { schema: rowsSchema },
+      keyOf,
+      derivation(client),
+    );
     await flush();
     const echo = echoOf(socket, NEW);
 
@@ -303,7 +331,14 @@ describe("NotificationsClient — seeded derivation", () => {
 
   test("a forced resub (a delta with no base) asks plain, and a late derived ack is dropped while the resub's answer applies", async () => {
     const { qc, client, socket } = await setup();
-    client.observe(KEY, NEW, undefined, rowsSchema, keyOf, derivation(client));
+    client.observe(
+      KEY,
+      NEW,
+      undefined,
+      { schema: rowsSchema },
+      keyOf,
+      derivation(client),
+    );
     await flush();
     const echo = echoOf(socket, NEW);
     socket.serverSend({
@@ -342,7 +377,14 @@ describe("NotificationsClient — seeded derivation", () => {
   test("a sub-error drops the derivation: the HTTP fallback runs, and a late derived ack is dropped", async () => {
     const { qc, client, socket } = await setup();
     const fetchQuery = vi.spyOn(qc, "prefetchQuery").mockResolvedValue();
-    client.observe(KEY, NEW, undefined, rowsSchema, keyOf, derivation(client));
+    client.observe(
+      KEY,
+      NEW,
+      undefined,
+      { schema: rowsSchema },
+      keyOf,
+      derivation(client),
+    );
     await flush();
     const echo = echoOf(socket, NEW);
     socket.serverSend({
@@ -370,8 +412,15 @@ describe("NotificationsClient — seeded derivation", () => {
 
   test("derive is read on a fresh sub only — a refcount bump sends nothing", async () => {
     const { client, socket } = await setup();
-    client.observe(KEY, NEW, undefined, rowsSchema, keyOf);
-    client.observe(KEY, NEW, undefined, rowsSchema, keyOf, derivation(client));
+    client.observe(KEY, NEW, undefined, { schema: rowsSchema }, keyOf);
+    client.observe(
+      KEY,
+      NEW,
+      undefined,
+      { schema: rowsSchema },
+      keyOf,
+      derivation(client),
+    );
     await flush();
     expect(subsOf(socket, NEW)).toHaveLength(1);
     expect(subsOf(socket, NEW)[0]!.derive).toBeUndefined();

@@ -146,8 +146,8 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
 
   test("release now: the last observer leaving with `now` unsubscribes at once, drops the cached value, and a remount is a new sub", async () => {
     const { client, socket, qc } = await setup();
-    client.observe("k", { a: "1" }, undefined, pushSchema);
-    client.observe("k", { a: "1" }, undefined, pushSchema);
+    client.observe("k", { a: "1" }, undefined, { schema: pushSchema });
+    client.observe("k", { a: "1" }, undefined, { schema: pushSchema });
     socket.serverSend({
       kind: "sub-ack",
       key: "k",
@@ -173,15 +173,15 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     // No parked teardown fires later.
     await vi.advanceTimersByTimeAsync(SUB_KEEPALIVE_MS + 1);
     expect(unsubFrames(socket)).toHaveLength(1);
-    client.observe("k", { a: "1" }, undefined, pushSchema);
+    client.observe("k", { a: "1" }, undefined, { schema: pushSchema });
     await flush();
     expect(subFrames(socket, "k")).toHaveLength(2);
   });
 
   test("appliedSeq orders every sub's value on one client-wide sequence", async () => {
     const { client, socket } = await setup();
-    client.observe("k", { a: "1" }, undefined, pushSchema);
-    client.observe("k", { a: "2" }, undefined, pushSchema);
+    client.observe("k", { a: "1" }, undefined, { schema: pushSchema });
+    client.observe("k", { a: "2" }, undefined, { schema: pushSchema });
     await flush();
     expect(client.appliedSeq("k", { a: "1" })).toBe(0);
     const frame = (a: string, version: number) => ({

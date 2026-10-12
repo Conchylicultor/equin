@@ -6,7 +6,9 @@
  *   - the HTTP read answers 422 `{ reason: "refused", code, detail }`;
  *   - a push drain whose loader refuses tells every holder the same
  *     `sub-error reason:"refused"` (a change INTO a refused state reaches the
- *     reader), sends no update, and reports nothing;
+ *     reader), sends no update, and reports nothing — a plain value's drain
+ *     and an external keyed window's (a paged value's page: `notify` re-reads
+ *     it whole through `drainMembershipFull`) alike;
  *   - neither files a report (it is not a server failure);
  *   - a code the resource does not declare (`refusals`) is a server bug:
  *     `loader-failed`, reported, never `refused`;
@@ -16,6 +18,7 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { z } from "zod";
 import { ResourceRefusal } from "@plugins/packages/plugins/resource-protocol/core";
+import type { ResourceParams } from "./runtime";
 import { createHarness } from "./test-support";
 
 class UnknownThing extends ResourceRefusal {
@@ -170,6 +173,64 @@ describe("refusal", () => {
         reason: "refused",
         code: "unknown-thing",
         message: "the file was deleted",
+      });
+    }
+    expect(reported).toEqual([]);
+  });
+
+  test("external keyed window (a page): a refusal after a notify reaches every holder as `refused`, with no delta", async () => {
+    type Row = { id: string; n: number };
+    const reported: unknown[] = [];
+    const h = createHarness({
+      sockets: 2,
+      reportError: (_c, err) => reported.push(err),
+    });
+    let invalid = false;
+    const resource = h.runtime.defineExternalResource(
+      {
+        key: "page",
+        schema: z.array(z.object({ id: z.string(), n: z.number() })),
+        keyed: { keyOf: (r: unknown) => (r as Row).id },
+        validateParams: () => {},
+        refusals: ["unknown-thing"],
+      },
+      {
+        membership: {
+          kind: "window",
+          limitOf: (p: ResourceParams) => Number(p.limit),
+        },
+        loader: async (): Promise<Row[]> => {
+          if (invalid) throw new UnknownThing("the query is no longer valid");
+          return [
+            { id: "a", n: 1 },
+            { id: "b", n: 2 },
+          ];
+        },
+      },
+    );
+    const params = { limit: "10" };
+    await h.subscribe("page", params, { socket: 0 });
+    await h.subscribe("page", params, { socket: 1 });
+    const before = h.frames.length;
+    invalid = true;
+    resource.notify(params);
+    for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
+    const after = h.frames.slice(before) as unknown as Record<
+      string,
+      unknown
+    >[];
+    expect(
+      after.filter((f) => f.kind === "update" || f.kind === "delta"),
+    ).toEqual([]);
+    const errors = after.filter((f) => f.kind === "sub-error");
+    expect(errors).toHaveLength(2);
+    for (const f of errors) {
+      expect(f).toMatchObject({
+        key: "page",
+        params,
+        reason: "refused",
+        code: "unknown-thing",
+        message: "the query is no longer valid",
       });
     }
     expect(reported).toEqual([]);

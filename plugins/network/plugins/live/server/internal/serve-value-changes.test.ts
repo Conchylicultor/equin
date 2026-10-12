@@ -149,7 +149,13 @@ describe("changes — types", () => {
     });
     const paged = liveValue(key("paged"), {
       query: Query,
-      paged: { item: Item, id: "id", limit: 10 },
+      paged: {
+        item: Item,
+        id: "id",
+        key: { of: (i) => [i.id], order: ["asc"] },
+        limit: 10,
+        maxLimit: 20,
+      },
     });
     expect(snap).toMatchObject({ load: "on-demand", snapshot: true });
     const typeOnly = () => {
@@ -190,7 +196,7 @@ describe("changes — types", () => {
         source: "external",
         // @ts-expect-error — a paged value is never a snapshot
         changes: SNAPSHOT,
-        loader: () => ({ items: [], nextCursor: null, meta: undefined }),
+        loader: () => [],
       });
       // @ts-expect-error — a snapshot is never preloaded
       liveValue(key("x"), { schema: Count, load: "snapshot", preload: "boot" });

@@ -56,6 +56,18 @@ const pagedValue = liveValue("test.use-live-types.paged", {
     meta: z.object({ total: z.number() }),
   },
 });
+const refusingPaged = liveValue("test.use-live-types.paged-refusals", {
+  query: Question,
+  paged: {
+    item: Item,
+    id: "id",
+    key: { of: (i) => [i.at], order: ["desc"] },
+    limit: 2,
+    maxLimit: 4,
+    meta: z.object({ total: z.number() }),
+  },
+  refusals: ["invalid-query"],
+});
 
 function useTypeChecks(maybe: { viewport: typeof viewport } | undefined) {
   const paged: LivePagesResult<Row> = useLive(scroll, {}, { viewport });
@@ -83,6 +95,19 @@ function useTypeChecks(maybe: { viewport: typeof viewport } | undefined) {
     { limit: 1 },
   );
   const total = useLive(pagedValue.meta, { metric: "m" });
+  // A declared refusal types the pages' and the meta sibling's error code alike.
+  const refusedPages = useLive(refusingPaged, { metric: "m" });
+  if (refusedPages.status === "error") {
+    const code: "invalid-query" | undefined = refusedPages.error.code;
+    void code;
+  }
+  const refusedTotal = useLive(refusingPaged.meta, { metric: "m" });
+  if (refusedTotal.status === "error") {
+    const code: "invalid-query" | undefined = refusedTotal.error.code;
+    void code;
+    // @ts-expect-error — "gone" is not one of the declared codes
+    void (refusedTotal.error.code === "gone");
+  }
   // @ts-expect-error a paged read under a viewport takes no limit
   useLive(pagedValue, { metric: "m" }, { viewport, limit: 1 });
   // @ts-expect-error the cursor chain's `first` is gone — a preview is `{ limit }`
@@ -91,7 +116,17 @@ function useTypeChecks(maybe: { viewport: typeof viewport } | undefined) {
   useLive(pagedValue, { metric: "m" }, maybe);
   // @ts-expect-error the question is the schema's input
   useLive(pagedValue, { q: "{}" });
-  return [paged, detached, list, valuePages, valueList, preview, total];
+  return [
+    paged,
+    detached,
+    list,
+    valuePages,
+    valueList,
+    preview,
+    total,
+    refusedPages,
+    refusedTotal,
+  ];
 }
 
 /** A paged value's key, checked by tsc (its serve half: `shared/compile-value.test.ts`). */

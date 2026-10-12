@@ -61,10 +61,10 @@ import { withoutWindowFields } from "./window-fields";
  * `maxLimit`), and a grow that FAILS is the error arm with the window it grew
  * from as `stale`.
  */
-export type LiveListResult<Row, C extends string = string> = PagedResourceResult<
+export type LiveListResult<
   Row,
-  C
->;
+  C extends string = string,
+> = PagedResourceResult<Row, C>;
 
 /**
  * A read of a value declared `load: "snapshot"`: its result plus `refresh()`
@@ -380,17 +380,17 @@ export function useLive<
  *   The per-question meta sibling is `useLive(pagedValue.meta, query)`.
  */
 export function useLive<Item, Meta, Q, QIn, C extends string = never>(
-  value:
-    | (LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin> & RefusalsDecl<C>)
-    | null,
+  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C> | null,
   query: NoInfer<QIn> | null,
   options: LivePagesOptions,
-): LivePagesResult<Item, C>;
+): LivePagesResult<Item, NoInfer<C>>;
 export function useLive<Item, Meta, Q, QIn, C extends string = never>(
-  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin> & RefusalsDecl<C>,
+  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C>,
   query: NoInfer<QIn> | null,
   options?: LiveValuePagesOptions,
-): LiveListResult<Item, C>;
+  // `NoInfer`: `C` is the declaration's — never widened by the result's
+  // annotation (`LiveListResult<Item>` would infer `string`).
+): LiveListResult<Item, NoInfer<C>>;
 /**
  * - `useLive(queryValue, query)` — a typed-query value
  *   (`liveValue(key, { query })`): the question is the schema's INPUT, encoded
@@ -570,7 +570,7 @@ function readKindOf(
   }
   if (source === null) return "count";
   if ("live" in source) {
-    const decl = source as {
+    const decl = source as unknown as {
       key: string;
       query?: unknown;
       paged?: unknown;

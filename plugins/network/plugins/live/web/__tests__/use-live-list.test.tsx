@@ -265,7 +265,13 @@ describe("useLive(value, [p1, p2, …])", () => {
     });
     const paged = liveValue(key(), {
       query: Query,
-      paged: { item: z.object({ id: z.string() }), id: "id", limit: 10 },
+      paged: {
+        item: z.object({ id: z.string() }),
+        id: "id",
+        key: { of: (i: { id: string }) => [i.id], order: ["asc"] },
+        limit: 10,
+        maxLimit: 20,
+      },
     });
 
     // Never called — the assertions are the annotations and `@ts-expect-error`s.

@@ -3866,6 +3866,33 @@ export function createResourceRuntime(
     return str.length;
   }
 
+  // A declared refusal is an ANSWER, not a failure: the value moved into a
+  // state the reader must see (the file it reads was deleted → `missing`, the
+  // query became invalid → `invalid-query`). Tell every holder, as the sub-ack
+  // read does; the client's sub-error handler then reads over HTTP and
+  // surfaces the typed refusal (422) with the last value as `stale`.
+  // `declaredLoad` already turned an undeclared code into a plain Error, so
+  // only a declared one arrives as a ResourceRefusal. Every push-path loader
+  // failure that ends a drain calls this — the plain-value drain and the
+  // keyed-window FULL (`drainMembershipFull`, where a keyed refill's failure
+  // also lands) alike — so a paged value's refusal reaches its pages.
+  function broadcastRefusal(
+    subs: readonly SocketState[],
+    entry: RegistryEntry,
+    params: ResourceParams,
+    err: unknown,
+  ): void {
+    if (!(err instanceof ResourceRefusal)) return;
+    broadcastJson(subs, {
+      kind: "sub-error",
+      key: entry.key,
+      params,
+      reason: "refused",
+      code: err.code,
+      message: err.message,
+    });
+  }
+
   // Schedule a single global microtask flush, guarded so concurrent callers
   // coalesce onto one flush. The immediate (non-debounced) path.
   function scheduleFlush(): void {
@@ -4587,6 +4614,7 @@ export function createResourceRuntime(
       } catch (err) {
         if (evictOnContractError(entry, params, err)) return;
         reportLoaderError(`loader failed for ${entry.key}`, err);
+        broadcastRefusal(subs, entry, params, err);
         // The pending is consumed, so the snapshot may now miss a real member
         // this change admitted — and the router reads membership off it: a
         // quiescent tuple would drop that member's every later value-only
@@ -5384,23 +5412,7 @@ export function createResourceRuntime(
         } catch (err) {
           if (evictOnContractError(entry, params, err)) continue;
           reportLoaderError(`loader failed for ${entry.key}`, err);
-          // A declared refusal is an ANSWER, not a failure: the value moved into
-          // a state the reader must see (the file it reads was deleted →
-          // `missing`). Tell every holder, as the sub-ack read does; the
-          // client's sub-error handler then reads over HTTP and surfaces the
-          // typed refusal (422) with the last value as `stale`. `declaredLoad`
-          // already turned an undeclared code into a plain Error, so only a
-          // declared one reaches here as a ResourceRefusal.
-          if (err instanceof ResourceRefusal) {
-            broadcastJson(subs, {
-              kind: "sub-error",
-              key: entry.key,
-              params,
-              reason: "refused",
-              code: err.code,
-              message: err.message,
-            });
-          }
+          broadcastRefusal(subs, entry, params, err);
           // Skip sending and cascading on loader failure — otherwise we'd
           // invalidate downstream state based on a torn read. Never persist on
           // the failure path. No ack either — a failed recompute never proved
