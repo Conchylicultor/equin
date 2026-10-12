@@ -1,0 +1,14 @@
+// @hash 6ec84829688d
+{
+  // One table: the tag tree as rows, in the tree's own depth-first order (the
+  // panel flattens it). No sort on purpose — a sorted column would scatter the
+  // children away from their parents and lose the indentation's meaning.
+  "views": [
+    {
+      "id": "tags",
+      "name": "Tags",
+      "icon": "sell",
+      "view": { "type": "table" }
+    }
+  ]
+}

@@ -310,6 +310,13 @@ export interface FieldOption {
   variant?: BadgeVariant;
   /** Tooltip on the read chip — why this value means what it means. */
   hint?: string;
+  /**
+   * The `value` of this option's parent option, making the set a forest
+   * (e.g. a place category under its group). Absent → a root. Read by
+   * {@link optionDescendants} (the "incl. nested" tags operators); a value that
+   * names no option, or a cycle, is tolerated there.
+   */
+  parent?: string;
 }
 
 /**
@@ -1072,6 +1079,9 @@ export interface FilterValueInputProps {
  */
 export interface FilterLowerContext {
   readonly column: string;
+  /** The field the rule is on — an operator reads its `options` (e.g. the
+   *  option hierarchy) from it. */
+  readonly field: FieldDef<unknown>;
   readonly now: number;
 }
 
@@ -1583,4 +1593,20 @@ export interface DataViewBaseProps<TRow> {
    * ("Search apps"). Default `"Search…"`.
    */
   searchPlaceholder?: string;
+  /**
+   * A panel the surface places beside its view — a facet sidebar, a tag
+   * tree. It renders INSIDE the DataView's controls context, so code in it
+   * reads and edits the active view's state through `useDataViewControls()`
+   * (`filter.setFilter(…)`, `sort`, the query) exactly as a toolbar control
+   * does; the view body stays outside that context.
+   *
+   * Placement is the toolbar's: beside an {@link ToolbarArrangement.overlay}
+   * arrangement it is a floating card on the left (the surface's height minus
+   * gutters, its own scroll), and the arrangement's cards start past it
+   * (`ToolbarParts.asideInset`); otherwise it is a left column beside the band
+   * and the view. The panel sizes its own width. Shown once the surface has an
+   * active view (there is no view state to edit before). Only a band chrome
+   * takes it: a hosted or sections toolbar throws.
+   */
+  aside?: ReactNode;
 }

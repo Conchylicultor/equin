@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { lowersToMatch } from "@plugins/primitives/plugins/data-view/web/testing";
+import {
+  lowersToMatch,
+  testField,
+} from "@plugins/primitives/plugins/data-view/web/testing";
 import type { FilterFieldValue } from "@plugins/primitives/plugins/data-view/core";
 import { numberLower } from "./number-lower";
 
@@ -29,7 +32,9 @@ describe("number operators lowered", () => {
   it("empty operand → keep (incomplete rule)", () => {
     expect(keeps("=", undefined, 5)).toBe(true);
     expect(keeps(">", null, 5)).toBe(true);
-    expect(numberLower["="]("5", { column: "n", now: 0 })).toBeUndefined();
+    expect(
+      numberLower["="]("5", { column: "n", field: testField("n"), now: 0 }),
+    ).toBeUndefined();
   });
 
   it("non-numeric field value → drop (when operand present)", () => {
@@ -54,7 +59,9 @@ describe("number operators lowered", () => {
     expect(keeps("between", { max: 5 }, 7)).toBe(false);
     expect(keeps("between", {}, 7)).toBe(true); // no bounds → keep
     expect(keeps("between", { min: 1 }, null)).toBe(false);
-    expect(numberLower.between({}, { column: "n", now: 0 })).toBeUndefined();
+    expect(
+      numberLower.between({}, { column: "n", field: testField("n"), now: 0 }),
+    ).toBeUndefined();
   });
 
   it("is-empty / is-not-empty", () => {

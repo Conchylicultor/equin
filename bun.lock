@@ -650,6 +650,26 @@
       "name": "@singularity/plugin-apps-pages-welcome-recent-pages",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/places": {
+      "name": "@singularity/plugin-apps-places",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/places/plugins/places-core": {
+      "name": "@singularity/plugin-apps-places-places-core",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/places/plugins/places-map": {
+      "name": "@singularity/plugin-apps-places-places-map",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/places/plugins/shell": {
+      "name": "@singularity/plugin-apps-places-shell",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/places/plugins/tag-manager": {
+      "name": "@singularity/plugin-apps-places-tag-manager",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/prototypes": {
       "name": "@singularity/plugin-apps-prototypes",
       "version": "0.0.1",
@@ -2587,6 +2607,22 @@
     },
     "plugins/fields/plugins/list/plugins/config": {
       "name": "@singularity/plugin-fields-list-config",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/location": {
+      "name": "@singularity/plugin-fields-location",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/location/plugins/filter": {
+      "name": "@singularity/plugin-fields-location-filter",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/location/plugins/storage": {
+      "name": "@singularity/plugin-fields-location-storage",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/location/plugins/table": {
+      "name": "@singularity/plugin-fields-location-table",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/multiline-text": {
@@ -4702,6 +4738,10 @@
       "name": "@singularity/plugin-primitives-data-view-custom-columns",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/data-view/plugins/floating-toolbar": {
+      "name": "@singularity/plugin-primitives-data-view-floating-toolbar",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/data-view/plugins/gallery": {
       "name": "@singularity/plugin-primitives-data-view-gallery",
       "version": "0.0.1",
@@ -4712,6 +4752,10 @@
     },
     "plugins/primitives/plugins/data-view/plugins/list": {
       "name": "@singularity/plugin-primitives-data-view-list",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/data-view/plugins/map": {
+      "name": "@singularity/plugin-primitives-data-view-map",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/data-view/plugins/table": {
@@ -6793,6 +6837,16 @@
 
     "@singularity/plugin-apps-pages-welcome-recent-pages": ["@singularity/plugin-apps-pages-welcome-recent-pages@workspace:plugins/apps/plugins/pages/plugins/welcome/plugins/recent-pages"],
 
+    "@singularity/plugin-apps-places": ["@singularity/plugin-apps-places@workspace:plugins/apps/plugins/places"],
+
+    "@singularity/plugin-apps-places-places-core": ["@singularity/plugin-apps-places-places-core@workspace:plugins/apps/plugins/places/plugins/places-core"],
+
+    "@singularity/plugin-apps-places-places-map": ["@singularity/plugin-apps-places-places-map@workspace:plugins/apps/plugins/places/plugins/places-map"],
+
+    "@singularity/plugin-apps-places-shell": ["@singularity/plugin-apps-places-shell@workspace:plugins/apps/plugins/places/plugins/shell"],
+
+    "@singularity/plugin-apps-places-tag-manager": ["@singularity/plugin-apps-places-tag-manager@workspace:plugins/apps/plugins/places/plugins/tag-manager"],
+
     "@singularity/plugin-apps-prototypes": ["@singularity/plugin-apps-prototypes@workspace:plugins/apps/plugins/prototypes"],
 
     "@singularity/plugin-apps-prototypes-canvas": ["@singularity/plugin-apps-prototypes-canvas@workspace:plugins/apps/plugins/prototypes/plugins/canvas"],
@@ -7736,6 +7790,14 @@
     "@singularity/plugin-fields-list": ["@singularity/plugin-fields-list@workspace:plugins/fields/plugins/list"],
 
     "@singularity/plugin-fields-list-config": ["@singularity/plugin-fields-list-config@workspace:plugins/fields/plugins/list/plugins/config"],
+
+    "@singularity/plugin-fields-location": ["@singularity/plugin-fields-location@workspace:plugins/fields/plugins/location"],
+
+    "@singularity/plugin-fields-location-filter": ["@singularity/plugin-fields-location-filter@workspace:plugins/fields/plugins/location/plugins/filter"],
+
+    "@singularity/plugin-fields-location-storage": ["@singularity/plugin-fields-location-storage@workspace:plugins/fields/plugins/location/plugins/storage"],
+
+    "@singularity/plugin-fields-location-table": ["@singularity/plugin-fields-location-table@workspace:plugins/fields/plugins/location/plugins/table"],
 
     "@singularity/plugin-fields-multiline-text": ["@singularity/plugin-fields-multiline-text@workspace:plugins/fields/plugins/multiline-text"],
 
@@ -8717,11 +8779,15 @@
 
     "@singularity/plugin-primitives-data-view-custom-columns": ["@singularity/plugin-primitives-data-view-custom-columns@workspace:plugins/primitives/plugins/data-view/plugins/custom-columns"],
 
+    "@singularity/plugin-primitives-data-view-floating-toolbar": ["@singularity/plugin-primitives-data-view-floating-toolbar@workspace:plugins/primitives/plugins/data-view/plugins/floating-toolbar"],
+
     "@singularity/plugin-primitives-data-view-gallery": ["@singularity/plugin-primitives-data-view-gallery@workspace:plugins/primitives/plugins/data-view/plugins/gallery"],
 
     "@singularity/plugin-primitives-data-view-icons": ["@singularity/plugin-primitives-data-view-icons@workspace:plugins/primitives/plugins/data-view/plugins/icons"],
 
     "@singularity/plugin-primitives-data-view-list": ["@singularity/plugin-primitives-data-view-list@workspace:plugins/primitives/plugins/data-view/plugins/list"],
+
+    "@singularity/plugin-primitives-data-view-map": ["@singularity/plugin-primitives-data-view-map@workspace:plugins/primitives/plugins/data-view/plugins/map"],
 
     "@singularity/plugin-primitives-data-view-table": ["@singularity/plugin-primitives-data-view-table@workspace:plugins/primitives/plugins/data-view/plugins/table"],
 

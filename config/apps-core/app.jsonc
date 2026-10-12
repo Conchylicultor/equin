@@ -1,4 +1,4 @@
-// @hash 0223718468c9
+// @hash 3b6dc12b557f
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -22,12 +22,14 @@
   // system tooling below. Events is a content app fed by external sources —
   // the same family as Mail — so it sits with them, directly after Mail.
   // Chord (the chord ear trainer) is a music app: it sits beside Sonata.
+  // Places (saved places on a map) is personal content: it sits after Events.
   "items": [
     "apps.home.shell:home",
     "apps.agent-manager.shell:agent-manager",
     "apps.pages.shell:pages",
     "apps.mail.shell:mail",
     "apps.events.shell:events",
+    "apps.places.shell:places",
     "apps.sonata.shell:sonata",
     "apps.chord.shell:chord",
     "apps.browser.shell:browser",

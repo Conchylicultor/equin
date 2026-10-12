@@ -130,8 +130,8 @@ is reported by the schema file that exports it, which is where its plugin's
   - Slots:
     - `IdKinds.Kind`
     - `IdKinds.Presenter`
-  - Slot contributors: 34 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `IdKinds.Kind` ×25
+  - Slot contributors: 35 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `IdKinds.Kind` ×26
     - `IdKinds.Presenter` ×9
   - Exports (types):
     - `IdPresenter`
@@ -181,8 +181,8 @@ is reported by the schema file that exports it, which is where its plugin's
     - `parseKindLabel`
     - `storedIdSchema`
 - Cross-plugin:
-  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×9
+  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×10
     - `conversations` ×4
     - `primitives` ×3
     - `build` ×2

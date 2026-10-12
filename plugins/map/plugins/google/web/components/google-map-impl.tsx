@@ -16,7 +16,9 @@ import {
   positionsKey,
   type MapArea,
   type MapOverlay,
+  type MapPadding,
   type MapPath,
+  type MapPin,
 } from "@plugins/map/core";
 import type { MapRendererProps } from "@plugins/map/web";
 import {
@@ -32,6 +34,7 @@ import {
 import { MapErrorCard } from "./map-error-card";
 import { GOOGLE_COLOR_SCHEME, GOOGLE_TILES } from "../internal/tiles";
 import { OverlayPin } from "./overlay-pin";
+import { ClusteredPins } from "./clustered-pins";
 
 /**
  * Google's own places (shops, museums, restaurants, parks' names) are hidden:
@@ -92,6 +95,10 @@ function GoogleMapCanvas({
   renderPin,
   onActivate,
   activeId,
+  cluster,
+  renderCluster,
+  focusId,
+  fitPadding,
 }: MapRendererProps & { browserKey: string }) {
   // Held in state, not a ref: the tone colours are read off this element, and
   // a ref cannot trigger the render that reads them.
@@ -136,17 +143,36 @@ function GoogleMapCanvas({
           streetViewControl={false}
           mapTypeControl={false}
         >
-          <FitCamera overlays={overlays} />
-          {overlays.map((o) => (
-            <OverlayNode
-              key={o.id}
-              overlay={o}
-              colors={colors}
-              active={o.id === activeId}
+          <FitCamera overlays={overlays} fitPadding={fitPadding} />
+          <FocusCamera
+            overlays={overlays}
+            focusId={focusId}
+            fitPadding={fitPadding}
+          />
+          {overlays.map((o) =>
+            // Clustered pins are drawn together below, not one by one.
+            cluster !== undefined && o.kind === "pin" ? null : (
+              <OverlayNode
+                key={o.id}
+                overlay={o}
+                colors={colors}
+                active={o.id === activeId}
+                renderPin={renderPin}
+                onActivate={onActivate}
+              />
+            ),
+          )}
+          {cluster === undefined ? null : (
+            <ClusteredPins
+              pins={overlays.filter((o): o is MapPin => o.kind === "pin")}
+              radiusPx={cluster.radiusPx}
+              activeId={activeId}
               renderPin={renderPin}
+              renderCluster={renderCluster}
               onActivate={onActivate}
+              fitPadding={fitBoundsPadding(fitPadding)}
             />
-          ))}
+          )}
         </GoogleMap>
       </APIProvider>
     </div>
@@ -158,11 +184,20 @@ function GoogleMapCanvas({
  * user's own pan and zoom survive edits that move nothing (a renamed place, a
  * re-render, a new unplaced item).
  */
-function FitCamera({ overlays }: { overlays: readonly MapOverlay[] }) {
+function FitCamera({
+  overlays,
+  fitPadding,
+}: {
+  overlays: readonly MapOverlay[];
+  fitPadding: MapPadding;
+}) {
   const map = useMap();
   const positions = overlayPositions(overlays);
   const key = positionsKey(positions);
   const latest = useLatestRef(positions);
+  // Read at fit time, never a trigger: chrome opening (a detail card) must not
+  // reframe the user's map — FocusCamera brings a covered selection out.
+  const padding = useLatestRef(fitPadding);
 
   useEffect(() => {
     if (map === null) return;
@@ -171,17 +206,135 @@ function FitCamera({ overlays }: { overlays: readonly MapOverlay[] }) {
       case "none":
         return;
       case "point":
-        map.setCenter(camera.center);
         map.setZoom(camera.zoom);
+        map.setCenter(paddedCenter(map, camera.center, padding.current));
         return;
       case "bounds":
-        map.fitBounds(camera.bounds, FIT_PADDING_PX);
+        map.fitBounds(camera.bounds, fitBoundsPadding(padding.current));
         return;
     }
-    // `key` is the trigger; `latest` carries the positions it stands for.
-  }, [map, key, latest]);
+    // `key` is the trigger; `latest` / `padding` carry what it stands for.
+  }, [map, key, latest, padding]);
 
   return null;
+}
+
+/**
+ * Brings the focused pin into view when the focus (or the covered edges)
+ * change: a pan, and only when the pin is off-screen or under the chrome — no
+ * refit, no zoom, so the user's framing holds.
+ */
+function FocusCamera({
+  overlays,
+  focusId,
+  fitPadding,
+}: {
+  overlays: readonly MapOverlay[];
+  focusId: string | null;
+  fitPadding: MapPadding;
+}) {
+  const map = useMap();
+  const latest = useLatestRef(overlays);
+  const padding = useLatestRef(fitPadding);
+  // The covered edges are a trigger too: chrome that opens WITH the selection
+  // (a detail card) is measured a render later, and may cover the pin then.
+  const { top, right, bottom, left } = fitPadding;
+
+  useEffect(() => {
+    if (map === null || focusId === null) return;
+    const pin = latest.current.find(
+      (o): o is MapPin => o.kind === "pin" && o.id === focusId,
+    );
+    if (pin === undefined) return;
+    // No bounds yet: the map has not laid out, and FitCamera's first framing
+    // includes every pin, the focused one too.
+    if (map.getBounds() === undefined) return;
+    if (isInUncoveredArea(map, pin.position, padding.current)) return;
+    map.panTo(paddedCenter(map, pin.position, padding.current));
+    // `focusId` and the covered edges are the triggers; `latest` / `padding`
+    // carry what they read.
+  }, [map, focusId, latest, padding, top, right, bottom, left]);
+
+  return null;
+}
+
+/** `fitBounds` padding: the renderer's own margin on top of the covered room. */
+function fitBoundsPadding(pad: MapPadding): google.maps.Padding {
+  return {
+    top: FIT_PADDING_PX + pad.top,
+    right: FIT_PADDING_PX + pad.right,
+    bottom: FIT_PADDING_PX + pad.bottom,
+    left: FIT_PADDING_PX + pad.left,
+  };
+}
+
+/** The map's current top-left corner and pixel scale, in world coordinates. */
+function viewport(map: google.maps.Map) {
+  const bounds = map.getBounds();
+  const projection = map.getProjection();
+  const zoom = map.getZoom();
+  if (bounds === undefined || projection == null || zoom === undefined) {
+    return null;
+  }
+  const northWest = projection.fromLatLngToPoint(
+    new google.maps.LatLng(
+      bounds.getNorthEast().lat(),
+      bounds.getSouthWest().lng(),
+    ),
+  );
+  if (northWest === null) return null;
+  return { projection, northWest, scale: 2 ** zoom };
+}
+
+/**
+ * Whether a position sits on screen and outside the covered edges. Without a
+ * laid-out projection it answers from the plain bounds.
+ */
+function isInUncoveredArea(
+  map: google.maps.Map,
+  position: google.maps.LatLngLiteral,
+  pad: MapPadding,
+): boolean {
+  const view = viewport(map);
+  const point = view?.projection.fromLatLngToPoint(position);
+  if (view === null || point == null) {
+    return map.getBounds()?.contains(position) ?? true;
+  }
+  const world = 256 * view.scale;
+  // A view across the antimeridian: wrap the x offset into the world.
+  const x =
+    ((((point.x - view.northWest.x) * view.scale) % world) + world) % world;
+  const y = (point.y - view.northWest.y) * view.scale;
+  const div = map.getDiv();
+  return (
+    x >= pad.left &&
+    x <= div.clientWidth - pad.right &&
+    y >= pad.top &&
+    y <= div.clientHeight - pad.bottom
+  );
+}
+
+/**
+ * The map centre that puts `position` in the middle of the UNCOVERED area —
+ * shifted from the plain centre by half the difference of opposite paddings.
+ */
+function paddedCenter(
+  map: google.maps.Map,
+  position: google.maps.LatLngLiteral,
+  pad: MapPadding,
+): google.maps.LatLngLiteral | google.maps.LatLng {
+  const projection = map.getProjection();
+  const zoom = map.getZoom();
+  const point = projection?.fromLatLngToPoint(position);
+  if (projection == null || zoom === undefined || point == null) {
+    return position;
+  }
+  const scale = 2 ** zoom;
+  const shifted = new google.maps.Point(
+    point.x - (pad.left - pad.right) / 2 / scale,
+    point.y - (pad.top - pad.bottom) / 2 / scale,
+  );
+  return projection.fromPointToLatLng(shifted) ?? position;
 }
 
 interface OverlayNodeProps {

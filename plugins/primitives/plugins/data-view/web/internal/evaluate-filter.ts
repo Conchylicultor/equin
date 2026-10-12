@@ -70,6 +70,7 @@ export function lowerFilterGroup<TRow>(
     if (!resolved) return undefined;
     const ctx: FilterLowerContext = {
       column: resolved.field.id,
+      field: resolved.field as FieldDef<unknown>,
       get now() {
         readsClock = true;
         return now;

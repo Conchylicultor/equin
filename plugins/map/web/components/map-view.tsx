@@ -5,7 +5,13 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
-import type { MapOverlay, MapPin } from "../../core";
+import {
+  DEFAULT_CLUSTER_RADIUS_PX,
+  NO_MAP_PADDING,
+  type MapOverlay,
+  type MapPadding,
+  type MapPin,
+} from "../../core";
 import {
   GeoMap,
   type MapRendererProps,
@@ -21,6 +27,23 @@ export interface MapViewProps {
   activeId?: string | null;
   /** A pin was clicked. */
   onActivate?: (id: string) => void;
+  /**
+   * Group pins that crowd each other on screen into one mark per group, drawn
+   * through `GeoMap.Cluster`. Absent = never cluster. `radiusPx` defaults to
+   * {@link DEFAULT_CLUSTER_RADIUS_PX}.
+   */
+  cluster?: { radiusPx?: number };
+  /**
+   * The pin to bring into view (a selected row, say). The map pans to it when
+   * it changes and it is off-screen; it never refits or zooms for it.
+   */
+  focusId?: string | null;
+  /**
+   * The room chrome floating over the map covers on each edge, in px (a
+   * sidebar, a toolbar, a card): fitting keeps pins out of it, and a focused
+   * pin under it counts as off-screen. Default: none.
+   */
+  fitPadding?: MapPadding;
   /**
    * Shown instead of a map when there are no overlays — the host's own words
    * for "nothing to show yet". The renderer is never mounted for an empty map.
@@ -42,6 +65,9 @@ export function MapView({
   overlays,
   activeId = null,
   onActivate = ignoreActivate,
+  cluster,
+  focusId = null,
+  fitPadding = NO_MAP_PADDING,
   empty,
 }: MapViewProps) {
   const renderer = GeoMap.Renderer.useContributions()[0];
@@ -65,11 +91,21 @@ export function MapView({
   const renderPin = (pin: MapPin, active: boolean) => (
     <GeoMap.Pin.Dispatch pin={pin} active={active} tiles={tiles} />
   );
+  const renderCluster = (pins: readonly MapPin[]) => (
+    <GeoMap.Cluster.Dispatch pins={pins} count={pins.length} tiles={tiles} />
+  );
   const props: MapRendererProps = {
     overlays,
     renderPin,
     onActivate,
     activeId,
+    cluster:
+      cluster === undefined
+        ? undefined
+        : { radiusPx: cluster.radiusPx ?? DEFAULT_CLUSTER_RADIUS_PX },
+    renderCluster,
+    focusId,
+    fitPadding,
   };
   return <RendererGate renderer={renderer} props={props} />;
 }

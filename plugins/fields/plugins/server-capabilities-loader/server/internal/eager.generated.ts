@@ -15,6 +15,7 @@ import "@plugins/fields/plugins/date/plugins/storage/server";
 import "@plugins/fields/plugins/float/plugins/storage/server";
 import "@plugins/fields/plugins/int/plugins/storage/server";
 import "@plugins/fields/plugins/json/plugins/storage/server";
+import "@plugins/fields/plugins/location/plugins/storage/server";
 import "@plugins/fields/plugins/rank/plugins/storage/server";
 import "@plugins/fields/plugins/tags/plugins/storage/server";
 import "@plugins/fields/plugins/text/plugins/storage/server";

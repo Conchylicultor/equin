@@ -28,6 +28,7 @@ export {
 export { IDENTITY_CODEC, UNGROUPED_FOLD_KEY } from "./internal/types";
 
 export { compareValues } from "./internal/grouping";
+export { optionDescendants } from "./internal/option-tree";
 
 export { scopeFilterRows } from "./internal/filter-scope";
 export type {

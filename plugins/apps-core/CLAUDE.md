@@ -51,27 +51,13 @@ keeps reading the old location until then.
     - `Apps.TabBar`
     - `Apps.TabBarActions`
     - `Apps.Overlay`
-  - Slot contributors:
-    - `Apps.App` ← `apps.agent-manager.shell`
-    - `Apps.App` ← `apps.browser.shell`
-    - `Apps.App` ← `apps.chord.shell`
-    - `Apps.App` ← `apps.debug.shell`
-    - `Apps.App` ← `apps.deploy.shell`
-    - `Apps.App` ← `apps.events.shell`
-    - `Apps.App` ← `apps.file-explorer.shell`
-    - `Apps.App` ← `apps.home.shell`
-    - `Apps.App` ← `apps.mail.shell`
-    - `Apps.App` ← `apps.pages.shell`
-    - `Apps.App` ← `apps.prototypes.shell`
-    - `Apps.App` ← `apps.settings.shell`
-    - `Apps.App` ← `apps.sonata.shell`
-    - `Apps.App` ← `apps.studio.shell`
-    - `Apps.App` ← `apps.website.shell`
+  - Slot contributors: 21 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Apps.App` ×16
+    - `Apps.Overlay` ← `apps-core.app-launcher`
     - `Apps.RailFraming` ← `apps-core.app-rail-framing`
     - `Apps.Surface` ← `apps-core.surface`
-    - `Apps.TabBar` ← `apps-core.tab-bar`
     - `Apps.TabBarActions` ← `shell.global-action-bar`
-    - `Apps.Overlay` ← `apps-core.app-launcher`
+    - `Apps.TabBar` ← `apps-core.tab-bar`
   - Uses:
     - `primitives/pane.currentRoutePath`
     - `primitives/pane.stripBasePath`
@@ -98,8 +84,8 @@ keeps reading the old location until then.
     - `useFocusedAppId`
     - `usePathname`
 - Cross-plugin:
-  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×18
+  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×19
     - `apps-core` ×11
     - `ui` ×5
     - `config_v2` ×2

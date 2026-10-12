@@ -53,6 +53,7 @@ function renderToolbar(opts: {
   arrangement?: ToolbarArrangement;
   density?: DataViewDensity;
   searchPlaceholder?: string;
+  asideInset?: string;
 }) {
   lastParts = null;
   return render(
@@ -70,6 +71,7 @@ function renderToolbar(opts: {
           density={opts.density}
           arrangement={opts.arrangement}
           searchPlaceholder={opts.searchPlaceholder}
+          asideInset={opts.asideInset}
         />
       </DataViewControlsProvider>
     </PluginProvider>,
@@ -146,5 +148,44 @@ describe("DataViewToolbar arrangements", () => {
     // The compact bar shows the strip (more than one view) and folds search away.
     expect(screen.getByTestId("strip")).toBeTruthy();
     expect(screen.queryByPlaceholderText("Search…")).toBeNull();
+  });
+
+  it("floats an overlay arrangement's band: absolute, click-through, past the aside", () => {
+    renderToolbar({
+      arrangement: {
+        ...recordingArrangement,
+        overlay: true,
+        spaceBelow: "50px",
+      },
+      asideInset: "240px",
+    });
+
+    const band = screen.getByTestId("arrangement").parentElement!;
+    expect(band.className).toContain("absolute");
+    expect(band.className).toContain("pointer-events-none");
+    expect(lastParts!.asideInset).toBe("240px");
+    // An overlay band takes no room, so it owes the view no space below.
+    expect(document.querySelector('[style*="height: 50px"]')).toBeNull();
+  });
+
+  it("hands an in-flow arrangement a zero aside inset by default", () => {
+    renderToolbar({ arrangement: recordingArrangement });
+
+    expect(lastParts!.asideInset).toBe("0px");
+    const band = screen.getByTestId("arrangement").parentElement!;
+    expect(band.className).not.toContain("pointer-events-none");
+  });
+
+  it("floats the compact fold as one card under an overlay arrangement", () => {
+    renderToolbar({
+      arrangement: { ...recordingArrangement, overlay: true },
+      density: "compact",
+    });
+
+    expect(screen.queryByTestId("arrangement")).toBeNull();
+    const strip = screen.getByTestId("strip");
+    // The card opts back into pointer events over the click-through band.
+    expect(strip.closest(".pointer-events-auto")).not.toBeNull();
+    expect(strip.closest(".pointer-events-none")).not.toBeNull();
   });
 });

@@ -80,6 +80,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
       groupHeaders={props.groupHeaders}
       toolbar={props.toolbar}
       searchPlaceholder={props.searchPlaceholder}
+      aside={props.aside}
       pinnedView={props.pinnedView}
       renderSections={(instances, chrome, readyModel) => (
         <DataViewSectionsBody<TRow>
@@ -123,6 +124,8 @@ export function DataViewShellFrame(props: {
   groupHeaders?: DataViewGroupHeaders;
   toolbar?: DataViewToolbarSpec;
   searchPlaceholder?: string;
+  /** The surface's side panel (`DataViewProps.aside`); the body places it. */
+  aside?: ReactNode;
   /** Present → this host shows one named instance and paints no switcher. */
   pinnedView?: string;
   /** Renders the per-active-instance body. Receives the SETTLED model — the
@@ -156,6 +159,7 @@ export function DataViewShellFrame(props: {
     groupHeaders,
     toolbar,
     searchPlaceholder,
+    aside,
     pinnedView,
     children,
     renderSections,
@@ -191,7 +195,21 @@ export function DataViewShellFrame(props: {
   // Sections: no band and no frame — every instance under its own header, so
   // a state with no instance is just its content.
   const sectioned = isSectionsToolbar(toolbar);
-  const rootClassName = hosted ? hoverRevealGroup : undefined;
+  // An overlay arrangement floats its band over the view, which takes the
+  // whole surface: the root fills its parent's height (instead of growing to
+  // its content) and is the positioning context the band and aside float in.
+  const overlay = !hosted && !sectioned && toolbar?.overlay === true;
+  const rootClassName = hosted
+    ? hoverRevealGroup
+    : overlay
+      ? "relative h-full"
+      : undefined;
+  if (aside !== undefined && (hosted || sectioned)) {
+    throw new Error(
+      `DataView(${storageKey}): \`aside\` needs a band toolbar — a hosted ` +
+        "or sections toolbar has no band to place it beside.",
+    );
+  }
   // The chrome of a state with no active instance (loading, or no views
   // authored): the band's stand-in toolbar, or the hosted frame without its
   // options — there is no instance for them to act on yet.
@@ -211,7 +229,7 @@ export function DataViewShellFrame(props: {
         />
       </Stack>
     ) : (
-      <Stack gap="none" ref={rootRef}>
+      <Stack gap="none" ref={rootRef} className={rootClassName}>
         <ShellToolbar title={title} actions={actions} creators={creators} />
         <div className="rail-follow py-md">{content}</div>
       </Stack>
@@ -344,6 +362,7 @@ export function DataViewShellFrame(props: {
     toolbar,
     searchPlaceholder,
     stickyRef: toolbarRef,
+    aside,
   };
 
   return (

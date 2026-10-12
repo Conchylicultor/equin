@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { lowersToMatch } from "@plugins/primitives/plugins/data-view/web/testing";
+import {
+  lowersToMatch,
+  testField,
+} from "@plugins/primitives/plugins/data-view/web/testing";
 import type { FilterFieldValue } from "@plugins/primitives/plugins/data-view/core";
 import { enumLower } from "./enum-lower";
 
@@ -41,7 +44,7 @@ describe("enum operators lowered", () => {
   });
 
   it("lowers to the language's ops", () => {
-    const ctx = { column: "status", now: 0 };
+    const ctx = { column: "status", field: testField("status"), now: 0 };
     expect(enumLower["is-any-of"](["a", 3, "b"], ctx)).toEqual({
       column: "status",
       op: "in",

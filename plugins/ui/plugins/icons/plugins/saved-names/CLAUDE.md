@@ -7,6 +7,7 @@
 - Description: The membership-checked SavedSymbolName: a user-picked Material Symbols name, parsed against the installed sets before anything stores it.
 - Cross-plugin:
   - Imported by:
+    - `apps/places/places-core`
     - `conversations/agents`
     - `fields/avatar/config`
     - `fields/icon/config`

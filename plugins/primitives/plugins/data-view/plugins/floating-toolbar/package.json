@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-data-view-floating-toolbar",
+  "description": "Floating toolbar arrangement for the data-view primitive: the band floats over the view (a full-bleed map under it) — the view tabs as a floating card top-left, past the surface's aside, and search, controls, actions and create as a floating card top-right.",
+  "private": true,
+  "version": "0.0.1"
+}

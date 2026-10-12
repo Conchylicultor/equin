@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { lowersToMatch } from "@plugins/primitives/plugins/data-view/web/testing";
+import {
+  lowersToMatch,
+  testField,
+} from "@plugins/primitives/plugins/data-view/web/testing";
 import type { FilterFieldValue } from "@plugins/primitives/plugins/data-view/core";
 import { textLower } from "./text-lower";
 
@@ -42,7 +45,7 @@ describe("text operators lowered", () => {
   });
 
   it("an incomplete rule lowers to undefined (the chip does not count it)", () => {
-    const ctx = { column: "title", now: 0 };
+    const ctx = { column: "title", field: testField("title"), now: 0 };
     expect(textLower.contains("", ctx)).toBeUndefined();
     expect(textLower.is(undefined, ctx)).toBeUndefined();
     expect(textLower.contains("an", ctx)).toEqual({

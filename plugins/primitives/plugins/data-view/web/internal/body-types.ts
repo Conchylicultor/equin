@@ -48,6 +48,9 @@ export interface DataViewShellChrome {
    *  `<Sticky>` so the shell can publish the measured height as
    *  `--dv-header-offset` on the shell root. */
   stickyRef: (node: HTMLElement | null) => void;
+  /** The surface's side panel (`DataViewProps.aside`), a surface property
+   *  carried like `toolbar`. The body places it, inside the controls context. */
+  aside?: ReactNode;
 }
 
 /** `Omit` over each member of a union — a plain `Omit` of a union is not a union. */
@@ -59,7 +62,7 @@ export type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
  * Everything a data source supplies: the full `DataViewProps` surface minus the
  * per-surface keys the shell owns (`storageKey` / `title` / `actions` /
  * `defaultView` / `views` / `density` / `groupHeaders` / `toolbar` /
- * `searchPlaceholder`).
+ * `searchPlaceholder` / `aside`).
  *
  * `density` is on that list for the same reason `title` is: it describes the
  * SURFACE, not the data bundle, and the body reads it off `chrome`. Omitting it
@@ -81,6 +84,7 @@ export type DataViewSourceBundle<TRow> = DistributiveOmit<
   | "groupHeaders"
   | "toolbar"
   | "searchPlaceholder"
+  | "aside"
 >;
 
 /** Props of the per-active-instance body (`DataViewBody`) — an intersection,

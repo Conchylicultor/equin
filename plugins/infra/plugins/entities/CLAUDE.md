@@ -258,6 +258,7 @@ so a stray `defineEntity(` outside a schema-glob file is flagged.
     - `apps/browser/bookmarks`
     - `apps/events/events-core`
     - `apps/mail/mail-core`
+    - `apps/places/places-core`
     - `apps/sonata/library`
     - `apps/sonata/track-mixer`
     - `conversations/conversation-view/turn-summary`

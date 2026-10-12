@@ -73,6 +73,8 @@ appears (YAGNI).
   - Exports (values): `confirmDialog`
 - Cross-plugin:
   - Imported by:
+    - `apps/places/places-map`
+    - `apps/places/tag-manager`
     - `apps/prototypes/canvas`
     - `build/serve-composition`
     - `conversations/conversation-view/rewind`

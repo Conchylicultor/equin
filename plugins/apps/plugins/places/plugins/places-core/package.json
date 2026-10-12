@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-places-places-core",
+  "description": "Contract layer for the Places app: the places / place_tags entities, the seeded tag tree, the live places and tags collections, the place and tag CRUD endpoints, Google Places search, Haiku-picked place icons, and the pure tag-tree helpers (colour inheritance, auto-tags, status).",
+  "private": true,
+  "version": "0.0.1"
+}

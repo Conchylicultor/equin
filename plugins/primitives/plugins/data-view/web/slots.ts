@@ -55,6 +55,12 @@ export interface DataViewContribution extends ViewTypeMeta {
    *  list/table opt IN (`true`); gallery/tree do not. When false the host never
    *  passes `manualOrder` into the view and keeps the Sort control. */
   supportsManualOrder?: boolean;
+  /** Under an `overlay` toolbar arrangement, whether this view starts at the
+   *  surface's very top-left edge, UNDER the floating band and aside (a map
+   *  that is the surface's canvas). Default false: the host insets the view by
+   *  the band's height and the aside's reach, so its first row clears the
+   *  floating cards. No effect beside an in-flow band. */
+  fullBleed?: boolean;
 }
 
 /**

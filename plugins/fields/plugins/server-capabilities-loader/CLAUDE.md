@@ -34,6 +34,7 @@ drift. Fix by running `./singularity build`.
     - `fields/float/storage`
     - `fields/int/storage`
     - `fields/json/storage`
+    - `fields/location/storage`
     - `fields/rank/storage`
     - `fields/tags/storage`
     - `fields/text/storage`

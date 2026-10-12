@@ -93,6 +93,7 @@ import type {
   DistributiveOmit,
 } from "../internal/body-types";
 import { DataViewToolbar } from "./toolbar/data-view-toolbar";
+import { BandSurface } from "./band-surface";
 import { HostedOptions } from "./toolbar/hosted-options";
 import { hostedCreators } from "./creators-control";
 import { ViewSection } from "./view-section";
@@ -1107,6 +1108,9 @@ function DataViewBodyInner<TRow>(
                 hostRef={setRowsHost}
                 anchorAttr="data-row-key"
                 weakAttr={PAGE_PLACEHOLDER_ATTR}
+                // A full-bleed view (a map under an overlay band) fills the
+                // surface: the region passes the body's height through.
+                fill={activeInstance.viewType.fullBleed === true}
               >
                 <PlaceholderHeightContext.Provider value={placeholderHeight}>
                   {bodyState.kind !== "view" ? (
@@ -1246,17 +1250,26 @@ function DataViewBodyInner<TRow>(
           );
         }
 
+        // Narrowed here, outside the band's closure (which would lose it).
+        const arrangement = chrome.toolbar;
         return (
-          <>
-            {/* The toolbar folds when the surface ASKS for it (`density`) or when
-                it is genuinely too narrow for the wide inline row
-                (`COMPACT_BREAKPOINT`) — the folded single-bar compact form
-                (search + every control inside one `MdTune` options popover,
-                single-view switcher hidden). The host hands it NO control — the
-                toolbar reads `DataViewSlots.Control` itself and each control's
-                panel reads this provider's context, so adding a control is a
-                contribution and never an edit here. */}
-            <DataViewControlsProvider {...controlsContext}>
+          // The band, the surface's `aside` and the body — laid out per the
+          // arrangement (in flow, or floating over the body); the controls
+          // provider wraps the band and the aside, never the body.
+          <BandSurface
+            overlay={arrangement?.overlay === true}
+            aside={chrome.aside}
+            fullBleed={activeInstance.viewType.fullBleed === true}
+            controls={controlsContext}
+            band={(asideInset) => (
+              // The toolbar folds when the surface ASKS for it (`density`) or
+              // when it is genuinely too narrow for the wide inline row
+              // (`COMPACT_BREAKPOINT`) — the folded single-bar compact form
+              // (search + every control inside one `MdTune` options popover,
+              // single-view switcher hidden). The host hands it NO control —
+              // the toolbar reads `DataViewSlots.Control` itself and each
+              // control's panel reads the provider's context, so adding a
+              // control is a contribution and never an edit here.
               <DataViewToolbar
                 stickyRef={chrome.stickyRef}
                 title={chrome.title}
@@ -1267,12 +1280,14 @@ function DataViewBodyInner<TRow>(
                 actions={chrome.actions}
                 creators={creators}
                 density={chrome.density}
-                arrangement={chrome.toolbar}
+                arrangement={arrangement}
                 searchPlaceholder={chrome.searchPlaceholder}
+                asideInset={asideInset}
               />
-            </DataViewControlsProvider>
+            )}
+          >
             {body}
-          </>
+          </BandSurface>
         );
       }}
     </CollectRowOrder>

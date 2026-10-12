@@ -16,6 +16,7 @@
   - **`home`** — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
   - **`mail`** — Mail — a Gmail-class client.
   - **`pages`** — Notion-like pages app.
+  - **`places`** — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
   - **`prototypes`** — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
   - **`settings`** — Settings app.
   - **`sonata`** — Sonata — extensible piano and music app.

@@ -1,0 +1,1 @@
+export { placesApp } from "./app";

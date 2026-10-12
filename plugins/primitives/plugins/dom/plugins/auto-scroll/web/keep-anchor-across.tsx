@@ -26,6 +26,12 @@ export interface KeepAnchorAcrossProps {
    * it) — for a caller that also measures what the region holds.
    */
   hostRef?: (el: HTMLDivElement | null) => void;
+  /**
+   * `true`: the region's box takes its parent's full height, so content sized
+   * to fill (`h-full` — a full-bleed map) has a definite height to resolve
+   * against. Default: the box is as tall as its content.
+   */
+  fill?: boolean;
   children: ReactNode;
 }
 
@@ -120,7 +126,11 @@ export class KeepAnchorAcross extends Component<
     return (
       // A plain block box: the region's opt-out of browser scroll anchoring
       // (a `display: contents` box draws nothing for the property to apply to).
-      <div ref={this.setHost} style={{ overflowAnchor: "none" }}>
+      <div
+        ref={this.setHost}
+        className={this.props.fill ? "h-full" : undefined}
+        style={{ overflowAnchor: "none" }}
+      >
         {this.props.children}
       </div>
     );

@@ -29,6 +29,7 @@ describe("capsuleToolbar", () => {
         foldedControls={<span data-testid="folded" />}
         actions={<span data-testid="actions" />}
         creators={<span data-testid="creators" />}
+        asideInset="0px"
       />,
     );
 

@@ -49,6 +49,9 @@ interface MergedDataViewBaseProps<THostProps> {
   groupHeaders?: DataViewGroupHeaders;
   /** The search placeholder, forwarded like `toolbar`. */
   searchPlaceholder?: string;
+  /** The surface's side panel (`DataViewProps.aside`), forwarded like
+   *  `toolbar` — a property of the surface, whichever source is active. */
+  aside?: ReactNode;
 }
 
 /** One dev-warn per (storageKey, source) — the mismatch is static, so once. */
@@ -78,6 +81,7 @@ export function MergedDataView<THostProps>(
     groupHeaders,
     toolbar,
     searchPlaceholder,
+    aside,
   } = props;
   const contributions = DataViewSlots.View.useContributions();
   const rawSourceContribs = sources.useContributions();
@@ -118,6 +122,7 @@ export function MergedDataView<THostProps>(
       groupHeaders={groupHeaders}
       toolbar={toolbar}
       searchPlaceholder={searchPlaceholder}
+      aside={aside}
     >
       {(activeInstance, chrome, readyModel) => {
         // Always found: a row whose `source` matches no contribution never

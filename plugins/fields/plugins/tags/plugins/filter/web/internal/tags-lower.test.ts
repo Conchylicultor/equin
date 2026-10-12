@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { lowersToMatch } from "@plugins/primitives/plugins/data-view/web/testing";
+import {
+  lowersToMatch,
+  testField,
+} from "@plugins/primitives/plugins/data-view/web/testing";
 import type { FilterFieldValue } from "@plugins/primitives/plugins/data-view/core";
 import { tagsLower } from "./tags-lower";
 
@@ -45,10 +48,63 @@ describe("tags operators lowered", () => {
   });
 
   it("lowers a single tag to a one-element list", () => {
-    expect(tagsLower.contains("a", { column: "tags", now: 0 })).toEqual({
+    expect(
+      tagsLower.contains("a", {
+        column: "tags",
+        field: testField("tags"),
+        now: 0,
+      }),
+    ).toEqual({
       column: "tags",
       op: "hasAll",
       operand: ["a"],
+    });
+  });
+
+  describe("nested", () => {
+    const field = {
+      id: "v",
+      label: "v",
+      options: [
+        { value: "food", label: "Food" },
+        { value: "cafe", label: "Cafe", parent: "food" },
+        { value: "park", label: "Park" },
+      ],
+    };
+    const nestedKeeps = (
+      op: "has-nested" | "lacks-nested",
+      operand: unknown,
+      value: FilterFieldValue,
+    ) =>
+      lowersToMatch(
+        { lower: tagsLower[op] },
+        "stringArray",
+        operand,
+        value,
+        0,
+        field,
+      );
+
+    it("has-nested matches descendants of the operand", () => {
+      expect(nestedKeeps("has-nested", ["food"], ["cafe"])).toBe(true);
+      expect(nestedKeeps("has-nested", ["cafe"], ["food"])).toBe(false);
+      expect(nestedKeeps("has-nested", ["food"], ["park"])).toBe(false);
+      expect(nestedKeeps("has-nested", [], ["park"])).toBe(true);
+    });
+
+    it("lacks-nested excludes the closure", () => {
+      expect(nestedKeeps("lacks-nested", ["food"], ["cafe"])).toBe(false);
+      expect(nestedKeeps("lacks-nested", ["food"], ["park"])).toBe(true);
+      expect(nestedKeeps("lacks-nested", ["food"], null)).toBe(true);
+    });
+
+    it("on a flat list is the operand itself", () => {
+      const flat = tagsLower["has-nested"](["a"], {
+        column: "c",
+        field: testField("c"),
+        now: 0,
+      });
+      expect(flat).toEqual({ column: "c", op: "hasAny", operand: ["a"] });
     });
   });
 });

@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-places-tag-manager",
+  "description": "The Places tag manager: the one tag tree as an editable table (name, parent, colour, icon, Google types, place count, add child, delete), floating over the map; and TagMark, how a tag shows beside its name everywhere.",
+  "private": true,
+  "version": "0.0.1"
+}

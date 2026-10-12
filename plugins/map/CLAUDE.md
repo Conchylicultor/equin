@@ -21,11 +21,25 @@ Plain data, no React:
   zoom / fit bounds) and `positionsKey`, an order-insensitive identity for a set
   of positions. A renderer re-frames only when that key changes, so an edit that
   moves nothing keeps the user's pan and zoom.
+- `MapPadding` (`{ top, right, bottom, left }` px, `NO_MAP_PADDING`): the room
+  chrome floating over the map covers.
+- Clustering: `clusterPins(points, radiusPx)` greedily groups pins already
+  projected to pixels (deterministic, input-order-insensitive, grid-bucketed),
+  and `clusterPinType(pins)` names the dispatch key of a group — the shared
+  `pinType`, or `MIXED_PIN_TYPE` for a mixed group.
 
 ## Host and slots (`web/`)
 
-- `<MapView overlays activeId onActivate empty/>` fills its parent; the caller
-  owns the size. With no overlays it renders `empty` and never mounts a renderer.
+- `<MapView overlays activeId onActivate cluster focusId empty/>` fills its
+  parent; the caller owns the size. With no overlays it renders `empty` and
+  never mounts a renderer. `cluster={{ radiusPx? }}` (default 48) opts into
+  clustering — without it every pin is drawn on its own. `focusId` pans to a pin
+  when it changes and is off-screen, never refitting or zooming. `fitPadding`
+  (a `MapPadding`, default none) names the edges floating chrome covers: fitting
+  frames the overlays in the uncovered area, and a focused pin under the chrome
+  counts as off-screen and is panned to the uncovered area's middle — re-checked
+  when the padding changes, since a card opening with the selection is measured a
+  render later. A change of padding never re-frames (the user's map stays put).
 - `GeoMap.Renderer` — a data slot. **First contribution wins**; zero is a loud
   "no map renderer installed" state. Its contract is `Place.Provider`'s, widened
   to three states: `useReadiness(): "pending" | "ready" | "blocked"`, and
@@ -33,13 +47,20 @@ Plain data, no React:
   state, never the set-up action, because a pending configuration is not a
   missing one.
 - The renderer component receives `MapRendererProps` (`overlays`,
-  `renderPin(pin, active)`, `onActivate`, `activeId`). **A renderer never styles
+  `renderPin(pin, active)`, `onActivate`, `activeId`, `cluster`,
+  `renderCluster(pins)`, `focusId`, `fitPadding` — always set, zeros when
+  nothing floats). **A renderer never styles
   a pin**: it places the node that `renderPin` returns. That node is
   `GeoMap.Pin.Dispatch`, already isolated by the slot middleware. A renderer
   owns the camera, meaning fit-to-bounds and the single-point zoom.
 - `GeoMap.Pin` — a dispatch slot keyed on `pin.pinType`. Its component gets
   `{ pin, active }`. The fallback is a neutral dot, so an unclaimed type is still
   visible.
+- `GeoMap.Cluster` — a dispatch slot keyed on `clusterPinType(pins)`. Its
+  component gets `{ pins, count, tiles }`. The fallback is a neutral count disc,
+  which a mixed group always gets. A renderer places `renderCluster`'s node like
+  a pin's, never the active pin (which is always drawn on its own), and a click
+  on it frames the cluster's pins.
 
 The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
 
@@ -47,14 +68,17 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
 
 ## Plugin reference
 
-- Description: Vendor-neutral map primitive: <MapView overlays/> draws pins, paths and areas through the first GeoMap.Renderer (showing its set-up action while it is blocked, and a loud state when none is installed), with every pin's look contributed through the GeoMap.Pin dispatch slot keyed on its pinType.
+- Description: Vendor-neutral map primitive: <MapView overlays/> draws pins, paths and areas through the first GeoMap.Renderer (showing its set-up action while it is blocked, and a loud state when none is installed), with every pin's look contributed through the GeoMap.Pin dispatch slot keyed on its pinType, and — when the caller asks for clustering — every group of nearby pins drawn through the GeoMap.Cluster dispatch slot keyed on the pinType its pins share.
 - Web:
   - Slots:
     - `GeoMap.Renderer`
     - `GeoMap.Pin`
+    - `GeoMap.Cluster`
   - Slot contributors:
     - `GeoMap.Renderer` ← `map.google`
+    - `GeoMap.Pin` ← `apps.places.places-map`
     - `GeoMap.Pin` ← `page.place.map-layer`
+    - `GeoMap.Cluster` ← `apps.places.places-map`
   - Uses:
     - `primitives/css/center.Center`
     - `primitives/css/line.Line`
@@ -65,6 +89,7 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `primitives/slot-render.defineDispatchSlot`
     - `primitives/slot-render.renderIsolated`
   - Exports (types):
+    - `MapClusterProps`
     - `MapLabelProps`
     - `MapPinProps`
     - `MapRendererContribution`
@@ -77,24 +102,34 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `MapView`
 - Cross-plugin:
   - Imported by:
+    - `apps/places/places-map`
     - `map/google`
     - `page/map`
     - `page/place/map-layer`
+    - `primitives/data-view/map`
 - Core:
   - Exports (types):
+    - `ClusterPoint`
     - `LatLng`
     - `MapArea`
     - `MapBounds`
     - `MapCamera`
     - `MapOverlay`
+    - `MapPadding`
     - `MapPath`
     - `MapPin`
     - `MapStrokeStyle`
     - `MapTileScheme`
     - `MapTone`
+    - `PinCluster`
   - Exports (values):
     - `cameraFor`
+    - `clusterPins`
+    - `clusterPinType`
+    - `DEFAULT_CLUSTER_RADIUS_PX`
     - `MAP_TONE_TOKEN`
+    - `MIXED_PIN_TYPE`
+    - `NO_MAP_PADDING`
     - `overlayPositions`
     - `positionsKey`
     - `SINGLE_POINT_ZOOM`

@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-fields-location-table",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Location field type: data-view table cell (address, else lat, lng).",
+  "singularity": {
+    "collapsed": true
+  }
+}

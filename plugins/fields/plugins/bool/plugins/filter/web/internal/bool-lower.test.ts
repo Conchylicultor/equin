@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { lowersToMatch } from "@plugins/primitives/plugins/data-view/web/testing";
+import {
+  lowersToMatch,
+  testField,
+} from "@plugins/primitives/plugins/data-view/web/testing";
 import type { FilterFieldValue } from "@plugins/primitives/plugins/data-view/core";
 import { boolLower } from "./bool-lower";
 
@@ -26,7 +29,13 @@ describe("bool operators lowered", () => {
   it("unset operand defaults to unchecked (and is complete)", () => {
     expect(keeps("is", undefined, false)).toBe(true);
     expect(keeps("is", undefined, true)).toBe(false);
-    expect(boolLower.is(undefined, { column: "done", now: 0 })).toEqual({
+    expect(
+      boolLower.is(undefined, {
+        column: "done",
+        field: testField("done"),
+        now: 0,
+      }),
+    ).toEqual({
       column: "done",
       op: "ne",
       operand: true,

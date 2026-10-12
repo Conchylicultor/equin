@@ -18,6 +18,7 @@
     - `apps/browser/bookmarks`
     - `apps/events/events-core`
     - `apps/mail/mail-core`
+    - `apps/places/places-core`
     - `apps/sonata/library`
     - `apps/sonata/track-mixer`
     - `conversations/summary`

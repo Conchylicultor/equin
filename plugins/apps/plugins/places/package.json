@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-apps-places",
+  "description": "Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.",
+  "private": true,
+  "version": "0.0.1",
+  "singularity": {
+    "collapsed": true
+  }
+}

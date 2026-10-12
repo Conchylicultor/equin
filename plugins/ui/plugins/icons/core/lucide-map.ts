@@ -23,6 +23,8 @@ export const LUCIDE_MAP = {
   "account-tree": "network",
   add: "plus",
   "add-circle": "circle-plus",
+  "add-location-alt": "map-pin-plus",
+  "add-reaction": MATERIAL_ONLY,
   adjust: "circle-dot",
   // The element picker's glyph everywhere: Lucide's mouse-pointer-click reads
   // as "click", not as "pick an element on screen", so it keeps ads_click.
@@ -143,6 +145,7 @@ export const LUCIDE_MAP = {
   "folder-zip": "folder-archive",
   "fork-right": "git-fork",
   "format-bold": "bold",
+  "format-color-reset": MATERIAL_ONLY,
   "format-color-text": "baseline",
   "format-indent-decrease": "list-indent-decrease",
   "format-indent-increase": "list-indent-increase",

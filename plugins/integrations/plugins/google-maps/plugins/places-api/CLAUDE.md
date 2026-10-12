@@ -57,7 +57,9 @@ is correct here — do not "fix" it later.
 
 - Description: Stateless typed Google Places API (New) client: places:autocomplete and place details, mapped to the neutral PlaceSuggestion / PlaceSnapshot shapes. Takes the API key per call; never touches auth or storage.
 - Cross-plugin:
-  - Imported by: `page/place/google`
+  - Imported by:
+    - `apps/places/places-core`
+    - `page/place/google`
 - Server:
   - Exports (values):
     - `autocomplete`

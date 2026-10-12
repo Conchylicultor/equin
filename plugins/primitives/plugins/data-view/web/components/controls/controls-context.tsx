@@ -146,7 +146,8 @@ export function useDataViewControls(): DataViewControlsContextValue {
   if (!ctx) {
     throw new Error(
       "useDataViewControls must be used within a DataView toolbar (a control " +
-        "panel, or a DataViewSlots.Setting contribution inside one)",
+        "panel, or a DataViewSlots.Setting contribution inside one) or the " +
+        "surface's `aside`",
     );
   }
   return ctx;

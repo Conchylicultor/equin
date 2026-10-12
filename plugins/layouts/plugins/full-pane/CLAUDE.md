@@ -54,6 +54,7 @@ declared on the pane.**
   - Imported by:
     - `apps/chord/shell`
     - `apps/file-explorer/shell`
+    - `apps/places/shell`
     - `apps/prototypes/shell`
     - `apps/sonata/shell`
     - `apps/website/shell`

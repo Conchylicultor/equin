@@ -49,6 +49,15 @@ export interface ToolbarParts {
   actions: ReactNode;
   /** The create affordance (`DataViewProps.creators`), in `forms.creators`. */
   creators: ReactNode;
+  /**
+   * How far from the surface's left edge the surface's `aside`
+   * (`DataViewProps.aside`) reaches, as a CSS length — `"0px"` when there is
+   * none. An {@link ToolbarArrangement.overlay} arrangement starts its left
+   * card past it (adding its own gutter), so the cards never sit on the aside's
+   * floating card. An in-flow band is already beside the aside's column and
+   * can ignore it (it is `"0px"` there).
+   */
+  asideInset: string;
 }
 
 /**
@@ -70,6 +79,23 @@ export interface ToolbarArrangement {
    * wide layout wears it: the compact fold keeps a narrow pane's tight rhythm.
    */
   spaceBelow?: string;
+  /**
+   * `true`: the band FLOATS over the view instead of sitting above it. The
+   * host positions the band absolutely over the surface's top edge
+   * (transparent, `pointer-events: none`, no mask) and gives the view the whole
+   * surface: the DataView root fills its parent's height, the view renders in
+   * a scroller under the band, and a view that declares `fullBleed` (a map)
+   * starts at the very top edge, under the band. Any other view is inset by
+   * the band's height and the aside's reach, so its first row clears the
+   * cards. The arrangement draws its parts as floating cards and opts EACH
+   * card back into pointer events (`Overlay.Interactive`), so the gaps between
+   * them stay click-through to the view. `spaceBelow` is ignored.
+   *
+   * The compact fold floats too, as the host's one bar on a raised card of its
+   * own (past the aside), so the view's inset means the same thing at every
+   * width and a narrow pane never shows a transparent row of controls.
+   */
+  overlay?: true;
 }
 
 /**

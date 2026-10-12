@@ -3,8 +3,21 @@ import { createPortal } from "react-dom";
 import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import type { LatLng } from "@plugins/map/core";
 
+/**
+ * Where the content sits on its point: a pin's tip (bottom centre, as an
+ * Advanced Marker's), or a cluster disc's middle.
+ */
+export type OverlayAnchor = "bottom" | "center";
+
+const ANCHOR_TRANSFORM: Record<OverlayAnchor, string> = {
+  bottom: "translate(-50%, -100%)",
+  center: "translate(-50%, -50%)",
+};
+
 interface OverlayPinProps {
   position: LatLng;
+  /** Defaults to `bottom`. */
+  anchor?: OverlayAnchor;
   label: string | undefined;
   zIndex: number;
   onActivate: () => void;
@@ -17,11 +30,13 @@ interface OverlayPinProps {
  * Map ID makes Google ignore the inline `styles` the canvas uses to hide its own
  * places — so pins are placed by hand and the map needs no Map ID at all.
  *
- * The content is anchored at its bottom centre, as an Advanced Marker's is, and
- * the pin is a button: click, Enter or Space activates it.
+ * The content is anchored at its bottom centre, as an Advanced Marker's is
+ * (or at its centre, for a cluster), and the pin is a button: click, Enter or
+ * Space activates it.
  */
 export function OverlayPin({
   position,
+  anchor = "bottom",
   label,
   zIndex,
   onActivate,
@@ -48,6 +63,10 @@ export function OverlayPin({
   useEffect(() => {
     overlay?.stackAt(zIndex);
   }, [overlay, zIndex]);
+
+  useEffect(() => {
+    overlay?.anchorAt(anchor);
+  }, [overlay, anchor]);
 
   if (overlay === null) return null;
 
@@ -76,6 +95,7 @@ interface PinOverlay extends google.maps.OverlayView {
   readonly container: HTMLDivElement;
   moveTo(position: LatLng): void;
   stackAt(zIndex: number): void;
+  anchorAt(anchor: OverlayAnchor): void;
 }
 
 /**
@@ -91,7 +111,7 @@ function createPinOverlay(maps: google.maps.MapsLibrary): PinOverlay {
       super();
       this.container.style.position = "absolute";
       // Bottom centre on the point, as an Advanced Marker anchors its content.
-      this.container.style.transform = "translate(-50%, -100%)";
+      this.container.style.transform = ANCHOR_TRANSFORM.bottom;
       // A press on the pin is not the start of a pan, nor a click on the map.
       maps.OverlayView.preventMapHitsAndGesturesFrom(this.container);
     }
@@ -103,6 +123,10 @@ function createPinOverlay(maps: google.maps.MapsLibrary): PinOverlay {
 
     stackAt(zIndex: number) {
       this.container.style.zIndex = String(zIndex);
+    }
+
+    anchorAt(anchor: OverlayAnchor) {
+      this.container.style.transform = ANCHOR_TRANSFORM[anchor];
     }
 
     override onAdd() {

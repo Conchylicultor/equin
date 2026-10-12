@@ -36,7 +36,9 @@ export function resolveRuleOperator<TRow>(
  * any instant gives the counter the evaluator's answer; a constant keeps the
  * counter pure (no clock read in render).
  */
-const COMPLETENESS_PROBE: Omit<FilterLowerContext, "column"> = { now: 0 };
+const COMPLETENESS_PROBE: Omit<FilterLowerContext, "column" | "field"> = {
+  now: 0,
+};
 
 /**
  * THE single definition of "this rule constrains rows": it resolves, and its
@@ -54,6 +56,7 @@ export function isRuleActive<TRow>(
   if (resolved === null) return false;
   const lowered: Filter | undefined = resolved.op.lower(rule.value, {
     column: resolved.field.id,
+    field: resolved.field as FieldDef<unknown>,
     ...COMPLETENESS_PROBE,
   });
   return lowered !== undefined;

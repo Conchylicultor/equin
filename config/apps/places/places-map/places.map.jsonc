@@ -1,0 +1,32 @@
+// @hash 6ec84829688d
+{
+  // Map first: the landing view is every place on the map, the screen's
+  // canvas. Gallery and List are the same rows read another way — the tag
+  // sidebar's filter is per view, so each starts unfiltered.
+  "views": [
+    {
+      "id": "all",
+      "name": "All places",
+      "icon": "map",
+      "view": { "type": "map" }
+    },
+    {
+      "id": "gallery",
+      "name": "Gallery",
+      "icon": "grid-view",
+      "view": {
+        "type": "gallery",
+        "sort": [{ "fieldId": "createdAt", "direction": "desc" }]
+      }
+    },
+    {
+      "id": "list",
+      "name": "List",
+      "icon": "list",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "name", "direction": "asc" }]
+      }
+    }
+  ]
+}

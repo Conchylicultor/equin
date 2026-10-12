@@ -58,8 +58,8 @@ Only present slots render — an absent slot produces no region and no phantom g
   - Exports (types): `ColumnProps`
   - Exports (values): `Column`
 - Cross-plugin:
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×9
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×11
     - `primitives` ×5
     - `debug` ×3
     - `code-explorer/commit-detail`

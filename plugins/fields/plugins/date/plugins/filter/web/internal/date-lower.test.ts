@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { lowersToMatch } from "@plugins/primitives/plugins/data-view/web/testing";
+import {
+  lowersToMatch,
+  testField,
+} from "@plugins/primitives/plugins/data-view/web/testing";
 import type { FilterFieldValue } from "@plugins/primitives/plugins/data-view/core";
 import { withinRange } from "../../core";
 import { dateLower } from "./date-lower";
@@ -68,7 +71,10 @@ describe("date operators lowered", () => {
     expect(between({ to: "2026-01-12" }, jan15)).toBe(false);
     expect(between({}, jan15)).toBe(true); // no bounds → keep
     expect(
-      dateLower["is-between"]({}, { column: "at", now: NOW }),
+      dateLower["is-between"](
+        {},
+        { column: "at", field: testField("at"), now: NOW },
+      ),
     ).toBeUndefined();
   });
 
@@ -117,6 +123,7 @@ describe("date operators lowered", () => {
     let reads = 0;
     const ctx = {
       column: "at",
+      field: testField("at"),
       get now() {
         reads += 1;
         return NOW;

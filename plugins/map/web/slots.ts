@@ -2,7 +2,14 @@ import type { ComponentType, ReactNode } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web";
-import type { MapOverlay, MapPin, MapTileScheme } from "../core";
+import {
+  clusterPinType,
+  type MapOverlay,
+  type MapPadding,
+  type MapPin,
+  type MapTileScheme,
+} from "../core";
+import { DefaultCluster } from "./components/default-cluster";
 import { DefaultPin } from "./components/default-pin";
 
 /** What a renderer is handed. Pins arrive pre-rendered through {@link MapRendererProps.renderPin}. */
@@ -17,6 +24,31 @@ export interface MapRendererProps {
   /** A pin was clicked. */
   onActivate: (id: string) => void;
   activeId: string | null;
+  /**
+   * Group pins that sit closer than `radiusPx` on screen into one mark, drawn
+   * with {@link renderCluster}. Absent = never cluster: every pin is drawn on
+   * its own, exactly as before clustering existed. The active pin is never
+   * clustered, so the selection stays visible at any zoom.
+   */
+  cluster?: { radiusPx: number };
+  /**
+   * The React content of one cluster — `GeoMap.Cluster`'s dispatch, already
+   * isolated. Like {@link renderPin}, a renderer places it and never draws a
+   * cluster of its own.
+   */
+  renderCluster: (pins: readonly MapPin[]) => ReactNode;
+  /**
+   * The pin to bring into view. When it changes, the renderer pans to it if it
+   * is off-screen — no refit and no zoom change, so the user's framing holds.
+   */
+  focusId: string | null;
+  /**
+   * The room floating chrome covers on each edge, in px. Fitting frames the
+   * overlays inside what is left (on top of the renderer's own margin), and
+   * {@link focusId} treats a pin under the chrome as off-screen, panning it to
+   * the middle of the uncovered area. All zeros when nothing floats.
+   */
+  fitPadding: MapPadding;
 }
 
 /**
@@ -69,6 +101,16 @@ export interface MapPinProps {
   tiles: MapTileScheme;
 }
 
+/** What a cluster component receives. */
+export interface MapClusterProps {
+  /** The pins the cluster stands for; never empty. */
+  pins: readonly MapPin[];
+  /** `pins.length`, spelled out for the common case of drawing the count. */
+  count: number;
+  /** The scheme of the tiles the cluster is drawn on. */
+  tiles: MapTileScheme;
+}
+
 export const GeoMap = {
   /**
    * Map engines contribute here. First contribution wins; none at all is a
@@ -85,5 +127,15 @@ export const GeoMap = {
   Pin: defineDispatchSlot<MapPinProps, string>({
     key: (props) => props.pin.pinType,
     fallback: DefaultPin,
+  }),
+  /**
+   * Cluster appearance, keyed on the pinType its pins share — the owner of a
+   * pin type contributes its cluster look next to its pin look. A cluster that
+   * mixes types (or a type with no cluster contribution) falls back to a
+   * neutral count disc.
+   */
+  Cluster: defineDispatchSlot<MapClusterProps, string>({
+    key: (props) => clusterPinType(props.pins),
+    fallback: DefaultCluster,
   }),
 };

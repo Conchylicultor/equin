@@ -36,10 +36,10 @@ its table/filter capabilities from `number` via the identity `extends` chain.
     - `intField`
     - `intSample`
 - Cross-plugin:
-  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×11
+    - `apps` ×3
     - `infra` ×3
-    - `apps` ×2
     - `conversations` ×2
     - `apps-core/surface/floating/wallpaper`
     - `fields/object/config`

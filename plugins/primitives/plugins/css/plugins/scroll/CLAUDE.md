@@ -43,11 +43,11 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `Scroll`
     - `scrollClasses`
 - Cross-plugin:
-  - Imported by: 89 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 90 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×25
     - `apps` ×18
+    - `primitives` ×13
     - `debug` ×12
-    - `primitives` ×12
     - `page` ×4
     - `build` ×3
     - `plugin-meta` ×3

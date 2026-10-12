@@ -934,10 +934,12 @@ interface ToolbarArrangement {
   forms: { search: "field" | "bare"; controls: "ghost" | "round"; creators: "labelled" | "round" };
   component: ComponentType<ToolbarParts>;
   spaceBelow?: string; // CSS length between the band and the view; wide layout only
+  overlay?: true;      // the band floats over the view — see "Floating chrome"
 }
 interface ToolbarParts {
   title; switcher: { strip; chip }; search; focusSearch(): void; query;
   controls; foldedControls; actions; creators;
+  asideInset: string;  // how far the surface's `aside` reaches from the left edge
 }
 ```
 
@@ -966,6 +968,39 @@ interface ToolbarParts {
   renders it as a sibling AFTER the `<Sticky>` band, so it scrolls away with the
   content rather than growing the pinned band, and drops it in the compact fold.
   Views start flush — a view never pads its own top to make room for a toolbar.
+
+### Floating chrome: `overlay` arrangements and the `aside`
+
+For a surface whose view IS its canvas (a full-screen map with the tabs and
+tools floating over it — `floating-toolbar` is the reference arrangement).
+
+- **`ToolbarArrangement.overlay: true`.** The shell root fills its parent
+  (`relative h-full`) instead of growing to its content; the body renders in a
+  `Scroll fill isolate` of its own (the one exception to "never owns a
+  scroller", since the band must not scroll away); the band is a `Pin
+  to="top" stretch decorative` over it — transparent, `pointer-events: none`,
+  no mask. The arrangement draws its parts as floating cards and wraps each in
+  `Overlay.Interactive`, so the gaps stay click-through to the view.
+  `spaceBelow` is ignored. The compact fold floats too, as the one bar on a
+  floating card (`FloatingFold`), so the inset below means the same thing at
+  every width.
+- **`DataViewContribution.fullBleed`.** Under an overlay band a `fullBleed`
+  view (a map) starts at the top-left edge, under the cards, in an `h-full`
+  box. Any other view is inset by the band's measured height
+  (`--dv-header-offset`, where its sticky group headers pin too) and the
+  aside's reach, so its first row clears the cards. No effect beside an
+  in-flow band.
+- **`DataViewProps.aside?: ReactNode`** — a host panel (a facet sidebar) placed
+  by `BandSurface` (`web/components/band-surface.tsx`): beside an overlay band
+  a floating `Surface level="overlay"` card on the left (the surface's height
+  minus `md` gutters, its own scroll; the panel sizes its own width), measured
+  so the band's `asideInset` is `calc(md + width)`; beside an in-flow band a
+  sticky left column, with `asideInset` `"0px"` (the band already starts past
+  it). It renders inside a `DataViewControlsProvider`, so it reads and edits
+  the active view through `useDataViewControls()` (`filter.setFilter(…)`, …).
+  It is a surface key (carried on `DataViewShellChrome`, omitted from
+  `DataViewSourceBundle`), shown once there is an active view, and only a band
+  chrome takes it — a hosted or sections toolbar throws.
 
 ## Hosted toolbar: no band
 
@@ -1128,7 +1163,8 @@ re-homed; nothing is derived here. In particular `filter` and `sort` are the sam
 controller objects the row pipeline uses, so a summary and what actually filters
 cannot come from two computations.
 
-It is provided around **the toolbar only**, never around the view body: view
+It is provided around **the toolbar and the surface's `aside`** (two providers
+of one value — see "Floating chrome"), never around the view body: view
 children have a deliberate contract (`DataViewRenderProps`), and an ambient back
 door to `viewModel` would be a second undocumented seam. Popovers portal out of
 the DOM but stay React children, so the context still reaches every panel.

@@ -2,6 +2,10 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { type ReactNode, useCallback, useRef } from "react";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import { spaceLength } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
@@ -66,6 +70,10 @@ export interface DataViewToolbarProps {
   arrangement?: ToolbarArrangement;
   /** The search field's placeholder; default `"Search…"`. */
   searchPlaceholder?: string;
+  /** `ToolbarParts.asideInset`: how far the surface's aside reaches from the
+   *  left edge, as a CSS length; default `"0px"` (no aside, or one in its own
+   *  column beside the band). */
+  asideInset?: string;
 }
 
 /**
@@ -98,6 +106,7 @@ export function DataViewToolbar({
   density,
   arrangement = barArrangement,
   searchPlaceholder = "Search…",
+  asideInset = "0px",
 }: DataViewToolbarProps): ReactNode {
   const [measureRef, { width }] = useElementSize();
   // The band is both the shell's measured sticky element and this toolbar's
@@ -123,7 +132,12 @@ export function DataViewToolbar({
   // Built once and relocated into whichever branch renders — the toolbar's
   // "each control element is built once" discipline. The compact fold has forms
   // of its own; the wide layout builds each part in the arrangement's forms.
-  const { forms, component: Arrangement, spaceBelow } = arrangement;
+  const { forms, component: Arrangement, spaceBelow, overlay } = arrangement;
+  // An overlay arrangement floats the band in BOTH layouts, so the view's inset
+  // (the band's measured height) means one thing whatever the width; the
+  // compact fold then wears a card of its own (below) rather than floating as
+  // a transparent row over the view.
+  const floating = overlay === true;
   const creatorsControl = (
     <CreatorsControl
       creators={creators}
@@ -153,6 +167,73 @@ export function DataViewToolbar({
     </Text>
   ) : null;
 
+  const compactRow = (
+    <div
+      // toolbar row of variable-content controls; no named-slot primitive maps. The Sticky's `mask` paints `bg-chrome-mask` so rows don't show through the pinned bar (and it matches whatever surface the DataView is embedded in)
+      //
+      // ONE line in BOTH layouts — no `flex-wrap`. Compact keeps every control
+      // but the switcher behind the single options trigger, and the switcher
+      // (whose chips deliberately never shrink — see EditableViewSwitcher) sits
+      // in the shrinkable scroll lane below, so the trailing controls can never
+      // be pushed past the container's edge and clipped.
+      // eslint-disable-next-line layout/no-adhoc-layout
+      className="flex items-center gap-sm py-sm rail-follow"
+    >
+      {/* The one shrinkable cell of the bar. The switcher's chips hug their
+            content and never shrink, so when more views exist than fit, this
+            lane scrolls horizontally rather than pushing the trailing controls
+            out of reach. Scrollbar hidden — it is an overflow escape hatch, not
+            a permanent affordance. */}
+      <Scroll axis="x" fill hideScrollbar>
+        <Stack direction="row" align="center" gap="sm">
+          {titleNode}
+          {switcherCount > 1 ? switcher.strip : null}
+        </Stack>
+      </Scroll>
+      {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
+      {actions}
+      {creatorsControl}
+      {/* Search folds in here with every control — a non-empty query
+            counts toward the trigger's badge so a folded-away search is still
+            visible from the closed bar. */}
+      <CompactControls
+        search={searchInput}
+        controls={controls}
+        activeCount={activeCount}
+        searching={query.length > 0}
+      />
+    </div>
+  );
+
+  const bandContent = !compact ? (
+    <Arrangement
+      title={titleNode}
+      switcher={switcher}
+      search={searchInput}
+      focusSearch={focusSearch}
+      query={query}
+      controls={controls.map((c) => (
+        <ControlTrigger key={c.id} control={c} form={forms.controls} />
+      ))}
+      foldedControls={
+        <CompactControls
+          controls={controls}
+          activeCount={controlsCount}
+          searching={false}
+          revealOnHover={false}
+          form={forms.controls}
+        />
+      }
+      actions={actions}
+      creators={creatorsControl}
+      asideInset={asideInset}
+    />
+  ) : floating ? (
+    <FloatingFold asideInset={asideInset}>{compactRow}</FloatingFold>
+  ) : (
+    compactRow
+  );
+
   return (
     // `nav` (not the default `raised`) so the toolbar out-stacks the grouped
     // views' own sticky group headers (`raised`): an outgoing group header slides
@@ -170,79 +251,63 @@ export function DataViewToolbar({
     // Pure CSS (`group-hover`), so hovering costs zero re-renders; the state
     // hook would re-render every windowed row on each pointer enter/leave.
     <>
-      <Sticky
-        edge="top"
-        mask
-        layer="nav"
-        ref={bandRef}
-        className={hoverRevealGroup}
-      >
-        {compact ? (
-          <div
-            // toolbar row of variable-content controls; no named-slot primitive maps. The Sticky's `mask` paints `bg-chrome-mask` so rows don't show through the pinned bar (and it matches whatever surface the DataView is embedded in)
-            //
-            // ONE line in BOTH layouts — no `flex-wrap`. Compact keeps every control
-            // but the switcher behind the single options trigger, and the switcher
-            // (whose chips deliberately never shrink — see EditableViewSwitcher) sits
-            // in the shrinkable scroll lane below, so the trailing controls can never
-            // be pushed past the container's edge and clipped.
-            // eslint-disable-next-line layout/no-adhoc-layout
-            className="flex items-center gap-sm py-sm rail-follow"
-          >
-            {/* The one shrinkable cell of the bar. The switcher's chips hug their
-                content and never shrink, so when more views exist than fit, this
-                lane scrolls horizontally rather than pushing the trailing controls
-                out of reach. Scrollbar hidden — it is an overflow escape hatch, not
-                a permanent affordance. */}
-            <Scroll axis="x" fill hideScrollbar>
-              <Stack direction="row" align="center" gap="sm">
-                {titleNode}
-                {switcherCount > 1 ? switcher.strip : null}
-              </Stack>
-            </Scroll>
-            {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
-            {actions}
-            {creatorsControl}
-            {/* Search folds in here with every control — a non-empty query
-                counts toward the trigger's badge so a folded-away search is still
-                visible from the closed bar. */}
-            <CompactControls
-              search={searchInput}
-              controls={controls}
-              activeCount={activeCount}
-              searching={query.length > 0}
-            />
-          </div>
-        ) : (
-          <Arrangement
-            title={titleNode}
-            switcher={switcher}
-            search={searchInput}
-            focusSearch={focusSearch}
-            query={query}
-            controls={controls.map((c) => (
-              <ControlTrigger key={c.id} control={c} form={forms.controls} />
-            ))}
-            foldedControls={
-              <CompactControls
-                controls={controls}
-                activeCount={controlsCount}
-                searching={false}
-                revealOnHover={false}
-                form={forms.controls}
-              />
-            }
-            actions={actions}
-            creators={creatorsControl}
-          />
-        )}
-      </Sticky>
+      {floating ? (
+        // Floating: the band spans the surface's top edge over the view —
+        // transparent (no mask: the view shows between the cards) and
+        // click-through (`decorative`), each card opting back in. It never
+        // scrolls: it is a child of the surface root, not of the view's
+        // scroller.
+        <Pin
+          to="top"
+          stretch
+          decorative
+          layer="nav"
+          ref={bandRef}
+          className={hoverRevealGroup}
+        >
+          {bandContent}
+        </Pin>
+      ) : (
+        <Sticky
+          edge="top"
+          mask
+          layer="nav"
+          ref={bandRef}
+          className={hoverRevealGroup}
+        >
+          {bandContent}
+        </Sticky>
+      )}
       {/* The arrangement's space below the band: a sibling of the `<Sticky>`, not
         padding inside it, so it scrolls away with the content instead of
         growing the pinned band (and the measured header offset). */}
-      {!compact && spaceBelow ? (
+      {!compact && !floating && spaceBelow ? (
         <div aria-hidden style={{ height: spaceBelow }} />
       ) : null}
     </>
+  );
+}
+
+/**
+ * The compact fold under an overlay arrangement: the one bar, as a raised
+ * floating card spanning the band past the aside — the fold's own layout, only
+ * given a surface to sit on, since the floating band behind it is transparent.
+ */
+function FloatingFold(props: {
+  asideInset: string;
+  children: ReactNode;
+}): ReactNode {
+  const { asideInset, children } = props;
+  return (
+    <div
+      className="p-sm"
+      style={{ paddingLeft: `calc(${asideInset} + ${spaceLength("sm")})` }}
+    >
+      <Overlay.Interactive>
+        <Surface level="overlay" className="px-xs">
+          {children}
+        </Surface>
+      </Overlay.Interactive>
+    </div>
   );
 }

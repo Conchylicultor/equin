@@ -481,6 +481,12 @@
       "parent": null
     },
     {
+      "paneId": "places-map",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
       "paneId": "plugin-conv-side",
       "segment": "plugin/:pluginId",
       "appIndex": false,

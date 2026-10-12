@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-places-places-map",
+  "description": "The Places map screen: the app's index pane, a full-bleed DataView of the saved places with floating chrome (tag sidebar, Add place, place card), and the saved-place pin and cluster.",
+  "private": true,
+  "version": "0.0.1"
+}

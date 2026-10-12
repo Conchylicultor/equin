@@ -90,6 +90,7 @@ host owns its own inset, through `className`.
     - `symbolNameForClassic`
 - Cross-plugin:
   - Imported by:
+    - `apps/places/tag-manager`
     - `fields/avatar/config`
     - `fields/icon/config`
     - `page/callout`

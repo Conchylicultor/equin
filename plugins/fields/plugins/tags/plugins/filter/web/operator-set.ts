@@ -36,6 +36,20 @@ export const tagsOperatorSet: FilterOperatorSet = {
       lower: tagsLower["contains-all-of"],
     },
     {
+      id: "has-nested",
+      label: "Has any of (incl. nested)",
+      hasValue: true,
+      ValueInput: TagMultiInput,
+      lower: tagsLower["has-nested"],
+    },
+    {
+      id: "lacks-nested",
+      label: "Has none of (incl. nested)",
+      hasValue: true,
+      ValueInput: TagMultiInput,
+      lower: tagsLower["lacks-nested"],
+    },
+    {
       id: "is-empty",
       label: "Is empty",
       hasValue: false,

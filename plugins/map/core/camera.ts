@@ -3,6 +3,26 @@ import type { LatLng, MapOverlay } from "./overlays";
 /** Zoom used when the map frames a single point: street level. */
 export const SINGLE_POINT_ZOOM = 15;
 
+/**
+ * Screen room, in px per edge, that chrome floating over the map covers (a
+ * sidebar, a toolbar, a detail card). Framing keeps every pin out of it, and a
+ * pin under it counts as off-screen.
+ */
+export interface MapPadding {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+/** No chrome over the map. */
+export const NO_MAP_PADDING: MapPadding = {
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+};
+
 export interface MapBounds {
   south: number;
   west: number;

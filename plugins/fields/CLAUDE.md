@@ -102,13 +102,13 @@ tokens, so anything that imports the barrels back would cycle.
 - Description: Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 - Web:
   - Slots: `Fields.Identity`
-  - Slot contributors: 25 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Fields.Identity` ×25
+  - Slot contributors: 26 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Fields.Identity` ×26
   - Exports (values): `Fields`
 - Cross-plugin:
-  - Imported by: 68 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields` ×47
-    - `apps` ×7
+  - Imported by: 70 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×48
+    - `apps` ×8
     - `debug` ×3
     - `infra` ×3
     - `tasks` ×3
@@ -149,6 +149,7 @@ tokens, so anything that imports the barrels back would cycle.
   - **`int`** [2 sub-plugins] — Integer field type: identity only, extends number — reuses number's cell and filter via the extends chain.
   - **`json`** [2 sub-plugins] — JSON field type: identity only. The config-render capability and the jsonField factory live in the plugins/config sub-plugin.
   - **`list`** [1 sub-plugin] — List field type: identity only. The config-render capability and the listField factory live in the plugins/config sub-plugin.
+  - **`location`** [3 sub-plugins] — Location field type: identity only. The read cell lives in the plugins/table sub-plugin, the is-set filter in plugins/filter, the jsonb column in plugins/storage.
   - **`multiline-text`** [1 sub-plugin] — Long text field type: identity only, extends text — reuses text's cell and filter via the extends chain.
   - **`number`** [5 sub-plugins] — Number field type: identity only. The data-view cell and filter (min/max) capabilities live in the plugins/{table,filter} sub-plugins.
   - **`object`** [1 sub-plugin] — Object field type: identity only. The config-render capability and the objectField factory live in the plugins/config sub-plugin.
