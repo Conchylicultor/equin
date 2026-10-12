@@ -23,6 +23,16 @@ it closes, so the two halves line up and wrap together. Checklists keep their
 boxes everywhere: pickable rows in the reply, ticked lines in the draft and in
 the sent message.
 
+**One shape rule, one item syntax.** Card or chip is decided on all three
+surfaces by active-data's `isBlockForm` (`@plugins/active-data/core`) over the
+text between the tags — a line break inside them, i.e. `<go>` ending its line,
+makes a card, even around one item: the reply's segmenter calls it, the sent
+message's `GoEcho` calls it on the region's body, and the draft's region scan
+(`go-regions.ts`) calls it on the region's text read off the editor. A
+checklist line is read through `parseGoItem`, and the draft's pick token
+pattern (`GO_PICK_RE`) is built from the same bullet spelling in
+`parse-go.ts`, so a new spelling reaches all three at once.
+
 ## The language
 
 **Inline** — one line, wherever it is written (beside prose or on its own line):
@@ -83,16 +93,16 @@ picked items are in the draft: a line is dropped by deleting it.
 
 **In the sent message** an `InlineText` walker (`web/internal/go-walker.tsx`,
 order -1 so it sees the raw string) renders each `<go>` region in full, in the
-same tint (`GoEcho`): one line inline, a block (`<go>` on its own line, even around one picked item) as a card whose `- [x]` lines
-read as checked boxes.
+same tint (`GoEcho`): inline or a card by the shape rule above, a card's
+`- [x]` lines read as checked boxes.
 
 Rules for agents are in the root `CLAUDE.md`.
 
 ## How the reply renders
 
 The tag is an `ActiveData.Tag` block contribution with an `inline` renderer.
-active-data extracts only a multi-line occurrence standing on lines of its own
-as a block (`GoBlock`); everything else stays in the markdown, where
+active-data extracts an occurrence standing on lines of its own and in block
+form (`isBlockForm`) as a block (`GoBlock`); everything else stays in the markdown, where
 active-data's remark pass pairs `<go>` / `</go>` into one element rendered by
 `GoInline` (see `active-data/web/internal/remark-inline-tags.ts`).
 

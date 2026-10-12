@@ -17,7 +17,17 @@ export interface GoBody {
   tail: string;
 }
 
-const ITEM_RE = /^\s*[-*+] \[( |x|X)\] (.*)$/;
+// The one spelling of a checklist line's prefix: every reader of a `- [ ]`
+// line — the reply's rows, the sent message's boxes, the draft's pick token —
+// is built from it.
+const BULLET = String.raw`[-*+] `;
+const ITEM_RE = new RegExp(String.raw`^\s*${BULLET}\[( |x|X)\] (.*)$`);
+
+/**
+ * A picked item's `- [x] ` prefix at a line start — the draft's pick token
+ * pattern (global, as the token extension scans with it).
+ */
+export const GO_PICK_RE = new RegExp(String.raw`^${BULLET}\[[xX]\] `, "g");
 
 /** One line of a `<go>` body as a checklist item, or `null` for prose. */
 export function parseGoItem(line: string): GoItem | null {
@@ -58,17 +68,6 @@ export function goWire(content: string, picked: readonly boolean[]): string {
     .filter((_, i) => picked[i])
     .map((item) => `- [x] ${item.text}`);
   return `<go>\n${lines.join("\n")}\n</go>`;
-}
-
-/**
- * Whether a sent `<go>` body (the text between the tags) is a block — drawn as
- * a card — rather than one inline line. The tag's own shape decides, not the
- * line count: a block opens with `<go>` on a line of its own (`goWire`), so
- * its body holds a line break even when it is one picked item whose `</go>`
- * the draft pulled onto that line (`goDraft`).
- */
-export function isGoBlockBody(body: string): boolean {
-  return body.includes("\n");
 }
 
 /**

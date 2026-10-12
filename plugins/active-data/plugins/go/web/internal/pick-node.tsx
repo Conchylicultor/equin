@@ -8,8 +8,6 @@ import { PickedBox } from "../components/picked-box";
  */
 export type GoPickFields = { mark: "x" };
 
-export const GO_PICK_RE = /^[-*+] \[[xX]\] /g;
-
 const goPickNode = defineInlineTokenNode<GoPickFields>({
   type: "go-pick",
   fields: ["mark"],

@@ -193,6 +193,7 @@ Behavior:
     - `ActiveDataBindingSchema`
     - `ActiveDataBindingsPayloadSchema`
     - `deleteBinding`
+    - `isBlockForm`
     - `putBinding`
     - `putBindingBodySchema`
 - Cross-plugin:

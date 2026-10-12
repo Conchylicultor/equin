@@ -2,7 +2,8 @@ import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { GO_TINT, GoInlineUnit } from "./go-cap";
 import { PickedBox } from "./picked-box";
-import { isGoBlockBody, parseGoItem } from "../internal/parse-go";
+import { isBlockForm } from "@plugins/active-data/core";
+import { parseGoItem } from "../internal/parse-go";
 
 /**
  * A `<go>` in the USER's message — an agent suggestion they accepted, possibly
@@ -13,7 +14,7 @@ import { isGoBlockBody, parseGoItem } from "../internal/parse-go";
  */
 export function GoEcho({ body }: { body: string }) {
   const text = body.replace(/^\n+|\n+$/g, "");
-  if (!isGoBlockBody(body)) {
+  if (!isBlockForm(body)) {
     return (
       <GoInlineUnit>
         <InlineText text={text} />

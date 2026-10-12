@@ -2,10 +2,10 @@ import {
   $getNodeByKey,
   $getRoot,
   $isElementNode,
-  $isLineBreakNode,
   type ElementNode,
   type LexicalNode,
 } from "lexical";
+import { isBlockForm } from "@plugins/active-data/core";
 
 /**
  * The `<go>` regions of a draft, read off the marker tokens. Markers are
@@ -19,7 +19,10 @@ export interface Region {
   close: string;
   /** Keys of everything between the markers. */
   inner: string[];
-  /** Spans lines (paragraphs, or line breaks inside one): drawn as a box. */
+  /**
+   * In block form (active-data's `isBlockForm` over the region's text, where a
+   * paragraph boundary reads as a line break): drawn as a box.
+   */
   block: boolean;
 }
 
@@ -36,17 +39,24 @@ export function markerToken(node: LexicalNode): string | null {
 
 export function $scan(): Scan {
   const out: Scan = { regions: [], orphans: [] };
-  let open: (Omit<Region, "close"> & { para: number }) | null = null;
+  // The open region's text so far — what the sent message will hold between
+  // the tags — so its shape is decided by the same rule as every other surface.
+  let open: {
+    open: string;
+    inner: string[];
+    body: string;
+    para: number;
+  } | null = null;
   $getRoot()
     .getChildren()
     .forEach((para, p) => {
       if (!$isElementNode(para)) return;
-      if (open && open.para !== p) open.block = true;
+      if (open && open.para !== p) open.body += "\n";
       for (const child of para.getChildren()) {
         const token = markerToken(child);
         if (token === "<go>") {
           if (open) out.orphans.push(open.open);
-          open = { open: child.getKey(), inner: [], block: false, para: p };
+          open = { open: child.getKey(), inner: [], body: "", para: p };
         } else if (token === "</go>") {
           if (!open) out.orphans.push(child.getKey());
           else
@@ -54,11 +64,11 @@ export function $scan(): Scan {
               open: open.open,
               close: child.getKey(),
               inner: open.inner,
-              block: open.block,
+              block: isBlockForm(open.body),
             });
           open = null;
         } else if (open) {
-          if ($isLineBreakNode(child)) open.block = true;
+          open.body += child.getTextContent();
           open.inner.push(child.getKey());
         }
       }

@@ -1,11 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import {
-  goDraft,
-  goWire,
-  isGoBlockBody,
-  parseGo,
-  parseGoItem,
-} from "./parse-go";
+import { isBlockForm } from "@plugins/active-data/core";
+import { GO_PICK_RE, goDraft, goWire, parseGo, parseGoItem } from "./parse-go";
 
 describe("parseGo", () => {
   test("plain prose has no items", () => {
@@ -68,23 +63,23 @@ describe("goDraft", () => {
   });
 });
 
-describe("isGoBlockBody", () => {
+// Every surface decides card vs chip with active-data's isBlockForm over the
+// text between the tags; these pin what the draft and the wire hand it.
+describe("block form of what Go sends", () => {
   const body = (sent: string) => /^<go>([\s\S]*)<\/go>\s*$/.exec(sent)![1]!;
 
-  test("one inline line is not a block", () => {
-    expect(isGoBlockBody(body(goDraft(goWire("Implement it", []))))).toBe(
-      false,
-    );
+  test("one inline line is a chip", () => {
+    expect(isBlockForm(body(goDraft(goWire("Implement it", []))))).toBe(false);
   });
 
-  test("a single picked item sent from the draft is still a block", () => {
+  test("a single picked item sent from the draft is a card", () => {
     const sent = goDraft(goWire("- [x] A\n- [ ] B", [true, false]));
     expect(sent).toBe("<go>\n- [x] A</go>\n");
-    expect(isGoBlockBody(body(sent))).toBe(true);
+    expect(isBlockForm(body(sent))).toBe(true);
   });
 
-  test("a single picked item sent directly is a block", () => {
-    expect(isGoBlockBody(body(goWire("- [ ] A", [true])))).toBe(true);
+  test("a single picked item sent directly is a card", () => {
+    expect(isBlockForm(body(goWire("- [ ] A", [true])))).toBe(true);
   });
 });
 
@@ -92,5 +87,19 @@ describe("parseGoItem", () => {
   test("reads a checklist line, rejects prose", () => {
     expect(parseGoItem("- [x] A")).toEqual({ text: "A", checked: true });
     expect(parseGoItem("- A")).toBeNull();
+  });
+
+  test("the draft's pick token matches exactly the picked items", () => {
+    for (const line of [
+      "- [x] A",
+      "* [X] B",
+      "+ [x] C",
+      "- [ ] D",
+      "- A",
+      "-[x] E",
+    ]) {
+      GO_PICK_RE.lastIndex = 0;
+      expect(GO_PICK_RE.test(line)).toBe(parseGoItem(line)?.checked === true);
+    }
   });
 });

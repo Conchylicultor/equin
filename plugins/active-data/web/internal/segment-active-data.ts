@@ -7,6 +7,7 @@ import {
 import { ActiveData } from "../slots";
 import type { ActiveDataBlockContribution } from "../slots";
 import { parseAttrs } from "./tag-attrs";
+import { isBlockForm } from "../../core";
 
 type SealedBlockContribution = SealContributions<ActiveDataBlockContribution>;
 
@@ -82,11 +83,11 @@ export function buildSegments(
     );
     const contrib = blockContribs.find((c) => c.tag === m![1])!;
     // An inline-capable tag is a block only when it is one: on lines of its
-    // own AND spanning lines. Beside prose, or a single line even standing
-    // alone, it stays in the markdown and renders through `inline`.
+    // own AND in block form. Beside prose, or `<tag>one line</tag>` even
+    // standing alone, it stays in the markdown and renders through `inline`.
     if (
       contrib.inline &&
-      (!standsAlone(rawText, m.index, end) || !inner.trim().includes("\n"))
+      (!standsAlone(rawText, m.index, end) || !isBlockForm(inner))
     ) {
       continue;
     }

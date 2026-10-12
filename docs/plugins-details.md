@@ -74,6 +74,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ActiveDataBindingSchema`
       - `ActiveDataBindingsPayloadSchema`
       - `deleteBinding`
+      - `isBlockForm`
       - `putBinding`
       - `putBindingBodySchema`
   - Cross-plugin:

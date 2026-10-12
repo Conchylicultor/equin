@@ -36,4 +36,16 @@ describe("buildSegments", () => {
     const text = "```\n<go>\n- [ ] x\n</go>\n```";
     expect(buildSegments(text, contribs)).toEqual([{ type: "markdown", text }]);
   });
+
+  test("one line in block form is a block; on the open tag's line it is inline", () => {
+    expect(
+      buildSegments("<go>\n- [ ] Only one\n</go>", contribs).map((s) => s.type),
+    ).toEqual(["block"]);
+    expect(
+      buildSegments("<go>\n- [x] Only one</go>", contribs).map((s) => s.type),
+    ).toEqual(["block"]);
+    expect(buildSegments("<go>Implement it</go>", contribs)).toEqual([
+      { type: "markdown", text: "<go>Implement it</go>" },
+    ]);
+  });
 });
