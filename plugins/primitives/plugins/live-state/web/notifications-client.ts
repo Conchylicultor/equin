@@ -9,6 +9,7 @@ import {
   type TransportSocket,
   subscribeWsStatus,
   subscribeNetDiag,
+  type SharedWebSocketOptions,
   type WsStatus,
   type NetDiagEvent,
 } from "@plugins/primitives/plugins/networking/web";
@@ -22,10 +23,17 @@ import { httpStaleDropReportSink } from "./stale-drop-reporter";
 import { updateDelayReportSink } from "./update-delay-reporter";
 import {
   BUILD_GRAPH_HEADER,
+  DERIVE_MAX_SOURCES,
   DEV_BUILD,
   parseResourceBytesHeaders,
+  PROTOCOL,
   parseResourceHttpErrorBody,
+  type ClientFrame,
   type ContractVerdict,
+  type Derivation,
+  type DeriveSource,
+  type ExactClientFrame,
+  type ServerFrame,
   type SubErrorReason,
 } from "@plugins/packages/plugins/resource-protocol/core";
 import { markResourceContractMismatch } from "./resource-contract-store";
@@ -115,16 +123,25 @@ export function isTerminalResourceError(err: unknown): boolean {
 const REALM_HOLDER_ID = crypto.randomUUID();
 
 /**
- * The shared socket's dialect (`SharedWebSocketOptions.dialect`): this
- * module's own URL, content-addressed per build of it. The server answers
- * one tab's request with frames every tab on the socket receives, and a
- * frame vocabulary grows (a derived `sub-ack` carries no value: a bundle that
+ * The shared socket's options: its dialect is the frame vocabulary's id
+ * (`PROTOCOL`, `packages/resource-protocol`). The server answers one tab's
+ * request with frames every tab on the socket receives, and a frame
+ * vocabulary grows (a derived `sub-ack` carries no value: a bundle that
  * predates it would parse `undefined` as the tuple's value and adopt its
  * version, wedging its own read). So a tab shares its socket only with tabs
- * running this same client — an older bundle left open across a deploy keeps
- * a socket of its own, and never sees a frame it cannot read.
+ * that read frames alike — an older bundle left open across a deploy that
+ * changed the vocabulary keeps a socket of its own and never sees a frame it
+ * cannot read, while a deploy that did not change it keeps every tab on one.
  */
-const SOCKET_DIALECT = import.meta.url;
+const SOCKET_OPTIONS: SharedWebSocketOptions = { dialect: PROTOCOL };
+
+/**
+ * A frame this client sends — the protocol's, and only the protocol's: a field
+ * its `op` does not declare is a type error however the frame was built
+ * (`ExactClientFrame`), so the wire cannot grow without moving `PROTOCOL`.
+ */
+const wire = <F extends ClientFrame>(frame: ExactClientFrame<F>): string =>
+  JSON.stringify(frame);
 
 // Per-hop persistent tracing for the live-state update pipeline (Layer 1). All
 // lines route to the `live-state` log channel over plain HTTP via clientLog —
@@ -248,9 +265,6 @@ export interface ResourceDerivation<P extends ResourceParams = ResourceParams> {
   from: readonly ResourceSlice<P>[];
 }
 
-/** The most sources a derivation names — the server refuses more. */
-const DERIVE_MAX_SOURCES = 2;
-
 /** One source of a {@link ResourceDerivation}. */
 export interface ResourceSlice<P extends ResourceParams = ResourceParams> {
   params: P;
@@ -260,149 +274,20 @@ export interface ResourceSlice<P extends ResourceParams = ResourceParams> {
   until: string | null;
 }
 
-/** One source of a `sub` frame's `derive`, as the wire carries it. */
-interface DerivationSourceFrame {
-  params: ResourceParams;
-  version: number;
-  after: string | null;
-  until: string | null;
-}
-
 /**
- * A `sub` frame's `derive`: its sources, and the id this client minted for
- * it — the one thing a derived ack echoes, so matching an answer to its
- * question never depends on how the server spells the sources back.
+ * A `sub` frame's `derive` (the protocol's `Derivation`): its sources, and the
+ * id this client minted for it — the one thing a derived ack echoes, so
+ * matching an answer to its question never depends on how the server spells
+ * the sources back.
  */
-interface DerivationFrame {
-  id: string;
-  from: DerivationSourceFrame[];
-}
+type DerivationFrame = Derivation;
 
-type ServerMsg =
-  // `etag` (conditional revalidation): the fresh content signature accompanying a
-  // full value. Present only for a resource that declares `revalidate`; the client
-  // stores it and sends it back on its next (re)subscribe / conditional GET.
-  // `epoch` (version short-circuit): the server's boot identity, stamped on every
-  // ack frame. Stored per channel and echoed alongside the sub's version on the
-  // next replay, so a same-boot server can answer `up-to-date` from its in-memory
-  // version counter with no loader run.
-  // `watermark` (commit watermark, Rule B′): the xid8 snapshot floor the frame's
-  // value was read under. Rides ONLY frames whose value fully reconciles the
-  // client — sub-ack, update, and FULL keyed deltas (a SCOPED delta is a partial
-  // re-read and never carries one). Adopted into the module-level watermark
-  // registry immediately before the cache write it describes, so the optimistic
-  // hook can causally compare mutation ack tokens against it.
-  // `ackTx` (mutation-ack attribution): the source-transaction ids the frame's
-  // recompute folded in — noted into the tx-ack registry immediately before the
-  // cache write (value frames), so the optimistic hook's exact-ack confirmation
-  // reads them synchronously. Feed-driven frames only; sub-ack/HTTP bodies never
-  // carry one (their snapshot watermark subsumes it).
-  | {
-      kind: "sub-ack";
-      id?: number;
-      key: string;
-      params: ResourceParams;
-      /** Absent for a bytes read (`ResourceRead.bytes`): its value is read over HTTP. */
-      value?: unknown;
-      version: number;
-      etag?: string;
-      epoch?: string;
-      watermark?: string;
-      derived?: undefined;
-    }
-  // A DERIVED sub-ack: the server seeded the tuple from the slice this sub's
-  // `derive` named (see `ResourceDerivation`), so no value rides it — the tab
-  // that asked adopts the slice it holds. It echoes the id of the derivation
-  // it answers: the shared socket broadcasts every frame, and a tab holding
-  // the same tuple through another request must not take it for its own. No
-  // etag, no watermark (the server ran no read).
-  | {
-      kind: "sub-ack";
-      id?: number;
-      key: string;
-      params: ResourceParams;
-      version: number;
-      epoch?: string;
-      etag?: undefined;
-      derived: { id: string };
-    }
-  | {
-      kind: "update";
-      key: string;
-      params: ResourceParams;
-      value: unknown;
-      version: number;
-      etag?: string;
-      watermark?: string;
-      ackTx?: string[];
-      /** Wall-clock epoch ms of the change behind this frame (see update-delay-reporter.ts). */
-      changedAt?: number;
-    }
-  | {
-      kind: "delta";
-      key: string;
-      params: ResourceParams;
-      upserts: [string, unknown][];
-      deletes: string[];
-      order?: string[];
-      version: number;
-      watermark?: string;
-      ackTx?: string[];
-      changedAt?: number;
-    }
-  | { kind: "invalidate"; key: string; params: ResourceParams; version: number }
-  // Standalone mutation-ack frame (sent only for tuples a tab asked acks for —
-  // `requestAcks`): a recompute produced NO value change (empty scoped diff,
-  // net-zero membership, point empty-intersection) but the writer's ack must
-  // not hang on it.
-  // Version-less, cache-less, idempotent — handled BEFORE the version-guard
-  // block, gated on the local sub entry like `sub-error`.
-  | { kind: "ack"; key: string; params: ResourceParams; ackTx: string[] }
-  // "your cached value is still current" — the WS analogue of HTTP 304. Carries no
-  // value: the client keeps its cached value and only adopts `version` (so a later
-  // real update isn't stale-dropped), treating the (re)subscribe as acked.
-  | {
-      kind: "up-to-date";
-      id?: number;
-      key: string;
-      params: ResourceParams;
-      version: number;
-      epoch?: string;
-    }
-  // The batched twin: one frame answering every already-current entry of a
-  // `sub-batch` replay. Each entry runs through the exact per-entry `up-to-date`
-  // logic (version guard, adoption, lastAckVersion).
-  | {
-      kind: "up-to-date-batch";
-      epoch: string;
-      entries: Array<{
-        id?: number;
-        key: string;
-        params: ResourceParams;
-        version: number;
-      }>;
-    }
-  // `params` (Fix D): a sub-error now names the exact subscription it failed for,
-  // so the client can gate it on a live local sub (the all-tabs fan-out safety)
-  // and drive an HTTP-fallback refetch. A pre-upgrade server omits `params`
-  // (undefined at runtime); such a legacy frame simply fails the sub gate.
-  // `verdict` rides `contract-mismatch` / `unknown-key`: `skew` means this
-  // tab's bundle is older than the server's — the Reload advice picks it up.
-  | {
-      kind: "sub-error";
-      id?: number;
-      key: string;
-      params: ResourceParams;
-      reason: SubErrorReason;
-      verdict?: ContractVerdict;
-      /** On `refused`: the refusal's code (the HTTP fallback carries it too). */
-      code?: string;
-      /** On `refused`: the refusal's message (the HTTP fallback carries it too). */
-      message?: string;
-    }
-  // `flushOpenMs`: how long the server's running flush pass has been open (0
-  // when idle). Absent from a server that predates it — read as 0.
-  | { kind: "ping"; flushOpenMs?: number };
+// Every frame the server sends, as the protocol declares it (`ServerFrame`,
+// `packages/resource-protocol` — each field's meaning is documented there).
+// The shared socket fans every frame out to every tab on it, so this tab reads
+// frames answering other tabs' requests too: every kind below is gated on a
+// live local sub before it touches the cache (`handleServerMessage`).
+type ServerMsg = ServerFrame;
 
 function paramsKey(params: ResourceParams | undefined): string {
   if (!params) return "{}";
@@ -720,11 +605,16 @@ export class NotificationsClient {
   };
 
   constructor(
-    private queryClient: QueryClient,
+    /**
+     * The cache this client writes — and the one its provider mounts: the
+     * pair is built together, so a provider can never hand React a cache the
+     * client does not write (`NotificationsClientProvider`).
+     */
+    readonly queryClient: QueryClient,
     hooks?: {
       makeSocket?: (
         url: string,
-        options: { dialect: string },
+        options: SharedWebSocketOptions,
       ) => TransportSocket;
       /** Maps a socket path to the URL it opens at (default: the path itself). */
       socketUrl?: (path: string) => string;
@@ -738,9 +628,10 @@ export class NotificationsClient {
     // Socket factory must be set before channelFor (openChannel reads it).
     const makeSocket =
       hooks?.makeSocket ??
-      ((u: string, options: { dialect: string }) =>
+      ((u: string, options: SharedWebSocketOptions) =>
         new SharedWebSocket(u, undefined, options));
-    this.makeSocket = (u) => makeSocket(u, { dialect: SOCKET_DIALECT });
+    // Every socket names the frame vocabulary it reads (`SOCKET_OPTIONS`).
+    this.makeSocket = (u) => makeSocket(u, SOCKET_OPTIONS);
     const socketUrl = hooks?.socketUrl ?? ((path: string) => path);
     this.socketUrls = {
       worktree: socketUrl(WS_URLS.worktree),
@@ -1257,13 +1148,33 @@ export class NotificationsClient {
     if (derive.from.length === 0) return skip("no-source");
     if (derive.from.length > DERIVE_MAX_SOURCES) return skip("sources");
     const rows: unknown[] = [];
-    const from: DerivationSourceFrame[] = [];
+    const from: DeriveSource[] = [];
     for (const slice of derive.from) {
       const src = channel.subs.get(`${key}\0${paramsKey(slice.params)}`);
       if (src === undefined) return skip("source-not-held");
-      if (src.appliedSeq === 0 || src.appliedSeq !== slice.appliedSeq) {
-        return skip("source-moved");
+      if (src.appliedSeq === 0) {
+        // Nothing applied through this tab's sub yet: its first answer has
+        // not landed. Either the source is itself still loading (a fresh sub,
+        // or a derivation of its own in flight) — nothing to count — or the
+        // value it holds is a boot-hydrated one, whose version the server
+        // cannot match. That case is accepted (a split there loads in full:
+        // latency, not correctness), and counted, one line per refused seed,
+        // on the paged read's channel to keep it so
+        // (research/2026-10-12-global-live-paging-followups.md).
+        if (
+          src.derivation !== undefined ||
+          this.queryClient.getQueryData(queryKeyFor(key, slice.params)) ===
+            undefined
+        ) {
+          return skip("source-loading");
+        }
+        clientLog(
+          "live-pages",
+          `[${key}] seed refused: a source holds a boot-hydrated value (params=${pk})`,
+        );
+        return skip("source-hydrated");
       }
+      if (src.appliedSeq !== slice.appliedSeq) return skip("source-moved");
       if (!src.socketValue || src.version < 0) return skip("source-not-socket");
       const held = this.queryClient.getQueryData(
         queryKeyFor(key, slice.params),
@@ -1331,9 +1242,7 @@ export class NotificationsClient {
         queryKey: queryKeyFor(key, params),
         exact: true,
       });
-      channel.ws.send(
-        JSON.stringify({ op: "unsub", key, params, tabId: this.tabId }),
-      );
+      channel.ws.send(wire({ op: "unsub", key, params, tabId: this.tabId }));
       trace(`unobserve key=${key} params=${pk} refcount=0 released now`);
       this.emitDebug();
       return;
@@ -1356,9 +1265,7 @@ export class NotificationsClient {
       }
       channel.subs.delete(id);
       channel.pendingTeardown.delete(id);
-      channel.ws.send(
-        JSON.stringify({ op: "unsub", key, params, tabId: this.tabId }),
-      );
+      channel.ws.send(wire({ op: "unsub", key, params, tabId: this.tabId }));
       trace(`teardown key=${key} params=${pk}`);
       this.emitDebug();
     }, SUB_KEEPALIVE_MS);
@@ -1417,7 +1324,7 @@ export class NotificationsClient {
       `subAcks key=${key} params=${paramsKey(params)} acks=${acks ? 1 : 0}`,
     );
     channel.ws.send(
-      JSON.stringify({ op: "sub-acks", key, params, acks, tabId: this.tabId }),
+      wire({ op: "sub-acks", key, params, acks, tabId: this.tabId }),
     );
   }
 
@@ -1813,9 +1720,7 @@ export class NotificationsClient {
     // However this tab leaves — close, pagehide, crash — the worker tells the
     // server to release every sub it holds, so a departed tab's subs stop
     // fanning out at once instead of leaking until the socket cycles.
-    channel.ws.setLastWill(
-      JSON.stringify({ op: "unsub-tab", tabId: this.tabId }),
-    );
+    channel.ws.setLastWill(wire({ op: "unsub-tab", tabId: this.tabId }));
     channel.ws.onopen = () => {
       channel.opens++;
       this.replaySubs(channel);
@@ -1941,10 +1846,11 @@ export class NotificationsClient {
       });
     }
     channel.ws.send(
-      JSON.stringify({
+      wire({
         op: "sub-batch",
         tabId: this.tabId,
         build: clientBuild(),
+        protocol: PROTOCOL,
         ...(channel.serverEpoch !== undefined
           ? { epoch: channel.serverEpoch }
           : {}),
@@ -1987,7 +1893,7 @@ export class NotificationsClient {
       `sendSub key=${key} params=${paramsKey(params)} socket=${socket}${etag !== undefined ? " etag=1" : ""}${derive !== undefined ? ` derive=${derive.from.length}` : ""}`,
     );
     channel.ws.send(
-      JSON.stringify({
+      wire({
         op: "sub",
         id: this.nextMsgId++,
         key,
@@ -2004,6 +1910,9 @@ export class NotificationsClient {
         // Per frame: one shared socket carries every tab's frames, and their
         // bundles may differ (see `clientBuild`).
         build: clientBuild(),
+        // The vocabulary this tab reads: the server trusts a `derive` only
+        // under its own.
+        protocol: PROTOCOL,
       }),
     );
   }
@@ -2199,7 +2108,7 @@ export class NotificationsClient {
     // flight against its untouched baseline.
     if (
       msg.kind === "sub-ack" &&
-      msg.derived !== undefined &&
+      "derived" in msg &&
       entry.derivation?.id !== msg.derived.id
     ) {
       trace(
@@ -2231,6 +2140,7 @@ export class NotificationsClient {
     // (re)subscribe / conditional GET can be answered `up-to-date`/304.
     if (
       (msg.kind === "sub-ack" || msg.kind === "update") &&
+      "etag" in msg &&
       msg.etag !== undefined
     ) {
       entry.etag = msg.etag;
@@ -2249,7 +2159,7 @@ export class NotificationsClient {
       return;
     }
 
-    if (msg.kind === "sub-ack" && msg.derived !== undefined) {
+    if (msg.kind === "sub-ack" && "derived" in msg) {
       this.applyDerived(entry, msg.key, msg.params);
       return;
     }
@@ -2313,7 +2223,7 @@ export class NotificationsClient {
     params: ResourceParams,
     value: unknown,
     watermark?: string,
-    ackTx?: string[],
+    ackTx?: readonly string[],
   ): void {
     // Invariant: handleServerMessage only reaches here for a (key) this tab
     // observes, and observe() registers the schema alongside the sub entry — so
@@ -2391,10 +2301,10 @@ export class NotificationsClient {
     entry: ActiveSub,
     key: string,
     params: ResourceParams,
-    upserts: [string, unknown][],
-    order: string[] | undefined,
+    upserts: readonly (readonly [string, unknown])[],
+    order: readonly string[] | undefined,
     watermark?: string,
-    ackTx?: string[],
+    ackTx?: readonly string[],
   ): void {
     const queryKey = queryKeyFor(key, params);
     // Base-presence guard (load-bearing): never apply a delta onto a missing

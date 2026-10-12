@@ -1,5 +1,5 @@
 /**
- * The bell popover's chip row over a real NotificationsProvider + QueryClient
+ * The bell popover's chip row over `createLiveStateHarness` (a real client and its QueryClient)
  * (the live `use-live.test.tsx` harness): groupings are driven with
  * `client.setQueryData` on the exact tuple the codec encodes.
  */
@@ -17,35 +17,23 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
+import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
 import {
-  NotificationsProvider,
-  getNotificationsClient,
-  queryKeyFor,
-} from "@plugins/primitives/plugins/live-state/web";
+  createLiveStateHarness,
+  type LiveStateHarness,
+} from "@plugins/primitives/plugins/live-state/web/testing";
 import { notifications } from "../../shared/resources";
 import { NotificationsPanel } from "../components/notifications-panel";
 
 afterEach(cleanup);
 
-function makeClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
-}
-
-function mount(client: QueryClient) {
-  const rendered = render(
-    <NotificationsProvider queryClient={client}>
+function mount(live: LiveStateHarness) {
+  vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
+  return render(
+    <live.Wrapper>
       <NotificationsPanel empty={false} onClose={() => {}} />
-    </NotificationsProvider>,
+    </live.Wrapper>,
   );
-  const live = getNotificationsClient();
-  if (!live) throw new Error("NotificationsClient not created");
-  vi.spyOn(live, "hasEverBeenReady").mockReturnValue(true);
-  return rendered;
 }
 
 const groupsKey = (groupBy: "type" | "variant") =>
@@ -59,7 +47,7 @@ const groupsKey = (groupBy: "type" | "variant") =>
 
 describe("NotificationsPanel — chip row", () => {
   it("shows a loading state (never an empty row) while the groupings are pending", () => {
-    mount(makeClient());
+    mount(createLiveStateHarness());
     const chips = screen.getByTestId("notification-chips");
     expect(within(chips).getByRole("status").textContent).toContain(
       "Loading filters",
@@ -68,7 +56,8 @@ describe("NotificationsPanel — chip row", () => {
   });
 
   it("renders a chip per server group, plus Errors when an error group exists", async () => {
-    const client = makeClient();
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
     client.setQueryData(groupsKey("type"), [
       { value: "build", count: 3 },
       { value: "old-type", count: 2 },
@@ -77,7 +66,7 @@ describe("NotificationsPanel — chip row", () => {
       { value: "info", count: 4 },
       { value: "error", count: 1 },
     ]);
-    mount(client);
+    mount(live);
     await waitFor(() => {
       const chips = screen.getByTestId("notification-chips");
       expect(

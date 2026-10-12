@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useResources,
   type PagedResourceResult,
@@ -15,6 +15,11 @@ import {
   type LiveValueOrigin,
 } from "@plugins/network/plugins/live/core";
 import { withoutWindowFields } from "./window-fields";
+import {
+  createCrossPageGaps,
+  type CrossPageGaps,
+  type GapPage,
+} from "./cross-page-gaps";
 import {
   pageSourceOf,
   type LivePagesQuery,
@@ -169,7 +174,21 @@ interface HookState<Q> {
   previous: Plan<Q> | null;
   /** The last full page that could not split — reported once, from an effect. */
   collapse: { seq: number; reason: string; at: number } | null;
+  /**
+   * The rest pages the last overflow splits minted, each batch in the plan at
+   * its `base` — timed from an effect until each one's own read first settles.
+   * Appended, not replaced (the last `OVERFLOW_BATCHES` kept): two renders can
+   * each split before one commit runs the effect, and the effect takes every
+   * batch past the last `seq` it saw.
+   */
+  overflowed: {
+    seq: number;
+    batches: readonly { seq: number; base: string; pages: readonly Page[] }[];
+  } | null;
 }
+
+/** Overflow batches kept for the timing effect — far more than renders between two commits. */
+const OVERFLOW_BATCHES = 8;
 
 type Observation = PageObservation<RowEntry, ResourceError>;
 
@@ -362,6 +381,7 @@ function usePages<Row, Q, P extends Record<string, string>>(
           },
     previous: null,
     collapse: null,
+    overflowed: null,
   }));
 
   // A new query: a fresh plan — keeping the previous rows on screen when only
@@ -391,6 +411,7 @@ function usePages<Row, Q, P extends Record<string, string>>(
       previous:
         keep && restored === null ? (state.previous ?? state.current) : null,
       collapse: state.collapse,
+      overflowed: state.overflowed,
     };
   } else if (
     state.current !== null &&
@@ -524,6 +545,22 @@ function usePages<Row, Q, P extends Record<string, string>>(
               },
             }
           : {}),
+        ...(outcome.overflowed
+          ? {
+              overflowed: {
+                seq: (state.overflowed?.seq ?? 0) + 1,
+                batches: [
+                  ...(state.overflowed?.batches.slice(1 - OVERFLOW_BATCHES) ??
+                    []),
+                  {
+                    seq: (state.overflowed?.seq ?? 0) + 1,
+                    base: plan.base,
+                    pages: outcome.overflowed,
+                  },
+                ],
+              },
+            }
+          : {}),
       };
     }
     if (state.previous !== null) {
@@ -544,6 +581,107 @@ function usePages<Row, Q, P extends Record<string, string>>(
       `[${source.key}] page ${collapse.at} could not split (${collapse.reason}) — collapsed the pages after it into it`,
     );
   }, [collapse, source]);
+
+  // What the `live-pages` instrumentation below reads of this render: each
+  // LIVE page of the current plan, by its key in the plan, with its tuple and
+  // what its read shows (`undefined` while it has nothing). One pass over the
+  // pages, no row touched.
+  const liveReads = useMemo(() => {
+    const plan = readCurrent;
+    if (plan === null) return null;
+    const out: {
+      pageKey: string;
+      tupleKey: string;
+      rows: readonly unknown[] | undefined;
+    }[] = [];
+    for (const { page, live } of plan.state.pages) {
+      if (!live) continue;
+      const hit = read(plan, page);
+      if (hit === null) continue;
+      out.push({
+        pageKey: pageKeyOf(plan, page),
+        tupleKey: hit.tupleKey,
+        rows: rowsOfResult(hit.result),
+      });
+    }
+    return out;
+  }, [readCurrent, read]);
+
+  // How long an overflow split hides rows: a full page that is not last
+  // splits at its median, and its rest page `(m, b]` is read whole — until that
+  // read first settles, a row past the old page's last is in no page. Timed
+  // from the commit that mints the page to the commit its read settles in.
+  // (The decision this feeds: a hidden-rows marker, dropped unless the gap is
+  // common or over ~150 ms — research/2026-10-12-global-live-paging-followups.md.)
+  const overflowed = readState.overflowed;
+  const overflowStarts = useRef<Map<string, number>>(new Map());
+  const overflowSeen = useRef(0);
+  useEffect(() => {
+    if (overflowed === null) return;
+    const at = performance.now();
+    for (const batch of overflowed.batches) {
+      if (batch.seq <= overflowSeen.current) continue;
+      for (const page of batch.pages) {
+        const key = planPageKey(batch.base, page);
+        if (!overflowStarts.current.has(key)) {
+          overflowStarts.current.set(key, at);
+        }
+      }
+    }
+    overflowSeen.current = overflowed.seq;
+  }, [overflowed]);
+  useEffect(() => {
+    const starts = overflowStarts.current;
+    if (starts.size === 0) return;
+    const at = performance.now();
+    for (const [key, minted] of starts) {
+      // A rest page stays live until its read answers, so one not live is
+      // gone before it settled (a new query, a drop past `maxLimit`): no gap
+      // left to time.
+      const live = liveReads?.find((r) => r.pageKey === key);
+      if (live === undefined) {
+        starts.delete(key);
+        continue;
+      }
+      if (live.rows === undefined) continue;
+      starts.delete(key);
+      clientLog(
+        "live-pages",
+        `[${source.key}] overflow-split gap ${Math.round(at - minted)}ms (rest page settled with ${live.rows.length} rows)`,
+      );
+    }
+  }, [liveReads, source]);
+
+  // A row moving between two live pages arrives as two frames; when the one
+  // it leaves lands first, the row is in no page until the other does. Logged
+  // per gap closed within 1 s (a delete never comes back, so it is none) — the
+  // decision this feeds: a client-side departure hold in the plan, built only
+  // if it fires. Diffed per CHANGED page (`cross-page-gaps.ts`).
+  const gaps = useRef<{
+    source: PageSource<Row, Q, P>;
+    detector: CrossPageGaps<unknown>;
+  } | null>(null);
+  useEffect(() => {
+    if (liveReads === null) return;
+    if (gaps.current?.source !== source) {
+      gaps.current = {
+        source,
+        detector: createCrossPageGaps<unknown>(
+          (row) => entryOf(row, source.idField).id,
+        ),
+      };
+    }
+    const pages: GapPage<unknown>[] = [];
+    for (const { tupleKey, rows } of liveReads) {
+      if (rows !== undefined) pages.push({ key: tupleKey, rows });
+    }
+    for (const g of gaps.current.detector.observe(performance.now(), pages)) {
+      clientLog(
+        "live-pages",
+        `[${source.key}] cross-page gap: row ${g.id} was in no live page for ${Math.round(g.ms)}ms`,
+      );
+    }
+  }, [liveReads, source]);
 
   // The plan's shape, logged as it changes: how deep the read is, and how
   // much of it is live.
@@ -691,7 +829,12 @@ function sameColumns(
 
 /** A page's identity within the plan reading it: its plan's query and its bounds. */
 function pageKeyOf(plan: Plan<unknown>, page: Page): string {
-  return `${plan.base}\u0000${pageKey(page)}`;
+  return planPageKey(plan.base, page);
+}
+
+/** {@link pageKeyOf} from the plan's `base` alone. */
+function planPageKey(base: string, page: Page): string {
+  return `${base}\u0000${pageKey(page)}`;
 }
 
 const PENDING: Observation = { kind: "pending" };

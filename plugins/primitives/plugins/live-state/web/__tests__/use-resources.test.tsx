@@ -1,6 +1,6 @@
 /**
  * `useResources` — a varying list of tuples of one resource, each read exactly
- * as `useResource` reads one. Over a real NotificationsProvider + QueryClient:
+ * as `useResource` reads one. Over `createLiveStateHarness` (a real client and its QueryClient):
  *
  * - the subscription set moves by DIFF: add / remove / reorder observe and
  *   unobserve only the tuples that entered or left, and a kept tuple is never
@@ -20,12 +20,8 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 }));
 
 import { act, render, renderHook, waitFor } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
-import { type ReactNode } from "react";
 import { z } from "zod";
 import {
-  NotificationsProvider,
-  getNotificationsClient,
   pendingMountSnapshot,
   queryKeyFor,
   slowResourceReportSink,
@@ -33,6 +29,8 @@ import {
   useResources,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { SlowResourceInfo } from "../slow-resource-reporter";
+import type { NotificationsClient } from "../notifications-client";
+import { createLiveStateHarness } from "../testing";
 import {
   registerResourceDescriptor,
   type ResourceDescriptor,
@@ -50,25 +48,7 @@ const descriptor = (): ResourceDescriptor<number[], { n: string }> => {
   return d;
 };
 
-function makeClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
-}
-
-function wrapperFor(client: QueryClient) {
-  return ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>
-      {children}
-    </NotificationsProvider>
-  );
-}
-
-function spyNotifications() {
-  const notifications = getNotificationsClient();
-  if (!notifications) throw new Error("NotificationsClient not created");
+function spyNotifications(notifications: NotificationsClient) {
   vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
   const observe = vi.spyOn(notifications, "observe");
   const unobserve = vi.spyOn(notifications, "unobserve");
@@ -82,16 +62,15 @@ const tuple = (n: string) => ({ n });
 describe("useResources", () => {
   it("observes each tuple once, and moves the set by diff on add / remove / reorder", () => {
     const d = descriptor();
-    const client = makeClient();
-    // Mount once so the provider creates the client, then spy.
+    const live = createLiveStateHarness();
     const { rerender, unmount } = renderHook(
       ({ list }: { list: { n: string }[] }) => useResources(d, list),
       {
-        wrapper: wrapperFor(client),
+        wrapper: live.Wrapper,
         initialProps: { list: [tuple("a"), tuple("b")] },
       },
     );
-    const { observe, unobserve, names } = spyNotifications();
+    const { observe, unobserve, names } = spyNotifications(live.notifications);
     observe.mockClear();
     unobserve.mockClear();
 
@@ -116,16 +95,16 @@ describe("useResources", () => {
 
   it("release now: a tuple dropped from the list is let go at once; unmounting keeps the keep-alive", () => {
     const d = descriptor();
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const { rerender, unmount } = renderHook(
       ({ list }: { list: { n: string }[] }) =>
         useResources(d, list, { release: "now" }),
       {
-        wrapper: wrapperFor(client),
+        wrapper: live.Wrapper,
         initialProps: { list: [tuple("a"), tuple("b")] },
       },
     );
-    const { unobserve } = spyNotifications();
+    const { unobserve } = spyNotifications(live.notifications);
     unobserve.mockClear();
     rerender({ list: [tuple("a")] });
     expect(
@@ -142,19 +121,19 @@ describe("useResources", () => {
 
   it("each tuple carries where its value was last applied (appliedSeq)", async () => {
     const d = descriptor();
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const { result } = renderHook(
       () => useResources(d, [tuple("a"), tuple("b")]),
-      { wrapper: wrapperFor(client) },
+      { wrapper: live.Wrapper },
     );
-    const { notifications } = spyNotifications();
+    const { notifications } = spyNotifications(live.notifications);
     expect(result.current.map((r) => r.appliedSeq)).toEqual([0, 0]);
     vi.spyOn(notifications, "appliedSeq").mockImplementation((_key, params) =>
       (params as { n: string }).n === "a" ? 7 : 3,
     );
     act(() => {
-      client.setQueryData(queryKeyFor(d.key, tuple("a")), [1]);
-      client.setQueryData(queryKeyFor(d.key, tuple("b")), [2]);
+      live.queryClient.setQueryData(queryKeyFor(d.key, tuple("a")), [1]);
+      live.queryClient.setQueryData(queryKeyFor(d.key, tuple("b")), [2]);
     });
     await waitFor(() =>
       expect(result.current.map((r) => r.status)).toEqual(["ready", "ready"]),
@@ -164,7 +143,7 @@ describe("useResources", () => {
 
   it("shares a tuple's refcount with a useResource on the same tuple", () => {
     const d = descriptor();
-    const client = makeClient();
+    const live = createLiveStateHarness();
     function Many({ list }: { list: { n: string }[] }) {
       useResources(d, list);
       return null;
@@ -173,7 +152,7 @@ describe("useResources", () => {
       useResource(d, tuple("a"));
       return null;
     }
-    const wrapper = wrapperFor(client);
+    const wrapper = live.Wrapper;
     const view = render(
       <>
         <Many list={[tuple("a"), tuple("b")]} />
@@ -181,7 +160,7 @@ describe("useResources", () => {
       </>,
       { wrapper },
     );
-    const { notifications } = spyNotifications();
+    const { notifications } = spyNotifications(live.notifications);
     const refcount = (n: string): number | undefined =>
       notifications
         .debugSnapshot()
@@ -203,18 +182,18 @@ describe("useResources", () => {
 
   it("each tuple is loading until its own value lands, and counts as a pending mount until then", async () => {
     const d = descriptor();
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const before = pendingMountSnapshot().pending;
     const { result } = renderHook(
       () => useResources(d, [tuple("a"), tuple("b")]),
-      { wrapper: wrapperFor(client) },
+      { wrapper: live.Wrapper },
     );
-    spyNotifications();
+    spyNotifications(live.notifications);
     expect(result.current.map((r) => r.status)).toEqual(["loading", "loading"]);
     expect(pendingMountSnapshot().pending - before).toBe(2);
 
     act(() => {
-      client.setQueryData(queryKeyFor(d.key, tuple("b")), [2]);
+      live.queryClient.setQueryData(queryKeyFor(d.key, tuple("b")), [2]);
     });
     await waitFor(() =>
       expect(result.current.map((r) => r.status)).toEqual(["loading", "ready"]),
@@ -309,21 +288,21 @@ describe("useResources", () => {
       if (r.key === d.key) reports.push(r);
     });
     try {
-      const client = makeClient();
+      const live = createLiveStateHarness();
       const { result, rerender } = renderHook(
         () => useResources(d, [tuple("a"), tuple("b")]),
-        { wrapper: wrapperFor(client) },
+        { wrapper: live.Wrapper },
       );
-      spyNotifications();
+      spyNotifications(live.notifications);
       expect(reports).toEqual([]);
       act(() => {
-        client.setQueryData(queryKeyFor(d.key, tuple("b")), [2]);
+        live.queryClient.setQueryData(queryKeyFor(d.key, tuple("b")), [2]);
       });
       await waitFor(() => expect(result.current[1]!.status).toBe("ready"));
       expect(reports.map((r) => r.params)).toEqual([tuple("b")]);
       act(() => {
-        client.setQueryData(queryKeyFor(d.key, tuple("a")), [1]);
-        client.setQueryData(queryKeyFor(d.key, tuple("b")), [3]);
+        live.queryClient.setQueryData(queryKeyFor(d.key, tuple("a")), [1]);
+        live.queryClient.setQueryData(queryKeyFor(d.key, tuple("b")), [3]);
       });
       await waitFor(() => expect(result.current[0]!.status).toBe("ready"));
       rerender();

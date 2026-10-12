@@ -11,11 +11,18 @@ import {
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
-import { automationsCatalog, automationTasks } from "../../core";
+import {
+  automationOrigins,
+  automationsCatalog,
+  type AutomationOriginRow,
+} from "../../core";
 
-// Every filing the collection holds, so the list can name an origin for EVERY
-// task row (see the collection's note on its bound).
-const ORIGIN_WINDOW = 2000;
+// Stable (module-level), so the `select` re-runs only when the set changes.
+function toOriginMap(
+  rows: readonly AutomationOriginRow[],
+): ReadonlyMap<string, string> {
+  return new Map(rows.map((r) => [r.taskId, r.automationId]));
+}
 
 // The value of a task no automation filed: a person (or an agent acting for
 // one) did.
@@ -32,7 +39,9 @@ const BY_HAND = "by-hand";
  * about the task that then reverses.
  */
 export function OriginField({ render }: FieldExtensionProps<TaskListItem>) {
-  const filings = useLive(automationTasks, { limit: ORIGIN_WINDOW });
+  // Every task's automation, from the whole origin set, so the list can name
+  // an origin for EVERY task row.
+  const filings = useLive(automationOrigins, { select: toOriginMap });
   const catalog = useLive(automationsCatalog);
   const result = useMemo(
     () => combineResources({ filings, catalog }),
@@ -46,9 +55,7 @@ export function OriginField({ render }: FieldExtensionProps<TaskListItem>) {
       error: () => null,
       ready: (d) => d,
     });
-    const originOf = known
-      ? new Map(known.filings.map((f) => [f.taskId, f.automationId]))
-      : null;
+    const originOf = known ? known.filings : null;
     const labelOf = new Map((known?.catalog ?? []).map((a) => [a.id, a.label]));
     const valueOf = (t: TaskListItem) =>
       originOf === null ? null : (originOf.get(t.id) ?? BY_HAND);

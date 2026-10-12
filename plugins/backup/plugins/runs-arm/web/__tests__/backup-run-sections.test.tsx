@@ -7,12 +7,9 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 }));
 
 import { cleanup, render, screen } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import {
-  NotificationsProvider,
-  queryKeyFor,
-} from "@plugins/primitives/plugins/live-state/web";
+import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
+import { createLiveStateHarness } from "@plugins/primitives/plugins/live-state/web/testing";
 import { authState } from "@plugins/auth/core";
 import type { RunRow } from "@plugins/runs/core";
 import {
@@ -116,20 +113,11 @@ function backupRun(overrides: Record<string, unknown> = {}): RunRow {
  * pressed.
  */
 function renderSection(node: ReactNode): void {
-  const client = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
-  client.setQueryData(queryKeyFor(authState.key, undefined), {
+  const live = createLiveStateHarness();
+  live.queryClient.setQueryData(queryKeyFor(authState.key, undefined), {
     providers: {},
   });
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>
-      {children}
-    </NotificationsProvider>
-  );
-  render(<>{node}</>, { wrapper });
+  render(<>{node}</>, { wrapper: live.Wrapper });
 }
 
 afterEach(cleanup);

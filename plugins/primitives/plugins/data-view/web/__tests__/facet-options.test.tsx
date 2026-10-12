@@ -1,7 +1,7 @@
 /**
  * A live source's facets (`liveDataSource({ facets })`): each facet column's
  * values, read live as a grouping, handed to the field over that column as its
- * `optionsResult` — over a real NotificationsProvider + QueryClient, the
+ * `optionsResult` — over `createLiveStateHarness` (a real client and its QueryClient), the
  * grouping tuple read back from the query cache.
  *
  * - declaration: a facet must be a declared text column, read by a field that
@@ -28,14 +28,15 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import {
-  NotificationsProvider,
   ResourceError,
-  getNotificationsClient,
   queryKeyFor,
 } from "@plugins/primitives/plugins/live-state/web";
+import {
+  createLiveStateHarness,
+  type LiveStateHarness,
+} from "@plugins/primitives/plugins/live-state/web/testing";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import {
   liveBoolean,
@@ -95,14 +96,6 @@ const fieldsOf = (): FieldDef<Report>[] => [
   { id: "noise", label: "Noise", type: "bool", value: (r) => r.noise },
 ];
 
-function makeClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
-}
-
 /** The grouping tuple a facet over `column` reads (max limit, scope as `where`). */
 const groupsKey = (c: C, column: "kind" | "source") =>
   queryKeyFor(
@@ -114,10 +107,11 @@ const groupsKey = (c: C, column: "kind" | "source") =>
   );
 
 /** Mount the facet overlay; `latest()` is the schema it last handed down. */
-function mount(client: QueryClient, source: LiveDataSource<Report>) {
+function mount(live: LiveStateHarness, source: LiveDataSource<Report>) {
   let latest: FieldDef<unknown>[] = [];
+  vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
   const view = (s: LiveDataSource<Report>) => (
-    <NotificationsProvider queryClient={client}>
+    <live.Wrapper>
       <CollectFacetOptions
         source={s as LiveDataSource<unknown>}
         fields={fieldsOf() as FieldDef<unknown>[]}
@@ -128,18 +122,15 @@ function mount(client: QueryClient, source: LiveDataSource<Report>) {
           return null;
         }}
       </CollectFacetOptions>
-    </NotificationsProvider>
+    </live.Wrapper>
   );
   const rendered = render(view(source));
-  const notifications = getNotificationsClient();
-  if (!notifications) throw new Error("NotificationsClient not created");
-  vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
   return {
     optionsOf: (id: string) =>
       latest.find((f) => f.id === id)!.optionsResult as
         FieldOptionsResult | undefined,
     rerender: (s: LiveDataSource<Report>) => rendered.rerender(view(s)),
-    notifications,
+    notifications: live.notifications,
   };
 }
 
@@ -233,9 +224,10 @@ describe("facetOptionsResult", () => {
 describe("CollectFacetOptions", () => {
   it("is loading until the grouping settles, then value-sorted options that stay put across a count change", async () => {
     const c = reports();
-    const client = makeClient();
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
     const source = liveDataSource(c, { searchable: [], facets: ["kind"] });
-    const { optionsOf } = mount(client, source);
+    const { optionsOf } = mount(live, source);
 
     expect(optionsOf("kind")).toEqual({ status: "loading" });
     // A field over no facet is untouched.
@@ -288,9 +280,10 @@ describe("CollectFacetOptions", () => {
 
   it("reads the grouping over the scope, and nothing while the scope is awaited", async () => {
     const c = reports();
-    const client = makeClient();
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
     const all = liveDataSource(c, { searchable: [], facets: ["kind"] });
-    const { optionsOf, rerender } = mount(client, all.awaitingScope(["noise"]));
+    const { optionsOf, rerender } = mount(live, all.awaitingScope(["noise"]));
     const groupTuples = () =>
       client
         .getQueryCache()
@@ -324,9 +317,10 @@ describe("CollectFacetOptions", () => {
 
   it("a failed grouping is the error arm, and its Retry re-reads it", async () => {
     const c = reports();
-    const client = makeClient();
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
     const source = liveDataSource(c, { searchable: [], facets: ["kind"] });
-    const { optionsOf, notifications } = mount(client, source);
+    const { optionsOf, notifications } = mount(live, source);
     const fetch = vi
       .spyOn(notifications, "fetchOverHttp")
       .mockRejectedValueOnce(new Error("boom"));

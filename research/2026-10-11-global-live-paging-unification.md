@@ -259,7 +259,7 @@ That task is re-planned on top of this plan.
   - the one-frame duplicate or gap across pages;
   - the `NotificationsClient` binding;
   - verifying the list, gallery and tree views;
-  - `DERIVE_MAX_SOURCES`, defined twice (`runtime.ts:1189`, `notifications-client.ts:237`).
+  - `DERIVE_MAX_SOURCES`, defined twice (once in `resource-runtime/core/runtime.ts`, once in `live-state/web/notifications-client.ts`) — *done: one definition in `packages/resource-protocol/core/internal/frames.ts`, part of the hashed frame vocabulary (research/2026-10-12-global-live-paging-followups.md §1.2).*
 - **Seeding the first split after boot.** A boot-hydrated page 0 has `appliedSeq` 0, so `seedOf` refuses it.
 - **A DataView source over a paged value,** which needs filterable and text-column seams that values do not have (`data-view/web/internal/live-data-source.ts:26-60`).
 

@@ -1,7 +1,7 @@
 /**
- * useLive / useLiveRow over a real NotificationsProvider + QueryClient (the
+ * useLive / useLiveRow over `createLiveStateHarness` (a real client and its QueryClient) (the
  * live-state use-resource-error-gate.test.tsx harness): authoritative values
- * are driven with `client.setQueryData` on the exact tuple the codec encodes,
+ * are driven with `queryClient.setQueryData` on the exact tuple the codec encodes,
  * the same call a WS sub-ack makes.
  */
 
@@ -12,17 +12,19 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 }));
 
 import { renderHook, waitFor, act } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
 import { type ReactNode } from "react";
 import { z } from "zod";
 import {
   NotificationsProvider,
-  getNotificationsClient,
   hydrateResource,
   pendingMountSnapshot,
   queryKeyFor,
 } from "@plugins/primitives/plugins/live-state/web";
-import { NotificationsClient } from "@plugins/primitives/plugins/live-state/web/testing";
+import {
+  NotificationsClient,
+  createLiveStateHarness,
+  type LiveStateHarness,
+} from "@plugins/primitives/plugins/live-state/web/testing";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import {
   liveBoolean,
@@ -53,34 +55,19 @@ function collection() {
 const rows = (count: number): Row[] =>
   Array.from({ length: count }, (_, i) => ({ id: `r${i}`, n: i, on: true }));
 
-function makeClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
-}
-
-function mount<R>(client: QueryClient, useHook: () => R) {
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>
-      {children}
-    </NotificationsProvider>
-  );
-  const rendered = renderHook(useHook, { wrapper });
-  const notifications = getNotificationsClient();
-  if (!notifications) throw new Error("NotificationsClient not created");
-  vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
-  return { ...rendered, notifications };
+function mount<R>(live: LiveStateHarness, useHook: () => R) {
+  vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
+  const rendered = renderHook(useHook, { wrapper: live.Wrapper });
+  return { ...rendered, notifications: live.notifications };
 }
 
 describe("useLive — window", () => {
   it("the default read subscribes on the declaration's default tuple and reports canGrow on a full window", async () => {
     const c = collection();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
 
-    const { result } = mount(client, () => useLive(c));
+    const { result } = mount(live, () => useLive(c));
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const r = result.current;
     if (r.status !== "ready") throw new Error("unreachable");
@@ -91,12 +78,12 @@ describe("useLive — window", () => {
 
   it("a filtered, sorted query subscribes on its canonical tuple", () => {
     const c = collection();
-    const client = makeClient();
-    mount(client, () =>
+    const live = createLiveStateHarness();
+    mount(live, () =>
       useLive(c, { where: { on: true }, orderBy: [["n", "desc"]], limit: 3 }),
     );
     expect(
-      client.getQueryState(
+      live.queryClient.getQueryState(
         queryKeyFor(c.key, {
           limit: "3",
           order: '[["n","desc"]]',
@@ -108,8 +95,8 @@ describe("useLive — window", () => {
 
   it("an or tree subscribes on its canonical tuple — the same one for any spelling", () => {
     const c = collection();
-    const client = makeClient();
-    mount(client, () =>
+    const live = createLiveStateHarness();
+    mount(live, () =>
       useLive(c, {
         where: or(
           { column: "id", op: "gt", operand: "r3" },
@@ -117,7 +104,7 @@ describe("useLive — window", () => {
         ),
       }),
     );
-    mount(client, () =>
+    mount(live, () =>
       useLive(c, {
         where: or(
           { column: "on", op: "eq", operand: false },
@@ -130,9 +117,9 @@ describe("useLive — window", () => {
       where:
         '{"or":[{"column":"id","op":"gt","operand":"r3"},{"column":"on","op":"eq","operand":false}]}',
     });
-    expect(client.getQueryState(key)).toBeDefined();
+    expect(live.queryClient.getQueryState(key)).toBeDefined();
     expect(
-      client
+      live.queryClient
         .getQueryCache()
         .findAll()
         .filter((q) => (q.queryKey as unknown[])[0] === c.key),
@@ -141,10 +128,10 @@ describe("useLive — window", () => {
 
   it("loadMore stays settled on the previous rows while the grown window loads, then settles on it; canGrow ends at maxLimit", async () => {
     const c = collection();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
 
-    const { result } = mount(client, () => useLive(c));
+    const { result } = mount(live, () => useLive(c));
     await waitFor(() => expect(result.current.status).toBe("ready"));
 
     act(() => {
@@ -160,7 +147,10 @@ describe("useLive — window", () => {
     expect(mid.canGrow).toBe(false);
 
     act(() => {
-      client.setQueryData(queryKeyFor(c.key, { limit: "4" }), rows(4));
+      live.queryClient.setQueryData(
+        queryKeyFor(c.key, { limit: "4" }),
+        rows(4),
+      );
     });
     await waitFor(() => {
       const r = result.current;
@@ -177,7 +167,10 @@ describe("useLive — window", () => {
       grown.loadMore();
     });
     act(() => {
-      client.setQueryData(queryKeyFor(c.key, { limit: "5" }), rows(5));
+      live.queryClient.setQueryData(
+        queryKeyFor(c.key, { limit: "5" }),
+        rows(5),
+      );
     });
     await waitFor(() => {
       const r = result.current;
@@ -192,9 +185,9 @@ describe("useLive — window", () => {
 
   it("a short window cannot grow", async () => {
     const c = collection();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(1));
-    const { result } = mount(client, () => useLive(c));
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(1));
+    const { result } = mount(live, () => useLive(c));
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const r = result.current;
     if (r.status !== "ready") throw new Error("unreachable");
@@ -207,16 +200,16 @@ describe("useLive — window", () => {
 describe("useLive — result identity", () => {
   it("a settled window keeps its result and loadMore across a re-render that changes nothing — inline queries included", async () => {
     const c = collection();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
-    client.setQueryData(
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
+    live.queryClient.setQueryData(
       queryKeyFor(c.key, {
         limit: "2",
         where: '{"column":"on","op":"eq","operand":true}',
       }),
       rows(2),
     );
-    const { result, rerender } = mount(client, () => ({
+    const { result, rerender } = mount(live, () => ({
       all: useLive(c),
       on: useLive(c, { where: { on: true } }),
     }));
@@ -239,23 +232,23 @@ describe("useLive — result identity", () => {
 
   it("a push of deep-equal rows keeps the result; a push that changes them yields a new one", async () => {
     const c = collection();
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const key = queryKeyFor(c.key, { limit: "2" });
-    client.setQueryData(key, rows(2));
-    const { result } = mount(client, () => useLive(c));
+    live.queryClient.setQueryData(key, rows(2));
+    const { result } = mount(live, () => useLive(c));
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const first = result.current;
     if (first.status !== "ready") throw new Error("unreachable");
 
     // A fresh array with the same rows: structural sharing keeps `data`.
     act(() => {
-      client.setQueryData(key, rows(2));
+      live.queryClient.setQueryData(key, rows(2));
     });
     expect(result.current).toBe(first);
 
     const changed = [rows(2)[0]!, { id: "r1", n: 1, on: false }];
     act(() => {
-      client.setQueryData(key, changed);
+      live.queryClient.setQueryData(key, changed);
     });
     await waitFor(() => expect(result.current).not.toBe(first));
     const next = result.current;
@@ -268,9 +261,9 @@ describe("useLive — result identity", () => {
 
   it("a grow is settled on the previous rows (stable while it loads), then settles on the larger window with a new loadMore", async () => {
     const c = collection();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
-    const { result, rerender } = mount(client, () => useLive(c));
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
+    const { result, rerender } = mount(live, () => useLive(c));
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const first = result.current;
     if (first.status !== "ready") throw new Error("unreachable");
@@ -286,7 +279,10 @@ describe("useLive — result identity", () => {
     expect(result.current).toBe(mid);
 
     act(() => {
-      client.setQueryData(queryKeyFor(c.key, { limit: "4" }), rows(4));
+      live.queryClient.setQueryData(
+        queryKeyFor(c.key, { limit: "4" }),
+        rows(4),
+      );
     });
     await waitFor(() => {
       const r = result.current;
@@ -308,10 +304,13 @@ describe("useLive — result identity", () => {
     const v = liveValue(`test.use-live.value.${seq++}`, {
       schema: z.object({ n: z.number() }),
     });
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(`${c.key}:rows`, { ids: "r0" }), rows(1));
-    client.setQueryData(queryKeyFor(v.key, {}), { n: 1 });
-    const { result, rerender } = mount(client, () => ({
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(
+      queryKeyFor(`${c.key}:rows`, { ids: "r0" }),
+      rows(1),
+    );
+    live.queryClient.setQueryData(queryKeyFor(v.key, {}), { n: 1 });
+    const { result, rerender } = mount(live, () => ({
       set: useLive(c, { ids: ["r0"] }),
       value: useLive(v),
     }));
@@ -335,13 +334,13 @@ describe("useLive — groupBy", () => {
 
   it("subscribes on the :groups tuple and goes loading → settled with paging handles", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result } = mount(client, () =>
+    const live = createLiveStateHarness();
+    const { result } = mount(live, () =>
       useLive(c, { groupBy: "on", limit: 2 }),
     );
     expect(result.current.status).toBe("loading");
     act(() => {
-      client.setQueryData(
+      live.queryClient.setQueryData(
         queryKeyFor(`${c.key}:groups`, { groupBy: "on", limit: "2" }),
         groups(2),
       );
@@ -359,10 +358,10 @@ describe("useLive — groupBy", () => {
 
   it("a where rides in the canonical group tuple", () => {
     const c = collection();
-    const client = makeClient();
-    mount(client, () => useLive(c, { groupBy: "on", where: { on: true } }));
+    const live = createLiveStateHarness();
+    mount(live, () => useLive(c, { groupBy: "on", where: { on: true } }));
     expect(
-      client.getQueryState(
+      live.queryClient.getQueryState(
         queryKeyFor(`${c.key}:groups`, {
           groupBy: "on",
           limit: "50",
@@ -374,12 +373,12 @@ describe("useLive — groupBy", () => {
 
   it("loadMore stays settled on the previous groups while the grown tuple loads", async () => {
     const c = collection();
-    const client = makeClient();
-    client.setQueryData(
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(
       queryKeyFor(`${c.key}:groups`, { groupBy: "on", limit: "2" }),
       groups(2),
     );
-    const { result } = mount(client, () =>
+    const { result } = mount(live, () =>
       useLive(c, { groupBy: "on", limit: 2 }),
     );
     await waitFor(() => expect(result.current.status).toBe("ready"));
@@ -396,7 +395,7 @@ describe("useLive — groupBy", () => {
 
     // One default group page (50) past 2, clamped to the group max (100).
     act(() => {
-      client.setQueryData(
+      live.queryClient.setQueryData(
         queryKeyFor(`${c.key}:groups`, { groupBy: "on", limit: "52" }),
         groups(3),
       );
@@ -414,15 +413,15 @@ describe("useLive — groupBy", () => {
 
   it("rejects an orderBy and a non-filterable column at the type level", () => {
     const c = collection();
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const ordered = { groupBy: "on", orderBy: [["n", "asc"]] } as const;
     const unfilterable = { groupBy: "n" } as const;
     // @ts-expect-error — a grouping has a fixed order
     const useOrdered = () => useLive(c, ordered);
     // @ts-expect-error — `n` is sortable but not filterable
     const useUnfilterable = () => useLive(c, unfilterable);
-    expect(() => mount(client, useOrdered)).toThrow(/fixed order/);
-    expect(() => mount(client, useUnfilterable)).toThrow(
+    expect(() => mount(live, useOrdered)).toThrow(/fixed order/);
+    expect(() => mount(live, useUnfilterable)).toThrow(
       /not a filterable column/,
     );
   });
@@ -431,12 +430,12 @@ describe("useLive — groupBy", () => {
 describe("useLive — ids", () => {
   it("an id set reads the :rows sibling on its canonical tuple, with no paging fields", async () => {
     const c = collection();
-    const client = makeClient();
-    client.setQueryData(
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(
       queryKeyFor(`${c.key}:rows`, { ids: "r0,r1" }),
       rows(2),
     );
-    const { result } = mount(client, () => useLive(c, { ids: ["r1", "r0"] }));
+    const { result } = mount(live, () => useLive(c, { ids: ["r1", "r0"] }));
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const r = result.current;
     if (r.status !== "ready") throw new Error("unreachable");
@@ -448,11 +447,14 @@ describe("useLive — ids", () => {
 describe("useLiveRow", () => {
   it("goes loading → found", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result } = mount(client, () => useLiveRow(c, "r0"));
+    const live = createLiveStateHarness();
+    const { result } = mount(live, () => useLiveRow(c, "r0"));
     expect(result.current.status).toBe("loading");
     act(() => {
-      client.setQueryData(queryKeyFor(`${c.key}:rows`, { ids: "r0" }), rows(1));
+      live.queryClient.setQueryData(
+        queryKeyFor(`${c.key}:rows`, { ids: "r0" }),
+        rows(1),
+      );
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(result.current).toMatchObject({
@@ -464,11 +466,14 @@ describe("useLiveRow", () => {
 
   it("goes loading → not found when the server answers with no row", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result } = mount(client, () => useLiveRow(c, "nope"));
+    const live = createLiveStateHarness();
+    const { result } = mount(live, () => useLiveRow(c, "nope"));
     expect(result.current.status).toBe("loading");
     act(() => {
-      client.setQueryData(queryKeyFor(`${c.key}:rows`, { ids: "nope" }), []);
+      live.queryClient.setQueryData(
+        queryKeyFor(`${c.key}:rows`, { ids: "nope" }),
+        [],
+      );
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(result.current).toMatchObject({
@@ -479,12 +484,12 @@ describe("useLiveRow", () => {
 
   it("a null id is not found on the first render, reads nothing, and is not a pending mount", () => {
     const c = collection();
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const observe = vi.spyOn(NotificationsClient.prototype, "observe");
     // Other suites' mounts may still be counted: measure the difference.
     const before = pendingMountSnapshot().pending;
     const seen: LiveRowResult<Row>[] = [];
-    const { unmount } = mount(client, () => {
+    const { unmount } = mount(live, () => {
       const r = useLiveRow(c, null);
       seen.push(r);
       return r;
@@ -508,10 +513,10 @@ describe("useLiveRow", () => {
     "an id the point codec cannot carry (%s) is not found, reads nothing, and does not throw",
     (_label, id) => {
       const c = collection();
-      const client = makeClient();
+      const live = createLiveStateHarness();
       const observe = vi.spyOn(NotificationsClient.prototype, "observe");
       const seen: LiveRowResult<Row>[] = [];
-      const { unmount } = mount(client, () => {
+      const { unmount } = mount(live, () => {
         const r = useLiveRow(c, id);
         seen.push(r);
         return r;
@@ -529,11 +534,14 @@ describe("useLiveRow", () => {
 
   it("an id switched to null is not found on that very render; switched back, it reads the row", async () => {
     const c = collection();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(`${c.key}:rows`, { ids: "r0" }), rows(1));
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(
+      queryKeyFor(`${c.key}:rows`, { ids: "r0" }),
+      rows(1),
+    );
     let id: string | null = "r0";
     const seen: LiveRowResult<Row>[] = [];
-    const { result, rerender } = mount(client, () => {
+    const { result, rerender } = mount(live, () => {
       const r = useLiveRow(c, id);
       seen.push(r);
       return r;
@@ -563,14 +571,20 @@ describe("useLiveRow", () => {
 
   it("a failed load is the error arm, keeping the last row as `stale` — and no stale row when it was absent", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result, notifications } = mount(client, () => ({
+    const live = createLiveStateHarness();
+    const { result, notifications } = mount(live, () => ({
       hit: useLiveRow(c, "r0"),
       miss: useLiveRow(c, "nope"),
     }));
     act(() => {
-      client.setQueryData(queryKeyFor(`${c.key}:rows`, { ids: "r0" }), rows(1));
-      client.setQueryData(queryKeyFor(`${c.key}:rows`, { ids: "nope" }), []);
+      live.queryClient.setQueryData(
+        queryKeyFor(`${c.key}:rows`, { ids: "r0" }),
+        rows(1),
+      );
+      live.queryClient.setQueryData(
+        queryKeyFor(`${c.key}:rows`, { ids: "nope" }),
+        [],
+      );
     });
     await waitFor(() => {
       expect(result.current.hit.status).toBe("ready");
@@ -582,7 +596,7 @@ describe("useLiveRow", () => {
       .spyOn(notifications, "fetchOverHttp")
       .mockRejectedValue(new Error("late"));
     await act(async () => {
-      await client.refetchQueries({ queryKey: [`${c.key}:rows`] });
+      await live.queryClient.refetchQueries({ queryKey: [`${c.key}:rows`] });
     });
     fetch.mockRestore();
 
@@ -603,16 +617,16 @@ describe("useLiveRow", () => {
 
   it("keeps its result across a re-render and a deep-equal push; a changed row yields a new one", async () => {
     const c = collection();
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const key = queryKeyFor(`${c.key}:rows`, { ids: "r0" });
-    const { result, rerender } = mount(client, () => ({
+    const { result, rerender } = mount(live, () => ({
       hit: useLiveRow(c, "r0"),
       loading: useLiveRow(c, "later"),
       absent: useLiveRow(c, null),
     }));
     const { loading, absent } = result.current;
     act(() => {
-      client.setQueryData(key, rows(1));
+      live.queryClient.setQueryData(key, rows(1));
     });
     await waitFor(() => expect(result.current.hit.status).toBe("ready"));
     const hit = result.current.hit;
@@ -625,13 +639,13 @@ describe("useLiveRow", () => {
 
     // A fresh array with the same row: structural sharing keeps the row.
     act(() => {
-      client.setQueryData(key, rows(1));
+      live.queryClient.setQueryData(key, rows(1));
     });
     expect(result.current.hit).toBe(hit);
 
     const changed = { id: "r0", n: 0, on: false };
     act(() => {
-      client.setQueryData(key, [changed]);
+      live.queryClient.setQueryData(key, [changed]);
     });
     await waitFor(() => expect(result.current.hit).not.toBe(hit));
     expect(result.current.hit).toMatchObject({
@@ -648,14 +662,17 @@ describe("a lookup-only collection", () => {
 
   it("useLiveRow and an id set read its :rows sibling", async () => {
     const c = lookup();
-    const client = makeClient();
-    const { result } = mount(client, () => ({
+    const live = createLiveStateHarness();
+    const { result } = mount(live, () => ({
       row: useLiveRow(c, "r0"),
       set: useLive(c, { ids: ["r0"] }),
     }));
     expect(result.current.row.status).toBe("loading");
     act(() => {
-      client.setQueryData(queryKeyFor(`${c.key}:rows`, { ids: "r0" }), rows(1));
+      live.queryClient.setQueryData(
+        queryKeyFor(`${c.key}:rows`, { ids: "r0" }),
+        rows(1),
+      );
     });
     await waitFor(() => expect(result.current.row.status).toBe("ready"));
     expect(result.current.row).toMatchObject({
@@ -686,11 +703,14 @@ const Unread = z.object({ errors: z.number(), warnings: z.number() });
 describe("useLive — value", () => {
   it("goes loading → settled on the param-less tuple", async () => {
     const v = liveValue(`test.use-live.value.${seq++}`, { schema: Unread });
-    const client = makeClient();
-    const { result } = mount(client, () => useLive(v));
+    const live = createLiveStateHarness();
+    const { result } = mount(live, () => useLive(v));
     expect(result.current.status).toBe("loading");
     act(() => {
-      client.setQueryData(queryKeyFor(v.key, {}), { errors: 1, warnings: 2 });
+      live.queryClient.setQueryData(queryKeyFor(v.key, {}), {
+        errors: 1,
+        warnings: 2,
+      });
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const r = result.current;
@@ -703,12 +723,12 @@ describe("useLive — value", () => {
       schema: Unread,
       params: ["scope"],
     });
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(v.key, { scope: "a" }), {
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(v.key, { scope: "a" }), {
       errors: 0,
       warnings: 5,
     });
-    const { result } = mount(client, () => useLive(v, { scope: "a" }));
+    const { result } = mount(live, () => useLive(v, { scope: "a" }));
     await waitFor(() => expect(result.current.status).toBe("ready"));
   });
 
@@ -718,14 +738,14 @@ describe("useLive — value", () => {
       preload: "boot",
     });
     expect(v.defaultParams).toEqual({});
-    const client = makeClient();
+    const live = createLiveStateHarness();
     // What the boot task does before first paint: seed the default tuple.
-    client.setQueryData(queryKeyFor(v.key, v.defaultParams!), {
+    live.queryClient.setQueryData(queryKeyFor(v.key, v.defaultParams!), {
       errors: 3,
       warnings: 0,
     });
     const seen: string[] = [];
-    mount(client, () => {
+    mount(live, () => {
       const r = useLive(v);
       seen.push(r.status);
       return r;
@@ -735,9 +755,9 @@ describe("useLive — value", () => {
 
   it("no placeholder: a never-loaded value makes no HTTP fetch on mount (the WS fills it)", () => {
     const v = liveValue(`test.use-live.value.${seq++}`, { schema: Unread });
-    const client = makeClient();
-    mount(client, () => useLive(v));
-    const state = client.getQueryState(queryKeyFor(v.key, {}));
+    const live = createLiveStateHarness();
+    mount(live, () => useLive(v));
+    const state = live.queryClient.getQueryState(queryKeyFor(v.key, {}));
     expect(state?.data).toBeUndefined();
     expect(state?.dataUpdatedAt).toBe(0);
     expect(state?.fetchStatus).toBe("idle");
@@ -752,22 +772,25 @@ describe("useLive — value", () => {
       schema: Unread,
       preload: "boot",
     });
-    const client = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false, staleTime: Infinity, gcTime: 5 },
-      },
-    });
+    const live = createLiveStateHarness({ queries: { gcTime: 5 } });
     for (const v of [kept, plain]) {
-      client.setQueryData(queryKeyFor(v.key, {}), { errors: 0, warnings: 0 });
+      live.queryClient.setQueryData(queryKeyFor(v.key, {}), {
+        errors: 0,
+        warnings: 0,
+      });
     }
-    const a = mount(client, () => useLive(kept));
-    const b = mount(client, () => useLive(plain));
+    const a = mount(live, () => useLive(kept));
+    const b = mount(live, () => useLive(plain));
     a.unmount();
     b.unmount();
     await waitFor(() =>
-      expect(client.getQueryState(queryKeyFor(plain.key, {}))).toBeUndefined(),
+      expect(
+        live.queryClient.getQueryState(queryKeyFor(plain.key, {})),
+      ).toBeUndefined(),
     );
-    expect(client.getQueryState(queryKeyFor(kept.key, {}))?.data).toEqual({
+    expect(
+      live.queryClient.getQueryState(queryKeyFor(kept.key, {}))?.data,
+    ).toEqual({
       errors: 0,
       warnings: 0,
     });
@@ -778,11 +801,11 @@ describe("useLive — value", () => {
       schema: Unread,
       params: ["id"],
     });
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const observe = vi.spyOn(NotificationsClient.prototype, "observe");
     const before = pendingMountSnapshot().pending;
     let id: string | null = null;
-    const { result, rerender } = mount(client, () =>
+    const { result, rerender } = mount(live, () =>
       useLive(v, id === null ? null : { id }),
     );
     expect(result.current).toMatchObject({ status: "loading" });
@@ -791,7 +814,7 @@ describe("useLive — value", () => {
     // The skipped query can never fetch: refetch is a no-op.
     await result.current.refetch();
     expect(
-      client
+      live.queryClient
         .getQueryCache()
         .findAll({ queryKey: [v.key] })
         .every((q) => q.state.fetchStatus === "idle"),
@@ -806,7 +829,7 @@ describe("useLive — value", () => {
     ).toEqual([{ id: "a" }]);
     observe.mockRestore();
     act(() => {
-      client.setQueryData(queryKeyFor(v.key, { id: "a" }), {
+      live.queryClient.setQueryData(queryKeyFor(v.key, { id: "a" }), {
         errors: 1,
         warnings: 0,
       });
@@ -819,14 +842,14 @@ describe("useLive — value", () => {
       schema: Unread,
       params: ["path", "scopeId?"],
     });
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const observe = vi.spyOn(NotificationsClient.prototype, "observe");
     // Seeded under the canonical `{ path }` — every spelling reads it.
-    client.setQueryData(queryKeyFor(v.key, { path: "p" }), {
+    live.queryClient.setQueryData(queryKeyFor(v.key, { path: "p" }), {
       errors: 7,
       warnings: 0,
     });
-    const { result } = mount(client, () => [
+    const { result } = mount(live, () => [
       useLive(v, { path: "p" }),
       useLive(v, { path: "p", scopeId: undefined }),
       useLive(v, { path: "p", scopeId: "" }),
@@ -936,11 +959,14 @@ describe("useLive — value", () => {
 describe("status arms", () => {
   it("a window goes loading → ready", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result } = mount(client, () => useLive(c));
+    const live = createLiveStateHarness();
+    const { result } = mount(live, () => useLive(c));
     expect(result.current.status).toBe("loading");
     act(() => {
-      client.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
+      live.queryClient.setQueryData(
+        queryKeyFor(c.key, { limit: "2" }),
+        rows(2),
+      );
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(result.current.status).toBe("ready");
@@ -948,9 +974,9 @@ describe("status arms", () => {
 
   it("a grow that fails is the error arm, with the window it grew from as `stale`", async () => {
     const c = collection();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
-    const { result } = mount(client, () => useLive(c));
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
+    const { result } = mount(live, () => useLive(c));
     await waitFor(() => expect(result.current.status).toBe("ready"));
 
     act(() => {
@@ -965,7 +991,7 @@ describe("status arms", () => {
     // placeholder-less window query is disabled until its first value, so
     // `refetchQueries` would skip it.
     await act(async () => {
-      await client.prefetchQuery({
+      await live.queryClient.prefetchQuery({
         queryKey: queryKeyFor(c.key, { limit: "4" }),
         queryFn: () => Promise.reject(new Error("grow failed")),
         staleTime: 0,
@@ -980,7 +1006,10 @@ describe("status arms", () => {
 
     // Retrying the grown window recovers it.
     act(() => {
-      client.setQueryData(queryKeyFor(c.key, { limit: "4" }), rows(4));
+      live.queryClient.setQueryData(
+        queryKeyFor(c.key, { limit: "4" }),
+        rows(4),
+      );
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const grown = result.current;
@@ -990,8 +1019,8 @@ describe("status arms", () => {
 
   it("useLiveRow carries refetch on every arm; refetch from the error arm recovers", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result, notifications } = mount(client, () => useLiveRow(c, "r0"));
+    const live = createLiveStateHarness();
+    const { result, notifications } = mount(live, () => useLiveRow(c, "r0"));
     expect(result.current.status).toBe("loading");
     expect(typeof result.current.refetch).toBe("function");
 
@@ -1024,11 +1053,11 @@ describe("useLive — a scroll collection's window", () => {
       maxLimit: 6,
       scroll: true,
     });
-    const client = makeClient();
-    const { result, notifications } = mount(client, () => useLive(c));
+    const live = createLiveStateHarness();
+    const { result, notifications } = mount(live, () => useLive(c));
     const keyed = rows(2).map((r) => ({ ...r, $key: `["${r.n}","${r.id}"]` }));
     act(() => {
-      client.setQueryData(queryKeyFor(c.key, { limit: "2" }), keyed);
+      live.queryClient.setQueryData(queryKeyFor(c.key, { limit: "2" }), keyed);
     });
     await waitFor(() =>
       expect(result.current).toMatchObject({ status: "ready", data: rows(2) }),
@@ -1038,7 +1067,7 @@ describe("useLive — a scroll collection's window", () => {
       .spyOn(notifications, "fetchOverHttp")
       .mockRejectedValue(new Error("late"));
     await act(async () => {
-      await client.refetchQueries({ queryKey: [c.key] });
+      await live.queryClient.refetchQueries({ queryKey: [c.key] });
     });
     fetch.mockRestore();
     await waitFor(() => expect(result.current.status).toBe("error"));

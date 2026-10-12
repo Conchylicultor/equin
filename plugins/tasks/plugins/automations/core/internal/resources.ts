@@ -46,15 +46,11 @@ export const AutomationTaskRowSchema = taskOriginShape.schema;
 export type AutomationTaskRow = z.infer<typeof AutomationTaskRowSchema>;
 
 /**
- * The tasks automations filed, newest first. One automation's history is
+ * The tasks automations filed, newest first — an automation's HISTORY:
  * `useLive(automationTasks, { where: { automationId } })`; one task's origin is
  * `useLiveRow(automationTasks, taskId)` (`found: false` ⇒ not an automation's).
- *
- * The task list's Automation field reads the whole window (up to `maxLimit`),
- * since it needs an origin for EVERY task row: naming every task id would be
- * O(tasks), while what is bounded here is the set of automated tasks (the
- * `task-tracks` reasoning). Past `maxLimit` rows, the oldest-filed read as
- * filed by a person in the LIST only — the single-task reads stay exact.
+ * A surface that needs an origin for EVERY task reads `automationOrigins`
+ * instead, never this window as a set.
  */
 export const automationTasks = liveCollection("automations.tasks", {
   row: AutomationTaskRowSchema,
@@ -63,6 +59,33 @@ export const automationTasks = liveCollection("automations.tasks", {
   sortable: ["filedAt"],
   default: { orderBy: [["filedAt", "desc"]], limit: 50 },
   maxLimit: 2000,
+});
+
+export const AutomationOriginRowSchema = AutomationTaskRowSchema.pick({
+  taskId: true,
+  automationId: true,
+});
+export type AutomationOriginRow = z.infer<typeof AutomationOriginRowSchema>;
+
+/**
+ * Which automation filed or launched each task, as the WHOLE ordered set
+ * (`all`) of the same `tasks_ext_origin` rows, projected to `{ taskId,
+ * automationId }`: the task list's Automation field needs an origin for EVERY
+ * task row, so its reader holds the set entire — an automated task never reads
+ * as filed by hand past a window's edge. The narrow projection keeps the set
+ * small (an id pair per automated task) and its refills off the columns the
+ * history shows (`releasedAt`, `sourceKeys`).
+ */
+export const automationOrigins = liveCollection("automations.origins", {
+  row: AutomationOriginRowSchema,
+  id: "taskId",
+  all: {
+    orderBy: [["taskId", "asc"]],
+    unbounded: {
+      reason:
+        "at most one row per task, and the task list projects an origin for every task",
+    },
+  },
 });
 
 // What a person decided about launching a task with a launch-kind automation:
@@ -82,15 +105,27 @@ export const LaunchDecisionRowSchema = launchDecisionShape.schema;
 export type LaunchDecisionRow = z.infer<typeof LaunchDecisionRowSchema>;
 
 /**
- * The launch decisions, newest first: one automation's are
- * `useLive(launchDecisions, { where: { automationId } })`. Bounded by what a
- * person clicked through — a review list, not the task table.
+ * Every launch decision, as the WHOLE ordered set (`all`): a launch list joins
+ * the decisions to every task it shows (`useLive(launchDecisions, { select })`
+ * keeping its own automation's), so its reader holds them entire — a decided
+ * task never reads as undecided past a window's edge.
+ *
+ * The key is `automations.launch-decisions.all`, not the old window's
+ * `automations.launch-decisions`: no bundle ever declared this key with another
+ * contract, so a tab on an older one gets `unknown-key` (a `skew` verdict) and
+ * never parses these rows.
  */
-export const launchDecisions = liveCollection("automations.launch-decisions", {
-  row: LaunchDecisionRowSchema,
-  id: "taskId",
-  filterable: { automationId: liveText() },
-  sortable: ["decidedAt"],
-  default: { orderBy: [["decidedAt", "desc"]], limit: 500 },
-  maxLimit: 2000,
-});
+export const launchDecisions = liveCollection(
+  "automations.launch-decisions.all",
+  {
+    row: LaunchDecisionRowSchema,
+    id: "taskId",
+    all: {
+      orderBy: [["taskId", "asc"]],
+      unbounded: {
+        reason:
+          "at most one row per task (a person's call on launching it), and a launch list joins them to every task it shows",
+      },
+    },
+  },
+);

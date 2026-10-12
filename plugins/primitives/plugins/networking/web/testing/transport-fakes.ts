@@ -32,6 +32,7 @@ import {
   SharedWebSocket,
   type PageLifecycleLike,
   type SharedWebSocketHooks,
+  type SharedWebSocketOptions,
 } from "../shared-websocket";
 import { createSharedWsHost, type SharedWsHost } from "../shared-ws-host";
 import type {
@@ -387,8 +388,13 @@ export interface TransportHub {
   workers: FakeSharedWorkers;
   /** A fresh tab's hooks on the shared transport. */
   tab(): TabHandle;
-  /** A `NotificationsClient` `makeSocket` hook building real sockets on this tab. */
-  makeSocket(tab: TabHandle): (url: string) => SharedWebSocket;
+  /**
+   * A `NotificationsClient` `makeSocket` hook building real sockets on this
+   * tab, with the options the client asks for (its dialect).
+   */
+  makeSocket(
+    tab: TabHandle,
+  ): (url: string, options?: SharedWebSocketOptions) => SharedWebSocket;
   /**
    * The tab dies without a word (crash, kill, OS discard): its ports go silent
    * — no `detach` — and the browser frees its locks, which is how the worker
@@ -431,7 +437,8 @@ export function createTransportHub(): TransportHub {
       return handle;
     },
     makeSocket(tab: TabHandle) {
-      return (url: string) => new SharedWebSocket(url, tab.hooks);
+      return (url: string, options?: SharedWebSocketOptions) =>
+        new SharedWebSocket(url, tab.hooks, options);
     },
     kill(tab: TabHandle): void {
       for (const port of tab.ports) port.close();

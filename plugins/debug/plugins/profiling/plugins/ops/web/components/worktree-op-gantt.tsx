@@ -8,6 +8,7 @@ import {
 } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
 import {
   FIVE_MINUTES,
+  OPS_READ_LIMIT,
   TWENTY_MINUTES,
   ceilTo,
   floorTo,
@@ -15,10 +16,13 @@ import {
 import { LiveOpGantt, type OpWindow } from "./live-op-gantt";
 
 // One worktree's ops can span every other worktree's around them; the span is
-// read in two steps. First that worktree's own ops; their span ± 20 min is the
-// span, floored / ceiled to 5 min so the second tuple is stable. While one of
-// them is still in flight its end grows with `now`, so the span is left
-// open-ended rather than re-keyed every tick.
+// read in two steps. First that worktree's own ops — no time bound of its
+// own: its newest `OPS_READ_LIMIT`, within the store's 30-day retention (a
+// worktree with more starts its span late, and says so). Their span ± 20 min
+// is the span, floored / ceiled to 5 min so the second tuple is stable — a
+// time range stated in that query. While one of them is still in flight its
+// end grows with `now`, so the span is left open-ended rather than re-keyed
+// every tick. Either read coming back full is said on the chart (`capped`).
 function windowOf(rows: readonly OpRow[]): OpWindow | null {
   let startMs = Infinity;
   let endMs = -Infinity;
@@ -42,10 +46,13 @@ function WindowGantt({
   span,
   worktree,
   empty,
+  ownCapped,
 }: {
   span: OpWindow;
   worktree: string;
   empty: ReactNode;
+  /** The worktree's own read came back full: its span may start earlier. */
+  ownCapped: boolean;
 }): ReactElement {
   const start = new Date(span.startMs).toISOString();
   // An op overlaps the span when it was requested inside it, or requested
@@ -70,7 +77,7 @@ function WindowGantt({
               },
             ],
           },
-    limit: 2000,
+    limit: OPS_READ_LIMIT,
   });
   if (result.status === "loading") return <Loading label="Loading ops…" />;
   if (result.status === "error")
@@ -88,6 +95,7 @@ function WindowGantt({
       span={span}
       highlightWorktree={worktree}
       empty={empty}
+      capped={ownCapped || result.data.length >= OPS_READ_LIMIT}
     />
   );
 }
@@ -104,7 +112,10 @@ export function WorktreeOpGantt({
   worktree: string;
   empty: ReactNode;
 }): ReactElement {
-  const own = useLive(opsHistory, { where: { opSlug: worktree }, limit: 2000 });
+  const own = useLive(opsHistory, {
+    where: { opSlug: worktree },
+    limit: OPS_READ_LIMIT,
+  });
   if (own.status === "loading") return <Loading label="Loading ops…" />;
   if (own.status === "error")
     return (
@@ -117,5 +128,12 @@ export function WorktreeOpGantt({
     );
   const span = windowOf(own.data);
   if (span === null) return <>{empty}</>;
-  return <WindowGantt span={span} worktree={worktree} empty={empty} />;
+  return (
+    <WindowGantt
+      span={span}
+      worktree={worktree}
+      empty={empty}
+      ownCapped={own.data.length >= OPS_READ_LIMIT}
+    />
+  );
 }

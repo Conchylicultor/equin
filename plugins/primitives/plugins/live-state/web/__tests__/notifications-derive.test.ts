@@ -13,6 +13,9 @@
  *     derivation is gone;
  *   - nothing is seeded when a source moved since the caller decided (its
  *     `appliedSeq`), is not held, or names a row it does not hold;
+ *   - nor from a source nothing was applied to since boot (`appliedSeq` 0:
+ *     a hydrated value before its first sub-ack) — counted on the
+ *     `live-pages` log channel;
  *   - a derived ack answering another derivation (another tab's, on the
  *     shared socket — even of the very same slices) adopts nothing — no
  *     value, no version;
@@ -24,8 +27,11 @@
 
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 
+const logged = vi.hoisted(() => [] as { channel: string; line: string }[]);
 vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
-  clientLog: () => {},
+  clientLog: (channel: string, line: string) => {
+    logged.push({ channel, line });
+  },
 }));
 
 import { QueryClient } from "@tanstack/react-query";
@@ -230,6 +236,45 @@ describe("NotificationsClient — seeded derivation", () => {
     expect(subsOf(socket, NEW)[0]!.derive).toBeUndefined();
     expect(subsOf(socket, { limit: "5" })[0]!.derive).toBeUndefined();
     expect(subsOf(socket, { limit: "7" })[0]!.derive).toBeUndefined();
+  });
+
+  test("nothing is seeded from a source holding a boot-hydrated value — and the refusal is logged on live-pages", async () => {
+    const { qc, client, socket } = await setup();
+    // A hydrated source: a cached value, its sub sent, no sub-ack yet.
+    const BOOT = { limit: "2" };
+    qc.setQueryData(queryKeyFor(KEY, BOOT), [{ id: "a", n: 1 }]);
+    client.observe(KEY, BOOT, undefined, rowsSchema, keyOf);
+    expect(client.appliedSeq(KEY, BOOT)).toBe(0);
+    logged.length = 0;
+    client.observe(KEY, NEW, undefined, rowsSchema, keyOf, {
+      from: [{ params: BOOT, appliedSeq: 0, after: null, until: "a" }],
+    });
+    await flush();
+    expect(subsOf(socket, NEW)[0]!.derive).toBeUndefined();
+    expect(
+      logged.filter(
+        (l) => l.channel === "live-pages" && l.line.includes("seed refused"),
+      ),
+    ).toHaveLength(1);
+  });
+
+  test("a source still loading seeds nothing, and is no boot refusal: nothing is logged", async () => {
+    const { client, socket } = await setup();
+    // A fresh sub, its first answer not landed and nothing cached.
+    const FRESH = { limit: "2" };
+    client.observe(KEY, FRESH, undefined, rowsSchema, keyOf);
+    expect(client.appliedSeq(KEY, FRESH)).toBe(0);
+    logged.length = 0;
+    client.observe(KEY, NEW, undefined, rowsSchema, keyOf, {
+      from: [{ params: FRESH, appliedSeq: 0, after: null, until: "a" }],
+    });
+    await flush();
+    expect(subsOf(socket, NEW)[0]!.derive).toBeUndefined();
+    expect(
+      logged.filter(
+        (l) => l.channel === "live-pages" && l.line.includes("seed refused"),
+      ),
+    ).toHaveLength(0);
   });
 
   test("a derived ack answering another derivation adopts nothing; the tab's own answer still applies", async () => {

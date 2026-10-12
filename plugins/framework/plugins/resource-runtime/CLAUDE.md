@@ -76,9 +76,16 @@ inside the runtime — `reportError` is additive, never the only report. Wait
 attribution: `research/2026-06-19-global-wait-attribution-instrumentation.md`.
 
 It is **acyclic**: besides `zod` and `bun` types it imports only
-`@plugins/packages/plugins/inflight/core` (a leaf) — and the leaf
+`@plugins/packages/plugins/inflight/core` (a leaf) — and the leaves
 `@plugins/packages/plugins/canonical-params/core`, the params rule it shares with
-the browser (see *Optional params* above) — and `inflight` does double duty here:
+the browser (see *Optional params* above), and
+`@plugins/packages/plugins/resource-protocol/core`, the wire vocabulary: every
+frame it sends is a `ServerFrame` carrying only the fields its kind declares
+(`sendJson` / `broadcastJson` take an `ExactServerFrame`, which refuses an
+undeclared field however the frame was built), and every frame it reads is a
+`ReceivedFrame<op>` (each field optional — untrusted — but none undeclared),
+declared there once as data the client's frame type and the `PROTOCOL` id
+derive from — and `inflight` does double duty here:
 read-path single-flight coalescing, and the correctness-bearing freshness floor
 (`notBefore`) the push path uses to refuse a flight that started before the change
 it is announcing — see *Flight freshness* below. It declares its own local
@@ -301,6 +308,12 @@ two — more is `malformed`, so one frame cannot cost O(sources × window).
 the tuple — so every change routed from then on reaches the new tuple, and none
 lands between the check and the copy:
 
+- **Only under this server's frame vocabulary.** The sub's `protocol` (every
+  `sub` / `sub-batch` frame names the `PROTOCOL` its tab reads —
+  `packages/resource-protocol`) must equal the server's own; any other, or
+  none (a bundle that predates the field), may mean something else by its
+  `derive` or read a derived ack differently, so the sub loads
+  (`protocol-skew`), before anything else is checked.
 - **Derived** when the entry is a bounded window that states its
   `membership.familyOf` (and no `revalidate`), the
   tuple's subscription OPENED its span (`firstGlobal` — a held tuple's first
@@ -324,7 +337,8 @@ lands between the check and the copy:
   never persisted.
 - **Otherwise** it falls back to today's path (`serveSub`, a full load), and the
   client takes either answer. Every refusal is counted by reason in `_debug`'s
-  `deriveFallbacks` (`not-derivable`, `held`, `malformed` — also reported —,
+  `deriveFallbacks` (`protocol-skew`, `not-derivable`, `held`, `malformed` —
+  also reported —,
   `source-not-held`, `foreign-source`, `source-busy`, `source-moved`, `slice`,
   `source-full`, `overlap`, `over-limit`), every derivation in `derivedSubs`.
 - **Trust boundary.** The runtime is key-agnostic: that the slices are all of
@@ -341,16 +355,18 @@ lands between the check and the copy:
 - **Version skew.** A tab whose bundle predates derived acks would read one as
   a `sub-ack` with an `undefined` value (a parse error) and adopt its version,
   dropping its own value ack as stale. It never receives one: live-state
-  shares its socket only with tabs running the same client
-  (`SharedWebSocketOptions.dialect`, see `networking/CLAUDE.md`), and a derived
-  ack goes only to the socket whose tab asked.
+  shares its socket only with tabs reading the same frame vocabulary (its
+  dialect is `PROTOCOL`, `SharedWebSocketOptions.dialect` — see
+  `networking/CLAUDE.md`), and a derived ack goes only to the socket whose tab
+  asked.
 - `sub-batch` entries never derive (a replay asks for full values).
 
 Pinned by `runtime-derive.test.ts` (the derived ack and its frame shape, a
 change after it as a delta, a merge — also with its sources unsubscribed in the
 same burst as the derived sub —, a commit racing the registration, an echo
 answering another derivation, every refusal falling back and converging — a
-foreign source and more than two sources included —, and the `makeClientView`
+foreign source, more than two sources and a foreign protocol included —, and
+the `makeClientView`
 convergence property under random interleavings of writes, plain and derived
 subs, unsubs and flush timing) — and again over an external window: a
 `notify` as a keyed delta, a head and a merge derived from the pages the
@@ -637,8 +653,9 @@ stopped joining a pre-commit read flight (*Flight freshness* below).
 The two `delta` kinds are NOT interchangeable for a future etag. A **keyed FULL
 delta** (and the M5 membership deltas) fully reconciles the client to server truth,
 so an etag there WOULD be safe — a possible future optimization, needing a
-co-producing builder plus an `etag` field the client's `ServerMsg` delta does not
-declare today (a server-stamped one is discarded on arrival). A **keyed SCOPED
+co-producing builder plus an `etag` field on the protocol's `delta` frame
+(`packages/resource-protocol`), which declares none today — so `broadcastJson`
+cannot send one, and adding it moves `PROTOCOL`. A **keyed SCOPED
 delta** (`deletes: []`, `order: undefined`) deliberately does NOT assert
 membership, so an etag there would be a permanent partial-stale pin — it must
 **NEVER** carry one, and is excluded by construction.
@@ -1038,11 +1055,18 @@ and those plugins' `CLAUDE.md`.
     - `packages/resource-protocol.BUILD_GRAPH_HEADER`
     - `packages/resource-protocol.contractVerdict`
     - `packages/resource-protocol.ContractVerdict`
+    - `packages/resource-protocol.Derivation`
+    - `packages/resource-protocol.DERIVE_MAX_ID`
+    - `packages/resource-protocol.DERIVE_MAX_SOURCES`
+    - `packages/resource-protocol.DeriveSource`
+    - `packages/resource-protocol.ExactServerFrame`
+    - `packages/resource-protocol.PROTOCOL`
+    - `packages/resource-protocol.ReceivedFrame`
     - `packages/resource-protocol.resourceBytesHeaders`
     - `packages/resource-protocol.ResourceContractError`
     - `packages/resource-protocol.ResourceHttpErrorBody`
     - `packages/resource-protocol.ResourceRefusal`
-    - `packages/resource-protocol.SubErrorFrame`
+    - `packages/resource-protocol.ServerFrame`
     - `packages/semaphore.createSemaphore`
   - Exports (types):
     - `AliasMembership`

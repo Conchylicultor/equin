@@ -81,36 +81,28 @@ function createLiveQueryClient(): QueryClient {
   });
 }
 
-export interface NotificationsProviderProps {
-  children: ReactNode;
-  queryClient?: QueryClient;
-}
-
 /**
- * Mounts a live-state pipeline — a QueryClient and the NotificationsClient
- * feeding it — for `children`. Under the page's own transport (no
- * `<TransportProvider>` above) it is the page's singleton pipeline. Under any
+ * Mounts a live-state pipeline — a NotificationsClient and the QueryClient it
+ * owns — for `children`. Under the page's own transport (no
+ * `<TransportProvider>` above) it is the tab's one client
+ * (`ensureNotificationsClient`, unless boot already hoisted it). Under any
  * other transport it is a pipeline of that transport's own: a fresh
  * QueryClient, a NotificationsClient opening the transport's sockets and
  * fetching through it, and its own causal-floor registries — so nothing read
  * inside the subtree is cached, confirmed or reported against the page's
- * server, and the reverse.
+ * server, and the reverse. It takes no client: a cache handed in beside the
+ * singleton was mounted for React while the client went on writing the one it
+ * was built with. A test mounts its own pair through `web/testing`'s
+ * `createLiveStateHarness`.
  */
-export function NotificationsProvider(props: NotificationsProviderProps) {
+export function NotificationsProvider({ children }: { children: ReactNode }) {
   const transport = useTransport();
-  if (transport === originTransport) return createElement(RootPipeline, props);
-  if (props.queryClient)
-    throw new Error(
-      "NotificationsProvider: a scoped pipeline owns its QueryClient — pass no queryClient under a TransportProvider",
-    );
-  return createElement(ScopedPipeline, { transport, children: props.children });
-}
-
-function RootPipeline({ children, queryClient }: NotificationsProviderProps) {
-  const qc = queryClient ?? getDefaultQueryClient();
-  // NotificationsClient is a singleton for the tab; create on first render.
-  const notifications = getOrCreateNotifications(qc);
-  return providePipeline(qc, notifications, children);
+  if (transport === originTransport)
+    return createElement(NotificationsClientProvider, {
+      client: ensureNotificationsClient(),
+      children,
+    });
+  return createElement(ScopedPipeline, { transport, children });
 }
 
 function ScopedPipeline({
@@ -122,22 +114,29 @@ function ScopedPipeline({
 }) {
   const pipeline = scopedPipelineFor(transport);
   useEffect(() => retainScopedPipeline(transport), [transport]);
-  return providePipeline(pipeline.queryClient, pipeline.client, children);
+  return createElement(NotificationsClientProvider, {
+    client: pipeline.client,
+    children,
+  });
 }
 
-function providePipeline(
-  qc: QueryClient,
-  notifications: NotificationsClient,
-  children: ReactNode,
-) {
+/**
+ * Mount `client` and the cache it owns — one value, so the two cannot be
+ * mismatched. Internal: the providers above pass the tab singleton or a scoped
+ * pipeline's client, and the test harness (`web/testing`) a fresh client per
+ * test.
+ */
+export function NotificationsClientProvider({
+  client,
+  children,
+}: {
+  client: NotificationsClient;
+  children: ReactNode;
+}) {
   return createElement(
     QueryClientProvider,
-    { client: qc },
-    createElement(
-      NotificationsContext.Provider,
-      { value: notifications },
-      children,
-    ),
+    { client: client.queryClient },
+    createElement(NotificationsContext.Provider, { value: client }, children),
   );
 }
 
@@ -213,10 +212,6 @@ export function useLiveSocketKindOf(): (
 }
 
 let singleton: NotificationsClient | null = null;
-function getOrCreateNotifications(qc: QueryClient): NotificationsClient {
-  if (!singleton) singleton = new NotificationsClient(qc);
-  return singleton;
-}
 
 // Transport hoist: construct the singleton NotificationsClient at the VERY start
 // of boot — before any plugin chunk is evaluated — so its leader-election
@@ -224,12 +219,13 @@ function getOrCreateNotifications(qc: QueryClient): NotificationsClient {
 // calls `new WebSocket()` inside SharedWebSocket) then fires during the first
 // main-thread yield (a `loadPlugins` await gap) and the socket opens *during*
 // boot instead of ~8s later, after the full app mount. NotificationsProvider
-// later calls the same `getOrCreateNotifications`, so it reuses THIS singleton —
-// the one-socket-per-origin invariant is preserved (no eager second socket, no
-// per-tab WS regression). Constructed against the same default QueryClient the
-// provider mounts, so seeded/hydrated cache entries line up.
+// later calls this same function, so it reuses THIS singleton — the
+// one-socket-per-origin invariant is preserved (no eager second socket, no
+// per-tab WS regression). It owns the default QueryClient, the one
+// `hydrateResource` / `hydrateQuery` seed, so seeded cache entries line up.
 export function ensureNotificationsClient(): NotificationsClient {
-  return getOrCreateNotifications(getDefaultQueryClient());
+  singleton ??= new NotificationsClient(getDefaultQueryClient());
+  return singleton;
 }
 
 // Context-free accessor for the singleton — usable from Core.Root watchers that

@@ -30,6 +30,11 @@
  */
 
 import {
+  PROTOCOL,
+  type Derivation,
+  type DeriveSource,
+} from "@plugins/packages/plugins/resource-protocol/core";
+import {
   createResourceRuntime,
   type ResourceParams,
   type ResourceRuntimeOptions,
@@ -79,19 +84,11 @@ export interface RecordedFrame {
   }>;
 }
 
-/** A `sub` frame's seeded derivation (the runtime's `Derivation`): its minted id and sources. */
-export interface DeriveFrame {
-  id: string;
-  from: DeriveSourceFrame[];
-}
+/** A `sub` frame's seeded derivation (the protocol's `Derivation`): its minted id and sources. */
+export type DeriveFrame = Derivation;
 
-/** One source of a `sub` frame's seeded derivation (the runtime's `DeriveSource`). */
-export interface DeriveSourceFrame {
-  params: ResourceParams;
-  version: number;
-  after: string | null;
-  until: string | null;
-}
+/** One source of a `sub` frame's seeded derivation (the protocol's `DeriveSource`). */
+export type DeriveSourceFrame = DeriveSource;
 
 export interface Harness {
   runtime: ReturnType<typeof createResourceRuntime>;
@@ -115,6 +112,12 @@ export interface Harness {
       build?: string;
       /** A seeded derivation: the new tuple as slices of tuples this socket holds. */
       derive?: DeriveFrame;
+      /**
+       * The frame vocabulary the tab names (the frame's `protocol`): default
+       * this build's `PROTOCOL`, as live-state sends it; `null` omits it (a
+       * bundle that predates the field).
+       */
+      protocol?: string | null;
     },
   ) => Promise<void>;
   /** Send `op:sub-batch` (one tab's whole-set replay) and await the next macrotask. */
@@ -216,6 +219,7 @@ export function createHarness(
           ...(o.acks !== undefined ? { acks: o.acks } : {}),
           ...(o.build !== undefined ? { build: o.build } : {}),
           ...(o.derive !== undefined ? { derive: o.derive } : {}),
+          ...(o.protocol !== null ? { protocol: o.protocol ?? PROTOCOL } : {}),
         }),
       );
       await tick(); // let the async sub-ack (initial load) complete
@@ -227,6 +231,7 @@ export function createHarness(
         JSON.stringify({
           op: "sub-batch",
           tabId: o.tabId ?? "tab-test",
+          protocol: PROTOCOL,
           ...(o.epoch !== undefined ? { epoch: o.epoch } : {}),
           ...(o.build !== undefined ? { build: o.build } : {}),
           complete: o.complete ?? true,

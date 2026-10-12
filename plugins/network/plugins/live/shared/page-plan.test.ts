@@ -267,6 +267,15 @@ describe("page plan — overflow", () => {
     const out = reconcile(plan, answered, MEASURING, LIMITS);
     expect(out.plan.pages.length).toBe(3);
     expect(out.plan.pages.slice(0, 2).every((p) => p.live)).toBe(true);
+    // The split is reported with its rest page — the half read whole, whose
+    // read the `live-pages` log times — and only it.
+    expect(out.overflowed).toEqual([out.plan.pages[1]!.page]);
+    expect(out.plan.pages[1]!.seed).toBeNull();
+    expect(out.plan.pages[0]!.seed).not.toBeNull();
+    // Nothing more to report once its halves' reads are pending.
+    expect(reconcile(out.plan, answered, MEASURING, LIMITS).overflowed).toBe(
+      undefined,
+    );
     const a = assemble(out.plan, answered);
     // The split head's rows: [10, 11, 12, 20] → [10, 11] + [12, 20], shown.
     expect(a.entries.map((e) => e.id)).toEqual([

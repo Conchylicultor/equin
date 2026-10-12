@@ -11,7 +11,7 @@
  * Regression: `edited-files` declared as a `liveValue` stayed pending forever,
  * leaving the conversation's Close button disabled.
  *
- * Harness mirrors use-resource-error-gate: real `NotificationsProvider`,
+ * Harness mirrors use-resource-error-gate: a `createLiveStateHarness` pair,
  * `fetchOverHttp` spied, cold-start primer suppressed, `clientLog` mocked.
  */
 
@@ -22,16 +22,13 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 }));
 
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
-import { type ReactNode } from "react";
 import { z } from "zod";
 import {
-  NotificationsProvider,
-  getNotificationsClient,
   queryKeyFor,
   useResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { ResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { createLiveStateHarness, type LiveStateHarness } from "../testing";
 
 const Count = z.object({ n: z.number() });
 
@@ -47,33 +44,22 @@ const pushed: ResourceDescriptor<{ n: number }> = {
   validateParams: () => {},
 };
 
-function makeClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
-  });
+// React Query's own refetch-on-mount, as the app's client has it.
+function makeClient(): LiveStateHarness {
+  return createLiveStateHarness({ queries: { refetchOnMount: true } });
 }
 
 function mount<R>(
-  client: QueryClient,
+  live: LiveStateHarness,
   fetched: { n: number },
   useHook: () => R,
 ) {
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>
-      {children}
-    </NotificationsProvider>
-  );
-  // The provider creates the client on first render; spy before the hook's
-  // query runs by rendering a no-op first.
-  const probe = renderHook(() => null, { wrapper });
-  const notifications = getNotificationsClient();
-  if (!notifications) throw new Error("NotificationsClient not created");
-  vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
+  // Spied before the hook's query runs.
+  vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
   const fetchOverHttp = vi
-    .spyOn(notifications, "fetchOverHttp")
+    .spyOn(live.notifications, "fetchOverHttp")
     .mockResolvedValue(fetched);
-  probe.unmount();
-  const rendered = renderHook(useHook, { wrapper });
+  const rendered = renderHook(useHook, { wrapper: live.Wrapper });
   return { ...rendered, fetchOverHttp };
 }
 
@@ -98,13 +84,15 @@ describe("useResource — pushed and on-demand descriptors", () => {
   });
 
   it("a pushed value waits for the sub-ack — no HTTP read on mount", async () => {
-    const client = makeClient();
-    const { result, fetchOverHttp } = mount(client, { n: 1 }, () =>
+    const live = makeClient();
+    const { result, fetchOverHttp } = mount(live, { n: 1 }, () =>
       useResource(pushed),
     );
     expect(result.current.status).toBe("loading");
     act(() => {
-      client.setQueryData(queryKeyFor(pushed.key, undefined), { n: 2 });
+      live.queryClient.setQueryData(queryKeyFor(pushed.key, undefined), {
+        n: 2,
+      });
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(fetchOverHttp).not.toHaveBeenCalled();

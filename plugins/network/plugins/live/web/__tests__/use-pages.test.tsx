@@ -1,7 +1,7 @@
 /**
  * `useLive` over a scroll collection — its key-range pages, with a viewport and
- * without — over a real NotificationsProvider + QueryClient: each page is
- * a window tuple, driven with `client.setQueryData` on the exact tuple its
+ * without — over `createLiveStateHarness` (a real client and its QueryClient): each page is
+ * a window tuple, driven with `queryClient.setQueryData` on the exact tuple its
  * codec encodes (the same call a WS sub-ack makes), and a read failure through
  * the one HTTP path (`fetchOverHttp`), as `use-live.test.tsx` does.
  *
@@ -39,14 +39,14 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 }));
 
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
-import { type ReactNode } from "react";
+import type { QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
+import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
 import {
-  NotificationsProvider,
-  getNotificationsClient,
-  queryKeyFor,
-} from "@plugins/primitives/plugins/live-state/web";
+  createLiveStateHarness,
+  type LiveStateHarness,
+  type NotificationsClient,
+} from "@plugins/primitives/plugins/live-state/web/testing";
 import {
   liveCollection,
   scopedLiveColumns,
@@ -92,18 +92,6 @@ const MEASURING = mintVisibleRange({ kind: "measuring" });
 const on = (from: number, to: number): VisibleRange =>
   mintVisibleRange({ kind: "rows", first: `r${from}`, last: `r${to}` });
 
-// ONE client for the file: the NotificationsClient is a tab singleton,
-// created against the first provider's client — a released page's cache is
-// dropped from that one (every test reads its own collection key).
-const CLIENT = new QueryClient({
-  defaultOptions: {
-    queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-  },
-});
-function makeClient(): QueryClient {
-  return CLIENT;
-}
-
 function tuple(
   c: C,
   limit: number,
@@ -122,24 +110,17 @@ interface Props {
   viewport?: VisibleRange;
 }
 
-function mount(client: QueryClient, c: C, initial: Props) {
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>
-      {children}
-    </NotificationsProvider>
-  );
+function mount(live: LiveStateHarness, c: C, initial: Props) {
+  vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
   const rendered = renderHook(
     (p: Props) =>
       useLive(c, p.query, {
         viewport: p.viewport ?? MEASURING,
         ...(p.resetKey === undefined ? {} : { resetKey: p.resetKey }),
       }),
-    { wrapper, initialProps: initial },
+    { wrapper: live.Wrapper, initialProps: initial },
   );
-  const notifications = getNotificationsClient();
-  if (!notifications) throw new Error("NotificationsClient not created");
-  vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
-  return { ...rendered, notifications };
+  return { ...rendered, notifications: live.notifications };
 }
 
 function settled<Row>(
@@ -180,19 +161,19 @@ async function pageTo(
 describe("useLive — a scroll collection's pages, with a viewport", () => {
   it("a null query reads nothing and stays loading", () => {
     const c = collection();
-    const client = makeClient();
-    const { result } = mount(client, c, { query: null });
+    const live = createLiveStateHarness();
+    const { result } = mount(live, c, { query: null });
     expect(result.current).toEqual({ status: "loading" });
-    expect(client.getQueryCache().findAll()).toHaveLength(0);
+    expect(live.queryClient.getQueryCache().findAll()).toHaveLength(0);
   });
 
   it("is loading until the head settles; rows come without their $key", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result } = mount(client, c, { query: {} });
+    const live = createLiveStateHarness();
+    const { result } = mount(live, c, { query: {} });
     expect(result.current.status).toBe("loading");
     act(() => {
-      client.setQueryData(tuple(c, 2), wire(0, 2));
+      live.queryClient.setQueryData(tuple(c, 2), wire(0, 2));
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const r = settled(result.current);
@@ -204,10 +185,10 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
 
   it("a loadMore splits the full last page at its last row, the rows on screen until the new page lands", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result } = mount(client, c, { query: {} });
+    const live = createLiveStateHarness();
+    const { result } = mount(live, c, { query: {} });
     act(() => {
-      client.setQueryData(tuple(c, 2), wire(0, 2));
+      live.queryClient.setQueryData(tuple(c, 2), wire(0, 2));
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
 
@@ -218,8 +199,14 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
     expect(mid.canGrow).toBe(false);
     expect(mid.rows).toEqual(rows(0, 2));
     act(() => {
-      client.setQueryData(tuple(c, 4, { until: keyOf(1) }), wire(0, 2));
-      client.setQueryData(tuple(c, 2, { after: keyOf(1) }), wire(2, 4));
+      live.queryClient.setQueryData(
+        tuple(c, 4, { until: keyOf(1) }),
+        wire(0, 2),
+      );
+      live.queryClient.setQueryData(
+        tuple(c, 2, { after: keyOf(1) }),
+        wire(2, 4),
+      );
     });
     await waitFor(() =>
       expect(settled(result.current).rows).toEqual(rows(0, 4)),
@@ -229,16 +216,18 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
     expect(r.canGrow).toBe(true);
     // The replaced default tuple is released at once, its cached value with it.
     expect(
-      client.getQueryCache().find({ queryKey: tuple(c, 2), exact: true }),
+      live.queryClient
+        .getQueryCache()
+        .find({ queryKey: tuple(c, 2), exact: true }),
     ).toBeUndefined();
   });
 
   it("a loadMore subscribes the known half seeded from the old last page, and the new page plainly", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result, notifications } = mount(client, c, { query: {} });
+    const live = createLiveStateHarness();
+    const { result, notifications } = mount(live, c, { query: {} });
     act(() => {
-      client.setQueryData(tuple(c, 2), wire(0, 2));
+      live.queryClient.setQueryData(tuple(c, 2), wire(0, 2));
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const observe = vi.spyOn(notifications, "observe");
@@ -268,9 +257,9 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
    * global `invocationCallOrder` across both spies), each subscribe with its
    * `derive` and each release with its `release` mode.
    */
-  function callLog(notifications: ReturnType<typeof getNotificationsClient>) {
-    const observe = vi.spyOn(notifications!, "observe");
-    const unobserve = vi.spyOn(notifications!, "unobserve");
+  function callLog(notifications: NotificationsClient) {
+    const observe = vi.spyOn(notifications, "observe");
+    const unobserve = vi.spyOn(notifications, "unobserve");
     observe.mockClear();
     unobserve.mockClear();
     return () =>
@@ -292,9 +281,9 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
 
   it("a merge subscribes the merged page seeded from both pages, before either is released", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result, notifications } = mount(client, c, { query: {} });
-    await pageTo(client, c, result, 2);
+    const live = createLiveStateHarness();
+    const { result, notifications } = mount(live, c, { query: {} });
+    await pageTo(live.queryClient, c, result, 2);
     const encode = c.window.window.encode;
     const a = encode({ limit: 4 }, { until: keyOf(1) });
     const b = encode({ limit: 2 }, { after: keyOf(1) });
@@ -302,8 +291,8 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
     // Deletes leave one row in each: two pages holding ≤ step rows between
     // them, neither full — known whole, so merged with no read.
     act(() => {
-      client.setQueryData(queryKeyFor(c.key, a), wire(0, 1));
-      client.setQueryData(queryKeyFor(c.key, b), wire(2, 3));
+      live.queryClient.setQueryData(queryKeyFor(c.key, a), wire(0, 1));
+      live.queryClient.setQueryData(queryKeyFor(c.key, b), wire(2, 3));
     });
     const merged = JSON.stringify(encode({ limit: 4 }));
     await waitFor(() =>
@@ -342,16 +331,16 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
 
   it("an overflow split seeds only the half up to its cut; the half past it is read whole", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result, notifications } = mount(client, c, { query: {} });
-    await pageTo(client, c, result, 2);
+    const live = createLiveStateHarness();
+    const { result, notifications } = mount(live, c, { query: {} });
+    await pageTo(live.queryClient, c, result, 2);
     const encode = c.window.window.encode;
     const full = encode({ limit: 4 }, { until: keyOf(1) });
     const logOf = callLog(notifications);
     // Inserts fill the head page (not last) to its limit: it may hide rows,
     // so it splits at its median cuttable row, r-1.
     act(() => {
-      client.setQueryData(queryKeyFor(c.key, full), wire(-2, 2));
+      live.queryClient.setQueryData(queryKeyFor(c.key, full), wire(-2, 2));
     });
     const head = JSON.stringify(encode({ limit: 4 }, { until: keyOf(-1) }));
     const rest = JSON.stringify(
@@ -378,23 +367,26 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
 
   it("a failing new page keeps the rows shown, with its own retry — never loadMore", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result, notifications } = mount(client, c, { query: {} });
+    const live = createLiveStateHarness();
+    const { result, notifications } = mount(live, c, { query: {} });
     act(() => {
-      client.setQueryData(tuple(c, 2), wire(0, 2));
+      live.queryClient.setQueryData(tuple(c, 2), wire(0, 2));
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
 
     act(() => settled(result.current).loadMore());
     act(() => {
-      client.setQueryData(tuple(c, 4, { until: keyOf(1) }), wire(0, 2));
+      live.queryClient.setQueryData(
+        tuple(c, 4, { until: keyOf(1) }),
+        wire(0, 2),
+      );
     });
     const fetch = vi
       .spyOn(notifications, "fetchOverHttp")
       .mockRejectedValueOnce(new Error("boom"));
     await act(async () => {
       await expect(
-        client
+        live.queryClient
           .getQueryCache()
           .find({ queryKey: tuple(c, 2, { after: keyOf(1) }), exact: true })!
           .fetch(),
@@ -426,11 +418,11 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
 
   it("pages far from the viewport are unsubscribed at once and keep their rows; in view, subscribed again", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result, rerender, notifications } = mount(client, c, {
+    const live = createLiveStateHarness();
+    const { result, rerender, notifications } = mount(live, c, {
       query: {},
     });
-    await pageTo(client, c, result, 6);
+    await pageTo(live.queryClient, c, result, 6);
     const unobserve = vi.spyOn(notifications, "unobserve");
     const observe = vi.spyOn(notifications, "observe");
     const page5 = tuple(c, 2, { after: keyOf(9) });
@@ -442,7 +434,7 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
     expect(released.length).toBeGreaterThan(0);
     expect(released.every((r) => r === "now")).toBe(true);
     expect(
-      client.getQueryCache().find({ queryKey: page5, exact: true }),
+      live.queryClient.getQueryCache().find({ queryKey: page5, exact: true }),
     ).toBeUndefined();
     // Their rows stay on screen.
     expect(settled(result.current).rows).toEqual(rows(0, 12));
@@ -454,7 +446,7 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
     rerender({ query: {}, viewport: on(10, 11) });
     await waitFor(() =>
       expect(
-        client
+        live.queryClient
           .getQueryCache()
           .find({ queryKey: page5, exact: true })
           ?.getObserversCount(),
@@ -466,7 +458,7 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
     expect(settled(result.current).rows).toEqual(rows(0, 12));
     expect(settled(result.current).canGrow).toBe(false);
     act(() => {
-      client.setQueryData(page5, wire(10, 12));
+      live.queryClient.setQueryData(page5, wire(10, 12));
     });
     await waitFor(() => expect(settled(result.current).canGrow).toBe(true));
     expect(settled(result.current).rows).toEqual(rows(0, 12));
@@ -475,29 +467,24 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
   it("another collection whose query encodes alike starts over: a plan is one collection's", async () => {
     const a = collection();
     const b = collection();
-    const client = makeClient();
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <NotificationsProvider queryClient={client}>
-        {children}
-      </NotificationsProvider>
-    );
+    const live = createLiveStateHarness();
     const { result, rerender } = renderHook(
       (p: { c: C }) =>
         useLive(p.c, {}, { viewport: MEASURING, resetKey: "same" }),
-      { wrapper, initialProps: { c: a } },
+      { wrapper: live.Wrapper, initialProps: { c: a } },
     );
-    await pageTo(client, a, result, 2);
+    await pageTo(live.queryClient, a, result, 2);
     // Same query, same resetKey — another collection: loading on ITS head,
     // never `a`'s pages read against `b`.
     rerender({ c: b });
     expect(result.current.status).toBe("loading");
     expect(
-      client
+      live.queryClient
         .getQueryCache()
         .find({ queryKey: tuple(b, 2, { after: keyOf(1) }), exact: true }),
     ).toBeUndefined();
     act(() => {
-      client.setQueryData(tuple(b, 2), wire(7, 9));
+      live.queryClient.setQueryData(tuple(b, 2), wire(7, 9));
     });
     await waitFor(() =>
       expect(settled(result.current).rows).toEqual(rows(7, 9)),
@@ -506,12 +493,12 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
 
   it("a search undone before its head settles restores the pages still on screen", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result, rerender } = mount(client, c, {
+    const live = createLiveStateHarness();
+    const { result, rerender } = mount(live, c, {
       query: {},
       resetKey: "sort:n",
     });
-    await pageTo(client, c, result, 2);
+    await pageTo(live.queryClient, c, result, 2);
     rerender({
       query: { where: { title: { contains: "x" } } },
       resetKey: "sort:n",
@@ -526,13 +513,13 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
 
   it("a query change under the same resetKey keeps the previous rows until the new head settles", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result, rerender } = mount(client, c, {
+    const live = createLiveStateHarness();
+    const { result, rerender } = mount(live, c, {
       query: {},
       resetKey: "sort:n",
     });
     act(() => {
-      client.setQueryData(tuple(c, 2), wire(0, 2));
+      live.queryClient.setQueryData(tuple(c, 2), wire(0, 2));
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
 
@@ -543,7 +530,7 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
     expect(kept.canGrow).toBe(false);
 
     act(() => {
-      client.setQueryData(tuple(c, 2, {}, searched), wire(5, 6));
+      live.queryClient.setQueryData(tuple(c, 2, {}, searched), wire(5, 6));
     });
     await waitFor(() =>
       expect(settled(result.current).rows).toEqual(rows(5, 6)),
@@ -557,10 +544,10 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
 
   it("past the stale budget the farthest pages are placeholders; one on screen is subscribed again and replaced by its rows", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result, rerender } = mount(client, c, { query: {} });
+    const live = createLiveStateHarness();
+    const { result, rerender } = mount(live, c, { query: {} });
     // 14 pages of two rows: rows 0 … 27.
-    await pageTo(client, c, result, 14);
+    await pageTo(live.queryClient, c, result, 14);
     const closed = (j: number) =>
       tuple(
         c,
@@ -570,7 +557,7 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
           : { after: keyOf(2 * j - 1), until: keyOf(2 * j + 1) },
       );
     const observers = (key: unknown[]) =>
-      client
+      live.queryClient
         .getQueryCache()
         .find({ queryKey: key, exact: true })
         ?.getObserversCount() ?? 0;
@@ -604,9 +591,9 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
     expect(r.placeholders.after.map((p) => p.key)).toContain(ph11!.key);
     expect(r.rows.map((x) => x.id)).not.toContain("r22");
     act(() => {
-      client.setQueryData(closed(10), wire(20, 22));
-      client.setQueryData(closed(11), wire(22, 24));
-      client.setQueryData(closed(12), wire(24, 26));
+      live.queryClient.setQueryData(closed(10), wire(20, 22));
+      live.queryClient.setQueryData(closed(11), wire(22, 24));
+      live.queryClient.setQueryData(closed(12), wire(24, 26));
     });
     // Its rows land in its place; the head, far now, is a placeholder.
     await waitFor(() =>
@@ -630,12 +617,7 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
       scroll: true,
       columnScope: "test.surface",
     });
-    const client = makeClient();
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <NotificationsProvider queryClient={client}>
-        {children}
-      </NotificationsProvider>
-    );
+    const live = createLiveStateHarness();
     const one = scopedLiveColumns("test.surface", "custom", {
       a: { domain: "text", sortable: true },
     });
@@ -646,21 +628,24 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
     const { result, rerender } = renderHook(
       (p: { columns: typeof one }) =>
         useLive(c, { columns: [p.columns] }, { viewport: MEASURING }),
-      { wrapper, initialProps: { columns: one } },
+      { wrapper: live.Wrapper, initialProps: { columns: one } },
     );
-    const notifications = getNotificationsClient()!;
+    const notifications = live.notifications;
     vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
     act(() => {
-      client.setQueryData(queryKeyFor(c.key, { limit: "2" }), wire(0, 2));
+      live.queryClient.setQueryData(
+        queryKeyFor(c.key, { limit: "2" }),
+        wire(0, 2),
+      );
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     act(() => settled(result.current).loadMore());
     act(() => {
-      client.setQueryData(
+      live.queryClient.setQueryData(
         queryKeyFor(c.key, { limit: "4", until: keyOf(1) }),
         wire(0, 2),
       );
-      client.setQueryData(
+      live.queryClient.setQueryData(
         queryKeyFor(c.key, { limit: "2", after: keyOf(1) }),
         wire(2, 4),
       );
@@ -680,16 +665,12 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
 });
 
 describe("useLive — a scroll collection's pages, without a viewport", () => {
-  function mountPlain(client: QueryClient, c: C, query?: { limit: number }) {
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <NotificationsProvider queryClient={client}>
-        {children}
-      </NotificationsProvider>
-    );
-    const rendered = renderHook(() => useLive(c, query), { wrapper });
-    const notifications = getNotificationsClient()!;
-    vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
-    return { ...rendered, notifications };
+  function mountPlain(live: LiveStateHarness, c: C, query?: { limit: number }) {
+    vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
+    const rendered = renderHook(() => useLive(c, query), {
+      wrapper: live.Wrapper,
+    });
+    return { ...rendered, notifications: live.notifications };
   }
   const ready = <T,>(r: { status: string }) => {
     if (r.status !== "ready")
@@ -710,11 +691,11 @@ describe("useLive — a scroll collection's pages, without a viewport", () => {
 
   it("page 0 is the plain window tuple; loadMore splits, every page stays live, capped at maxLimit rows", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result, notifications } = mountPlain(client, c);
+    const live = createLiveStateHarness();
+    const { result, notifications } = mountPlain(live, c);
     expect(result.current.status).toBe("loading");
     act(() => {
-      client.setQueryData(tuple(c, 2), wire(0, 2));
+      live.queryClient.setQueryData(tuple(c, 2), wire(0, 2));
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(ready<List>(result.current).data).toEqual(rows(0, 2));
@@ -725,8 +706,14 @@ describe("useLive — a scroll collection's pages, without a viewport", () => {
     act(() => ready<List>(result.current).loadMore());
     expect(ready<List>(result.current).growing).toBe(true);
     act(() => {
-      client.setQueryData(tuple(c, 4, { until: keyOf(1) }), wire(0, 2));
-      client.setQueryData(tuple(c, 2, { after: keyOf(1) }), wire(2, 4));
+      live.queryClient.setQueryData(
+        tuple(c, 4, { until: keyOf(1) }),
+        wire(0, 2),
+      );
+      live.queryClient.setQueryData(
+        tuple(c, 2, { after: keyOf(1) }),
+        wire(2, 4),
+      );
     });
     await waitFor(() =>
       expect(ready<List>(result.current).data).toEqual(rows(0, 4)),
@@ -738,8 +725,12 @@ describe("useLive — a scroll collection's pages, without a viewport", () => {
     act(() => r.loadMore());
     expect(ready<List>(result.current).data).toEqual(rows(0, 4));
     // Both pages live: only the split's source was released.
-    expect(observers(client, tuple(c, 4, { until: keyOf(1) }))).toBe(1);
-    expect(observers(client, tuple(c, 2, { after: keyOf(1) }))).toBe(1);
+    expect(observers(live.queryClient, tuple(c, 4, { until: keyOf(1) }))).toBe(
+      1,
+    );
+    expect(observers(live.queryClient, tuple(c, 2, { after: keyOf(1) }))).toBe(
+      1,
+    );
     expect(
       unobserve.mock.calls
         .filter(([key]) => key === c.key)
@@ -749,16 +740,22 @@ describe("useLive — a scroll collection's pages, without a viewport", () => {
 
   it("a page an insert pushes past maxLimit rows goes; the page before it becomes the last", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result } = mountPlain(client, c);
+    const live = createLiveStateHarness();
+    const { result } = mountPlain(live, c);
     act(() => {
-      client.setQueryData(tuple(c, 2), wire(0, 2));
+      live.queryClient.setQueryData(tuple(c, 2), wire(0, 2));
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     act(() => ready<List>(result.current).loadMore());
     act(() => {
-      client.setQueryData(tuple(c, 4, { until: keyOf(1) }), wire(0, 2));
-      client.setQueryData(tuple(c, 2, { after: keyOf(1) }), wire(2, 4));
+      live.queryClient.setQueryData(
+        tuple(c, 4, { until: keyOf(1) }),
+        wire(0, 2),
+      );
+      live.queryClient.setQueryData(
+        tuple(c, 2, { after: keyOf(1) }),
+        wire(2, 4),
+      );
     });
     await waitFor(() =>
       expect(ready<List>(result.current).data).toEqual(rows(0, 4)),
@@ -766,17 +763,25 @@ describe("useLive — a scroll collection's pages, without a viewport", () => {
     // Two rows inserted at the head fill page 0: it splits at r-1, and the
     // pages before the last now hold 4 rows — the cap — so the last goes.
     act(() => {
-      client.setQueryData(tuple(c, 4, { until: keyOf(1) }), wire(-2, 2));
+      live.queryClient.setQueryData(
+        tuple(c, 4, { until: keyOf(1) }),
+        wire(-2, 2),
+      );
     });
     await waitFor(() =>
-      expect(observers(client, tuple(c, 2, { after: keyOf(1) }))).toBe(0),
+      expect(
+        observers(live.queryClient, tuple(c, 2, { after: keyOf(1) })),
+      ).toBe(0),
     );
     expect(ready<List>(result.current).data).toEqual(rows(-2, 2));
     const last = tuple(c, 4, { after: keyOf(-1) });
-    expect(observers(client, last)).toBe(1);
+    expect(observers(live.queryClient, last)).toBe(1);
     act(() => {
-      client.setQueryData(tuple(c, 4, { until: keyOf(-1) }), wire(-2, 0));
-      client.setQueryData(last, wire(0, 4));
+      live.queryClient.setQueryData(
+        tuple(c, 4, { until: keyOf(-1) }),
+        wire(-2, 0),
+      );
+      live.queryClient.setQueryData(last, wire(0, 4));
     });
     // The new last page reads up to its own limit past its old cut; the
     // pages before it hold less than the cap, so it stays — and the read,
@@ -789,38 +794,31 @@ describe("useLive — a scroll collection's pages, without a viewport", () => {
 
   it("a query `limit` is page 0's limit — the plain tuple it always read", async () => {
     const c = collection();
-    const client = makeClient();
-    const { result } = mountPlain(client, c, { limit: 1 });
+    const live = createLiveStateHarness();
+    const { result } = mountPlain(live, c, { limit: 1 });
     act(() => {
-      client.setQueryData(tuple(c, 1), wire(0, 1));
+      live.queryClient.setQueryData(tuple(c, 1), wire(0, 1));
     });
     await waitFor(() =>
       expect(ready<List>(result.current).data).toEqual(rows(0, 1)),
     );
-    expect(observers(client, tuple(c, 1))).toBe(1);
+    expect(observers(live.queryClient, tuple(c, 1))).toBe(1);
   });
 
   it("a plain reader shares page 0 with a paged one and stays ready after the paged one releases it", async () => {
     const c = collection();
-    const client = makeClient();
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <NotificationsProvider queryClient={client}>
-        {children}
-      </NotificationsProvider>
-    );
+    const live = createLiveStateHarness();
     const { result } = renderHook(
       () => ({
         plain: useLive(c),
         paged: useLive(c, {}, { viewport: MEASURING }),
       }),
-      { wrapper },
+      { wrapper: live.Wrapper },
     );
-    vi.spyOn(getNotificationsClient()!, "hasEverBeenReady").mockReturnValue(
-      true,
-    );
-    expect(observers(client, tuple(c, 2))).toBe(2);
+    vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
+    expect(observers(live.queryClient, tuple(c, 2))).toBe(2);
     act(() => {
-      client.setQueryData(tuple(c, 2), wire(0, 2));
+      live.queryClient.setQueryData(tuple(c, 2), wire(0, 2));
     });
     await waitFor(() => expect(result.current.paged.status).toBe("ready"));
     expect(ready<List>(result.current.plain).data).toEqual(rows(0, 2));
@@ -828,31 +826,32 @@ describe("useLive — a scroll collection's pages, without a viewport", () => {
     // The paged read splits page 0 away; the plain one still holds it.
     act(() => settled(result.current.paged).loadMore());
     act(() => {
-      client.setQueryData(tuple(c, 4, { until: keyOf(1) }), wire(0, 2));
-      client.setQueryData(tuple(c, 2, { after: keyOf(1) }), wire(2, 4));
+      live.queryClient.setQueryData(
+        tuple(c, 4, { until: keyOf(1) }),
+        wire(0, 2),
+      );
+      live.queryClient.setQueryData(
+        tuple(c, 2, { after: keyOf(1) }),
+        wire(2, 4),
+      );
     });
     await waitFor(() =>
       expect(settled(result.current.paged).rows).toEqual(rows(0, 4)),
     );
-    expect(observers(client, tuple(c, 2))).toBe(1);
+    expect(observers(live.queryClient, tuple(c, 2))).toBe(1);
     expect(ready<List>(result.current.plain).data).toEqual(rows(0, 2));
   });
 
   it("a boot-hydrated page 0 is ready on the first render, with a viewport and without", () => {
     const c = collection();
-    const client = makeClient();
-    client.setQueryData(tuple(c, 2), wire(0, 2));
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <NotificationsProvider queryClient={client}>
-        {children}
-      </NotificationsProvider>
-    );
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(tuple(c, 2), wire(0, 2));
     const { result } = renderHook(
       () => ({
         plain: useLive(c),
         paged: useLive(c, {}, { viewport: MEASURING }),
       }),
-      { wrapper },
+      { wrapper: live.Wrapper },
     );
     expect(ready<List>(result.current.plain).data).toEqual(rows(0, 2));
     expect(settled(result.current.paged).rows).toEqual(rows(0, 2));
@@ -860,26 +859,18 @@ describe("useLive — a scroll collection's pages, without a viewport", () => {
 });
 
 describe("useLive — one call site, one kind of read", () => {
-  const wrapperOf =
-    (client: QueryClient) =>
-    ({ children }: { children: ReactNode }) => (
-      <NotificationsProvider queryClient={client}>
-        {children}
-      </NotificationsProvider>
-    );
-
   it("a null collection under a viewport reads nothing, and back, keeping the hook order", async () => {
     const c = collection();
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const { result, rerender } = renderHook(
       (p: { c: C | null }) =>
         useLive(p.c, p.c === null ? null : {}, { viewport: MEASURING }),
-      { wrapper: wrapperOf(client), initialProps: { c: null as C | null } },
+      { wrapper: live.Wrapper, initialProps: { c: null as C | null } },
     );
     expect(result.current).toEqual({ status: "loading" });
     rerender({ c });
     act(() => {
-      client.setQueryData(tuple(c, 2), wire(0, 2));
+      live.queryClient.setQueryData(tuple(c, 2), wire(0, 2));
     });
     await waitFor(() =>
       expect(settled(result.current).rows).toEqual(rows(0, 2)),
@@ -890,13 +881,13 @@ describe("useLive — one call site, one kind of read", () => {
 
   it("a call site that switches between a viewport and none throws", () => {
     const c = collection();
-    const client = makeClient();
+    const live = createLiveStateHarness();
     // One call site whose options come and go (a cast: no overload takes it).
     const read = useLive as (...args: unknown[]) => unknown;
     const { rerender } = renderHook(
       (p: { paged: boolean }) =>
         read(c, {}, p.paged ? { viewport: MEASURING } : undefined),
-      { wrapper: wrapperOf(client), initialProps: { paged: true } },
+      { wrapper: live.Wrapper, initialProps: { paged: true } },
     );
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(() => rerender({ paged: false })).toThrow(

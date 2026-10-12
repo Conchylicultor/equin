@@ -4,6 +4,7 @@ import { taskStatusChanged } from "@plugins/tasks/plugins/tasks-core/server";
 import { automationTaskStatusJob } from "./internal/attention";
 import { watchAutomationConfigs } from "./internal/watch";
 import {
+  automationOriginsServed,
   automationsCatalogServed,
   automationTasksServed,
   launchDecisionsServed,
@@ -34,10 +35,11 @@ export { releaseLaunchedTask } from "./internal/release";
 
 export default {
   description:
-    "Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, written by the decide-launch endpoint alone — concurrency slots held until a task settles or releaseLaunchedTask, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value, the automations.tasks collection (the origin side-table) and the automations.launch-decisions collection, and notifies the bell when an automated task needs its person.",
+    "Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, written by the decide-launch endpoint alone — concurrency slots held until a task settles or releaseLaunchedTask, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value, the automations.tasks collection (the origin side-table, an automation's history), the automations.origins set (the same rows, every task's automation) and the automations.launch-decisions.all set, and notifies the bell when an automated task needs its person.",
   contributions: [
     ...automationsCatalogServed.declare,
     ...automationTasksServed.declare,
+    ...automationOriginsServed.declare,
     ...launchDecisionsServed.declare,
     Trigger({
       on: taskStatusChanged,

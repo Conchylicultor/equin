@@ -18,19 +18,16 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 }));
 
 import { act, render, renderHook, waitFor } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
-import { useEffect, type ReactNode } from "react";
+import { useEffect } from "react";
 import { z } from "zod";
-import {
-  getNotificationsClient,
-  NotificationsProvider,
-  queryKeyFor,
-} from "@plugins/primitives/plugins/live-state/web";
+import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import {
+  createLiveStateHarness,
   noteResourceTxAcks,
   noteResourceWatermark,
   NotificationsClient,
+  type LiveStateHarness,
 } from "@plugins/primitives/plugins/live-state/web/testing";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -144,36 +141,17 @@ async function settleQueues(): Promise<void> {
   });
 }
 
-function makeClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
-}
-
-function providerWrapper(client: QueryClient) {
-  return ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>
-      {children}
-    </NotificationsProvider>
-  );
-}
-
 /**
  * The transport counts as having been ready (like `useLive`'s suite), so no
- * cold-start HTTP prime races the hand-written `setQueryData` values. Call it
- * once the provider has mounted — it creates the client.
+ * cold-start HTTP prime races the hand-written `setQueryData` values.
  */
-function markTransportReady(): void {
-  const notifications = getNotificationsClient();
-  if (!notifications) throw new Error("NotificationsClient not created");
-  vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
+function markTransportReady(live: LiveStateHarness): void {
+  vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
 }
 
-function mountPositional<R>(client: QueryClient, useHook: () => R) {
-  const rendered = renderHook(useHook, { wrapper: providerWrapper(client) });
-  markTransportReady();
+function mountPositional<R>(live: LiveStateHarness, useHook: () => R) {
+  const rendered = renderHook(useHook, { wrapper: live.Wrapper });
+  markTransportReady(live);
   return rendered;
 }
 
@@ -222,18 +200,18 @@ function useRows(
  * leaves again for the same tuple, so it stays readable for the whole case.
  */
 async function mountRows(
-  client: QueryClient,
+  live: LiveStateHarness,
   mutate: (n: number) => Promise<MutateResult>,
   {
     contentBased = false,
     value = rowsValue,
   }: { contentBased?: boolean; value?: NumbersValue } = {},
 ) {
-  const rendered = mountPositional(client, () =>
+  const rendered = mountPositional(live, () =>
     useRows(mutate, contentBased, value),
   );
   act(() => {
-    client.setQueryData(queryKeyFor(value.key, undefined), []);
+    live.queryClient.setQueryData(queryKeyFor(value.key, undefined), []);
   });
   await settledOf(rendered.result);
   return { ...rendered, rows: () => settledArm(rendered.result.current) };
@@ -246,9 +224,10 @@ afterEach(() => {
 
 describe("useOptimisticResource", () => {
   it("content-based: a push that lands BEFORE the response still confirms the op", async () => {
-    const client = makeClient();
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
     const { mutate, release } = deferredMutate();
-    const { rows } = await mountRows(client, mutate, { contentBased: true });
+    const { rows } = await mountRows(live, mutate, { contentBased: true });
 
     act(() => {
       rows().dispatch(2);
@@ -273,9 +252,10 @@ describe("useOptimisticResource", () => {
   });
 
   it("coarse: the dispatch-time generation stamp confirms at the resolve edge", async () => {
-    const client = makeClient();
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
     const { mutate, release } = deferredMutate();
-    const { rows } = await mountRows(client, mutate); // no isConfirmedBy ⇒ coarse
+    const { rows } = await mountRows(live, mutate); // no isConfirmedBy ⇒ coarse
 
     act(() => {
       rows().dispatch(2);
@@ -295,9 +275,10 @@ describe("useOptimisticResource", () => {
   });
 
   it("coarse: with no push since dispatch, the op stays until the next push", async () => {
-    const client = makeClient();
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
     const { mutate, release } = deferredMutate();
-    const { rows } = await mountRows(client, mutate);
+    const { rows } = await mountRows(live, mutate);
 
     act(() => {
       rows().dispatch(2);
@@ -322,9 +303,10 @@ describe("useOptimisticResource", () => {
     // `dataUpdateCount`. Coarse mode drops any resolved op on a push, so an
     // ungated subscription would let a bare invalidate — which delivers no
     // server data at all — confirm the op.
-    const client = makeClient();
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
     const { mutate, release } = deferredMutate();
-    const { rows } = await mountRows(client, mutate);
+    const { rows } = await mountRows(live, mutate);
 
     act(() => {
       rows().dispatch(2);
@@ -357,7 +339,8 @@ describe("useOptimisticResource", () => {
     // observable is the indicator itself: it renders NOTHING while `idle`, and
     // the only way out of `idle` here is an explicit `savedAt` stamp — the
     // spinner is suppressed by its 120ms show-delay, and nothing failed.
-    const client = makeClient();
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
     const { mutate, release } = deferredMutate();
     // Published from an EFFECT, never during render: reassigning an outer
     // binding while rendering is a side effect (react-compiler rejects it), and
@@ -375,14 +358,14 @@ describe("useOptimisticResource", () => {
     }
 
     const { container } = render(
-      <NotificationsProvider queryClient={client}>
+      <live.Wrapper>
         <SyncStatusProvider>
           <Probe />
           <SyncStatusIndicator />
         </SyncStatusProvider>
-      </NotificationsProvider>,
+      </live.Wrapper>,
     );
-    markTransportReady();
+    markTransportReady(live);
     act(() => {
       client.setQueryData(rowsKey, []);
     });
@@ -405,11 +388,11 @@ describe("useOptimisticResource", () => {
   it("a transient HTTP failure keeps the op RENDERED and surfaces it in `failed`", async () => {
     // Never-revert: a 5xx says the server failed, not the op — a sync-status
     // state (cloud `error` + Retry), not an undo; the prediction stays.
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const mutate = vi.fn(() =>
       Promise.reject(new EndpointError(503, { message: "busy" })),
     );
-    const { rows } = await mountRows(client, mutate);
+    const { rows } = await mountRows(live, mutate);
 
     await act(async () => {
       rows().dispatch(2);
@@ -424,7 +407,8 @@ describe("useOptimisticResource", () => {
     // A 4xx is a final verdict: the server will never hold this state, so the
     // prediction leaves the overlay (server truth renders) and the rejection is
     // emitted for the toast + report.
-    const client = makeClient();
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
     const reports: OptimisticRejectionReport[] = [];
     optimisticRejectionSink.register((r) => {
       reports.push(r);
@@ -433,7 +417,7 @@ describe("useOptimisticResource", () => {
     const mutate = vi.fn(() =>
       Promise.reject(new EndpointError(400, "destination is outside the page")),
     );
-    const { result } = mountPositional(client, () =>
+    const { result } = mountPositional(live, () =>
       useOptimisticResource(rowsValue, {
         apply,
         mutate,
@@ -473,13 +457,13 @@ describe("useOptimisticResource", () => {
   it.each([401, 408, 429, 500])(
     "HTTP %i is transient: the op stays rendered in `failed`, nothing is reported",
     async (status) => {
-      const client = makeClient();
+      const live = createLiveStateHarness();
       const reports: OptimisticRejectionReport[] = [];
       optimisticRejectionSink.register((r) => {
         reports.push(r);
       });
       const mutate = vi.fn(() => Promise.reject(new EndpointError(status, {})));
-      const { rows } = await mountRows(client, mutate);
+      const { rows } = await mountRows(live, mutate);
 
       await act(async () => {
         rows().dispatch(2);
@@ -491,9 +475,9 @@ describe("useOptimisticResource", () => {
   );
 
   it("a permanently rejected op un-parks the newer op queued behind it", async () => {
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const { mutate, calls, sent } = queuedMutate();
-    const { rows } = await mountRows(client, mutate, {
+    const { rows } = await mountRows(live, mutate, {
       value: laneRejectValue,
     });
 
@@ -513,12 +497,12 @@ describe("useOptimisticResource", () => {
   });
 
   it("retry(opId) re-fires a failed op IN PLACE (same opId, same overlay position)", async () => {
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const mutate = vi
       .fn<(n: number) => Promise<MutateResult>>()
       .mockRejectedValueOnce(new EndpointError(500, {}))
       .mockResolvedValue(undefined);
-    const { rows } = await mountRows(client, mutate);
+    const { rows } = await mountRows(live, mutate);
 
     let opId = "";
     await act(async () => {
@@ -540,9 +524,9 @@ describe("useOptimisticResource", () => {
   it("a network-rejected mutate keeps the op rendered as `syncing`, NOT `failed`", async () => {
     // Offline-is-syncing (the Yjs provider's policy): a fetch-level rejection
     // says nothing about the op, so it is not an error state.
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const mutate = vi.fn(() => Promise.reject(new TypeError("fetch failed")));
-    const { rows } = await mountRows(client, mutate);
+    const { rows } = await mountRows(live, mutate);
 
     await act(async () => {
       rows().dispatch(2);
@@ -555,12 +539,12 @@ describe("useOptimisticResource", () => {
   });
 
   it("the browser `online` edge auto-retries network-failed ops", async () => {
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const mutate = vi
       .fn<(n: number) => Promise<MutateResult>>()
       .mockRejectedValueOnce(new TypeError("fetch failed"))
       .mockResolvedValue(undefined);
-    const { rows } = await mountRows(client, mutate);
+    const { rows } = await mountRows(live, mutate);
 
     let opId = "";
     await act(async () => {
@@ -584,7 +568,7 @@ describe("useOptimisticResource", () => {
     // server-side effects (a second split targets the block the first one
     // created). A concurrent replay can land out of order and be durably
     // rejected — the drain must await each op before firing the next.
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const releases: Array<(res?: MutateResult) => void> = [];
     let offline = true;
     const mutate = vi.fn((_n: number) => {
@@ -593,7 +577,7 @@ describe("useOptimisticResource", () => {
         releases.push(resolve);
       });
     });
-    const { rows } = await mountRows(client, mutate);
+    const { rows } = await mountRows(live, mutate);
 
     await act(async () => {
       rows().dispatch(2);
@@ -624,14 +608,14 @@ describe("useOptimisticResource", () => {
   it("a network re-failure stops the drain; the next edge resumes it", async () => {
     // Transport still down ⇒ every later op would fail the same way — stop
     // instead of hammering; the next reconnect edge re-drains from the top.
-    const client = makeClient();
+    const live = createLiveStateHarness();
     let offline = true;
     const mutate = vi.fn((_n: number) =>
       offline
         ? Promise.reject(new TypeError("fetch failed"))
         : Promise.resolve(undefined as MutateResult),
     );
-    const { rows } = await mountRows(client, mutate);
+    const { rows } = await mountRows(live, mutate);
 
     await act(async () => {
       rows().dispatch(2);
@@ -662,9 +646,9 @@ describe("useOptimisticResource", () => {
   it("HTTP-failed ops are NOT auto-retried on the `online` edge", async () => {
     // The server already answered; a reconnect doesn't change that answer.
     // Only an explicit retry() re-sends.
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const mutate = vi.fn(() => Promise.reject(new EndpointError(503, {})));
-    const { rows } = await mountRows(client, mutate);
+    const { rows } = await mountRows(live, mutate);
 
     await act(async () => {
       rows().dispatch(2);
@@ -683,9 +667,9 @@ describe("useOptimisticResource", () => {
     // carrying this commit's ackTx was noted before the mutate resolved, so the
     // resolve edge's hasAck probe confirms immediately — even though the only
     // snapshot on this tuple is the pre-dispatch base, which lacks the op.
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const { mutate, release } = deferredMutate();
-    const { rows } = await mountRows(client, mutate, {
+    const { rows } = await mountRows(live, mutate, {
       contentBased: true,
       value: ackRaceValue,
     });
@@ -711,9 +695,9 @@ describe("useOptimisticResource", () => {
     optimisticDivergenceReportSink.register((r) => {
       reports.push(r);
     });
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const { mutate, release } = deferredMutate();
-    const { rows } = await mountRows(client, mutate, {
+    const { rows } = await mountRows(live, mutate, {
       contentBased: true,
       value: ackStandaloneValue,
     });
@@ -747,14 +731,15 @@ describe("useOptimisticResource", () => {
     // at `paramsRef.current` — so after a params change, an ack noted under the
     // OLD tuple is invisible, and the op converges via Rule B on the NEW
     // tuple's watermark-carrying snapshot instead.
-    const client = makeClient();
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
     const { mutate, release } = deferredMutate();
     const { result, rerender } = renderHook(
       ({ p }: { p: { v: string } }) =>
         useOptimisticResource(ackRebaseValue, p, { apply, mutate }),
-      { wrapper: providerWrapper(client), initialProps: { p: { v: "1" } } },
+      { wrapper: live.Wrapper, initialProps: { p: { v: "1" } } },
     );
-    markTransportReady();
+    markTransportReady(live);
     act(() => {
       client.setQueryData(queryKeyFor(ackRebaseValue.key, { v: "1" }), []);
     });
@@ -809,9 +794,10 @@ describe("useOptimisticResource", () => {
       reports.push(r);
     });
 
-    const client = makeClient();
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
     const mutate = vi.fn(() => Promise.resolve({ watermark: "100" }));
-    const { rows } = await mountRows(client, mutate, {
+    const { rows } = await mountRows(live, mutate, {
       contentBased: true,
       value: denialValue,
     });
@@ -842,9 +828,9 @@ describe("useOptimisticResource", () => {
     // The half the primitive used to enforce on retry only. Ops are an ordered
     // fold, so their writes are an ordered stream — B may depend on A's
     // server-side effect (a second split targets the block the first created).
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const { mutate, calls, sent } = queuedMutate();
-    const { rows } = await mountRows(client, mutate, { value: laneOrderValue });
+    const { rows } = await mountRows(live, mutate, { value: laneOrderValue });
 
     act(() => {
       rows().dispatch(2);
@@ -865,9 +851,9 @@ describe("useOptimisticResource", () => {
   it("a durably-rejected send does NOT wedge its successors", async () => {
     // The lane advances on settle — resolve or reject alike. A rejected op is a
     // sync-status state, never a stalled queue.
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const { mutate, calls, sent } = queuedMutate();
-    const { rows } = await mountRows(client, mutate, { value: laneWedgeValue });
+    const { rows } = await mountRows(live, mutate, { value: laneWedgeValue });
 
     act(() => {
       rows().dispatch(2);
@@ -892,9 +878,10 @@ describe("useOptimisticResource", () => {
     // The hole a per-hook ref had: two mounted consumers of one tuple are two
     // writers to ONE server-side entity, and a per-instance chain orders each of
     // them against itself only.
-    const client = makeClient();
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
     const { mutate, calls, sent } = queuedMutate();
-    const { result } = mountPositional(client, () => ({
+    const { result } = mountPositional(live, () => ({
       a: useRows(mutate, false, laneSharedValue),
       b: useRows(mutate, false, laneSharedValue),
     }));
@@ -929,9 +916,9 @@ describe("useOptimisticResource", () => {
     // no single tuple's overlay can predict) still has to depart in order. It
     // must resolve the lane key exactly as the hook does — a different
     // derivation would order it against nothing.
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const { mutate, calls, sent } = queuedMutate();
-    const { rows } = await mountRows(client, mutate, {
+    const { rows } = await mountRows(live, mutate, {
       value: laneDetachedValue,
     });
 
@@ -955,10 +942,10 @@ describe("useOptimisticResource", () => {
   });
 
   it("an idle lane is reclaimed, so the module-level registry cannot grow unboundedly", async () => {
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const { mutate, release } = deferredMutate();
     const idle = activeSendLaneCount();
-    const { rows } = await mountRows(client, mutate, {
+    const { rows } = await mountRows(live, mutate, {
       value: laneReclaimValue,
     });
 
@@ -1005,9 +992,10 @@ const setRank = (rows: RankRow[], v: { id: string; rank: string }): RankRow[] =>
 
 describe("useOptimisticResource — read forms", () => {
   it("a value is pending until its first value lands; then dispatch replays and a push confirms", async () => {
-    const client = makeClient();
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
     const { mutate, release } = deferredMutate();
-    const { result } = mountPositional(client, () =>
+    const { result } = mountPositional(live, () =>
       useOptimisticResource(numbersValue, { apply, mutate }),
     );
     expect(result.current.status).toBe("loading");
@@ -1047,8 +1035,8 @@ describe("useOptimisticResource — read forms", () => {
   });
 
   it("the loading arm has no dispatch, data or serverData (type level)", () => {
-    const client = makeClient();
-    const { result } = mountPositional(client, () =>
+    const live = createLiveStateHarness();
+    const { result } = mountPositional(live, () =>
       useOptimisticResource(numbersValue, { apply, mutate: async () => {} }),
     );
     const r = result.current;
@@ -1064,8 +1052,9 @@ describe("useOptimisticResource — read forms", () => {
   });
 
   it("a parameterized value reads its own tuple; its params are required (type level)", async () => {
-    const client = makeClient();
-    const { result } = mountPositional(client, () =>
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    const { result } = mountPositional(live, () =>
       useOptimisticResource(
         namedValue,
         { name: "a" },
@@ -1095,8 +1084,9 @@ describe("useOptimisticResource — read forms", () => {
     // No descriptor seeds a value: the `:rows` tuple's cache entry is empty
     // until the server answers, and the read says `loading` — never a `[]`
     // stand-in an op could be folded onto.
-    const client = makeClient();
-    const { result } = mountPositional(client, () =>
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    const { result } = mountPositional(live, () =>
       useOptimisticResource(
         ranks,
         { ids: ["b", "a"] },
@@ -1127,8 +1117,8 @@ describe("useOptimisticResource — read forms", () => {
           release();
         };
       });
-    const client = makeClient();
-    const { unmount } = mountPositional(client, () =>
+    const live = createLiveStateHarness();
+    const { unmount } = mountPositional(live, () =>
       useOptimisticResource(
         ranks,
         { ids: ["a"] },
@@ -1147,10 +1137,11 @@ describe("useOptimisticResource — read forms", () => {
   });
 
   it("a reorder whose write changed nothing in the tuple still confirms, via the standalone ack", async () => {
-    const client = makeClient();
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
     const { mutate, release } = deferredMutate();
     const params = { ids: "a,b" };
-    const { result } = mountPositional(client, () =>
+    const { result } = mountPositional(live, () =>
       useOptimisticResource(
         ranks,
         { ids: ["a", "b"] },

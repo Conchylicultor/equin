@@ -11,16 +11,15 @@ const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
 
 /**
  * Field extension contributed into the page-tree's `PageTree.Fields` factory: a
- * render-callback component that reads this plugin's own bounded favorites
- * window and yields one `starred` bool `FieldDef<PageRow>` closed over the id
+ * render-callback component that reads this plugin's own favorites set and
+ * yields one `starred` bool `FieldDef<PageRow>` closed over the id
  * set. Because the field carries a synchronous `value` projection, it shows up
  * in the DataView's Filter pill for free — so the "Favorites" view is just a
  * filtered `list` view over `starred`, with no bespoke sidebar.
  *
- * The whole-set read is exactly why `starredPages` is read as a bounded WINDOW
- * rather than by id: the field must project `starred` for every row the
- * DataView filters over, and naming every page id would be O(pages). See
- * `shared/resources.ts`.
+ * The whole-set read is exactly why `starredPages` is declared `all` rather
+ * than read by id: the field must project `starred` for every row the
+ * DataView filters over. See `shared/resources.ts`.
  */
 export function StarredField({ render }: FieldExtensionProps<PageRow>) {
   // An empty set while pending is genuinely correct, and is the LEAST wrong of

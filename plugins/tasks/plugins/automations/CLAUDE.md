@@ -148,7 +148,10 @@ ONLY by `decideLaunchEndpoint` (`POST /api/automations/:automationId/launch-deci
 `decision: null` clears) — the person's click. Nothing on the server approves
 a task, and `candidates` cannot bypass the filter: an automation only ranks.
 `excluded` is for the automation's own review UI (not proposed again); the pump
-ignores it. Read with `useLive(launchDecisions, { where: { automationId } })`.
+ignores it. Served as `launchDecisions` (`automations.launch-decisions.all`), the
+whole ordered set (`all`, at most one row per task): a launch list joins it to
+every task it shows, so it reads it entire and keeps its own automation's rows
+(`useLive(launchDecisions, { select })`).
 
 Dedupe ("one open task") is file-kind only. A launched task stays the person's
 task: its category, title and description are untouched; the role says the
@@ -187,8 +190,14 @@ task with none was filed and started by a person or an agent acting for one.
 Rows from before launches existed read `filed` (the column's DB default).
 `automationOfTask(taskId)` (server barrel) answers which automation, for a
 plugin that treats automated tasks differently (the outcome-report tool is
-offered only to them). Served as the `automations.tasks` live collection — a
-window filterable by `automationId` (newest first), and point reads by task id.
+offered only to them). Served twice from the one table:
+
+- `automationTasks` (`automations.tasks`) — an automation's HISTORY: a window
+  filterable by `automationId` (newest first), and point reads by task id.
+- `automationOrigins` (`automations.origins`) — every task's automation, the
+  whole ordered set (`all`) projected to `{ taskId, automationId }`: the task
+  list's Automation field needs an origin for EVERY task row, so it never
+  reads the history window as a set.
 
 ## Reads
 
@@ -200,7 +209,7 @@ window filterable by `automationId` (newest first), and point reads by task id.
   (launch; the list shows "N running"). Re-pushed when an
   automation's config changes, it files, launches or releases a task, or one of
   its tasks changes status.
-- `automationTasks` — see above.
+- `automationTasks`, `automationOrigins`, `launchDecisions` — see above.
 - `automationsRoute` / `automationDetailRoute` (`automation/:automationId`).
 
 ## The person's attention
@@ -220,7 +229,7 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
 
 ## Plugin reference
 
-- Description: Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the `origin` Automation field in every task DataView, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, written by the decide-launch endpoint alone — concurrency slots held until a task settles or releaseLaunchedTask, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value, the automations.tasks collection (the origin side-table) and the automations.launch-decisions collection, and notifies the bell when an automated task needs its person.
+- Description: Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the `origin` Automation field in every task DataView, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, written by the decide-launch endpoint alone — concurrency slots held until a task settles or releaseLaunchedTask, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value, the automations.tasks collection (the origin side-table, an automation's history), the automations.origins set (the same rows, every task's automation) and the automations.launch-decisions.all set, and notifies the bell when an automated task needs its person.
 - Web:
   - Slots:
     - `Automations.Config`
@@ -281,9 +290,10 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
 - Server:
   - Contributes:
     - `resource.declare` "automations.catalog"
-    - `resource.declare` "automations.launch-decisions"
-    - `resource.declare` "automations.launch-decisions:groups"
-    - `resource.declare` "automations.launch-decisions:rows"
+    - `resource.declare` "automations.launch-decisions.all"
+    - `resource.declare` "automations.launch-decisions.all:rows"
+    - `resource.declare` "automations.origins"
+    - `resource.declare` "automations.origins:rows"
     - `resource.declare` "automations.tasks"
     - `resource.declare` "automations.tasks:groups"
     - `resource.declare` "automations.tasks:rows"
@@ -324,9 +334,10 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
   - Register: `defineJob('automations.task-status')`
   - Resources:
     - `automations.catalog` (push, notified)
-    - `automations.launch-decisions` (keyed, window)
-    - `automations.launch-decisions:groups` (push)
-    - `automations.launch-decisions:rows` (keyed, point)
+    - `automations.launch-decisions.all` (keyed)
+    - `automations.launch-decisions.all:rows` (keyed, point)
+    - `automations.origins` (keyed)
+    - `automations.origins:rows` (keyed, point)
     - `automations.tasks` (keyed, window)
     - `automations.tasks:groups` (push)
     - `automations.tasks:rows` (keyed, point)
@@ -356,6 +367,7 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `AutomationConfigFields`
     - `AutomationEntry`
     - `AutomationKind`
+    - `AutomationOriginRow`
     - `AutomationSettings`
     - `AutomationSource`
     - `AutomationTaskRow`
@@ -378,6 +390,8 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `automationDetailRoute`
     - `AutomationEntrySchema`
     - `automationModelField`
+    - `AutomationOriginRowSchema`
+    - `automationOrigins`
     - `AUTOMATIONS_CONFIG_PLUGIN_ID`
     - `automationsCatalog`
     - `AutomationSettingsSchema`

@@ -3,6 +3,7 @@ import {
   serveValue,
 } from "@plugins/network/plugins/live/server";
 import {
+  automationOrigins,
   automationsCatalog,
   automationTasks,
   launchDecisions,
@@ -107,8 +108,17 @@ export const automationTasksServed = serveCollection(automationTasks, {
   from: tasksOrigin,
 });
 
-// Served from the extension handle, like the origin rows: a decision is a
-// window entry, a cleared one an exit.
+// The same rows as the whole set, projected to `{ taskId, automationId }`:
+// filing a task is an entrant (one refill + one `orderOf`), its deletion an
+// exit with no load, and a write to a column the set does not project
+// (`releasedAt`, `sourceKeys`) loads nothing.
+export const automationOriginsServed = serveCollection(automationOrigins, {
+  from: tasksOrigin,
+});
+
+// Served from the extension handle, like the origin rows: a decision is an
+// entrant of the whole set, a changed one a one-row refill, a cleared one an
+// exit.
 export const launchDecisionsServed = serveCollection(launchDecisions, {
   from: tasksLaunchDecision,
 });

@@ -37,7 +37,6 @@ vi.mock("../internal/use-data-view-model", () => ({
 }));
 
 import { act, cleanup, render, waitFor } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { z } from "zod";
 import {
@@ -45,11 +44,8 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
-import {
-  NotificationsProvider,
-  getNotificationsClient,
-  queryKeyFor,
-} from "@plugins/primitives/plugins/live-state/web";
+import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
+import { createLiveStateHarness } from "@plugins/primitives/plugins/live-state/web/testing";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { liveNumber } from "@plugins/network/plugins/live/plugins/filter/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -254,15 +250,6 @@ function model(state: ViewState) {
 
 const Sources = defineDataViewSources<Record<string, never>>();
 
-// ONE client for the file: the NotificationsClient is a tab singleton, made
-// against the first provider's client (a released page's cache is dropped
-// from that one).
-const CLIENT = new QueryClient({
-  defaultOptions: {
-    queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-  },
-});
-
 /** Mount a MergedDataView whose one source renders `bundle()` — re-read on every `rerender`. */
 function mount(bundle: () => object) {
   currentModel = model({ sort: [], filter: null, query: "" });
@@ -286,8 +273,10 @@ function mount(bundle: () => object) {
     ],
     slots: { ...DataViewSlots, sources: Sources },
   } as unknown as LoadedPlugin;
+  const live = createLiveStateHarness();
+  vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
   const tree = () => (
-    <NotificationsProvider queryClient={CLIENT}>
+    <live.Wrapper>
       <PluginProvider plugins={[plugin]}>
         <div
           data-testid="scroller"
@@ -301,13 +290,14 @@ function mount(bundle: () => object) {
           />
         </div>
       </PluginProvider>
-    </NotificationsProvider>
+    </live.Wrapper>
   );
   const rendered = render(tree());
-  const notifications = getNotificationsClient();
-  if (!notifications) throw new Error("NotificationsClient not created");
-  vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
-  return { notifications, rerender: () => rendered.rerender(tree()) };
+  return {
+    notifications: live.notifications,
+    queryClient: live.queryClient,
+    rerender: () => rendered.rerender(tree()),
+  };
 }
 
 const placeholders = () =>
@@ -585,7 +575,10 @@ describe("page placeholders — a live source scrolled deep", () => {
   it("the rows drawn stay bounded however deep the read goes; the rest stand as placeholders", async () => {
     const c = items_();
     const source = liveDataSource(c, { searchable: [] });
-    const { notifications } = mount(() => ({ fields: FIELDS, source }));
+    const { notifications, queryClient } = mount(() => ({
+      fields: FIELDS,
+      source,
+    }));
     // Every subscribed tuple is answered a tick later, as a sub-ack would.
     const observe = notifications.observe.bind(notifications);
     vi.spyOn(notifications, "observe").mockImplementation(
@@ -594,7 +587,7 @@ describe("page placeholders — a live source scrolled deep", () => {
         if (key !== c.key) return;
         setTimeout(() =>
           act(() => {
-            CLIENT.setQueryData(
+            queryClient.setQueryData(
               queryKeyFor(key, params),
               windowOf(params as Record<string, string>),
             );
@@ -603,7 +596,7 @@ describe("page placeholders — a live source scrolled deep", () => {
       },
     );
     act(() => {
-      CLIENT.setQueryData(
+      queryClient.setQueryData(
         queryKeyFor(c.key, { limit: "2" }),
         windowOf({ limit: "2" }),
       );

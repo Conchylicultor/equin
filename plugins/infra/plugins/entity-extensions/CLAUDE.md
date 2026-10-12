@@ -100,7 +100,8 @@ Because the handle is an entity, no form has a row projection left to write:
 | Collection form | Serve |
 |---|---|
 | **lookup-only** `liveCollection(key, { row, id })` (default) | `serveCollection(c, { from: ext })`, **no `select`** — the entity is an `EntitySource`, its row fields bind to its columns by name |
-| windowed `liveCollection` (a reader lists rows — `pages-starred`) | the same, plus the declaration's `filterable` / `sortable` / `default` / `maxLimit` |
+| windowed `liveCollection` (a reader lists rows, a bounded window of them — `automations.tasks`) | the same, plus the declaration's `filterable` / `sortable` / `default` / `maxLimit` |
+| `all` `liveCollection` (a reader needs the whole set — at most one row per parent, a field projecting it for every parent: `pages-starred.all`, `automations.origins`) | the same, plus the declaration's `all: { orderBy, unbounded: { reason } }` |
 
 The old push forms (`defineResource` over the whole table, or a fold into a `Record`) re-sent every parent's row to every subscriber on any write and made each reader `.find(id)` its one row; the last of them (Sonata's per-song settings) are lookup collections now, and `no-legacy-resource-spelling` rejects the spelling.
 

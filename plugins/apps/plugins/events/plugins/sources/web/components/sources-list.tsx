@@ -114,7 +114,7 @@ export function SourcesList(): ReactNode {
       },
       // A DERIVED dimension: there is no `extraction` column — it is computed
       // by `extractionStatus` from the two the run ledger writes. Fine exactly
-      // here — this DataView is client-side over a bounded live window, so
+      // here — this DataView is client-side over the whole live sources set, so
       // filter / sort / group-by run over the rows already in hand and need no
       // server binding. (A server-delegated view, like `event-list`, could not
       // do this: its filters compile to SQL against real columns.)

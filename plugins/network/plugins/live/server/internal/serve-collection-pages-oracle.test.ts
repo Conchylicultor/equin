@@ -70,6 +70,7 @@ import {
   LIVE_ROW_KEY,
 } from "@plugins/network/plugins/live/core";
 import { liveNumber } from "@plugins/network/plugins/live/plugins/filter/core";
+import { PROTOCOL } from "@plugins/packages/plugins/resource-protocol/core";
 import {
   assemble,
   loadMore,
@@ -316,6 +317,7 @@ class Pages {
           op: "sub",
           key: collection.key,
           params,
+          protocol: PROTOCOL,
           ...(derive !== null ? { derive: derive.frame } : {}),
         }),
       );

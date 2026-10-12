@@ -15,14 +15,23 @@ than as work. A closed op's sleeps are stored on its row, so it takes `null`.
 ## Surfaces
 
 - **Profiling section** (`OpSection`): every op requested in the last 24 h —
-  `useLive(opsHistory, { where: requestedAt >= cutoff, limit: 2000 })`, the
-  cutoff floored to 5 min so the subscription tuple is stable.
+  `useLive(opsHistory, { where: requestedAt >= cutoff, limit: OPS_READ_LIMIT })`
+  (`opsHistory.window.window.maxLimit`, read off the collection), the cutoff
+  floored to 5 min so the subscription tuple is stable.
 - **Worktree Gantt** (`WorktreeOpGantt`, exported; the conversation's `/pp`
   pane): two reads. First that worktree's own ops (`where: { opSlug }`); their
   span ± 20 min, floored / ceiled to 5 min, is the window. Then every op
   overlapping the window (requested in it, or completed in it). While one of the
   worktree's ops is in flight the window is open-ended rather than re-keyed as
   it grows.
+- **No Gantt read is taken for the history as a set.** Each is newest
+  first, at `OPS_READ_LIMIT`: the section's and the worktree window's are time
+  ranges stated in their query (the 24 h cutoff, the window); the worktree's
+  own read has no time bound but the store's 30-day retention, so a worktree
+  with more ops than that starts its span late. A read that comes back full
+  draws the newest ops and says it may hold older ones above the chart
+  (`LiveOpGantt`'s `capped`; a read of exactly `OPS_READ_LIMIT` says so too —
+  full cannot tell "exactly" from "more").
 - **Op detail** (`opDetailPane`): `useLiveRow(opsHistory, opId)` — the stat
   grid **Wait / Work / Asleep / Total** (Asleep only when the op slept; the
   four reconcile exactly, off the fold's one breakdown), the timeline with every

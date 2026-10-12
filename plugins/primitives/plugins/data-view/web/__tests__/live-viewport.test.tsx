@@ -1,6 +1,6 @@
 /**
  * The viewport a live source pages by, end to end: a `MergedDataView` over a
- * live collection (a real NotificationsProvider + QueryClient, the view model
+ * live collection (`createLiveStateHarness` (a real client and its QueryClient), the view model
  * stubbed, one minimal list view stamping `data-row-key`), with an
  * IntersectionObserver that answers each row it is handed — as a browser does
  * — from the rows the test puts "on screen".
@@ -23,7 +23,6 @@ vi.mock("../internal/use-data-view-model", () => ({
 }));
 
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { z } from "zod";
 import {
@@ -31,11 +30,8 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
-import {
-  NotificationsProvider,
-  getNotificationsClient,
-  queryKeyFor,
-} from "@plugins/primitives/plugins/live-state/web";
+import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
+import { createLiveStateHarness } from "@plugins/primitives/plugins/live-state/web/testing";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import {
   liveInstant,
@@ -179,13 +175,10 @@ function mount(c: C, state: ViewState) {
     ],
     slots: { ...DataViewSlots, sources: Sources },
   } as unknown as LoadedPlugin;
-  const client = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
+  const live = createLiveStateHarness();
+  vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
   const tree = () => (
-    <NotificationsProvider queryClient={client}>
+    <live.Wrapper>
       <PluginProvider plugins={[plugin]}>
         <MergedDataView
           storageKey={STORAGE_KEY}
@@ -193,15 +186,12 @@ function mount(c: C, state: ViewState) {
           hostProps={{}}
         />
       </PluginProvider>
-    </NotificationsProvider>
+    </live.Wrapper>
   );
   const rendered = render(tree());
-  const notifications = getNotificationsClient();
-  if (!notifications) throw new Error("NotificationsClient not created");
-  vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
-  const unobserve = vi.spyOn(notifications, "unobserve");
+  const unobserve = vi.spyOn(live.notifications, "unobserve");
   return {
-    client,
+    client: live.queryClient,
     unobserve,
     /** Re-render under another view state (a sort picked, …). */
     setState: (next: ViewState) => {

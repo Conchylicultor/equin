@@ -2,10 +2,10 @@
 // ends compile against. The resource runtime (per-worktree server and central)
 // sends these frames and bodies; the live-state client reads them. A leaf on
 // purpose: the runtime barrel pulls `node:crypto`, so the browser cannot import
-// it, and the runtime must not import the live-state client.
+// it, and the runtime must not import the live-state client. The frames
+// themselves (`SubErrorFrame` included) are declared in `./frames`.
 
-/** Params as they ride the wire: every name → a string. */
-type WireParams = Record<string, string>;
+import { CONTRACT_VERDICTS, SUB_ERROR_REASONS } from "./frames";
 
 /**
  * Why a subscription (or its HTTP read) was refused.
@@ -22,12 +22,7 @@ type WireParams = Record<string, string>;
  *   reported — and it carries a `code` the resource declares (its
  *   `refusals`) and a user-readable message.
  */
-export type SubErrorReason =
-  | "unknown-key"
-  | "unauthorized"
-  | "loader-failed"
-  | "contract-mismatch"
-  | "refused";
+export type SubErrorReason = (typeof SUB_ERROR_REASONS)[number];
 
 /**
  * Whose fault a contract mismatch is, judged from the build the client says it
@@ -39,22 +34,7 @@ export type SubErrorReason =
  *   the server's decode. A real bug.
  * - `unknown` — one side cannot say (a dev bundle, no served graph, central).
  */
-export type ContractVerdict = "skew" | "same-build" | "unknown";
-
-/** The `sub-error` frame the runtime sends when it refuses (or drops) a sub. */
-export interface SubErrorFrame {
-  kind: "sub-error";
-  id?: number;
-  key: string;
-  params: WireParams;
-  reason: SubErrorReason;
-  /** Present on `contract-mismatch` and `unknown-key` — both are what skew looks like. */
-  verdict?: ContractVerdict;
-  /** Present on `refused`: the refusal's declared code (`ResourceRefusal.code`). */
-  code?: string;
-  /** Present on `refused`: the refusal's user-readable message. */
-  message?: string;
-}
+export type ContractVerdict = (typeof CONTRACT_VERDICTS)[number];
 
 /**
  * The JSON body of a failed `GET /api/resources/:key` (404 unknown key, 409
@@ -146,18 +126,10 @@ export function contractVerdict(
   return clientBuild === serverGraph ? "same-build" : "skew";
 }
 
-const REASONS: ReadonlySet<string> = new Set<SubErrorReason>([
-  "unknown-key",
-  "unauthorized",
-  "loader-failed",
-  "contract-mismatch",
-  "refused",
-]);
-const VERDICTS: ReadonlySet<string> = new Set<ContractVerdict>([
-  "skew",
-  "same-build",
-  "unknown",
-]);
+const REASONS: ReadonlySet<string> = new Set<SubErrorReason>(SUB_ERROR_REASONS);
+const VERDICTS: ReadonlySet<string> = new Set<ContractVerdict>(
+  CONTRACT_VERDICTS,
+);
 
 /**
  * Read a failed HTTP read's body as a `ResourceHttpErrorBody`, or `undefined`

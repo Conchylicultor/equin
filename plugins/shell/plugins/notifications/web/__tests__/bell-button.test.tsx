@@ -12,35 +12,23 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 }));
 
 import { cleanup, render, screen } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
+import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
 import {
-  NotificationsProvider,
-  getNotificationsClient,
-  queryKeyFor,
-} from "@plugins/primitives/plugins/live-state/web";
+  createLiveStateHarness,
+  type LiveStateHarness,
+} from "@plugins/primitives/plugins/live-state/web/testing";
 import { notifications, notificationsUnread } from "../../shared/resources";
 import { BellButton } from "../components/bell-button";
 
 afterEach(cleanup);
 
-function makeClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
-}
-
-function mount(client: QueryClient) {
-  const rendered = render(
-    <NotificationsProvider queryClient={client}>
+function mount(live: LiveStateHarness) {
+  vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
+  return render(
+    <live.Wrapper>
       <BellButton />
-    </NotificationsProvider>,
+    </live.Wrapper>,
   );
-  const live = getNotificationsClient();
-  if (!live) throw new Error("NotificationsClient not created");
-  vi.spyOn(live, "hasEverBeenReady").mockReturnValue(true);
-  return rendered;
 }
 
 const windowKey = () => {
@@ -51,18 +39,22 @@ const windowKey = () => {
 };
 const unreadKey = () => queryKeyFor(notificationsUnread.key, {});
 
-function settled(unread: { errors: number; warnings: number }): QueryClient {
-  const client = makeClient();
-  client.setQueryData(windowKey(), []);
-  client.setQueryData(unreadKey(), unread);
-  return client;
+function settled(unread: {
+  errors: number;
+  warnings: number;
+}): LiveStateHarness {
+  const live = createLiveStateHarness();
+  live.queryClient.setQueryData(windowKey(), []);
+  live.queryClient.setQueryData(unreadKey(), unread);
+  return live;
 }
 
 describe("BellButton — unread badge", () => {
   it("paints a neutral bell (no count) while the unread value is pending", () => {
-    const client = makeClient();
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
     client.setQueryData(windowKey(), []);
-    mount(client);
+    mount(live);
     expect(screen.getByRole("button", { name: "Notifications" })).toBeTruthy();
     expect(screen.queryByText(/^\d|9\+/)).toBeNull();
   });

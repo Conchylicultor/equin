@@ -21,7 +21,7 @@
  *     once the value lands;
  *   - a selector that may be absent types its data as `T | S`, never `S`.
  *
- * Authoritative pushes are `client.setQueryData` on the exact tuple — the call
+ * Authoritative pushes are `queryClient.setQueryData` on the exact tuple — the call
  * a WS sub-ack / update makes.
  */
 
@@ -32,17 +32,15 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 }));
 
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
-import { type ReactNode } from "react";
+import type { QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import {
-  NotificationsProvider,
-  getNotificationsClient,
   queryKeyFor,
   type ResourceResult,
   useResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { ResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { createLiveStateHarness, type LiveStateHarness } from "../testing";
 
 const rowsResource: ResourceDescriptor<number[], { id: string }> = {
   key: "test.gate-latch.rows",
@@ -57,36 +55,21 @@ const firstPositive = (rows: number[]): number | undefined =>
   rows.find((n) => n > 0);
 const anyPositive = (rows: number[]): boolean => rows.some((n) => n > 0);
 
-function makeClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
-}
-
 function mount<R, P>(
-  client: QueryClient,
+  live: LiveStateHarness,
   useHook: (props: P) => R,
   initialProps: P,
 ) {
   const renders: R[] = [];
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>
-      {children}
-    </NotificationsProvider>
-  );
+  vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
   const rendered = renderHook(
     (props: P) => {
       const r = useHook(props);
       renders.push(r);
       return r;
     },
-    { wrapper, initialProps },
+    { wrapper: live.Wrapper, initialProps },
   );
-  const notifications = getNotificationsClient();
-  if (!notifications) throw new Error("NotificationsClient not created");
-  vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
   return { ...rendered, renders };
 }
 
@@ -131,9 +114,9 @@ describe("useResource gate — the derived latch", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("a tuple already cached renders once: ready, select-scoped, on the first render", async () => {
-    const client = makeClient();
-    client.setQueryData(keyOf("a"), [1, 2]);
-    const { renders } = mount(client, useGated, { id: "a" });
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(keyOf("a"), [1, 2]);
+    const { renders } = mount(live, useGated, { id: "a" });
     await settleNotifications();
     expect(renders).toHaveLength(1);
     const first = renders[0]!;
@@ -143,11 +126,11 @@ describe("useResource gate — the derived latch", () => {
   });
 
   it("a tuple with no value flips loading → ready even when the slice is unchanged across the boundary", async () => {
-    const client = makeClient();
-    const { result } = mount(client, useGated, { id: "a" });
+    const live = createLiveStateHarness();
+    const { result } = mount(live, useGated, { id: "a" });
     expect(result.current.status).toBe("loading");
     act(() => {
-      client.setQueryData(keyOf("a"), [0]);
+      live.queryClient.setQueryData(keyOf("a"), [0]);
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const r = result.current;
@@ -156,23 +139,23 @@ describe("useResource gate — the derived latch", () => {
   });
 
   it("once settled, a push that leaves the slice equal re-renders nothing; one that moves it does", async () => {
-    const client = makeClient();
-    const { result, renders } = mount(client, useGated, { id: "a" });
+    const live = createLiveStateHarness();
+    const { result, renders } = mount(live, useGated, { id: "a" });
     act(() => {
-      client.setQueryData(keyOf("a"), [0]);
+      live.queryClient.setQueryData(keyOf("a"), [0]);
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     await settleNotifications();
     const settledRenders = renders.length;
 
     act(() => {
-      client.setQueryData(keyOf("a"), [0, 0]);
+      live.queryClient.setQueryData(keyOf("a"), [0, 0]);
     });
     await settleNotifications();
     expect(renders).toHaveLength(settledRenders);
 
     act(() => {
-      client.setQueryData(keyOf("a"), [0, 3]);
+      live.queryClient.setQueryData(keyOf("a"), [0, 3]);
     });
     await waitFor(() => {
       const r = result.current;
@@ -181,10 +164,10 @@ describe("useResource gate — the derived latch", () => {
   });
 
   it("a params change re-gates a tuple with no value, and starts narrowed on one already cached", async () => {
-    const client = makeClient();
-    client.setQueryData(keyOf("a"), [1]);
-    client.setQueryData(keyOf("c"), [0]);
-    const { result, rerender, renders } = mount(client, useGated, {
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(keyOf("a"), [1]);
+    live.queryClient.setQueryData(keyOf("c"), [0]);
+    const { result, rerender, renders } = mount(live, useGated, {
       id: "a",
     });
     expect(result.current.status).toBe("ready");
@@ -194,7 +177,7 @@ describe("useResource gate — the derived latch", () => {
     rerender({ id: "b" });
     expect(result.current.status).toBe("loading");
     act(() => {
-      client.setQueryData(keyOf("b"), [0]);
+      live.queryClient.setQueryData(keyOf("b"), [0]);
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const onB = result.current;
@@ -214,10 +197,10 @@ describe("useResource gate — the derived latch", () => {
   });
 
   it("a read whose tuple holds a value adds no cache listener", async () => {
-    const client = makeClient();
-    client.setQueryData(keyOf("a"), [1]);
-    const listeners = countCacheListeners(client);
-    const { rerender, result } = mount(client, useMaybeGated, {
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(keyOf("a"), [1]);
+    const listeners = countCacheListeners(live.queryClient);
+    const { rerender, result } = mount(live, useMaybeGated, {
       gated: false,
     });
     await settleNotifications();
@@ -230,9 +213,9 @@ describe("useResource gate — the derived latch", () => {
   });
 
   it("an open read listens until its value lands, then stops", async () => {
-    const client = makeClient();
-    const listeners = countCacheListeners(client);
-    const { rerender, result } = mount(client, useMaybeGated, {
+    const live = createLiveStateHarness();
+    const listeners = countCacheListeners(live.queryClient);
+    const { rerender, result } = mount(live, useMaybeGated, {
       gated: false,
     });
     await settleNotifications();
@@ -244,7 +227,7 @@ describe("useResource gate — the derived latch", () => {
     expect(listeners()).toBe(plain + 1);
 
     act(() => {
-      client.setQueryData(keyOf("a"), [0]);
+      live.queryClient.setQueryData(keyOf("a"), [0]);
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     await settleNotifications();

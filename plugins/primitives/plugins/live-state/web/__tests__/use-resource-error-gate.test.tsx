@@ -16,11 +16,11 @@
  * `pending` (the deprecated pre-`status` spelling) is asserted alongside: true
  * on both loading and error, false on ready.
  *
- * Harness: a real `NotificationsProvider` over a real `QueryClient`. The ONE HTTP
+ * Harness: a real `NotificationsClient` and the `QueryClient` it owns (`createLiveStateHarness`). The ONE HTTP
  * write path — `NotificationsClient.fetchOverHttp`, which backs `useResource`'s
  * `queryFn` — is spied so `refetch()` is a deterministic way to drive an error
  * into `q.error` without a live server. Authoritative pushes are driven directly
- * with `client.setQueryData`, the same call the WS sub-ack makes. React Query's
+ * with `queryClient.setQueryData`, the same call the WS sub-ack makes. React Query's
  * observer notification is batched (async), so state transitions are awaited via
  * `waitFor` rather than read synchronously.
  *
@@ -36,12 +36,8 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 }));
 
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
-import { type ReactNode } from "react";
 import { z } from "zod";
 import {
-  NotificationsProvider,
-  getNotificationsClient,
   queryKeyFor,
   useResource,
 } from "@plugins/primitives/plugins/live-state/web";
@@ -49,6 +45,8 @@ import {
   ResourceError,
   type ResourceDescriptor,
 } from "@plugins/primitives/plugins/live-state/core";
+import type { NotificationsClient } from "../notifications-client";
+import { createLiveStateHarness, type LiveStateHarness } from "../testing";
 
 const rowsResource: ResourceDescriptor<number[]> = {
   key: "test.error-gate.rows",
@@ -57,34 +55,20 @@ const rowsResource: ResourceDescriptor<number[]> = {
 };
 const rowsKey = queryKeyFor(rowsResource.key, undefined);
 
-function makeClient(): QueryClient {
-  // retry:false so a rejected queryFn sets `state.error` immediately; no
-  // auto-refetch so `fetchOverHttp` runs ONLY on our explicit `refetch()`.
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
-}
-
-function mount<R>(client: QueryClient, useHook: () => R) {
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>
-      {children}
-    </NotificationsProvider>
-  );
-  const rendered = renderHook(useHook, { wrapper });
-  const notifications = getNotificationsClient();
-  if (!notifications) throw new Error("NotificationsClient not created");
+// The harness's client has retry:false, so a rejected queryFn sets
+// `state.error` immediately, and no auto-refetch, so `fetchOverHttp` runs ONLY
+// on our explicit `refetch()`.
+function mount<R>(live: LiveStateHarness, useHook: () => R) {
   // Suppress the cold-start HTTP primer so the only path that runs
   // `fetchOverHttp` is our explicit `refetch()`.
-  vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
-  return { ...rendered, notifications };
+  vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
+  const rendered = renderHook(useHook, { wrapper: live.Wrapper });
+  return { ...rendered, notifications: live.notifications };
 }
 
 /** Force `q.error` via the queryFn (`fetchOverHttp`) rejecting once. */
 async function failNextLoad(
-  notifications: NonNullable<ReturnType<typeof getNotificationsClient>>,
+  notifications: NotificationsClient,
   result: { current: { refetch: () => Promise<void> } },
   message: string,
 ): Promise<void> {
@@ -106,16 +90,16 @@ describe("useResource — loading / error / ready", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("no value yet ⇒ loading, with no error", () => {
-    const client = makeClient();
-    const { result } = mount(client, () => useResource(rowsResource));
+    const live = createLiveStateHarness();
+    const { result } = mount(live, () => useResource(rowsResource));
     const r = result.current;
     expect(r.status).toBe("loading");
     expect("error" in r).toBe(false);
   });
 
   it("first-load failure ⇒ error, typed, with no stale", async () => {
-    const client = makeClient();
-    const { result, notifications } = mount(client, () =>
+    const live = createLiveStateHarness();
+    const { result, notifications } = mount(live, () =>
       useResource(rowsResource),
     );
     await failNextLoad(notifications, result, "boom");
@@ -130,13 +114,13 @@ describe("useResource — loading / error / ready", () => {
   });
 
   it("failure after a successful load ⇒ error, stale = last good, data absent", async () => {
-    const client = makeClient();
-    const { result, notifications } = mount(client, () =>
+    const live = createLiveStateHarness();
+    const { result, notifications } = mount(live, () =>
       useResource(rowsResource),
     );
 
     act(() => {
-      client.setQueryData(rowsKey, [1, 2, 3]);
+      live.queryClient.setQueryData(rowsKey, [1, 2, 3]);
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     // Narrow a LOCAL, never `result.current` itself: narrowing the property
@@ -158,26 +142,26 @@ describe("useResource — loading / error / ready", () => {
   });
 
   it("a subsequent setQueryData (WS push) clears the error and returns to ready — the RQ assumption the gate rests on", async () => {
-    const client = makeClient();
-    const { result, notifications } = mount(client, () =>
+    const live = createLiveStateHarness();
+    const { result, notifications } = mount(live, () =>
       useResource(rowsResource),
     );
 
     act(() => {
-      client.setQueryData(rowsKey, [1]);
+      live.queryClient.setQueryData(rowsKey, [1]);
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     await failNextLoad(notifications, result, "boom");
     await waitFor(() => expect(result.current.status).toBe("error"));
     // The load-bearing RQ behavior, asserted against the real QueryClient:
     // the error is live BEFORE the push...
-    expect(client.getQueryState(rowsKey)?.error).toBeTruthy();
+    expect(live.queryClient.getQueryState(rowsKey)?.error).toBeTruthy();
 
     act(() => {
-      client.setQueryData(rowsKey, [1, 2]);
+      live.queryClient.setQueryData(rowsKey, [1, 2]);
     });
     // ...and the success action RESET it to null — synchronously, on the cache.
-    expect(client.getQueryState(rowsKey)?.error).toBeNull();
+    expect(live.queryClient.getQueryState(rowsKey)?.error).toBeNull();
 
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const r = result.current;
@@ -187,13 +171,13 @@ describe("useResource — loading / error / ready", () => {
   });
 
   it("with select, stale carries the selected slice, not the raw payload", async () => {
-    const client = makeClient();
-    const { result, notifications } = mount(client, () =>
+    const live = createLiveStateHarness();
+    const { result, notifications } = mount(live, () =>
       useResource(rowsResource, undefined, { select: (rows) => rows.length }),
     );
 
     act(() => {
-      client.setQueryData(rowsKey, [10, 20, 30]);
+      live.queryClient.setQueryData(rowsKey, [10, 20, 30]);
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const beforeFailure = result.current;
@@ -210,8 +194,8 @@ describe("useResource — loading / error / ready", () => {
   });
 
   it("refetch from the error arm re-runs the load and recovers", async () => {
-    const client = makeClient();
-    const { result, notifications } = mount(client, () =>
+    const live = createLiveStateHarness();
+    const { result, notifications } = mount(live, () =>
       useResource(rowsResource),
     );
     await failNextLoad(notifications, result, "boom");

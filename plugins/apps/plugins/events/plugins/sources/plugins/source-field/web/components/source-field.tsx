@@ -31,6 +31,14 @@ function sourceFields(
 
 const NO_SOURCES: readonly EventSource[] = [];
 
+// Stable (module-level), so the `select` re-runs only when the set changes.
+// Code-point order, as the server's `C` collation sorted them before.
+function byName(sources: readonly EventSource[]): readonly EventSource[] {
+  return [...sources].sort((a, b) =>
+    a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
+  );
+}
+
 /**
  * The `source` dimension of the events DataView, contributed into
  * `event-list`'s `EventList.Fields` seam.
@@ -40,8 +48,8 @@ const NO_SOURCES: readonly EventSource[] = [];
  * a synchronous closure that cannot call hooks. Same shape as
  * `tasks/task-category`'s `CategoryField`.
  *
- * The options are every source (up to the collection's `maxLimit`), sorted by
- * name on the server — not the newest-100 default window.
+ * The options are every source (the collection is declared `all`), sorted by
+ * name here.
  *
  * The field id is **`sourceId`**, matching the column the `events.list`
  * collection declares filterable and sortable — that is what makes filtering
@@ -51,10 +59,7 @@ const NO_SOURCES: readonly EventSource[] = [];
 export function SourceField({
   render,
 }: FieldExtensionProps<SourcedEvent>): ReactNode {
-  const result = useLive(eventSources, {
-    orderBy: [["name", "asc"]],
-    limit: 500,
-  });
+  const result = useLive(eventSources, { select: byName });
   // Every arm renders the SAME element at the same position: `render` wraps the
   // rest of the DataView, so a different tree per arm would remount the list
   // when the sources land. While they load (or if the read fails) the field

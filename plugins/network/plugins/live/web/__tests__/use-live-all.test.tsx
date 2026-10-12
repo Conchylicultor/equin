@@ -1,6 +1,6 @@
 /**
- * `useLive(all[, { select }])` / `useLiveRow(all, id)` over a real
- * NotificationsProvider + QueryClient (the use-live.test.tsx harness). A push
+ * `useLive(all[, { select }])` / `useLiveRow(all, id)` over a
+ * `createLiveStateHarness` (the use-live.test.tsx harness). A push
  * is the client's own write: a full value is `setQueryData` on the param-less
  * tuple (what a sub-ack does), a delta is `mergeKeyedDelta` over the cached
  * rows then `setQueryData` of its result (exactly `applyDelta`).
@@ -27,8 +27,8 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 }));
 
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
-import { type ReactNode } from "react";
+import type { QueryClient } from "@tanstack/react-query";
+import { type ReactElement, type ReactNode } from "react";
 import { z } from "zod";
 import {
   NotificationsProvider,
@@ -37,7 +37,10 @@ import {
   queryKeyFor,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
-import { mergeKeyedDelta } from "@plugins/primitives/plugins/live-state/web/testing";
+import {
+  createLiveStateHarness,
+  mergeKeyedDelta,
+} from "@plugins/primitives/plugins/live-state/web/testing";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 
@@ -59,22 +62,16 @@ const ROWS: Row[] = [
   { id: "c", title: "C", rank: 3 },
 ];
 
-function makeClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
-}
-
-/** Mount with a render log; `client` undefined = the app's default client. */
-function mount<R>(client: QueryClient | undefined, useHook: () => R) {
+/**
+ * Mount with a render log under `wrapper`: a harness's own pair, or the app's
+ * `NotificationsProvider` (the tab singleton over the default client — the
+ * one `hydrateResource` seeds).
+ */
+function mount<R>(
+  wrapper: (props: { children: ReactNode }) => ReactElement,
+  useHook: () => R,
+) {
   const renders: R[] = [];
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider {...(client ? { queryClient: client } : {})}>
-      {children}
-    </NotificationsProvider>
-  );
   const rendered = renderHook(
     () => {
       const r = useHook();
@@ -139,8 +136,10 @@ describe("useLive(all)", () => {
     const primeFromHttp = vi.spyOn(notifications, "primeFromHttp");
     const observe = vi.spyOn(notifications, "observe");
 
-    const p = mount(undefined, () => useLive(plain));
-    const s = mount(undefined, () => useLive(selected, { select: titleOfA }));
+    const p = mount(NotificationsProvider, () => useLive(plain));
+    const s = mount(NotificationsProvider, () =>
+      useLive(selected, { select: titleOfA }),
+    );
     await settleNotifications();
 
     expect(p.renders).toHaveLength(1);
@@ -162,31 +161,33 @@ describe("useLive(all)", () => {
 
   it("is loading until its first value, then ready with the rows as cached", async () => {
     const c = allCollection();
-    const client = makeClient();
-    const { result } = mount(client, () => useLive(c));
+    const live = createLiveStateHarness();
+    const { result } = mount(live.Wrapper, () => useLive(c));
     expect(result.current.status).toBe("loading");
     act(() => {
-      client.setQueryData(queryKeyFor(c.key, undefined), ROWS);
+      live.queryClient.setQueryData(queryKeyFor(c.key, undefined), ROWS);
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(readyData(result.current)).toBe(
-      client.getQueryData(queryKeyFor(c.key, undefined)),
+      live.queryClient.getQueryData(queryKeyFor(c.key, undefined)),
     );
   });
 
   it("keeps `data` (and the result) identical while nothing is pushed", async () => {
     const c = allCollection();
     const other = allCollection();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(c.key, undefined), ROWS);
-    client.setQueryData(queryKeyFor(other.key, undefined), ROWS);
-    const { result, rerender } = mount(client, () => useLive(c));
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(c.key, undefined), ROWS);
+    live.queryClient.setQueryData(queryKeyFor(other.key, undefined), ROWS);
+    const { result, rerender } = mount(live.Wrapper, () => useLive(c));
     const first = result.current;
     const rows = readyData(first);
     rerender();
     // A push to ANOTHER key is no push to this one.
     act(() => {
-      client.setQueryData(queryKeyFor(other.key, undefined), [ROWS[0]!]);
+      live.queryClient.setQueryData(queryKeyFor(other.key, undefined), [
+        ROWS[0]!,
+      ]);
     });
     await settleNotifications();
     expect(result.current).toBe(first);
@@ -195,12 +196,12 @@ describe("useLive(all)", () => {
 
   it("a delta keeps every untouched row's identity", async () => {
     const c = allCollection();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(c.key, undefined), ROWS);
-    const { result } = mount(client, () => useLive(c));
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(c.key, undefined), ROWS);
+    const { result } = mount(live.Wrapper, () => useLive(c));
     const before = readyData(result.current);
 
-    pushDelta(client, c.key, [{ id: "b", title: "B2", rank: 2 }]);
+    pushDelta(live.queryClient, c.key, [{ id: "b", title: "B2", rank: 2 }]);
     await waitFor(() => expect(readyData(result.current)[1]!.title).toBe("B2"));
     const after = readyData(result.current);
     expect(after).not.toBe(before);
@@ -211,32 +212,32 @@ describe("useLive(all)", () => {
 
   it("a push that leaves the selected slice alone does not re-render a select; one that moves it does", async () => {
     const c = allCollection();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(c.key, undefined), ROWS);
-    const { result, renders } = mount(client, () =>
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(c.key, undefined), ROWS);
+    const { result, renders } = mount(live.Wrapper, () =>
       useLive(c, { select: titleOfA }),
     );
     await settleNotifications();
     expect(readyData(result.current)).toBe("A");
     const settled = renders.length;
 
-    pushDelta(client, c.key, [{ id: "b", title: "B2", rank: 2 }]);
-    pushDelta(client, c.key, [], ["c", "b", "a"]);
+    pushDelta(live.queryClient, c.key, [{ id: "b", title: "B2", rank: 2 }]);
+    pushDelta(live.queryClient, c.key, [], ["c", "b", "a"]);
     await settleNotifications();
     expect(renders).toHaveLength(settled);
 
-    pushDelta(client, c.key, [{ id: "a", title: "A2", rank: 1 }]);
+    pushDelta(live.queryClient, c.key, [{ id: "a", title: "A2", rank: 1 }]);
     await waitFor(() => expect(readyData(result.current)).toBe("A2"));
   });
 
   it("an `order` delta reorders; a row left in place keeps its identity", async () => {
     const c = allCollection();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(c.key, undefined), ROWS);
-    const { result } = mount(client, () => useLive(c));
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(c.key, undefined), ROWS);
+    const { result } = mount(live.Wrapper, () => useLive(c));
     const before = readyData(result.current);
 
-    pushDelta(client, c.key, [], ["b", "a", "c"]);
+    pushDelta(live.queryClient, c.key, [], ["b", "a", "c"]);
     await waitFor(() =>
       expect(readyData(result.current).map((r) => r.id)).toEqual([
         "b",
@@ -254,18 +255,18 @@ describe("useLive(all)", () => {
 
   it("every plain observer holds the cached array and rows; a push that changes nothing re-renders none", async () => {
     const c = allCollection();
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const queryKey = queryKeyFor(c.key, undefined);
-    client.setQueryData(queryKey, ROWS);
-    const first = mount(client, () => useLive(c));
-    const second = mount(client, () => useLive(c));
+    live.queryClient.setQueryData(queryKey, ROWS);
+    const first = mount(live.Wrapper, () => useLive(c));
+    const second = mount(live.Wrapper, () => useLive(c));
     await settleNotifications();
 
-    pushDelta(client, c.key, [{ id: "b", title: "B2", rank: 2 }]);
+    pushDelta(live.queryClient, c.key, [{ id: "b", title: "B2", rank: 2 }]);
     await waitFor(() =>
       expect(readyData(second.result.current)[1]!.title).toBe("B2"),
     );
-    const cached = client.getQueryData<Row[]>(queryKey)!;
+    const cached = live.queryClient.getQueryData<Row[]>(queryKey)!;
     for (const observer of [first, second]) {
       const rows = readyData(observer.result.current);
       expect(rows).toBe(cached);
@@ -276,7 +277,7 @@ describe("useLive(all)", () => {
     // the cache keeps its array, so no plain read re-renders.
     const settled = [first.renders.length, second.renders.length];
     act(() => {
-      client.setQueryData(
+      live.queryClient.setQueryData(
         queryKey,
         cached.map((r) => ({ ...r })),
       );
@@ -288,11 +289,11 @@ describe("useLive(all)", () => {
 
   it("an id read goes to `:rows`, not to the whole set — useLive(all, { ids }) and useLiveRow(all, id)", async () => {
     const c = allCollection();
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const rowsKey = (ids: string) => queryKeyFor(c.rows.key, { ids });
-    client.setQueryData(rowsKey("a,b"), [ROWS[0]!, ROWS[1]!]);
-    client.setQueryData(rowsKey("c"), [ROWS[2]!]);
-    const { result } = mount(client, () => ({
+    live.queryClient.setQueryData(rowsKey("a,b"), [ROWS[0]!, ROWS[1]!]);
+    live.queryClient.setQueryData(rowsKey("c"), [ROWS[2]!]);
+    const { result } = mount(live.Wrapper, () => ({
       ids: useLive(c, { ids: ["b", "a"] }),
       row: useLiveRow(c, "c"),
     }));
@@ -302,7 +303,9 @@ describe("useLive(all)", () => {
     if (row.status !== "ready" || !row.found) throw new Error("unreachable");
     expect(row.row).toEqual(ROWS[2]);
     // The whole set was never read.
-    expect(client.getQueryState(queryKeyFor(c.key, undefined))).toBeUndefined();
+    expect(
+      live.queryClient.getQueryState(queryKeyFor(c.key, undefined)),
+    ).toBeUndefined();
   });
 
   it("types: the whole set and a select are `all`-only; a lookup or window collection has no whole set", () => {

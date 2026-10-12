@@ -6,13 +6,20 @@ import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   BUILD_GRAPH_HEADER,
+  DERIVE_MAX_ID,
+  DERIVE_MAX_SOURCES,
+  PROTOCOL,
   ResourceContractError,
   ResourceRefusal,
   contractVerdict,
   resourceBytesHeaders,
   type ContractVerdict,
+  type Derivation,
+  type DeriveSource,
+  type ExactServerFrame,
+  type ReceivedFrame,
   type ResourceHttpErrorBody,
-  type SubErrorFrame,
+  type ServerFrame,
 } from "@plugins/packages/plugins/resource-protocol/core";
 import {
   buildSnapshot,
@@ -1214,105 +1221,14 @@ interface RegistryEntry {
  */
 function acceptAnyParams(_params: ResourceParams): void {}
 
-/**
- * Every frame `sendJson` sends — one socket, one frame. (The broadcast frames
- * — update, delta, invalidate, ack — go through `broadcastJson`.)
- */
-type ServerFrame =
-  | { kind: "ping"; flushOpenMs: number }
-  | SubErrorFrame
-  | {
-      kind: "up-to-date";
-      id?: number;
-      key: string;
-      params: ResourceParams;
-      version: number;
-      epoch: string;
-    }
-  | {
-      kind: "up-to-date-batch";
-      epoch: string;
-      entries: Array<{
-        id?: number;
-        key: string;
-        params: ResourceParams;
-        version: number;
-      }>;
-    }
-  | {
-      kind: "sub-ack";
-      id?: number;
-      key: string;
-      params: ResourceParams;
-      value: unknown;
-      version: number;
-      etag?: string;
-      watermark?: string;
-      epoch: string;
-    }
-  // A DERIVED sub-ack (see `deriveSub`): the tuple's value is the slice the
-  // client asked for, of rows it already holds — so no value rides it. It
-  // echoes the id the client minted for the derivation it answers, so a tab
-  // holding the same tuple through a different request (the shared socket
-  // broadcasts every frame) adopts only an answer to its own. No etag (no
-  // read ran) and no watermark (Rule B′: the slice was cut from snapshots
-  // scoped deltas built, which vouch for no commit floor).
-  | {
-      kind: "sub-ack";
-      id?: number;
-      key: string;
-      params: ResourceParams;
-      version: number;
-      epoch: string;
-      derived: { id: string };
-    }
-  // A BYTES resource's sub-ack (`ResourceDefinition.bytes`): no value — an
-  // ArrayBuffer never rides a JSON frame — so no etag or watermark either
-  // (each describes a value). The client reads the value over HTTP.
-  | {
-      kind: "sub-ack";
-      id?: number;
-      key: string;
-      params: ResourceParams;
-      value?: never;
-      version: number;
-      etag?: never;
-      watermark?: never;
-      epoch: string;
-      derived?: never;
-    };
-
-/**
- * A `sub` frame's `derive`: the id its client minted for this derivation
- * (echoed by the derived ack — opaque here, at most `DERIVE_MAX_ID` chars)
- * and its sources, at most `DERIVE_MAX_SOURCES` — a page split reads one, a
- * merge two.
- */
-interface Derivation {
-  id: string;
-  from: DeriveSource[];
-}
-
-const DERIVE_MAX_SOURCES = 2;
-const DERIVE_MAX_ID = 128;
-
-/**
- * One source of a seeded derivation (a `sub` frame's `derive.from` entry): a
- * tuple of the same resource the client holds at `version`, and the slice of
- * its rows the new tuple is — those after the row `after` (exclusive; `null` =
- * from its first row) through the row `until` (inclusive; `null` = through the
- * end of its RANGE, which only a source that is not full holds whole). Rows are
- * named by id (`keyOf`), in the source's window order.
- */
-interface DeriveSource {
-  params: ResourceParams;
-  version: number;
-  after: string | null;
-  until: string | null;
-}
-
 /** Why a derivation fell back to a load — the `_debug` payload's `deriveFallbacks` keys. */
 type DeriveRefusal =
+  /**
+   * The sub names another frame vocabulary than this server's (`protocol` ≠
+   * `PROTOCOL`, or absent: a bundle that predates it) — its derivation may
+   * mean something else here, so it is not read at all.
+   */
+  | "protocol-skew"
   /** Not a bounded window that states its `familyOf` (or a `revalidate` resource). */
   | "not-derivable"
   /** The tuple was already subscribed: its first subscriber decided how it loaded. */
@@ -3832,7 +3748,16 @@ export function createResourceRuntime(
     return ackSubscribersFor(key, paramsKey(params)).length > 0;
   }
 
-  function sendJson(ws: ServerWebSocket<WsData>, obj: ServerFrame): void {
+  // Every frame the runtime sends is one of the protocol's, carrying only the
+  // fields its kind declares (`ExactServerFrame`, `packages/resource-protocol`
+  // — checked however the frame was built, a variable or a spread included): a
+  // new field or kind is an edit there, which moves `PROTOCOL` — so tabs
+  // reading the old vocabulary never share a socket with tabs reading the new
+  // one.
+  function sendJson<F extends ServerFrame>(
+    ws: ServerWebSocket<WsData>,
+    obj: ExactServerFrame<F>,
+  ): void {
     try {
       ws.send(JSON.stringify(obj));
       // eslint-disable-next-line promise-safety/no-bare-catch
@@ -3852,7 +3777,10 @@ export function createResourceRuntime(
   // Returns the serialized frame's length in UTF-16 chars (0 when nothing was
   // sent) — the delivery's `frameChars` measure, read off the one string that
   // was already built, so measuring costs nothing extra.
-  function broadcastJson(subs: readonly SocketState[], obj: unknown): number {
+  function broadcastJson<F extends ServerFrame>(
+    subs: readonly SocketState[],
+    obj: ExactServerFrame<F>,
+  ): number {
     if (subs.length === 0) return 0;
     const str = JSON.stringify(obj);
     for (const s of subs) {
@@ -5520,84 +5448,56 @@ export function createResourceRuntime(
         return;
       }
       if (!msg || typeof msg !== "object") return;
-      const m = msg as {
-        op?: string;
-        kind?: string;
-        id?: number;
-        key?: string;
-        params?: ResourceParams;
-        // Client's last-known conditional-revalidation ETag for (key, params), if
-        // it holds a cached value. Present only on `op: "sub"` from a client that
-        // has one; an old client omits it → full-loader path (backward-compatible).
-        etag?: string;
-        // Version short-circuit echo: the client's last-applied version counter
-        // plus the boot epoch it belongs to (see `handleSub`). Optional — an old
-        // client omits them → full path.
-        version?: number;
-        epoch?: string;
-        // The sending tab's id (per-tab sub bookkeeping — see `SocketSubRecord`).
-        // Optional; an untagged frame lands in the legacy `""` bucket.
-        tabId?: string;
-        // The build graph the sending tab's bundle was built from, on `sub` /
-        // `sub-batch` — per frame, because a shared socket's leader relays
-        // follower tabs that may run different bundles. Judges a contract
-        // mismatch (`rejectContract`); absent from a bundle that predates it.
-        build?: string;
-        // Client-requested standalone ack frames (see `SocketSubRecord.ackTabs`):
-        // on `op: "sub"` / a `sub-batch` entry it restates the tab's current
-        // flag (absent = off); on `op: "sub-acks"` it flips it on a held sub.
-        acks?: boolean;
-        // `op: "sub"` only: a seeded derivation (see `deriveSub`) — the new
-        // tuple's rows as a slice of tuples this client already holds.
-        // Parsed by `derivationOf`; an older client omits it → full path.
-        derive?: unknown;
-        // `op: "sub-batch"` fields: one whole-set replay for ONE tab. `complete:
-        // true` additionally reconciles — releases every sub that tab previously
-        // held on this socket and did not restate.
-        complete?: boolean;
-        entries?: Array<{
-          id?: number;
-          key?: string;
-          params?: ResourceParams;
-          etag?: string;
-          version?: number;
-          acks?: boolean;
-        }>;
-      };
-      if (m.kind === "pong") return;
+      // Each frame is read as the vocabulary declares its `op`
+      // (`ReceivedFrame`): untrusted, every field optional, and nothing a tab
+      // was never declared to send — a new field the runtime reads is an edit
+      // to the vocabulary, which moves `PROTOCOL`. An unknown op is ignored.
+      //
       // Canonical from here on (see `canonicalTuple`): a frame's params name the
       // tuple the rest of the runtime keys. Every frame sent back echoes that
       // canonical tuple, so a sender that did NOT canonicalize (live-state's
       // client does) would match none of them — reported, once per key.
-      m.params = canonicalFor(m.key, m.params);
-      if (Array.isArray(m.entries)) {
-        for (const e of m.entries) {
-          if (e !== null && typeof e === "object") {
-            e.params = canonicalFor(e.key, e.params);
-          }
+      switch ((msg as { op?: unknown }).op) {
+        case "sub": {
+          const m = msg as ReceivedFrame<"sub">;
+          m.params = canonicalFor(m.key, m.params);
+          void handleSub(state, m);
+          return;
         }
-      }
-      if (m.op === "sub") {
-        void handleSub(state, m);
-        return;
-      }
-      if (m.op === "sub-batch") {
-        handleSubBatch(state, m);
-        return;
-      }
-      if (m.op === "unsub") {
-        handleUnsub(state, m);
-        return;
-      }
-      if (m.op === "sub-acks") {
-        handleSubAcks(state, m);
-        return;
-      }
-      if (m.op === "unsub-tab") {
-        // Best-effort tab departure (pagehide): release everything this tab holds
-        // on this socket. Subs other tabs still hold are untouched.
-        releaseTabSubs(state, typeof m.tabId === "string" ? m.tabId : "");
-        return;
+        case "sub-batch": {
+          // One whole-set replay for ONE tab. `complete: true` additionally
+          // reconciles — releases every sub that tab previously held on this
+          // socket and did not restate.
+          const m = msg as ReceivedFrame<"sub-batch">;
+          if (Array.isArray(m.entries)) {
+            for (const e of m.entries) {
+              if (e !== null && typeof e === "object") {
+                e.params = canonicalFor(e.key, e.params);
+              }
+            }
+          }
+          handleSubBatch(state, m);
+          return;
+        }
+        case "unsub": {
+          const m = msg as ReceivedFrame<"unsub">;
+          m.params = canonicalFor(m.key, m.params);
+          handleUnsub(state, m);
+          return;
+        }
+        case "sub-acks": {
+          const m = msg as ReceivedFrame<"sub-acks">;
+          m.params = canonicalFor(m.key, m.params);
+          handleSubAcks(state, m);
+          return;
+        }
+        case "unsub-tab": {
+          // Best-effort tab departure (pagehide): release everything this tab
+          // holds on this socket. Subs other tabs still hold are untouched.
+          const m = msg as ReceivedFrame<"unsub-tab">;
+          releaseTabSubs(state, typeof m.tabId === "string" ? m.tabId : "");
+          return;
+        }
       }
     },
     close(ws) {
@@ -5692,6 +5592,11 @@ export function createResourceRuntime(
   // rows the new tuple's range holds beyond the slices are the client's claim
   // (the cuts it encoded in the new params): the runtime is key-agnostic and
   // cannot check a range, only that the slices fit the window (`limitOf`).
+  //
+  // Only under this server's frame vocabulary: the sub's `protocol` must be
+  // `PROTOCOL`. A tab of another vocabulary (an older bundle left open across
+  // a deploy, or one that predates the field) may mean something else by its
+  // `derive`, or read the derived ack differently — it loads (`protocol-skew`).
   //
   // Only a bounded window that states its `familyOf`: never
   // persisted, so no base floor to carry (an L2 floor must describe a FULL
@@ -5831,21 +5736,11 @@ export function createResourceRuntime(
     return { id: derivation.id };
   }
 
+  // `m.derive` is a seeded derivation (see `deriveSub`), on a fresh `sub`
+  // only, read only under this server's `PROTOCOL` (`m.protocol`).
   async function handleSub(
     state: SocketState,
-    m: {
-      id?: number;
-      key?: string;
-      params?: ResourceParams;
-      etag?: string;
-      version?: number;
-      epoch?: string;
-      tabId?: string;
-      acks?: boolean;
-      build?: string;
-      /** A seeded derivation (see `deriveSub`) — on a fresh `sub` only. */
-      derive?: unknown;
-    },
+    m: ReceivedFrame<"sub">,
   ): Promise<void> {
     const { id, key, params = {}, etag: clientEtag } = m;
     if (!key) return;
@@ -5905,9 +5800,12 @@ export function createResourceRuntime(
     // and none can land between the check and the copy.
     let derived = false;
     if (m.derive !== undefined) {
-      const outcome = firstGlobal
-        ? deriveSub(entry, pk, params, m.derive)
-        : "held";
+      const outcome =
+        m.protocol !== PROTOCOL
+          ? "protocol-skew"
+          : firstGlobal
+            ? deriveSub(entry, pk, params, m.derive)
+            : "held";
       if (typeof outcome === "string") {
         recordDeriveFallback(key, outcome);
       } else {
@@ -6188,20 +6086,7 @@ export function createResourceRuntime(
   // dispatch of single subs.
   function handleSubBatch(
     state: SocketState,
-    m: {
-      tabId?: string;
-      epoch?: string;
-      build?: string;
-      complete?: boolean;
-      entries?: Array<{
-        id?: number;
-        key?: string;
-        params?: ResourceParams;
-        etag?: string;
-        version?: number;
-        acks?: boolean;
-      }>;
-    },
+    m: ReceivedFrame<"sub-batch">,
   ): void {
     const tabId = typeof m.tabId === "string" ? m.tabId : "";
     const build = typeof m.build === "string" ? m.build : undefined;
@@ -6332,10 +6217,7 @@ export function createResourceRuntime(
     }
   }
 
-  function handleUnsub(
-    state: SocketState,
-    m: { key?: string; params?: ResourceParams; tabId?: string },
-  ): void {
+  function handleUnsub(state: SocketState, m: ReceivedFrame<"unsub">): void {
     const { key, params = {} } = m;
     if (!key) return;
     const inner = state.subs.get(key);
@@ -6391,12 +6273,7 @@ export function createResourceRuntime(
   // (no shipped resource declares one) could still be pending.
   function handleSubAcks(
     state: SocketState,
-    m: {
-      key?: string;
-      params?: ResourceParams;
-      tabId?: string;
-      acks?: boolean;
-    },
+    m: ReceivedFrame<"sub-acks">,
   ): void {
     const { key, params = {} } = m;
     if (!key) return;

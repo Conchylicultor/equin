@@ -665,20 +665,22 @@ async function pageRowFacts(
  * The page ids `apps/pages/agent-origin` has marked as e2e debris (its 24h sweep
  * trashes them). An agent-authored page must never be among them.
  *
- * Reads the `pages-origin` collection's window at its max limit; a row is
- * `{ blockId, source, createdAt }`, keyed on `blockId` (the marked page's id).
+ * Reads the whole `pages-origin.all` marker set (an `all` collection, no
+ * params); a row is `{ blockId, source, createdAt }`, keyed on `blockId` (the
+ * marked page's id).
  */
 async function fetchAgentOriginPageIds(): Promise<string[]> {
-  const res = await agentFetch("/api/resources/pages-origin?limit=500");
-  if (!res.ok) throw new Error(`pages-origin: HTTP ${res.status}`);
+  const res = await agentFetch("/api/resources/pages-origin.all");
+  if (!res.ok) throw new Error(`pages-origin.all: HTTP ${res.status}`);
   const body = (await res.json()) as { value?: { blockId?: unknown }[] };
-  if (!body.value) throw new Error("pages-origin: response carried no value");
+  if (!body.value)
+    throw new Error("pages-origin.all: response carried no value");
   return body.value.map((row) => {
     // Checked, so a renamed key fails the run instead of mapping every row to
     // `undefined` and passing the "not marked" check vacuously.
     if (typeof row.blockId !== "string") {
       throw new Error(
-        `pages-origin: row without a blockId: ${JSON.stringify(row)}`,
+        `pages-origin.all: row without a blockId: ${JSON.stringify(row)}`,
       );
     }
     return row.blockId;

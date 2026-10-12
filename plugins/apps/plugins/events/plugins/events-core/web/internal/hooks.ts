@@ -1,8 +1,8 @@
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { type ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import {
   useLive,
   useLiveRow,
-  type LiveListResult,
   type LiveRowResult,
 } from "@plugins/network/plugins/live/web";
 import {
@@ -20,18 +20,16 @@ import {
 } from "../../core";
 
 /**
- * The configured sources, live: the collection's default window (newest first,
- * 100). A surface that needs another filter, order or size reads
- * `useLive(eventSources, { … })` directly.
+ * The configured sources, live: every one, newest first (the collection is
+ * declared `all`). Not loaded yet is the loading arm, never an empty list.
  */
-export function useEventSources(): LiveListResult<EventSource> {
+export function useEventSources(): ResourceResult<EventSource[]> {
   return useLive(eventSources);
 }
 
 /**
  * One source by id, live: pending, then found or determinately absent. Reads the
- * collection's point sibling, so it answers for ANY source — not only the ones a
- * window happens to hold.
+ * collection's point sibling — one row, not the whole set.
  */
 export function useEventSourceRow(
   sourceId: string,

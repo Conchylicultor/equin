@@ -236,7 +236,9 @@ change.
   split is minted in the same reconcile that observes the page full, so the
   unmarked window is one round trip for the half past the old cap.
 - A `columns` change keeps the cuts: live pages re-read and released pages
-  become placeholders.
+  become placeholders. *(Superseded: `columns` is not a wire param, so a
+  change keeps the plan and re-reads nothing — see* As landed *below and
+  `live/web/internal/use-pages.ts`'s `sameColumns` branch.)*
 - **Verify:** jsdom height and anchoring tests; the DOM node count stays bounded
   on a deep scroll.
 - **As landed.**
@@ -379,17 +381,22 @@ change.
 - Hand-rolled lists (notifications, trash, mail messages) → DataView, then pages.
 - Offset jump (dragging the scrollbar far).
 - A projection param — and with it the deferred half of P2's `columns`
-  change: live pages re-read, released pages become placeholders.
+  change: live pages re-read, released pages become placeholders. *(Dropped —
+  research/2026-10-12-global-live-paging-followups.md: only `reports` rows are
+  wide, and slimming its list row is cheaper than a new tuple dimension.)*
 - The hidden-rows marker (P2, not landed — see *As landed*): an inline
   placeholder after the rows of a full page that is not last, until its split
-  settles. Needs an inline (non-edge) entry kind every view can draw. **The
-  deviation from the approved plan awaits the user's sign-off.**
+  settles. Needs an inline (non-edge) entry kind every view can draw. *(Dropped,
+  instrumented — the follow-ups doc: the `live-pages` log times each
+  overflow split's gap; reopen if it is common or over about 150 ms.)*
 - live-state: the tab's `NotificationsClient` is bound to the FIRST
   `QueryClient` a `NotificationsProvider` mounts with; a later provider with
   another client silently shares the first one's cache (a test making a client
   per test loses `release: "now"` drops — two P1 assertions passed wrongly).
   Make the wrong spelling impossible: drop the provider's `queryClient` prop
   for a `web/testing` harness owning one client, or assert on a different one.
+  *(Done in the follow-ups' session 1: the provider takes no client, and
+  `createLiveStateHarness()` gives each test its own pair.)*
 
 ## 7. Risks
 
@@ -397,7 +404,14 @@ change.
   P3 and P4, each split loads at most the unknown half.
 - **Stale pages** do not see changes until they come back into view. This is
   accepted by design.
-- **Cross-page moves** can show a one-frame duplicate or gap until P6.
+- **Cross-page moves** can show a one-frame gap: a row moving between two live
+  pages is in neither while the frame of the page it left has landed and the
+  other's has not. The duplicate (the entering frame first) is already fixed —
+  the plan shows a row once, from the most recently applied page
+  (`winningPages`, `live/shared/page-plan.ts`). The gap is measured, not fixed:
+  the `live-pages` log records each one closed within 1 s, and the fix if it
+  fires is a client-side departure hold in the plan, not P6's batched frame
+  (research/2026-10-12-global-live-paging-followups.md).
 - **An entrant** still costs one O(limit) `windowIdsOf`: Postgres collation cannot
   be reproduced in JS.
 

@@ -6,12 +6,19 @@ import type {
 import { useLive } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import type { PageRow } from "@plugins/page/plugins/editor/core";
-import { agentPages } from "../../shared/resources";
+import { agentPages, type AgentPageRow } from "../../shared/resources";
+
+const NO_IDS: ReadonlySet<string> = new Set<string>();
+
+// Stable (module-level), so the `select` re-runs only when the set changes.
+function toIdSet(rows: readonly AgentPageRow[]): ReadonlySet<string> {
+  return new Set(rows.map((r) => r.blockId));
+}
 
 /**
  * Field extension contributed into the page-tree's `PageTree.Fields` factory: a
  * render-callback component that reads this plugin's own live `agentPages`
- * window into a `Set<string>` and yields one `origin` enum `FieldDef<PageRow>`
+ * set into a `Set<string>` and yields one `origin` enum `FieldDef<PageRow>`
  * closed over the set. That makes `origin` a filter dimension of the one
  * `pages-sidebar` DataView — the **Private** and **Scratch** sections are two
  * view instances of it, `origin is user` / `origin is agent`, each authored
@@ -24,16 +31,12 @@ export function OriginField({ render }: FieldExtensionProps<PageRow>) {
   // a flash of pages under Scratch and never an unresolvable rule. A failed
   // read projects the same empty set: the split is an enrichment, and the tree
   // itself stays correct without it.
-  const result = useLive(agentPages);
-  const agentIds = useMemo(
-    () =>
-      foldResource(result, {
-        loading: () => new Set<string>(),
-        error: () => new Set<string>(),
-        ready: (rows) => new Set(rows.map((r) => r.blockId)),
-      }),
-    [result],
-  );
+  const result = useLive(agentPages, { select: toIdSet });
+  const agentIds = foldResource(result, {
+    loading: () => NO_IDS,
+    error: () => NO_IDS,
+    ready: (ids) => ids,
+  });
   const fields = useMemo<FieldDef<PageRow>[]>(
     () => [
       {

@@ -1,9 +1,10 @@
-// Round-trips a page's starred state through its bounded WINDOW resource:
-// read the header star, toggle it, confirm the flip, toggle it back.
+// Round-trips a page's starred state through its live favorites set (an `all`
+// collection): read the header star, toggle it, confirm the flip, toggle it
+// back.
 //
-// The toggle is the whole point of the check. Starring is a window membership
-// ENTRY and unstarring an EXIT, and those are the two paths that ship a delta
-// rather than a whole-collection recompute — so a star that flips and holds is
+// The toggle is the whole point of the check. Starring is a membership ENTRY
+// of the set and unstarring an EXIT, and those are the two paths that ship a
+// delta rather than a whole-set reload — so a star that flips and holds is
 // the evidence that the incremental membership path works end to end. The
 // script always restores the page's original state, so it is safe to re-run.
 //
@@ -31,7 +32,7 @@ const STAR =
   '[aria-label="Add to favorites"], [aria-label="Remove from favorites"]';
 const url = pathUrl(`/pages/page/${pageId}`);
 
-const r = report("pages-starred window resource");
+const r = report("pages-starred.all set resource");
 console.log(`url: ${url}`);
 
 const outcome = await withBrowser(async (h) => {
@@ -45,7 +46,7 @@ const outcome = await withBrowser(async (h) => {
   // lives in the sidebar, so the header's star is the last match.
   const star = page.locator(STAR).last();
 
-  // aria-pressed is the star's own answer about what it read from the window.
+  // aria-pressed is the star's own answer about what it read from the set.
   const pressed = async (): Promise<string | null> =>
     await star.getAttribute("aria-pressed");
 

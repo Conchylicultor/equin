@@ -43,7 +43,8 @@ printed. Design:
 [`research/2026-08-25-global-data-view-field-driven-row-tint-tone-visibility.md`](../../../../../../research/2026-08-25-global-data-view-field-driven-row-tint-tone-visibility.md).)
 
 Two of the seven fields are derived, with **no column behind them** — legal here
-only because this DataView is client-side over a bounded live window, so
+only because this DataView is client-side over the live sources set (an
+`all` collection — every source), so
 filter/sort/group-by run over the rows already in hand and need no server
 binding:
 

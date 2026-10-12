@@ -1,7 +1,7 @@
 /**
- * useLive over a typed-query value and a key-range-paged value, on a real
- * NotificationsProvider + QueryClient (the use-live.test.tsx harness):
- * authoritative values are driven with `client.setQueryData` on the exact tuple
+ * useLive over a typed-query value and a key-range-paged value, on a
+ * `createLiveStateHarness` (the use-live.test.tsx harness):
+ * authoritative values are driven with `queryClient.setQueryData` on the exact tuple
  * the declaration's codec encodes — the same call a WS sub-ack makes. (The
  * paged read's plan and hook are the scroll collection's, pinned in
  * `use-pages.test.tsx`; here, what a VALUE source changes.)
@@ -14,15 +14,13 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 }));
 
 import { renderHook, waitFor, act } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
-import { type ReactNode } from "react";
 import { z } from "zod";
+import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
 import {
-  NotificationsProvider,
-  getNotificationsClient,
-  queryKeyFor,
-} from "@plugins/primitives/plugins/live-state/web";
-import { NotificationsClient } from "@plugins/primitives/plugins/live-state/web/testing";
+  NotificationsClient,
+  createLiveStateHarness,
+  type LiveStateHarness,
+} from "@plugins/primitives/plugins/live-state/web/testing";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { mintVisibleRange, useLive } from "@plugins/network/plugins/live/web";
 
@@ -35,25 +33,10 @@ const Meta = z.object({ total: z.number() });
 let seq = 0;
 const key = () => `test.use-live-query.${seq++}`;
 
-function makeClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
-}
-
-function mount<R>(client: QueryClient, useHook: () => R) {
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>
-      {children}
-    </NotificationsProvider>
-  );
-  const rendered = renderHook(useHook, { wrapper });
-  const notifications = getNotificationsClient();
-  if (!notifications) throw new Error("NotificationsClient not created");
-  vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
-  return { ...rendered, notifications };
+function mount<R>(live: LiveStateHarness, useHook: () => R) {
+  vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
+  const rendered = renderHook(useHook, { wrapper: live.Wrapper });
+  return { ...rendered, notifications: live.notifications };
 }
 
 /** Items at descending `at`s ("9", "8", …), each with the `$key` the server mints. */
@@ -69,9 +52,9 @@ const items = (...ids: string[]): Item[] =>
 describe("useLive — typed-query value", () => {
   it("subscribes on the question's canonical tuple, and goes loading → ready", async () => {
     const v = liveValue(key(), { schema: Result, query: Query });
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const observe = vi.spyOn(NotificationsClient.prototype, "observe");
-    const { result } = mount(client, () => useLive(v, { metric: "m" }));
+    const { result } = mount(live, () => useLive(v, { metric: "m" }));
     expect(result.current.status).toBe("loading");
     const tuple = { q: '{"days":7,"metric":"m"}' };
     expect(
@@ -79,7 +62,7 @@ describe("useLive — typed-query value", () => {
     ).toEqual([tuple]);
     observe.mockRestore();
     act(() => {
-      client.setQueryData(queryKeyFor(v.key, tuple), { n: 3 });
+      live.queryClient.setQueryData(queryKeyFor(v.key, tuple), { n: 3 });
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(result.current).toMatchObject({ data: { n: 3 } });
@@ -87,12 +70,15 @@ describe("useLive — typed-query value", () => {
 
   it("a changed question is a new tuple: it shows loading", async () => {
     const v = liveValue(key(), { schema: Result, query: Query });
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(v.key, v.query.encode({ metric: "a" })), {
-      n: 1,
-    });
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(
+      queryKeyFor(v.key, v.query.encode({ metric: "a" })),
+      {
+        n: 1,
+      },
+    );
     let metric = "a";
-    const { result, rerender } = mount(client, () => useLive(v, { metric }));
+    const { result, rerender } = mount(live, () => useLive(v, { metric }));
     await waitFor(() => expect(result.current.status).toBe("ready"));
     metric = "b";
     rerender();
@@ -101,10 +87,10 @@ describe("useLive — typed-query value", () => {
 
   it("a refetch (an invalidate) keeps the previous answer on screen", async () => {
     const v = liveValue(key(), { schema: Result, query: Query });
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const tuple = v.query.encode({ metric: "m" });
-    client.setQueryData(queryKeyFor(v.key, tuple), { n: 1 });
-    const { result, notifications } = mount(client, () =>
+    live.queryClient.setQueryData(queryKeyFor(v.key, tuple), { n: 1 });
+    const { result, notifications } = mount(live, () =>
       useLive(v, { metric: "m" }),
     );
     await waitFor(() => expect(result.current.status).toBe("ready"));
@@ -130,9 +116,9 @@ describe("useLive — typed-query value", () => {
 
   it("null reads nothing", () => {
     const v = liveValue(key(), { schema: Result, query: Query });
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const observe = vi.spyOn(NotificationsClient.prototype, "observe");
-    const { result } = mount(client, () => useLive(v, null));
+    const { result } = mount(live, () => useLive(v, null));
     expect(result.current.status).toBe("loading");
     expect(observe.mock.calls.filter(([k]) => k === v.key)).toEqual([]);
     observe.mockRestore();
@@ -172,9 +158,12 @@ describe("useLive — paged value", () => {
 
   it("no viewport: page 0 is { q, limit }, `$key` is split off, and loadMore splits without flashing", async () => {
     const v = paged();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(v.key, { q, limit: "2" }), wire("a", "b"));
-    const { result } = mount(client, () => useLive(v, { metric: "m" }));
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(
+      queryKeyFor(v.key, { q, limit: "2" }),
+      wire("a", "b"),
+    );
+    const { result } = mount(live, () => useLive(v, { metric: "m" }));
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const first = result.current;
     if (first.status !== "ready") throw new Error("unreachable");
@@ -190,11 +179,11 @@ describe("useLive — paged value", () => {
     });
     const cut = JSON.stringify(["8", "b"]);
     act(() => {
-      client.setQueryData(
+      live.queryClient.setQueryData(
         queryKeyFor(v.key, { q, limit: "4", until: cut }),
         wire("a", "b"),
       );
-      client.setQueryData(
+      live.queryClient.setQueryData(
         queryKeyFor(v.key, { q, limit: "2", after: cut }),
         wire("a", "b", "c", "d").slice(2),
       );
@@ -211,9 +200,12 @@ describe("useLive — paged value", () => {
 
   it("{ limit } is page 0's limit — a preview — and the step", async () => {
     const v = paged();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(v.key, { q, limit: "1" }), wire("a"));
-    const { result } = mount(client, () =>
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(
+      queryKeyFor(v.key, { q, limit: "1" }),
+      wire("a"),
+    );
+    const { result } = mount(live, () =>
       useLive(v, { metric: "m" }, { limit: 1 }),
     );
     await waitFor(() => expect(result.current.status).toBe("ready"));
@@ -222,10 +214,13 @@ describe("useLive — paged value", () => {
 
   it("with a viewport: the pages result", async () => {
     const v = paged();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(v.key, { q, limit: "2" }), wire("a"));
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(
+      queryKeyFor(v.key, { q, limit: "2" }),
+      wire("a"),
+    );
     const viewport = mintVisibleRange({ kind: "measuring" });
-    const { result } = mount(client, () =>
+    const { result } = mount(live, () =>
       useLive(v, { metric: "m" }, { viewport }),
     );
     await waitFor(() => expect(result.current.status).toBe("ready"));
@@ -239,9 +234,12 @@ describe("useLive — paged value", () => {
 
   it("a failed page under the items shown is the error arm with them as stale", async () => {
     const v = paged();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(v.key, { q, limit: "2" }), wire("a", "b"));
-    const { result } = mount(client, () => useLive(v, { metric: "m" }));
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(
+      queryKeyFor(v.key, { q, limit: "2" }),
+      wire("a", "b"),
+    );
+    const { result } = mount(live, () => useLive(v, { metric: "m" }));
     await waitFor(() => expect(result.current.status).toBe("ready"));
     act(() => {
       const r = result.current;
@@ -250,11 +248,11 @@ describe("useLive — paged value", () => {
     });
     const cut = JSON.stringify(["8", "b"]);
     await act(async () => {
-      client.setQueryData(
+      live.queryClient.setQueryData(
         queryKeyFor(v.key, { q, limit: "4", until: cut }),
         wire("a", "b"),
       );
-      await client.prefetchQuery({
+      await live.queryClient.prefetchQuery({
         queryKey: queryKeyFor(v.key, { q, limit: "2", after: cut }),
         queryFn: () => Promise.reject(new Error("page failed")),
         staleTime: 0,
@@ -269,18 +267,18 @@ describe("useLive — paged value", () => {
 
   it("the meta sibling is a typed-query value over the same question", async () => {
     const v = paged();
-    const client = makeClient();
-    client.setQueryData(queryKeyFor(v.meta.key, { q }), { total: 4 });
-    const { result } = mount(client, () => useLive(v.meta, { metric: "m" }));
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(v.meta.key, { q }), { total: 4 });
+    const { result } = mount(live, () => useLive(v.meta, { metric: "m" }));
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(result.current).toMatchObject({ data: { total: 4 } });
   });
 
   it("null reads nothing", () => {
     const v = paged();
-    const client = makeClient();
+    const live = createLiveStateHarness();
     const observe = vi.spyOn(NotificationsClient.prototype, "observe");
-    const { result } = mount(client, () => useLive(v, null));
+    const { result } = mount(live, () => useLive(v, null));
     expect(result.current.status).toBe("loading");
     expect(observe.mock.calls.filter(([k]) => k === v.key)).toEqual([]);
     observe.mockRestore();
@@ -288,9 +286,9 @@ describe("useLive — paged value", () => {
 
   it("a limit past maxLimit throws", () => {
     const v = paged();
-    const client = makeClient();
+    const live = createLiveStateHarness();
     expect(() =>
-      mount(client, () => useLive(v, { metric: "m" }, { limit: 5 })),
+      mount(live, () => useLive(v, { metric: "m" }, { limit: 5 })),
     ).toThrow(/not an integer in 1..4/);
   });
 });

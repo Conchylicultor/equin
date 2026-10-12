@@ -25,12 +25,14 @@ change. `setTaskTrack(id, "main")` deletes the row.
 
 ## Reads
 
-One `liveCollection` (`task-tracks`), read two ways:
+One `liveCollection` (`task-tracks.all`), read two ways:
 
 - `useTaskTrack(taskId)` — point read, exact, a `ResourceResult<TaskTrack>`: `loading` until known (never a
   stand-in "main").
-- The task list's `track` field reads the preloaded bounded window of stored
-  rows and grows it while full; see `shared/resources.ts` for the bound.
+- `useStoredTracks()` — the task list's `track` field: the collection is
+  declared `all` (at most one row per task), so the field holds every stored
+  row — preloaded (`boot-and-keep`), read with `useLive(taskTracks, { select
+  })`; see `shared/resources.ts`.
 
 The track is decided per filing and is NOT inherited by subtasks (it is not a
 `TaskLaunchServer` option).
@@ -39,7 +41,7 @@ The track is decided per filing and is NOT inherited by subtasks (it is not a
 
 ## Plugin reference
 
-- Description: Per-task track (main | sidequest): the track badge, a `track` enum field in the tasks DataView (badge cell, groupable, filterable), and the clickable Track control the task detail header renders to switch it. Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (window for the task list, point reads for one task), and the endpoint that switches a task's track, and the tasks.trackChanged trigger event every track write emits.
+- Description: Per-task track (main | sidequest): the track badge, a `track` enum field in the tasks DataView (badge cell, groupable, filterable), and the clickable Track control the task detail header renders to switch it. Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (the whole set for the task list, point reads for one task), and the endpoint that switches a task's track, and the tasks.trackChanged trigger event every track write emits.
 - Web:
   - Contributes: `Tasks.Fields` "track" → `TrackField`
   - Uses:
@@ -49,9 +51,7 @@ The track is decided per filing and is NOT inherited by subtasks (it is not a
     - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
     - `primitives/live-state.foldResource`
-    - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
     - `shell/notifications.toast`
     - `tasks/task-list.Tasks`
@@ -61,9 +61,8 @@ The track is decided per filing and is NOT inherited by subtasks (it is not a
     - `useTaskTrack`
 - Server:
   - Contributes:
-    - `resource.declare` "task-tracks"
-    - `resource.declare` "task-tracks:groups"
-    - `resource.declare` "task-tracks:rows"
+    - `resource.declare` "task-tracks.all"
+    - `resource.declare` "task-tracks.all:rows"
   - Uses:
     - `database.db`
     - `database.DbExecutor`
@@ -90,9 +89,8 @@ The track is decided per filing and is NOT inherited by subtasks (it is not a
     - `taskTrackChanged`
   - Register: `defineTriggerEvent('tasks.trackChanged')`
   - Resources:
-    - `task-tracks` (keyed, window)
-    - `task-tracks:groups` (push)
-    - `task-tracks:rows` (keyed, point)
+    - `task-tracks.all` (keyed)
+    - `task-tracks.all:rows` (keyed, point)
   - Routes: `PUT /api/tasks/:taskId/track`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`

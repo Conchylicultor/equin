@@ -22,15 +22,24 @@ others — there is no leader to lose. Design:
   out instead of using `packages/retry`.
 - **One worker per networking build.** The worker script is content-addressed
   next to the tab code naming it, so a tab only ever talks to a worker of its own
-  build; during a rollout old and new tabs hold one socket each.
+  build; during a rollout old and new tabs hold one socket each. The address is
+  networking's OWN web artifact (`/artifacts/<networking web dir>/assets/
+  shared-ws.worker-<hash>.js`), whose hash covers only this plugin's inlined
+  files plus the global builder identity (`web-artifacts`, *A worker is bundled
+  whole*) — so an edit to a consumer (live-state) never moves it; an edit to
+  networking's `web/` or a builder/toolchain change does.
 - **One worker per dialect.** `new SharedWebSocket(url, hooks?, { dialect })`
   — the dialect is part of the worker's name (`sharedWsWorkerName`), so a tab
   shares its socket only with tabs of the same dialect. The worker fans every
   server frame out to every tab on the socket, so a consumer whose server may
   answer one tab with a frame another bundle of it would misread names one its
-  readers share: live-state passes its own module URL (content-addressed per
-  build of it), so a tab left open across a deploy never sees a frame of a
-  newer vocabulary. No dialect = every tab of this networking build.
+  readers share. **A dialect is a protocol id, never a build id**: it must move
+  exactly when the frames a tab reads change. live-state passes `PROTOCOL`
+  (`packages/resource-protocol`, a hash of its frame vocabulary), so a tab left
+  open across a deploy that changed the vocabulary never sees a frame of the
+  newer one, while every other deploy keeps all tabs on one socket — a module
+  URL (its old dialect) split the socket on every rebuild of live-state. No
+  dialect = every tab of this networking build.
 - **`onopen` fires once per server connection per tab** (consumers replay their
   state there): the worker re-sends its status on every port join/leave, and the
   tab dispatches only when the connection id changes (or after a re-attach).
@@ -67,7 +76,8 @@ go through injected factories that default to the globals:
 - `new SharedWebSocket(url, hooks?, options?)` — `SharedWebSocketHooks` carries
   `makeSharedWorker`, `locks`, `pageLifecycle` (`null` ⇒ none). Production
   passes nothing (`options` is not a seam: its `dialect` names who shares the
-  socket).
+  socket; `SharedWebSocketOptions`, exported for a consumer whose own socket
+  factory forwards it — live-state's `makeSocket(url, options)` hook).
 - `createSharedWsHost({ makeWebSocket, locks })` — the worker entry passes the
   real ones; tests pass fakes. The structural types (`WebSocketLike`,
   `SharedWorkerLike`, `MessagePortLike`, `LockManagerLike`) live in

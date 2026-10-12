@@ -47,8 +47,14 @@ export interface SharedWebSocketOptions {
    * (default: none named — every tab of this networking build). The worker
    * fans every server frame out to every tab on its socket, so a consumer
    * whose server may answer one tab with a frame another tab's code would
-   * misread names a dialect its readers share — tabs that read frames
-   * differently then never share a socket.
+   * misread names a dialect: the id of the frame vocabulary its readers
+   * speak — tabs that read frames differently then never share a socket.
+   *
+   * A protocol id, never a build id: it must move exactly when the frames a
+   * tab reads change. A per-build value (a module URL, a bundle hash) splits
+   * the socket on every unrelated rebuild of the consumer; a hand-bumped
+   * version forgets to move. Derive it from the vocabulary itself
+   * (live-state passes `PROTOCOL`, `packages/resource-protocol`).
    */
   dialect?: string;
 }

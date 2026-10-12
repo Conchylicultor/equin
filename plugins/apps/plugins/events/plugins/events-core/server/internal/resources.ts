@@ -11,13 +11,12 @@ import {
 import { _eventSources, _eventSourceRuns } from "./tables";
 import { listRunEvents, runExists } from "./sources-repo";
 
-// The sources collection over `event_sources`: its window (filterable on
-// status / enabled, sortable by createdAt / name) and its `:rows` point sibling.
-// Every column is on the wire — a source row is small and the whole thing is
-// what the sources pane renders. `createdAt` never changes; `name` does, so a
-// rename costs one bounded ids query per subscribed window (the order signature
-// covers every sortable column), while a status / fingerprint / watermark write
-// stays an in-place upsert.
+// The sources collection over `event_sources`: the whole ordered set and its
+// `:rows` point sibling. Every column is on the wire — a source row is small
+// and the whole thing is what the sources pane renders. A new source is an
+// entrant (one refill + one `orderOf`), a delete an exit; `createdAt` (the
+// order) never changes, so a rename or a status / fingerprint / watermark write
+// is a one-row refill.
 export const eventSourcesServed = serveCollection(eventSources, {
   from: _eventSources,
 });

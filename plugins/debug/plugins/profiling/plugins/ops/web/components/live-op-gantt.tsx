@@ -8,8 +8,15 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { attemptPane } from "@plugins/tasks/plugins/attempt-view/web";
 import type { OpRow } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
 import { OpGantt } from "@plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useOpActivation } from "../internal/use-op-activation";
-import { groupOps, overlapping, recordsAt } from "../internal/op-groups";
+import {
+  OPS_READ_LIMIT,
+  groupOps,
+  overlapping,
+  recordsAt,
+} from "../internal/op-groups";
 
 /** A span to clip the ops to (worktree mode), in epoch ms; `endMs` null = open-ended. */
 export interface OpWindow {
@@ -23,6 +30,13 @@ interface LiveOpGanttProps {
   highlightWorktree?: string;
   /** What to show when no op falls in the span. */
   empty: ReactNode;
+  /**
+   * Whether a read behind `rows` came back full (`OPS_READ_LIMIT` rows): the
+   * range may hold older ops than it drew, and the chart says so. (A read of
+   * exactly that many says so too: a full read cannot tell "exactly full" from
+   * "more", hence "may".)
+   */
+  capped: boolean;
 }
 
 // While any op is in flight its bar (and its open wait) grows with `now`; at a
@@ -89,9 +103,18 @@ function GanttAt({
  */
 export function LiveOpGantt(props: LiveOpGanttProps): ReactElement {
   const inFlight = props.rows.some((r) => r.closedBy === null);
-  return inFlight ? (
+  const chart = inFlight ? (
     <TickingGantt {...props} />
   ) : (
     <GanttAt {...props} now={0} sleepNow={null} />
+  );
+  if (!props.capped) return chart;
+  return (
+    <Stack gap="xs">
+      <Text variant="caption" tone="muted">
+        {`Showing the newest ${OPS_READ_LIMIT} ops — older ones may not be drawn.`}
+      </Text>
+      {chart}
+    </Stack>
   );
 }

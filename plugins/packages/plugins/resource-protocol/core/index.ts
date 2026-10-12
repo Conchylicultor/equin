@@ -14,6 +14,16 @@ export type {
   ContractVerdict,
   ResourceHttpErrorBody,
   ResourceReadEnvelope,
-  SubErrorFrame,
   SubErrorReason,
 } from "./internal/protocol";
+export { DERIVE_MAX_ID, DERIVE_MAX_SOURCES, PROTOCOL } from "./internal/frames";
+export type {
+  ClientFrame,
+  Derivation,
+  DeriveSource,
+  ExactClientFrame,
+  ExactServerFrame,
+  ReceivedFrame,
+  ServerFrame,
+  SubErrorFrame,
+} from "./internal/frames";

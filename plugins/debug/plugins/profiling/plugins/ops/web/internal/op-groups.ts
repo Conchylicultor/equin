@@ -5,6 +5,7 @@ import {
 import type { SleepNow } from "@plugins/infra/plugins/host/plugins/machine-sleep/core";
 import {
   opRowToFoldState,
+  opsHistory,
   type OpRow,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
 import type {
@@ -22,6 +23,15 @@ import type {
 
 export const FIVE_MINUTES = 5 * 60 * 1000;
 export const TWENTY_MINUTES = 20 * 60 * 1000;
+
+/**
+ * The size of every Gantt read of `opsHistory` — the collection's own
+ * `maxLimit`, read off it so the two cannot drift. Each read is newest first
+ * and never taken for the whole history: one that comes back full is drawn
+ * and SAYS it may hold older ops (`capped`), rather than passing the newest
+ * ones off as everything it asked for.
+ */
+export const OPS_READ_LIMIT = opsHistory.window.window.maxLimit;
 
 /** `ms` floored to a multiple of `step` — a stable window bound for a subscription tuple. */
 export function floorTo(ms: number, step: number): number {

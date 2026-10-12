@@ -13,13 +13,9 @@ import {
   render,
   renderHook,
 } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
 import {
-  NotificationsProvider,
-  queryKeyFor,
-} from "@plugins/primitives/plugins/live-state/web";
-import {
+  createLiveStateHarness,
   markResourceContractMismatch,
   resetResourceContractMismatches,
 } from "@plugins/primitives/plugins/live-state/web/testing";
@@ -62,20 +58,12 @@ function servingGraph(graph: string): DeploymentState {
 }
 
 function wrapperServing(graph: string) {
-  const client = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
-  client.setQueryData(
+  const live = createLiveStateHarness();
+  live.queryClient.setQueryData(
     queryKeyFor(deployment.key, undefined),
     servingGraph(graph),
   );
-  return ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>
-      {children}
-    </NotificationsProvider>
-  );
+  return live.Wrapper;
 }
 
 beforeEach(() => {

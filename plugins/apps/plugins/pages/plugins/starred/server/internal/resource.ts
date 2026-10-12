@@ -4,14 +4,12 @@ import { pageBlocksStarred } from "./tables";
 
 // Served from the extension handle (its wire columns — `blockId` is the
 // `parent_id` PK, `createdAt` a `wireTimestamps` entry of the shape). Starring
-// is a window membership ENTRY and unstarring a membership EXIT; both ship
-// incremental deltas, never a whole-collection recompute.
+// is an entrant of the whole set (one refill + one `orderOf`) and unstarring an
+// exit with no load; never a whole-set reload.
 //
-// The window's order column is UPDATE-stable by construction: `pageBlocksStarred`
-// is presence-only, so `upsert(pageId, {})` writes `createdAt` once at insert and
-// on conflict only rewrites the key with its own value (a no-op) — re-starring an
-// already-starred page is an in-place refill with an unchanged order signature
-// and zero ids queries.
+// Re-starring an already-starred page changes nothing: `pageBlocksStarred` is
+// presence-only, so `upsert(pageId, {})` on conflict only rewrites the key with
+// its own value (a no-op) — no column the set reads moves.
 export const starredPagesServed = serveCollection(starredPages, {
   from: pageBlocksStarred,
 });

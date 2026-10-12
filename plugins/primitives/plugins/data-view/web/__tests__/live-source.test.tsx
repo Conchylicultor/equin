@@ -1,6 +1,6 @@
 /**
  * The DataView → live-window adapter (`useLiveSource`) over a real
- * NotificationsProvider + QueryClient: which window tuple a view state lowers
+ * `createLiveStateHarness` (a real client and its QueryClient): which window tuple a view state lowers
  * to (the tuple the scroll subscribes, read back from the query cache), and
  * how the scroll maps onto what the body renders.
  *
@@ -31,17 +31,19 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
-import { type ReactNode, useEffect } from "react";
+import type { QueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { z } from "zod";
 import { markDeferredLoadComplete } from "@plugins/framework/plugins/web-sdk/core";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import {
-  NotificationsProvider,
   ResourceError,
-  getNotificationsClient,
   queryKeyFor,
 } from "@plugins/primitives/plugins/live-state/web";
+import {
+  createLiveStateHarness,
+  type LiveStateHarness,
+} from "@plugins/primitives/plugins/live-state/web/testing";
 import {
   liveCollection,
   type LiveQuery,
@@ -187,16 +189,8 @@ function flat<T>(view: SourceView<T> | null): FlatSourceView<T> {
   return view;
 }
 
-function makeClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
-}
-
 function mount(
-  client: QueryClient,
+  live: LiveStateHarness,
   c: C,
   initial: {
     state: ViewState;
@@ -212,11 +206,7 @@ function mount(
       : all;
   const fields = fieldsOf(c);
   const plan = resolveLiveFields(fields, source, resolveOperatorSet, "host");
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <NotificationsProvider queryClient={client}>
-      {children}
-    </NotificationsProvider>
-  );
+  vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
   const rendered = renderHook(
     (p: { state: ViewState }) =>
       useLiveSource<Thread>({
@@ -229,11 +219,8 @@ function mount(
         now: 0,
         collapsedSections: NO_COLLAPSED,
       }),
-    { wrapper, initialProps: { state: initial.state } },
+    { wrapper: live.Wrapper, initialProps: { state: initial.state } },
   );
-  const notifications = getNotificationsClient();
-  if (!notifications) throw new Error("NotificationsClient not created");
-  vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
   return rendered;
 }
 
@@ -271,8 +258,9 @@ afterEach(() => {
 describe("useLiveSource — lowering", () => {
   it("renames a field onto its column, ANDs the scope first, and sorts by columns", () => {
     const c = threads();
-    const client = makeClient();
-    mount(client, c, {
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    mount(live, c, {
       scoped: true,
       state: {
         ...baseState,
@@ -305,8 +293,9 @@ describe("useLiveSource — lowering", () => {
 
   it("debounces the search, and a search-only change keeps the previous rows until the new head settles", async () => {
     const c = threads();
-    const client = makeClient();
-    const { result, rerender } = mount(client, c, { state: baseState });
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    const { result, rerender } = mount(live, c, { state: baseState });
     act(() => {
       client.setQueryData(queryKeyFor(c.key, { limit: "2" }), wire([1]));
     });
@@ -334,8 +323,9 @@ describe("useLiveSource — lowering", () => {
 
   it("a one-bucket-per-value grouping over a column no grouping counts leads the order (the default after it), sections by appearance", () => {
     const c = threads();
-    const client = makeClient();
-    const { result } = mount(client, c, {
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    const { result } = mount(live, c, {
       state: {
         ...baseState,
         groupBy: { fieldId: "folder", groupingId: "value" },
@@ -353,8 +343,9 @@ describe("useLiveSource — lowering", () => {
 
   it("a grouped column the sort already names is not named twice", () => {
     const c = threads();
-    const client = makeClient();
-    mount(client, c, {
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    mount(live, c, {
       state: {
         ...baseState,
         sort: [
@@ -375,8 +366,9 @@ describe("useLiveSource — lowering", () => {
 
   it("a bucketed grouping neither prepends nor reorders the user's sort", () => {
     const c = threads();
-    const client = makeClient();
-    const { result } = mount(client, c, {
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    const { result } = mount(live, c, {
       state: {
         ...baseState,
         sort: [{ fieldId: "subject", direction: "asc" }],
@@ -391,8 +383,9 @@ describe("useLiveSource — lowering", () => {
 describe("useLiveSource — states", () => {
   it("a scope not known yet reads nothing and is the loading state", () => {
     const c = threads();
-    const client = makeClient();
-    const { result } = mount(client, c, { awaiting: true, state: baseState });
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    const { result } = mount(live, c, { awaiting: true, state: baseState });
     expect(result.current?.loading).toBe(true);
     expect(result.current?.rows).toEqual([]);
     expect(tuples(client, c)).toEqual([]);
@@ -400,8 +393,9 @@ describe("useLiveSource — states", () => {
 
   it("a saved sort on a field that does not resolve is pending before the deferred tier settles, the error arm after", async () => {
     const c = threads();
-    const client = makeClient();
-    const { result } = mount(client, c, {
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    const { result } = mount(live, c, {
       state: {
         ...baseState,
         sort: [{ fieldId: "playCount", direction: "desc" }],
@@ -419,8 +413,9 @@ describe("useLiveSource — states", () => {
 
   it("the skeleton until the head settles; an empty head is the empty state", async () => {
     const c = threads();
-    const client = makeClient();
-    const { result } = mount(client, c, { state: baseState });
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    const { result } = mount(live, c, { state: baseState });
     expect(result.current!.loading).toBe(true);
     act(() => {
       client.setQueryData(queryKeyFor(c.key, { limit: "2" }), []);
@@ -432,8 +427,9 @@ describe("useLiveSource — states", () => {
 
   it("the paging can grow while the scroll can", async () => {
     const c = threads();
-    const client = makeClient();
-    const { result } = mount(client, c, { state: baseState });
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    const { result } = mount(live, c, { state: baseState });
     act(() => {
       client.setQueryData(queryKeyFor(c.key, { limit: "2" }), wire([1, 2]));
     });
@@ -494,16 +490,16 @@ function LiveBody(props: {
 describe("useLiveSource — a failed head read", () => {
   it("renders the read's failure with Retry, and Retry re-reads the head", async () => {
     const c = threads();
-    const client = makeClient();
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
     const source = liveDataSource(c, { searchable: ["subject"] });
-    render(
-      <NotificationsProvider queryClient={client}>
-        <LiveBody source={source} fields={fieldsOf(c)} />
-      </NotificationsProvider>,
-    );
-    const notifications = getNotificationsClient();
-    if (!notifications) throw new Error("NotificationsClient not created");
+    const notifications = live.notifications;
     vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
+    render(
+      <live.Wrapper>
+        <LiveBody source={source} fields={fieldsOf(c)} />
+      </live.Wrapper>,
+    );
     expect(screen.getByText("loading")).toBeTruthy();
 
     const head = queryKeyFor(c.key, { limit: "2" });
@@ -530,9 +526,10 @@ describe("useLiveSource — a failed head read", () => {
 
   it("the adapter hands the head failure over as a read error, not a query error", async () => {
     const c = threads();
-    const client = makeClient();
-    const { result } = mount(client, c, { state: baseState });
-    const notifications = getNotificationsClient()!;
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    const { result } = mount(live, c, { state: baseState });
+    const notifications = live.notifications;
     vi.spyOn(notifications, "fetchOverHttp").mockRejectedValueOnce(
       new Error("boom"),
     );
@@ -587,7 +584,7 @@ describe("useLiveSource — server sections", () => {
   }
 
   function mountSectioned(
-    client: QueryClient,
+    live: LiveStateHarness,
     c: C,
     initial: { state: ViewState; scoped?: boolean },
   ) {
@@ -600,8 +597,9 @@ describe("useLiveSource — server sections", () => {
     const onView = (view: SourceView<Thread> | null) => {
       latest = view;
     };
+    vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
     const tree = (state: ViewState, collapsed: ReadonlySet<string>) => (
-      <NotificationsProvider queryClient={client}>
+      <live.Wrapper>
         <Sectioned
           source={source}
           fields={fields}
@@ -609,12 +607,9 @@ describe("useLiveSource — server sections", () => {
           collapsed={collapsed}
           onView={onView}
         />
-      </NotificationsProvider>
+      </live.Wrapper>
     );
     const rendered = render(tree(initial.state, NO_COLLAPSED));
-    const notifications = getNotificationsClient();
-    if (!notifications) throw new Error("NotificationsClient not created");
-    vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
     return {
       view(): SectionedSourceView<Thread> {
         const v = latest as SourceView<Thread> | null;
@@ -661,7 +656,8 @@ describe("useLiveSource — server sections", () => {
 
   it("reads ONE grouping over the view's whole where, and no rows until a section asks", async () => {
     const c = threads();
-    const client = makeClient();
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
     const state: ViewState = {
       ...byUnread,
       filter: {
@@ -679,7 +675,7 @@ describe("useLiveSource — server sections", () => {
         ],
       },
     };
-    const m = mountSectioned(client, c, { state, scoped: true });
+    const m = mountSectioned(live, c, { state, scoped: true });
     const where = and(
       clause("labelIds", "hasAny", ["INBOX"]),
       clause("subject", "eq", "hello"),
@@ -722,8 +718,9 @@ describe("useLiveSource — server sections", () => {
 
   it("a section reads its value only once its footer asks; collapsing it unsubscribes", async () => {
     const c = threads();
-    const client = makeClient();
-    const m = mountSectioned(client, c, { state: byUnread });
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    const m = mountSectioned(live, c, { state: byUnread });
     act(() => {
       client.setQueryData(groupsKey(c, "unread"), [
         { value: true, count: 3 },
@@ -764,8 +761,9 @@ describe("useLiveSource — server sections", () => {
 
   it("a blank text value is the one None; the grouping full at its max says so", async () => {
     const c = threads();
-    const client = makeClient();
-    const m = mountSectioned(client, c, {
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    const m = mountSectioned(live, c, {
       state: {
         ...baseState,
         groupBy: { fieldId: "subject", groupingId: "value" },

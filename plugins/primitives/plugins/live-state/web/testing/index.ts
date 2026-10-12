@@ -15,3 +15,9 @@ export {
 // drives a delta onto a cached tuple without a socket (`setQueryData` of its
 // result is exactly the client's write).
 export { mergeKeyedDelta } from "../keyed-delta-merge";
+// A fresh client + the cache it owns per test, mounted by its `Wrapper`.
+export { createLiveStateHarness } from "./live-state-harness";
+export type {
+  LiveStateHarness,
+  LiveStateHarnessOptions,
+} from "./live-state-harness";

@@ -36,7 +36,7 @@ const TRACK_OPTIONS = TASK_TRACKS.map((track) => ({
  * the loading block and a view grouped, sorted or filtered by it renders its
  * loading state (data-view) — never "main", which would be a claim about the
  * task that then reverses. A failed read with nothing held is its
- * `readError`; one over a held map keeps painting it. The window is
+ * `readError`; one over a held map keeps painting it. The set is
  * preloaded, so this is at most one round-trip.
  */
 export function TrackField({ render }: FieldExtensionProps<TaskListItem>) {

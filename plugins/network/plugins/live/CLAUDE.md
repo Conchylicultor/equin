@@ -22,32 +22,32 @@ the filter language: `research/2026-09-25-global-unified-filter-language.md`).
 
 ```ts
 // core/ (browser-safe) — declare once
-export const eventSources = liveCollection("events.sources", {
-  row: EventSourceSchema,                // a zod OBJECT — its keys are the projection
+export const orders = liveCollection("shop.orders", {        // an illustrative collection
+  row: OrderSchema,                      // a zod OBJECT — its keys are the projection
   id: "id",
-  filterable: { status: liveText(SourceStatusSchema), enabled: liveBoolean() },  // domain constructors
-  sortable: ["createdAt", "name"],
+  filterable: { status: liveText(OrderStatusSchema), paid: liveBoolean() },  // domain constructors
+  sortable: ["createdAt", "total"],
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },
   maxLimit: 500,
   preload: "none",                       // or "boot" — see Declare
 });
 
 // server/ — serve it; spread all three Resource.Declare entries
-export const eventSourcesServed = serveCollection(eventSources, {
-  from: _eventSources,
+export const ordersServed = serveCollection(orders, {
+  from: _orders,
   // where: eq(t.dismissed, false)       — optional base membership (see Serve)
 });
-// contributions: [...eventSourcesServed.declare]
+// contributions: [...ordersServed.declare]
 
 // web/ — read it
-useLive(eventSources);                                                // default window
-useLive(eventSources, { where: { enabled: true }, orderBy: [["name", "asc"]], limit: 50 });
-useLive(eventSources, { where: or({ column: "status", op: "eq", operand: "error" },
-                                  { column: "enabled", op: "eq", operand: false }) }); // a Filter tree
-useLive(eventSources, { groupBy: "status", where: { enabled: true } }); // values + counts
-useLive(eventSources, { count: true, where: { enabled: true } });     // a total (declared `count: true`)
-useLive(eventSources, { ids: visibleIds });                           // point set
-useLiveRow(eventSources, sourceId);                                   // one row (a null id: not found)
+useLive(orders);                                                      // default window
+useLive(orders, { where: { paid: true }, orderBy: [["total", "asc"]], limit: 50 });
+useLive(orders, { where: or({ column: "status", op: "eq", operand: "refunded" },
+                            { column: "paid", op: "eq", operand: false }) }); // a Filter tree
+useLive(orders, { groupBy: "status", where: { paid: true } });       // values + counts
+useLive(orders, { count: true, where: { paid: true } });             // a total (declared `count: true`)
+useLive(orders, { ids: visibleIds });                                 // point set
+useLiveRow(orders, orderId);                                          // one row (a null id: not found)
 
 // the whole ordered set, for a set its readers need entire (see `all` below)
 export const graphNodes = liveCollection("graph.nodes", {
@@ -420,8 +420,10 @@ collections and values — D1–D3 below).
   ROUTED", not never keyed). Everything after it is shared: keyed `delta`
   frames, per-tuple snapshots, seeded split and merge (a value page's family
   is its question's `q`), one client cache path. So a value page's read sends
-  `derive` like a collection's, and comes under the per-build socket dialect
-  as derived acks do.
+  `derive` like a collection's, and comes under the frame-vocabulary protocol
+  as derived acks do (`PROTOCOL`, `packages/resource-protocol`: tabs share a
+  socket only under the same one, and a derivation asked under another
+  protocol loads in full — `protocol-skew`).
 
 ### Collections — `scroll: true`
 
@@ -704,16 +706,37 @@ step — a collection's `default.limit`, a value's `paged.limit` (or the read's
     loading. A `null` collection and query read nothing (a surface whose origin is
     not live still calls the hook, so its hook order is fixed).
   - **Logs.** The `live-pages` channel records the plan's shape as it changes
-    (`pages=N live=M`), a collapse, and a read that stops short.
+    (`pages=N live=M`), a collapse, and a read that stops short — and three
+    signals that decide follow-ups (research/2026-10-12-global-live-paging-followups.md):
+    - `overflow-split gap Nms` — from the commit an overflow split mints its
+      rest page (`(m, b]`, read whole: `reconcile`'s `overflowed`) to the
+      commit that page's read first settles: how long rows past the old
+      page's last were in no page (a hidden-rows marker is reopened only if
+      this is common or over ~150 ms);
+    - `cross-page gap: row X was in no live page for Nms` — a row that left
+      one live page and reappeared in another within 1 s (the leaving frame
+      first; the duplicate order is the dedup's, and a delete never comes
+      back), from `web/internal/cross-page-gaps.ts`, which diffs only the
+      pages whose rows array changed (a client-side departure hold is built
+      only if it fires);
+    - `seed refused: a source holds a boot-hydrated value` — written by
+      live-state's `seedOf` when a split or merge would seed from a page
+      whose value is still the boot-hydrated one (`appliedSeq` 0, a cached
+      value, no derivation of its own in flight): the page loads in full
+      instead. A source still loading (nothing cached, or its own derivation
+      unanswered) is refused too, but not counted.
   - Pinned by `shared/page-plan.test.ts` (the plan against a simulated server:
     loadMore as a split, overflow, no cuttable key, the merge bound, the live
     band and its hysteresis, dedup on a backward move, contiguity, a stale last
     page's `canGrow`, the stale budget and its placeholders at the edges, a
-    placeholder on screen subscribed again, random walks),
-    `web/internal/page-source.test.ts` (the seam: page 0 is the default /
+    placeholder on screen subscribed again, random walks, an overflow split
+    reporting its rest page), `web/internal/cross-page-gaps.test.ts` (the
+    gap detector: a move with the leaving frame first is one gap; the
+    duplicate order, a flip in place, a delete and a page handing its rows
+    on are none), `web/internal/page-source.test.ts` (the seam: page 0 is the default /
     `{ q, limit }` tuple, cuts verbatim, one source per declaration),
-    `web/__tests__/use-pages.test.tsx` (the hook over a real
-    NotificationsProvider, through `useLive`: placeholders past the budget, a
+    `web/__tests__/use-pages.test.tsx` (the hook over a fresh
+    `createLiveStateHarness` per test, through `useLive`: placeholders past the budget, a
     `columns` change, a `loadMore` sent seeded, a merge seeded from both
     pages and an overflow split from its known half, each before the
     replaced pages' release; without a viewport, every page live and capped

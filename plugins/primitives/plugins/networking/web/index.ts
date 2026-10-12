@@ -11,6 +11,7 @@ export type { ReconnectingEventSourceOptions } from "./reconnecting-event-source
 export { SharedWebSocket } from "./shared-websocket";
 export type {
   SharedWebSocketHooks,
+  SharedWebSocketOptions,
   PageLifecycleLike,
 } from "./shared-websocket";
 export type {

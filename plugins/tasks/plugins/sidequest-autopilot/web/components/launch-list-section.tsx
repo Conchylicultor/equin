@@ -43,6 +43,7 @@ import {
   MAX_DECIDED_TASKS,
   type AutomationEntry,
   type LaunchDecision,
+  type LaunchDecisionRow,
 } from "@plugins/tasks/plugins/automations/core";
 import {
   sidequestAutopilotConfig,
@@ -57,6 +58,7 @@ import {
 } from "../../shared/launch-list";
 import {
   sidequestTriageRows,
+  type SidequestTriage,
   type TriageRisk,
   type TriageVerdict,
 } from "../../shared/triage";
@@ -66,8 +68,24 @@ const LAUNCH_LIST_VIEW = defineDataView(
   "tasks.sidequest-autopilot.launch-list",
 );
 
-// The triage rows and decisions read whole: one per sidequest, tens today.
-const ROWS_LIMIT = 2000;
+// Stable (module-level), so the `select` re-runs only when the set changes:
+// this automation's decisions, by task.
+function ownDecisions(
+  rows: readonly LaunchDecisionRow[],
+): ReadonlyMap<string, LaunchDecision> {
+  return new Map(
+    rows
+      .filter((r) => r.automationId === SIDEQUEST_AUTOPILOT_ID)
+      .map((r) => [r.taskId, r.decision]),
+  );
+}
+
+// Stable (module-level): the triage rows, by task.
+function triageByTask(
+  rows: readonly SidequestTriage[],
+): ReadonlyMap<string, SidequestTriage> {
+  return new Map(rows.map((r) => [r.taskId, r]));
+}
 
 const NO_ROWS: LaunchListRow[] = [];
 
@@ -128,11 +146,9 @@ export function LaunchListSection(): ReactElement {
   const catalog = useLive(automationsCatalog);
   const tracks = useStoredTracks();
   const tasks = useLive(taskRows);
-  const triage = useLive(sidequestTriageRows, { limit: ROWS_LIMIT });
-  const decisions = useLive(launchDecisions, {
-    where: { automationId: SIDEQUEST_AUTOPILOT_ID },
-    limit: ROWS_LIMIT,
-  });
+  // Both read whole (`all`): the list joins them to every ready sidequest.
+  const triage = useLive(sidequestTriageRows, { select: triageByTask });
+  const decisions = useLive(launchDecisions, { select: ownDecisions });
   const readyIds = useMemo(
     () =>
       foldResource(combineResources({ tracks, tasks }), {
@@ -183,10 +199,8 @@ export function LaunchListSection(): ReactElement {
             }));
           return launchListRows(
             ready,
-            new Map(d.triage.map((r) => [r.taskId, r])),
-            new Map<string, LaunchDecision>(
-              d.decisions.map((r) => [r.taskId, r.decision]),
-            ),
+            d.triage,
+            d.decisions,
             now,
             d.config.staleAfterDays,
           );

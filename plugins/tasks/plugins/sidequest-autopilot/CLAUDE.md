@@ -43,7 +43,9 @@ is handed as `--json-schema` and parsed with. Stored in
 `decide` / `split` / `obsolete`), free-form `context` (markdown, for a human),
 `question` + 2–4 `answers` (or none), the person's `answer`, `risk`,
 `sizeMinutes`, `value` 1–5, `areas`, the `mainSha` read and the task's
-`sourceTitle` / `sourceDescription`. Served as `sidequest-autopilot.triage`.
+`sourceTitle` / `sourceDescription`. Served as `sidequest-autopilot.triage.all`,
+the whole ordered set (`all`, at most one row per task): the launch list joins
+it (and automations' `launchDecisions` set) to every ready sidequest.
 
 - **When** (`server/internal/triage-jobs.ts`, main only, while `triage` is on):
   a task becomes a sidequest (`tasks.trackChanged`, task-track) or a sidequest
@@ -119,7 +121,7 @@ finish and report.
 
 ## Plugin reference
 
-- Description: The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, in total, push policy, model, prompt, triage, stale after, triage prompt) and contributes its sections — Launch list (a DataView of every ready sidequest in launch order, grouped Approved / Proposed by triage / Needs your call / Looks obsolete / Triaging / Excluded; each row expands to triage's context, its one-click question and Re-triage; triage may tick a row, only Approve selected approves), Run until (until you turn it off, or until a date and time after which it turns itself off) and Triage (the switch, stale after, the triage prompt). Declares the Sidequest autopilot automation (launch kind, off by default): while on, it starts agents on the ready sidequests (no attempt, not held, dropped or blocked) a person APPROVED in its launch list — best first by triage's value for size, `concurrency` at a time (default 2), at most `maxLaunches` per turn-on (default 5) — each with the autopilot prompt (triage's context and the person's answer included; never ask, check obsolescence first, stay in scope, push only what the push policy allows, finish with submit_outcome_report). Triage (on by default, main only): each ready sidequest is read once by a read-only Sonnet run (Read / Grep / Glob over the main checkout) — verdict ready / decide / split / obsolete, risk, size, value, areas, a free-form context and at most one one-click question — stored in tasks_ext_sidequest_triage and served as sidequest-autopilot.triage; queued when a task becomes a sidequest or a sidequest becomes ready, backfilled at boot, re-run only by the person's Re-triage. Triage approves nothing. Turns itself off at its `runUntil`.
+- Description: The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, in total, push policy, model, prompt, triage, stale after, triage prompt) and contributes its sections — Launch list (a DataView of every ready sidequest in launch order, grouped Approved / Proposed by triage / Needs your call / Looks obsolete / Triaging / Excluded; each row expands to triage's context, its one-click question and Re-triage; triage may tick a row, only Approve selected approves), Run until (until you turn it off, or until a date and time after which it turns itself off) and Triage (the switch, stale after, the triage prompt). Declares the Sidequest autopilot automation (launch kind, off by default): while on, it starts agents on the ready sidequests (no attempt, not held, dropped or blocked) a person APPROVED in its launch list — best first by triage's value for size, `concurrency` at a time (default 2), at most `maxLaunches` per turn-on (default 5) — each with the autopilot prompt (triage's context and the person's answer included; never ask, check obsolescence first, stay in scope, push only what the push policy allows, finish with submit_outcome_report). Triage (on by default, main only): each ready sidequest is read once by a read-only Sonnet run (Read / Grep / Glob over the main checkout) — verdict ready / decide / split / obsolete, risk, size, value, areas, a free-form context and at most one one-click question — stored in tasks_ext_sidequest_triage and served as the sidequest-autopilot.triage.all set; queued when a task becomes a sidequest or a sidequest becomes ready, backfilled at boot, re-run only by the person's Re-triage. Triage approves nothing. Turns itself off at its `runUntil`.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "sidequest-autopilot"
@@ -153,9 +155,8 @@ finish and report.
 - Server:
   - Contributes:
     - `ConfigV2.Register` "sidequest-autopilot"
-    - `resource.declare` "sidequest-autopilot.triage"
-    - `resource.declare` "sidequest-autopilot.triage:groups"
-    - `resource.declare` "sidequest-autopilot.triage:rows"
+    - `resource.declare` "sidequest-autopilot.triage.all"
+    - `resource.declare` "sidequest-autopilot.triage.all:rows"
     - `trigger` "sidequest-autopilot.task-ready"
     - `trigger` "sidequest-autopilot.triage-on-task"
     - `trigger` "sidequest-autopilot.triage-on-task"
@@ -186,9 +187,8 @@ finish and report.
     - `defineJob('sidequest-autopilot.triage-backfill')`
     - `defineWarmup('sidequest-autopilot.triage-backfill')`
   - Resources:
-    - `sidequest-autopilot.triage` (keyed, window)
-    - `sidequest-autopilot.triage:groups` (push)
-    - `sidequest-autopilot.triage:rows` (keyed, point)
+    - `sidequest-autopilot.triage.all` (keyed)
+    - `sidequest-autopilot.triage.all:rows` (keyed, point)
   - Routes:
     - `POST /api/sidequest-autopilot/triage/:taskId/run`
     - `PUT /api/sidequest-autopilot/triage/:taskId/answer`

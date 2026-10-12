@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import {
-  liveBoolean,
   liveInstant,
   liveNumber,
   liveText,
@@ -11,28 +10,32 @@ import {
   EventSourceSchema,
   RunEventSchema,
 } from "./schema";
-import { RUN_OUTCOMES, SOURCE_STATUSES } from "./vocab";
+import { RUN_OUTCOMES } from "./vocab";
 
 /**
- * The configured sources, as a live collection: a bounded window (newest first
- * by default, 100 / max 500) plus its `:rows` point sibling for by-id reads.
- * The set is small in practice but user-grown, so it gets a real bound rather
- * than an unbounded read.
+ * The configured sources, as the WHOLE ordered set (`all`, newest first) plus
+ * its `:rows` point sibling for by-id reads. Every reader needs every source:
+ * the Sources list filters, sorts and groups them client-side (its derived
+ * fields have no column), and the events list's Source field offers each as
+ * an option — so a window would silently drop the oldest past its edge. The
+ * set is user-curated (a person adds each source by hand).
  *
- * Consumers may filter on `status` / `enabled` and sort by `createdAt` / `name`
- * (`useLive(eventSources, { … })`); one row by id is `useLiveRow` — which reads
- * the point sibling, so a source outside any window is still found.
+ * Read whole with `useLive(eventSources)`; one row by id is `useLiveRow`.
+ *
+ * The key is `events.sources.all`, not the old window's `events.sources`: no
+ * bundle ever declared this key with another contract, so a tab on an older
+ * one gets `unknown-key` (a `skew` verdict) and never parses these rows.
  */
-export const eventSources = liveCollection("events.sources", {
+export const eventSources = liveCollection("events.sources.all", {
   row: EventSourceSchema,
   id: "id",
-  filterable: {
-    status: liveText(z.enum(SOURCE_STATUSES)),
-    enabled: liveBoolean(),
+  all: {
+    orderBy: [["createdAt", "desc"]],
+    unbounded: {
+      reason:
+        "a person adds every source by hand, and the Sources list and the events list's Source field each need every source",
+    },
   },
-  sortable: ["createdAt", "name"],
-  default: { orderBy: [["createdAt", "desc"]], limit: 100 },
-  maxLimit: 500,
 });
 
 /**

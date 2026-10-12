@@ -44,7 +44,7 @@ nothing but the registry: the Sources list passes its row, and an events list
 passes the ref the server joined onto each event row (`SourcedEvent`, whose flat
 `sourceType` / `sourceConfig` `sourceRefOf` reads back — the `events.list`
 collection's and the `events.run-events` value's rows), so no caller ever looks a `sourceId` up
-in the bounded sources window. Either way a surface names no source type. Omit
+in the sources set. Either way a surface names no source type. Omit
 `originUrl` for a type that stands for no page (`manual`).
 
 Both gate the answer through `externalUrl` at the mint: a type reads its URL out
@@ -167,10 +167,10 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
   - Uses:
     - `ids.IdKinds`
     - `infra/endpoints.useEndpointMutation`
-    - `network/live.LiveListResult`
     - `network/live.LiveRowResult`
     - `network/live.useLive`
     - `network/live.useLiveRow`
+    - `primitives/live-state.ResourceResult`
   - Exports (values):
     - `EventSources`
     - `useCreateEventSource`
@@ -192,9 +192,8 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `resource.declare` "events.source-runs"
     - `resource.declare` "events.source-runs:groups"
     - `resource.declare` "events.source-runs:rows"
-    - `resource.declare` "events.sources"
-    - `resource.declare` "events.sources:groups"
-    - `resource.declare` "events.sources:rows"
+    - `resource.declare` "events.sources.all"
+    - `resource.declare` "events.sources.all:rows"
   - Uses:
     - `database.db`
     - `ids.IdKinds`
@@ -239,9 +238,8 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `events.source-runs` (keyed, window)
     - `events.source-runs:groups` (push)
     - `events.source-runs:rows` (keyed, point)
-    - `events.sources` (keyed, window)
-    - `events.sources:groups` (push)
-    - `events.sources:rows` (keyed, point)
+    - `events.sources.all` (keyed)
+    - `events.sources.all:rows` (keyed, point)
   - Routes:
     - `GET /api/events/sources`
     - `POST /api/events/sources`
@@ -251,18 +249,27 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `POST /api/events/sources/:id/refresh`
     - `POST /api/events/sources/refresh-all`
 - Core:
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live/filter` ×4
-    - `fields` ×3
-    - `ids` ×3
-    - `apps/events/event-date` ×2
-    - `fields/text/config` ×2
-    - `network/live` ×2
+  - Uses:
+    - `apps/events/event-date.EventDate`
+    - `apps/events/event-date.EventDateSchema`
+    - `fields.FieldsRecord`
+    - `fields.fieldsToZodObject`
+    - `fields.nullable`
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
+    - `fields/text/config.enumTextField`
+    - `fields/text/config.textField`
+    - `ids.defineIdKind`
+    - `ids.idKindField`
+    - `ids.IdOf`
     - `infra/endpoints.defineEndpoint`
+    - `network/live.liveCollection`
+    - `network/live.liveValue`
+    - `network/live/filter.liveInstant`
+    - `network/live/filter.liveNumber`
+    - `network/live/filter.liveText`
   - Exports (types):
     - `CreateEventSourceBody`
     - `EventCategory`

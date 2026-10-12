@@ -1,14 +1,14 @@
 /**
- * The `events.sources` live collection, end to end on a deployed build:
+ * The `events.sources.all` live collection, end to end on a deployed build:
  *
  *   1. the source detail pane resolves a real source by id through the `:rows`
  *      point read — found, its name on screen;
  *   2. an unknown id lands on the explicit "no longer exists" state, never an
  *      endless spinner;
- *   3. the Source filter's options are every source sorted by name — read from
- *      the exact window tuple `source-field` subscribes to
- *      (`{ limit: 500, order: [["name","asc"]] }`) and, in the UI, from the
- *      events list's Source filter value picker;
+ *   3. the Source filter's options are every source sorted by name — the
+ *      whole set `source-field` subscribes to (its one `{}` tuple, sorted by
+ *      name in the browser) and, in the UI, the events list's Source filter
+ *      value picker;
  *   4. a source's `enabled` flag is LIVE on both surfaces at once: with the
  *      sources list and that source's detail pane open side by side, flipping
  *      it from the detail pane's Scheduling control moves the list row's
@@ -74,7 +74,7 @@ await withBrowser(async (h) => {
   r.note(`target "${target.name}" (${target.id})`);
 
   // 1 — found, by id.
-  const point = await resource<SourceRow[]>("events.sources:rows", {
+  const point = await resource<SourceRow[]>("events.sources.all:rows", {
     ids: target.id,
   });
   r.eq(
@@ -99,7 +99,7 @@ await withBrowser(async (h) => {
 
   // 2 — an unknown id: determinately missing.
   const unknown = "evs-does-not-exist-e2e";
-  const none = await resource<SourceRow[]>("events.sources:rows", {
+  const none = await resource<SourceRow[]>("events.sources.all:rows", {
     ids: unknown,
   });
   r.eq("the :rows point read returns nothing for an unknown id", none, []);
@@ -125,13 +125,10 @@ await withBrowser(async (h) => {
 
   // 3 — the Source filter's options: every source, sorted by name.
   const expected = sources.map((s) => s.name).sort(byCodePoint);
-  const byName = await resource<SourceRow[]>("events.sources", {
-    limit: "500",
-    order: '[["name","asc"]]',
-  });
+  const whole = await resource<SourceRow[]>("events.sources.all", {});
   r.eq(
-    "the name-sorted window holds every source in name order",
-    byName.map((s) => s.name),
+    "the whole set holds every source",
+    whole.map((s) => s.name).sort(byCodePoint),
     expected,
   );
 

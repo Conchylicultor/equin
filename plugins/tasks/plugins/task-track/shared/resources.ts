@@ -8,8 +8,8 @@ import { STORED_TASK_TRACKS } from "../core";
 // entity-extension table (1:1 per task), which `server/internal/tables.ts`
 // builds from this shape. The column only takes the stored tracks (today
 // `sidequest`): absence of a row IS the main track, so `main` has no spelling
-// here. `createdAt` is on the wire because it is the window's order key (a
-// `sortable` column must be a row field).
+// here. `createdAt` (when the task left main) rides on the wire as a plain
+// field of the shape.
 export const taskTrackShape = defineExtensionShape({
   key: "taskId",
   fields: { track: enumTextField(STORED_TASK_TRACKS) },
@@ -22,23 +22,33 @@ export type TaskTrackRow = z.infer<typeof TaskTrackRowSchema>;
 //
 // - `useLiveRow(taskTracks, taskId)` — the exact answer for ONE task (the task
 //   detail's Track row, the conversation header chip). `found: false` is main.
-// - `useLive(taskTracks)` — the bounded default WINDOW, for the task list's
+// - `useLive(taskTracks)` — the WHOLE ordered set (`all`), for the task list's
 //   `track` field, which must project a track for EVERY row the tasks DataView
-//   groups and filters over. Naming every task id would be O(tasks); what is
-//   bounded here is the set of non-main tasks, so the window bounds the right
-//   thing (the same reasoning as `pages-starred`). The list reader grows the
-//   window while it is full; past `maxLimit` sidequests the oldest-filed ones
-//   read as main in the LIST only — the single-task reads stay exact.
+//   groups and filters over, so its reader holds the set entire. A row a task
+//   has (or not) is its track: one row per sidequest at most, never a stand-in
+//   for one past a window's edge.
+//
+// Served from the extension table (`server/internal/resource.ts`): marking a
+// task a sidequest is one entrant, moving it back to main (or the task's
+// delete, by FK cascade) an exit — never a whole-set reload.
+//
+// The key is `task-tracks.all`, not the old window's `task-tracks`: no bundle
+// ever declared this key with another contract, so a tab on an older one gets
+// `unknown-key` (a `skew` verdict) and never parses these rows — no C39
+// old-bundle proof to keep.
 //
 // Preloaded (`boot-and-keep`) so the tasks list never paints every row as main
-// and then flips: the boot snapshot hydrates the default window before first
+// and then flips: the boot snapshot hydrates the `{}` tuple before first
 // paint, and the cache stays resident for surfaces that mount late.
-export const taskTracks = liveCollection("task-tracks", {
+export const taskTracks = liveCollection("task-tracks.all", {
   row: TaskTrackRowSchema,
   id: "taskId",
-  filterable: {},
-  sortable: ["createdAt"],
-  default: { orderBy: [["createdAt", "desc"]], limit: 500 },
-  maxLimit: 2000,
+  all: {
+    orderBy: [["taskId", "asc"]],
+    unbounded: {
+      reason:
+        "at most one row per task, and the task list projects a track for every task",
+    },
+  },
   preload: "boot-and-keep",
 });

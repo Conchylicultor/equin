@@ -19,7 +19,7 @@ export type { TaskTrackChangedPayload } from "./internal/tables-events";
 
 export default {
   description:
-    "Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (window for the task list, point reads for one task), and the endpoint that switches a task's track, and the tasks.trackChanged trigger event every track write emits.",
+    "Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (the whole set for the task list, point reads for one task), and the endpoint that switches a task's track, and the tasks.trackChanged trigger event every track write emits.",
   contributions: [...taskTracksServed.declare],
   register: [taskTrackChanged],
   httpRoutes: {

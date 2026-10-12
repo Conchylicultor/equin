@@ -145,7 +145,12 @@ same query, current and complete.
   sub-ack / update / delta / derived ack applied in order — so it IS the
   server's snapshot at `version`; an HTTP body clears it). Otherwise (or a bound
   naming no row, or more than two sources) the sub goes out plain — traced
-  `derive skipped … reason=…`.
+  `derive skipped … reason=…`. A source nothing was applied to through this
+  tab's sub yet (`appliedSeq` 0) is either still loading (`source-loading`:
+  nothing cached, or a derivation of its own in flight) or holds a
+  boot-hydrated value before its first `sub-ack` (`source-hydrated`) — only
+  the latter is also counted on the `live-pages` channel (`seed refused: …`,
+  one line per refused seed): accepted latency, measured.
 - **The derived `sub-ack`** carries no value and echoes the derivation's `id`.
   The tab adopts its held slice (the same row objects, no re-parse, no
   watermark) at the ack's version only when that id is its own in-flight
@@ -159,9 +164,17 @@ same query, current and complete.
   full value): a derived ack arriving after one of them is dropped.
 - **Only tabs that read it share its socket.** A bundle that predates derived
   acks would parse one's missing value and adopt its version, wedging its read.
-  The client's socket names its dialect — this module's own content-addressed
-  URL (`SOCKET_DIALECT`, `SharedWebSocketOptions.dialect`) — so a tab left
-  open across a deploy keeps a socket of its own and never sees one.
+  The client's socket names its dialect — `PROTOCOL`, the id of the frame
+  vocabulary (`packages/resource-protocol`; `SOCKET_OPTIONS`,
+  `SharedWebSocketOptions.dialect`) — so a tab left open across a deploy that
+  changed the vocabulary keeps a socket of its own and never sees one, while a
+  deploy that did not keeps it on the shared socket.
+- **Only under the server's vocabulary.** Every `sub` / `sub-batch` frame names
+  the tab's `protocol`; the runtime reads a `derive` only under its own
+  `PROTOCOL` and otherwise loads (`protocol-skew`). Frames are typed by the
+  protocol both ways: the client reads `ServerFrame` and sends only
+  `ClientFrame`s carrying no undeclared field (`wire` takes an
+  `ExactClientFrame`), and `DERIVE_MAX_SOURCES` is the protocol's.
 
 Pinned by `web/__tests__/notifications-derive.test.ts`.
 
@@ -359,6 +372,26 @@ per frame, because one shared socket carries tabs running other bundles —
 and every HTTP read the `BUILD_GRAPH_HEADER`, so the server can judge the
 verdict. `useResource` does not retry a `contract-mismatch` / `unknown-key`
 error (`isTerminalResourceError`): the same bundle is refused the same way.
+
+## One client, one cache — `NotificationsProvider` takes no client
+
+The tab has ONE `NotificationsClient` (`ensureNotificationsClient()`, hoisted
+to the start of boot), and it OWNS its `QueryClient` (`client.queryClient`,
+the default one `hydrateResource` / `hydrateQuery` seed). `NotificationsProvider`
+takes only `children`: it mounts the singleton and that client's own cache,
+through the internal `NotificationsClientProvider`, which takes the client
+alone — so the cache React reads and the cache the client writes cannot differ.
+(It used to take a `queryClient` prop, while the singleton kept the cache it was
+first built with: a second provider mounted a cache nothing wrote.)
+
+A test mounts its own pair with `web/testing`'s `createLiveStateHarness(options?)`
+→ `{ Wrapper, queryClient, notifications, dispose }`: a fresh client and cache
+per test (query defaults `retry: false`, `refetchOnMount: false`,
+`staleTime: Infinity`, overridable via `options.queries`), destroyed when the
+test finishes (vitest's `onTestFinished`; `dispose()` is idempotent). It
+throws outside a running test, so a harness shared across a file's tests cannot
+be written. Transport suites that drive sockets build `new NotificationsClient(qc,
+hooks)` directly.
 
 ## Resource schemas
 

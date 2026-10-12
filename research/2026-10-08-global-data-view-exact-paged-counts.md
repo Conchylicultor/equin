@@ -1,5 +1,16 @@
 # DataView: exact section counts over paged reads
 
+> **Status: landed** (`cc0166ae05`). `DataViewPaging.total` is
+> `DataViewPagingTotal` (`{ count, uniform? }`, `data-view/core`), threaded
+> into `rowsComplete` as `{ growable, total }`; `liveCollection` declares
+> `count: true` and mints `:count`, read with `useLive(c, { count: true,
+> where? })`; live sources read it over their scope only; the queue's Done,
+> History and All conversations count exactly, and `conversationsGoneStats` is
+> gone. Not landed as written: §3's grouped `byValue` per-bucket totals — a
+> live source grouped by a groupable column now lists server sections with
+> exact counts from `:groups` instead (data-view CLAUDE.md, *Live sources*).
+> The design below is kept as the record.
+
 > **Superseded (2026-10-09):** the segmented scroll (`useLiveScroll`, `shared/scroll-plan.ts`, every loaded segment live, the 16-segment cap) is replaced by live key-range pages (`useLiveCollectionPages`, `shared/page-plan.ts`) whose liveness follows the viewport — see `research/2026-10-09-global-live-key-range-pages-v2.md`. Where this doc reads a scroll or its segments, read the paged read and its pages.
 
 ## Context

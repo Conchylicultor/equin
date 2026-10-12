@@ -389,10 +389,20 @@ function merge<R extends PageEntry>(
   return [...pages.slice(0, i), merged, ...pages.slice(i + 2)];
 }
 
-/** What `reconcile` did that a caller owes a report for: a full page that could not split. */
+/**
+ * What `reconcile` did that a caller owes a report for: a full page that could
+ * not split, and the pages an overflow split minted past its cut.
+ */
 export interface ReconcileOutcome<R> {
   plan: PagePlan<R>;
   collapsed?: { at: number; reason: string };
+  /**
+   * The REST page of each overflow split this reconcile made — `(m, b]`, the
+   * half past the cut, read whole (its source was full: it may hide rows). Until
+   * its read first settles, a row past the old page's last is in no page — the
+   * gap the `live-pages` log times.
+   */
+  overflowed?: readonly Page[];
 }
 
 /**
@@ -428,6 +438,7 @@ export function reconcile<R extends PageEntry, E extends Error>(
 ): ReconcileOutcome<R> {
   let next = plan;
   let collapsed: { at: number; reason: string } | undefined;
+  const overflowed: Page[] = [];
   // Each step turns settled pages into pages not read yet, which no step
   // touches: the loop ends within one pass over the pages.
   for (let guard = 0; ; guard++) {
@@ -440,12 +451,17 @@ export function reconcile<R extends PageEntry, E extends Error>(
     if (step === null) break;
     next = step.plan;
     collapsed ??= step.collapsed;
+    if (step.overflowed) overflowed.push(...step.overflowed);
   }
   next =
     viewport === null
       ? everyPageLive(next, observe, limits)
       : liveSet(next, observe, viewport, limits);
-  return collapsed ? { plan: next, collapsed } : { plan: next };
+  return {
+    plan: next,
+    ...(collapsed ? { collapsed } : {}),
+    ...(overflowed.length > 0 ? { overflowed } : {}),
+  };
 }
 
 /**
@@ -541,9 +557,8 @@ function structuralStep<R extends PageEntry, E extends Error>(
     if (entries == null || entries.length < page.limit) continue;
     const j = overflowCut(entries, page, limits);
     if (j !== null) {
-      return {
-        plan: with_(split(pages, i, entries, seqOf(i), j, limits)),
-      };
+      const next = split(pages, i, entries, seqOf(i), j, limits);
+      return { plan: with_(next), overflowed: [next[i + 1]!.page] };
     }
     return {
       plan: {

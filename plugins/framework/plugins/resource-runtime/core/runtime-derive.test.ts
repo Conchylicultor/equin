@@ -14,7 +14,8 @@
  *     slices sharing a row, more rows than the new window, a tuple already
  *     held, a resource that states no `familyOf`, a source of
  *     another query (`foreign-source`), a malformed frame (no id, more than
- *     two sources);
+ *     two sources), a derivation under another frame vocabulary
+ *     (`protocol-skew` — a foreign `PROTOCOL`, or none named);
  *   - a merge (two sources) loads nothing — also when the sources are
  *     unsubscribed in the same burst as the derived sub;
  *   - a commit routed right after the derivation reaches the new tuple;
@@ -508,7 +509,13 @@ describe("seeded derivation — every refusal falls back to a full load", () => 
         views: Views;
         tail: ResourceParams;
       },
-    ) => { params: ResourceParams; slices?: SliceSpec[]; raw?: unknown },
+    ) => {
+      params: ResourceParams;
+      slices?: SliceSpec[];
+      raw?: unknown;
+      /** The sub's `protocol` (default: this build's); `null` omits it. */
+      protocol?: string | null;
+    },
   ) {
     const x = pagesHarness(o);
     seed(x.table, 6);
@@ -518,11 +525,16 @@ describe("seeded derivation — every refusal falls back to a full load", () => 
     await settle();
     const framesAt = x.h.frames.length;
     const loadsAt = x.loads.length;
-    const { params, slices, raw } = act({ ...x, views, tail });
+    const { params, slices, raw, protocol } = act({ ...x, views, tail });
     if (raw !== undefined) {
       // The frame as given: the client-side slice would refuse it first.
       views.track(params);
       void x.h.subscribe(KEY, params, { derive: raw as DeriveFrame });
+    } else if (protocol !== undefined) {
+      // A well-formed derivation, sent under the given vocabulary.
+      const seeded = views.slice(slices!)!;
+      views.track(params);
+      void x.h.subscribe(KEY, params, { derive: seeded.frame, protocol });
     } else {
       views.send(params, slices ? { slices } : undefined);
     }
@@ -681,6 +693,27 @@ describe("seeded derivation — every refusal falls back to a full load", () => 
     });
     expect(out.fallbacks).toEqual({ "source-not-held": 1 });
     expect(out.converged).toBe(true);
+  });
+
+  test("a derivation asked under another frame vocabulary (protocol-skew), or none named", async () => {
+    // The same slice derives under this build's PROTOCOL (the first test of
+    // this file); under any other — or from a bundle that names none — the
+    // server cannot know what the derive means, nor how the tab reads a
+    // derived ack, so it loads.
+    for (const protocol of ["rp-0000000000000", null]) {
+      const out = await attempt({}, ({ tail }) => ({
+        params: head,
+        slices: [{ params: tail, after: null, until: "r2" }],
+        protocol,
+      }));
+      expect(out).toEqual({
+        derived: false,
+        hasValue: true,
+        fullLoads: 1,
+        fallbacks: { "protocol-skew": 1 },
+        converged: true,
+      });
+    }
   });
 
   test("a malformed derive", async () => {

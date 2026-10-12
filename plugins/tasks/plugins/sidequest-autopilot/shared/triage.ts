@@ -62,18 +62,27 @@ export const SidequestTriageSchema = sidequestTriageShape.schema;
 export type SidequestTriage = z.infer<typeof SidequestTriageSchema>;
 
 /**
- * Every triage row, newest first — bounded by the sidequest backlog (one row
- * per sidequest triage read), not by the task table.
+ * Every triage row, as the WHOLE ordered set (`all`): the launch list joins
+ * triage to every ready sidequest it shows, so its reader holds the set entire
+ * — a triaged sidequest never reads as untriaged past a window's edge.
+ *
+ * The key is `sidequest-autopilot.triage.all`, not the old window's
+ * `sidequest-autopilot.triage`: no bundle ever declared this key with another
+ * contract, so a tab on an older one gets `unknown-key` (a `skew` verdict) and
+ * never parses these rows.
  */
 export const sidequestTriageRows = liveCollection(
-  "sidequest-autopilot.triage",
+  "sidequest-autopilot.triage.all",
   {
     row: SidequestTriageSchema,
     id: "taskId",
-    filterable: {},
-    sortable: ["triagedAt"],
-    default: { orderBy: [["triagedAt", "desc"]], limit: 500 },
-    maxLimit: 2000,
+    all: {
+      orderBy: [["taskId", "asc"]],
+      unbounded: {
+        reason:
+          "at most one row per task (its latest triage read), and the launch list joins triage to every ready sidequest",
+      },
+    },
   },
 );
 

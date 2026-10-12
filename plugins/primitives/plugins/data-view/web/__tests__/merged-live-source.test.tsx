@@ -1,7 +1,7 @@
 /**
  * A LIVE source through the merged (`MergedDataView`) path — the conversation
  * sidebar's History is the first merged surface whose source is a
- * `liveDataSource`. Mounted over a real NotificationsProvider + QueryClient,
+ * `liveDataSource`. Mounted over `createLiveStateHarness` (a real client and its QueryClient),
  * with the view model stubbed (the config read is not under test) and one
  * minimal list view:
  *
@@ -26,7 +26,7 @@ vi.mock("../internal/use-data-view-model", () => ({
 }));
 
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { z } from "zod";
 import {
@@ -34,11 +34,8 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
-import {
-  NotificationsProvider,
-  getNotificationsClient,
-  queryKeyFor,
-} from "@plugins/primitives/plugins/live-state/web";
+import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
+import { createLiveStateHarness } from "@plugins/primitives/plugins/live-state/web/testing";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import {
   liveInstant,
@@ -210,13 +207,10 @@ function mount(c: C, state: ViewState, activeId: string | null = null) {
     ],
     slots: { ...DataViewSlots, sources: Sources },
   } as unknown as LoadedPlugin;
-  const client = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, refetchOnMount: false, staleTime: Infinity },
-    },
-  });
+  const live = createLiveStateHarness();
+  vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
   const rendered = render(
-    <NotificationsProvider queryClient={client}>
+    <live.Wrapper>
       <PluginProvider plugins={[plugin]}>
         <MergedDataView
           storageKey={STORAGE_KEY}
@@ -224,12 +218,9 @@ function mount(c: C, state: ViewState, activeId: string | null = null) {
           hostProps={{ activeId }}
         />
       </PluginProvider>
-    </NotificationsProvider>,
+    </live.Wrapper>,
   );
-  const notifications = getNotificationsClient();
-  if (!notifications) throw new Error("NotificationsClient not created");
-  vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
-  return { client, ...rendered };
+  return { client: live.queryClient, ...rendered };
 }
 
 /** The window tuples of `c` the cache holds (one per subscribed segment). */

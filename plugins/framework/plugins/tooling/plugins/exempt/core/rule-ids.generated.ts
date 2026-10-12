@@ -68,6 +68,7 @@ export type ExemptableRuleId =
   | "live-state/no-handrolled-result"
   | "live-state/no-ready-negation"
   | "live/no-endpoint-read"
+  | "live/no-grow-in-effect"
   | "live/no-legacy-resource-spelling"
   | "live/no-sentinel-param"
   | "live/visible-range-minter"

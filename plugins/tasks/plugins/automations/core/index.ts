@@ -65,6 +65,8 @@ export {
 } from "./internal/template";
 export type { PromptVariable, RenderedPrompt } from "./internal/template";
 export {
+  automationOrigins,
+  AutomationOriginRowSchema,
   automationsCatalog,
   automationTasks,
   AutomationTaskRowSchema,
@@ -74,6 +76,7 @@ export {
   taskOriginShape,
 } from "./internal/resources";
 export type {
+  AutomationOriginRow,
   AutomationTaskRow,
   LaunchDecisionRow,
 } from "./internal/resources";
