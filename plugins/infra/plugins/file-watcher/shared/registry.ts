@@ -9,6 +9,8 @@ import {
   watcherBackend,
   type FileWatcher,
   type FileWatcherOptions,
+  type WatchReaction,
+  type WatchReconcile,
   type WatcherBackend,
 } from "./engine";
 
@@ -56,10 +58,17 @@ export type FileWatcherStartOptions<Reconciles extends boolean> = {
    * for a watcher that only ever has one instance.
    */
   label?: string;
-  /** The filesystem said these paths moved. */
-  onChange: (events: FileChangeEvent[]) => void;
+  /**
+   * The filesystem said these paths moved. Return the work's promise: one
+   * reaction runs at a time, and batches landing meanwhile fold into one
+   * trailing call (see {@link WatchReaction}).
+   */
+  onChange: WatchReaction<FileChangeEvent>;
 } & (Reconciles extends true
-  ? { /** The declared reconcile tick came round. */ onReconcile: () => void }
+  ? {
+      /** The declared reconcile tick came round. Coalesced like `onChange`. */
+      onReconcile: WatchReconcile;
+    }
   : { onReconcile?: never });
 
 /** Whether a spec declares a reconcile (`reconcileMs` present). */
@@ -100,6 +109,11 @@ export interface FileWatcherInstanceInfo {
   label: string | null;
   dirs: string[];
   openedAt: Date;
+  /**
+   * Change batches that landed while a reaction was running and were folded
+   * into the one pending reaction instead of costing a run of their own.
+   */
+  foldedBatches: number;
 }
 
 /** The latest batch `onChange` was handed. */
@@ -235,7 +249,7 @@ export function defineFileWatcherIn<R extends number | undefined = undefined>(
         writesWhileOpen: spec.writesWhileOpen,
         onChange: (events: FileChangeEvent[]) => {
           noteBatch(state, events);
-          dispatch(state, () => onChange(events));
+          return dispatch(state, () => onChange(events));
         },
       };
       const engineOpts: FileWatcherOptions =
@@ -249,14 +263,21 @@ export function defineFileWatcherIn<R extends number | undefined = undefined>(
       const watcher = await createFileWatcher(engineOpts);
 
       const id = nextInstanceId++;
-      state.instances.set(id, {
+      const info = {
         label: opts.label ?? null,
         dirs: [...opts.dirs],
         openedAt: new Date(),
+      };
+      state.instances.set(id, {
+        ...info,
+        get foldedBatches() {
+          return watcher.folded();
+        },
       });
       announce(spec.name);
       let stopped = false;
       return {
+        folded: () => watcher.folded(),
         async stop() {
           if (!stopped) {
             stopped = true;
@@ -281,10 +302,15 @@ function noteBatch(state: DeclState, events: FileChangeEvent[]): void {
 
 /**
  * Run one handler dispatch as a recorded run. A handler that returns a promise
- * is timed until it settles. A throw (sync or async) is recorded as failed,
- * then handed to the runtime's `onFailure` (the server rethrows it).
+ * is timed until it settles — and that promise is handed back, so the engine's
+ * coalescer holds the next batch until it does. A throw (sync or async) is
+ * recorded as failed, then handed to the runtime's `onFailure` (the server
+ * rethrows it).
  */
-function dispatch(state: DeclState, handler: () => void): void {
+function dispatch(
+  state: DeclState,
+  handler: () => void | Promise<unknown>,
+): void | Promise<void> {
   const startedAt = new Date();
   const t0 = performance.now();
   const finish = (error: unknown, failed: boolean): void => {
@@ -306,16 +332,17 @@ function dispatch(state: DeclState, handler: () => void): void {
   }
   if (isThenable(result)) {
     // The handler returned async work; its settling is the run's end. On the
-    // server `onFailure` rethrows into this detached chain, so a rejection
-    // surfaces as the same unhandled rejection it was before it was recorded.
-    void result.then(
-      () => finish(null, false),
-      (err: unknown) => {
-        finish(err, true);
-        state.runtime.onFailure(state.spec.name, err);
-      },
+    // server `onFailure` rethrows into the returned chain, which the engine's
+    // coalescer surfaces as the same unhandled rejection it was before.
+    return Promise.resolve(
+      result.then(
+        () => finish(null, false),
+        (err: unknown) => {
+          finish(err, true);
+          state.runtime.onFailure(state.spec.name, err);
+        },
+      ),
     );
-    return;
   }
   finish(null, false);
 }
@@ -360,7 +387,8 @@ export function listFileWatchers(): FileWatcherSnapshot[] {
     runsHere: s.runtime.runsHere,
     backend: watcherBackend(s.spec.writesWhileOpen ?? false),
     reconcileMs: s.spec.reconcileMs ?? null,
-    instances: [...s.instances.values()],
+    // Spread: a snapshot reads each instance's live fold count now.
+    instances: [...s.instances.values()].map((i) => ({ ...i })),
     lastBatch: s.lastBatch,
     recentRuns: [...s.ring],
     runs: s.runs,

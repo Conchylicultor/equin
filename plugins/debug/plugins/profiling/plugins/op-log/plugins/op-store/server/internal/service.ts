@@ -11,6 +11,7 @@ import {
 } from "@plugins/infra/plugins/file-watcher/server";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { drainOpLog, type DrainResult } from "./ingest";
 import { isOpLive, reconcileOps } from "./reconcile";
 
@@ -30,17 +31,19 @@ export const opLogWatcher = defineFileWatcher({
 
 let watcher: FileWatcher | null = null;
 // Passes are serialized: two overlapping drains would both plan from the same
-// cursor. A flag pair rather than a promise chain: a rejected chain would
-// short-circuit and silently disarm every future pass for the process's life.
-let running = false;
-let rerun = false;
+// cursor. A change landing mid-pass is owed one more pass. A failed pass is
+// unexpected and surfaces as an unhandled rejection, without disarming later
+// passes.
+const passes = createCoalescer({
+  run: () => runTracked("op-store:pass", pass),
+});
 
 async function pass(): Promise<void> {
   const drained: DrainResult = await drainOpLog({ db, path: OP_LOG_FILE });
   if (drained.kind === "moved") {
     // Another process advanced this DB's cursor between our read and our
     // commit (a hot-swap overlap). Re-plan from where it left it.
-    rerun = true;
+    passes.trigger();
     return;
   }
   // `busy`: another process holds the ingest lock and is draining this DB
@@ -55,27 +58,6 @@ async function pass(): Promise<void> {
   });
 }
 
-function schedulePass(): void {
-  if (running) {
-    rerun = true; // a change landed mid-pass: one more pass is owed
-    return;
-  }
-  running = true;
-  // No `.catch`: a failed pass is unexpected and must surface as an unhandled
-  // rejection. The `finally` keeps one throw from disarming later passes.
-  void runTracked("op-store:pass", async () => {
-    try {
-      await pass();
-    } finally {
-      running = false;
-      if (rerun) {
-        rerun = false;
-        schedulePass();
-      }
-    }
-  });
-}
-
 /**
  * Boot: drain → reconcile (awaited, so the boot-preloaded in-flight rows are
  * current as soon as possible), then watch. A write that lands between the
@@ -84,24 +66,20 @@ function schedulePass(): void {
  */
 export async function startOpStore(): Promise<void> {
   if (watcher) return;
-  running = true;
-  try {
-    await runTracked("op-store:boot-pass", pass);
-  } finally {
-    running = false;
-  }
+  await passes.run();
   const dir = dirname(OP_LOG_FILE);
   mkdirSync(dir, { recursive: true });
   watcher = await opLogWatcher.start({
     dirs: [dir],
     onChange: (events) => {
       // `op-log.jsonl` and its rotations; anything else in the dir is not ours.
-      if (events.some((e) => basename(e.path).startsWith(LOG_NAME)))
-        schedulePass();
+      return events.some((e) => basename(e.path).startsWith(LOG_NAME))
+        ? passes.run()
+        : undefined;
     },
-    onReconcile: () => schedulePass(),
+    onReconcile: () => passes.run(),
   });
-  schedulePass();
+  passes.trigger();
 }
 
 export async function stopOpStore(): Promise<void> {

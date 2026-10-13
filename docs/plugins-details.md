@@ -20234,7 +20234,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/file-sink` (0 debt)
                   - `reports` (0 debt)
             - **`trigger-render-safety`** — trigger-render-safety lint rule: no-provider-trigger-render
-            - **`watcher-safety`** — watcher-safety lint rules: no-direct-parcel-watcher (only the file-watcher engine loads @parcel/watcher) and no-raw-fs-watch (no fs.watch / watchFile / fs.promises.watch / chokidar in host-process code — declare a watcher with defineFileWatcher, or watchForCommand in the CLI)
+            - **`watcher-safety`** — watcher-safety lint rules: no-direct-parcel-watcher (only the file-watcher engine loads @parcel/watcher), no-raw-fs-watch (no fs.watch / watchFile / fs.promises.watch / chokidar in host-process code — declare a watcher with defineFileWatcher, or watchForCommand in the CLI) and no-detached-watch-reaction (a watch callback returns its async work instead of detaching it with void, so the watch coalesces it to one running plus one pending run)
               - Exemptions:
                 - Exempted by:
                   - `framework/cli/op-runtime` (0 debt)
@@ -21879,6 +21879,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FileWatcherStartOptions`
           - `ServerFileWatcherSpec`
           - `WatcherBackend`
+          - `WatchReaction`
+          - `WatchReconcile`
         - Exports (values):
           - `acquireDirWatch`
           - `BATCH_SAMPLE_MAX`
@@ -21892,6 +21894,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `FileWatcher`
           - `WatchForCommandOptions`
+          - `WatchReaction`
+          - `WatchReconcile`
         - Exports (values): `watchForCommand`
       - Plugins:
         - **`background-arm`** — File watchers in the Background activity catalog: registers the `file-watcher` background kind — every declaration made with defineFileWatcher under File watchers, triggered on file change, its scope from mainOnly, and its facts (open instances and the directories each watches, the native backend, the last change batch, the reconcile period) — plus its handler runs in this process. Pushes the catalog as instances open and close and as runs land (throttled by the file-watcher registry).
@@ -21907,14 +21911,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Register: `defineBackgroundKind('file-watcher')`
     - **`git`** — Umbrella for the two plugins that answer 'has git state moved, and must I read it again?': the ref watcher that reports every advance, and the signature-keyed memo that skips a gated recompute when a cheap probe says nothing changed.
       - Plugins:
-        - **`checkout-watch`** — The checkout watch hub: acquireCheckoutWatch(root, onChange) hears every change that can move a git checkout's state — its working tree and its git dir (HEAD, index, refs; a linked worktree's git dir and the common refs, which live outside it) — each change tagged worktree or git, refcounted per checkout over the shared directory-watch hub.
+        - **`checkout-watch`** — The checkout watch hub: acquireCheckoutWatch(root, { refs, onChange }) hears every change that can move a git checkout's state — its working tree and its git dir (HEAD, index, and the refs the reader names beside its own branch; a linked worktree's git dir and the common refs live outside it) — each change tagged worktree or git, refcounted per checkout over the shared directory-watch hub, each reader's reaction coalesced (one running plus one pending).
           - Server:
             - Uses:
               - `infra/file-watcher.acquireDirWatch`
               - `primitives/commit-list.runGit`
+              - `primitives/commit-list.tryRunGit`
+              - `primitives/commit-list.WorktreeGoneError`
             - Exports (types):
               - `CheckoutChange`
+              - `CheckoutRefs`
               - `CheckoutWatchRelease`
+              - `CheckoutWatchRequest`
             - Exports (values): `acquireCheckoutWatch`
           - Cross-plugin:
             - Imported by:
@@ -24715,6 +24723,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `canonicalJson`
           - `canonicalParams`
+    - **`coalesce`** — Trigger coalescer: createCoalescer / createKeyedCoalescer run a reaction at most once at a time per key and fold every trigger that lands mid-run into ONE trailing run (its items merged), so however many triggers arrive the work is bounded to one running plus one pending per key — and a trigger never joins a run that started before it.
+      - Core:
+        - Exports (types):
+          - `Coalescer`
+          - `CoalescerStats`
+          - `KeyedCoalescer`
+        - Exports (values):
+          - `createCoalescer`
+          - `createKeyedCoalescer`
     - **`flock`** — Kernel advisory file locking: flockTry/flockRelease over libc flock(2), and waitForFlock — a push-based blocking acquire run in a child so the event loop never freezes. The one lock ownership the kernel releases on process death (SIGKILL included) and that consults no pid.
       - Cross-plugin:
         - Imported by:

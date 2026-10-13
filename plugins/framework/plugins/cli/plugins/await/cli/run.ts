@@ -312,10 +312,10 @@ async function watchUntil(
     debounceMs: 50,
     ceilingMs: 500,
     reconcileMs: RECONCILE_MS,
-    onChange: () => void check(),
+    onChange: () => check(),
     onReconcile: () => {
       onReconcile?.();
-      void check();
+      return check();
     },
   });
 

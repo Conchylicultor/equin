@@ -3,6 +3,7 @@ import {
   defineFileWatcher,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
+import { createKeyedCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
@@ -109,6 +110,24 @@ export const transcriptsWatcher = defineFileWatcher({
 
 let watcher: FileWatcher | null = null;
 
+/**
+ * What a room's next run must do: `"read"` re-reads its files; `"resolve"`
+ * re-resolves its membership first (a discovered room's event, or the
+ * reconcile tick).
+ */
+type RoomWork = "read" | "resolve";
+
+// One run at a time per room; events and ticks landing mid-run fold into one
+// trailing run. Each run reads the room's CURRENT files, so a room written a
+// line at a time (debounceMs: 0) costs at most one running plus one pending
+// run however fast the lines come — and a slow room holds only itself.
+const roomRuns = createKeyedCoalescer<Room, RoomWork>({
+  run: (room, work) =>
+    work.includes("resolve")
+      ? runTracked("transcript-watcher:reconcile", () => reconcileRoom(room))
+      : runTracked("transcript-watcher:process", () => processRoom(room)),
+});
+
 export async function startTranscriptWatcher(): Promise<void> {
   watcher = await transcriptsWatcher.start({
     dirs: [CLAUDE_PROJECTS_DIR],
@@ -125,19 +144,14 @@ export async function startTranscriptWatcher(): Promise<void> {
         // A discovered room re-resolves first: the event may BE the creation of a
         // file that belongs to it. A fixed-membership room cannot have gained a
         // file, so it only re-reads.
-        void runTracked("transcript-watcher:process", () =>
-          room.discovered ? reconcileRoom(room) : processRoom(room),
-        );
+        roomRuns.trigger(room, [room.discovered ? "resolve" : "read"]);
       }
     },
     onReconcile: () => {
       // Belt-and-suspenders for a missed parcel event AND for a missed
       // `refreshConversationChain` call: re-resolving here bounds the staleness of
       // a session switch to one reconcile period even if the status reconciler never notified.
-      for (const room of rooms.values())
-        void runTracked("transcript-watcher:reconcile", () =>
-          reconcileRoom(room),
-        );
+      for (const room of rooms.values()) roomRuns.trigger(room, ["resolve"]);
     },
   });
 }

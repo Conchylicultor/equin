@@ -3802,6 +3802,10 @@
       "name": "@singularity/plugin-packages-canonical-params",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/coalesce": {
+      "name": "@singularity/plugin-packages-coalesce",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/flock": {
       "name": "@singularity/plugin-packages-flock",
       "version": "0.0.1",
@@ -8340,6 +8344,8 @@
     "@singularity/plugin-packages": ["@singularity/plugin-packages@workspace:plugins/packages"],
 
     "@singularity/plugin-packages-canonical-params": ["@singularity/plugin-packages-canonical-params@workspace:plugins/packages/plugins/canonical-params"],
+
+    "@singularity/plugin-packages-coalesce": ["@singularity/plugin-packages-coalesce@workspace:plugins/packages/plugins/coalesce"],
 
     "@singularity/plugin-packages-flock": ["@singularity/plugin-packages-flock@workspace:plugins/packages/plugins/flock"],
 

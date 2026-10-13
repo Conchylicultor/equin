@@ -189,11 +189,10 @@ export async function subscribeTmuxSignals(
     watchers.push(
       await sessionFilesWatcher.start({
         dirs: [CLAUDE_SESSIONS_DIR],
-        onChange: (events) => {
-          void runTracked("runtime-tmux:session-files", () =>
+        onChange: (events) =>
+          runTracked("runtime-tmux:session-files", () =>
             onSessionFiles(events),
-          );
-        },
+          ),
       }),
       await tmuxSignalsWatcher.start({
         dirs: [tmuxSignalsDir.ensure()],

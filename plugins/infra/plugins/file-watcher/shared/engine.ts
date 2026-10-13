@@ -1,6 +1,7 @@
 import type * as parcel from "@parcel/watcher";
 import { readdirSync } from "node:fs";
 import { basename, extname, join } from "node:path";
+import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 // Pure-JS wrapper: this import loads NO native code — `wrapper.js` only defines
 // functions that close over a `binding` passed in at call time. Safe to import
@@ -64,9 +65,24 @@ export function getParcelWatcher(): Promise<ParcelWatcherApi> {
   return parcelWatcherPromise;
 }
 
+/**
+ * What a watch calls with a batch of changes. RETURN the work's promise (never
+ * detach it with `void`): the watch runs at most one reaction at a time per
+ * subscriber and folds every batch that lands meanwhile into ONE trailing call
+ * (`packages/coalesce`), so a fast-changing folder against slow work stays
+ * bounded — one running plus one pending — and the last batch is always
+ * answered by a run that started after it. A sync reaction (`notify()`) runs
+ * inline, as before. `watcher-safety/no-detached-watch-reaction` rejects the
+ * detached spelling.
+ */
+export type WatchReaction<E> = (events: E[]) => void | Promise<unknown>;
+
+/** A reconcile tick's reaction — coalesced like {@link WatchReaction}. */
+export type WatchReconcile = () => void | Promise<unknown>;
+
 interface FileWatcherBaseOptions {
   dirs: string[];
-  onChange: (events: parcel.Event[]) => void;
+  onChange: WatchReaction<parcel.Event>;
   debounceMs?: number;
   ceilingMs?: number;
   extensions?: string[];
@@ -115,7 +131,7 @@ interface FileWatcherBaseOptions {
 type FileWatcherReconcileOptions =
   | {
       /** Called on the timer to re-derive state a dropped fsevent could have missed. */
-      onReconcile: () => void;
+      onReconcile: WatchReconcile;
       /** How often to reconcile. Default 30s. */
       reconcileMs?: number;
     }
@@ -158,6 +174,8 @@ function assertKqueueSized(dir: string): void {
 
 export interface FileWatcher {
   stop(): Promise<void>;
+  /** Batches folded into a pending reaction instead of costing a run. */
+  folded(): number;
 }
 
 /**
@@ -200,6 +218,18 @@ export async function createFileWatcher(
   let ceilingTimer: ReturnType<typeof setTimeout> | null = null;
   let lastFlushAt = 0;
   let reconcileTimer: ReturnType<typeof setInterval> | null = null;
+  // One reaction at a time; batches landing mid-run fold into one trailing
+  // call. The `bg` span covers the reaction's awaited work, not only its
+  // synchronous body.
+  const changes = createCoalescer<parcel.Event>({
+    run: (events) => runTracked(`watch:${name}`, () => onChange(events)),
+  });
+  const reconciles =
+    onReconcile === undefined
+      ? null
+      : createCoalescer({
+          run: () => runTracked(`watch:${name}:reconcile`, () => onReconcile()),
+        });
 
   function flush(): void {
     lastFlushAt = Date.now();
@@ -213,11 +243,7 @@ export async function createFileWatcher(
     }
     const events = pending;
     pending = [];
-    // `onChange` is void-returning, so only its SYNCHRONOUS body is charged to
-    // the `bg` span — which is exactly the main-thread-blocking portion. Any
-    // async the callback detaches internally is the consumer's own runTracked
-    // responsibility.
-    void runTracked(`watch:${name}`, () => onChange(events));
+    changes.trigger(events);
   }
 
   function schedule(): void {
@@ -269,7 +295,7 @@ export async function createFileWatcher(
           if (filtered.length === 0) return;
 
           if (debounceMs === 0) {
-            void runTracked(`watch:${name}`, () => onChange(filtered));
+            changes.trigger(filtered);
           } else {
             pending.push(...filtered);
             schedule();
@@ -284,13 +310,12 @@ export async function createFileWatcher(
     }
   }
 
-  if (onReconcile) {
-    reconcileTimer = setInterval(() => {
-      void runTracked(`watch:${name}:reconcile`, () => onReconcile());
-    }, reconcileMs);
+  if (reconciles !== null) {
+    reconcileTimer = setInterval(() => reconciles.trigger(), reconcileMs);
   }
 
   return {
+    folded: () => changes.stats().folded,
     async stop(): Promise<void> {
       if (debounceTimer) {
         clearTimeout(debounceTimer);

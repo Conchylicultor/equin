@@ -54,12 +54,12 @@ describe("createDirWatchHub", () => {
     const ra = await hub.acquire({
       dir: "/w",
       scope: "subtree",
-      onChange: (e) => a.push(...paths(e)),
+      onChange: (e) => void a.push(...paths(e)),
     });
     const rb = await hub.acquire({
       dir: "/w",
       scope: "subtree",
-      onChange: (e) => b.push(...paths(e)),
+      onChange: (e) => void b.push(...paths(e)),
     });
     expect(fake.started).toEqual(["/w"]);
     fake.emit("/w", "/w/x");
@@ -80,12 +80,12 @@ describe("createDirWatchHub", () => {
     const rr = await hub.acquire({
       dir: "/w",
       scope: "subtree",
-      onChange: (e) => root.push(...paths(e)),
+      onChange: (e) => void root.push(...paths(e)),
     });
     const rc = await hub.acquire({
       dir: "/w/a/b",
       scope: "subtree",
-      onChange: (e) => child.push(...paths(e)),
+      onChange: (e) => void child.push(...paths(e)),
     });
     expect(fake.started).toEqual(["/w"]);
     fake.emit("/w", "/w/top", "/w/a/b/deep/f", "/w/a/bc");
@@ -105,7 +105,7 @@ describe("createDirWatchHub", () => {
     const rc = await hub.acquire({
       dir: "/w/a",
       scope: "subtree",
-      onChange: (e) => child.push(...paths(e)),
+      onChange: (e) => void child.push(...paths(e)),
     });
     const rr = await hub.acquire({
       dir: "/w",
@@ -148,7 +148,7 @@ describe("createDirWatchHub", () => {
     const pc = hub.acquire({
       dir: "/w/a",
       scope: "subtree",
-      onChange: (e) => child.push(...paths(e)),
+      onChange: (e) => void child.push(...paths(e)),
     });
     await Promise.resolve();
     const rr = await hub.acquire({
@@ -175,7 +175,7 @@ describe("createDirWatchHub", () => {
     const release = await hub.acquire({
       dir: "/w",
       scope: "children",
-      onChange: (e) => heard.push(...paths(e)),
+      onChange: (e) => void heard.push(...paths(e)),
     });
     fake.emit("/w", "/w", "/w/new", "/w/sub/deep");
     expect(heard).toEqual(["/w", "/w/new"]);
@@ -184,7 +184,7 @@ describe("createDirWatchHub", () => {
     const r2 = await hub.acquire({
       dir: "/w/sub",
       scope: "children",
-      onChange: () => calls++,
+      onChange: () => void calls++,
     });
     fake.emit("/w", "/w/other/x");
     expect(calls).toBe(0);
@@ -234,12 +234,12 @@ describe("createDirWatchHub over the real engine", () => {
     const rr = await hub.acquire({
       dir,
       scope: "children",
-      onChange: (e) => root.push(...paths(e)),
+      onChange: (e) => void root.push(...paths(e)),
     });
     const rc = await hub.acquire({
       dir: sub,
       scope: "children",
-      onChange: (e) => child.push(...paths(e)),
+      onChange: (e) => void child.push(...paths(e)),
     });
     expect(natives).toBe(1);
     writeFileSync(join(sub, "f.txt"), "x");

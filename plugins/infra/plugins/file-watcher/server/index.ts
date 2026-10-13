@@ -25,7 +25,12 @@ export type {
   FileWatcherStartOptions,
 } from "../shared/registry";
 export { WRITES_WHILE_OPEN_MAX_ENTRIES } from "../shared/engine";
-export type { FileWatcher, WatcherBackend } from "../shared/engine";
+export type {
+  FileWatcher,
+  WatchReaction,
+  WatchReconcile,
+  WatcherBackend,
+} from "../shared/engine";
 
 export default {
   description:

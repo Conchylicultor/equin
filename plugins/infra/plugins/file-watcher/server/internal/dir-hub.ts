@@ -1,8 +1,10 @@
 import { dirname, isAbsolute, normalize } from "node:path";
+import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import {
   createRefcountHub,
   type HubHold,
 } from "@plugins/packages/plugins/refcount-hub/core";
+import type { WatchReaction } from "../../shared/engine";
 import type { FileChangeEvent } from "../../shared/registry";
 
 /**
@@ -19,8 +21,12 @@ export interface DirWatchRequest {
   /** Absolute, normalized, as the filesystem reports it (no symlinked prefix). */
   dir: string;
   scope: DirWatchScope;
-  /** The changes in scope, batched. Never called with an empty batch. */
-  onChange: (events: FileChangeEvent[]) => void;
+  /**
+   * The changes in scope, batched. Never called with an empty batch. Return
+   * the work's promise: one call runs at a time for this watcher, and the
+   * batches landing meanwhile fold into one trailing call.
+   */
+  onChange: WatchReaction<FileChangeEvent>;
 }
 
 /** Give a watch back; the last one on a root stops its native watch. */
@@ -146,9 +152,14 @@ export function createDirWatchHub(start: StartRootWatch): DirWatchHub {
         );
       }
       const root = coveringRoot(dir) ?? dir;
+      // This watcher's own reaction queue: the native fan-out stays
+      // synchronous, while a slow reaction holds only its own later batches.
+      const reaction = createCoalescer<FileChangeEvent>({
+        run: (events) => (h.released ? undefined : onChange(events)),
+      });
       const listener = (events: FileChangeEvent[]) => {
         const mine = events.filter((e) => inScope(dir, scope, e.path));
-        if (mine.length > 0) onChange(mine);
+        if (mine.length > 0) reaction.trigger(mine);
       };
       const h: Holder = {
         dir,

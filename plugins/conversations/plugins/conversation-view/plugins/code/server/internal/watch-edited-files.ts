@@ -13,8 +13,14 @@ import { evictEditedFiles, primeEditedFiles } from "./edited-files-cache";
 // One room per watched worktree, however many conversations show it, over the
 // shared checkout watch: the working tree AND the git dir, since the list moves
 // on a `git add` (untracked → added), and on a `main` advance or rebase (the
-// merge-base). Any change batch outside build output triggers one recompute;
-// the checkout watch batches them.
+// merge-base). The list reads HEAD (its own branch), the index, the working
+// tree and `main` — so of the refs every worktree shares it hears only its own
+// branch and `refs/heads/main`: another worktree's commit costs nothing.
+//
+// Any batch outside build output triggers a recompute. The recompute is
+// RETURNED to the checkout watch, which runs one at a time per room and folds
+// the batches landing mid-run into one trailing recompute — a recompute reads
+// the worktree's current state, so N pending ones would be N−1 wasted runs.
 
 /** Folders a build writes: their churn never moves the edited-files list. */
 const BUILD_OUTPUT = new Set([
@@ -42,11 +48,14 @@ interface Room {
 
 const rooms = createRefcountHub<void>(async (worktreePath, emit) => {
   const room: Room = { worktreePath, serialized: null, closed: false };
-  const release = await acquireCheckoutWatch(worktreePath, (changes) => {
-    if (changes.every((c) => isBuildOutput(worktreePath, c))) return;
-    void runTracked("watch-edited-files:recompute", () =>
-      recompute(room, emit),
-    );
+  const release = await acquireCheckoutWatch(worktreePath, {
+    refs: { also: ["refs/heads/main"] },
+    onChange: async (changes) => {
+      if (changes.every((c) => isBuildOutput(worktreePath, c))) return;
+      await runTracked("watch-edited-files:recompute", () =>
+        recompute(room, emit),
+      );
+    },
   });
   void runTracked("watch-edited-files:baseline", () => baseline(room));
   return () => {

@@ -4,6 +4,7 @@ import {
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { currentBranchRef } from "./current-branch-ref";
 import { gitCommonDir } from "./git-common-dir";
 import { readSha } from "./read-sha";
@@ -37,6 +38,14 @@ export const gitRefsWatcher = defineFileWatcher({
 const lastKnownSha = new Map<string, string | null>();
 let watcher: FileWatcher | null = null;
 let started = false;
+
+// One recompute at a time — a change and a reconcile tick included — with the
+// triggers landing mid-run folded into one trailing recompute. Each re-reads
+// every tracked ref's current sha, so overlapping runs would only interleave
+// on `lastKnownSha` (and double-announce an advance).
+const recomputes = createCoalescer({
+  run: () => runTracked("git-watcher:recompute", () => recompute()),
+});
 
 // The last `refs/heads/main` sha the watcher has observed, or null if not yet
 // seeded. Lets the commits-graph probe fingerprint `main` with zero subprocess.
@@ -86,14 +95,19 @@ export async function startGitWatcher(): Promise<void> {
   // deletes it when packing) → we get the event and re-read the true sha via
   // `git rev-parse` (which also resolves packed-refs). The reconcile timer is
   // the safety net for packed-refs-only movement.
+  //
+  // The refs dir is shared by every worktree, so a change is only worth a
+  // recompute when it writes a tracked ref (its loose file or its lock).
+  const tracked = new Set(
+    [...lastKnownSha.keys()].map((ref) => `${commonDir}/${ref}`),
+  );
+  const writesTracked = (path: string) =>
+    tracked.has(path.endsWith(".lock") ? path.slice(0, -".lock".length) : path);
   watcher = await gitRefsWatcher.start({
     dirs: [`${commonDir}/refs`],
-    onChange: () => {
-      void runTracked("git-watcher:recompute", () => recompute());
-    },
-    onReconcile: () => {
-      void runTracked("git-watcher:recompute", () => recompute());
-    },
+    onChange: (events) =>
+      events.some((e) => writesTracked(e.path)) ? recomputes.run() : undefined,
+    onReconcile: () => recomputes.run(),
   });
 }
 

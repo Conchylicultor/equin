@@ -37,6 +37,27 @@ await w.stop();
 - The registry lives in `shared/registry.ts`. The file-watcher barrels never
   import the catalog's server barrel — they are imported early at boot.
 
+## Reactions are coalesced: return the work
+
+A reaction (`onChange`, `onReconcile` — the `WatchReaction` / `WatchReconcile`
+types) may return a promise, and **should return its async work rather than
+detach it**. Every layer that hands a batch to a subscriber — the engine (per
+instance, so `defineFileWatcher` and `watchForCommand`), `acquireDirWatch` (per
+watcher) and `infra/git/checkout-watch` (per reader) — runs it through
+`packages/coalesce`: one reaction at a time, and the batches that land while it
+runs fold into ONE trailing call with their events merged. However fast the
+folder changes and however slow the work, a subscriber costs at most one running
+plus one pending reaction, and the last change is always answered by a run that
+started after it. A sync reaction (`notify()`) runs inline, as before.
+
+`onChange: () => { void recompute(); }` escapes all of that — one recompute per
+batch, unbounded (on 2026-10-12 it queued 3,291 edited-files recomputes behind
+the 2-slot heavy-read gate and blanked main). `watcher-safety/no-detached-watch-reaction`
+rejects it. Work keyed INSIDE one batch (one run per room) triggers a
+`createKeyedCoalescer` instead (see `conversations/transcript-watcher`).
+
+The catalog's `Folded` fact counts the batches an instance folded.
+
 ## In a CLI command: `watchForCommand`
 
 A foreground `./singularity` command that waits on the disk (`await`) imports
@@ -111,6 +132,8 @@ moved (see `apps/prototypes/files`).
     - `FileWatcherStartOptions`
     - `ServerFileWatcherSpec`
     - `WatcherBackend`
+    - `WatchReaction`
+    - `WatchReconcile`
   - Exports (values):
     - `acquireDirWatch`
     - `BATCH_SAMPLE_MAX`
@@ -124,6 +147,8 @@ moved (see `apps/prototypes/files`).
   - Exports (types):
     - `FileWatcher`
     - `WatchForCommandOptions`
+    - `WatchReaction`
+    - `WatchReconcile`
   - Exports (values): `watchForCommand`
 - Sub-plugins:
   - **`background-arm`** — File watchers in the Background activity catalog: registers the `file-watcher` background kind — every declaration made with defineFileWatcher under File watchers, triggered on file change, its…

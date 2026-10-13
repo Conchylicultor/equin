@@ -64,6 +64,13 @@ function facts(w: FileWatcherSnapshot): BackgroundFact[] {
       value: `${b.eventCount} ${b.eventCount === 1 ? "event" : "events"} · ${clock(b.at, true)} · ${names}${more}`,
     });
   }
+  const folded = w.instances.reduce((n, i) => n + i.foldedBatches, 0);
+  if (folded > 0) {
+    out.push({
+      label: "Folded",
+      value: `${folded} ${folded === 1 ? "batch" : "batches"} landed mid-run and joined the one pending run`,
+    });
+  }
   if (w.reconcileMs !== null) {
     out.push({
       label: "Reconcile",

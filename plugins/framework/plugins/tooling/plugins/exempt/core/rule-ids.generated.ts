@@ -144,6 +144,7 @@ export type ExemptableRuleId =
   | "ui-kit/no-button-shadow"
   | "ui-kit/no-groupless-dropdown-menu-label"
   | "viewport-overlay/no-adhoc-viewport-overlay"
+  | "watcher-safety/no-detached-watch-reaction"
   | "watcher-safety/no-direct-parcel-watcher"
   | "watcher-safety/no-raw-fs-watch"
   | "z-layers/no-adhoc-zindex"

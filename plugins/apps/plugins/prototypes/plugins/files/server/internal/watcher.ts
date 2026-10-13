@@ -3,6 +3,7 @@ import {
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { protoIdKind } from "../../core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { adoptPrototypeHistories, prototypeHistoryServed } from "./history";
@@ -102,27 +103,12 @@ function notifyHistory(name: string): void {
   if (protoIdKind.is(name)) prototypeHistoryServed.notify({ name });
 }
 
-// Single-flight with a trailing re-run: a signature read is async, so two
-// triggers arriving together must not each compare against a stale `lastSignature`
-// and notify twice for one edit.
-let refreshing = false;
-let refreshAgain = false;
-
-async function refresh(): Promise<void> {
-  if (refreshing) {
-    refreshAgain = true;
-    return;
-  }
-  refreshing = true;
-  try {
-    do {
-      refreshAgain = false;
-      await refreshOnce();
-    } while (refreshAgain);
-  } finally {
-    refreshing = false;
-  }
-}
+// One refresh at a time, with a trailing re-run: a signature read is async, so
+// two triggers arriving together must not each compare against a stale
+// `lastSignature` and notify twice for one edit.
+const refreshes = createCoalescer({
+  run: () => runTracked("prototypes:refresh", () => refreshOnce()),
+});
 
 /**
  * Sort one batch of watcher events. A version recorded under `_history/`
@@ -133,7 +119,7 @@ async function refresh(): Promise<void> {
  * carries the picks. A status written under `_status/` re-reads the statuses,
  * and likewise reloads nothing. Everything else goes through the signature gate.
  */
-function onTreeEvents(paths: string[]): void {
+function onTreeEvents(paths: string[]): Promise<void> | undefined {
   let treeMoved = false;
   const recorded = new Set<string>();
   const picked = new Set<string>();
@@ -148,7 +134,7 @@ function onTreeEvents(paths: string[]): void {
   for (const id of recorded) notifyHistory(id);
   for (const name of picked) prototypePicksServed.notify({ name });
   if (statusMoved) prototypeStatusesServed.notify();
-  if (treeMoved) void runTracked("prototypes:refresh", () => refresh());
+  return treeMoved ? refreshes.run() : undefined;
 }
 
 /**
@@ -179,12 +165,8 @@ export async function startPrototypesWatcher(): Promise<void> {
 
   watcher = await prototypesTreeWatcher.start({
     dirs: [prototypesDir.path],
-    onChange: (events) => {
-      onTreeEvents(events.map((e) => e.path));
-    },
-    onReconcile: () => {
-      void runTracked("prototypes:reconcile", () => refresh());
-    },
+    onChange: (events) => onTreeEvents(events.map((e) => e.path)),
+    onReconcile: () => refreshes.run(),
   });
 }
 

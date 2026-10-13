@@ -369,7 +369,8 @@ export interface CorpusIndexEnv {
   yieldMacrotask: () => Promise<void>;
   startFileWatcher: (opts: {
     dirs: string[];
-    onChange: () => void;
+    /** A change or reconcile tick; its promise is coalesced by the watch. */
+    onChange: () => Promise<unknown>;
   }) => Promise<void>;
   /** The declaration `startFileWatcher` opens (surfaced as `CorpusIndex.watcher`). */
   watcherRegistration: Registration;
@@ -424,13 +425,19 @@ export function createCorpusIndex<TPartial>(
     // Single-flight: a concurrent second caller joins THIS promise and so
     // receives the same delta the refresh computed — never a silent empty one.
     refreshInflight ??= (async (): Promise<CorpusDelta> => {
+      // Cleared BEFORE the pass: a change landing mid-pass (which may already
+      // have scanned past its path) sets it again, so the next call re-checks
+      // rather than trusting this pass. A failed pass leaves the index stale.
+      dirty = false;
       try {
         const { addedPaths, modifiedPaths, removedPaths } = await refreshCorpus(
           index!,
           refreshDeps(),
         );
-        dirty = false;
         return { addedPaths, modifiedPaths, removedPaths };
+      } catch (err) {
+        dirty = true;
+        throw err;
       } finally {
         refreshInflight = null;
       }
@@ -460,10 +467,11 @@ export function createCorpusIndex<TPartial>(
     await env.startFileWatcher({
       dirs: resolveRoots(),
       onChange: () => {
-        // A corpus change: mark the index stale and warm it in the background so
-        // the next request finds nothing (or little) to do.
+        // A corpus change: mark the index stale and warm it now, so the next
+        // request finds nothing (or little) to do. Returned to the watch, which
+        // folds the changes landing mid-pass into one trailing pass.
         dirty = true;
-        void runTracked("corpus-index:ensure-fresh", () => ensureFresh());
+        return runTracked("corpus-index:ensure-fresh", () => ensureFresh());
       },
     });
   }

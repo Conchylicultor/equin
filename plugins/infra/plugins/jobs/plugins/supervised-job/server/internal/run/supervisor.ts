@@ -370,14 +370,12 @@ async function syncWatcher(): Promise<void> {
   watcherStarting = (async () => {
     watcher = await supervisedRunWatcher.start({
       dirs: [dir],
-      onChange: (events) => {
-        void runTracked("watch:supervised-run", () => onArtifactEvents(events));
-      },
-      onReconcile: () => {
-        void runTracked("watch:supervised-run:reconcile", () =>
+      onChange: (events) =>
+        runTracked("watch:supervised-run", () => onArtifactEvents(events)),
+      onReconcile: () =>
+        runTracked("watch:supervised-run:reconcile", () =>
           reconcileSupervisedRuns(),
-        );
-      },
+        ),
     });
   })();
   try {

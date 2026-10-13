@@ -2,5 +2,5 @@
   "name": "@singularity/plugin-framework-tooling-lint-watcher-safety",
   "version": "0.0.1",
   "private": true,
-  "description": "watcher-safety lint rules: no-direct-parcel-watcher (only the file-watcher engine loads @parcel/watcher) and no-raw-fs-watch (no fs.watch / watchFile / fs.promises.watch / chokidar in host-process code — declare a watcher with defineFileWatcher, or watchForCommand in the CLI)"
+  "description": "watcher-safety lint rules: no-direct-parcel-watcher (only the file-watcher engine loads @parcel/watcher), no-raw-fs-watch (no fs.watch / watchFile / fs.promises.watch / chokidar in host-process code \u2014 declare a watcher with defineFileWatcher, or watchForCommand in the CLI) and no-detached-watch-reaction (a watch callback returns its async work instead of detaching it with void, so the watch coalesces it to one running plus one pending run)"
 }

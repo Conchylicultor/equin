@@ -51,10 +51,14 @@ export const gitStatusServed = serveValue(fileExplorerGitStatus, {
   },
   whileSubscribed: async ({ root }, notify) => {
     await assertCheckoutRoot(root);
-    const release = await acquireCheckoutWatch(root, (changes) => {
-      if (changes.some((c) => c.area === "git" || matters(root, c.path))) {
-        notify();
-      }
+    // `--branch` reads ahead/behind: the own branch and its upstream.
+    const release = await acquireCheckoutWatch(root, {
+      refs: { also: [], upstream: true },
+      onChange: (changes) => {
+        if (changes.some((c) => c.area === "git" || matters(root, c.path))) {
+          notify();
+        }
+      },
     });
     return () => {
       lastIndex.delete(root);

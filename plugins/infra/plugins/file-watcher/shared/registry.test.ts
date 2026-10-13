@@ -172,7 +172,7 @@ describe("defineFileWatcherIn", () => {
     open.push(
       await w.start({
         dirs: [dir],
-        onChange: (events) => seen.push(...events.map((e) => e.path)),
+        onChange: (events) => void seen.push(...events.map((e) => e.path)),
       }),
     );
     writeFileSync(join(dir, "a.txt"), "x");

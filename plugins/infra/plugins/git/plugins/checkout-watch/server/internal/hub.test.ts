@@ -7,7 +7,10 @@ import {
   classifyGitDirEvent,
   classifyRootEvent,
   createCheckoutWatchHub,
+  refAt,
+  type CheckoutBranch,
   type CheckoutChange,
+  type CheckoutRefs,
 } from "./hub";
 
 const ev = (path: string): FileChangeEvent => ({ type: "update", path });
@@ -62,7 +65,7 @@ describe("classifyGitDirEvent", () => {
 
 /** Fake dir watches: each acquire recorded, emitting by dir on demand. */
 function fakeDirs() {
-  const live = new Map<string, (events: FileChangeEvent[]) => void>();
+  const live = new Map<string, DirWatchRequest["onChange"]>();
   const acquired: string[] = [];
   const released: string[] = [];
   const acquireDirWatch = async (req: DirWatchRequest) => {
@@ -74,27 +77,64 @@ function fakeDirs() {
       live.delete(req.dir);
     };
   };
+  // The hub's own listeners are synchronous: the dir watch hears no promise.
   const emit = (dir: string, ...paths: string[]) =>
-    live.get(dir)!(paths.map(ev));
+    void live.get(dir)!(paths.map(ev));
   return { acquireDirWatch, acquired, released, emit };
 }
 
+describe("refAt", () => {
+  test("a loose ref or its lock is the ref; anything else is none", () => {
+    expect(refAt("/m/.git", "/m/.git/refs/heads/a/b")).toBe("refs/heads/a/b");
+    expect(refAt("/m/.git", "/m/.git/refs/heads/main.lock")).toBe(
+      "refs/heads/main",
+    );
+    expect(refAt("/m/.git", "/m/.git/HEAD")).toBeUndefined();
+    expect(refAt("/m/.git", "/m/.git/packed-refs")).toBeUndefined();
+  });
+});
+
+const LINKED = {
+  gitDir: "/main/.git/worktrees/wt",
+  commonDir: "/main/.git",
+};
+const ALSO_NONE: CheckoutRefs = { also: [] };
+const tick = () => new Promise<void>((r) => setTimeout(r, 0));
+
+function linkedHub(branch: () => CheckoutBranch = () => OWN) {
+  const dirs = fakeDirs();
+  let probes = 0;
+  const hub = createCheckoutWatchHub({
+    acquireDirWatch: dirs.acquireDirWatch,
+    locate: async () => {
+      probes++;
+      return LINKED;
+    },
+    readBranch: async () => branch(),
+  });
+  return { dirs, hub, probes: () => probes };
+}
+
+const OWN: CheckoutBranch = {
+  own: "refs/heads/wt-branch",
+  upstream: "refs/remotes/origin/wt-branch",
+};
+
 describe("createCheckoutWatchHub", () => {
   test("a linked worktree watches its root plus its git dirs outside; readers share one watch", async () => {
-    const dirs = fakeDirs();
-    let probes = 0;
-    const hub = createCheckoutWatchHub({
-      acquireDirWatch: dirs.acquireDirWatch,
-      gitDirsOutside: async () => {
-        probes++;
-        return ["/main/.git/worktrees/wt", "/main/.git/refs"];
-      },
-    });
+    const { dirs, hub, probes } = linkedHub();
     const a: CheckoutChange[] = [];
     const b: CheckoutChange[] = [];
-    const ra = await hub.acquire("/wt", (c) => a.push(...c));
-    const rb = await hub.acquire("/wt", (c) => b.push(...c));
-    expect(probes).toBe(1);
+    const also: CheckoutRefs = { also: ["refs/heads/main"] };
+    const ra = await hub.acquire("/wt", {
+      refs: also,
+      onChange: (c) => void a.push(...c),
+    });
+    const rb = await hub.acquire("/wt", {
+      refs: also,
+      onChange: (c) => void b.push(...c),
+    });
+    expect(probes()).toBe(1);
     expect(dirs.acquired).toEqual([
       "/wt",
       "/main/.git/worktrees/wt",
@@ -103,15 +143,18 @@ describe("createCheckoutWatchHub", () => {
 
     dirs.emit("/wt", "/wt/src/a.ts", "/wt/node_modules/x");
     dirs.emit("/main/.git/refs", "/main/.git/refs/heads/main");
-    expect(a.map((c) => [c.path, c.area])).toEqual([
-      ["/wt/src/a.ts", "worktree"],
-      ["/main/.git/refs/heads/main", "git"],
+    expect(a.map((c) => [c.path, c.area, c.ref])).toEqual([
+      ["/wt/src/a.ts", "worktree", undefined],
+      ["/main/.git/refs/heads/main", "git", "refs/heads/main"],
     ]);
     expect(b).toEqual(a);
 
     // Only noise: nobody is called.
     let calls = 0;
-    const rc = await hub.acquire("/wt", () => calls++);
+    const rc = await hub.acquire("/wt", {
+      refs: ALSO_NONE,
+      onChange: () => void calls++,
+    });
     dirs.emit("/main/.git/worktrees/wt", "/main/.git/worktrees/wt/logs/HEAD");
     expect(calls).toBe(0);
 
@@ -127,13 +170,120 @@ describe("createCheckoutWatchHub", () => {
     expect(hub.roots()).toEqual([]);
   });
 
+  test("other worktrees' refs reach nobody; the own branch, its upstream when asked, and named refs do", async () => {
+    const { dirs, hub } = linkedHub();
+    const plain: (string | undefined)[] = [];
+    const withUpstream: (string | undefined)[] = [];
+    await hub.acquire("/wt", {
+      refs: { also: ["refs/heads/main"] },
+      onChange: (c) => void plain.push(...c.map((x) => x.ref)),
+    });
+    await hub.acquire("/wt", {
+      refs: { also: [], upstream: true },
+      onChange: (c) => void withUpstream.push(...c.map((x) => x.ref)),
+    });
+    dirs.emit(
+      "/main/.git/refs",
+      "/main/.git/refs/heads/other-wt",
+      "/main/.git/refs/heads/other-wt.lock",
+      "/main/.git/refs/remotes/origin/other-wt",
+    );
+    expect(plain).toEqual([]);
+    expect(withUpstream).toEqual([]);
+
+    dirs.emit(
+      "/main/.git/refs",
+      "/main/.git/refs/heads/wt-branch",
+      "/main/.git/refs/heads/main",
+      "/main/.git/refs/remotes/origin/wt-branch",
+    );
+    expect(plain).toEqual(["refs/heads/wt-branch", "refs/heads/main"]);
+    expect(withUpstream).toEqual([
+      "refs/heads/wt-branch",
+      "refs/remotes/origin/wt-branch",
+    ]);
+  });
+
+  test("a HEAD change re-reads the branch before the batch is filtered", async () => {
+    let branch: CheckoutBranch = OWN;
+    const { dirs, hub } = linkedHub(() => branch);
+    const heard: (string | undefined)[] = [];
+    await hub.acquire("/wt", {
+      refs: ALSO_NONE,
+      onChange: (c) => void heard.push(...c.map((x) => x.ref ?? x.path)),
+    });
+    branch = { own: "refs/heads/next", upstream: null };
+    dirs.emit("/main/.git/worktrees/wt", "/main/.git/worktrees/wt/HEAD");
+    dirs.emit("/main/.git/refs", "/main/.git/refs/heads/next");
+    dirs.emit("/main/.git/refs", "/main/.git/refs/heads/wt-branch");
+    await tick();
+    expect(heard).toEqual(["/main/.git/worktrees/wt/HEAD", "refs/heads/next"]);
+  });
+
+  test("a flood against a slow reader: at most one running plus one pending, and a final run after the last batch", async () => {
+    const { dirs, hub } = linkedHub();
+    const gates: (() => void)[] = [];
+    const runs: number[] = [];
+    let running = 0;
+    let maxRunning = 0;
+    await hub.acquire("/wt", {
+      refs: ALSO_NONE,
+      onChange: async (changes) => {
+        running += 1;
+        maxRunning = Math.max(maxRunning, running);
+        runs.push(changes.length);
+        await new Promise<void>((r) => gates.push(r));
+        running -= 1;
+      },
+    });
+    for (let i = 0; i < 500; i++) dirs.emit("/wt", `/wt/f${i}.ts`);
+    expect(runs).toEqual([1]);
+    gates.shift()!();
+    await tick();
+    // The 499 batches that landed mid-run are ONE trailing run.
+    expect(runs).toEqual([1, 499]);
+    dirs.emit("/wt", "/wt/last.ts");
+    gates.shift()!();
+    await tick();
+    expect(runs).toEqual([1, 499, 1]);
+    gates.shift()!();
+    await tick();
+    expect(runs.length).toBe(3);
+    expect(maxRunning).toBe(1);
+  });
+
+  test("a reader released mid-run is not called again", async () => {
+    const { dirs, hub } = linkedHub();
+    let calls = 0;
+    let open!: () => void;
+    const release = await hub.acquire("/wt", {
+      refs: ALSO_NONE,
+      onChange: async () => {
+        calls += 1;
+        await new Promise<void>((r) => (open = r));
+      },
+    });
+    dirs.emit("/wt", "/wt/a.ts");
+    dirs.emit("/wt", "/wt/b.ts");
+    release();
+    open();
+    await tick();
+    expect(calls).toBe(1);
+  });
+
   test("a git dir that cannot be watched releases what was opened and rejects", async () => {
     const dirs = fakeDirs();
     const hub = createCheckoutWatchHub({
       acquireDirWatch: dirs.acquireDirWatch,
-      gitDirsOutside: async () => ["/missing/.git"],
+      locate: async () => ({
+        gitDir: "/missing/.git",
+        commonDir: "/missing/.git",
+      }),
+      readBranch: async () => OWN,
     });
-    const err = await rejection(hub.acquire("/wt", () => {}));
+    const err = await rejection(
+      hub.acquire("/wt", { refs: ALSO_NONE, onChange: () => {} }),
+    );
     expect(err.message).toContain("ENOENT");
     expect(dirs.released).toEqual(["/wt"]);
     expect(hub.roots()).toEqual([]);

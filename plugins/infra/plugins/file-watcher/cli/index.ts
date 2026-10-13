@@ -3,4 +3,8 @@
 // it is not registered and not loaded on every invocation.
 export { watchForCommand } from "./internal/watch-for-command";
 export type { WatchForCommandOptions } from "./internal/watch-for-command";
-export type { FileWatcher } from "../shared/engine";
+export type {
+  FileWatcher,
+  WatchReaction,
+  WatchReconcile,
+} from "../shared/engine";
