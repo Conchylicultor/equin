@@ -98,7 +98,7 @@ export default function MenuSheetExhibit() {
                 value=""
                 onChange={() => {}}
                 placeholder="Search…"
-                appearance="field"
+                appearance="menu"
               />
             </ControlPanel.Section>
             <ControlPanel.Section>

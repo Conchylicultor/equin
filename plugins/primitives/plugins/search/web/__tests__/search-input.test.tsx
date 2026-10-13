@@ -67,7 +67,7 @@ describe("SearchInput appearance", () => {
   it("field (default) keeps the bordered box", () => {
     render(<Controlled initial="" />);
     const input = screen.getByPlaceholderText("Search");
-    expect(input.className).toContain("border-input");
+    expect(input.className).toContain("border-field-outline");
     expect(input.className).not.toContain("bg-muted");
   });
 
@@ -77,7 +77,7 @@ describe("SearchInput appearance", () => {
     const cls = input.className.split(/\s+/);
     expect(cls).toContain("bg-muted");
     expect(cls).toContain("border-transparent");
-    expect(cls).not.toContain("border-input");
+    expect(cls).not.toContain("border-field-outline");
     expect(cls).toContain("focus-border");
     expect(cls).toContain("focus:bg-background");
     expect(cls).toContain("focus-visible:ring-0");

@@ -117,6 +117,7 @@ export function TagPicker({
     >
       <Stack gap="xs">
         <SearchInput
+          appearance="menu"
           // Declared, not inherited: the panel portals out of the page body, so
           // its undo owner is this field's own (see page-link's picker).
           {...localUndoProps}

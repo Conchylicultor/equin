@@ -10,7 +10,6 @@
   - Contributes: `Core.Root` → `CommandPaletteRoot`
   - Uses:
     - `primitives/css/fill.Fill`
-    - `primitives/css/fill.fillClasses`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
@@ -21,6 +20,7 @@
     - `primitives/css/ui-kit.ScrollArea`
     - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/overlay/tooltip.Kbd`
+    - `primitives/search.SearchInput`
     - `ui/icons.Icon`
   - Exports (types): `CommandPaletteItem`
   - Exports (values): `CommandPalette`

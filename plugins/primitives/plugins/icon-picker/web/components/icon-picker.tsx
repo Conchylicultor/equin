@@ -1,5 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   SectionLabel,
@@ -9,11 +9,10 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import {
   runtimeSymbol,
-  symbol,
   type SavedSymbolName,
 } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -22,9 +21,6 @@ import {
   type SymbolEntry,
   type SymbolSet,
 } from "../internal/icons";
-
-const closeIcon = symbol("close");
-const searchIcon = symbol("search");
 
 const COLUMNS = 9;
 
@@ -75,7 +71,6 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
   const [query, setQuery] = useState("");
   const [set, setSet] = useState<SymbolSet | null>(null);
   const [failure, setFailure] = useState<Error | null>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
   if (failure) throw failure;
 
   useEffect(() => {
@@ -111,34 +106,12 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
           </span>
         )}
       </Stack>
-      <div className="relative">
-        <Pin to="left" offset="sm" decorative>
-          <Icon icon={searchIcon} className="size-3.5 text-muted-foreground" />
-        </Pin>
-        <input
-          ref={searchRef}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search icons…"
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- pl-7/pr-7 reserve gutters sized to the absolutely-positioned search icon and clear button
-          className="w-full rounded-md border border-input bg-background py-xs pl-7 pr-7 text-caption outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
-        />
-        {query && (
-          <Pin to="right" offset="sm">
-            <button
-              type="button"
-              aria-label="Clear search"
-              onClick={() => {
-                setQuery("");
-                searchRef.current?.focus();
-              }}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <Icon icon={closeIcon} className="size-3.5" />
-            </button>
-          </Pin>
-        )}
-      </div>
+      <SearchInput
+        appearance="menu"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search icons…"
+      />
 
       {/* Icon grid */}
       <Scroll className="max-h-64">

@@ -13,16 +13,12 @@ import { assetMirrorUrl } from "@plugins/infra/plugins/asset-mirror/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
 import { EmojiSchema, type Emoji } from "../../core";
 import { EmojiGlyph } from "./emoji-glyph";
 import { EMOJIBASE_LOCALE, EMOJIBASE_MIRROR_ID } from "../../shared/mirror";
-
-const searchIcon = symbol("search");
 
 /** Today's grid: nine columns. A caller may ask for another count. */
 const DEFAULT_COLUMNS = 9;
@@ -227,6 +223,7 @@ export function EmojiPicker({
   className,
 }: EmojiPickerProps) {
   const panel = variant === "panel";
+  const [query, setQuery] = useState("");
   // Fixed at mount (see `leadingCategory`): a resolver frimousse is handed
   // once, wrapping the default one, so the leading category is part of the
   // DATA — searched, keyboard-navigated and virtualized like any other.
@@ -252,23 +249,16 @@ export function EmojiPicker({
           // eslint-disable-next-line layout/no-adhoc-layout -- frimousse's root is the column that stacks the search field over its self-sizing viewport
           className="isolate flex flex-col gap-xs"
         >
-          <div className="relative">
-            <Pin to="left" offset="sm" decorative>
-              <Icon
-                icon={searchIcon}
-                className="size-3.5 text-muted-foreground"
-              />
-            </Pin>
-            <Frimousse.Search
-              placeholder="Search emoji…"
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- pl-7 reserves the gutter the absolutely-positioned search icon sits in
-              className={cn(
-                "w-full appearance-none rounded-md border border-input bg-background py-xs pl-7 pr-sm text-caption outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground",
-                // One panel row tall, edged by the panel's own hairline.
-                panel && "h-(--cp-row-h) border-border py-0",
-              )}
-            />
-          </div>
+          {/* The shared search field, drawn through frimousse's own input
+              (which filters the grid) — controlled, since frimousse has no
+              search prop on its root. */}
+          <SearchInput
+            appearance={panel ? "menu" : "field"}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search emoji…"
+            render={<Frimousse.Search />}
+          />
           <Frimousse.Viewport
             className={cn(
               "relative outline-none",

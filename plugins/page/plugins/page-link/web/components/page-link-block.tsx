@@ -123,6 +123,7 @@ function PagePicker({
     >
       <Stack gap="sm">
         <SearchInput
+          appearance="menu"
           // NOT redundant, however portaled this looks. This field reads as
           // `local` today only because the popover portals to `document.body`,
           // which severs it from the page body's `surfaceUndoProps` subtree so

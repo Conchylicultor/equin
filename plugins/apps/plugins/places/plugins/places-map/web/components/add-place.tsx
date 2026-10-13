@@ -1,3 +1,4 @@
+import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { useState, type ReactNode } from "react";
 import {
   ControlPanel,
@@ -7,10 +8,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  Button,
-  Input,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
@@ -96,7 +94,8 @@ function AddPlaceSearch({
   return (
     <>
       <ControlPanel.Section>
-        <Input
+        <SearchInput
+          appearance="menu"
           autoFocus
           value={text}
           onChange={(e) => setText(e.target.value)}

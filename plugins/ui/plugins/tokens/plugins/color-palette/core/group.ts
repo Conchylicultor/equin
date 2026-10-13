@@ -209,6 +209,26 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
     default: "var(--selected)",
     label: "Popover row hover",
   },
+  // A text field's fill (Input, Textarea, SearchInput); its outline is
+  // `input`. Default = the fill it always wore.
+  field: {
+    default: "transparent",
+    darkDefault: "color-mix(in oklab, var(--input) 30%, transparent)",
+    label: "Field fill",
+  },
+  // A text field's fill and outline INSIDE a floating panel (a menu's search
+  // row, a picker's filter). Default = the canvas field, so a theme that
+  // leaves them out changes nothing; a theme whose popover sits a step above
+  // its cards sets the fill a step below the popover — a sunken well that
+  // reads as the menu's first row, not a separate control.
+  popoverField: {
+    default: "var(--field)",
+    label: "Popover field fill",
+  },
+  popoverFieldBorder: {
+    default: "var(--input)",
+    label: "Popover field border",
+  },
   // A neutral header chip's fill (a conversation's model chip).
   chip: {
     default: "var(--muted)",

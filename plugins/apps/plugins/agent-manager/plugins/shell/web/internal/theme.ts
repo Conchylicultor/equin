@@ -92,6 +92,10 @@ const colorPalette = colorPaletteGroup.fragment({
     popoverForeground: DARK.text,
     popoverHover: DARK.fillHover,
     popoverBorder: DARK.input,
+    // A field inside one (the menu's search row) sinks a step below it, to
+    // the panel tone, edged by the soft hairline — the Menu prototype's bg-1.
+    popoverField: DARK.panel,
+    popoverFieldBorder: DARK.border,
     primary: DARK.lagoon,
     primaryForeground: DARK.lagoonInk,
     primaryText: DARK.lagoonText,
@@ -148,6 +152,8 @@ const colorPalette = colorPaletteGroup.fragment({
     cardForeground: LIGHT.text,
     popover: "oklch(1 0 0)",
     popoverForeground: LIGHT.text,
+    popoverField: LIGHT.panel,
+    popoverFieldBorder: LIGHT.border,
     primary: LIGHT.lagoon,
     primaryForeground: LIGHT.lagoonInk,
     primaryText: LIGHT.lagoonText,
@@ -238,7 +244,10 @@ const fontFamily = fontFamilyGroup.fragment(
  * 9px, and so do the `md` / `lg` buttons and button-group segments
  * (`radiusControl`). Raised cards — the thread's user message, tool rows and
  * prompt box — take the mockup's 12px (`radiusCard`). A tool badge is an 8px
- * box edged in its own colour, an inline code span a 7px bordered chip.
+ * box edged in its own colour, an inline code span a 7px bordered chip. A
+ * menu or control-panel row — and the search field that leads a menu — takes
+ * the Menu prototype's 7px (`radiusPanelRow`), tighter than the 9px rows
+ * elsewhere.
  */
 const shape = shapeGroup.fragment(
   both({
@@ -249,6 +258,7 @@ const shape = shapeGroup.fragment(
     borderToolBadge: "1px",
     radiusCode: "0.4375rem",
     borderCode: "1px",
+    radiusPanelRow: "0.4375rem",
   }),
 );
 

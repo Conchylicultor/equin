@@ -16,7 +16,12 @@ function Input({
   className,
   type,
   ...props
-}: Omit<React.ComponentProps<"input">, "size"> & DensityControlled) {
+}: Omit<React.ComponentProps<"input">, "size"> &
+  DensityControlled & {
+    /** Draw the field through another input element that owns its own state
+     * (a headless library's search input), keeping this field's chrome. */
+    render?: React.ReactElement;
+  }) {
   const density = useControlSize();
   return (
     <InputPrimitive

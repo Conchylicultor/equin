@@ -36,7 +36,7 @@ export function HostedOptions({
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder={searchPlaceholder}
-          appearance="field"
+          appearance="menu"
         />
       }
       controls={controls}

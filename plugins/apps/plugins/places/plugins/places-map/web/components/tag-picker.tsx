@@ -1,12 +1,10 @@
+import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { useMemo, useState } from "react";
 import {
   ControlPanel,
   ControlPanelPopover,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
-import {
-  Button,
-  Input,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
@@ -72,7 +70,8 @@ export function TagPicker({
       }
     >
       <ControlPanel.Section>
-        <Input
+        <SearchInput
+          appearance="menu"
           autoFocus
           value={query}
           onChange={(e) => setQuery(e.target.value)}

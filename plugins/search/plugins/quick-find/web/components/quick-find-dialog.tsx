@@ -156,6 +156,7 @@ function QuickFindDialogBody({
           caveat in `dialog.tsx`). */}
       <div className="border-b rail-bleed py-sm">
         <SearchInput
+          appearance="menu"
           autoFocus
           value={query}
           onChange={(e) => {

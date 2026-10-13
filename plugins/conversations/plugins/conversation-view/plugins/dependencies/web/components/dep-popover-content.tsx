@@ -120,6 +120,7 @@ export function DepPopoverContent({
       )}
 
       <SearchInput
+        appearance="menu"
         placeholder="Search conversations…"
         value={search}
         onChange={(e) => setSearch(e.target.value)}

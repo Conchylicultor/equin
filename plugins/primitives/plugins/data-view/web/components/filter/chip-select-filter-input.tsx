@@ -1,9 +1,6 @@
+import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { useState, type ReactNode } from "react";
-import {
-  Button,
-  ControlSizeProvider,
-  Input,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -133,14 +130,13 @@ export function ChipSelectFilterInput(
       ) : (
         <Stack gap="sm">
           {choices.length > 6 && (
-            <ControlSizeProvider size="xs">
-              <Input
-                autoFocus
-                placeholder="Search…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </ControlSizeProvider>
+            <SearchInput
+              appearance="menu"
+              autoFocus
+              placeholder="Search…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
           )}
           {visible.length > 0 ? (
             <Stack direction="row" gap="xs" wrap>

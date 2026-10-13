@@ -109,7 +109,7 @@ Picking saves (`savePlace`) and selects the place; `maps-not-configured`
     - `Pane.Register` "places-map"
     - `GeoMap.Pin` → `SavedPlacePin`
     - `GeoMap.Cluster` → `SavedPlaceCluster`
-  - Uses: 63 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 64 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/places/places-core` ×8
     - `primitives/collapsible` ×5
     - `primitives/css/ui-kit` ×4
@@ -143,6 +143,7 @@ Picking saves (`savePlace`) and selects the place; `maps-not-configured`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/persistent-draft.useDraft`
+    - `primitives/search.SearchInput`
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `ui/icons.Icon`
 

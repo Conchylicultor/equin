@@ -10,17 +10,12 @@ import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import {
-  Fill,
-  fillClasses,
-} from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import type { CommandPaletteItem } from "../slots";
 import { fuzzyMatch, type FuzzyMatch } from "./fuzzy";
-import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const searchIcon = symbol("search");
 
 interface CommandPaletteDialogProps {
   open: boolean;
@@ -173,12 +168,9 @@ function CommandPaletteBody({
               span the whole panel while their contents land back on the panel's
               rail. Both are direct children of the panel, which is what makes a
               bleed free (see the caveat in `dialog.tsx`). */}
-      <Line className="gap-sm border-b rail-bleed py-sm">
-        <Icon
-          icon={searchIcon}
-          className={cn("size-4 text-muted-foreground", rigidClass())}
-        />
-        <input
+      <div className="border-b rail-bleed py-sm">
+        <SearchInput
+          appearance="menu"
           autoFocus
           value={query}
           onChange={(e) => {
@@ -186,13 +178,9 @@ function CommandPaletteBody({
             setActiveIdx(0);
           }}
           onKeyDown={handleKeyDown}
-          className={cn(
-            fillClasses("x"),
-            "bg-transparent text-body outline-none placeholder:text-muted-foreground",
-          )}
           placeholder="Search commands..."
         />
-      </Line>
+      </div>
 
       <ScrollArea className="max-h-80">
         {/* Block rhythm only: the list opens NO region of its own, so its

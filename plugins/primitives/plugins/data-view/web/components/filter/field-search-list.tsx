@@ -46,6 +46,7 @@ export function FieldSearchList<TRow>(props: {
   return (
     <Stack gap="xs">
       <SearchInput
+        appearance="menu"
         autoFocus
         value={query}
         onChange={(e) => setQuery(e.target.value)}

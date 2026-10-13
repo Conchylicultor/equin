@@ -41,14 +41,14 @@ export const SURFACE_LEVELS: Record<SurfaceLevel, string> = {
   // foreground tint, which darkens under light and lightens under dark by
   // construction, at any preset.
   sunken:
-    "bg-muted [--chrome-mask:var(--muted)] [--hover-fill:color-mix(in_oklab,var(--foreground)_6%,var(--muted))]",
+    "bg-muted [--chrome-mask:var(--muted)] [--hover-fill:color-mix(in_oklab,var(--foreground)_6%,var(--muted))] [--field-fill:var(--field)] [--field-outline:var(--input)]",
   // The ground plane: pane / page canvas, toolbar bands, sticky headers. Tone
   // only — flush bands supply their own `border-b` / radius via className.
-  base: "bg-background [--chrome-mask:var(--background)] [--hover-fill:var(--muted)]",
+  base: "bg-background [--chrome-mask:var(--background)] [--hover-fill:var(--muted)] [--field-fill:var(--field)] [--field-outline:var(--input)]",
   // A card lifted one step above base. Its corners are the shape group's
   // `--radius-card` (`rounded-card`), which defaults to the `rounded-md` step.
   raised:
-    "rounded-card border border-border bg-card shadow-sm [--chrome-mask:var(--card)] [--hover-fill:var(--muted)]",
+    "rounded-card border border-border bg-card shadow-sm [--chrome-mask:var(--card)] [--hover-fill:var(--muted)] [--field-fill:var(--field)] [--field-outline:var(--input)]",
   // Floats above everything — popovers, menus, command palette, floating panels.
   // Hovers to `--accent`, the tone base-ui's own menu/select items highlight
   // with, so a ghost button in a popover matches the items beside it.
@@ -59,6 +59,8 @@ export const SURFACE_LEVELS: Record<SurfaceLevel, string> = {
     // default = the accent it always hovered to), so a theme whose accent IS
     // its popover tone still shows the hover. Corners and shadow are the shape / shadow
     // groups' popover roles (`rounded-popover`, `shadow-popover`), defaulting
-    // to the `rounded-lg` and `shadow-md` steps it always wore.
-    "rounded-popover bg-popover text-popover-foreground shadow-popover ring-1 ring-popover-border [--chrome-mask:var(--popover)] [--hover-fill:var(--popover-hover)]",
+    // to the `rounded-lg` and `shadow-md` steps it always wore. A text field
+    // inside wears the popover's own field tokens (`--popover-field`, default =
+    // the canvas field), so a theme can sink a menu's search row into the panel.
+    "rounded-popover bg-popover text-popover-foreground shadow-popover ring-1 ring-popover-border [--chrome-mask:var(--popover)] [--hover-fill:var(--popover-hover)] [--field-fill:var(--popover-field)] [--field-outline:var(--popover-field-border)]",
 };

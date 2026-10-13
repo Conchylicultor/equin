@@ -127,6 +127,12 @@
        page canvas — which on the sidebar (`--sidebar` 0.965 vs `--muted` 0.97)
        landed on the surface color and read as no hover at all. */
     --color-hover-fill: var(--hover-fill);
+    /* A text field's paint on the current surface — `bg-field-fill` /
+       `border-field-outline`, which every surface co-publishes (see `:root`
+       default + Surface roles), so a field inside a menu wears the popover's
+       field tokens rather than the canvas ones. */
+    --color-field-fill: var(--field-fill);
+    --color-field-outline: var(--field-outline);
     --color-sidebar: var(--sidebar);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar-border: var(--sidebar-border);
@@ -1392,6 +1398,47 @@
   }
 }
 
+@utility menu-field {
+  /* twmerge: standalone -- Composite row geometry for a menu's search field (bleed margins + width, and its glyph / input / clear cells); not a single-property utility another class should selectively override. */
+  /* A menu's search field IS its first row, so it takes a row's geometry
+     (`cp-row` above), not a loose field's: its box bleeds out of the rail to
+     where a row's fill starts, its glyph sits in the rows' icon column one row pad in,
+     and its text starts on the rows' label rail — glyph, then icon gap. Cells
+     are attribute-marked so the field owns none of this per call site.
+     The bleed is a CONTROL PANEL's alone: its rows bleed, so its search row
+     does. Elsewhere (a dropdown, a dialog's list) rows sit on the rail, and a
+     field bleeding out of a dialog's wide rail would run past every row. */
+  position: relative;
+  .cp-panel & {
+    --cp-bleed-start: calc(min(var(--cp-panel-pad), var(--rail-start, 0px)) - var(--rail-start, 0px));
+    --cp-bleed-end: calc(min(var(--cp-panel-pad), var(--rail-end, 0px)) - var(--rail-end, 0px));
+    margin-inline: var(--cp-bleed-start) var(--cp-bleed-end);
+    width: calc(100% - var(--cp-bleed-start) - var(--cp-bleed-end));
+  }
+  & > [data-menu-field-glyph],
+  & > [data-menu-field-clear] {
+    position: absolute;
+    inset-block: 0;
+    width: var(--cp-icon-col);
+    display: grid;
+    place-items: center;
+  }
+  & > [data-menu-field-glyph] {
+    inset-inline-start: var(--cp-row-pad-x);
+    pointer-events: none;
+  }
+  & > [data-menu-field-clear] {
+    inset-inline-end: var(--cp-row-pad-x);
+  }
+  & > input {
+    padding-inline: calc(var(--cp-row-pad-x) + var(--cp-icon-col) + var(--cp-icon-gap))
+      var(--cp-row-pad-x);
+  }
+  & > input:not(:placeholder-shown) {
+    padding-inline-end: calc(var(--cp-row-pad-x) + var(--cp-icon-col) + var(--cp-icon-gap));
+  }
+}
+
 @utility cp-rule {
   /* twmerge: standalone -- Composite builder grid (display + 6 tracks + gap + min-height + inline padding + radius + the data-span collapse); not a single-property utility another class should selectively override. */
   display: grid;
@@ -1959,6 +2006,13 @@
        preset's `--muted` and ignore its own. Guarded by
        `inherited-theme-defaults-scoped`. */
     --hover-fill: var(--muted);
+    /* Text-field paint default = the canvas field (`--field`, outlined by
+       `--input`). Surface roles override it per-subtree — the overlay with the
+       popover's own field tokens, so a field inside a menu can sit as a well a
+       step below the panel. Same DERIVED-helper status (and the same reason to
+       sit at every theme-scope root) as `--hover-fill` above. */
+    --field-fill: var(--field);
+    --field-outline: var(--input);
     /* Control-panel geometry — the numbers behind the `cp-*` utilities above.
        They live at EVERY theme-scope root for the same reason `--chrome-mask`
        does: most of them read a density token (`--space-*`, `--pad-row-x`,

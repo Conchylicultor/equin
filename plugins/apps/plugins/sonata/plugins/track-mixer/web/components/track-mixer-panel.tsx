@@ -204,6 +204,7 @@ function InstrumentPicker({
       }
     >
       <SearchInput
+        appearance="menu"
         autoFocus
         placeholder="Search instruments…"
         value={query}

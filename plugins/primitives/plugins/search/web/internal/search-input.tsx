@@ -30,12 +30,22 @@ const searchIcon = symbol("search");
  *   visible border, the theme radius, its icon and placeholder in the faint
  *   tier. Focus lifts it onto the surface colour with the fields' quiet border instead
  *   of the halo — a toolbar filter that should recede until it is used.
+ * - `menu` — the search row leading a menu or picker panel, drawn as the
+ *   panel's first row rather than a separate control: a row's height, corners,
+ *   label text and inline geometry (box as wide as a row's fill, glyph in the
+ *   rows' icon column, text on their label rail). Its fill and
+ *   outline are the surface's field paint (inside a popover, the theme's
+ *   `popoverField` / `popoverFieldBorder`).
  */
-export type SearchInputAppearance = "field" | "bare" | "filled";
+export type SearchInputAppearance = "field" | "bare" | "filled" | "menu";
 
 /** What `filled` changes on the `field` box: the well, and how focus shows. */
 const FILLED_INPUT =
   "border-transparent bg-muted dark:bg-muted placeholder:text-faint-foreground focus:bg-background dark:focus:bg-background focus-visible:ring-0";
+
+/** The `menu` field's box: a panel row's height, corners and label text
+ * (its inline geometry is the `menu-field` utility's). */
+const MENU_INPUT = "h-(--panel-row-h) rounded-panel-row text-label font-normal";
 
 // The `field` appearance is a compact field by construction: it declares the
 // `sm` control size itself (as `Bar` does), so its height still follows the
@@ -50,6 +60,10 @@ export type SearchInputProps = Omit<
     appearance?: SearchInputAppearance;
     /** The `<input>` element — lets a host focus the field (e.g. on `/`). */
     ref?: React.Ref<HTMLInputElement>;
+    /** Draw the field through an input that owns the query itself (a headless
+     * library's search input, e.g. frimousse's), keeping this field's chrome.
+     * Not for `bare`. */
+    render?: React.ReactElement;
   };
 
 export function SearchInput({
@@ -113,6 +127,33 @@ export function SearchInput({
           <Kbd className={rigidClass()}>/</Kbd>
         )}
       </Line>
+    );
+  }
+
+  if (appearance === "menu") {
+    // A row's geometry, not a field's: `menu-field` bleeds the box to a row's
+    // fill and places the glyph, the text and the clear button on the rows'
+    // icon column and label rail (see app.css).
+    return (
+      <div className={cn("menu-field", wrapperClassName)}>
+        <span data-menu-field-glyph="" className="text-faint-foreground">
+          <Icon icon={searchIcon} className="icon-auto" aria-hidden />
+        </span>
+        <Input className={cn(MENU_INPUT, className)} {...props} />
+        {hasValue && (
+          <span data-menu-field-clear="">
+            <button
+              type="button"
+              onClick={handleClear}
+              className="rounded-sm text-faint-foreground hover:text-foreground focus:outline-none"
+              tabIndex={-1}
+              aria-label="Clear filter"
+            >
+              <Icon icon={closeIcon} className="icon-auto" />
+            </button>
+          </span>
+        )}
+      </div>
     );
   }
 

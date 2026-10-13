@@ -4379,7 +4379,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "places-map"
               - `GeoMap.Pin` → `SavedPlacePin`
               - `GeoMap.Cluster` → `SavedPlaceCluster`
-            - Uses: 63 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 64 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `apps/places/places-core` ×8
               - `primitives/collapsible` ×5
               - `primitives/css/ui-kit` ×4
@@ -4413,6 +4413,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `primitives/persistent-draft.useDraft`
+              - `primitives/search.SearchInput`
               - `primitives/shortcuts.useSurfaceShortcuts`
               - `ui/icons.Icon`
         - **`shell`** — The Places app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the map's index pane is shown, and the app's own light-only theme, which the places app selects.
@@ -28788,7 +28789,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes: `Core.Root` → `CommandPaletteRoot`
         - Uses:
           - `primitives/css/fill.Fill`
-          - `primitives/css/fill.fillClasses`
           - `primitives/css/line.Line`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
@@ -28799,6 +28799,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.ScrollArea`
           - `primitives/dom/scroll-reveal.useRevealOnActive`
           - `primitives/overlay/tooltip.Kbd`
+          - `primitives/search.SearchInput`
           - `ui/icons.Icon`
         - Exports (types): `CommandPaletteItem`
         - Exports (values): `CommandPalette`
@@ -29472,17 +29473,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pin`
               - `pinClasses`
           - Cross-plugin:
-            - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
-              - `primitives` ×19
+            - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+              - `primitives` ×18
               - `apps` ×15
               - `page` ×9
               - `conversations` ×7
               - `apps-core` ×2
               - `tasks` ×2
-              - `ui` ×2
               - `debug/logs`
               - `reorder/editor`
               - `screenshot/draw-on-app`
+              - `ui/tab-bar`
         - **`placeholder`** — Muted text placeholder for loading, empty, and error states. Props: children, tone (muted | error).
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -31775,13 +31776,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/css/center.Center`
           - `primitives/css/grid.Grid`
-          - `primitives/css/pin.Pin`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.SectionLabel`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
           - `primitives/loading.Loading`
+          - `primitives/search.SearchInput`
           - `primitives/virtual-rows.VirtualRows`
           - `ui/icons.Icon`
         - Exports (types): `IconPickerProps`
@@ -33747,27 +33748,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SearchInput`
           - `useTextFilter`
       - Cross-plugin:
-        - Imported by:
+        - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/search/REFERENCE.md`](../plugins/primitives/plugins/search/REFERENCE.md)
+          - `apps` ×12
+          - `primitives` ×4
+          - `page` ×2
+          - `ui` ×2
           - `apps-core/surface/floating/wallpaper`
-          - `apps/browser/omnibox`
-          - `apps/browser/start-page`
-          - `apps/file-explorer/browser`
-          - `apps/mail/search`
-          - `apps/sonata/sources/ultimate-guitar`
-          - `apps/sonata/track-mixer`
-          - `apps/studio/compositions/contributors`
-          - `apps/studio/compositions/entry-points`
-          - `apps/studio/contributions`
-          - `apps/studio/graph`
-          - `apps/website/pages/apps`
           - `conversations/conversation-view/dependencies`
           - `debug/read-set`
-          - `page/page-link`
-          - `page/tags`
-          - `primitives/data-view`
-          - `primitives/tree`
           - `search/quick-find`
-          - `ui/theme-engine/theme-customizer`
     - **`section-card`** — Titled collapsible card primitive: Card chrome + a SectionHeaderRow trigger (chevron, icon, title, sibling header actions) + an unmounted-while-collapsed body. The sanctioned home for the 'card whose title expands it' shape, so a stack of such cards is uniform by construction.
       - Web:
         - Uses:
@@ -38330,14 +38319,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Cross-plugin:
-        - Imported by: 305 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 304 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×64
           - `conversations` ×55
           - `page` ×40
           - `primitives` ×40
           - `fields` ×33
           - `debug` ×15
-          - `ui` ×9
+          - `ui` ×8
           - `tasks` ×7
           - `apps-core` ×6
           - `active-data` ×4
@@ -38469,12 +38458,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `primitives/css/center.Center`
               - `primitives/css/fill.fillClasses`
-              - `primitives/css/pin.Pin`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.SectionLabel`
               - `primitives/css/ui-kit.cn`
               - `primitives/loading.Loading`
-              - `ui/icons.Icon`
+              - `primitives/search.SearchInput`
             - Exports (types):
               - `EmojiPickerLeadingCategory`
               - `EmojiPickerProps`

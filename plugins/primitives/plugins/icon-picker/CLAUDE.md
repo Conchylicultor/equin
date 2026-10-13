@@ -72,13 +72,13 @@ host owns its own inset, through `className`.
   - Uses:
     - `primitives/css/center.Center`
     - `primitives/css/grid.Grid`
-    - `primitives/css/pin.Pin`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/loading.Loading`
+    - `primitives/search.SearchInput`
     - `primitives/virtual-rows.VirtualRows`
     - `ui/icons.Icon`
   - Exports (types): `IconPickerProps`

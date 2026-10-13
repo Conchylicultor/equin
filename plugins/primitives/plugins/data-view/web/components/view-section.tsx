@@ -254,7 +254,7 @@ function SectionRootPanel(props: {
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             placeholder={searchPlaceholder}
-            appearance="field"
+            appearance="menu"
           />
         }
       />
