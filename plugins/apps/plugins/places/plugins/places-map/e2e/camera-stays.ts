@@ -57,6 +57,11 @@ await withBrowser(async (h) => {
   const box = await map.boundingBox();
   if (box === null) throw new Error("no map on the page");
 
+  // Start from no tag filter: the view's filter is saved, so a previous
+  // session's picks would otherwise leak into the steps below.
+  const clear = page.getByRole("button", { name: "Clear", exact: true });
+  if (await clear.isVisible()) await clear.click();
+
   // The user's own framing: zoom out a few notches over the map's middle.
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   for (let i = 0; i < 3; i++) {
