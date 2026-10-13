@@ -5,7 +5,10 @@ import {
 import {
   createContext,
   useContext,
+  useLayoutEffect,
   useMemo,
+  useRef,
+  useState,
   type ComponentProps,
   type ReactNode,
 } from "react";
@@ -145,32 +148,130 @@ export function CollapsibleTrigger({
   );
 }
 
-export interface CollapsibleContentProps extends ComponentProps<"div"> {
-  forceMount?: boolean;
-}
+export interface CollapsibleContentProps extends ComponentProps<"div"> {}
 
+/** The fold / unfold tween: the content's height and opacity, and the
+ *  chevron's quarter turn (`duration-200`), on one clock. */
+const FOLD_MS = 200;
+/** Fast out, soft landing — the content arrives decisively and settles. */
+const FOLD_EASING = "cubic-bezier(0.2, 0, 0, 1)";
+
+/**
+ * The content, while open — and, after a close, until its fold-away has run.
+ *
+ * The motion lives on a wrapper the primitive owns, never on the caller's box:
+ * the caller's `className` (padding, a border, a rule) stays on the inner box,
+ * so a fold tweens the whole of it down to nothing rather than stopping at its
+ * padding and then jumping. Only a change of `open` after mount animates —
+ * content that starts open appears as it always did, so a page full of open
+ * sections does not unfold on load.
+ */
 export function CollapsibleContent({
   className,
   children,
-  forceMount,
   ...props
 }: CollapsibleContentProps) {
   const { open, contentId } = useCtx();
+  const { ref, present } = useFoldMotion(open);
 
-  if (!forceMount && !open) return null;
+  if (!present) return null;
 
   return (
     <div
+      ref={ref}
       data-slot="collapsible-content"
       data-state={open ? "open" : "closed"}
       id={contentId}
       role="region"
-      className={className}
-      {...props}
+      // Folding away: still painted, no longer there for focus or a reader.
+      inert={!open}
     >
-      {children}
+      <div className={className} {...props}>
+        {children}
+      </div>
     </div>
   );
+}
+
+/**
+ * Tweens a box's height between 0 and its natural height when `open` flips,
+ * keeping it mounted (`present`) until a close has finished. A flip mid-tween
+ * starts from where the box is, so a quick double click reverses smoothly.
+ * Under `prefers-reduced-motion` the tween has no duration — the same states,
+ * no motion.
+ */
+function useFoldMotion(open: boolean) {
+  const ref = useRef<HTMLDivElement>(null);
+  const running = useRef<Animation | null>(null);
+  const [present, setPresent] = useState(open);
+  const [prevOpen, setPrevOpen] = useState(open);
+  const [motion, setMotion] = useState<{ opening: boolean } | null>(null);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) setPresent(true);
+    setMotion({ opening: open });
+  }
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (motion === null || el === null) return;
+    const natural = el.scrollHeight;
+    // Interrupted: start from the in-flight frame. Otherwise from the far end.
+    // Only this box's own tween: a fold-away that unmounted its box leaves its
+    // (held) animation on the detached node, which a reopen must not start from.
+    const prior =
+      running.current?.effect instanceof KeyframeEffect &&
+      running.current.effect.target === el
+        ? running.current
+        : null;
+    const from = prior
+      ? {
+          height: el.getBoundingClientRect().height,
+          opacity: Number(getComputedStyle(el).opacity),
+        }
+      : {
+          height: motion.opening ? 0 : natural,
+          opacity: motion.opening ? 0 : 1,
+        };
+    prior?.cancel();
+    const reduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    el.style.overflow = "hidden";
+    const anim = el.animate(
+      [
+        { height: `${from.height}px`, opacity: from.opacity },
+        {
+          height: `${motion.opening ? natural : 0}px`,
+          opacity: motion.opening ? 1 : 0,
+        },
+      ],
+      {
+        duration: reduced ? 0 : FOLD_MS,
+        easing: FOLD_EASING,
+        // A fold-away holds its last frame (height 0) until React unmounts the
+        // box. Without it the animation's effect drops the moment it finishes,
+        // a commit before the unmount lands, and the full content paints for
+        // one frame between the collapse and its removal.
+        fill: motion.opening ? "none" : "forwards",
+      },
+    );
+    running.current = anim;
+    anim.onfinish = () => {
+      if (!motion.opening) {
+        // Stays `running`: a reopen landing before the unmount must cancel
+        // this held frame, and starts from it (height 0).
+        setPresent(false);
+        return;
+      }
+      running.current = null;
+      // Settled open: natural height again, and nothing clipped (a sticky
+      // header or a spilling popover inside must not be cut by the fold).
+      el.style.overflow = "";
+    };
+  }, [motion]);
+
+  return { ref, present };
 }
 
 export interface CollapsibleChevronProps {

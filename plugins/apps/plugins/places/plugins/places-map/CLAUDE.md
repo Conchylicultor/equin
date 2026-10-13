@@ -109,8 +109,9 @@ Picking saves (`savePlace`) and selects the place; `maps-not-configured`
     - `Pane.Register` "places-map"
     - `GeoMap.Pin` → `SavedPlacePin`
     - `GeoMap.Cluster` → `SavedPlaceCluster`
-  - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 63 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/places/places-core` ×8
+    - `primitives/collapsible` ×5
     - `primitives/css/ui-kit` ×4
     - `primitives/data-view` ×4
     - `map` ×3

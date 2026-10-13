@@ -4373,8 +4373,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "places-map"
               - `GeoMap.Pin` → `SavedPlacePin`
               - `GeoMap.Cluster` → `SavedPlaceCluster`
-            - Uses: 58 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 63 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `apps/places/places-core` ×8
+              - `primitives/collapsible` ×5
               - `primitives/css/ui-kit` ×4
               - `primitives/data-view` ×4
               - `map` ×3
@@ -28770,11 +28771,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useCollapsibleContext`
           - `useExpandAll`
       - Cross-plugin:
-        - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+        - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
           - `ui` ×9
           - `primitives` ×7
+          - `apps` ×6
           - `conversations` ×6
-          - `apps` ×5
           - `plugin-meta` ×4
           - `review` ×3
           - `build/build-logs`

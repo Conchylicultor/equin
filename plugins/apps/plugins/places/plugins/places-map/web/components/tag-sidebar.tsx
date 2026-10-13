@@ -22,6 +22,13 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import {
+  CollapsibleChevron,
+  CollapsibleContent,
+  CollapsibleProvider,
+  CollapsibleTrigger,
+  useCollapsibleContext,
+} from "@plugins/primitives/plugins/collapsible/web";
+import {
   flattenTagTree,
   tagDescendants,
   tagPlaceCounts,
@@ -44,7 +51,6 @@ import {
 import { BrandMark } from "./brand-mark";
 import { TagChip } from "./tag-chip";
 
-const chevronIcon = symbol("chevron-right");
 const checkIcon = symbol("check");
 const removeIcon = symbol("remove");
 const addIcon = symbol("add");
@@ -116,21 +122,20 @@ export function TagSidebar({
   const [open, setOpen] = useDraft("places.tag-sidebar.open", true);
 
   return (
-    // `fill`: the floating aside card hugs this column's height up to the
-    // surface's, so the tree scrolls between a header and footer that stay put.
-    <Column
-      fill
-      className="w-72"
-      header={
-        <Stack gap="sm" className="p-sm">
-          <button
-            type="button"
-            aria-expanded={open}
-            aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
-            onClick={() => setOpen(!open)}
-            className="rounded-md text-left hover:bg-hover-fill"
-          >
-            <Line className="gap-sm p-xs">
+    // One fold for the tree and the footer: both slide away together under the
+    // header, which stays (with the filter summary, so a filter never hides).
+    <CollapsibleProvider open={open} onOpenChange={setOpen}>
+      {/* `fill`: the floating aside card hugs this column's height up to the
+          surface's, so the tree scrolls between a header and footer that stay put. */}
+      <Column
+        fill
+        className="w-72"
+        header={
+          <Stack gap="sm" className="p-sm">
+            <CollapsibleTrigger
+              aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
+              className="gap-sm rounded-md p-xs hover:bg-hover-fill"
+            >
               <BrandMark />
               <Fill>
                 <Text variant="heading">Places</Text>
@@ -138,54 +143,48 @@ export function TagSidebar({
               <Text variant="count" tone="muted">
                 {places.length}
               </Text>
-              <Icon
-                icon={chevronIcon}
-                className={cn(
-                  "size-4 text-muted-foreground transition-transform",
-                  open && "rotate-90",
-                )}
+              <CollapsibleChevron className="size-4 text-muted-foreground" />
+            </CollapsibleTrigger>
+            {state.include.length + state.exclude.length > 0 ? (
+              <FilterSummary
+                include={picked(state.include)}
+                exclude={picked(state.exclude)}
+                mode={state.mode}
+                tags={tags}
+                onRemove={(id) => write(removeTag(state, id))}
+                onMode={(mode) => write({ ...state, mode })}
+                onClear={() => write({ include: [], exclude: [], mode: "any" })}
               />
-            </Line>
-          </button>
-          {state.include.length + state.exclude.length > 0 ? (
-            <FilterSummary
-              include={picked(state.include)}
-              exclude={picked(state.exclude)}
-              mode={state.mode}
+            ) : null}
+          </Stack>
+        }
+        body={
+          <CollapsibleContent>
+            <TagTree
               tags={tags}
-              onRemove={(id) => write(removeTag(state, id))}
-              onMode={(mode) => write({ ...state, mode })}
-              onClear={() => write({ include: [], exclude: [], mode: "any" })}
+              counts={counts}
+              state={state}
+              onCycle={(id) => write(cycleTag(state, id, tags))}
             />
-          ) : null}
-        </Stack>
-      }
-      body={
-        open ? (
-          <TagTree
-            tags={tags}
-            counts={counts}
-            state={state}
-            onCycle={(id) => write(cycleTag(state, id, tags))}
-          />
-        ) : undefined
-      }
-      footer={
-        open ? (
-          <Line className="gap-2xs border-t p-xs">
-            <Button variant="ghost" onClick={onNewTag}>
-              <Icon icon={addIcon} />
-              New tag
-            </Button>
-            <Fill />
-            <Button variant="ghost" onClick={onManageTags}>
-              <Icon icon={tuneIcon} />
-              Manage tags
-            </Button>
-          </Line>
-        ) : undefined
-      }
-    />
+          </CollapsibleContent>
+        }
+        footer={
+          <CollapsibleContent>
+            <Line className="gap-2xs border-t p-xs">
+              <Button variant="ghost" onClick={onNewTag}>
+                <Icon icon={addIcon} />
+                New tag
+              </Button>
+              <Fill />
+              <Button variant="ghost" onClick={onManageTags}>
+                <Icon icon={tuneIcon} />
+                Manage tags
+              </Button>
+            </Line>
+          </CollapsibleContent>
+        }
+      />
+    </CollapsibleProvider>
   );
 }
 
@@ -262,43 +261,34 @@ function TagTree(props: {
   state: SidebarState;
   onCycle: (tagId: string) => void;
 }): ReactNode {
-  const { tags, counts, state, onCycle } = props;
+  const { tags } = props;
   const [query, setQuery] = useState("");
   // Roots start open, deeper levels closed; `toggled` holds the tags whose
   // open state the user flipped from that default.
   const [toggled, setToggled] = useState<ReadonlySet<string>>(new Set());
-  const entries = useMemo(() => flattenTagTree(tags), [tags]);
-  const hasChildren = useMemo(
-    () =>
-      new Set(tags.flatMap((t) => (t.parentId === null ? [] : [t.parentId]))),
-    [tags],
-  );
-
-  const q = query.trim().toLowerCase();
-  const visible = useMemo(() => {
-    const matches = (t: PlaceTag) => t.name.toLowerCase().includes(q);
-    const isOpen = (id: string, depth: number) =>
-      q !== "" || (depth === 0) !== toggled.has(id);
-    const out: { tag: PlaceTag; depth: number; open: boolean }[] = [];
-    // A closed tag hides everything deeper than it until the walk climbs back.
-    let hideBelow = Number.POSITIVE_INFINITY;
-    for (const { tag, depth } of entries) {
-      if (depth > hideBelow) continue;
-      hideBelow = Number.POSITIVE_INFINITY;
-      if (
-        q !== "" &&
-        !matches(tag) &&
-        !tagDescendants(tag.id, tags).some(matches)
-      ) {
-        hideBelow = depth;
-        continue;
-      }
-      const open = isOpen(tag.id, depth);
-      out.push({ tag, depth, open });
-      if (!open) hideBelow = depth;
+  // Each tag's children in tree order (the flattened walk lists siblings in
+  // order, so appending as it goes keeps it).
+  const childrenOf = useMemo(() => {
+    const out = new Map<string | null, PlaceTag[]>();
+    for (const { tag } of flattenTagTree(tags)) {
+      const siblings = out.get(tag.parentId) ?? [];
+      siblings.push(tag);
+      out.set(tag.parentId, siblings);
     }
     return out;
-  }, [entries, tags, q, toggled]);
+  }, [tags]);
+
+  const q = query.trim().toLowerCase();
+  // While searching: only tags matching or holding a match, all unfolded.
+  const shown = useMemo(() => {
+    if (q === "") return null;
+    const matches = (t: PlaceTag) => t.name.toLowerCase().includes(q);
+    return new Set(
+      tags
+        .filter((t) => matches(t) || tagDescendants(t.id, tags).some(matches))
+        .map((t) => t.id),
+    );
+  }, [tags, q]);
 
   const toggle = (id: string) =>
     setToggled((prev) => {
@@ -308,6 +298,17 @@ function TagTree(props: {
       return next;
     });
 
+  const branch: TagBranchContext = {
+    ...props,
+    childrenOf,
+    shown,
+    isOpen: (id, depth) => shown !== null || (depth === 0) !== toggled.has(id),
+    onToggle: toggle,
+  };
+  const roots = (childrenOf.get(null) ?? []).filter(
+    (t) => shown === null || shown.has(t.id),
+  );
+
   return (
     <Stack gap="2xs" className="px-xs pb-sm">
       <Input
@@ -316,27 +317,72 @@ function TagTree(props: {
         placeholder="Find a tag…"
         aria-label="Find a tag"
       />
-      {visible.length === 0 ? (
+      {roots.length === 0 ? (
         <Text variant="caption" tone="faint" className="px-sm">
           No tag matches “{query}”.
         </Text>
       ) : null}
-      {visible.map(({ tag, depth, open }) => (
-        <TagTreeRow
-          key={tag.id}
-          tag={tag}
-          tags={tags}
-          depth={depth}
-          open={open}
-          leaf={!hasChildren.has(tag.id)}
-          count={counts.get(tag.id) ?? 0}
-          filterState={tagFilterState(state, tag.id)}
-          partial={hasPickedDescendant(state, tag.id, tags)}
-          onToggle={() => toggle(tag.id)}
-          onCycle={() => onCycle(tag.id)}
-        />
+      {roots.map((tag) => (
+        <TagBranch key={tag.id} tag={tag} depth={0} ctx={branch} />
       ))}
     </Stack>
+  );
+}
+
+/** What every branch of the tree reads, handed down unchanged. */
+interface TagBranchContext {
+  tags: readonly PlaceTag[];
+  counts: ReadonlyMap<string, number>;
+  state: SidebarState;
+  onCycle: (tagId: string) => void;
+  childrenOf: ReadonlyMap<string | null, readonly PlaceTag[]>;
+  /** The tags a search keeps, or null when not searching. */
+  shown: ReadonlySet<string> | null;
+  isOpen: (tagId: string, depth: number) => boolean;
+  onToggle: (tagId: string) => void;
+}
+
+/** A tag's row and, folding under it, its children. */
+function TagBranch(props: {
+  tag: PlaceTag;
+  depth: number;
+  ctx: TagBranchContext;
+}): ReactNode {
+  const { tag, depth, ctx } = props;
+  const children = ctx.childrenOf.get(tag.id) ?? [];
+  const visible = children.filter(
+    (t) => ctx.shown === null || ctx.shown.has(t.id),
+  );
+  return (
+    <CollapsibleProvider
+      open={ctx.isOpen(tag.id, depth)}
+      onOpenChange={() => ctx.onToggle(tag.id)}
+    >
+      <TagTreeRow
+        tag={tag}
+        tags={ctx.tags}
+        depth={depth}
+        leaf={children.length === 0}
+        count={ctx.counts.get(tag.id) ?? 0}
+        filterState={tagFilterState(ctx.state, tag.id)}
+        partial={hasPickedDescendant(ctx.state, tag.id, ctx.tags)}
+        onCycle={() => ctx.onCycle(tag.id)}
+      />
+      {visible.length > 0 ? (
+        <CollapsibleContent>
+          <Stack gap="2xs" className="pt-2xs">
+            {visible.map((child) => (
+              <TagBranch
+                key={child.id}
+                tag={child}
+                depth={depth + 1}
+                ctx={ctx}
+              />
+            ))}
+          </Stack>
+        </CollapsibleContent>
+      ) : null}
+    </CollapsibleProvider>
   );
 }
 
@@ -344,33 +390,32 @@ function TagTreeRow(props: {
   tag: PlaceTag;
   tags: readonly PlaceTag[];
   depth: number;
-  open: boolean;
   leaf: boolean;
   count: number;
   filterState: TagFilterState;
   partial: boolean;
-  onToggle: () => void;
   onCycle: () => void;
 }): ReactNode {
-  const { tag, tags, depth, open, leaf, count, filterState, partial } = props;
+  const { tag, tags, depth, leaf, count, filterState, partial } = props;
+  // The branch's fold: this row's disclosure is its trigger.
+  const fold = useCollapsibleContext();
+  if (!fold) throw new Error("TagTreeRow renders inside its TagBranch's fold");
   return (
     <Line className="gap-2xs" style={{ paddingLeft: depth * INDENT_PX }}>
       {/* The disclosure is its own button beside the row, never inside it:
           the row is itself the include / exclude button. */}
       <button
         type="button"
-        aria-label={open ? `Collapse ${tag.name}` : `Expand ${tag.name}`}
-        aria-expanded={open}
-        onClick={props.onToggle}
+        aria-label={fold.open ? `Collapse ${tag.name}` : `Expand ${tag.name}`}
+        aria-expanded={fold.open}
+        aria-controls={leaf ? undefined : fold.contentId}
+        onClick={fold.toggle}
         className={cn(
           "size-4 rounded-sm text-muted-foreground hover:bg-hover-fill hover:text-foreground",
           leaf && "invisible",
         )}
       >
-        <Icon
-          icon={chevronIcon}
-          className={cn("size-3.5 transition-transform", open && "rotate-90")}
-        />
+        <CollapsibleChevron className="size-3.5" />
       </button>
       <Fill>
         <Row
