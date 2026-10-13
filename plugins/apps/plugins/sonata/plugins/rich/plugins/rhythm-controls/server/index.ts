@@ -9,7 +9,7 @@ export { songRhythm } from "./internal/tables";
 
 export default {
   description:
-    "Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern, figuration and HandVoicing + the groove preset it was applied from). Serves it as a per-song lookup collection. Server registration of the global groove-presets config.",
+    "Owns the sonata_songs_ext_rhythm side-table: per-song groove — the song's accompaniment (a bass and a chord RhythmPattern, figuration and HandVoicing, whether a chord change restarts the rhythm, and the groove preset it was applied from). Serves it as a per-song lookup collection. Server registration of the global groove-presets config.",
   httpRoutes: {
     [setRhythmEndpoint.route]: handleSetRhythm,
   },

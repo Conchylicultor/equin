@@ -27,7 +27,6 @@ export {
   DEFAULT_BASS_FIGURATION_ID,
   DEFAULT_CHORD_FIGURATION_ID,
 } from "./figuration";
-export { voicingConfig } from "./config";
 export type { HandVoicing } from "./hand-voicing";
 export {
   DEFAULT_BASS_VOICING,
@@ -36,5 +35,16 @@ export {
   MAX_HAND_OCTAVE,
   MIN_HAND_OCTAVE,
 } from "./hand-voicing";
-export type { ReVoiceInclude, ReVoiceOptions } from "./revoice";
-export { reVoiceChords, CHORD_TRACK, CHORD_BASS_TRACK } from "./revoice";
+export type {
+  GrooveCycle,
+  GrooveCycleOptions,
+  ReVoiceGroove,
+  ReVoiceInclude,
+  ReVoiceOptions,
+} from "./revoice";
+export {
+  grooveCycles,
+  reVoiceChords,
+  CHORD_TRACK,
+  CHORD_BASS_TRACK,
+} from "./revoice";

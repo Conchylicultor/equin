@@ -3,66 +3,45 @@ import {
   useLibrarySong,
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import {
-  ChordModeRow,
+  ChordModeSwitch,
   useChordModeAvailable,
 } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/chord-mode/web";
-import {
-  GrooveSwitch,
-  RhythmControls,
-  useGroove,
-} from "@plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/web";
-import { VoicingControls } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/voicing-controls/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Separator } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { RhythmControls } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 /**
- * Offered when chord mode can be flipped OR the song's chords are voiced. Both
- * hooks run unconditionally (rules of hooks).
+ * Offered for a library song (a file document's accompaniment is the default
+ * one, not editable) when chord mode can be flipped OR the song's chords are
+ * voiced. Every hook runs unconditionally (rules of hooks).
  */
 export function useAccompanimentAvailable(): boolean {
+  const song = useLibrarySong();
   const chordModeAvailable = useChordModeAvailable();
   const voiced = useHasVoicedChords();
-  return chordModeAvailable || voiced;
-}
-
-/** Header action: the groove switch, only while there are voiced chords to groove. */
-export function AccompanimentActions() {
-  const voiced = useHasVoicedChords();
-  return voiced ? <GrooveSwitch /> : null;
+  return song.kind === "library" && (chordModeAvailable || voiced);
 }
 
 /**
- * The Accompaniment body: the chord-mode row, then (when the song's chords are
- * voiced) EITHER the groove body — whose hands carry their own octave and
- * voice-leading — OR, while the groove is off, the block-chord voicing rows.
- * Never both: the two voice the chords on different paths, so showing both
- * would offer two Octave controls of which one does nothing.
+ * Header action: the accompaniment's on/off — only for a song with detected
+ * chords (a MIDI song), where it is chord mode. A song with authored chords
+ * always plays its accompaniment: no switch.
+ */
+export function AccompanimentActions() {
+  const chordModeAvailable = useChordModeAvailable();
+  return chordModeAvailable ? <ChordModeSwitch /> : null;
+}
+
+/**
+ * The Accompaniment body: the groove editor while the song's chords are
+ * voiced — always for authored chords, and for detected chords while the
+ * header switch (chord mode) is on. Off, a line says what the switch does.
  */
 export function AccompanimentSection() {
-  const chordModeAvailable = useChordModeAvailable();
   const voiced = useHasVoicedChords();
-  const part = useVoicedPart();
-
+  if (voiced) return <RhythmControls />;
   return (
-    <Stack gap="md">
-      {chordModeAvailable && <ChordModeRow />}
-      {chordModeAvailable && voiced && <Separator />}
-      {voiced && part === "groove" && <RhythmControls />}
-      {voiced && part === "voicing" && <VoicingControls />}
-    </Stack>
+    <Text as="p" variant="body" tone="muted">
+      Turn on to play the song's detected chords as an accompaniment.
+    </Text>
   );
-}
-
-/**
- * Which voiced part the body shows. A file document has no groove, so its
- * chords are block chords: the voicing rows. A library song shows the groove
- * body while its groove is on — or not known yet (the body's loading / error
- * state) — and the voicing rows once it is known to be off.
- */
-function useVoicedPart(): "groove" | "voicing" {
-  const song = useLibrarySong();
-  const groove = useGroove();
-  if (song.kind === "none") return "voicing";
-  if (groove.status !== "ready") return "groove";
-  return groove.data.enabled ? "groove" : "voicing";
 }

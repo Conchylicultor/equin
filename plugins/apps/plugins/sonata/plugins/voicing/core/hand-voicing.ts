@@ -12,8 +12,8 @@
  *  - `doubleOctave` — every struck pitch also sounds an octave above (a bass C1
  *    plays C1 + C2), whatever the figuration.
  *
- * Pure data: the engine (`voicing.ts`) reads it on the groove path only; the
- * block-chord path keeps the global `voicingConfig`.
+ * Pure data: the engine (`voicing.ts`) reads it on the groove path — the only
+ * path `reVoiceChords` takes.
  */
 export interface HandVoicing {
   enabled: boolean;

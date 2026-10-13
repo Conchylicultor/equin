@@ -8,7 +8,6 @@ export const handleSetRhythm = implement(
     // Upsert the per-song groove. The FK to sonata_songs makes a write for a
     // non-existent song fail loudly.
     await songRhythm.upsert(params.id, {
-      enabled: body.enabled,
       bass: body.bass,
       chord: body.chord,
       bassPatternId: body.bassPatternId,
@@ -16,6 +15,7 @@ export const handleSetRhythm = implement(
       bassVoicing: body.bassVoicing,
       chordVoicing: body.chordVoicing,
       groovePresetId: body.groovePresetId,
+      restartOnChordChange: body.restartOnChordChange,
     });
   },
 );

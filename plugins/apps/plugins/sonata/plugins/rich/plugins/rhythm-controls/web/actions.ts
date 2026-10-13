@@ -5,11 +5,11 @@ import type { HandVoicing } from "@plugins/apps/plugins/sonata/plugins/voicing/c
 import { setRhythmEndpoint } from "../shared/endpoints";
 
 /**
- * The persisted groove: the toggle, both hands' patterns, their figuration ids
- * and voicings, and the preset it was applied from.
+ * The persisted groove: both hands' patterns, their figuration ids and
+ * voicings, whether a chord change restarts the necklace, and the preset it was
+ * applied from.
  */
 export interface RhythmGroove {
-  enabled: boolean;
   bass: RhythmPattern;
   chord: RhythmPattern;
   bassPatternId: string;
@@ -18,6 +18,7 @@ export interface RhythmGroove {
   chordVoicing: HandVoicing;
   /** The groove preset this groove was applied from; `null` when none. */
   groovePresetId: string | null;
+  restartOnChordChange: boolean;
 }
 
 /**
@@ -58,7 +59,6 @@ export function useSaveRhythm(): (
       mutate({
         params: { id: songId },
         body: {
-          enabled: groove.enabled,
           bass: wirePattern(groove.bass),
           chord: wirePattern(groove.chord),
           bassPatternId: groove.bassPatternId,
@@ -66,6 +66,7 @@ export function useSaveRhythm(): (
           bassVoicing: groove.bassVoicing,
           chordVoicing: groove.chordVoicing,
           groovePresetId: groove.groovePresetId,
+          restartOnChordChange: groove.restartOnChordChange,
         },
       }),
     [mutate],

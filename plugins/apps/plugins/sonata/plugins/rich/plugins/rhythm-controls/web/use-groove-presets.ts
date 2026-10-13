@@ -40,6 +40,7 @@ function contentOf(from: GrooveFields) {
     bassFigurationId: from.bassFigurationId,
     chordVoicing: from.chordVoicing,
     bassVoicing: from.bassVoicing,
+    restartOnChordChange: from.restartOnChordChange,
   };
 }
 

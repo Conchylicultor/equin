@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-apps-sonata-rich-voicing-controls",
-  "description": "Sonata Section: chord-voicing controls (realistic toggle, strategy picker, octave) — shown only for songs with authored chord annotations.",
-  "private": true,
-  "version": "0.0.1"
-}

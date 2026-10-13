@@ -5196,7 +5196,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SonataDocument.SongSetting` ← `apps.sonata.track-mixer`
               - `SonataDocument.SongSetting` ← `apps.sonata.transpose`
             - Uses:
-              - `config_v2.useConfig`
               - `primitives/scope/scoped-store.defineScopedStore`
               - `primitives/slot-render.defineMountSlot`
             - Exports (types):
@@ -5210,6 +5209,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SongSettingKey`
             - Exports (values):
               - `chordModeSetting`
+              - `defaultGroove`
               - `defineSongSetting`
               - `grooveSetting`
               - `keyAutoDetectSetting`
@@ -6027,21 +6027,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `toggleOnset`
         - **`rich`** — Rich annotation umbrella for Sonata: chord analyzer, chord overlay, chord readout.
           - Plugins:
-            - **`accompaniment`** — Sonata Section: Accompaniment — composes the chord-mode row ('Play the detected chords'), the groove (GrooveSwitch in the header, RhythmControls in the body while it is on) and, while the groove is off, the block-chord voicing rows (VoicingControls) into one section, available when chord mode can be offered or the song's chords are voiced.
+            - **`accompaniment`** — Sonata Section: Accompaniment — the song's chords played through its groove (RhythmControls in the body). A song with authored chords always plays it; a song with detected chords (MIDI) turns it on and off with the chord-mode switch (ChordModeSwitch) in the header. Available for a library song when chord mode can be offered or the song's chords are voiced.
               - Web:
                 - Contributes: `Sonata.Section` "Accompaniment" → `AccompanimentSection`
                 - Uses:
                   - `apps/sonata/document.useHasVoicedChords`
                   - `apps/sonata/document.useLibrarySong`
-                  - `apps/sonata/rich/chord-mode.ChordModeRow`
+                  - `apps/sonata/rich/chord-mode.ChordModeSwitch`
                   - `apps/sonata/rich/chord-mode.useChordModeAvailable`
-                  - `apps/sonata/rich/rhythm-controls.GrooveSwitch`
                   - `apps/sonata/rich/rhythm-controls.RhythmControls`
-                  - `apps/sonata/rich/rhythm-controls.useGroove`
-                  - `apps/sonata/rich/voicing-controls.VoicingControls`
                   - `apps/sonata/shell.Sonata`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/ui-kit.Separator`
+                  - `primitives/css/text.Text`
             - **`chord-analyzer`** — Sonata Analyzer: derives chord annotations from the score's notes. Slices the score at every onset, runs interval-set chord detection over each window, and emits coalesced source:"derived" chord annotations.
               - Web:
                 - Contributes: `SonataDocument.Analyzer` "chord-analyzer"
@@ -6090,7 +6086,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
                   - `primitives/css/spacing.Stack`
-            - **`chord-mode`** — Sonata accompaniment part: per-song chord mode. Exports the 'Play the detected chords' switch row (ChordModeRow) and its gate (useChordModeAvailable) for the Accompaniment section to compose: on, the song document voices the song's detected chords onto the Chords / Bass tracks (same voicing + rhythm options as a chord grid) and the original tracks are turned off in the Tracks card, where any of them can be re-enabled. Persists per song and registers with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's detected chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves it as a per-song lookup collection.
+            - **`chord-mode`** — Sonata accompaniment part: per-song chord mode. Exports the Accompaniment on/off switch of a song with detected chords (ChordModeSwitch) and its gate (useChordModeAvailable) for the Accompaniment section's header: on, the song document voices the song's detected chords onto the Chords / Bass tracks (through the same groove as a chord grid) and the original tracks are turned off in the Tracks card, where any of them can be re-enabled. Persists per song and registers with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's detected chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves it as a per-song lookup collection.
               - Web:
                 - Contributes: `SonataDocument.SongSetting` "chord-mode-sync" → `ChordModeObserver`
                 - Uses:
@@ -6106,14 +6102,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/track-mixer.setTracksActive`
                   - `infra/endpoints.useEndpointMutation`
                   - `network/live.useLiveRow`
-                  - `primitives/css/spacing.Stack`
                   - `primitives/css/switch.Switch`
-                  - `primitives/css/text.Text`
                   - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
                   - `primitives/overlay/tooltip.WithTooltip`
                 - Exports (values):
-                  - `ChordModeRow`
+                  - `ChordModeSwitch`
                   - `useChordModeAvailable`
                   - `useSaveChordMode`
               - Server:
@@ -6266,14 +6260,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `fitVoicings`
                   - `READOUT_WINDOW`
-            - **`rhythm-controls`** — Sonata accompaniment part: the per-song groove. Exports its on/off switch (GrooveSwitch) and its body (RhythmControls: a groove preset picker, a left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, and one expanded block per hand: on/off chip in its track's colour, pattern, rhythm, octave, voice-leading, rotate, steps, octave doubling) for the Accompaniment section to compose; contributes no section of its own. Persists the groove per song and feeds the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the global groove presets (config sonata groove-presets: useGroovePresets) and the per-song preset provenance useGroove carries. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern, figuration and HandVoicing + the groove preset it was applied from). Serves it as a per-song lookup collection. Server registration of the global groove-presets config.
+            - **`rhythm-controls`** — Sonata accompaniment part: the per-song groove — the song's accompaniment, through which every voiced chord is played. Exports its body (RhythmControls: a groove preset picker, a left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, a Restart on chord change switch, and one expanded block per hand: on/off chip in its track's colour, pattern, rhythm, octave, voice-leading, rotate, steps, octave doubling) for the Accompaniment section to compose; contributes no section of its own. Persists the groove per song and feeds the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the global groove presets (config sonata groove-presets: useGroovePresets) and the per-song preset provenance useGroove carries. Owns the sonata_songs_ext_rhythm side-table: per-song groove — the song's accompaniment (a bass and a chord RhythmPattern, figuration and HandVoicing, whether a chord change restarts the rhythm, and the groove preset it was applied from). Serves it as a per-song lookup collection. Server registration of the global groove-presets config.
               - Web:
                 - Contributes:
                   - `ConfigV2.WebRegister` "groove-presets"
                   - `SonataDocument.SongSetting` "rhythm-sync" → `RhythmObserver`
-                - Uses: 54 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md)
+                - Uses: 56 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md)
                   - `primitives/css/ui-kit` ×10
-                  - `apps/sonata/document` ×7
+                  - `apps/sonata/document` ×9
                   - `primitives/live-state` ×6
                   - `apps/sonata/primitives/rhythm-circle` ×3
                   - `config_v2` ×3
@@ -6307,7 +6301,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `grooveEquals`
                   - `grooveSummary`
-                  - `GrooveSwitch`
                   - `presetGroove`
                   - `RhythmControls`
                   - `useGroove`
@@ -6328,19 +6321,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `songRhythm`
                 - Resources: `sonata-rhythm:rows` (keyed, point)
                 - Routes: `POST /api/sonata/songs/:id/rhythm`
-              - Cross-plugin:
-                - Imported by: `apps/sonata/rich/accompaniment`
-            - **`voicing-controls`** — Sonata accompaniment part: the chord-voicing rows (Voice-leading switch, Octave − C4 + stepper) writing the global voicing config. Contributes no section of its own — the Accompaniment section composes it, gated on the song document's useHasVoicedChords.
-              - Web:
-                - Uses:
-                  - `config_v2.useConfig`
-                  - `config_v2.useSetConfig`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/switch.Switch`
-                  - `primitives/css/text.Text`
-                  - `primitives/icon-button.IconButton`
-                  - `primitives/overlay/tooltip.WithTooltip`
-                - Exports (values): `VoicingControls`
               - Cross-plugin:
                 - Imported by: `apps/sonata/rich/accompaniment`
         - **`score`**
@@ -7099,13 +7079,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/css/ui-kit.cn`
               - `ui/icons.Icon`
-        - **`voicing`** — Web registration of the Sonata voicing config (realistic voice-leading, strategy, octave). Server registration of the Sonata voicing config (realistic voice-leading, strategy, octave).
-          - Web:
-            - Contributes: `ConfigV2.WebRegister` "config"
-            - Uses: `config_v2.ConfigV2`
-          - Server:
-            - Contributes: `ConfigV2.Register` "config"
-            - Uses: `config_v2.ConfigV2`
+        - **`voicing`** — Voicing strategies for Sonata: turn timed chord events into performed notes. Shared by every chord-authoring source (chord-grid, Ultimate Guitar, …) so chord-to-notes voicing has one home.
           - Core:
             - Uses:
               - `apps/sonata/rhythm.effectiveOnsets`
@@ -7113,17 +7087,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/score.scoreEndBeat`
               - `apps/sonata/theory.chordPitches`
               - `apps/sonata/theory.nearestVoicing`
-              - `config_v2.defineConfig`
-              - `fields/bool/config.boolField`
-              - `fields/float/config.floatField`
             - Exports (types):
               - `ChordEvent`
               - `Degree`
               - `Figuration`
               - `FigurationContext`
+              - `GrooveCycle`
+              - `GrooveCycleOptions`
               - `HandRole`
               - `HandVoicing`
               - `Register`
+              - `ReVoiceGroove`
               - `ReVoiceInclude`
               - `ReVoiceOptions`
               - `StruckTone`
@@ -7138,12 +7112,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FIGURATIONS`
               - `figurationsForHand`
               - `findFiguration`
+              - `grooveCycles`
               - `handVoicingEquals`
               - `MAX_HAND_OCTAVE`
               - `MIN_HAND_OCTAVE`
               - `reVoiceChords`
               - `voiceChords`
-              - `voicingConfig`
     - **`studio`** — Plugin inspection and visualization; home for the plugin graph and contribution tables.
       - Plugins:
         - **`compositions`** — Compositions pane: list named compositions and open a composition's detail pane, whose sections (draft, closure, release) are contributed by sub-plugins.
@@ -9907,8 +9881,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 85 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×85
+    - Slot contributors: 84 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×84
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -10067,8 +10041,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 104 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `apps` ×24
+    - Imported by: 101 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `apps` ×21
       - `debug` ×14
       - `backup` ×13
       - `conversations` ×12
@@ -17622,9 +17596,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 23 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 22 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `debug` ×12
-              - `apps` ×5
+              - `apps` ×4
               - `conversations` ×2
               - `tasks` ×2
               - `apps-core/surface/floating`
@@ -18110,7 +18084,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/sonata/library`
               - `apps/sonata/track-mixer`
-              - `apps/sonata/voicing`
               - `debug/live-state-churn/monitor`
               - `debug/queue-health`
               - `debug/sentinel`
@@ -29721,8 +29694,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 389 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×98
+            - Imported by: 386 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×95
               - `conversations` ×61
               - `primitives` ×50
               - `debug` ×34
@@ -29890,7 +29863,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/recording`
               - `apps/sonata/rich/chord-mode`
               - `apps/sonata/rich/rhythm-controls`
-              - `apps/sonata/rich/voicing-controls`
               - `apps/website/improve`
               - `config_v2/fields`
               - `debug/queue`
@@ -29916,8 +29888,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 358 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×93
+            - Imported by: 357 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×92
               - `conversations` ×70
               - `primitives` ×40
               - `debug` ×32
@@ -30172,9 +30144,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 398 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 397 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×101
-              - `apps` ×78
+              - `apps` ×77
               - `conversations` ×52
               - `page` ×25
               - `debug` ×23
@@ -31783,8 +31755,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `IconButtonProps`
         - Exports (values): `IconButton`
       - Cross-plugin:
-        - Imported by: 113 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×43
+        - Imported by: 112 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×42
           - `primitives` ×19
           - `conversations` ×15
           - `page` ×7
@@ -33103,9 +33075,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TooltipDoc`
               - `WithTooltip`
           - Cross-plugin:
-            - Imported by: 47 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
+            - Imported by: 46 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
               - `primitives` ×15
-              - `apps` ×11
+              - `apps` ×10
               - `page` ×6
               - `conversations` ×5
               - `apps-core` ×3

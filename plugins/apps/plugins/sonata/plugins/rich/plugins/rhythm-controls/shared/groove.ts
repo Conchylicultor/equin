@@ -12,8 +12,9 @@ import type { GroovePreset } from "./groove-presets";
 /**
  * A song's groove content plus its provenance — each hand's rhythm necklace
  * (*when*), tone-order figuration id (*what*) and voicing (on/off, octave,
- * voice-leading, octave doubling), and the preset it was last
- * applied from (`null`: never applied from one). The `commit` payload: callers
+ * voice-leading, octave doubling), whether a chord change starts the necklace
+ * over, and the preset it was last applied from (`null`: never applied from
+ * one). The `commit` payload: callers
  * spread the resolved groove and override one field.
  */
 export interface GrooveFields {
@@ -24,6 +25,7 @@ export interface GrooveFields {
   chordFigurationId: string;
   bassVoicing: HandVoicing;
   chordVoicing: HandVoicing;
+  restartOnChordChange: boolean;
 }
 
 /**
@@ -43,13 +45,14 @@ function patternEquals(a: RhythmPattern, b: RhythmPattern): boolean {
 
 /**
  * Whether two grooves sound the same: both hands' subdivisions and effective
- * onsets, figuration ids and voicings. Provenance is ignored (a pattern's
+ * onsets, figuration ids and voicings, and whether chord changes restart. Provenance is ignored (a pattern's
  * `presetId`, a groove's `presetId`), and so is how a rotation is represented
  * (`rotation: 2` over raw onsets vs. the pre-rotated onsets) — the basis of a
  * preset's "edited" mark.
  */
 export function grooveEquals(a: GrooveContent, b: GrooveContent): boolean {
   return (
+    a.restartOnChordChange === b.restartOnChordChange &&
     a.bassFigurationId === b.bassFigurationId &&
     a.chordFigurationId === b.chordFigurationId &&
     handVoicingEquals(a.bassVoicing, b.bassVoicing) &&
@@ -80,5 +83,6 @@ export function presetGroove(p: GroovePreset): GrooveFields {
     chordFigurationId: p.chordFigurationId,
     bassVoicing: p.bassVoicing,
     chordVoicing: p.chordVoicing,
+    restartOnChordChange: p.restartOnChordChange,
   };
 }

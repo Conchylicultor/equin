@@ -5,16 +5,6 @@ import {
   useSongSetting,
   useWriteSongSetting,
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
-import {
-  defaultBassPattern,
-  defaultChordPattern,
-} from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
-import {
-  DEFAULT_BASS_FIGURATION_ID,
-  DEFAULT_BASS_VOICING,
-  DEFAULT_CHORD_FIGURATION_ID,
-  DEFAULT_CHORD_VOICING,
-} from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
 import {
   combineResources,
@@ -23,6 +13,7 @@ import {
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { GrooveFields } from "../shared/groove";
+import { DEFAULT_GROOVE_PRESET_ID } from "../shared/groove-presets";
 import { rhythms } from "../shared/resources";
 import { useSaveRhythm } from "./actions";
 import {
@@ -32,16 +23,13 @@ import {
   usePendingPreset,
 } from "./pending-preset";
 
-/** A known groove: the resolved fields, whether it is on, and its writer. */
+/** A known groove: the resolved fields and their writer. */
 export type GrooveState = GrooveFields & {
-  /** Enabled ⇔ the loaded song's `grooveSetting` holds a groove. */
-  enabled: boolean;
   /**
-   * Optimistically drive playback (the setting) and persist. Pass `on=false`
-   * to disable (setting cleared to `null`); the observer re-affirms the same
-   * value on the next push.
+   * Optimistically drive playback (the setting) and persist; the observer
+   * re-affirms the same value on the next push.
    */
-  commit: (next: GrooveFields, on: boolean) => void;
+  commit: (next: GrooveFields) => void;
 };
 
 /**
@@ -53,16 +41,15 @@ export type GrooveState = GrooveFields & {
 export type Groove = ResourceResult<GrooveState>;
 
 /**
- * Single source of the open song's groove, shared by the section BODY
- * (`RhythmControls`) and its header switch (`GrooveSwitch`), so the on/off
- * switch in the collapsed section and the open body read and write
- * the exact same state.
+ * Single source of the open song's groove for the accompaniment body
+ * (`RhythmControls`) and its preset picker.
  *
- * Two halves, both needed before anything is shown: the setting carries
- * whether the groove is on and its optimistic live value (instant playback),
- * and the song's `rhythms` row is display truth (it remembers both patterns,
- * figuration ids and voicings even while the groove is off). An absent row is a song whose
- * groove was never configured: the default patterns ARE its patterns.
+ * Two halves, both needed before anything is shown: the setting carries the
+ * groove's content and its optimistic live value (instant playback) — the
+ * observer settles it from the song's row, or the default accompaniment for a
+ * song never configured — and the song's `rhythms` row carries its preset
+ * provenance. A song with no row reads as applied from the default preset,
+ * whose seed is what it plays.
  *
  * `presetId` (the preset the groove was last applied from) is the row's
  * `groovePresetId` under an optimistic overlay (`pending-preset.ts`), so
@@ -96,25 +83,20 @@ export function useGroove(): Groove {
   }, [currentSongId, rowPresetId, pendingPreset]);
 
   const commit = useCallback(
-    (next: GrooveFields, on: boolean) => {
+    (next: GrooveFields) => {
       if (currentSongId === null) return;
-      setGroove(
-        currentSongId,
-        on
-          ? {
-              hands: { bass: next.bass, chord: next.chord },
-              bassFigurationId: next.bassFigurationId,
-              chordFigurationId: next.chordFigurationId,
-              bassVoicing: next.bassVoicing,
-              chordVoicing: next.chordVoicing,
-            }
-          : null,
-      );
+      setGroove(currentSongId, {
+        hands: { bass: next.bass, chord: next.chord },
+        bassFigurationId: next.bassFigurationId,
+        chordFigurationId: next.chordFigurationId,
+        bassVoicing: next.bassVoicing,
+        chordVoicing: next.chordVoicing,
+        restartOnChordChange: next.restartOnChordChange,
+      });
       // The preset id is this plugin's own column (not in the setting): overlay
       // it until the row's push carries it, so "edited" never flickers.
       setPendingPreset(currentSongId, next.presetId);
       saveRhythm(currentSongId, {
-        enabled: on,
         bass: next.bass,
         chord: next.chord,
         bassPatternId: next.bassFigurationId,
@@ -122,6 +104,7 @@ export function useGroove(): Groove {
         bassVoicing: next.bassVoicing,
         chordVoicing: next.chordVoicing,
         groovePresetId: next.presetId,
+        restartOnChordChange: next.restartOnChordChange,
       });
     },
     [setGroove, saveRhythm, currentSongId],
@@ -146,27 +129,20 @@ export function useGroove(): Groove {
       throw new Error("useGroove: a ready gate over an unsettled input");
     }
     const live = store.value;
-    const persisted = row.found ? row.row : null;
     return {
-      enabled: live !== null,
       presetId:
         pendingPreset !== NO_PENDING_PRESET
           ? pendingPreset
-          : (persisted?.groovePresetId ?? null),
-      bass: live?.hands.bass ?? persisted?.bass ?? defaultBassPattern(),
-      chord: live?.hands.chord ?? persisted?.chord ?? defaultChordPattern(),
-      bassFigurationId:
-        live?.bassFigurationId ??
-        persisted?.bassPatternId ??
-        DEFAULT_BASS_FIGURATION_ID,
-      chordFigurationId:
-        live?.chordFigurationId ??
-        persisted?.chordPatternId ??
-        DEFAULT_CHORD_FIGURATION_ID,
-      bassVoicing:
-        live?.bassVoicing ?? persisted?.bassVoicing ?? DEFAULT_BASS_VOICING,
-      chordVoicing:
-        live?.chordVoicing ?? persisted?.chordVoicing ?? DEFAULT_CHORD_VOICING,
+          : row.found
+            ? row.row.groovePresetId
+            : DEFAULT_GROOVE_PRESET_ID,
+      bass: live.hands.bass,
+      chord: live.hands.chord,
+      bassFigurationId: live.bassFigurationId,
+      chordFigurationId: live.chordFigurationId,
+      bassVoicing: live.bassVoicing,
+      chordVoicing: live.chordVoicing,
+      restartOnChordChange: live.restartOnChordChange,
       commit,
     };
   });

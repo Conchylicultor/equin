@@ -996,10 +996,6 @@
       "name": "@singularity/plugin-apps-sonata-rich-rhythm-controls",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/sonata/plugins/rich/plugins/voicing-controls": {
-      "name": "@singularity/plugin-apps-sonata-rich-voicing-controls",
-      "version": "0.0.1",
-    },
     "plugins/apps/plugins/sonata/plugins/score": {
       "name": "@singularity/plugin-apps-sonata-score",
       "version": "0.0.1",
@@ -6949,7 +6945,6 @@
 
     "@singularity/plugin-apps-sonata-progress-bars": ["@singularity/plugin-apps-sonata-progress-bars@workspace:plugins/apps/plugins/sonata/plugins/progress/plugins/bars"],
 
-
     "@singularity/plugin-apps-sonata-progress-keys": ["@singularity/plugin-apps-sonata-progress-keys@workspace:plugins/apps/plugins/sonata/plugins/progress/plugins/keys"],
 
     "@singularity/plugin-apps-sonata-progress-loop": ["@singularity/plugin-apps-sonata-progress-loop@workspace:plugins/apps/plugins/sonata/plugins/progress/plugins/loop"],
@@ -6991,8 +6986,6 @@
     "@singularity/plugin-apps-sonata-rich-readout-keyboard": ["@singularity/plugin-apps-sonata-rich-readout-keyboard@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/readout-keyboard"],
 
     "@singularity/plugin-apps-sonata-rich-rhythm-controls": ["@singularity/plugin-apps-sonata-rich-rhythm-controls@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls"],
-
-    "@singularity/plugin-apps-sonata-rich-voicing-controls": ["@singularity/plugin-apps-sonata-rich-voicing-controls@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/voicing-controls"],
 
     "@singularity/plugin-apps-sonata-score": ["@singularity/plugin-apps-sonata-score@workspace:plugins/apps/plugins/sonata/plugins/score"],
 

@@ -10,16 +10,15 @@ import { rhythmShape } from "../../shared/resources";
 
 // Per-song rhythm groove attached to the library's `sonata_songs` row via the
 // entity-extensions primitive (1:1 side-table, FK CASCADE on song delete).
-// `enabled` gates the groove; `bass`/`chord` hold each hand's onset pattern and
+// `bass`/`chord` hold each hand's onset pattern and
 // `bassPatternId`/`chordPatternId` each hand's figuration id and
 // `bassVoicing`/`chordVoicing` each hand's voicing — see `rhythmShape`.
 // The figuration ids and voicings default to today's sound so existing rows backfill without
-// a groove change. An absent row reads as disabled (today's block-chord
-// behavior). Owned here so the library schema stays stable and this feature is
+// a groove change. An absent row reads as the default accompaniment. Owned here so the library schema stays stable and this feature is
 // independently composable. Table: `sonata_songs_ext_rhythm`.
 export const songRhythm = defineExtension(_songs, "rhythm", rhythmShape, {
   columns: {
-    enabled: { default: false },
+    restartOnChordChange: { default: true },
     bassPatternId: { default: DEFAULT_BASS_FIGURATION_ID },
     chordPatternId: { default: DEFAULT_CHORD_FIGURATION_ID },
     bassVoicing: { default: DEFAULT_BASS_VOICING },

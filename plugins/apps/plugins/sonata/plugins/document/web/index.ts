@@ -29,6 +29,7 @@ export {
   transposeSetting,
   keyAutoDetectSetting,
   chordModeSetting,
+  defaultGroove,
   grooveSetting,
   type RhythmGroove,
 } from "./score-settings";

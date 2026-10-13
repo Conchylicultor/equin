@@ -12,18 +12,18 @@ import {
   CHORD_TRACK,
 } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { setTracksActive } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { useSaveChordMode } from "../actions";
 
-const LABEL = "Play the detected chords";
+const LABEL = "Accompaniment — play the detected chords";
 
 /**
- * The chord-mode PART of the Accompaniment section: one row, "Play the
- * detected chords" + a switch, flipping the loaded song's chord mode.
+ * The chord-mode switch: the Accompaniment section's on/off for a song whose
+ * chords are detected (a MIDI song), in the section header — flipping the
+ * loaded song's chord mode. A song with authored chords (a chord grid, a
+ * chord sheet) always plays its accompaniment and has no switch.
  *
  * One flip does two things, deliberately in an order that never doubles the
  * sound. The setting flips synchronously (the pipeline re-voices at once),
@@ -39,10 +39,10 @@ const LABEL = "Play the detected chords";
  *
  * While the song's mode is loading the switch is a loading placeholder: "off"
  * would be a claim about the song, and a flip needs a known base. A failed read
- * renders inline with its Retry. A file document has no chord mode to flip, so
- * the row renders nothing.
+ * renders as an icon with its Retry. A file document has no chord mode to
+ * flip, so the switch renders nothing.
  */
-export function ChordModeRow() {
+export function ChordModeSwitch() {
   const { score } = useSession();
   const song = useLibrarySong();
   const mode = useSongSetting(chordModeSetting);
@@ -57,7 +57,7 @@ export function ChordModeRow() {
   if (mode.kind === "failed")
     return (
       <ResourceErrorInline
-        variant="inline"
+        variant="icon"
         subject="the song's chord mode"
         error={mode.error}
         refetch={mode.refetch}
@@ -90,29 +90,21 @@ export function ChordModeRow() {
     }
   };
 
+  if (mode.kind === "pending") return <Loading variant="spinner" />;
   return (
-    <Stack direction="row" gap="md" justify="between" align="center">
-      <Text as="span" variant="body">
-        {LABEL}
-      </Text>
-      {mode.kind === "pending" ? (
-        <Loading variant="spinner" />
-      ) : (
-        <WithTooltip
-          content={
-            mode.value
-              ? "Playing the detected chords on the Chords + Bass tracks. Turn off to play the song's own notes again."
-              : "Play the detected chords (Chords + Bass tracks) and turn the original tracks off. Re-enable any track in the Tracks card."
-          }
-        >
-          <Switch
-            checked={mode.value}
-            disabled={busy}
-            onCheckedChange={(next) => void toggle(next)}
-            aria-label={LABEL}
-          />
-        </WithTooltip>
-      )}
-    </Stack>
+    <WithTooltip
+      content={
+        mode.value
+          ? "Playing the detected chords on the Chords + Bass tracks. Turn off to play the song's own notes again."
+          : "Play the detected chords (Chords + Bass tracks) and turn the original tracks off. Re-enable any track in the Tracks card."
+      }
+    >
+      <Switch
+        checked={mode.value}
+        disabled={busy}
+        onCheckedChange={(next) => void toggle(next)}
+        aria-label={LABEL}
+      />
+    </WithTooltip>
   );
 }

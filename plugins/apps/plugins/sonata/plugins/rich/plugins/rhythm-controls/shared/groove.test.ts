@@ -27,6 +27,7 @@ const base: GrooveFields = {
   chordFigurationId: "block",
   bassVoicing: DEFAULT_BASS_VOICING,
   chordVoicing: DEFAULT_CHORD_VOICING,
+  restartOnChordChange: true,
 };
 
 describe("grooveEquals", () => {
@@ -55,6 +56,12 @@ describe("grooveEquals", () => {
     expect(
       grooveEquals({ ...base, chord: rotated }, { ...base, chord: baked }),
     ).toBe(true);
+  });
+
+  test("whether a chord change restarts the rhythm counts", () => {
+    expect(grooveEquals(base, { ...base, restartOnChordChange: false })).toBe(
+      false,
+    );
   });
 
   test("a rotation that moves the struck pulses differs", () => {

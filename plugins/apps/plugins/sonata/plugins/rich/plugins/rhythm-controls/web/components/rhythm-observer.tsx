@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import {
+  defaultGroove,
   grooveSetting,
   useFailSongSetting,
   useMountedSongId,
@@ -16,9 +17,9 @@ import { rhythms, type RhythmRow } from "../../shared/resources";
  *
  * It writes only a settled answer: a newly loaded song's settings start
  * pending, so until this song's row arrives nothing renders under the previous
- * song's groove or a stand-in "no groove" — and a write for a song no longer
- * loaded is dropped. A settled `null` — an absent row, or `enabled` off — IS
- * the song's groove: block chords.
+ * song's groove or a stand-in default — and a write for a song no longer
+ * loaded is dropped. An absent row IS the song's groove: the default
+ * accompaniment.
  */
 export function RhythmObserver() {
   const songId = useMountedSongId();
@@ -52,15 +53,16 @@ export function RhythmObserver() {
     if (!settled) return;
     setGroove(
       songId,
-      persisted && persisted.enabled
+      persisted
         ? {
             hands: { bass: persisted.bass, chord: persisted.chord },
             bassFigurationId: persisted.bassPatternId,
             chordFigurationId: persisted.chordPatternId,
             bassVoicing: persisted.bassVoicing,
             chordVoicing: persisted.chordVoicing,
+            restartOnChordChange: persisted.restartOnChordChange,
           }
-        : null,
+        : defaultGroove(),
     );
   }, [songId, settled, persisted, setGroove]);
 

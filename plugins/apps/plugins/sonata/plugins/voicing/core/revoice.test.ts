@@ -5,7 +5,14 @@ import {
   type Note,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { CHORD_BASS_TRACK, CHORD_TRACK, reVoiceChords } from "./revoice";
+import { patternFromPreset } from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
+import {
+  CHORD_BASS_TRACK,
+  CHORD_TRACK,
+  grooveCycles,
+  reVoiceChords,
+  type ReVoiceGroove,
+} from "./revoice";
 
 /**
  * `reVoiceChords` selection tests. The default pass voices AUTHORED chords only
@@ -16,7 +23,28 @@ import { CHORD_BASS_TRACK, CHORD_TRACK, reVoiceChords } from "./revoice";
  * rather than duplicates, and that voiced annotations point at the new notes.
  */
 
-const CFG = { realistic: false, octave: 4 };
+/** One root-position block triad per bar, right hand only. */
+const CFG: ReVoiceGroove = {
+  hands: {
+    chord: patternFromPreset("basic-1"),
+    bass: patternFromPreset("basic-1"),
+  },
+  chordFigurationId: "block",
+  bassFigurationId: "root",
+  chordVoicing: {
+    enabled: true,
+    octave: 4,
+    voiceLead: false,
+    doubleOctave: false,
+  },
+  bassVoicing: {
+    enabled: false,
+    octave: 2,
+    voiceLead: false,
+    doubleOctave: false,
+  },
+  restartOnChordChange: false,
+};
 
 function chord(
   source: Annotation["source"],
@@ -69,7 +97,7 @@ describe("reVoiceChords — selection", () => {
       chord("derived", 0, 4, ["m0"]),
       chord("derived", 4, 8, ["m1"]),
     ]);
-    const out = reVoiceChords(score, CFG, null, { include: "all" });
+    const out = reVoiceChords(score, CFG, { include: "all" });
 
     expect(originalNotes(out)).toEqual(originalNotes(score));
     // Two C-major block triads, one per chord, all on the chord track.
@@ -85,8 +113,8 @@ describe("reVoiceChords — selection", () => {
 
   it("a second include:'all' pass replaces the chord-track notes, never duplicates them", () => {
     const score = midiScore([chord("derived", 0, 4)]);
-    const once = reVoiceChords(score, CFG, null, { include: "all" });
-    const twice = reVoiceChords(once, CFG, null, { include: "all" });
+    const once = reVoiceChords(score, CFG, { include: "all" });
+    const twice = reVoiceChords(once, CFG, { include: "all" });
     expect(chordTrackNotes(twice)).toEqual(chordTrackNotes(once));
     expect(twice.notes).toHaveLength(once.notes.length);
   });
@@ -96,7 +124,7 @@ describe("reVoiceChords — selection", () => {
       chord("derived", 0, 4, ["m0"]),
       chord("derived", 4, 8, ["m1"]),
     ]);
-    const out = reVoiceChords(score, CFG, null, { include: "all" });
+    const out = reVoiceChords(score, CFG, { include: "all" });
     const voicedIds = new Set(chordTrackNotes(out).map((n) => n.id));
 
     for (const a of out.annotations) {
@@ -121,5 +149,32 @@ describe("reVoiceChords — selection", () => {
     const out = reVoiceChords(score, CFG);
     expect(out.annotations.find((a) => a.source === "derived")).toBe(derived);
     expect(chordTrackNotes(out)).toHaveLength(3);
+  });
+});
+
+describe("reVoiceChords — restart on chord change", () => {
+  // One bar of 4/4 (beats 0–4) whose chord changes on beat 2.
+  const score = midiScore([chord("authored", 0, 2), chord("authored", 2, 4)]);
+  const chordOnsets = (s: Score) => [
+    ...new Set(
+      s.notes.filter((n) => n.track === CHORD_TRACK).map((n) => n.start),
+    ),
+  ];
+
+  it("bar-anchored: a one-onset necklace skips the mid-bar chord", () => {
+    expect(chordOnsets(reVoiceChords(score, CFG))).toEqual([0]);
+  });
+
+  it("restarted: the mid-bar chord change strikes its own chord", () => {
+    const out = reVoiceChords(score, { ...CFG, restartOnChordChange: true });
+    expect(chordOnsets(out)).toEqual([0, 2]);
+  });
+
+  it("a restarted cycle keeps the bar's pulse and is cut at the bar line", () => {
+    const cycles = grooveCycles(score, { restartOnChordChange: true });
+    expect(cycles.slice(0, 2)).toEqual([
+      { start: 0, end: 2, span: 4 },
+      { start: 2, end: 4, span: 4 },
+    ]);
   });
 });

@@ -17,11 +17,7 @@ import {
   inferKeys,
   transposeScore,
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
-import {
-  reVoiceChords,
-  voicingConfig,
-} from "@plugins/apps/plugins/sonata/plugins/voicing/core";
-import { useConfig } from "@plugins/config_v2/web";
+import { reVoiceChords } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { SonataDocument } from "./slots";
 import type { SongIdentity } from "./identity";
 import {
@@ -126,11 +122,11 @@ function ComposedDocument({ children }: { children: ReactNode }) {
   //    figuration id, threaded into `reVoiceChords`. Like voicing, it lands notes
   //    on the chord annotations' EXISTING beats (a bar-anchored groove over the
   //    same timeline), so it belongs in the view layer and never rewinds the
-  //    transport. `null` ⇒ block chords;
+  //    transport. Always present: every song's chords play through a groove;
   //  - chord mode: when on, `baseScore` runs a SECOND re-voicing pass after
   //    chord analysis, so the analyzer-derived chords of a MIDI song become
-  //    playable notes on the Chords / Bass tracks — through the same voicing
-  //    config + groove a chord grid uses. A view transform: it lands notes on the
+  //    playable notes on the Chords / Bass tracks — through the same groove a
+  //    chord grid uses. A view transform: it lands notes on the
   //    chords' existing beats and never rewinds the transport;
   //  - any other registered setting (the track-mixer's track view): not read by
   //    the pipeline, but part of the gate.
@@ -145,10 +141,6 @@ function ComposedDocument({ children }: { children: ReactNode }) {
   const rawById = useLoadedRaw();
   const editLoadedRaw = useEditLoadedRaw();
   const loaded = useLoadedDocument();
-  // Global chord-voicing config (realistic toggle / octave). Read reactively here
-  // so toggling it re-derives the score below — chord notes are (re)generated from
-  // authored chord annotations in `baseScore`.
-  const voicing = useConfig(voicingConfig);
 
   // --- The score in two physically separate layers. -------------------------
   //
@@ -216,17 +208,15 @@ function ComposedDocument({ children }: { children: ReactNode }) {
     // (re-voicing / key inference / spelling / chord analysis all operate on the
     // shifted pitches). No-op at 0 semitones — see `transposeScore`.
     const transposed = transposeScore(contentScore, transposeSemitones);
-    // Regenerate chord notes from authored chord annotations under the global
-    // voicing config (realistic voice-leading / octave) and the per-song groove
-    // (per-hand rhythm necklace + tone-order figuration). Runs BEFORE key
+    // Regenerate chord notes from authored chord annotations under the per-song
+    // groove (per-hand rhythm necklace, tone-order figuration and voicing). Runs BEFORE key
     // inference + spelling so the chord notes exist for key detection and get
     // enharmonic spellings. Both voicing and groove land notes on the authored
     // chord annotations' *existing* beats (the groove strikes a bar-anchored
     // pattern over the same timeline), so the timeline span is unchanged — this
     // belongs in the view layer. No-op when there are no authored chord
-    // annotations (returns the score unchanged); `null` groove ⇒ one block note
-    // per chord.
-    const voiced = reVoiceChords(transposed, voicing, groove);
+    // annotations (returns the score unchanged).
+    const voiced = reVoiceChords(transposed, groove);
     // Two pure pre-analysis steps establish key context: inferKeys derives the
     // tonal centre(s) from the notes (when no key is authored), then spellScore
     // fills each note's enharmonic `spelling` from the key in force. Order
@@ -254,11 +244,9 @@ function ComposedDocument({ children }: { children: ReactNode }) {
     return {
       kind: "ready",
       contentKey,
-      score: spellScore(
-        reVoiceChords(analyzed, voicing, groove, { include: "all" }),
-      ),
+      score: spellScore(reVoiceChords(analyzed, groove, { include: "all" })),
     };
-  }, [contentScore, hasContent, analyzers, settings, voicing]);
+  }, [contentScore, hasContent, analyzers, settings]);
 
   // Source-keyed raw read. Recreated when `rawById` changes so consumers re-render
   // with fresh raw (e.g. the chord-grid editor reflecting a hydrated song).

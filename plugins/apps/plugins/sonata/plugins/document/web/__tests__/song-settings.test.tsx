@@ -35,6 +35,7 @@ import {
 } from "../song-setting";
 import {
   chordModeSetting,
+  defaultGroove,
   transposeSetting,
   useScoreSettings,
 } from "../score-settings";
@@ -394,7 +395,7 @@ describe("the score gate waits on the registered settings, and only on them", ()
       value: {
         transposeSemitones: 3,
         keyAutoDetect: false,
-        groove: null,
+        groove: defaultGroove(),
         chordMode: false,
       },
     });

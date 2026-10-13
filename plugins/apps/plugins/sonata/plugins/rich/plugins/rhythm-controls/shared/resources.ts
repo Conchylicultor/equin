@@ -52,17 +52,17 @@ export const HandVoicingSchema = z.object({
 });
 
 /**
- * One song's persisted rhythm groove: whether it is active plus the two hands'
- * patterns. Stored in the `sonata_songs_ext_rhythm` entity-extension table (1:1
- * per song), which `server/internal/tables.ts` builds from this shape; an absent
- * row reads as disabled (today's block-chord behavior). Both patterns are
- * remembered even while disabled, so re-enabling restores the groove rather than
- * resetting to defaults.
+ * One song's persisted groove — its accompaniment: the two hands' patterns,
+ * figurations and voicings, and whether a chord change restarts the necklace.
+ * Stored in the `sonata_songs_ext_rhythm` entity-extension table (1:1 per
+ * song), which `server/internal/tables.ts` builds from this shape; an absent
+ * row reads as the default accompaniment (`defaultGroove()`). There is no
+ * on/off: every song's chords play through its groove (a MIDI song's chords
+ * are voiced at all only while its chord mode is on).
  */
 export const rhythmShape = defineExtensionShape({
   key: "songId",
   fields: {
-    enabled: boolField(),
     // Each hand's onset pattern, as jsonb decoded by `RhythmPatternSchema` — the
     // SAME schema the HTTP write boundary validates against, so an onset outside
     // `[0, subdivisions)` is impossible to store by any route, not just the
@@ -97,6 +97,9 @@ export const rhythmShape = defineExtensionShape({
     // against the preset (`grooveEquals`), never stored. A preset deleted later
     // leaves a dangling id, which reads as "no preset".
     groovePresetId: nullable(textField()),
+    // Whether a chord change inside a bar starts the necklace over (see
+    // `grooveCycles`), so a mid-bar chord is struck on its own change.
+    restartOnChordChange: boolField(),
   },
 });
 export const RhythmRowSchema = rhythmShape.schema;
@@ -107,7 +110,7 @@ export type RhythmRow = z.infer<typeof RhythmRowSchema>;
  * the extension table (nothing lists every song's groove), minting
  * `sonata-rhythm:rows` alone. The observer and `useGroove` read the open song's
  * row with `useLiveRow(rhythms, songId)`; `found: false` is an absent row, i.e.
- * no groove and the default patterns.
+ * the default accompaniment.
  */
 export const rhythms = liveCollection("sonata-rhythm", {
   row: RhythmRowSchema,

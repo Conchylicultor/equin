@@ -84,7 +84,6 @@ availability gates over the composed score.
     - `SonataDocument.SongSetting` ← `apps.sonata.track-mixer`
     - `SonataDocument.SongSetting` ← `apps.sonata.transpose`
   - Uses:
-    - `config_v2.useConfig`
     - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/slot-render.defineMountSlot`
   - Exports (types):
@@ -98,6 +97,7 @@ availability gates over the composed score.
     - `SongSettingKey`
   - Exports (values):
     - `chordModeSetting`
+    - `defaultGroove`
     - `defineSongSetting`
     - `grooveSetting`
     - `keyAutoDetectSetting`

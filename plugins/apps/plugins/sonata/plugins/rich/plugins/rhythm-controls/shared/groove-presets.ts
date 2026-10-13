@@ -1,4 +1,5 @@
 import { defineConfig } from "@plugins/config_v2/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
@@ -17,11 +18,21 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { HandVoicingSchema, RhythmPatternSchema } from "./resources";
 
-/** Both hands at today's voicing — what every two-hand seed plays. */
+/**
+ * Both hands at the default voicing, a chord change starting the necklace over
+ * — what most two-hand seeds play.
+ */
 const BOTH_HANDS = {
   chordVoicing: DEFAULT_CHORD_VOICING,
   bassVoicing: DEFAULT_BASS_VOICING,
+  restartOnChordChange: true,
 };
+
+/**
+ * A clave groove keeps its place in the bar through a chord change: restarting
+ * the necklace mid-bar would break the clave.
+ */
+const CLAVE = { ...BOTH_HANDS, restartOnChordChange: false };
 
 /**
  * The code-authored starting set of groove presets. Each row carries an
@@ -34,7 +45,7 @@ const BOTH_HANDS = {
 const SEED_GROOVE_PRESETS = [
   {
     id: "default",
-    name: "Default",
+    name: "Simple",
     chord: defaultChordPattern(),
     bass: defaultBassPattern(),
     chordFigurationId: DEFAULT_CHORD_FIGURATION_ID,
@@ -48,7 +59,7 @@ const SEED_GROOVE_PRESETS = [
     bass: patternFromPreset("basic-2"),
     chordFigurationId: "block",
     bassFigurationId: "root-fifth",
-    ...BOTH_HANDS,
+    ...CLAVE,
   },
   {
     id: "pop-ballad",
@@ -66,7 +77,7 @@ const SEED_GROOVE_PRESETS = [
     bass: patternFromPreset("tresillo"),
     chordFigurationId: "block",
     bassFigurationId: "root-fifth",
-    ...BOTH_HANDS,
+    ...CLAVE,
   },
   {
     id: "stride",
@@ -95,6 +106,7 @@ const SEED_GROOVE_PRESETS = [
     bassFigurationId: "walking",
     chordVoicing: { ...DEFAULT_CHORD_VOICING, enabled: false },
     bassVoicing: DEFAULT_BASS_VOICING,
+    restartOnChordChange: true,
   },
   {
     id: "harp",
@@ -105,13 +117,14 @@ const SEED_GROOVE_PRESETS = [
     bassFigurationId: DEFAULT_BASS_FIGURATION_ID,
     chordVoicing: DEFAULT_CHORD_VOICING,
     bassVoicing: { ...DEFAULT_BASS_VOICING, enabled: false },
+    restartOnChordChange: true,
   },
 ];
 
 /**
  * Global (not per-song) saved grooves: a name plus both hands' rhythm
  * necklaces, figuration ids and voicings (a hand that is off makes a
- * one-hand groove) — everything `GrooveFields` holds except the
+ * one-hand groove) and whether a chord change restarts the necklace — everything `GrooveFields` holds except the
  * provenance. Applying one writes its content into the open song's groove and
  * records its id as the song's `groovePresetId`; "edited" is then derived by
  * comparing the song's groove against the preset (`grooveEquals`), never stored.
@@ -125,7 +138,7 @@ export const groovePresetsConfig = defineConfig({
     presets: listField({
       label: "Groove presets",
       description:
-        "Saved grooves offered by the Rhythm section's preset menu: both hands' rhythm patterns, figurations and voicings.",
+        "Saved grooves offered by the Accompaniment section's preset menu: both hands' rhythm patterns, figurations and voicings, and whether a chord change restarts the rhythm.",
       stableIdentity: true,
       itemFields: {
         name: textField({ label: "Name" }),
@@ -157,11 +170,21 @@ export const groovePresetsConfig = defineConfig({
           schema: HandVoicingSchema,
           default: DEFAULT_BASS_VOICING,
         }),
+        restartOnChordChange: boolField({
+          label: "Restart on chord change",
+          default: true,
+        }),
       },
       default: SEED_GROOVE_PRESETS,
     }),
   },
 });
+
+/**
+ * The seed a song plays before its groove is ever edited (`defaultGroove()` in
+ * the song document): a song with no groove row reads as applied from it.
+ */
+export const DEFAULT_GROOVE_PRESET_ID = "default";
 
 /** One saved groove preset, as stored (its list `id` is stable). */
 export type GroovePreset =

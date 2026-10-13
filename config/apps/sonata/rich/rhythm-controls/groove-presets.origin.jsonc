@@ -1,28 +1,23 @@
-// @hash 5a86239c53e1
+// @hash f6eb718eecad
 {
-  // Saved grooves offered by the Rhythm section's preset menu: both hands' rhythm patterns, figurations and voicings.
+  // Saved grooves offered by the Accompaniment section's preset menu: both hands' rhythm patterns, figurations and voicings, and whether a chord change restarts the rhythm.
   "presets": [
     {
       "id": "default",
-      "name": "Default",
+      "name": "Simple",
       "chord": {
-        "presetId": "son",
-        "subdivisions": 16,
+        "presetId": "basic-1",
+        "subdivisions": 8,
         "onsets": [
-          0,
-          3,
-          6,
-          10,
-          12
+          0
         ],
         "rotation": 0
       },
       "bass": {
-        "presetId": "basic-2",
+        "presetId": "basic-1",
         "subdivisions": 8,
         "onsets": [
-          0,
-          4
+          0
         ],
         "rotation": 0
       },
@@ -39,7 +34,8 @@
         "octave": 2,
         "voiceLead": false,
         "doubleOctave": false
-      }
+      },
+      "restartOnChordChange": true
     },
     {
       "id": "bossa-nova",
@@ -78,7 +74,8 @@
         "octave": 2,
         "voiceLead": false,
         "doubleOctave": false
-      }
+      },
+      "restartOnChordChange": false
     },
     {
       "id": "pop-ballad",
@@ -115,7 +112,8 @@
         "octave": 2,
         "voiceLead": false,
         "doubleOctave": false
-      }
+      },
+      "restartOnChordChange": true
     },
     {
       "id": "son-clave",
@@ -155,7 +153,8 @@
         "octave": 2,
         "voiceLead": false,
         "doubleOctave": false
-      }
+      },
+      "restartOnChordChange": false
     },
     {
       "id": "stride",
@@ -193,7 +192,8 @@
         "octave": 2,
         "voiceLead": false,
         "doubleOctave": false
-      }
+      },
+      "restartOnChordChange": true
     },
     {
       "id": "waltz",
@@ -229,7 +229,8 @@
         "octave": 2,
         "voiceLead": false,
         "doubleOctave": false
-      }
+      },
+      "restartOnChordChange": true
     },
     {
       "id": "walking-bass",
@@ -267,7 +268,8 @@
         "octave": 2,
         "voiceLead": false,
         "doubleOctave": false
-      }
+      },
+      "restartOnChordChange": true
     },
     {
       "id": "harp",
@@ -302,7 +304,8 @@
         "octave": 2,
         "voiceLead": false,
         "doubleOctave": false
-      }
+      },
+      "restartOnChordChange": true
     }
   ]
 }

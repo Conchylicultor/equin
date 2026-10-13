@@ -33,9 +33,9 @@ a config_v2 `FieldDef<boolean>` carrying the canonical `fields/` bool token
     - `boolField`
     - `boolSample`
 - Cross-plugin:
-  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×12
-    - `apps` ×5
+    - `apps` ×4
     - `conversations` ×2
     - `tasks` ×2
     - `apps-core/surface/floating`

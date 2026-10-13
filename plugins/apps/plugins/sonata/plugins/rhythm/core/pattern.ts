@@ -133,12 +133,19 @@ export function toggleOnset(
   };
 }
 
-/** A musically-sane default left-hand (bass) pattern. Fresh on every call. */
+/**
+ * The default left-hand (bass) pattern: one strike per cycle — with the
+ * default groove restarting on chord changes, the bass sounds once per chord
+ * (and again at each bar line it is held across). Fresh on every call.
+ */
 export function defaultBassPattern(): RhythmPattern {
-  return patternFromPreset("basic-2");
+  return patternFromPreset("basic-1");
 }
 
-/** A musically-sane default right-hand (chord) pattern. Fresh on every call. */
+/**
+ * The default right-hand (chord) pattern: one strike per cycle, like the bass —
+ * a plain held chord. Fresh on every call.
+ */
 export function defaultChordPattern(): RhythmPattern {
-  return patternFromPreset("son");
+  return patternFromPreset("basic-1");
 }

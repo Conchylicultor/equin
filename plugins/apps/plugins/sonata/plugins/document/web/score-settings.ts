@@ -1,5 +1,14 @@
-import type { RhythmHands } from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
-import type { HandVoicing } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
+import {
+  defaultBassPattern,
+  defaultChordPattern,
+} from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
+import {
+  DEFAULT_BASS_FIGURATION_ID,
+  DEFAULT_BASS_VOICING,
+  DEFAULT_CHORD_FIGURATION_ID,
+  DEFAULT_CHORD_VOICING,
+  type ReVoiceGroove,
+} from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { defineSongSetting, type SongSetting } from "./song-setting";
 import { useSettledSongSettings } from "./loaded-song";
 
@@ -39,36 +48,48 @@ export const keyAutoDetectSetting = defineSongSetting<boolean>(
 export const chordModeSetting = defineSongSetting<boolean>("chord mode", false);
 
 /**
- * Per-song groove — the two-hand onset necklace (`hands`), each hand's
- * tone-order figuration id (`bassFigurationId`/`chordFigurationId`) and each
- * hand's voicing (`bassVoicing`/`chordVoicing`: on/off, octave, voice-leading,
- * octave doubling). The rhythm-grid (the *when*), the figuration (the *what*)
- * and the voicing (the *where*) are one accompaniment pattern, so they travel
- * together into `reVoiceChords`.
+ * Per-song groove — the song's accompaniment: the two-hand onset necklace
+ * (`hands`), each hand's tone-order figuration id
+ * (`bassFigurationId`/`chordFigurationId`), each hand's voicing
+ * (`bassVoicing`/`chordVoicing`: on/off, octave, voice-leading, octave
+ * doubling) and whether a chord change starts the necklace over
+ * (`restartOnChordChange`). The rhythm-grid (the *when*), the figuration (the
+ * *what*) and the voicing (the *where*) are one accompaniment pattern, so they
+ * travel together into `reVoiceChords`.
  */
-export interface RhythmGroove {
-  hands: RhythmHands;
-  bassFigurationId: string;
-  chordFigurationId: string;
-  bassVoicing: HandVoicing;
-  chordVoicing: HandVoicing;
+export type RhythmGroove = ReVoiceGroove;
+
+/**
+ * The default accompaniment: a plain bass root and block chord, each struck
+ * once per chord (one onset per cycle, restarting on every chord change) — what
+ * a song plays before its groove is ever edited. Fresh on every call.
+ */
+export function defaultGroove(): RhythmGroove {
+  return {
+    hands: { bass: defaultBassPattern(), chord: defaultChordPattern() },
+    bassFigurationId: DEFAULT_BASS_FIGURATION_ID,
+    chordFigurationId: DEFAULT_CHORD_FIGURATION_ID,
+    bassVoicing: DEFAULT_BASS_VOICING,
+    chordVoicing: DEFAULT_CHORD_VOICING,
+    restartOnChordChange: true,
+  };
 }
 
 /**
- * The groove (`rhythm-controls` plugin). A settled `null` ⇒ no groove ⇒ block
- * chords. Absent: `null`.
+ * The groove (`rhythm-controls` plugin). Every song's chords are played
+ * through one — there is no groove-less path. Absent (a file document, or a
+ * composition without the feature): the default accompaniment.
  */
-export const grooveSetting = defineSongSetting<RhythmGroove | null>(
+export const grooveSetting = defineSongSetting<RhythmGroove>(
   "groove",
-  null,
+  defaultGroove(),
 );
 
 /** The settings the score pipeline transforms the content with. */
 export interface ScoreSettings {
   transposeSemitones: number;
   keyAutoDetect: boolean;
-  /** `null` ⇒ no groove (block chords). */
-  groove: RhythmGroove | null;
+  groove: RhythmGroove;
   chordMode: boolean;
 }
 

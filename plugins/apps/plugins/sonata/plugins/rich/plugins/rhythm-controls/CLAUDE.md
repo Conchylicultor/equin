@@ -1,20 +1,26 @@
 # rhythm-controls
 
-The **Rhythm Circle** surface for Sonata: a per-song, editable rhythm necklace
-that gives a chord grid real groove. A left hand (bass) and a right hand (chords)
-each strike an onset pattern; the two rings can run at independent subdivision
-counts to form a polyrhythm, and the whole necklace spins one revolution per bar
-with the playhead.
+The **groove** — a song's accompaniment — for Sonata: a per-song, editable
+rhythm necklace every voiced chord is played through (there is no groove-less
+block-chord path). A left hand (bass) and a right hand (chords) each strike an
+onset pattern; the two rings can run at independent subdivision counts to form
+a polyrhythm, and the whole necklace spins one revolution per cycle with the
+playhead — per bar, and from each chord change while the groove's
+`restartOnChordChange` is on (the cycles are `voicing/core`'s `grooveCycles`,
+shared with the engine, so the circle and the sound agree). The default
+accompaniment (`defaultGroove()`, the `default` "Simple" seed) is a bass root
+and a block chord struck once per cycle, restarting on every chord change.
 
 ## Design
 
 - **Per-song, DB-persisted** in `sonata_songs_ext_rhythm` (an `entity-extensions`
-  1:1 side-table; an absent row reads as disabled). One row holds `enabled`,
-  both hands' `RhythmPattern`s as jsonb, their figuration ids, their
+  1:1 side-table; an absent row reads as the default accompaniment). One row
+  holds both hands' `RhythmPattern`s as jsonb, their figuration ids, their
   `HandVoicing`s as jsonb (`bassVoicing` / `chordVoicing`: on/off, octave,
-  voice-leading, octave doubling — column defaults are today's sound), and the groove
-  preset it was applied from (see *Groove presets*). Both patterns are remembered even while
-  disabled, so re-enabling restores the groove rather than resetting. It is
+  voice-leading, octave doubling — column defaults are today's sound),
+  `restartOnChordChange`, and the groove preset it was applied from (see
+  *Groove presets*). There is no on/off: a song with authored chords always
+  plays its groove, and a MIDI song's is switched by its chord mode. It is
   served as a lookup-only collection, `rhythms = liveCollection("sonata-rhythm",
   { row, id: "songId" })` + `serveCollection(rhythms, { from: songRhythm })`
   (minting `sonata-rhythm:rows` alone; the jsonb patterns bind through the
@@ -28,24 +34,24 @@ with the playhead.
   groove is read, and pending again whenever another song is loaded, so one
   song's groove never leaks into the next. This plugin registers it
   (`SonataDocument.SongSetting`, with the headless `RhythmObserver`, mounted afresh for
-  each loaded song), which writes that song's settled groove: `null` (block
-  chords) when the row is absent or `enabled` is false. Dependency arrow stays
-  feature → shell.
+  each loaded song), which writes that song's settled groove: the row's, or
+  `defaultGroove()` when the row is absent. The setting is never null; a file
+  document reads its absent value, the default accompaniment. Dependency arrow
+  stays feature → shell.
 - **Pending is a state, in the controls too.** `useGroove()` is `pending` until
-  both the setting and the song's row have settled; the body and the header switch
-  render a loading state meanwhile, never the default patterns standing in for
-  the song's own. Once settled, an absent row is a song never configured, whose
-  patterns really are the defaults.
+  both the setting and the song's row have settled; the body renders a loading
+  state meanwhile, never the default patterns standing in for the song's own.
+  Once settled, an absent row is a song never configured, whose groove really
+  is the default — read as applied from the `default` preset
+  (`DEFAULT_GROOVE_PRESET_ID`).
 - **A part, not a section.** This plugin contributes no `Sonata.Section`: the
-  Accompaniment section composes its two exported parts — `GrooveSwitch` (the
-  on/off `Switch`, in the section header so it stays reachable while the
-  section is collapsed) and `RhythmControls` (the body). Both read one shared
-  `useGroove()` hook, so the header switch and the open body can never drive
-  different grooves. The applicability gate (does the song document voice this
-  song's chords?) is the composing section's. While the groove is off the body
-  renders nothing — the switch is the whole control.
+  Accompaniment section composes its exported body, `RhythmControls`, which
+  reads `useGroove()`. The applicability gate (does the song document voice
+  this song's chords?) and the header's on/off (a MIDI song's chord mode) are
+  the composing section's.
 - **The body, top to bottom.** The groove preset picker
-  (`groove-preset-picker.tsx`; see *Groove presets*), the rhythm circle, then
+  (`groove-preset-picker.tsx`; see *Groove presets*), the rhythm circle, the
+  "Restart on chord change" switch, then
   one expanded `HandBlock` per hand (right hand first). Its header: a colour
   chip that turns the hand on/off (off folds the block to its header, and the
   engine strikes nothing for it — a preset can be one-handed), the hand's name
@@ -80,15 +86,18 @@ with the playhead.
 
 - **Global, in config_v2.** `groovePresetsConfig` (`shared/groove-presets.ts`,
   name `groove-presets`) is one `listField` of saved grooves — `{ name, chord,
-  bass, chordFigurationId, bassFigurationId, chordVoicing, bassVoicing }`, each
+  bass, chordFigurationId, bassFigurationId, chordVoicing, bassVoicing,
+  restartOnChordChange }`, each
   pattern / voicing a `jsonField` validated by the same `RhythmPatternSchema` /
   `HandVoicingSchema` as the row and the endpoint (a preset saved before the
   voicings existed heals to the defaults). The
   list is `stableIdentity`: a song's `groovePresetId` is a durable key into it,
-  so every row (seeds included) carries an explicit `id`. Seeds (`default`,
-  `bossa-nova`, `pop-ballad`, `son-clave`, `stride`, `waltz`, and the
+  so every row (seeds included) carries an explicit `id`. Seeds (`default`
+  "Simple", `bossa-nova`, `pop-ballad`, `son-clave`, `stride`, `waltz`, and the
   one-handed `walking-bass` (left only) and `harp` (right only)) are built from
-  the real `RHYTHMS` / figuration ids. Registered on both runtimes
+  the real `RHYTHMS` / figuration ids; all restart on chord changes except the
+  two clave grooves (bossa nova, son clave), which keep their place in the bar.
+  Registered on both runtimes
   (`ConfigV2.Register` / `ConfigV2.WebRegister`).
 - **Per-song provenance, not state.** The row's nullable `groovePresetId` (sent
   by every `setRhythmEndpoint` write) records which preset the groove was last
@@ -109,13 +118,13 @@ with the playhead.
   (`save`, then commit the new id). Apply commits `presetGroove(p)`.
 - **Pure helpers** (`shared/groove.ts`, tested): `grooveEquals` compares what a
   groove sounds like (both hands' subdivisions + effective onsets, figuration
-  ids and voicings), ignoring provenance and how a rotation is spelt;
+  ids, voicings and `restartOnChordChange`), ignoring provenance and how a rotation is spelt;
   `grooveSummary` ("Block · Root–fifth", right hand first, an off hand "—"); `presetGroove` (a
   preset as `GrooveFields`, the preset as its `presetId`).
 - **`useGroove().presetId` never flickers.** The patterns' optimistic home is
   the shell's `grooveSetting`, but the preset id is this plugin's column, so
   `commit` also writes a module-level per-song overlay (`web/pending-preset.ts`,
-  shared by the body and the header switch) that the row's push confirms by
+  shared by every `useGroove()` reader) that the row's push confirms by
   carrying the SAME id. Without it, Apply would measure the new content against
   the old preset until the push and flash "edited".
 - **`useGroovePresets()`** — `ResourceResult<{ presets, save(name, from) → id,
@@ -136,14 +145,14 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
 
 ## Plugin reference
 
-- Description: Sonata accompaniment part: the per-song groove. Exports its on/off switch (GrooveSwitch) and its body (RhythmControls: a groove preset picker, a left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, and one expanded block per hand: on/off chip in its track's colour, pattern, rhythm, octave, voice-leading, rotate, steps, octave doubling) for the Accompaniment section to compose; contributes no section of its own. Persists the groove per song and feeds the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the global groove presets (config sonata groove-presets: useGroovePresets) and the per-song preset provenance useGroove carries. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern, figuration and HandVoicing + the groove preset it was applied from). Serves it as a per-song lookup collection. Server registration of the global groove-presets config.
+- Description: Sonata accompaniment part: the per-song groove — the song's accompaniment, through which every voiced chord is played. Exports its body (RhythmControls: a groove preset picker, a left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, a Restart on chord change switch, and one expanded block per hand: on/off chip in its track's colour, pattern, rhythm, octave, voice-leading, rotate, steps, octave doubling) for the Accompaniment section to compose; contributes no section of its own. Persists the groove per song and feeds the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the global groove presets (config sonata groove-presets: useGroovePresets) and the per-song preset provenance useGroove carries. Owns the sonata_songs_ext_rhythm side-table: per-song groove — the song's accompaniment (a bass and a chord RhythmPattern, figuration and HandVoicing, whether a chord change restarts the rhythm, and the groove preset it was applied from). Serves it as a per-song lookup collection. Server registration of the global groove-presets config.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "groove-presets"
     - `SonataDocument.SongSetting` "rhythm-sync" → `RhythmObserver`
-  - Uses: 54 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×10
-    - `apps/sonata/document` ×7
+    - `apps/sonata/document` ×9
     - `primitives/live-state` ×6
     - `apps/sonata/primitives/rhythm-circle` ×3
     - `config_v2` ×3
@@ -177,7 +186,6 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
   - Exports (values):
     - `grooveEquals`
     - `grooveSummary`
-    - `GrooveSwitch`
     - `presetGroove`
     - `RhythmControls`
     - `useGroove`

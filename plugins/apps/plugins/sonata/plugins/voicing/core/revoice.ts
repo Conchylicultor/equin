@@ -5,10 +5,10 @@
  * *annotations* only; this step regenerates the chord *notes* from those
  * annotations under the global voicing config. Run reactively in the shell
  * (before key inference, so chord notes exist for detection), it makes
- * voice-leading an orthogonal modifier applied uniformly to every symbol source
+ * the accompaniment an orthogonal modifier applied uniformly to every symbol source
  * — zero per-source code. The shell runs it a second time, after analysis, with
  * `include: "all"` when a song's chord mode is on — so a MIDI song's DETECTED
- * chords become playable notes through the very same voicing + groove.
+ * chords become playable notes through the very same groove.
  *
  * Pure and framework-free: a new `Score` in, a new `Score` out; the input is
  * never mutated.
@@ -106,36 +106,109 @@ function retargetVoiced(
 }
 
 /**
- * Resolve one rhythm pattern to absolute onset beats on the score's bar grid.
- *
- * The necklace repeats every bar: within each bar an effective onset `k` lands at
- * `barStart + span·k/subdivisions`, where `span` is that bar's length. Bars are
- * enumerated with `bars()` (time-signature aware, 4/4 by default — what the chord
- * grid emits), and the final bar's span runs to `scoreEndBeat`. We iterate bars
- * explicitly rather than via `subdivideBars(score, n)`, which collapses a
- * degenerate `span <= 0` bar to a single entry and would desynchronise the grid.
- * Because onsets are sorted and every in-bar beat is `< nextBarStart`, the
- * concatenation across bars is already sorted ascending.
+ * One cycle of a groove's necklace: it starts at `start`, is cut off at `end`
+ * (exclusive), and its pulses are spaced as if it lasted `span` beats — the
+ * length of the bar it falls in, so a restarted cycle keeps the bar's pulse.
  */
-function resolvePattern(score: Score, pattern: RhythmPattern): number[] {
+export interface GrooveCycle {
+  start: number;
+  end: number;
+  span: number;
+}
+
+/** Whether a chord change starts the necklace over, and which chords count. */
+export interface GrooveCycleOptions {
+  /**
+   * When true, every chord change that falls inside a bar starts the necklace
+   * over from its first pulse (cut off at the next change or bar line, where
+   * the bar grid takes over again), so a chord that changes mid-bar is struck
+   * on its own change even when no onset of the bar grid falls under it. When
+   * false the necklace is anchored to bar lines only.
+   */
+  restartOnChordChange: boolean;
+  /** Which chord annotations are voiced (default: authored only). */
+  include?: ReVoiceInclude;
+}
+
+/**
+ * The groove's cycles over a score, sorted ascending: one per bar (bars from
+ * `bars()`, time-signature aware; the final bar runs to `scoreEndBeat`), each
+ * split at the voiced chords' changes when `restartOnChordChange`. The single
+ * definition of where the necklace starts — the engine strikes onsets on it,
+ * and the rhythm circle spins on it, so the two cannot disagree.
+ */
+export function grooveCycles(
+  score: Score,
+  opts: GrooveCycleOptions,
+): GrooveCycle[] {
   const barList = bars(score);
   const end = scoreEndBeat(score);
-  const onsets = effectiveOnsets(pattern);
-  const beats: number[] = [];
+  const changes = opts.restartOnChordChange
+    ? [
+        ...new Set(
+          score.annotations
+            .filter(chordSelector(opts.include ?? "authored"))
+            .map((a) => a.start),
+        ),
+      ].sort((a, b) => a - b)
+    : [];
+  const cycles: GrooveCycle[] = [];
+  let c = 0;
   for (let i = 0; i < barList.length; i++) {
     const start = barList[i]!.startBeat;
     const next = i + 1 < barList.length ? barList[i + 1]!.startBeat : end;
     const span = next - start;
     if (span <= 0) continue; // skip a degenerate (zero/negative-length) bar
+    while (c < changes.length && changes[c]! <= start) c++;
+    let anchor = start;
+    while (c < changes.length && changes[c]! < next) {
+      cycles.push({ start: anchor, end: changes[c]!, span });
+      anchor = changes[c]!;
+      c++;
+    }
+    cycles.push({ start: anchor, end: next, span });
+  }
+  return cycles;
+}
+
+/**
+ * Resolve one rhythm pattern to absolute onset beats on the groove's cycles:
+ * within each cycle an effective onset `k` lands at `start + span·k/subdivisions`,
+ * kept only while it falls before the cycle's end. Cycles are sorted and
+ * contiguous, so the concatenation is already sorted ascending.
+ */
+function resolvePattern(
+  cycles: readonly GrooveCycle[],
+  pattern: RhythmPattern,
+): number[] {
+  const onsets = effectiveOnsets(pattern);
+  const beats: number[] = [];
+  for (const cycle of cycles) {
     for (const k of onsets) {
-      beats.push(start + (span * k) / pattern.subdivisions);
+      const beat = cycle.start + (cycle.span * k) / pattern.subdivisions;
+      if (beat >= cycle.end) break; // onsets are sorted: the rest are cut too
+      beats.push(beat);
     }
   }
   return beats;
 }
 
 /**
- * Regenerate chord notes from a score's chord annotations under `cfg`,
+ * The accompaniment a song's chords are played with: each hand's rhythm
+ * necklace (the *when*), tone-order figuration (the *what*) and voicing (the
+ * *where*), plus whether a chord change starts the necklace over.
+ */
+export interface ReVoiceGroove {
+  hands: RhythmHands;
+  bassFigurationId: string;
+  chordFigurationId: string;
+  bassVoicing: HandVoicing;
+  chordVoicing: HandVoicing;
+  restartOnChordChange: boolean;
+}
+
+/**
+ * Regenerate chord notes from a score's chord annotations under `groove`,
  * returning a new `Score`. Which annotations count is `opts.include` (default:
  * authored only — see {@link ReVoiceInclude}). All other tracks, notes, and
  * annotations are kept intact; only notes on {@link CHORD_TRACK} /
@@ -144,57 +217,44 @@ function resolvePattern(score: Score, pattern: RhythmPattern): number[] {
  * annotation is re-targeted at the notes generated for it. When the score has
  * no selected chord annotations the input is returned unchanged.
  *
- * When `groove` is nullish the emitted notes are byte-for-byte today's block
- * chords (no `rhythm`/`figuration` reaches the engine). When present, each hand's
- * pattern is resolved to absolute onset beats on the bar grid (`opts.rhythm`) and
- * its figuration id resolved to a {@link Figuration} (`opts.figuration`), so each
- * hand strikes its own bar-anchored, tone-ordered groove instead of one block
- * note per chord. With a groove, each hand's register, voice-leading, octave
- * doubling and on/off are its own (`bassVoicing` / `chordVoicing`); `cfg` then
- * voices only the no-groove block path.
+ * Each hand's pattern is resolved to absolute onset beats on the groove's
+ * cycles ({@link grooveCycles}) and its figuration id to a {@link Figuration},
+ * so each hand strikes its own tone-ordered groove; its register,
+ * voice-leading, octave doubling and on/off are its own voicing.
  */
 export function reVoiceChords(
   score: Score,
-  cfg: { realistic: boolean; octave: number },
-  groove?: {
-    hands: RhythmHands;
-    bassFigurationId: string;
-    chordFigurationId: string;
-    bassVoicing: HandVoicing;
-    chordVoicing: HandVoicing;
-  } | null,
+  groove: ReVoiceGroove,
   opts?: ReVoiceOptions,
 ): Score {
-  const selected = score.annotations.filter(
-    chordSelector(opts?.include ?? "authored"),
-  );
+  const include = opts?.include ?? "authored";
+  const selected = score.annotations.filter(chordSelector(include));
   const events: ChordEvent[] = selected
     .map((a) => ({ data: a.data, start: a.start, end: a.end }))
     .sort((x, y) => x.start - y.start);
 
   if (events.length === 0) return score;
 
+  const cycles = grooveCycles(score, {
+    restartOnChordChange: groove.restartOnChordChange,
+    include,
+  });
   const voicingOpts: VoicingOptions = {
-    octave: cfg.octave,
-    voiceLead: cfg.realistic,
+    octave: groove.chordVoicing.octave,
+    voiceLead: groove.chordVoicing.voiceLead,
     track: CHORD_TRACK,
     bassTrack: CHORD_BASS_TRACK,
     idPrefix: CHORD_NOTE_PREFIX,
-  };
-  if (groove) {
-    voicingOpts.rhythm = {
-      bass: resolvePattern(score, groove.hands.bass),
-      chord: resolvePattern(score, groove.hands.chord),
-    };
-    voicingOpts.figuration = {
+    rhythm: {
+      bass: resolvePattern(cycles, groove.hands.bass),
+      chord: resolvePattern(cycles, groove.hands.chord),
+    },
+    figuration: {
       bass: findFiguration(groove.bassFigurationId),
       chord: findFiguration(groove.chordFigurationId),
-    };
-    voicingOpts.hands = {
-      bass: groove.bassVoicing,
-      chord: groove.chordVoicing,
-    };
-  }
+    },
+    hands: { bass: groove.bassVoicing, chord: groove.chordVoicing },
+  };
 
   const chordNotes = voiceChords(events, voicingOpts);
 

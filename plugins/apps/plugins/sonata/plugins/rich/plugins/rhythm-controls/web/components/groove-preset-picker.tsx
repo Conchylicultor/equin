@@ -85,6 +85,7 @@ function fieldsOf(groove: GrooveState): GrooveFields {
     chordFigurationId: groove.chordFigurationId,
     bassVoicing: groove.bassVoicing,
     chordVoicing: groove.chordVoicing,
+    restartOnChordChange: groove.restartOnChordChange,
   };
 }
 
@@ -105,7 +106,7 @@ function PresetPicker({
   const edited = selected !== null && !grooveEquals(groove, selected);
 
   const apply = (p: GroovePreset) => {
-    groove.commit(presetGroove(p), true);
+    groove.commit(presetGroove(p));
     setOpen(false);
   };
 
@@ -113,7 +114,7 @@ function PresetPicker({
     remove(p.id);
     // This song's groove came from it: it is now from no preset.
     if (p.id === groove.presetId) {
-      groove.commit({ ...fields, presetId: null }, groove.enabled);
+      groove.commit({ ...fields, presetId: null });
     }
   };
 
@@ -122,13 +123,13 @@ function PresetPicker({
   const reset = (p: GroovePreset, seed: GroovePreset) => {
     update(p.id, { ...seed, presetId: p.id });
     if (p.id === selected?.id && !edited) {
-      groove.commit(presetGroove(seed), groove.enabled);
+      groove.commit(presetGroove(seed));
     }
   };
 
   const saveAsNew = (name: string) => {
     const id = save(name, fields);
-    groove.commit({ ...fields, presetId: id }, groove.enabled);
+    groove.commit({ ...fields, presetId: id });
     setNaming(null);
     setOpen(false);
   };
