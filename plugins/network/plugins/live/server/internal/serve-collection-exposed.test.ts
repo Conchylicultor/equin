@@ -39,6 +39,7 @@ import {
   exposedColumns,
   liveCollection,
   LIVE_COLUMNS_KEY,
+  LIVE_ROW_KEY,
 } from "@plugins/network/plugins/live/core";
 import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { compileCollection, serveCollection } from "./serve-collection";
@@ -168,8 +169,18 @@ const roles = (
 describe("exposed columns — the window", () => {
   test("each reached exposure is projected under its wire names and folded into $columns", async () => {
     const created = new Date("2026-10-12T10:00:00.000Z");
+    // The row as the database answers it — its row key's parts (the order
+    // key's text, then the id) included.
     const { c, window, rows, calls } = compile(() => [
-      { id: "c1", title: "t", createdAt: created, [TRACK]: "main", [COST]: 0 },
+      {
+        id: "c1",
+        title: "t",
+        createdAt: created,
+        [TRACK]: "main",
+        [COST]: 0,
+        __row_key_0: "2026-10-12 10:00:00+00",
+        __row_key_1: "c1",
+      },
     ]);
     const [row] = (await window.loader(c.window.window.encode())) as Record<
       string,
@@ -195,6 +206,7 @@ describe("exposed columns — the window", () => {
         xp_tasks_ext_track: { track: "main" },
         xp_conversations_ext_usage: { cost: 0 },
       },
+      [LIVE_ROW_KEY]: '["2026-10-12 10:00:00+00","c1"]',
     });
     const [point] = (await rows.loader(c.rows.point.encode(["c1"]))) as Record<
       string,
@@ -446,7 +458,16 @@ describe("exposed columns — the deferred bind", () => {
                 [TRACK]: "main",
               },
             ]
-          : [{ id: "c1", title: "t", createdAt: created, [TRACK]: "main" }],
+          : [
+              {
+                id: "c1",
+                title: "t",
+                createdAt: created,
+                [TRACK]: "main",
+                __row_key_0: "2026-10-12 10:00:00+00",
+                __row_key_1: "c1",
+              },
+            ],
     );
     const list = liveCollection(`test.live.exposed-boot-${n++}`, {
       row: Conversation,

@@ -6,7 +6,7 @@
 // `compileUnionCollection`, against the recording `QueryDb`, and driven
 // through every shape: the window's full / scoped / `windowIdsOf` loads and
 // order signatures per tuple (default, kind-pruned, ordered by a lookup read,
-// an arm column's filter and order, both scroll cuts, every arm pruned), the
+// an arm column's filter and order, both page cuts, every arm pruned), the
 // `:rows` point read (a bad integer id, an unknown kind, another arm's key),
 // the `:groups` loads, and each half's routes (gates, roles, `moves`, the
 // reverse probe re-keyed into `kind:raw`, the identity / alias maps' arm-key
@@ -122,7 +122,6 @@ const runs = liveCollection("golden-union.runs", {
   row: Row,
   id: "runKey",
   arms: { discriminator: "kind" },
-  scroll: true,
   filterable: {
     kind: liveText(),
     label: liveText(),

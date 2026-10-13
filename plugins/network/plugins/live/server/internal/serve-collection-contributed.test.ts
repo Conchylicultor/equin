@@ -64,7 +64,6 @@ function library() {
     sortable: ["title"],
     default: { orderBy: [["title", "asc"]], limit: 10 },
     maxLimit: 30,
-    scroll: true,
     contributed: true,
   });
 }

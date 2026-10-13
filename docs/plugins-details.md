@@ -1432,8 +1432,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slots:
               - `DebugApp.Sidebar`
               - `DebugApp.Toolbar`
-            - Slot contributors: 23 contributors — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
-              - `DebugApp.Sidebar` ×23
+            - Slot contributors: 24 contributors — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
+              - `DebugApp.Sidebar` ×24
             - Contributes: `Apps.App` "Debug" → `DebugLayout`
             - Uses:
               - `apps-core.Apps`
@@ -1445,13 +1445,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `debugApp`
           - Cross-plugin:
-            - Imported by: 23 plugins — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
+            - Imported by: 24 plugins — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
               - `debug` ×17
               - `infra` ×2
               - `backup`
               - `build`
               - `conversations/recover`
               - `plugin-meta/exhibits`
+              - `shell/notifications`
     - **`deploy`** — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
       - Server:
         - Contributes: `taskCategory` "deploy"
@@ -3478,7 +3479,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Exports (types): `MailHtmlProps`
             - Exports (values): `MailHtml`
-        - **`reading-pane`** — Mail reading pane: the threadPane Miller column showing a thread's newest messages oldest→newest (a live window, with Load older messages for a longer thread), each a collapsible card (newest expanded) with sender header, hydrated HTML/text body (privacy-safe images, inline cid: resolution), and attachment chips. Reading pane server: serves the thread-messages live collection (threadMessages) over mail_messages, so a reply/flag/hydration in an open thread pushes automatically.
+        - **`reading-pane`** — Mail reading pane: the threadPane Miller column showing a thread's newest messages oldest→newest (live key-range pages of 100 — Load older messages adds the next page, up to 500), each a collapsible card (newest expanded) with sender header, hydrated HTML/text body (privacy-safe images, inline cid: resolution), and attachment chips. Reading pane server: serves the thread-messages live collection (threadMessages) over mail_messages, so a reply/flag/hydration in an open thread pushes automatically.
           - Web:
             - Slots: `threadPane.Actions`
             - Slot contributors: `threadPane.Actions` ← `primitives.pane`
@@ -4146,26 +4147,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pages-starred.all` (keyed)
               - `pages-starred.all:rows` (keyed, point)
             - Routes: `PUT /api/pages/:pageId/starred`
-        - **`trash`** — Pages trash consumer: contributes a Trash entry into the Pages sidebar, opening a dialog that lists soft-deleted pages with restore and permanent-delete actions.
+        - **`trash`** — Pages trash consumer: contributes a Trash entry into the Pages sidebar, opening a dialog that lists soft-deleted pages as a live DataView with Restore and Delete permanently row actions.
           - Web:
-            - Contributes: `Pages.Sidebar` "Trash" → `PagesTrash`
-            - Uses: 23 symbols — full list in [`plugins/apps/plugins/pages/plugins/trash/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/trash/REFERENCE.md)
-              - `primitives/css/ui-kit` ×5
-              - `apps/pages/shell` ×2
-              - `network/live` ×2
-              - `primitives/cursor-pagination` ×2
+            - Slots: `item-actions`
+            - Slot contributors: `item-actions` ← `apps.pages.trash`
+            - Contributes:
+              - `Pages.Sidebar` "Trash" → `PagesTrash`
+              - `item-actions` "restore" → `RestoreTrashEntryAction`
+              - `item-actions` "purge" → `PurgeTrashEntryAction`
+            - Uses:
+              - `apps/pages/shell.Pages`
+              - `apps/pages/shell.PagesSidebarRow`
               - `infra/endpoints.useEndpointMutation`
-              - `primitives/css/inline.Inline`
-              - `primitives/css/placeholder.Placeholder`
-              - `primitives/css/row.Row`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.Dialog`
+              - `primitives/css/ui-kit.DialogContent`
+              - `primitives/css/ui-kit.DialogDescription`
+              - `primitives/css/ui-kit.DialogTitle`
+              - `primitives/data-view.DataView`
+              - `primitives/data-view.defineDataView`
+              - `primitives/data-view.defineItemActions`
+              - `primitives/data-view.FieldDef`
+              - `primitives/data-view.ItemActionProps`
+              - `primitives/data-view.liveDataSource`
               - `primitives/icon-button.IconButton`
-              - `primitives/live-state.ResourceErrorInline`
-              - `primitives/loading.Loading`
               - `primitives/relative-time.RelativeTime`
-              - `ui/icons.Icon`
         - **`welcome`** — Landing surface for the Pages app (shown at bare `/pages`): a quick-create + recent-pages launchpad rendered through the PagesWelcome.Section slot.
           - Web:
             - Slots:
@@ -4232,7 +4240,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `ids.IdKinds`
               - `infra/endpoints.useEndpointMutation`
-              - `network/live.LiveListResult`
               - `network/live.LiveRowResult`
               - `network/live.useLive`
               - `network/live.useLiveRow`
@@ -4252,13 +4259,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `ids.kind` "place"
               - `ids.kind` "ptag"
-              - `resource.declare` "places.places"
-              - `resource.declare` "places.places:groups"
-              - `resource.declare` "places.places:rows"
+              - `resource.declare` "places.places.all"
+              - `resource.declare` "places.places.all:rows"
               - `resource.declare` "places.search"
-              - `resource.declare` "places.tags"
-              - `resource.declare` "places.tags:groups"
-              - `resource.declare` "places.tags:rows"
+              - `resource.declare` "places.tags.all"
+              - `resource.declare` "places.tags.all:rows"
             - Uses:
               - `database.db`
               - `ids.IdKinds`
@@ -4279,13 +4284,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineJob('places.icon.generate')`
               - `defineWarmup('places.seed-tags')`
             - Resources:
-              - `places.places` (keyed, window)
-              - `places.places:groups` (push)
-              - `places.places:rows` (keyed, point)
+              - `places.places.all` (keyed)
+              - `places.places.all:rows` (keyed, point)
               - `places.search` (invalidate, fixed)
-              - `places.tags` (keyed, window)
-              - `places.tags:groups` (push)
-              - `places.tags:rows` (keyed, point)
+              - `places.tags.all` (keyed)
+              - `places.tags.all:rows` (keyed, point)
             - Routes:
               - `POST /api/places/places`
               - `PATCH /api/places/places/:id`
@@ -4295,19 +4298,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PATCH /api/places/tags/:id`
               - `DELETE /api/places/tags/:id`
           - Core:
-            - Uses: 22 symbols — full list in [`plugins/apps/plugins/places/plugins/places-core/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-core/REFERENCE.md)
-              - `fields/text/config` ×3
-              - `fields` ×3
-              - `ids` ×3
-              - `network/live/filter` ×3
-              - `network/live` ×2
-              - `ui/icons/saved-names` ×2
+            - Uses:
+              - `fields.FieldsRecord`
+              - `fields.fieldsToZodObject`
+              - `fields.nullable`
               - `fields/date/config.dateField`
               - `fields/int/config.intField`
               - `fields/json/config.jsonField`
               - `fields/location.locationField`
+              - `fields/text/config.enumTextField`
+              - `fields/text/config.parsedTextField`
+              - `fields/text/config.textField`
+              - `ids.defineIdKind`
+              - `ids.idKindField`
+              - `ids.IdOf`
               - `infra/endpoints.defineEndpoint`
               - `integrations/google-maps/places-api.PlaceSuggestionSchema`
+              - `network/live.liveCollection`
+              - `network/live.liveValue`
+              - `ui/icons/saved-names.parseSavedSymbolName`
+              - `ui/icons/saved-names.SavedSymbolNameSchema`
             - Exports (types):
               - `CreatePlaceTagBody`
               - `Place`
@@ -16141,15 +16151,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readOpStates`
               - `readSleepNow`
           - Plugins:
-            - **`op-store`** — Op-store web presence: eagerly registers the boot-critical op-store.in-flight live collection so boot-snapshot can hydrate it before first paint. Op-log read model: every serving backend ingests the host-global op-log.jsonl (and its rotations) into its own op_log_ops table behind a durable (inode, offset) cursor committed with the rows, reconciles in-flight ops whose process is gone (main appends a reconciler terminal to the log; a worktree closes locally only after an ingest gap), and serves the rows as the opsInFlight and opsHistory live collections, with a 30-day retention sweep.
+            - **`op-store`** — Op-store web presence: eagerly registers the boot-critical op-store.in-flight.all live collection so boot-snapshot can hydrate it before first paint. Op-log read model: every serving backend ingests the host-global op-log.jsonl (and its rotations) into its own op_log_ops table behind a durable (inode, offset) cursor committed with the rows, reconciles in-flight ops whose process is gone (main appends a reconciler terminal to the log; a worktree closes locally only after an ingest gap), and serves the rows as the opsInFlight and opsHistory live collections, with a 30-day retention sweep.
               - Server:
                 - Contributes:
                   - `resource.declare` "op-store.history"
                   - `resource.declare` "op-store.history:groups"
                   - `resource.declare` "op-store.history:rows"
-                  - `resource.declare` "op-store.in-flight"
-                  - `resource.declare` "op-store.in-flight:groups"
-                  - `resource.declare` "op-store.in-flight:rows"
+                  - `resource.declare` "op-store.in-flight.all"
+                  - `resource.declare` "op-store.in-flight.all:rows"
                 - Uses:
                   - `database.db`
                   - `database/derived-updated-at.deriveUpdatedAt`
@@ -16173,9 +16182,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `op-store.history` (keyed, window)
                   - `op-store.history:groups` (push)
                   - `op-store.history:rows` (keyed, point)
-                  - `op-store.in-flight` (keyed, window)
-                  - `op-store.in-flight:groups` (push)
-                  - `op-store.in-flight:rows` (keyed, point)
+                  - `op-store.in-flight.all` (keyed)
+                  - `op-store.in-flight.all:rows` (keyed, point)
               - Core:
                 - Uses:
                   - `debug/profiling/op-log.OpenWait`
@@ -20968,6 +20976,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: `debug/profiling/boot-bench`
         - Endpoint callers:
+          - `boot-bench`
           - `live-state`
           - `live-state-stale-drop`
           - `read-set`
@@ -22379,9 +22388,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "dead-jobs"
           - `resource.declare` "dead-jobs:groups"
           - `resource.declare` "dead-jobs:rows"
-          - `resource.declare` "job-runs"
-          - `resource.declare` "job-runs:groups"
-          - `resource.declare` "job-runs:rows"
+          - `resource.declare` "job-runs.all"
+          - `resource.declare` "job-runs.all:rows"
           - `resource.declare` "jobs-list"
           - `fork-schema-data-exclusion` "graphile_worker"
         - Uses:
@@ -22499,9 +22507,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `dead-jobs` (keyed, window)
           - `dead-jobs:groups` (push)
           - `dead-jobs:rows` (keyed, point)
-          - `job-runs` (keyed, window)
-          - `job-runs:groups` (push)
-          - `job-runs:rows` (keyed, point)
+          - `job-runs.all` (keyed)
+          - `job-runs.all:rows` (keyed, point)
           - `jobs-list` (invalidate, notified)
         - Routes:
           - `GET /api/jobs`
@@ -22538,7 +22545,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HOLD_SPECS`
           - `HoldClassSchema`
           - `holdForTask`
-          - `JOB_RUNS_MAX_LIMIT`
           - `JobRowSchema`
           - `JobRunOutcomeSchema`
           - `JobRunRowSchema`
@@ -23068,6 +23074,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CompiledGroups`
           - `CompiledUnion`
           - `EntitySource`
+          - `PointQueryResourceSpec`
           - `QueryDb`
           - `ReadColumn`
           - `RoutedSource`
@@ -24341,7 +24348,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
-    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); a scroll collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; LiveExposures.Register registers an entity extension's exposed fields (with their cells) for every list whose collection reaches its entity, read by useExposures. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+    - **`live`** — Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; LiveExposures.Register registers an entity extension's exposed fields (with their cells) for every list whose collection reaches its entity, read by useExposures. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
       - Web:
         - Slots: `LiveExposures.Register`
         - Slot contributors:
@@ -24380,8 +24387,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useLive`
           - `useLiveRow`
       - Server:
-        - Uses: 25 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `infra/query-resource` ×22
+        - Uses: 26 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `infra/query-resource` ×23
           - `database/sql-column` ×2
           - `network/live/filter.filterSql`
         - Exports (types):
@@ -24524,7 +24531,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveRowSchema`
           - `LiveRowsCollection`
           - `LiveScopedColumns`
-          - `LiveScrollCollection`
           - `LiveSnapshotBrand`
           - `LiveSortDirection`
           - `LiveTooLarge`
@@ -24557,8 +24563,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveValue`
           - `scopedLiveColumns`
       - Cross-plugin:
-        - Imported by: 221 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×62
+        - Imported by: 220 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×61
           - `conversations` ×35
           - `tasks` ×26
           - `debug` ×23
@@ -24656,8 +24662,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
           - Cross-plugin:
-            - Imported by: 33 plugins — full list in [`plugins/network/plugins/live/plugins/filter/REFERENCE.md`](../plugins/network/plugins/live/plugins/filter/REFERENCE.md)
-              - `apps` ×11
+            - Imported by: 32 plugins — full list in [`plugins/network/plugins/live/plugins/filter/REFERENCE.md`](../plugins/network/plugins/live/plugins/filter/REFERENCE.md)
+              - `apps` ×10
               - `infra` ×4
               - `conversations` ×3
               - `debug` ×3
@@ -29333,8 +29339,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `Inline`
           - Cross-plugin:
             - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
-              - `apps` ×16
               - `debug` ×16
+              - `apps` ×15
               - `reports` ×12
               - `conversations` ×9
               - `primitives` ×9
@@ -29349,6 +29355,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/query-deadline`
               - `reorder/editor`
               - `runs/run-outcome`
+              - `shell/notifications`
         - **`layer`** — Full-bleed layer layout primitive: <Layer> / layerClasses() is a standalone absolute inset-0 child of a positioned parent. The element-shaped sibling of Overlay's behind/above props.
           - Web:
             - Uses:
@@ -29522,8 +29529,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `PlaceholderProps`
             - Exports (values): `Placeholder`
           - Cross-plugin:
-            - Imported by: 82 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
-              - `apps` ×28
+            - Imported by: 81 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
+              - `apps` ×27
               - `debug` ×17
               - `primitives` ×13
               - `page` ×7
@@ -29623,8 +29630,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Row`
               - `SectionHeaderRow`
           - Cross-plugin:
-            - Imported by: 62 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
-              - `apps` ×16
+            - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
+              - `apps` ×15
               - `ui` ×11
               - `page` ×9
               - `primitives` ×9
@@ -29795,17 +29802,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `StatusDot`
               - `statusDotPaintClass`
           - Cross-plugin:
-            - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
+            - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
               - `apps` ×11
               - `conversations` ×8
               - `debug` ×8
               - `active-data` ×3
               - `build` ×2
               - `infra` ×2
+              - `shell` ×2
               - `tasks` ×2
               - `config_v2/settings`
               - `runs/run-outcome`
-              - `shell/health-report`
         - **`sticky`** — Sticky positioning layout primitive: <Sticky edge offset layer> pins a header/footer to a scroll edge with a z-layer-aware stacking level; stickyOffsetPx turns a measured height into the exact offset a box stacked under it pins at.
           - Web:
             - Uses:
@@ -29922,8 +29929,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 357 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×92
+            - Imported by: 356 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×91
               - `conversations` ×70
               - `primitives` ×40
               - `debug` ×32
@@ -30303,7 +30310,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps/mail/search`
-          - `apps/pages/trash`
           - `primitives/data-view`
           - `shell/notifications`
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
@@ -30372,8 +30378,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 65 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×57
+        - Contributes: 67 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×59
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
@@ -30469,6 +30475,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FoldRule`
           - `GlobalRowOrderContribution`
           - `GlobalRowOrderProps`
+          - `GridLine`
+          - `GridPhase`
           - `GroupBucket`
           - `GroupByController`
           - `GroupByRule`
@@ -30536,6 +30544,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useFilterClock`
           - `useFilterController`
           - `useFlatRows`
+          - `useGridPhase`
           - `useGroupByController`
           - `useGroupingClock`
           - `useGroupingRegistry`
@@ -30552,8 +30561,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowFilter`
           - `useSortController`
       - Server:
-        - Contributes: 59 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×57
+        - Contributes: 61 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×59
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -30678,9 +30687,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `splitFieldSections`
           - `UNGROUPED_FOLD_KEY`
       - Cross-plugin:
-        - Imported by: 89 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 91 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×30
-          - `apps` ×21
+          - `apps` ×22
           - `debug` ×11
           - `primitives` ×8
           - `conversations` ×7
@@ -30691,6 +30700,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `history/dialog`
           - `page/links`
           - `runs`
+          - `shell/notifications`
           - `ui/theme-engine/theme-gallery`
       - Exemptions:
         - Exempts itself from:
@@ -30702,11 +30712,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reorder/editor` (0 debt)
       - Test helpers:
         - Web: `@plugins/primitives/plugins/data-view/web/testing`
+          - `consumerPaging` — A consumer's paging (`DataViewProps.paging`): placeholders before and after the rows, every viewport report pushed to `reports`, nothing to grow.
+          - `describePagedConformance` — The paged-view contract every DataView view honours, run against `view` mounted through the real body on a laid-out page (`mountPagedDataView`):
           - `lowerFilterGroup` — Lower a DataView `FilterGroup` into a filter-language `Filter`, each rule through its operator's `lower` with `ctx.column` = the field id.
           - `lowersToMatch` — Does a rule `op(operand)` keep a row whose field projects to `value`? — the in-memory evaluator's exact path for one rule: `op.lower` over a column of `domain` (an incomplete rule, `undefined`, keeps every row), the DataView domain adapter, then the filter language's `matchesFilter`.
+          - `mountPagedDataView` — Mount ONE view of a paged DataView against a laid-out page — through the real seam (`DataViewShellFrame` around `DataViewBody`, the body every DataView renders), with a fake one-instance view model, inside a scroller whose `scrollTop` the test drives and an IntersectionObserver that answers from the layout, as a browser does.
+          - `PAGED_VIEWPORT_PX` — The scroller's visible height.
           - `renameColumns` — Rename every clause's column through `rename` (field id → column name).
           - `resolveLiveFields` — Resolve a schema against a live source — and check it where it is declared.
           - `testField` — A minimal option-less field for a test that calls `op.lower` directly.
+          - Types: `PagedDataView`, `PagedLayout`, `PagedViewUnderTest`
       - Plugins:
         - **`capsule-toolbar`** — Capsule toolbar arrangement for the data-view primitive: the collapsed view chip, a borderless search field (focused by /), the control triggers as circles and a round filled create button, all in one centred pill.
           - Web:
@@ -30821,8 +30836,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
           - Web:
             - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-            - Uses: 36 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md)
-              - `primitives/data-view` ×20
+            - Uses: 38 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md)
+              - `primitives/data-view` ×22
               - `primitives/css/ui-kit` ×2
               - `primitives/row-actions` ×2
               - `primitives/css/badge.Badge`
@@ -30849,8 +30864,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`icons`** — Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
           - Web:
             - Contributes: `DataViewSlots.View` "Icons" → `IconsView`
-            - Uses: 31 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md)
-              - `primitives/data-view` ×18
+            - Uses: 33 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md)
+              - `primitives/data-view` ×20
               - `primitives/avatar` ×2
               - `primitives/rank-reorder` ×2
               - `primitives/css/center.Center`
@@ -32089,8 +32104,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 229 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×66
+        - Imported by: 228 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×65
           - `conversations` ×38
           - `ui` ×22
           - `debug` ×20
@@ -32166,8 +32181,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LoadingVariant`
         - Exports (values): `Loading`
       - Cross-plugin:
-        - Imported by: 185 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×62
+        - Imported by: 184 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×61
           - `ui` ×19
           - `primitives` ×17
           - `conversations` ×16
@@ -33127,9 +33142,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 89 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×89
-        - Contributes: 112 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Slot contributors: 90 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×90
+        - Contributes: 113 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountsPane.Actions` "title" → `PaneTitleItem`
           - `agentDetailPane.Actions` "title" → `PaneTitleItem`
@@ -33200,6 +33215,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `mail-search.actions` "title" → `PaneTitleItem`
           - `mailThreadsPane.Actions` "title" → `PaneTitleItem`
           - `memoryPane.Actions` "title" → `PaneTitleItem`
+          - `notifications.actions` "title" → `PaneTitleItem`
           - `opDetailPane.Actions` "title" → `PaneTitleItem`
           - `pageDetailPane.Actions` "title" → `PaneTitleItem`
           - `pages-root.actions` "title" → `PaneTitleItem`
@@ -33353,7 +33369,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceAppId`
           - `useSyncPaneRegistry`
       - Cross-plugin:
-        - Imported by: 167 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 168 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×59
           - `conversations` ×29
           - `debug` ×23
@@ -33375,6 +33391,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review`
           - `runs`
           - `screenshot`
+          - `shell/notifications`
           - `ui/theme-engine/theme-customizer`
       - Exemptions:
         - Exempts itself from: `pane/no-core-define-route-in-web` — `.` (sanctioned)
@@ -34897,8 +34914,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 243 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×243
+    - Contributes: 246 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×246
     - Uses: 21 symbols — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
       - `reorder/editor` ×5
       - `config_v2` ×3
@@ -34923,8 +34940,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 242 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×242
+    - Contributes: 245 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×245
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -36147,29 +36164,44 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `mergeHealth`
           - `sortRows`
           - `verdictOf`
-    - **`notifications`** — Persistent bell-button notifications backed by the DB.
+    - **`notifications`** — Persistent bell-button notifications backed by the DB, and Debug → Notifications: every undismissed notification as a DataView (the bell popover's View all). Persistent bell-button notifications backed by the DB.
       - Web:
+        - Slots:
+          - `notifications.actions`
+          - `notification-actions`
+        - Slot contributors:
+          - `notifications.actions` ← `primitives.pane`
+          - `notification-actions` ← `shell.notifications`
         - Contributes:
           - `IdKinds.Kind` "notif"
           - `ActionBar.Item` → `BellButton`
-        - Uses: 29 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+          - `Pane.Register` "notifications"
+          - `DebugApp.Sidebar` "Notifications"
+          - `notification-actions` "open" → `OpenNotificationAction`
+          - `notification-actions` "dismiss" → `DismissNotificationAction`
+        - Uses: 39 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+          - `primitives/data-view` ×4
           - `infra/endpoints` ×2
           - `primitives/css/coords` ×2
+          - `primitives/css/ui-kit` ×2
           - `primitives/cursor-pagination` ×2
           - `primitives/live-state` ×2
+          - `primitives/pane` ×2
           - `apps-core/tabs.appLink`
+          - `apps/debug/shell.DebugApp`
           - `ids.IdKinds`
           - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/fill.Fill`
+          - `primitives/css/inline.Inline`
           - `primitives/css/line.Line`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/status-dot.StatusDot`
           - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.ToggleChip`
-          - `primitives/css/ui-kit.cn`
           - `primitives/icon-button.IconButton`
           - `primitives/link-gesture.activationProps`
           - `primitives/loading.Loading`
@@ -36223,8 +36255,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `ids.defineIdKind`
           - `ids.IdOf`
+          - `primitives/pane.defineRoute`
         - Exports (types): `NotificationId`
-        - Exports (values): `notificationIdKind`
+        - Exports (values):
+          - `notificationIdKind`
+          - `notificationsRoute`
       - Cross-plugin:
         - Imported by: 34 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `conversations` ×15
@@ -38357,8 +38392,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Cross-plugin:
-        - Imported by: 304 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×64
+        - Imported by: 303 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×63
           - `conversations` ×55
           - `page` ×40
           - `primitives` ×40

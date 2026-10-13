@@ -1,49 +1,49 @@
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
-import {
-  liveInstant,
-  liveStringArray,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
 import { PlaceSchema, PlaceTagSchema } from "./schema";
 import { PlaceSearchQuerySchema, PlaceSearchResultSchema } from "./maps";
 
 /**
- * The saved places, live. A personal set — hundreds, a few thousand at most —
- * that the map draws whole, so the default window is large (2000, max 5000)
- * rather than a page: a map that shows only the newest page of pins would lie
- * about where you have been. `tags` is filterable (the tag sidebar's
- * include / exclude rules), as are the name and Google id.
+ * The saved places, live, as the WHOLE ordered set (`all`, newest first) plus
+ * its `:rows` point sibling (one place by id). A personal set — hundreds, a
+ * few thousand at most — that the map draws whole and the tag sidebar counts
+ * whole: a map that shows only the newest window of pins would lie about
+ * where you have been. The Places DataView filters, sorts and searches it on
+ * the client.
+ *
+ * The key is `places.places.all`, not the old window's `places.places`: no
+ * bundle ever declared this key with another contract, so a tab on an older
+ * one gets `unknown-key` (a `skew` verdict) and never parses these rows.
  */
-export const places = liveCollection("places.places", {
+export const places = liveCollection("places.places.all", {
   row: PlaceSchema,
   id: "id",
-  filterable: {
-    name: liveText(),
-    googlePlaceId: liveText(),
-    tags: liveStringArray(),
-    autoTags: liveStringArray(),
-    createdAt: liveInstant(),
-    updatedAt: liveInstant(),
+  all: {
+    orderBy: [["createdAt", "desc"]],
+    unbounded: {
+      reason:
+        "a person saves every place by hand, and the map draws every one of them",
+    },
   },
-  sortable: ["createdAt", "updatedAt", "name"],
-  default: { orderBy: [["createdAt", "desc"]], limit: 2000 },
-  maxLimit: 5000,
 });
 
 /**
- * The tag tree, live, as flat rows (`parentId` links them; `tagPath` /
- * `tagDescendants` walk it). Read whole by every surface — the tree is tens of
- * tags — under the same generous bound as the places.
+ * The tag tree, live, as flat rows in rank order (`parentId` links them;
+ * `tagPath` / `tagDescendants` walk it) — the WHOLE ordered set (`all`): every
+ * surface reads the tree entire, and a tree cut at a window's edge orphans the
+ * children of a tag past it.
+ *
+ * The key is `places.tags.all`, not the old window's `places.tags` (see
+ * `places`).
  */
-export const placeTags = liveCollection("places.tags", {
+export const placeTags = liveCollection("places.tags.all", {
   row: PlaceTagSchema,
   id: "id",
-  filterable: {
-    name: liveText(),
+  all: {
+    orderBy: [["rank", "asc"]],
+    unbounded: {
+      reason: "a person adds every tag by hand, and the tag tree is read whole",
+    },
   },
-  sortable: ["rank", "name", "createdAt"],
-  default: { orderBy: [["rank", "asc"]], limit: 2000 },
-  maxLimit: 5000,
 });
 
 /**

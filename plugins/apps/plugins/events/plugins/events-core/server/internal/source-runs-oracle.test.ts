@@ -3,9 +3,9 @@
  * research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md) on a throwaway
  * database seeded with the real migration chain, through the REAL feed: the
  * real `eventSourceRuns` declaration compiled exactly as its `serveCollection`
- * compiles it, registered on the server-core runtime, the change-feed's routed
- * triggers installed from the routes it registered, its LISTEN consumer, and
- * `routeChange`.
+ * compiles it, registered on a resource runtime of the suite's own, the
+ * change-feed's routed triggers installed from the routes it registered, its
+ * LISTEN consumer, and the feed's own routing (`createChangeRouter`).
  *
  * The tuples are the ones the app subscribes: the source pane's window scoped
  * to one source (`.scoped({ where: { sourceId } })`), narrowed further by a
@@ -31,22 +31,16 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
-import {
-  routeChange,
-  type FeedChange,
-} from "@plugins/database/plugins/change-feed/server";
+import type { FeedChange } from "@plugins/database/plugins/change-feed/server";
 import {
   createChangeFeedListener,
+  createChangeRouter,
   rebuildTriggers,
 } from "@plugins/database/plugins/change-feed/server/testing";
 import {
-  defineResource,
-  notificationsWsHandler,
-  routedTableRequirements,
+  createResourceRuntime,
   type ResourceParams,
-  setRelationBases,
-} from "@plugins/framework/plugins/server-core/core";
-import { clearRelationBases } from "@plugins/framework/plugins/server-core/core/testing";
+} from "@plugins/framework/plugins/resource-runtime/core";
 import {
   makeClientView,
   type ClientView,
@@ -78,7 +72,17 @@ const truth = new Map<
   (params: ResourceParams) => Promise<unknown> | unknown
 >();
 
-const handler = notificationsWsHandler as unknown as {
+// The suite's OWN runtime, never server-core's process-global one:
+// `./singularity test` runs every bun suite in one process, and any suite that
+// loads `events-core/server` (a source type's, the refresh engine's) registers
+// the real `events.source-runs` on the global registry at module eval — so
+// registering it there too throws `defineResource: duplicate key`, whichever
+// suite loads second. The tree oracle (`tasks-core/server/testing`) does the
+// same for the same reason.
+const runtime = createResourceRuntime();
+const routeChange = createChangeRouter(runtime);
+
+const handler = runtime.notificationsWsHandler as unknown as {
   open(ws: unknown): void;
   message(ws: unknown, raw: string): void;
   close(ws: unknown, code: number, reason: string): void;
@@ -128,17 +132,11 @@ async function insertSource(id: string): Promise<void> {
 }
 
 beforeAll(async () => {
-  // What change-feed's boot installs before its listener starts (D34). This
-  // suite reaches only routed entries, but the legacy router runs on every
-  // change too, over whatever legacy read-sets other suites in this bun
-  // process left: with no bases set it would report on each one. No views
-  // matter here, so every relation is its own base.
-  setRelationBases((r) => [r]);
   testDb = await createTestDb({ prefix: "events_runs_oracle" });
   await runMigrations(testDb.db);
   // The collection's resources, compiled from the REAL declaration with the
   // options `resources.ts` serves it with, against this database — registered
-  // on the server-core runtime `routeChange` feeds, every loader run recorded.
+  // on the suite's runtime `routeChange` feeds, every loader run recorded.
   // (No custom-column sets: none are contributed here.)
   const specs = compileCollection(eventSourceRuns, {
     from: _eventSourceRuns,
@@ -165,11 +163,11 @@ beforeAll(async () => {
     eventSourceRuns.rows,
     specs.rows,
   ).serverOpts;
-  defineResource(eventSourceRuns.window, {
+  runtime.defineResource(eventSourceRuns.window, {
     ...windowOpts,
     loader: record(eventSourceRuns.key, windowOpts.loader),
   });
-  defineResource(eventSourceRuns.rows, {
+  runtime.defineResource(eventSourceRuns.rows, {
     ...rowsOpts,
     loader: record(eventSourceRuns.rows.key, rowsOpts.loader),
   });
@@ -183,7 +181,7 @@ beforeAll(async () => {
   await rebuildTriggers(
     testDb.db,
     { feedExempt: new Set(), optedOut: new Set(), produced: new Set() },
-    routedTableRequirements(),
+    runtime.routedTableRequirements(),
   );
   listener = createChangeFeedListener({
     connectionString: () => testDb.connectionString,
@@ -211,7 +209,6 @@ beforeAll(async () => {
 }, 60_000);
 
 afterAll(async () => {
-  clearRelationBases();
   handler.close(ws, 1000, "test");
   await listener?.stop();
   await testDb?.drop();
@@ -320,7 +317,9 @@ const T0 = Date.parse("2026-10-01T00:00:00.000Z");
 describe("events.source-runs — scoped differential oracle", () => {
   test("the collection routes event_source_runs", () => {
     expect(
-      routedTableRequirements().some((r) => r.table === "event_source_runs"),
+      runtime
+        .routedTableRequirements()
+        .some((r) => r.table === "event_source_runs"),
     ).toBe(true);
   });
 

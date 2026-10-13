@@ -78,7 +78,7 @@ const RELEASE_HISTORY_VIEW_ID = "studio.release.history";
 
 // This namespace's release runs, newest first — the Studio release-history
 // DataView's live source (research/2026-09-29-global-scoped-change-routing.md
-// P3). A scroll collection (read as key-range pages, no depth limit), scoped by the pane to
+// P3). Read as key-range pages (no depth limit), scoped by the pane to
 // one composition (`scoped({ where: { composition } })`) and by the server to
 // this namespace's runs (a worktree's fork inherits main's rows); a status flip
 // or a new run reaches the tuples holding it, through the routed runtime —
@@ -102,7 +102,6 @@ export const releaseHistory = liveCollection("release.history", {
   sortable: ["target", "status", "platform", "startedAt", "finishedAt"],
   default: { orderBy: [["startedAt", "desc"]], limit: 100 },
   maxLimit: 500,
-  scroll: true,
   columnScope: RELEASE_HISTORY_VIEW_ID,
 });
 

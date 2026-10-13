@@ -1,5 +1,5 @@
 /**
- * `useLive` over a scroll collection — its key-range pages, with a viewport and
+ * `useLive` over a collection's window — its key-range pages, with a viewport and
  * without — over `createLiveStateHarness` (a real client and its QueryClient): each page is
  * a window tuple, driven with `queryClient.setQueryData` on the exact tuple its
  * codec encodes (the same call a WS sub-ack makes), and a read failure through
@@ -70,7 +70,6 @@ function collection() {
     sortable: ["n"],
     default: { orderBy: [["n", "asc"]], limit: 2 },
     maxLimit: 4,
-    scroll: true,
   });
 }
 type C = ReturnType<typeof collection>;
@@ -158,7 +157,7 @@ async function pageTo(
   }
 }
 
-describe("useLive — a scroll collection's pages, with a viewport", () => {
+describe("useLive — a collection's pages, with a viewport", () => {
   it("a null query reads nothing and stays loading", () => {
     const c = collection();
     const live = createLiveStateHarness();
@@ -614,7 +613,6 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 2 },
       maxLimit: 4,
-      scroll: true,
       columnScope: "test.surface",
     });
     const live = createLiveStateHarness();
@@ -664,7 +662,7 @@ describe("useLive — a scroll collection's pages, with a viewport", () => {
   });
 });
 
-describe("useLive — a scroll collection's pages, without a viewport", () => {
+describe("useLive — a collection's pages, without a viewport", () => {
   function mountPlain(live: LiveStateHarness, c: C, query?: { limit: number }) {
     vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
     const rendered = renderHook(() => useLive(c, query), {

@@ -6,8 +6,8 @@
 
 /**
  * The reserved window-only row field a paged read's rows carry: the canonical
- * JSON array of the row's order-key values as exact text (a scroll
- * collection's: Postgres `col::text`), then its id — or `null` when that JSON
+ * JSON array of the row's order-key values as exact text (a collection's
+ * window: Postgres `col::text`), then its id — or `null` when that JSON
  * is over {@link LIVE_ROW_KEY_MAX_BYTES} (a long text sort key), at which no
  * page can be cut. It is not a row field: every read splits it off before
  * rows reach a consumer.

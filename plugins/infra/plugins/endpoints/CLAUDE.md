@@ -56,7 +56,7 @@ Use `fetchEndpoint` for imperative fetches outside React. Non-2xx responses thro
 **A read that a surface renders is a `ResourceResult`, not React Query's own result** (whose `isPending` / `isError` let a surface read `data ?? []` without asking which state it is in). From `@plugins/primitives/plugins/live-state/web` (live-state sits downstream of endpoints, so the adapters live there):
 
 - a GET — `useEndpointResource(endpoint, params, opts)` instead of `useEndpoint`;
-- a structured question (once a POST body) is a typed-query `liveValue` (`{ query }`), and a paged read a scroll collection or a key-range-paged one (`{ query, paged }`; a source with only forward cursors is one bounded value or a Postgres mirror — `network/live`, *Paged reads*) — never a TanStack query over `fetchEndpoint`. The revision-keyed and infinite query adapters are deleted; `useQueryResource` remains only for local async loads (a code-split module), never a server read.
+- a structured question (once a POST body) is a typed-query `liveValue` (`{ query }`), and a paged read a collection's window or a key-range-paged one (`{ query, paged }`; a source with only forward cursors is one bounded value or a Postgres mirror — `network/live`, *Paged reads*) — never a TanStack query over `fetchEndpoint`. The revision-keyed and infinite query adapters are deleted; `useQueryResource` remains only for local async loads (a code-split module), never a server read.
 
 An `EndpointError` maps to `not-found` on a 404 and `loader-failed` otherwise, with the server's message; a `fetch` that got no answer to `transport`; a response the schema rejects to `client-outdated`.
 

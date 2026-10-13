@@ -86,7 +86,6 @@ function setup() {
     sortable: ["title", "n"],
     default: { orderBy: [["n", "asc"]], limit: 10 },
     maxLimit: 50,
-    scroll: true,
     columnScope: SCOPE,
   });
   const recording = recordingQueryDb((q) =>

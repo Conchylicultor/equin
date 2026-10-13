@@ -167,30 +167,32 @@ export async function loadDeadJobsList(limit = 2000): Promise<DeadJobsPayload> {
 // and never updated, so `archivedAt` never re-sorts one.
 export const deadJobsServed = serveCollection(deadJobs, { from: _deadJobs });
 
-// The run history over `job_runs` (a per-job ring, see tables.ts): its scroll
-// window (newest finished first), its `:rows` point sibling and the `:groups`
-// the facets read. Every stored field binds to its column by name; `waitMs` is
-// the one computed field — `started_at − queued_at` in whole ms, floored at 0
-// because `started_at` is this process's clock and `queued_at` the database's.
-// No poll and no notify: the change feed covers `job_runs`. A run's write is
-// an insert, or an UPDATE of the ring slot it overwrites — which moves the
-// row's generated `id`, and the feed names both the old and the new one, so
-// the overwritten run leaves every window it was in.
+// The run history over `job_runs` (a per-job ring, see tables.ts): the whole
+// ordered set (newest finished first) and its `:rows` point sibling. Every
+// stored field binds to its column by name; `waitMs` is the one computed field
+// — `started_at − queued_at` in whole ms, floored at 0 because `started_at` is
+// this process's clock and `queued_at` the database's. No poll and no notify:
+// the change feed covers `job_runs`. A run's write is an insert, or an UPDATE
+// of the ring slot it overwrites — which moves the row's generated `id`, and
+// the feed names both the old and the new one, so the overwritten run leaves
+// the set as the new one enters it.
 export const jobRunsServed = serveCollection(jobRuns, {
   from: _jobRuns,
-  columns: {
-    waitMs: (j) =>
-      expr(
-        // GREATEST skips NULLs, so the CASE keeps a run with no `queued_at`
-        // NULL rather than reading it as a 0 ms wait.
-        sql`CASE WHEN ${j.base.queuedAt} IS NULL THEN NULL ELSE GREATEST(0, round(EXTRACT(EPOCH FROM (${j.base.startedAt} - ${j.base.queuedAt})) * 1000))::integer END`,
-        {
-          decoder: parsed(z.number().int(), "job-runs.waitMs"),
-          sqlType: "integer",
-        },
-      ),
-  },
+  columns: { waitMs: (j) => jobRunWaitMs(j.base) },
 });
+
+/** `waitMs` over a `job_runs` row's two instants, as SQL (see above). */
+export function jobRunWaitMs(run: { startedAt: unknown; queuedAt: unknown }) {
+  return expr(
+    // GREATEST skips NULLs, so the CASE keeps a run with no `queued_at` NULL
+    // rather than reading it as a 0 ms wait.
+    sql`CASE WHEN ${run.queuedAt} IS NULL THEN NULL ELSE GREATEST(0, round(EXTRACT(EPOCH FROM (${run.startedAt} - ${run.queuedAt})) * 1000))::integer END`,
+    {
+      decoder: parsed(z.number().int(), "job-runs.waitMs"),
+      sqlType: "integer",
+    },
+  );
+}
 
 // `jobs-list` reads the `graphile_worker.*` job tables, which live OUTSIDE the
 // public schema the L4 DB change-feed triggers cover (the feed deliberately

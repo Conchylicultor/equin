@@ -1,4 +1,4 @@
-// @hash a4818cecb937
+// @hash 6188d31cf811
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -11,6 +11,7 @@
   "items": [
     "debug.logs:logs",
     "debug.reports:reports",
+    "shell.notifications:notifications",
     "debug.trace.pane:trace-slow-events",
     "debug.profiling:profiling",
     "build:build",

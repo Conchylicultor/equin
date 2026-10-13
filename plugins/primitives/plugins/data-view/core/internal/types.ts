@@ -988,6 +988,16 @@ export interface DataViewRenderProps<TRow> {
    * deliberate no-op.
    */
   foldLines?: DataViewFoldLines;
+  /**
+   * The flat paged read's placeholders the body draws around the view — present
+   * exactly when it draws them (every row of `rows` is the read's: see
+   * {@link DataViewPaging.placeholders}); absent in memory, and under `isPaged`.
+   * A declared section's are on its `section.paging`. A grid view reads `before`
+   * to keep each card in the column it was drawn in when the pages above it are
+   * released or land (the gallery's and icons' phase pad); a stacked view needs
+   * nothing from it.
+   */
+  placeholders?: DataViewPagePlaceholders;
   /** Empty-state node, rendered only on confirmed-empty (`rows.length === 0`).
    *  Views NEVER see a loading state — the host renders the skeleton itself and
    *  skips `renderIsolated` while loading, so empty here always means empty. */
@@ -1242,16 +1252,14 @@ export type DataViewProps<TRow> = DataViewBaseProps<TRow> &
 
 /**
  * The props a surface's rows are identified and shaped by — for rows the
- * consumer holds in memory. A live `source` refuses all
- * four: its row key is its collection's `id`, a tree over a partial paged set
+ * consumer holds in memory. A live `source` refuses these and `hierarchy`:
+ * its row key is its collection's `id`, a tree over a partial paged set
  * orphans children, a consumer's rank would reorder server-sorted segments,
  * and its search is the source's `searchable`.
  */
 interface DataViewHeldRowProps<TRow> {
   rowKey: (row: TRow, index: number) => string;
   searchAccessor?: (row: TRow) => string;
-  /** Hierarchy accessors + mutations. Present → hierarchical views (tree) appear. */
-  hierarchy?: HierarchyConfig<TRow>;
   /**
    * Flat manual-order accessors + mutation. Present → views that opt in
    * (`supportsManualOrder`: list/table) order by `getRank` and enable rank-based
@@ -1263,20 +1271,25 @@ interface DataViewHeldRowProps<TRow> {
   manualOrder?: ManualOrderConfig<TRow>;
 }
 
-/** Rows the consumer holds, all of them. */
-export interface DataViewInMemoryOrigin<
-  TRow,
-> extends DataViewHeldRowProps<TRow> {
-  rows: readonly TRow[];
-  /**
-   * The state of the read backing `rows` — pass the read itself
-   * (`readiness={result}`: any `useLive` / `useResource` / combined result).
-   * `loading` renders `loadingState` (default: the view's skeleton), `error`
-   * renders `errorState` (default: the failure with Retry), and only `ready`
-   * renders the view — so neither a loading nor a failed list can masquerade
-   * as a confirmed-empty one (`emptyState` needs `ready` and zero rows).
-   */
-  readiness?: ResourceReadiness;
+/**
+ * Rows the consumer holds — all of them as a tree (`hierarchy`), or a loaded
+ * prefix of a paged read (`paging`), never both: a tree over a partial paged
+ * set orphans the children whose parents are not loaded yet. Both keys stay
+ * optional, so a `HierarchyConfig | undefined` prop still fits its arm.
+ */
+export type DataViewInMemoryOrigin<TRow> = DataViewInMemoryRows<TRow> &
+  (DataViewHierarchyRows<TRow> | DataViewPagedRows<TRow>);
+
+/** An in-memory origin whose rows form a tree. */
+interface DataViewHierarchyRows<TRow> {
+  /** Hierarchy accessors + mutations. Present → hierarchical views (tree) appear. */
+  hierarchy?: HierarchyConfig<TRow>;
+  paging?: never;
+}
+
+/** An in-memory origin whose rows are a loaded prefix of a paged read. */
+interface DataViewPagedRows<TRow> {
+  hierarchy?: never;
   /**
    * `rows` hold a loaded prefix of a longer read that pages as the user
    * scrolls: the body renders the same infinite-scroll footer a live `source`
@@ -1287,6 +1300,20 @@ export interface DataViewInMemoryOrigin<
    * collection's is a live `source` instead.
    */
   paging?: DataViewPaging<TRow>;
+}
+
+/** What every in-memory origin holds, tree or paged. */
+interface DataViewInMemoryRows<TRow> extends DataViewHeldRowProps<TRow> {
+  rows: readonly TRow[];
+  /**
+   * The state of the read backing `rows` — pass the read itself
+   * (`readiness={result}`: any `useLive` / `useResource` / combined result).
+   * `loading` renders `loadingState` (default: the view's skeleton), `error`
+   * renders `errorState` (default: the failure with Retry), and only `ready`
+   * renders the view — so neither a loading nor a failed list can masquerade
+   * as a confirmed-empty one (`emptyState` needs `ready` and zero rows).
+   */
+  readiness?: ResourceReadiness;
   /**
    * The live collection the rows come from, when they are one's (the Queue's
    * `conversationsActive`, merged in memory with other reads): every field an
@@ -1386,7 +1413,7 @@ export interface DataViewViewportSink {
 
 /**
  * The paging state of a read whose loaded rows a DataView shows — see
- * {@link DataViewInMemoryOrigin.paging}. A live `source` produces one
+ * {@link DataViewPagedRows.paging}. A live `source` produces one
  * internally; `pagesPaging` maps a `useLive` read onto it.
  */
 export interface DataViewPaging<TRow> {

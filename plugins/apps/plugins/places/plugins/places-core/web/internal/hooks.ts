@@ -2,9 +2,9 @@ import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   useLive,
   useLiveRow,
-  type LiveListResult,
   type LiveRowResult,
 } from "@plugins/network/plugins/live/web";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import {
   createPlaceTag,
   deletePlace,
@@ -22,10 +22,10 @@ import {
 } from "../../core";
 
 /**
- * Every saved place, live: the collection's default window (newest first,
- * 2000). A surface that filters server-side reads `useLive(places, { … })`.
+ * Every saved place, live: the whole set (newest first) — the map draws every
+ * pin, and the surfaces filter on the client.
  */
-export function usePlaces(): LiveListResult<Place> {
+export function usePlaces(): ResourceResult<Place[]> {
   return useLive(places);
 }
 
@@ -35,7 +35,7 @@ export function usePlaceRow(placeId: string): LiveRowResult<Place> {
 }
 
 /** The whole tag tree, live, as flat rows (rank order; `parentId` links them). */
-export function usePlaceTags(): LiveListResult<PlaceTag> {
+export function usePlaceTags(): ResourceResult<PlaceTag[]> {
   return useLive(placeTags);
 }
 

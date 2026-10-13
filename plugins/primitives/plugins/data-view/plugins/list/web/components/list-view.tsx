@@ -409,9 +409,12 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         section={section}
         foldLines={props.foldLines}
         // Tree-chrome rows keep the tree view's rhythm: no band padding, the
-        // rows sit flush under the header like a tree's do.
+        // rows sit flush under the header like a tree's do. The padding never
+        // depends on `windowed`: a read growing past the threshold would drop
+        // it, and every row on screen would jump by it (`VirtualRows` measures
+        // its own offset inside the band, so it needs no special case).
         className={
-          windowed || options.rowChrome === "tree"
+          options.rowChrome === "tree"
             ? undefined
             : // The top gap is the theme's (density `sectionBodyPadTop`,
               // default the `sm` step of the bottom one).

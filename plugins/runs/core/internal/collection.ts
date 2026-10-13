@@ -61,13 +61,13 @@ export const RunRowSchema = z.object({
  * is an arm (`defineRunKind`, server), served from its own table; a write to
  * one ledger refills only the rows it changed, in the windows reading that arm.
  *
- * Newest first by default; a scroll, so the list pages past one window.
+ * Newest first by default; read as key-range pages, so the list pages past
+ * one window.
  */
 export const runs = liveCollection("runs", {
   row: RunRowSchema,
   id: "runKey",
   arms: { discriminator: "kind" },
-  scroll: true,
   filterable: {
     kind: liveText(),
     label: liveText(),

@@ -1,6 +1,6 @@
 /**
  * `useLive`'s overloads, checked by tsc (every `@ts-expect-error` must be an
- * error): a scroll collection's — or a paged value's — paged read with a
+ * error): a collection's — or a paged value's — paged read with a
  * viewport takes no `limit` (its pages own the limits) and a viewport only as
  * a whole options object — never `undefined` — while a read without one is the
  * plain list read. The cursor chain's `{ first }` is gone, and a key part is
@@ -23,22 +23,17 @@ import { mintVisibleRange } from "../internal/visible-range";
 const Row = z.object({ id: z.string(), n: z.number() });
 type Row = z.infer<typeof Row>;
 
-const scroll = liveCollection("test.use-live-types.scroll", {
+const windowed = liveCollection("test.use-live-types.window", {
   row: Row,
   id: "id",
   filterable: {},
   sortable: ["n"],
   default: { orderBy: [["n", "asc"]], limit: 2 },
   maxLimit: 4,
-  scroll: true,
 });
-const plain = liveCollection("test.use-live-types.plain", {
+const lookup = liveCollection("test.use-live-types.lookup", {
   row: Row,
   id: "id",
-  filterable: {},
-  sortable: ["n"],
-  default: { orderBy: [["n", "asc"]], limit: 2 },
-  maxLimit: 4,
 });
 const viewport = mintVisibleRange({ kind: "measuring" });
 
@@ -70,18 +65,18 @@ const refusingPaged = liveValue("test.use-live-types.paged-refusals", {
 });
 
 function useTypeChecks(maybe: { viewport: typeof viewport } | undefined) {
-  const paged: LivePagesResult<Row> = useLive(scroll, {}, { viewport });
+  const paged: LivePagesResult<Row> = useLive(windowed, {}, { viewport });
   const detached: LivePagesResult<Row> = useLive(null, null, { viewport });
-  const list: LiveListResult<Row> = useLive(scroll, { limit: 1 });
+  const list: LiveListResult<Row> = useLive(windowed, { limit: 1 });
 
   // @ts-expect-error a paged read's pages own the limits
-  useLive(scroll, { limit: 1 }, { viewport });
-  // @ts-expect-error only a scroll collection is read as pages
-  useLive(plain, {}, { viewport });
+  useLive(windowed, { limit: 1 }, { viewport });
+  // @ts-expect-error a lookup-only collection has no window to page
+  useLive(lookup, {}, { viewport });
   // @ts-expect-error a viewport is the options object, never `undefined`
-  useLive(scroll, {}, maybe);
+  useLive(windowed, {}, maybe);
   // @ts-expect-error the viewport is a branded VisibleRange, never spelled by hand
-  useLive(scroll, {}, { viewport: { kind: "measuring" } });
+  useLive(windowed, {}, { viewport: { kind: "measuring" } });
 
   const valuePages: LivePagesResult<Item> = useLive(
     pagedValue,

@@ -7,7 +7,6 @@ export {
   DeadJobRowSchema,
   DeadJobsPayloadSchema,
   jobRuns,
-  JOB_RUNS_MAX_LIMIT,
   JobRunRowSchema,
   JobRunOutcomeSchema,
 } from "./resources";

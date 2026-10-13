@@ -101,8 +101,8 @@ export type ClaudeCliCallRow = z.infer<typeof ClaudeCliCallRowSchema>;
 /**
  * The call log — Debug → Claude CLI Calls — as a live collection: a bounded
  * window, newest first (100, grown to at most `RECENT_CALLS_LIMIT`), plus its
- * `:rows` / `:groups` siblings. Declared `scroll` so it backs the pane's live
- * DataView: search runs over the prompt / output / error text, the Source and
+ * `:rows` / `:groups` siblings. It backs the pane's live DataView (key-range
+ * pages): search runs over the prompt / output / error text, the Source and
  * Model filters are `:groups` facets of the whole log (not the loaded window),
  * and `status` (derived from `error`) filters and groups like a column. Since
  * the recorder trims the log to `RECENT_CALLS_LIMIT` rows, every query here is
@@ -125,7 +125,6 @@ export const claudeCliCalls = liveCollection("claude-cli-calls", {
   sortable: ["createdAt", "durationMs", "sourceName", "model"],
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },
   maxLimit: RECENT_CALLS_LIMIT,
-  scroll: true,
 });
 
 /**

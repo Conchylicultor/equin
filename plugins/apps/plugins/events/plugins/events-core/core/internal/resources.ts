@@ -58,8 +58,8 @@ const SOURCE_RUNS_VIEW_ID = "events.source-runs";
  * or the card beside it contradicts it. The change feed routes each run row's
  * write to the tuples holding it: no revision tick, no refetch.
  *
- * A scroll collection: retention keeps 30 days, and a source on a short cadence
- * writes more than one window of that. `flags` (the caveats list) is on the
+ * Read as key-range pages: retention keeps 30 days, and a source on a short
+ * cadence writes more than one window of that. `flags` (the caveats list) is on the
  * wire but display-only — no saved view sorts or filters by it.
  */
 export const eventSourceRuns = liveCollection("events.source-runs", {
@@ -89,7 +89,6 @@ export const eventSourceRuns = liveCollection("events.source-runs", {
   ],
   default: { orderBy: [["startedAt", "desc"]], limit: 100 },
   maxLimit: 500,
-  scroll: true,
   columnScope: SOURCE_RUNS_VIEW_ID,
 });
 

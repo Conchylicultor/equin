@@ -32,7 +32,6 @@ const runs = () =>
     row: Run,
     id: "runKey",
     arms: { discriminator: "kind" },
-    scroll: true,
     filterable: { kind: liveText(), label: liveText() },
     sortable: ["startedAt"],
     default: { orderBy: [["startedAt", "desc"]], limit: 10 },
@@ -42,10 +41,9 @@ const runs = () =>
 const BuildRow = z.object({ exitCode: z.number().nullable() });
 
 describe("liveCollection — the `arms` overload", () => {
-  test("a union is a scroll collection whose rows carry `$columns`", () => {
+  test("a union is a window whose rows carry `$columns`", () => {
     const c = runs();
     expect(c.arms).toEqual({ discriminator: "kind" });
-    expect(c.scroll).toBe(true);
     expect(c.contributed).toBe(false);
     expect(c.columnScope).toBeNull();
     // `rowKeys` stay the author's fields: `$columns` is folded, never bound.
@@ -72,7 +70,7 @@ describe("liveCollection — the `arms` overload", () => {
     expect(c.arms).toBeNull();
   });
 
-  test("runtime throws mirror the overload: contributed, columnScope, no scroll, no default, a bad discriminator", () => {
+  test("runtime throws mirror the overload: contributed, columnScope, no default, a bad discriminator", () => {
     const base = {
       row: Run,
       id: "runKey",
@@ -80,7 +78,6 @@ describe("liveCollection — the `arms` overload", () => {
       sortable: ["startedAt"],
       default: { orderBy: [["startedAt", "desc"]], limit: 10 },
       maxLimit: 30,
-      scroll: true,
     } as const;
     // Untyped callers: each spec is one the overloads refuse.
     const untyped = liveCollection as unknown as (
@@ -103,13 +100,6 @@ describe("liveCollection — the `arms` overload", () => {
     ).toThrow(/columnScope beside `arms`/);
     expect(() =>
       untyped(`test.live.arms-bad-${seq++}`, {
-        ...base,
-        arms: { discriminator: "kind" },
-        scroll: undefined,
-      }),
-    ).toThrow(/needs `scroll: true`/);
-    expect(() =>
-      untyped(`test.live.arms-bad-${seq++}`, {
         row: Run,
         id: "runKey",
         arms: { discriminator: "kind" },
@@ -129,7 +119,7 @@ describe("liveCollection — the `arms` overload", () => {
     ).toThrow(/is the id/);
   });
 
-  test("types: the overload refuses contributed / columnScope, requires scroll, and types the discriminator (T12)", () => {
+  test("types: the overload refuses contributed / columnScope, and types the discriminator (T12)", () => {
     // Never called — the assertions are the `@ts-expect-error`s.
     const _typesOnly = () => {
       const spec = {
@@ -140,30 +130,18 @@ describe("liveCollection — the `arms` overload", () => {
         default: { orderBy: [["startedAt", "desc"]], limit: 10 },
         maxLimit: 30,
       } as const;
-      // @ts-expect-error — a union is always a scroll
+      // A union needs nothing beside `arms`: every window pages.
       liveCollection("t.a", { ...spec, arms: { discriminator: "kind" } });
-      // Overload resolution reports the refused spec at its `arms` (the
-      // last overload tried is the single-table one, which has no `arms`).
-      liveCollection("t.b", {
-        ...spec,
-        scroll: true,
-        // @ts-expect-error — a union's columns are its arms', never contributed
-        arms: { discriminator: "kind" },
-        contributed: true,
-      });
-      liveCollection("t.c", {
-        ...spec,
-        scroll: true,
-        // @ts-expect-error — nor scoped
-        arms: { discriminator: "kind" },
-        columnScope: "s",
-      });
-      liveCollection("t.d", {
-        ...spec,
-        scroll: true,
-        // @ts-expect-error — the discriminator is a row field
-        arms: { discriminator: "nope" },
-      });
+      // One line per refused call: past three failed overloads TypeScript may
+      // report the call itself rather than the field at fault.
+      const arms = { discriminator: "kind" } as const;
+      // @ts-expect-error — a union's columns are its arms', never contributed
+      liveCollection("t.b", { ...spec, arms, contributed: true });
+      // @ts-expect-error — nor scoped
+      liveCollection("t.c", { ...spec, arms, columnScope: "s" });
+      const nope = { discriminator: "nope" } as const;
+      // @ts-expect-error — the discriminator is a row field
+      liveCollection("t.d", { ...spec, arms: nope });
     };
     void _typesOnly;
   });
@@ -230,7 +208,6 @@ describe("liveArmColumns", () => {
       sortable: ["startedAt"],
       default: { orderBy: [["startedAt", "desc"]], limit: 10 },
       maxLimit: 30,
-      scroll: true,
     });
     expect(() =>
       liveArmColumns(

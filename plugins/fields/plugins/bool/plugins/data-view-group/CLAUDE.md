@@ -3,7 +3,9 @@
 The **bool** type's `data-view.grouping` capability.
 
 Contributes `DataViewSlots.Grouping({ match: "bool", label: "Group by", groupings })`
-— the one way a boolean field buckets: a **No** section and a **Yes** section.
+— the one way a boolean field buckets: a **No** section and a **Yes** section,
+or the field's own names for them (`options` with values `"false"` / `"true"`:
+the notifications pane's `read` reads Unread / Read).
 
 This behaviour used to live inside data-view itself (the `field.type === "bool"`
 branch of `sectionLabel` in `use-data-view-sections.ts`). It is preserved here

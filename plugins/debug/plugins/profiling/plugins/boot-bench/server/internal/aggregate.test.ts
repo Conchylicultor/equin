@@ -216,6 +216,13 @@ describe("buildReport", () => {
     snapshotBloat: {
       warm: { tableBytes: 12345, deadTuples: 678, liveTuples: 9 },
     },
+    snapshotBytes: {
+      warm: {
+        total: { raw: 1000, gzip: 200 },
+        perKey: { notifications: { raw: 600, gzip: 120 } },
+        rowKeyBytes: { notifications: 42 },
+      },
+    },
   };
 
   it("passes each mode's snapshotBloat through onto the aggregate", () => {
@@ -227,5 +234,19 @@ describe("buildReport", () => {
     });
     expect(report.modes.warm!.bootSnapshotPersistedReadMs.median).toBe(9);
     expect(report.modes.cold).toBeUndefined();
+  });
+
+  it("passes each mode's snapshotBytes through onto the aggregate", () => {
+    const report = buildReport(res);
+    expect(report.modes.warm!.snapshotBytes).toEqual({
+      total: { raw: 1000, gzip: 200 },
+      perKey: { notifications: { raw: 600, gzip: 120 } },
+      rowKeyBytes: { notifications: 42 },
+    });
+  });
+
+  it("leaves snapshotBytes off a mode the response carries none for", () => {
+    const older: BootBenchRunResponse = { ...res, snapshotBytes: undefined };
+    expect(buildReport(older).modes.warm!.snapshotBytes).toBeUndefined();
   });
 });

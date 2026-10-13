@@ -67,7 +67,7 @@ describe("liveCollection", () => {
       filterable: { bogus: liveText() },
       sortable: ["name"],
       default: { orderBy: [["name", "asc"]], limit: 1 },
-      maxLimit: 1,
+      maxLimit: 2,
     });
     liveCollection("live-test.bad-domain", {
       row: RowSchema,
@@ -76,7 +76,7 @@ describe("liveCollection", () => {
       filterable: { name: liveBoolean() },
       sortable: ["name"],
       default: { orderBy: [["name", "asc"]], limit: 1 },
-      maxLimit: 1,
+      maxLimit: 2,
     });
     const OrRow = z.object({ id: z.string(), or: z.string() });
     expect(() =>
@@ -87,7 +87,7 @@ describe("liveCollection", () => {
         filterable: { or: liveText() },
         sortable: [],
         default: { orderBy: [["id", "asc"]], limit: 1 },
-        maxLimit: 1,
+        maxLimit: 2,
       }),
     ).toThrow(/cannot be a filterable column/);
     expect(() =>
@@ -415,7 +415,7 @@ describe("preload", () => {
     filterable: { enabled: liveBoolean() },
     sortable: ["name"],
     default: { orderBy: [["name", "asc"]], limit: 10 },
-    maxLimit: 10,
+    maxLimit: 20,
   } as const;
 
   it('is off by default, and "none" sets nothing', () => {
@@ -607,7 +607,6 @@ describe("count codec", () => {
         sortable: ["createdAt"],
         default: { orderBy: [["createdAt", "desc"]], limit: 100 },
         maxLimit: 500,
-        scroll: true,
         arms: { discriminator: "status" },
         count: true,
       } as never),
@@ -689,7 +688,7 @@ describe("which failures are a contract mismatch", () => {
   });
 });
 
-describe("scroll collection: page cuts", () => {
+describe("page cuts — every window takes them", () => {
   const scrolled = liveCollection("live-test.codec-scroll", {
     row: RowSchema,
     id: "id",
@@ -697,24 +696,12 @@ describe("scroll collection: page cuts", () => {
     sortable: ["createdAt", "name", "id"],
     default: { orderBy: [["createdAt", "desc"]], limit: 100 },
     maxLimit: 300,
-    scroll: true,
   });
   const codec = scrolled.window.window;
   // A row key of the default order: createdAt's text, then the id.
   const cut = JSON.stringify(["2026-09-30 10:00:00.123456+00", "r1"]);
 
-  it("is declared: the collection says so, and only it takes cuts", () => {
-    expect(scrolled.scroll).toBe(true);
-    expect(sources.scroll).toBe(false);
-    expect(() => encode(undefined, { after: cut })).toThrow(
-      /only a collection declared `scroll: true`/,
-    );
-    expect(() => decode({ limit: "100", after: cut })).toThrow(
-      /only a collection declared `scroll: true`/,
-    );
-  });
-
-  it("needs maxLimit ≥ 2 · default.limit", () => {
+  it("needs maxLimit ≥ 2 · default.limit, on every window", () => {
     expect(() =>
       liveCollection("live-test.codec-scroll-tight", {
         row: RowSchema,
@@ -723,9 +710,8 @@ describe("scroll collection: page cuts", () => {
         sortable: ["name"],
         default: { orderBy: [["name", "asc"]], limit: 100 },
         maxLimit: 199,
-        scroll: true,
       }),
-    ).toThrow(/maxLimit ≥ 2 · default.limit \(200\), got 199/);
+    ).toThrow(/maxLimit must be ≥ 2 · default.limit \(200\), got 199/);
   });
 
   it("cuts are absent by default: the default tuple stays byte-identical", () => {

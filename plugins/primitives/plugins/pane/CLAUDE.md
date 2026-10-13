@@ -807,9 +807,9 @@ See "Open questions" in the design doc.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 89 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×89
-  - Contributes: 112 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 90 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×90
+  - Contributes: 113 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountsPane.Actions` "title" → `PaneTitleItem`
     - `agentDetailPane.Actions` "title" → `PaneTitleItem`
@@ -880,6 +880,7 @@ See "Open questions" in the design doc.
     - `mail-search.actions` "title" → `PaneTitleItem`
     - `mailThreadsPane.Actions` "title" → `PaneTitleItem`
     - `memoryPane.Actions` "title" → `PaneTitleItem`
+    - `notifications.actions` "title" → `PaneTitleItem`
     - `opDetailPane.Actions` "title" → `PaneTitleItem`
     - `pageDetailPane.Actions` "title" → `PaneTitleItem`
     - `pages-root.actions` "title" → `PaneTitleItem`
@@ -1033,7 +1034,7 @@ See "Open questions" in the design doc.
     - `useSurfaceAppId`
     - `useSyncPaneRegistry`
 - Cross-plugin:
-  - Imported by: 167 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 168 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×59
     - `conversations` ×29
     - `debug` ×23
@@ -1055,6 +1056,7 @@ See "Open questions" in the design doc.
     - `review`
     - `runs`
     - `screenshot`
+    - `shell/notifications`
     - `ui/theme-engine/theme-customizer`
 - Exemptions:
   - Exempts itself from: `pane/no-core-define-route-in-web` — `.` (sanctioned)

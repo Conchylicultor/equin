@@ -21,8 +21,9 @@ import { listTags } from "./tags-repo";
 import { editPlaceTags } from "./tag-edits";
 import { placeIconJob } from "./place-icon";
 
-// Place reads and writes. Rows reach the UI through the live `places.places`
-// collection; these return the written row for the caller's own use.
+// Place reads and writes. Rows reach the UI through the live
+// `places.places.all` collection; these return the written row for the
+// caller's own use.
 
 export async function requirePlace(id: string): Promise<Place> {
   const [place] = await db

@@ -12,7 +12,6 @@
   - Uses:
     - `ids.IdKinds`
     - `infra/endpoints.useEndpointMutation`
-    - `network/live.LiveListResult`
     - `network/live.LiveRowResult`
     - `network/live.useLive`
     - `network/live.useLiveRow`
@@ -32,13 +31,11 @@
   - Contributes:
     - `ids.kind` "place"
     - `ids.kind` "ptag"
-    - `resource.declare` "places.places"
-    - `resource.declare` "places.places:groups"
-    - `resource.declare` "places.places:rows"
+    - `resource.declare` "places.places.all"
+    - `resource.declare` "places.places.all:rows"
     - `resource.declare` "places.search"
-    - `resource.declare` "places.tags"
-    - `resource.declare` "places.tags:groups"
-    - `resource.declare` "places.tags:rows"
+    - `resource.declare` "places.tags.all"
+    - `resource.declare` "places.tags.all:rows"
   - Uses:
     - `database.db`
     - `ids.IdKinds`
@@ -59,13 +56,11 @@
     - `defineJob('places.icon.generate')`
     - `defineWarmup('places.seed-tags')`
   - Resources:
-    - `places.places` (keyed, window)
-    - `places.places:groups` (push)
-    - `places.places:rows` (keyed, point)
+    - `places.places.all` (keyed)
+    - `places.places.all:rows` (keyed, point)
     - `places.search` (invalidate, fixed)
-    - `places.tags` (keyed, window)
-    - `places.tags:groups` (push)
-    - `places.tags:rows` (keyed, point)
+    - `places.tags.all` (keyed)
+    - `places.tags.all:rows` (keyed, point)
   - Routes:
     - `POST /api/places/places`
     - `PATCH /api/places/places/:id`
@@ -75,19 +70,26 @@
     - `PATCH /api/places/tags/:id`
     - `DELETE /api/places/tags/:id`
 - Core:
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields/text/config` ×3
-    - `fields` ×3
-    - `ids` ×3
-    - `network/live/filter` ×3
-    - `network/live` ×2
-    - `ui/icons/saved-names` ×2
+  - Uses:
+    - `fields.FieldsRecord`
+    - `fields.fieldsToZodObject`
+    - `fields.nullable`
     - `fields/date/config.dateField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
     - `fields/location.locationField`
+    - `fields/text/config.enumTextField`
+    - `fields/text/config.parsedTextField`
+    - `fields/text/config.textField`
+    - `ids.defineIdKind`
+    - `ids.idKindField`
+    - `ids.IdOf`
     - `infra/endpoints.defineEndpoint`
     - `integrations/google-maps/places-api.PlaceSuggestionSchema`
+    - `network/live.liveCollection`
+    - `network/live.liveValue`
+    - `ui/icons/saved-names.parseSavedSymbolName`
+    - `ui/icons/saved-names.SavedSymbolNameSchema`
   - Exports (types):
     - `CreatePlaceTagBody`
     - `Place`

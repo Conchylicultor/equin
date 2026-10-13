@@ -99,7 +99,6 @@ const collection = liveCollection("test.live.pages-oracle.items", {
   sortable: ["n"],
   default: { orderBy: [["n", "asc"]], limit: 2 },
   maxLimit: 4,
-  scroll: true,
 });
 const codec = collection.window.window;
 // No stale budget here: the oracle checks what a released page holds.

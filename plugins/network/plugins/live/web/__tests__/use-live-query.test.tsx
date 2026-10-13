@@ -3,7 +3,7 @@
  * `createLiveStateHarness` (the use-live.test.tsx harness):
  * authoritative values are driven with `queryClient.setQueryData` on the exact tuple
  * the declaration's codec encodes — the same call a WS sub-ack makes. (The
- * paged read's plan and hook are the scroll collection's, pinned in
+ * paged read's plan and hook are a collection window's, pinned in
  * `use-pages.test.tsx`; here, what a VALUE source changes.)
  */
 

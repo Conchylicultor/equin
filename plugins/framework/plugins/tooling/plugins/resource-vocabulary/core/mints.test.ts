@@ -44,12 +44,12 @@ describe("mintsOf ≡ liveCollection's runtime mints (A28)", () => {
       filterable: {},
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 10 },
-      maxLimit: 10,
+      maxLimit: 20,
     });
     expect(
       scannedMints(
         "test.mints.window",
-        `{ row: Row, id: "id", filterable: {}, sortable: ["n"], default: { orderBy: [["n", "asc"]], limit: 10 }, maxLimit: 10 }`,
+        `{ row: Row, id: "id", filterable: {}, sortable: ["n"], default: { orderBy: [["n", "asc"]], limit: 10 }, maxLimit: 20 }`,
       ),
     ).toEqual(runtimeMints(c));
   });
@@ -83,7 +83,6 @@ describe("mintsOf ≡ liveCollection's runtime mints (A28)", () => {
       row: Row,
       id: "id",
       arms: { discriminator: "kind" },
-      scroll: true,
       filterable: {},
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 10 },
@@ -92,7 +91,7 @@ describe("mintsOf ≡ liveCollection's runtime mints (A28)", () => {
     expect(
       scannedMints(
         "test.mints.arms",
-        `{ row: Row, id: "id", arms: { discriminator: "kind" }, scroll: true, filterable: {}, sortable: ["n"], default: { orderBy: [["n", "asc"]], limit: 10 }, maxLimit: 30 }`,
+        `{ row: Row, id: "id", arms: { discriminator: "kind" }, filterable: {}, sortable: ["n"], default: { orderBy: [["n", "asc"]], limit: 10 }, maxLimit: 30 }`,
       ),
     ).toEqual(runtimeMints(c));
   });

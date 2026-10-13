@@ -137,6 +137,9 @@ const row = (
   kind,
 });
 
+/** A window row as the wire carries it: its fields and its `$key` (default order: `n`, then the id). */
+const wired = (r: Src) => ({ ...r, $key: JSON.stringify([String(r.n), r.id]) });
+
 const hide = async (id: string, hidden = true): Promise<void> => {
   await db.execute(sql`UPDATE ${srcT} SET hidden = ${hidden} WHERE id = ${id}`);
 };
@@ -269,7 +272,7 @@ describe("serveCollection — compiled window + point, real Postgres", () => {
     const [d] = h.deltas(c.key, enabled);
     expect(d!.deletes).toEqual(["b"]);
     // `off` sorts before `c` but fails the filter: the backfill is `c`.
-    expect(d!.upserts).toEqual([["c", row("c", 4)]]);
+    expect(d!.upserts).toEqual([["c", wired(row("c", 4))]]);
     expect(d!.order).toEqual(["a", "c"]);
   });
 
@@ -415,8 +418,9 @@ describe("serveCollection — derived projection", () => {
       string,
       unknown
     >[];
-    expect(first).toEqual(row("a", 1, true, "a", "x"));
-    expect(Object.keys(first!).sort()).toEqual([...c.rowKeys].sort());
+    // The row schema's fields and the window's own `$key` — never `secret`.
+    expect(first).toEqual(wired(row("a", 1, true, "a", "x")));
+    expect(Object.keys(first!).sort()).toEqual([...c.rowKeys, "$key"].sort());
     const [pointRow] = (await h.subscribe(c.rows.key, { ids: "a" })) as Record<
       string,
       unknown
@@ -432,7 +436,7 @@ describe("serveCollection — derived projection", () => {
       filterable: {},
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 1 },
-      maxLimit: 1,
+      maxLimit: 2,
     });
     expect(() =>
       // @ts-expect-error — `bogus` is not a column of srcT, so `columns` is required
@@ -539,7 +543,7 @@ describe("serveCollection — :groups", () => {
       filterable: { kind: liveText() },
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 1 },
-      maxLimit: 1,
+      maxLimit: 2,
     });
     await seed();
     const specs = compileCollection(c, {
@@ -872,7 +876,7 @@ describe("serveCollection — a column type's wire codec", () => {
       filterable: { blob: liveText() },
       sortable: ["id"],
       default: { orderBy: [["id", "asc"]], limit: 1 },
-      maxLimit: 1,
+      maxLimit: 2,
     });
     expect(() =>
       compileCollection(c, { from: blobT, db: db as unknown as QueryDb }),

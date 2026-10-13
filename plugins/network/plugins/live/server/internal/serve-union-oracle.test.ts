@@ -116,7 +116,6 @@ const runs = liveCollection("test.live.union-oracle", {
   row: Row,
   id: "runKey",
   arms: { discriminator: "kind" },
-  scroll: true,
   filterable: {
     kind: liveText(),
     label: liveText(),

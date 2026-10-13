@@ -44,6 +44,22 @@ const bloatSchema = z.object({
   liveTuples: z.number(),
 });
 
+// The boot snapshot's size, as the endpoint serializes it: raw UTF-8 bytes and
+// gzip (level 6, what `gzip -6` and the usual HTTP compressor give).
+const byteSizeSchema = z.object({ raw: z.number(), gzip: z.number() });
+
+// Measured once per mode, outside the timed burst. `total` is the whole body,
+// `perKey` each key's own value, and `rowKeyBytes` — for each key whose rows
+// carry the server-minted row key (`$key`) — the mean bytes that member adds to
+// one row (times a deployment's row count: what the row key costs that key
+// there). A key none of whose rows carries one is absent from `rowKeyBytes`.
+const snapshotBytesSchema = z.object({
+  total: byteSizeSchema,
+  perKey: z.record(z.string(), byteSizeSchema),
+  rowKeyBytes: z.record(z.string(), z.number()),
+});
+export type SnapshotBytes = z.infer<typeof snapshotBytesSchema>;
+
 // One full benchmark iteration measured in the target backend's own process.
 export const iterResultSchema = z.object({
   bootSnapshot: z.object({
@@ -90,6 +106,14 @@ export const bootBenchRunResponseSchema = z.object({
     .object({
       cold: bloatSchema.optional(),
       warm: bloatSchema.optional(),
+    })
+    .optional(),
+  // The boot snapshot's bytes, captured ONCE per mode beside its bloat (before
+  // the set's timed iterations), so the extra assemble never lands in a burst.
+  snapshotBytes: z
+    .object({
+      cold: snapshotBytesSchema.optional(),
+      warm: snapshotBytesSchema.optional(),
     })
     .optional(),
 });

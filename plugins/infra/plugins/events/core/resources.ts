@@ -89,7 +89,7 @@ export type EmissionListRow = z.infer<typeof EmissionListRowSchema>;
 /**
  * The emit() log — Debug → Queue's Events tab — as a live collection: a bounded
  * window, newest first (200, grown to at most `EMISSIONS_CAP`), plus its
- * `:rows` / `:groups` siblings. Declared `scroll` so it backs a live DataView:
+ * `:rows` / `:groups` siblings. It backs a live DataView (key-range pages):
  * `eventName` and `match` (derived from `matchedCount`) are facets — groupings
  * of the whole log — and `matchedCount` / `emittedAt` filter and sort. Every
  * emit prunes the log to `EMISSIONS_CAP` rows, so any query here reads at most
@@ -108,7 +108,6 @@ export const eventEmissions = liveCollection("event-emissions", {
   sortable: ["emittedAt", "eventName", "matchedCount"],
   default: { orderBy: [["emittedAt", "desc"]], limit: 200 },
   maxLimit: EMISSIONS_CAP,
-  scroll: true,
 });
 
 // Every trigger binding across every registered event, newest first — the

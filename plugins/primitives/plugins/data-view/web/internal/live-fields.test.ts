@@ -52,7 +52,6 @@ const threads = () =>
     sortable: ["subject", "lastMessageAt"],
     default: { orderBy: [["lastMessageAt", "desc"]], limit: 10 },
     maxLimit: 30,
-    scroll: true,
   });
 
 /** The operator sets data-view resolves per field type — just their domains. */
@@ -318,7 +317,6 @@ describe("resolveLiveFields — contributed columns", () => {
       sortable: ["subject"],
       default: { orderBy: [["subject", "asc"]], limit: 10 },
       maxLimit: 30,
-      scroll: true,
       contributed: true,
     });
     const stats = liveColumns(c, "stats", {
@@ -353,7 +351,6 @@ describe("scoped columns (a surface's custom columns)", () => {
       sortable: ["subject"],
       default: { orderBy: [["subject", "asc"]], limit: 10 },
       maxLimit: 30,
-      scroll: true,
       columnScope: "test.surface",
     });
   const custom = (scope: string) =>

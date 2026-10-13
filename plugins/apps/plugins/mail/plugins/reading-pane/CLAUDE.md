@@ -14,7 +14,7 @@ message in an open thread's window is inserted or updated — a new reply, a fla
 flip, or a body hydration — so the pane stays live with no polling. Rows are
 message **envelopes**: bodies are null on the stubs and hydrated on demand
 (below). A message with no internal date (rare) sorts last under `desc`, so in a
-thread longer than the window it shows only once the window has grown to it.
+thread longer than one page it shows only once paging has reached it.
 
 ## Web
 
@@ -25,14 +25,19 @@ the plugin definition. Open it with
 `openPane(threadPane, { threadId }, { mode: "push" })`.
 
 `ThreadPaneView` reads `useLive(threadMessages, { where: { threadId } })` —
-loading and error are their own states, never an empty thread — reverses the
-newest-first window for display, and renders a scrolling list of collapsible
-message cards inside `PaneChrome` (title = thread subject):
+loading and error are their own states, never an empty thread — and hands the
+newest-first pages to `MessageList`, which reverses them for display and renders
+a scrolling list of collapsible message cards inside `PaneChrome` (title =
+thread subject, read off page 0):
 
-- **Older messages**: when the window is full (`canGrow`), a "Load older
-  messages" button above the first card calls `loadMore()` (one more page of
-  100, up to 500); it shows its spinner while the grown window loads, and the
-  cards already shown stay put.
+- **Older messages**: while there is more (`canGrow`), a "Load older messages"
+  button above the first card calls `loadMore()`, which splits off the next
+  key-range page of 100 older messages (never a reload of the loaded ones), up
+  to the 500 cap; it shows its spinner while the page loads, and the cards
+  already shown stay mounted (keyed by id) — the new page lands above them.
+- **Not a DataView — a documented bounded exception.** The pane reads one
+  thread's messages, not a collection to browse: no search, sort or grouping,
+  and the 500 cap stays.
 - **Collapse model** (`useCollapsible`): the newest message is expanded by
   default; older ones collapse to a one-line summary (sender · snippet · date)
   and expand on click.
@@ -65,7 +70,7 @@ parses MIME or HTML itself.
 
 ## Plugin reference
 
-- Description: Mail reading pane: the threadPane Miller column showing a thread's newest messages oldest→newest (a live window, with Load older messages for a longer thread), each a collapsible card (newest expanded) with sender header, hydrated HTML/text body (privacy-safe images, inline cid: resolution), and attachment chips. Reading pane server: serves the thread-messages live collection (threadMessages) over mail_messages, so a reply/flag/hydration in an open thread pushes automatically.
+- Description: Mail reading pane: the threadPane Miller column showing a thread's newest messages oldest→newest (live key-range pages of 100 — Load older messages adds the next page, up to 500), each a collapsible card (newest expanded) with sender header, hydrated HTML/text body (privacy-safe images, inline cid: resolution), and attachment chips. Reading pane server: serves the thread-messages live collection (threadMessages) over mail_messages, so a reply/flag/hydration in an open thread pushes automatically.
 - Web:
   - Slots: `threadPane.Actions`
   - Slot contributors: `threadPane.Actions` ← `primitives.pane`

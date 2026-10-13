@@ -155,7 +155,7 @@ describe("serveCollection — the `all` arm (C4)", () => {
       filterable: {},
       sortable: ["rank"],
       default: { orderBy: [["rank", "asc"]], limit: 10 },
-      maxLimit: 10,
+      maxLimit: 20,
     });
     const lookup = liveCollection(`test.live.all-lookup-${seq++}`, {
       row: z.object({ id: z.string(), title: z.string() }),

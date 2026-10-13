@@ -7,7 +7,7 @@ import type {
 } from "@plugins/network/plugins/live/core";
 
 // The total order a paged VALUE's items are cut in — the one Postgres gives a
-// scroll collection's window, spelled for a source with no SQL: each item's
+// collection's window, spelled for a source with no SQL: each item's
 // key is its order-key parts (exact text, or NULL) then its id. Parts compare
 // by code point (the cluster's `C` collation, and the filter language's
 // in-memory order), each in its declared direction, a NULL last in either

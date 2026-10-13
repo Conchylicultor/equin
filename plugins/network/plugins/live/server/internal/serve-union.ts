@@ -508,7 +508,7 @@ export function compileUnion<
         codec.decode(params as LiveWindowParams, handles);
       },
     },
-    scroll: { keyField: LIVE_ROW_KEY, maxKeyBytes: LIVE_ROW_KEY_MAX_BYTES },
+    rowKey: { keyField: LIVE_ROW_KEY, maxKeyBytes: LIVE_ROW_KEY_MAX_BYTES },
     point: { idsOf: (params) => collection.rows.point.decode(params) },
     groups: {
       query: (params) => {

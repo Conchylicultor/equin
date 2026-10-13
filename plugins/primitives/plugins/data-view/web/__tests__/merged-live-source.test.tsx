@@ -82,7 +82,6 @@ const convs = (columnScope: string) =>
     sortable: ["title", "createdAt"],
     default: { orderBy: [["createdAt", "desc"]], limit: 2 },
     maxLimit: 6,
-    scroll: true,
     columnScope,
   });
 type C = ReturnType<typeof convs>;

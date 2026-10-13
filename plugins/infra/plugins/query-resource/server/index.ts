@@ -29,6 +29,7 @@ export type { ReadColumn } from "./internal/joins";
 export type { CompiledGroups } from "./internal/compile-groups";
 export type {
   EntitySource,
+  PointQueryResourceSpec,
   QueryDb,
   RoutedSource,
   SelectMap,

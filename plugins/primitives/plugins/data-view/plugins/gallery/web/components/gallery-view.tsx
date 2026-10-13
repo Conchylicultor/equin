@@ -23,13 +23,16 @@ import {
   useResolveCell,
   useResolveCellEditor,
   useResolveOperatorSet,
+  useGridPhase,
   type CreateOption,
   type DataViewAggregateConfig,
   type DataViewRenderProps,
   type DataViewSection,
   type FieldDef,
+  type GridLine,
   type ItemActionsDescriptor,
 } from "@plugins/primitives/plugins/data-view/web";
+import type { DataViewPagePlaceholders } from "@plugins/primitives/plugins/data-view/core";
 import type { CoverContent, GalleryViewOptions } from "../../core";
 import { DataCard } from "./data-card";
 import { useGridColumns } from "./use-grid-columns";
@@ -48,14 +51,6 @@ const VIRTUALIZE_THRESHOLD = 60;
 type GalleryCell =
   | { kind: "row"; row: unknown; key: string; aggregateCount?: number }
   | { kind: "create" };
-
-/** Split a flat list into rows of `size` (the lane count). */
-function chunkRows<T>(items: readonly T[], size: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < items.length; i += size)
-    out.push(items.slice(i, i + size));
-  return out;
-}
 
 /**
  * Pick the cover field: explicit `coverField` id wins, else the field marked
@@ -158,8 +153,6 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   const vis = resolveBodyFields(props.fields, props.state.visibleFields);
   const options = (props.options ?? {}) as GalleryViewOptions<unknown>;
   const minCardWidth = options.minCardWidth ?? 200;
-  // Live column count for the windowed path (measured off the probe grid below).
-  const { probeRef, columns } = useGridColumns(minCardWidth);
   // Documented cast boundary: itemActions arrives type-erased.
   const itemActions = props.itemActions as
     ItemActionsDescriptor<unknown> | undefined;
@@ -327,8 +320,6 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     );
   };
 
-  const cellKey = (cell: GalleryCell): string =>
-    cell.kind === "create" ? "::create" : cell.key;
   const estimateRowHeight = options.cover || coverField ? 240 : 132;
 
   // Render one section's cells: plain auto-fill grid below the threshold, else
@@ -343,54 +334,20 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
       foldLines={props.foldLines}
       className="py-sm"
     >
-      {renderGrid(cells)}
+      {/* A section whose cards are all folded draws no grid — its header and
+          fold line say everything. */}
+      {cells.length === 0 ? null : (
+        <GalleryGrid
+          section={section}
+          placeholders={props.placeholders}
+          cells={cells}
+          minCardWidth={minCardWidth}
+          estimateRowHeight={estimateRowHeight}
+          renderCell={renderCell}
+        />
+      )}
     </SectionBody>
   );
-  const renderGrid = (cells: GalleryCell[]): ReactNode => {
-    // A section whose cards are all folded draws no grid — its header and fold
-    // line say everything.
-    if (cells.length === 0) return null;
-    if (cells.length <= VIRTUALIZE_THRESHOLD) {
-      return (
-        <Grid minCellWidth={`${minCardWidth}px`} gap="lg">
-          {cells.map((cell) => (
-            <div key={cellKey(cell)} className="contents">
-              {renderCell(cell)}
-            </div>
-          ))}
-        </Grid>
-      );
-    }
-    const rowsOfCells = columns > 0 ? chunkRows(cells, columns) : [];
-    return (
-      <>
-        <Grid
-          ref={probeRef}
-          aria-hidden
-          minCellWidth={`${minCardWidth}px`}
-          gap="lg"
-          className="h-0"
-        />
-        {columns > 0 ? (
-          <VirtualRows<GalleryCell[]>
-            items={rowsOfCells}
-            estimateSize={estimateRowHeight}
-            getKey={(chunk) => chunk.map(cellKey).join("|")}
-          >
-            {(chunk) => (
-              <Grid cols={columns} gap="lg" className="pb-lg">
-                {chunk.map((cell) => (
-                  <div key={cellKey(cell)} className="contents">
-                    {renderCell(cell)}
-                  </div>
-                ))}
-              </Grid>
-            )}
-          </VirtualRows>
-        ) : null}
-      </>
-    );
-  };
 
   // Ungrouped: the single implicit section renders as the legacy single grid,
   // with the trailing "+" create card appended.
@@ -430,5 +387,93 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
         )
       }
     </GroupedSections>
+  );
+}
+
+const cellKey = (cell: GalleryCell): string =>
+  cell.kind === "create" ? "::create" : cell.key;
+
+/**
+ * One section's card grid: the plain auto-fill grid up to the threshold, the
+ * lane-aware windowed grid above it. Its own component, so each band measures
+ * its own column count and records its own phase (`useGridPhase`): while the
+ * read's pages above it are placeholders, the band starts with as many empty
+ * spacer cells as keep every card in the column it was drawn in — a release
+ * or a landing never reflows the cards below it. The spacers carry no
+ * `data-row-key`, so the viewport, anchoring and selection never see them.
+ */
+function GalleryGrid({
+  section,
+  placeholders,
+  cells,
+  minCardWidth,
+  estimateRowHeight,
+  renderCell,
+}: {
+  section: DataViewSection<unknown>;
+  placeholders: DataViewPagePlaceholders | undefined;
+  cells: GalleryCell[];
+  minCardWidth: number;
+  estimateRowHeight: number;
+  renderCell: (cell: GalleryCell) => ReactNode;
+}): ReactNode {
+  const phase = useGridPhase(section, placeholders, cells.map(cellKey));
+  // Live column count (measured off the probe grid below) — in both branches
+  // when the band pages, so the pad is right in the render a release happens in.
+  const { probeRef, columns } = useGridColumns(minCardWidth);
+  const windowed = cells.length > VIRTUALIZE_THRESHOLD;
+  const probe =
+    windowed || phase.paged ? (
+      <Grid
+        ref={probeRef}
+        aria-hidden
+        minCellWidth={`${minCardWidth}px`}
+        gap="lg"
+        className="h-0"
+      />
+    ) : null;
+  if (!windowed) {
+    const pad = phase.pad(columns);
+    return (
+      <>
+        {probe}
+        <Grid minCellWidth={`${minCardWidth}px`} gap="lg">
+          {Array.from({ length: pad }, (_, i) => (
+            <div key={`::pad:${i}`} aria-hidden data-grid-pad="" />
+          ))}
+          {cells.map((cell) => (
+            <div key={cellKey(cell)} className="contents">
+              {renderCell(cell)}
+            </div>
+          ))}
+        </Grid>
+      </>
+    );
+  }
+  return (
+    <>
+      {probe}
+      {columns > 0 ? (
+        <VirtualRows<GridLine<GalleryCell>>
+          items={phase.lines(cells, columns)}
+          estimateSize={estimateRowHeight}
+          getKey={(line) => line.key}
+        >
+          {(line) => (
+            <Grid cols={columns} gap="lg" className="pb-lg">
+              {line.cells.map((cell, i) =>
+                cell === null ? (
+                  <div key={`::pad:${i}`} aria-hidden data-grid-pad="" />
+                ) : (
+                  <div key={cellKey(cell)} className="contents">
+                    {renderCell(cell)}
+                  </div>
+                ),
+              )}
+            </Grid>
+          )}
+        </VirtualRows>
+      ) : null}
+    </>
   );
 }

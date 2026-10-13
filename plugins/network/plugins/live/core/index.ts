@@ -89,7 +89,6 @@ export type {
   LivePreload,
   LiveRowsCollection,
   LiveRowSchema,
-  LiveScrollCollection,
   LiveWindowCodec,
   LiveWindowDescriptor,
 } from "./internal/live-collection";

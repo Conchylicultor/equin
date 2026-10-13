@@ -29,6 +29,7 @@ import type { WindowQueryResourceContract } from "@plugins/infra/plugins/query-r
 import type {
   QueryDb,
   SelectMap,
+  WindowQueryResourceSpec,
 } from "@plugins/infra/plugins/query-resource/server";
 import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
 import {
@@ -42,6 +43,33 @@ const rowsT = pgTable("rows", {
 });
 
 const rowSchema = z.object({ id: z.string(), n: z.number() });
+
+// Every window is read as key-range pages: the loader folds each row's `$key`
+// (its order keys' text, then its id) — which these bare descriptors' row
+// schema then strips, as it strips any field it does not declare; these
+// tuples carry no cuts.
+const ROW_KEY: WindowQueryResourceSpec["rowKey"] = {
+  cutsOf: () => ({}),
+  familyOf: () => "test",
+  keyField: "$key",
+  maxKeyBytes: 1024,
+};
+
+/**
+ * The row-key parts a rendered window read projects (`"<col>"::text as
+ * "__row_key_<i>"`), each read off the in-memory row as Postgres's text —
+ * the fakes answer them as the database would.
+ */
+function withKeyParts(sql: string, rows: Record<string, unknown>[]): unknown[] {
+  const parts = [...sql.matchAll(/"(\w+)"::text as "(__row_key_\d+)"/g)].map(
+    (m) => [m[1]!, m[2]!] as const,
+  );
+  if (parts.length === 0) return rows;
+  return rows.map((r) => ({
+    ...r,
+    ...Object.fromEntries(parts.map(([col, part]) => [part, String(r[col])])),
+  }));
+}
 
 // A live in-memory "rows" table + a fake db that answers each rendered query
 // from it: the pk-only windowed query (windowIdsOf), the `IN (...)` scoped
@@ -80,6 +108,7 @@ function liveDb() {
           ? window.map((r) => ({ id: r.id }))
           : window;
       }
+      rows = withKeyParts(sql, rows as Record<string, unknown>[]);
       return Promise.resolve(rows).then(resolve, reject);
     },
   });
@@ -132,6 +161,7 @@ function sortDb() {
           ? window.map((r) => ({ id: r.id }))
           : window;
       }
+      rows = withKeyParts(sql, rows as Record<string, unknown>[]);
       return Promise.resolve(rows).then(resolve, reject);
     },
   });
@@ -214,6 +244,7 @@ describe("compiled window resource — end-to-end", () => {
       select: { id: rowsT.id, n: rowsT.n },
       orderBy: { col: rowsT.n },
       window: { maxLimit: 10 },
+      rowKey: ROW_KEY,
       db,
     });
     const h = harness();
@@ -251,6 +282,7 @@ describe("compiled window resource — end-to-end", () => {
       select: { id: rowsT.id, n: rowsT.n },
       orderBy: { col: rowsT.n },
       window: { maxLimit: 10 },
+      rowKey: ROW_KEY,
       db,
     });
     const h = harness();
@@ -283,6 +315,7 @@ describe("compiled window resource — end-to-end", () => {
       select: { id: rowsT.id, n: rowsT.n },
       orderBy: { col: rowsT.n },
       window: { maxLimit: 10 },
+      rowKey: ROW_KEY,
       db,
     });
     const h = harness();
@@ -331,6 +364,7 @@ describe("compiled window resource — per-params orderBy, end-to-end", () => {
       ],
       signatureColumns: [sortT.n, sortT.m],
       window: {}, // maxLimit comes from the descriptor
+      rowKey: ROW_KEY,
       db,
     });
     const h = harness("sorted");

@@ -51,7 +51,7 @@ const REPORTS_VIEW_ID = "debug.reports";
 // producer (server/internal/producer.ts), which routes the ids every write
 // returned, coalesced to one flush per 2 s — so a crash storm UPDATEing a hot
 // row thousands of times a minute costs each reading tuple one scoped refill per
-// window. A scroll collection (read as key-range pages, no depth limit); NOT preloaded — a
+// window. Read as key-range pages (no depth limit); NOT preloaded — a
 // produced table may have no L2-persisted reader (A6), and a window never is.
 export const reportsList = liveCollection("reports.list", {
   row: ReportSchema,
@@ -71,7 +71,6 @@ export const reportsList = liveCollection("reports.list", {
   sortable: ["kind", "source", "count", "lastSeenAt"],
   default: { orderBy: [["lastSeenAt", "desc"]], limit: 100 },
   maxLimit: 500,
-  scroll: true,
   columnScope: REPORTS_VIEW_ID,
 });
 

@@ -293,7 +293,7 @@ boot-snapshot's persisted fast path is open from readiness, before the seed.
 
 ## Seeded derivation (a `sub` frame's `derive`)
 
-A paged read (network/live's `useLive` over a scroll collection or a paged
+A paged read (network/live's `useLive` over a collection's window or a paged
 value) splits and merges its pages, and
 each new page's rows are wholly or partly a slice of pages the client and the
 server already hold (`research/2026-10-09-global-live-key-range-pages-v2.md`
@@ -319,7 +319,7 @@ lands between the check and the copy:
   tuple's subscription OPENED its span (`firstGlobal` — a held tuple's first
   subscriber decided its load), and every source is of the new tuple's
   FAMILY (`familyOf` — the same query, whatever the range and limit:
-  query-resource states it for a scroll window, from network/live's codec —
+  query-resource states it for every window, from network/live's codec —
   the `where` and `order` —, and network/live for a paged value's page — its
   question's `q`) and QUIESCENT at the version the client sliced:
   subscribed, its span's snapshot present, no pending, not draining,

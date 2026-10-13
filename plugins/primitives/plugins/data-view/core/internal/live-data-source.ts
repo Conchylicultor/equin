@@ -3,13 +3,12 @@ import type {
   FilterColumn,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import type {
-  LiveScrollCollection,
+  LiveCollection,
   LiveWhere,
 } from "@plugins/network/plugins/live/core";
 
-// A DataView's LIVE data origin: a `network/live` collection declared
-// `scroll: true`, read as key-range pages (`useLive`), the pages near the
-// rows on screen live. The view's sort, filter, search and group-by lower onto
+// A DataView's LIVE data origin: a `network/live` collection's window, read
+// as key-range pages (`useLive`), the pages near the rows on screen live. The view's sort, filter, search and group-by lower onto
 // its window params, and the rows stay live through the routed runtime. The
 // types live here (the props union names them); the constructor,
 // `liveDataSource`, is web's (`web/internal/live-data-source.ts`).
@@ -50,7 +49,7 @@ export type LiveSourceScope =
  */
 export interface LiveDataSource<TRow> {
   readonly kind: "live";
-  readonly collection: LiveScrollCollection<TRow, unknown, string>;
+  readonly collection: LiveCollection<TRow, unknown, string>;
   /** Text-domain filterable columns the search box matches (`contains`, any of). */
   readonly searchable: readonly string[];
   /**

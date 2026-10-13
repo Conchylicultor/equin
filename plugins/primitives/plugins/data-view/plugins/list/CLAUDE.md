@@ -122,6 +122,14 @@ chrome, which owns the `rail-follow` header inset and the
 pinned/stacking group header for every flat view. The policy lives in the data-view
 parent, not here; see its CLAUDE.md ("Grouped sections: one pipeline, one chrome").
 
+## Paged
+
+A paged read's placeholders are the body's (`data-view/CLAUDE.md`, "Paging"):
+stacked rows need nothing of the view but `data-row-key` on each row. Pinned by
+`web/__tests__/paged-conformance.test.tsx` (data-view's
+`describePagedConformance`: one placeholder exactly as tall as the released
+rows, no scroll written on a release, a landing anchored).
+
 ## Windowing + manual order
 
 `estimateSize` tracks both dimensions of the row's height — its `size` and its
@@ -130,8 +138,10 @@ stacked one; `VirtualRows` measures every mounted row anyway, so the estimate
 only has to keep the sizer (and therefore the scrollbar) honest.
 
 A section windows through `VirtualRows` once its entry count exceeds 100; below
-that it renders as a plain `.map` inside a `<Stack className="rail-follow py-sm">`
-(the ambient rail with a `py-sm` vertical rhythm). That single
+that it renders as a plain `.map`. Both sit in the same `SectionBody` band with
+the same vertical padding: a band whose padding followed the threshold made
+every row on screen jump by it the moment a paged read grew past 100 rows
+(`e2e/live-pages-scroll.ts` caught it as an 8 px move). That single
 threshold is the *only* windowing decision — manual order does not bypass it.
 
 When the host hands down a `manualOrder`, both branches wrap each row in

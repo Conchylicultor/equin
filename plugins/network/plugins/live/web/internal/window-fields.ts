@@ -3,8 +3,8 @@ import {
   LIVE_SCOPED_KEY,
 } from "@plugins/network/plugins/live/core";
 
-// A window row may carry two server-minted fields beside its row fields: a
-// scroll collection's `$key` (so a scroll can cut at a row) and a scoped
+// A window row may carry two server-minted fields beside its row fields: its
+// `$key` (so a page can be cut at the row) and a scoped
 // collection's `$scoped` (the scoped column values its tuple orders by, which
 // the order signature reads). Neither is a row field: every read hands rows out
 // without them.

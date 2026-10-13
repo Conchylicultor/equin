@@ -13,7 +13,7 @@ import {
 import { opsOfSlug, slugOf } from "./op-lines";
 
 /**
- * Every in-flight op on the host — the ONE default-tuple `opsInFlight`
+ * Every in-flight op on the host — the ONE param-less `opsInFlight` (`all`)
  * subscription the banner and every sidebar chip share (it is boot-preloaded,
  * so it paints settled). Callers filter by slug on the client.
  */

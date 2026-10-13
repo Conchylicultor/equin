@@ -146,7 +146,7 @@ export const _jobRunStats = pgTable("job_run_stats", {
 // unique per run, unable to disagree with the two columns it names, and moved
 // with them when a slot is overwritten (the change feed names both the old and
 // the new id of such an UPDATE). It is the single-column primary key the
-// `job-runs` live collection (core/resources.ts) binds to.
+// `job-runs.all` live collection (core/resources.ts) binds to.
 //
 // Successor of `job_recent_runs` (whose composite (job_name, slot) key no
 // collection can bind): the migration that created this table copied that

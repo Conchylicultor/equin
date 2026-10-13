@@ -39,8 +39,8 @@ that test is the guard, keep it green.
 
 ## The live collection (`mail.threads`)
 
-`mailThreads` (`core/internal/collection.ts`) is a `liveCollection` declared
-`scroll: true` over `MailThreadSchema` — H 100, M 500, default order
+`mailThreads` (`core/internal/collection.ts`) is a `liveCollection` over
+`MailThreadSchema` — H 100, M 500, default order
 `lastMessageAt desc` — served by `serveCollection(mailThreads, { from:
 _mailThreads })` (`server/internal/collection.ts`): one table, identity routes
 only. The DataView reads it as live key-range pages through `mailThreadsSource`

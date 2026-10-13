@@ -51,6 +51,59 @@ describe("liveCollection — lookup-only (no default window)", () => {
     );
   });
 
+  test("every window pages: its rows carry `$key` on the wire, and its maxLimit leaves a split's headroom", () => {
+    const c = liveCollection("test.live-collection.paged", {
+      row: Row,
+      id: "id",
+      filterable: {},
+      sortable: ["n"],
+      default: { orderBy: [["n", "asc"]], limit: 10 },
+      maxLimit: 20,
+    });
+    // The wire schema keeps each row's server-minted key (null: uncuttable);
+    // a row without one is no window row.
+    const wire = c.window.schema.parse([
+      { id: "a", n: 1, $key: '["1","a"]' },
+      { id: "b", n: 2, $key: null },
+    ]) as Record<string, unknown>[];
+    expect(wire.map((r) => r.$key)).toEqual(['["1","a"]', null]);
+    expect(() => c.window.schema.parse([{ id: "a", n: 1 }])).toThrow();
+    // The point sibling's rows carry none: a key is a window position.
+    expect(c.rows.schema.parse([{ id: "a", n: 1 }])).toEqual([
+      { id: "a", n: 1 },
+    ]);
+    expect(() =>
+      liveCollection("test.live-collection.tight", {
+        row: Row,
+        id: "id",
+        filterable: {},
+        sortable: ["n"],
+        default: { orderBy: [["n", "asc"]], limit: 10 },
+        maxLimit: 19,
+      }),
+    ).toThrow(/maxLimit must be ≥ 2 · default.limit \(20\), got 19/);
+  });
+
+  test("types: `scroll` is no declaration field — a stray one is a tsc error", () => {
+    // Never called — the assertions are the `@ts-expect-error`s.
+    const _typesOnly = () => {
+      const w = {
+        row: Row,
+        id: "id",
+        filterable: {},
+        sortable: ["n"],
+        default: { orderBy: [["n", "asc"]], limit: 1 },
+        maxLimit: 2,
+      } as const;
+      // @ts-expect-error — every window pages; there is nothing to declare
+      liveCollection("test.types.scroll", { ...w, scroll: true });
+      const arms = { discriminator: "n" } as const;
+      // @ts-expect-error — nor on a union
+      liveCollection("test.types.scroll-arms", { ...w, arms, scroll: true });
+    };
+    void _typesOnly;
+  });
+
   test("types: a window field without `default`, and any preload, are tsc errors", () => {
     // Never called — the assertions are the `@ts-expect-error`s.
     const _typesOnly = () => {
@@ -155,7 +208,6 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
         /sortable, maxLimit beside `all`/,
       ],
       [{ ...base, filterable: {} }, /filterable beside `all`/],
-      [{ ...base, scroll: true }, /scroll beside `all`/],
       [{ ...base, contributed: true }, /contributed beside `all`/],
       [{ ...base, columnScope: "s" }, /columnScope beside `all`/],
       [{ ...base, arms: { discriminator: "n" } }, /arms beside `all`/],
@@ -211,8 +263,6 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
       liveCollection("t.b", { ...s, filterable: {} });
       // @ts-expect-error — nor a cap
       liveCollection("t.c", { ...s, maxLimit: 5 });
-      // @ts-expect-error — nor a scroll
-      liveCollection("t.d", { ...s, scroll: true });
       const bad = { ...order, orderBy: [["x", "asc"]] } as const;
       // @ts-expect-error — an order field must be a row field
       liveCollection("t.e", { ...s, all: bad });

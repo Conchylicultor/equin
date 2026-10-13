@@ -6,10 +6,10 @@ import { places, placeSearch, placeTags } from "../../core";
 import { searchPlaces } from "./places-repo";
 import { _places, _placeTags } from "./tables";
 
-// Both collections are their tables whole: every field is a column by name, so
-// the projection is exactly the row schema. The change feed routes each write —
-// a save, a tag edit, a tag delete's re-tagging, the icon job's write — to the
-// windows holding the row.
+// Both collections are their tables whole (`all` sets): every field is a
+// column by name, so the projection is exactly the row schema. The change feed
+// routes each write — a save, a tag edit, a tag delete's re-tagging, the icon
+// job's write — to the set: an entrant, an exit, or a one-row refill.
 export const placesServed = serveCollection(places, { from: _places });
 
 export const placeTagsServed = serveCollection(placeTags, {

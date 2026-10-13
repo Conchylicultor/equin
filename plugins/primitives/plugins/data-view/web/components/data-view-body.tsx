@@ -1065,6 +1065,9 @@ function DataViewBodyInner<TRow>(
           setSectionCollapsed: (key, collapsed) =>
             viewModel.setSectionCollapsed(activeViewId, key, collapsed),
           foldLines,
+          // The flat read's placeholders, drawn around the view below — a grid
+          // view keeps its cards' columns across a release above them.
+          placeholders: flatPlaceholders ?? undefined,
           emptyState,
           itemActions:
             itemActions as DataViewRenderProps<unknown>["itemActions"],

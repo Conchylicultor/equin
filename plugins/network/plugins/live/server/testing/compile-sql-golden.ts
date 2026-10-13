@@ -43,7 +43,10 @@ import {
   type LookupJoin,
   type WindowQueryResourceContract,
 } from "@plugins/infra/plugins/query-resource/core";
-import type { WindowQueryResourceSpec } from "@plugins/infra/plugins/query-resource/server";
+import type {
+  PointQueryResourceSpec,
+  WindowQueryResourceSpec,
+} from "@plugins/infra/plugins/query-resource/server";
 import {
   compileAllCollection,
   compileWindowQuery,
@@ -584,16 +587,26 @@ async function directWindowCases(): Promise<Record<string, Json>> {
     const base = win(key, 10);
     return { ...base, window: { ...base.window, maxLimit: 40 } };
   };
+  // Every window projects its row key (the declared order keys, then the pk)
+  // and takes page cuts; these direct specs read none, under one family.
+  const rowKey: WindowQueryResourceSpec["rowKey"] = {
+    cutsOf: () => ({}),
+    familyOf: () => "golden",
+    keyField: "$key",
+    maxKeyBytes: 1024,
+  };
   const run = async <P extends ResourceParams>(
     name: string,
     contract: Parameters<typeof compileWindowQuery>[0],
-    spec: (db: ReturnType<typeof harness>["db"]) => WindowQueryResourceSpec<P>,
+    spec: (
+      db: ReturnType<typeof harness>["db"],
+    ) => Omit<WindowQueryResourceSpec<P>, "rowKey">,
     tuples: Record<string, ResourceParams>,
   ) => {
     const { db, h } = harness(ROW_SAMPLE);
     const compiled = compileWindowQuery(
       contract as never,
-      counted(spec(db), h.counters) as never,
+      counted({ ...spec(db), rowKey }, h.counters) as never,
     );
     out[name] = {
       keyField: compiled.keyField,
@@ -703,7 +716,7 @@ async function directPointCases(): Promise<Record<string, Json>> {
     name: string,
     spec: (
       db: ReturnType<typeof harness>["db"],
-    ) => WindowQueryResourceSpec<PointParams>,
+    ) => PointQueryResourceSpec<PointParams>,
   ) => {
     const { db, h } = harness(ROW_SAMPLE);
     const contract = pt(name);
@@ -902,16 +915,15 @@ async function collectionCases(): Promise<Record<string, Json>> {
     });
   }
 
-  // Scroll cuts — NULL keys, a sortable-but-not-filterable key, a long key.
+  // Page cuts — NULL keys, a sortable-but-not-filterable key, a long key.
   {
-    const c = liveCollection("golden.scroll", {
+    const c = liveCollection("golden.cuts", {
       row: TrackRow,
       id: "id",
       filterable: { title: liveText(), owner: liveText() },
       sortable: ["title", "playedAt", "durationSec"],
       default: { orderBy: [["playedAt", "desc"]], limit: 10 },
       maxLimit: 30,
-      scroll: true,
     });
     const { db, h } = harness(TRACK_SAMPLE);
     const specs = compileCollection(c, {
@@ -920,7 +932,7 @@ async function collectionCases(): Promise<Record<string, Json>> {
       db,
     });
     const w = c.window.window;
-    out.scroll = await collectionRecord(h, c, specs, {
+    out.cuts = await collectionRecord(h, c, specs, {
       window: {
         default: w.encode(),
         cut: w.encode(
@@ -979,7 +991,6 @@ async function collectionCases(): Promise<Record<string, Json>> {
       sortable: ["title", "n"],
       default: { orderBy: [["n", "asc"]], limit: 10 },
       maxLimit: 50,
-      scroll: true,
       columnScope: SCOPE,
     });
     const { db, h } = harness([
@@ -1024,7 +1035,6 @@ async function collectionCases(): Promise<Record<string, Json>> {
       sortable: ["title"],
       default: { orderBy: [["title", "asc"]], limit: 10 },
       maxLimit: 30,
-      scroll: true,
       contributed: true,
     });
     const handle = liveColumns(c, "playback", {

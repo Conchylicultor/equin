@@ -12,11 +12,13 @@
 
 import { describe, expect, test } from "bun:test";
 import type {
+  LiveAllCollection,
   LiveCollection,
-  LiveScrollCollection,
+  LiveLookupCollection,
 } from "@plugins/network/plugins/live/core";
 import type {
   DataViewId,
+  DataViewPaging,
   DataViewProps,
   FieldDef,
   HierarchyConfig,
@@ -96,16 +98,41 @@ const bundleSourceRowKey: Rejects<
   Bundle
 > = true;
 
+// An in-memory origin is a tree or a paged prefix, never both: a tree over a
+// partial paged set orphans the children whose parents are not loaded yet.
+// Each alone (or an `undefined` hierarchy beside paging) is accepted; so is
+// `manualOrder` beside `paging` (the Queue uses both).
+type Held = Base & { rows: Thread[]; rowKey: RowKey };
+type Paging = DataViewPaging<Thread>;
+type Hierarchy = HierarchyConfig<Thread>;
+const hierarchyAlone: Accepts<Held & { hierarchy: Hierarchy }, Props> = true;
+const pagingAlone: Accepts<Held & { paging: Paging }, Props> = true;
+const maybeHierarchy: Accepts<
+  Held & { hierarchy: Hierarchy | undefined },
+  Props
+> = true;
+const manualOrderPaged: Accepts<
+  Held & { paging: Paging; manualOrder: ManualOrderConfig<Thread> },
+  Props
+> = true;
+const hierarchyBesidePaging: Rejects<
+  Held & { hierarchy: Hierarchy; paging: Paging },
+  Props
+> = true;
+const bundleHierarchyBesidePaging: Rejects<
+  Omit<Held, "storageKey"> & { hierarchy: Hierarchy; paging: Paging },
+  Bundle
+> = true;
+
 // A source's rows are its collection's: a DataView over another row type
 // cannot take it.
 const otherRows: Rejects<Source, LiveDataSource<Other>> = true;
 
-// `liveDataSource` takes only a collection declared `scroll: true`.
-type Plain = LiveCollection<Thread, { subject: never }, "subject">;
-const plainIsNotScroll: Rejects<
-  Plain,
-  LiveScrollCollection<Thread, { subject: never }, "subject">
-> = true;
+// `liveDataSource` takes a collection's window — every window pages; a
+// collection with none (lookup-only, or the whole `all` set) cannot be one.
+type Windowed = LiveCollection<Thread, { subject: never }, "subject">;
+const lookupIsNoWindow: Rejects<LiveLookupCollection<Thread>, Windowed> = true;
+const allIsNoWindow: Rejects<LiveAllCollection<Thread>, Windowed> = true;
 
 describe("DataView data origin (type-level)", () => {
   test("every stand-in is rejected, every lone origin accepted", () => {
@@ -125,7 +152,14 @@ describe("DataView data origin (type-level)", () => {
         bundleSourceRows,
         bundleSourceRowKey,
         otherRows,
-        plainIsNotScroll,
+        hierarchyAlone,
+        pagingAlone,
+        maybeHierarchy,
+        manualOrderPaged,
+        hierarchyBesidePaging,
+        bundleHierarchyBesidePaging,
+        lookupIsNoWindow,
+        allIsNoWindow,
       ].every(Boolean),
     ).toBe(true);
   });

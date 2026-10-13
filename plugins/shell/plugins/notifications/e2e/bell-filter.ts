@@ -9,6 +9,9 @@
  *      lists every one of its rows (a server-filtered window);
  *   3. scrolling the list to its end grows the window past 200;
  *   4. dismissing a row removes it live, and its chip's count follows;
+ *   4b. "View all" opens Debug → Notifications (the whole collection as a
+ *      DataView) and closes the popover WITHOUT marking all read (the badge
+ *      keeps its count); the pane's search finds the old type's rows;
  *   5. the unread badge counts the WHOLE collection (the `notifications.unread`
  *      value), not the loaded window: 3 unread errors + 250 unread warnings
  *      seeded behind 200 fresh info rows are in the boot snapshot's value, a
@@ -56,7 +59,12 @@ type Unread = { errors: number; warnings: number };
 
 // The label carries the exact unread count ("Notifications, 253 unread").
 const BELL_LABEL = /^Notifications(, \d+ unread)?$/;
-const bell = (page: Page) => page.getByRole("button", { name: BELL_LABEL });
+// The bell names itself with `aria-label`; Debug's "Notifications" sidebar row
+// (the View all pane) is named by its text, so it never matches.
+const bell = (page: Page) =>
+  page
+    .getByRole("button", { name: BELL_LABEL })
+    .and(page.locator("[aria-label]"));
 const rows = (page: Page) =>
   page.locator('[data-testid="notification-list"] li');
 const chip = (page: Page, type: string) =>
@@ -238,6 +246,54 @@ await withBrowser(async (h) => {
     r.ok(
       "nothing reloaded the page",
       await page.evaluate(() => Reflect.get(window, "__e2eBell") === true),
+    );
+
+    // 4b — View all: the pane, and leaving through it marks nothing read.
+    const labelBefore = await bell(page).getAttribute("aria-label");
+    await page.getByRole("button", { name: "View all" }).click();
+    await page.waitForURL(/\/debug\/notifications(\?|$)/, {
+      timeout: LIVE_TIMEOUT_MS,
+    });
+    r.ok("View all opens Debug → Notifications", true, page.url());
+    r.eq(
+      "…and closes the popover",
+      await page.locator('[data-testid="notification-list"]').count(),
+      0,
+    );
+    const paneRows = page.locator(
+      "[data-row-key]:not([data-page-placeholder])",
+    );
+    r.ok(
+      "the pane lists notifications",
+      (await settle(
+        page,
+        () => paneRows.count(),
+        (n) => n > 0,
+      )) > 0,
+    );
+    await page.getByPlaceholder("Search notifications…").fill(OLD_TYPE);
+    r.eq(
+      "its search finds the old type's undismissed rows",
+      await settle(
+        page,
+        () => paneRows.count(),
+        (n) => n === OLD_COUNT - 1,
+      ),
+      OLD_COUNT - 1,
+    );
+    await snap(page, OUT, "4b-view-all-pane");
+    // Mark-all-read would land within a push; give it the same deadline.
+    await page.waitForTimeout(1500);
+    // Mark-all-read drops the count to none; a notification the host files
+    // meanwhile (a slow-op report under e2e load) only raises it.
+    const unreadOf = (label: string | null) =>
+      Number(/, (\d+) unread$/.exec(label ?? "")?.[1] ?? 0);
+    const labelAfter = await bell(page).getAttribute("aria-label");
+    r.ok(
+      "leaving through View all did not mark all read (the badge kept its count)",
+      unreadOf(labelAfter) >= unreadOf(labelBefore) &&
+        unreadOf(labelBefore) > 0,
+      `${labelBefore} → ${labelAfter}`,
     );
 
     // 5 — the badge counts the whole collection, not the window.

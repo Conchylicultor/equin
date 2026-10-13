@@ -186,9 +186,9 @@ export const LIVE_GROUP_DEFAULT_LIMIT = 50;
 /**
  * The window resource's wire params: `limit` always, `where` (the filter
  * language's `encodeFilter`) / `order` as canonical JSON present only when
- * they differ from the default, and a page's cuts (`after` / `until`, a
- * scroll collection only) present only when set. Additive string keys, so the
- * default window stays byte-identical `{ limit: "100" }`.
+ * they differ from the default, and a page's cuts (`after` / `until`)
+ * present only when set. Additive string keys, so the default window stays
+ * byte-identical `{ limit: "100" }`.
  */
 export type LiveWindowParams = {
   limit: string;
@@ -199,7 +199,7 @@ export type LiveWindowParams = {
 };
 
 /**
- * One page's bounds in a scroll collection's order: `after` an EXCLUSIVE
+ * One page's bounds in a window's order: `after` an EXCLUSIVE
  * lower cut, `until` an INCLUSIVE upper one. Each is a row's `$key` exactly as
  * the server minted it (see {@link LIVE_ROW_KEY}) — never derived on the
  * client, whose decoded row lost the order columns' exact text (a `Date` holds
@@ -241,7 +241,7 @@ export interface LiveDecodedQuery<S extends string> {
   /** The canonical filter (validated by the strict decode); `undefined` when unfiltered. */
   where: Filter | undefined;
   orderBy: LiveOrderBy<S>;
-  /** The page's exclusive lower cut (a scroll collection's); absent = the order's start. */
+  /** The page's exclusive lower cut; absent = the order's start. */
   after?: LiveCutKey;
   /** The page's inclusive upper cut; absent = the order's end. */
   until?: LiveCutKey;

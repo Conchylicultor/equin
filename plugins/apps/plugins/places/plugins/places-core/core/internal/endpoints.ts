@@ -6,8 +6,9 @@ import { PLACE_STATUSES } from "./tag-tree";
 import { MapsNotConfiguredSchema } from "./maps";
 
 // Place and tag CRUD and the icon re-pick. Every read is live
-// (`./resources.ts`): the `places.places` / `places.tags` collections, which
-// every write here reaches through the change feed, and the `placeSearch` value.
+// (`./resources.ts`): the `places.places.all` / `places.tags.all` collections,
+// which every write here reaches through the change feed, and the
+// `placeSearch` value.
 
 export const SavePlaceBodySchema = z.object({
   googlePlaceId: z.string().min(1),

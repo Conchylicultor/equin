@@ -108,7 +108,7 @@ export interface ScopedMemberRead {
   domain: FilterDomainId;
   /**
    * How the stored value reads as its type — a cast of the raw column and the
-   * SQL type it produces (the type a scroll cut's operand casts back to);
+   * SQL type it produces (the type a page cut's operand casts back to);
    * absent = the raw column, as text.
    */
   cast?: { sql: (raw: PgColumn) => SQL; sqlType: string };

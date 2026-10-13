@@ -15,9 +15,9 @@ A web-only plugin: it reads the op-store's `opsInFlight` live collection
 
 ## How it works
 
-- **One subscription.** `useOpsInFlight()` is `useLive(opsInFlight)` with the
-  default tuple — every in-flight op on the host, boot-preloaded so the banner
-  and chips paint settled. The banner and every chip share it and filter by
+- **One subscription.** `useOpsInFlight()` is `useLive(opsInFlight)`, an
+  `all` collection (`op-store.in-flight.all`) — every in-flight op on the host,
+  however many, boot-preloaded so the banner and chips paint settled. The banner and every chip share it and filter by
   worktree slug on the client (`opSlugOf(row)`: `opSlug`, else the last
   segment of a legacy line's branch). The slug of a conversation is
   `basename(worktreePath)`.

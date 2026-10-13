@@ -241,9 +241,9 @@ serves them.
     other task or attempt write nothing (W4).
   - **`conversationsGone`** (`conversations-gone`) — a WINDOW of the ended
     conversations (`endedAt` desc, default `RECENT_GONE_LIMIT`, `maxLimit`
-    500, `scroll`, `count`, `preload: "boot"`; nothing filters it), so it
-    leaves L2: the welcome recents read the default, Recovery 50, and the
-    queue's Done section pages through it as a scroll, its count the
+    500, `count`, `preload: "boot"`; nothing filters it), so it leaves L2:
+    the welcome recents read the default, Recovery 50, and the queue's Done
+    section pages through it as live key-range pages, its count the
     collection's `:count`.
   - **`conversationsById`** (`conversations.by-id`, lookup-only: `:rows`) —
     any conversation by id, whatever its status or age

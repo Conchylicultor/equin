@@ -1,0 +1,14 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "trash",
+      "name": "Trash",
+      "icon": "delete",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "deletedAt", "direction": "desc" }]
+      }
+    }
+  ]
+}

@@ -12,8 +12,8 @@ import { VersionSchema, VersionWithSnapshotSchema } from "./schemas";
  *
  * Bounded: 100 by default, grown to at most 500. `recordVersion` coalesces
  * edits inside a ~10-minute window and retention keeps 30 days, so one entity's
- * timeline rarely needs more than the default window. A scroll collection, so
- * the version-history dialog's DataView reads it as live key-range pages.
+ * timeline rarely needs more than the default window. The version-history
+ * dialog's DataView reads it as live key-range pages.
  */
 export const historyVersions = liveCollection("history.versions", {
   row: VersionSchema,
@@ -22,7 +22,6 @@ export const historyVersions = liveCollection("history.versions", {
   sortable: ["createdAt"],
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },
   maxLimit: 500,
-  scroll: true,
 });
 
 /**

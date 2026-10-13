@@ -30,6 +30,12 @@ four headline metrics PLUS the signals the contention root cause needs:
   read) plus `snapshotBloat` (`snapshot-bloat.ts`: `live_state_snapshot` table bytes /
   dead+live tuples) — captured once per mode before any cold-clear DELETE churns the
   table. Bloat only reproduces in WARM mode against an already-bloated DB (main).
+- **Snapshot bytes.** `snapshotBytes` (`snapshot-bytes.ts`): the boot snapshot's
+  size as the endpoint serializes it — `total` and `perKey` `{ raw, gzip }` (gzip
+  level 6, comparable with `gzip -6` on a curl), plus `rowKeyBytes`: for each key
+  whose rows carry the server-minted `$key`, the mean bytes that member adds to a
+  row (× a deployment's row count = what the row key costs that key there). One
+  extra assemble per mode, beside the bloat capture, outside the timed burst.
 
 See `research/perfs/2026-06-28-boot-bench-contention-instrument.md`.
 

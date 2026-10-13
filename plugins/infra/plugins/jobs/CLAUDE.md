@@ -447,8 +447,8 @@ database but absent from the ledger is held by a dead worker. The stuck-lock
 sweeper will reclaim it.
 
 **The dead-letter archive is a live collection.** `deadJobs`
-(`core/resources.ts`, key `dead-jobs`) is a `scroll: true` `liveCollection`
-over `dead_jobs` backing a live DataView: newest archived first, 200 rows by
+(`core/resources.ts`, key `dead-jobs`) is a `liveCollection` over
+`dead_jobs` backing a live DataView (key-range pages): newest archived first, 200 rows by
 default, grown up to `DEAD_JOBS_ARCHIVE_CAP` (2000) — the same constant the
 dead-job GC trims the archive to, so a fully grown window is the whole archive.
 It filters on `jobName` / `lastError` (search, and `jobName` as a facet),
@@ -471,12 +471,13 @@ table's single-column primary key — `job_recent_runs`, its predecessor, had a
 composite (job_name, slot) key no collection can bind; its rows were copied
 over by the migration that dropped it. The ring's upsert targets the unique
 (job_name, slot) index, so overwriting a slot moves the row's id, and the change
-feed names both ids. `jobRuns` (key `job-runs`) is a `scroll: true` collection
-over it: newest finished first, 100 by default, grown up to
-`JOB_RUNS_MAX_LIMIT` (5000, the whole ring with headroom); `jobName`, `outcome`
-and `hold` are facets, `error` searchable, `durationMs` / `waitMs` / `attempt` /
-`startedAt` / `finishedAt` filter and sort. `waitMs` (`startedAt − queuedAt`,
-floored at 0, NULL without a `queuedAt`) is an `expr` column computed in SQL.
+feed names both ids. `jobRuns` (key `job-runs.all`) is an `all` collection
+over it — the whole ring, newest finished first (`unbounded`: a ring of 20 per
+job name), plus its `:rows` sibling. Its reader, Debug → Queue's Jobs list,
+merges it with the live graphile queue and filters, sorts and groups the merge
+on the client, so it holds every run. `waitMs` (`startedAt − queuedAt`, floored
+at 0, NULL without a `queuedAt`) is an `expr` column computed in SQL. Nothing
+prunes a retired job name's ring yet.
 `readRecentJobRuns(name)` still reads one job's ring for the Background
 activity catalog.
 
@@ -524,9 +525,8 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `resource.declare` "dead-jobs"
     - `resource.declare` "dead-jobs:groups"
     - `resource.declare` "dead-jobs:rows"
-    - `resource.declare` "job-runs"
-    - `resource.declare` "job-runs:groups"
-    - `resource.declare` "job-runs:rows"
+    - `resource.declare` "job-runs.all"
+    - `resource.declare` "job-runs.all:rows"
     - `resource.declare` "jobs-list"
     - `fork-schema-data-exclusion` "graphile_worker"
   - Uses:
@@ -644,9 +644,8 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `dead-jobs` (keyed, window)
     - `dead-jobs:groups` (push)
     - `dead-jobs:rows` (keyed, point)
-    - `job-runs` (keyed, window)
-    - `job-runs:groups` (push)
-    - `job-runs:rows` (keyed, point)
+    - `job-runs.all` (keyed)
+    - `job-runs.all:rows` (keyed, point)
     - `jobs-list` (invalidate, notified)
   - Routes:
     - `GET /api/jobs`
@@ -683,7 +682,6 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `HOLD_SPECS`
     - `HoldClassSchema`
     - `holdForTask`
-    - `JOB_RUNS_MAX_LIMIT`
     - `JobRowSchema`
     - `JobRunOutcomeSchema`
     - `JobRunRowSchema`

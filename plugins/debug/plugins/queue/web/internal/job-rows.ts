@@ -1,6 +1,5 @@
 import {
   HOLD_SPECS,
-  JOB_RUNS_MAX_LIMIT,
   jobRuns,
   jobsList,
   type HoldClass,
@@ -162,8 +161,8 @@ export interface JobRowsData {
 
 /**
  * The Jobs list's rows: the live graphile queue (`jobsList`) and the whole run
- * history (`jobRuns`, read as one window grown to `JOB_RUNS_MAX_LIMIT` — the
- * entire per-job ring), merged on the client. They cannot be one server-side
+ * history (`jobRuns`, the whole per-job ring as one `all` set), merged on the
+ * client. They cannot be one server-side
  * union: graphile's tables sit outside the schema the change feed covers.
  *
  * One read for every consumer — the list, the detail pane and its resolve
@@ -171,7 +170,7 @@ export interface JobRowsData {
  */
 export function useJobRows(): ResourceResult<JobRowsData> {
   const live = useLive(jobsList);
-  const runs = useLive(jobRuns, { limit: JOB_RUNS_MAX_LIMIT });
+  const runs = useLive(jobRuns);
   // A running row's duration is read against this clock — it orders the Slow
   // view; its cell ticks on its own (`runningSince`).
   const now = useNow(30_000);
@@ -180,9 +179,11 @@ export function useJobRows(): ResourceResult<JobRowsData> {
   );
 }
 
-// Merges are cached on the inputs' identities (the cached query values), so
+// Merges are cached on the inputs' identities (the cached query values — an
+// `all` read's array keeps its identity until a push changes the set), so
 // every consumer and every render of an unchanged read gets the same rows —
-// the DataView's memos hold — and the ~2000 run rows map once per change.
+// the DataView's memos hold — and the run rows (20 per job name) map once per
+// change.
 const runRowsCache = new WeakMap<readonly JobRunRow[], JobListRow[]>();
 const mergeCache = new WeakMap<
   JobsPayload,

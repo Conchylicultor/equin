@@ -40,6 +40,20 @@ Surface options reach `DataTable` straight through: `viewOptions.table`
 `density`, and its `groupHeaders` (each group header is data-view's shared
 `DataViewGroupHeader`). See `data-view/CLAUDE.md` ("Table view options").
 
+**Paged.** A flat paged read's placeholders are drawn by the body around the
+whole table (`data-view/CLAUDE.md`, "Paging"), so the ungrouped table honours
+the paged-view contract with nothing of its own — pinned by
+`web/__tests__/paged-conformance.test.tsx` (data-view's
+`describePagedConformance`). **Grouped, a declared section's `before`
+placeholders are not drawn:** its rows live in `DataTable`'s subgrid between
+the group's header row and its `footer` row, and `DataTableGroup` has no
+full-span row above the rows to hold them, so the table hands `SectionBody` an
+empty band (`{null}`), which draws only `after`. A page released above a
+grouped section's rows therefore just leaves, and the reader is held by the
+body's anchoring (`KeepAnchorAcross`) alone — the `isPaged` behaviour, not the
+height-keeping one. Drawing them needs a leading full-span row on
+`DataTableGroup` (a `data-table` change).
+
 The view passes nothing for the row inset: `DataTable` rows follow the ambient
 rail unconditionally, which is the same rail the rest of a DataView's bands read —
 see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.

@@ -48,7 +48,7 @@ the same Gantt with no special-casing.
   the same graceful not-found as an unknown id) — and renders it with a
   read-only "Saved snapshot · <relative time> · <worktree>" banner.
 - **Boot Profiles** (Debug sidebar → `bootProfileListPane`) lists saved snapshots
-  from `debug.boot-traces` — a scroll live collection whose row is the metadata
+  from `debug.boot-traces` — a live collection whose row is the metadata
   projection (no blob), newest first — as a **`DataView`** live `source`
   (`defineDataView("debug.boot-profiles")`, `views={["list"]}`, worktree/id/when
   fields, newest-first sort authored in

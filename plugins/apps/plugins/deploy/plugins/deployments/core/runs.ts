@@ -220,8 +220,8 @@ const DEPLOY_HISTORY_VIEW_ID = "deploy.deployment.history";
  * DataView source (research/2026-09-29-global-scoped-change-routing.md P3), the
  * pane scoping it to one deployment (`scoped({ where: { deploymentId } })`).
  * A run opening, finishing or failing reaches the tuples holding it through
- * the routed runtime: no revision tick, no refetch. A scroll collection
- * (read as key-range pages, no depth limit — a ledger only grows), and its `columnScope` is the
+ * the routed runtime: no revision tick, no refetch. Read as key-range pages
+ * (no depth limit — a ledger only grows), and its `columnScope` is the
  * history surface, so that surface's custom columns sort and filter it.
  */
 export const deployRunHistory = liveCollection("deploy.run-history", {
@@ -247,6 +247,5 @@ export const deployRunHistory = liveCollection("deploy.run-history", {
   ],
   default: { orderBy: [["startedAt", "desc"]], limit: 100 },
   maxLimit: 500,
-  scroll: true,
   columnScope: DEPLOY_HISTORY_VIEW_ID,
 });

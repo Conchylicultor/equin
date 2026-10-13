@@ -36,10 +36,7 @@ import {
   pointQueryResourceDescriptor,
   windowQueryResourceDescriptor,
 } from "../../core/internal/window-descriptor";
-import type {
-  WindowParams,
-  PointParams,
-} from "@plugins/primitives/plugins/live-state/core";
+import type { WindowParams } from "@plugins/primitives/plugins/live-state/core";
 import { liveCollection, LIVE_ROW_KEY } from "../../core";
 import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { compileCollection } from "./serve-collection";
@@ -76,6 +73,14 @@ const byOrder = (p: SortParams) => [
 ];
 const ptDescriptor = () =>
   pointQueryResourceDescriptor(`test.cw.pt-${seq++}`, rowSchema, "id");
+// Every window is read as key-range pages, so every window spec states where
+// its rows' keys go; these tuples carry no cuts.
+const ROW_KEY: WindowQueryResourceSpec["rowKey"] = {
+  cutsOf: () => ({}),
+  familyOf: () => "test",
+  keyField: LIVE_ROW_KEY,
+  maxKeyBytes: 1024,
+};
 
 // ── Fake db: records rendered SQL, returns scripted rows ──
 const fakeDb = recordingQueryDb;
@@ -89,6 +94,7 @@ describe("compileWindowQuery — window SQL", () => {
       where: eq(rows.dismissed, 0),
       orderBy: { col: rows.n, dir: "desc" },
       window: { maxLimit: 500 },
+      rowKey: ROW_KEY,
       db,
     });
     expect(keyField).toBe("id");
@@ -97,8 +103,10 @@ describe("compileWindowQuery — window SQL", () => {
       ["rows", { kind: "identity" }],
     ]);
     await serverOpts.loader({ limit: "100" });
+    // Every window row carries its key: each order key's text, the pk last.
     expect(calls[0]!.sql).toBe(
-      `select "id", "n" from "rows" where "rows"."dismissed" = $1 ` +
+      `select "id", "n", "n"::text as "__row_key_0", "id"::text as "__row_key_1" ` +
+        `from "rows" where "rows"."dismissed" = $1 ` +
         `order by "rows"."n" DESC NULLS LAST, "rows"."id" ASC NULLS LAST limit $2`,
     );
     expect(calls[0]!.params).toEqual([0, 100]);
@@ -113,6 +121,7 @@ describe("compileWindowQuery — window SQL", () => {
         select: { id: rows.id, n: rows.n },
         orderBy: { col: rows.n },
         window: { maxLimit: 50 },
+        rowKey: ROW_KEY,
         db,
       },
     );
@@ -129,6 +138,7 @@ describe("compileWindowQuery — window SQL", () => {
       select: { id: rows.id, n: rows.n },
       orderBy: { col: rows.n },
       window: { maxLimit: 500 },
+      rowKey: ROW_KEY,
       db,
     });
     expect(() => serverOpts.loader({} as WindowParams)).toThrow(
@@ -145,11 +155,13 @@ describe("compileWindowQuery — window SQL", () => {
       where: eq(rows.dismissed, 0),
       orderBy: { col: rows.n, dir: "desc" },
       window: { maxLimit: 500 },
+      rowKey: ROW_KEY,
       db,
     });
     await serverOpts.loader({ limit: "100" }, { affectedIds: ["a", "b"] });
     expect(calls[0]!.sql).toBe(
-      `select "id", "n" from "rows" where ("rows"."dismissed" = $1 and "rows"."id" in ($2, $3))`,
+      `select "id", "n", "n"::text as "__row_key_0", "id"::text as "__row_key_1" ` +
+        `from "rows" where ("rows"."dismissed" = $1 and "rows"."id" in ($2, $3))`,
     );
     expect(calls[0]!.params).toEqual([0, "a", "b"]);
   });
@@ -162,6 +174,7 @@ describe("compileWindowQuery — window SQL", () => {
       where: eq(rows.dismissed, 0),
       orderBy: { col: rows.n, dir: "desc" },
       window: { maxLimit: 500 },
+      rowKey: ROW_KEY,
       db,
     });
     const membership = serverOpts.membership!;
@@ -183,6 +196,7 @@ describe("compileWindowQuery — window SQL", () => {
       select: { id: rows.id, n: rows.n },
       orderBy: { col: rows.n, dir: "desc" },
       window: { maxLimit: 500 },
+      rowKey: ROW_KEY,
       db,
     });
     const membership = serverOpts.membership!;
@@ -205,6 +219,7 @@ describe("compileWindowQuery — window SQL", () => {
         { col: rows.parentId, nullable: true },
       ],
       window: { maxLimit: 500 },
+      rowKey: ROW_KEY,
       db,
     });
     const membership = serverOpts.membership!;
@@ -232,6 +247,7 @@ describe("compileWindowQuery — window SQL", () => {
         select: { id: rows.id }, // n is the order column but is not projected
         orderBy: { col: rows.n },
         window: { maxLimit: 500 },
+        rowKey: ROW_KEY,
         db,
       }),
     ).toThrow(/order column "n" is not projected/);
@@ -244,11 +260,12 @@ describe("compileWindowQuery — window SQL", () => {
       select: { id: rows.id, n: rows.n },
       orderBy: { col: rows.id, dir: "desc" },
       window: { maxLimit: 500 },
+      rowKey: ROW_KEY,
       db,
     });
     await serverOpts.loader({ limit: "10" });
     expect(calls[0]!.sql).toBe(
-      `select "id", "n" from "rows" order by "rows"."id" DESC NULLS LAST limit $1`,
+      `select "id", "n", "id"::text as "__row_key_0" from "rows" order by "rows"."id" DESC NULLS LAST limit $1`,
     );
   });
 });
@@ -261,6 +278,7 @@ describe("compileWindowQuery — routes", () => {
       where: (p: WindowParams) => (p.limit === "1" ? eq(rows.n, 1) : undefined),
       orderBy: { col: rows.n },
       window: { maxLimit: 500 },
+      rowKey: ROW_KEY,
       db,
     });
     const plan = serverOpts.routes!;
@@ -435,6 +453,7 @@ describe("compileWindowQuery — per-params orderBy", () => {
       orderBy: byOrder,
       signatureColumns: [rows.n, rows.parentId],
       window: {},
+      rowKey: ROW_KEY,
       db,
     });
     await serverOpts.loader({ limit: "5" });
@@ -443,11 +462,13 @@ describe("compileWindowQuery — per-params orderBy", () => {
     if (membership.kind !== "window") throw new Error("unreachable");
     await membership.windowIdsOf({ limit: "5", order: "parent" });
     await serverOpts.loader({ limit: "9999" }); // clamped to the descriptor's maxLimit
+    const byN = `select "id", "n", "parent_id", "n"::text as "__row_key_0", "id"::text as "__row_key_1" from "rows"`;
+    const byParent = `select "id", "n", "parent_id", "parent_id"::text as "__row_key_0", "id"::text as "__row_key_1" from "rows"`;
     expect(calls.map((c) => c.sql)).toEqual([
-      `select "id", "n", "parent_id" from "rows" order by "rows"."n" DESC NULLS LAST, "rows"."id" ASC NULLS LAST limit $1`,
-      `select "id", "n", "parent_id" from "rows" order by "rows"."parent_id" ASC NULLS LAST, "rows"."id" ASC NULLS LAST limit $1`,
+      `${byN} order by "rows"."n" DESC NULLS LAST, "rows"."id" ASC NULLS LAST limit $1`,
+      `${byParent} order by "rows"."parent_id" ASC NULLS LAST, "rows"."id" ASC NULLS LAST limit $1`,
       `select "id" from "rows" order by "rows"."parent_id" ASC NULLS LAST, "rows"."id" ASC NULLS LAST limit $1`,
-      `select "id", "n", "parent_id" from "rows" order by "rows"."n" DESC NULLS LAST, "rows"."id" ASC NULLS LAST limit $1`,
+      `${byN} order by "rows"."n" DESC NULLS LAST, "rows"."id" ASC NULLS LAST limit $1`,
     ]);
     expect(calls[3]!.params).toEqual([50]);
   });
@@ -460,6 +481,7 @@ describe("compileWindowQuery — per-params orderBy", () => {
       orderBy: byOrder,
       signatureColumns: [rows.n, rows.parentId],
       window: {},
+      rowKey: ROW_KEY,
       db,
     });
     const membership = serverOpts.membership!;
@@ -495,11 +517,13 @@ describe("compileWindowQuery — per-params orderBy", () => {
       orderBy: { col: rows.n },
       signatureColumns: [rows.n, rows.parentId],
       window: { maxLimit: 500 },
+      rowKey: ROW_KEY,
       db,
     });
     await serverOpts.loader({ limit: "3" });
     expect(calls[0]!.sql).toBe(
-      `select "id", "n", "parent_id" from "rows" order by "rows"."n" ASC NULLS LAST, "rows"."id" ASC NULLS LAST limit $1`,
+      `select "id", "n", "parent_id", "n"::text as "__row_key_0", "id"::text as "__row_key_1" ` +
+        `from "rows" order by "rows"."n" ASC NULLS LAST, "rows"."id" ASC NULLS LAST limit $1`,
     );
     const membership = serverOpts.membership!;
     if (membership.kind !== "window") throw new Error("unreachable");
@@ -523,6 +547,7 @@ describe("compileWindowQuery — per-params orderBy", () => {
       orderBy: byOrder,
       signatureColumns: [rows.n],
       window: {},
+      rowKey: ROW_KEY,
       db,
     });
     await serverOpts.loader({ limit: "5" }); // n: covered
@@ -542,8 +567,9 @@ describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
         ...base,
         orderBy: { col: rows.n },
         window: { maxLimit: 10 },
+        rowKey: ROW_KEY,
         point: { by: rows.id },
-      } as WindowQueryResourceSpec<WindowParams>),
+      } as never),
     ).toThrow(/mutually exclusive/);
   });
 
@@ -551,7 +577,7 @@ describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
     expect(() =>
       compileWindowQuery(winDescriptor(), {
         ...base,
-      } as WindowQueryResourceSpec<WindowParams>),
+      } as never),
     ).toThrow(
       /declare the collection with `all` \(`liveCollection\(key, \{ all \}\)`\)/,
     );
@@ -562,8 +588,19 @@ describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
       compileWindowQuery(winDescriptor(), {
         ...base,
         window: { maxLimit: 10 },
-      }),
+        rowKey: ROW_KEY,
+      } as never),
     ).toThrow(/REQUIRES `orderBy`/);
+  });
+
+  test("window without rowKey (an untyped caller: the window kind requires it)", () => {
+    expect(() =>
+      compileWindowQuery(winDescriptor(), {
+        ...base,
+        orderBy: { col: rows.n },
+        window: { maxLimit: 10 },
+      } as never),
+    ).toThrow(/REQUIRES `rowKey`/);
   });
 
   test("defaultLimit > maxLimit", () => {
@@ -572,6 +609,7 @@ describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
         ...base,
         orderBy: { col: rows.n },
         window: { maxLimit: 50 },
+        rowKey: ROW_KEY,
       }),
     ).toThrow(/defaultLimit \(100\) exceeds window\.maxLimit \(50\)/);
   });
@@ -582,6 +620,7 @@ describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
         ...base,
         orderBy: { col: rows.n },
         window: { maxLimit: 2.5 },
+        rowKey: ROW_KEY,
       }),
     ).toThrow(/maxLimit must be a positive integer/);
   });
@@ -592,6 +631,7 @@ describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
         ...base,
         orderBy: byOrder,
         window: {},
+        rowKey: ROW_KEY,
       }),
     ).toThrow(/function `orderBy` REQUIRES a non-empty `signatureColumns`/);
   });
@@ -603,6 +643,7 @@ describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
         orderBy: byOrder,
         signatureColumns: [rows.n, rows.parentId],
         window: {},
+        rowKey: ROW_KEY,
       }),
     ).toThrow(/order column "parent_id" is not projected/);
   });
@@ -614,6 +655,7 @@ describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
         orderBy: { col: rows.n },
         signatureColumns: [rows.parentId],
         window: { maxLimit: 500 },
+        rowKey: ROW_KEY,
       }),
     ).toThrow(/order column "n" is not in `signatureColumns`/);
   });
@@ -624,6 +666,7 @@ describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
         ...base,
         orderBy: { col: rows.n },
         window: { maxLimit: 60 },
+        rowKey: ROW_KEY,
       }),
     ).toThrow(
       /window\.maxLimit \(60\) disagrees with the descriptor's maxLimit \(50\)/,
@@ -636,6 +679,7 @@ describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
         ...base,
         orderBy: { col: rows.n },
         window: { maxLimit: 50 },
+        rowKey: ROW_KEY,
       }),
     ).not.toThrow();
   });
@@ -646,6 +690,7 @@ describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
         ...base,
         orderBy: { col: rows.n },
         window: {},
+        rowKey: ROW_KEY,
       }),
     ).toThrow(/declare `window\.maxLimit`/);
   });
@@ -656,7 +701,7 @@ describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
         ...base,
         signatureColumns: [rows.n],
         point: { by: rows.id },
-      }),
+      } as never),
     ).toThrow(/point sets are unordered/);
   });
 
@@ -666,7 +711,17 @@ describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
         ...base,
         orderBy: { col: rows.n },
         point: { by: rows.id },
-      } as WindowQueryResourceSpec<PointParams>),
+      } as never),
+    ).toThrow(/point sets are unordered/);
+  });
+
+  test("point with a rowKey (a point set is cut nowhere)", () => {
+    expect(() =>
+      compileWindowQuery(ptDescriptor(), {
+        ...base,
+        rowKey: ROW_KEY,
+        point: { by: rows.id },
+      } as never),
     ).toThrow(/point sets are unordered/);
   });
 
@@ -686,7 +741,8 @@ describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
         ...base,
         orderBy: { col: rows.n },
         window: { maxLimit: 10 },
-      } as WindowQueryResourceSpec<PointParams>),
+        rowKey: ROW_KEY,
+      } as never),
     ).toThrow(/no window codec/);
   });
 
@@ -695,8 +751,31 @@ describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
       compileWindowQuery(winDescriptor(), {
         ...base,
         point: { by: rows.id },
-      } as WindowQueryResourceSpec<WindowParams>),
+      } as never),
     ).toThrow(/no point codec/);
+  });
+});
+
+describe("the two spec kinds (types)", () => {
+  test("a point spec cannot spell a window-only field; a window spec needs its row key", () => {
+    // Never called — the assertions are the `@ts-expect-error`s.
+    const _typesOnly = () => {
+      const pt = { from: rows, point: { by: rows.id } } as const;
+      const win = { from: rows, orderBy: { col: rows.n }, window: {} } as const;
+      const order = { col: rows.n } as const;
+      const fam = { joins: [], valuesKey: "$s" } as const;
+      // @ts-expect-error — a point set is unordered
+      windowQueryResource(ptDescriptor(), { ...pt, orderBy: order });
+      // @ts-expect-error — so it is cut nowhere and keys no row
+      windowQueryResource(ptDescriptor(), { ...pt, rowKey: ROW_KEY });
+      // @ts-expect-error — and names no family member
+      windowQueryResource(ptDescriptor(), { ...pt, families: fam });
+      // @ts-expect-error — every window is read as key-range pages
+      windowQueryResource(winDescriptor(), win);
+      // @ts-expect-error — a window spec is never a point descriptor's
+      windowQueryResource(ptDescriptor(), { ...win, rowKey: ROW_KEY });
+    };
+    void _typesOnly;
   });
 });
 
@@ -717,6 +796,7 @@ describe("windowQueryResource — descriptor/keyField assertion", () => {
         select: { id: rows.id, n: rows.n },
         orderBy: { col: rows.n },
         window: { maxLimit: 100 },
+        rowKey: ROW_KEY,
         db,
       }),
     ).toThrow(/does not match the keyField "id"/);
@@ -746,6 +826,7 @@ describe("compileWindowQuery — joins", () => {
         joins: [x],
         orderBy: { col: rows.n },
         window: { maxLimit: 500 },
+        rowKey: ROW_KEY,
         db: fakeDb().db,
       }),
     ).toThrow(/needs an explicit `select`/);
@@ -759,6 +840,7 @@ describe("compileWindowQuery — joins", () => {
         select: { id: plan.render({ from: "x", col: rowsExt.id }), n: rows.n },
         orderBy: { col: rows.n },
         window: { maxLimit: 500 },
+        rowKey: ROW_KEY,
         db: fakeDb().db,
       }),
     ).toThrow(/projects a joined column/);
@@ -774,6 +856,7 @@ describe("compileWindowQuery — joins", () => {
       whereReads: [rows.n],
       orderBy: { col: rows.n },
       window: { maxLimit: 500 },
+      rowKey: ROW_KEY,
       db: fakeDb().db,
     });
     await serverOpts.loader({ limit: "5" });
@@ -801,6 +884,7 @@ describe("compileWindowQuery — joins", () => {
       whereReads: [rows.dismissed],
       orderBy: { col: rows.n },
       window: { maxLimit: 500 },
+      rowKey: ROW_KEY,
       db: fakeDb().db,
     });
     expect(
@@ -818,6 +902,7 @@ describe("compileWindowQuery — joins", () => {
       where: eq(rows.dismissed, 0),
       orderBy: { col: rows.n },
       window: { maxLimit: 500 },
+      rowKey: ROW_KEY,
       db,
     });
     // An update that changes only `icon` or `parent_id` changes a member row
@@ -831,14 +916,15 @@ describe("compileWindowQuery — joins", () => {
     ]);
     await serverOpts.loader({ limit: "5" });
     expect(calls[0]!.sql).toStartWith(
-      `select "id", "parent_id", "n", "dismissed", "icon" from "rows"`,
+      `select "id", "parent_id", "n", "dismissed", "icon", ` +
+        `"n"::text as "__row_key_0", "id"::text as "__row_key_1" from "rows"`,
     );
   });
 });
 
-// ── A scroll collection's window: page cuts and the `$key` row key ─────────
+// ── A collection's window: page cuts and the `$key` row key ──────────────
 
-describe("compileWindowQuery — scroll pages (serveCollection over a scroll collection)", () => {
+describe("compileWindowQuery — key-range pages (serveCollection over a collection)", () => {
   const tracks = pgTable("tracks", {
     id: text("id").primaryKey(),
     title: text("title").notNull(),
@@ -854,7 +940,7 @@ describe("compileWindowQuery — scroll pages (serveCollection over a scroll col
     owner: z.string(),
   });
   let n = 0;
-  const scrollCollection = () =>
+  const pagedCollection = () =>
     liveCollection(`test.cw.scroll-${n++}`, {
       row: TrackRow,
       id: "id",
@@ -863,13 +949,12 @@ describe("compileWindowQuery — scroll pages (serveCollection over a scroll col
       sortable: ["title", "playedAt", "durationSec"],
       default: { orderBy: [["playedAt", "desc"]], limit: 10 },
       maxLimit: 30,
-      scroll: true,
     });
 
-  function compileScroll(
+  function compilePaged(
     script?: (q: { sql: string; params: unknown[] }) => unknown[],
   ) {
-    const c = scrollCollection();
+    const c = pagedCollection();
     const recording = fakeDb(script);
     const specs = compileCollection(c, {
       from: tracks,
@@ -887,7 +972,7 @@ describe("compileWindowQuery — scroll pages (serveCollection over a scroll col
   const UNTIL = JSON.stringify(["2026-09-29 08:00:00.5+00", "t9"]);
 
   test("a cut-free tuple renders exactly as before; each row gets its $key", async () => {
-    const { c, window, calls } = compileScroll(() => [
+    const { c, window, calls } = compilePaged(() => [
       {
         id: "t1",
         title: "a",
@@ -915,7 +1000,7 @@ describe("compileWindowQuery — scroll pages (serveCollection over a scroll col
   });
 
   test("cuts compile on the order side, operands cast back to each key's column type, in full / scoped / ids", async () => {
-    const { c, window, calls } = compileScroll();
+    const { c, window, calls } = compilePaged();
     const params = c.window.window.encode(
       { limit: 20 },
       { after: AFTER, until: UNTIL },
@@ -950,7 +1035,7 @@ describe("compileWindowQuery — scroll pages (serveCollection over a scroll col
   });
 
   test("a NULL order key in a cut compiles as the trailing NULL region", async () => {
-    const { c, window, calls } = compileScroll();
+    const { c, window, calls } = compilePaged();
     await window.loader(
       c.window.window.encode(undefined, {
         after: JSON.stringify([null, "t4"]),
@@ -962,7 +1047,7 @@ describe("compileWindowQuery — scroll pages (serveCollection over a scroll col
   });
 
   test("a sortable-but-not-filterable order key takes cuts without tripping the whereReads universe", async () => {
-    const { c, window, calls } = compileScroll();
+    const { c, window, calls } = compilePaged();
     const params = c.window.window.encode(
       { orderBy: [["durationSec", "asc"]], where: { title: "x" } },
       { after: JSON.stringify(["90", "t2"]) },
@@ -984,7 +1069,7 @@ describe("compileWindowQuery — scroll pages (serveCollection over a scroll col
 
   test("a $key over 1 KiB (a long text sort key) is projected as null", async () => {
     const long = "x".repeat(1100);
-    const { c, window } = compileScroll(() => [
+    const { c, window } = compilePaged(() => [
       {
         id: "t1",
         title: long,
@@ -1008,5 +1093,28 @@ describe("compileWindowQuery — scroll pages (serveCollection over a scroll col
       c.window.window.encode({ orderBy: [["title", "asc"]] }),
     )) as Record<string, unknown>[];
     expect(rows.map((r) => r[LIVE_ROW_KEY])).toEqual([null, '["short","t2"]']);
+  });
+
+  test("every window states its page family, so a page of any window may be derived", () => {
+    const { c, window } = compilePaged();
+    const membership = window.membership!;
+    if (membership.kind !== "window") throw new Error("unreachable");
+    const familyOf = membership.familyOf!;
+    const w = c.window.window;
+    const cut = JSON.stringify(["2026-09-30 10:00:00.123456+00", "t1"]);
+    // Every page of one query — whatever its limit and cuts — is one family.
+    expect(familyOf(w.encode({ limit: 20 }, { after: cut }))).toBe(
+      familyOf(w.encode()),
+    );
+    expect(familyOf(w.encode({ limit: 20 }, { until: cut }))).toBe(
+      familyOf(w.encode()),
+    );
+    // Another filter or order is another query.
+    expect(familyOf(w.encode({ where: { title: "x" } }))).not.toBe(
+      familyOf(w.encode()),
+    );
+    expect(familyOf(w.encode({ orderBy: [["title", "asc"]] }))).not.toBe(
+      familyOf(w.encode()),
+    );
   });
 });

@@ -256,7 +256,10 @@ the source axis only decides *which data bundle* feeds the body.
 
 A data source can declare itself hierarchical by passing `hierarchy` (a
 `HierarchyConfig<TRow>`) to `<DataView>`. Present → hierarchical views (the
-tree) become selectable; absent → the host drops them from the switcher. The
+tree) become selectable; absent → the host drops them from the switcher.
+`hierarchy` and `paging` are exclusive on the in-memory origin (a type union,
+both keys optional): a tree over a paged prefix orphans the children whose
+parents are not loaded — the same reason a live `source` refuses `hierarchy`. The
 `HierarchyConfig` carries two required accessors (`getParentId`, `getRank`), the
 optional reference-edge accessor (`getAliasParents`, below), and the optional
 mutations (`onMove`, `onCreate`) — so a read-only nav tree supplies just the two
@@ -776,7 +779,8 @@ memory from a paged read — the conversation Queue, whose Done section is the
 `useLive(c, query, { viewport, resetKey })`, with the viewport it mints — and
 hands back the read and its paging together). Both reach the body as one
 `paging`, so the footer (loading-more, Retry, the stop line), the notices, the
-hold and the viewport are one code path. It takes a scroll collection only: a
+hold and the viewport are one code path. It takes a collection's window (any:
+every window pages; a lookup-only or `all` collection is a tsc error): a
 key-range-paged `liveValue` reads through the same `useLive` pages, but a
 DataView source over one needs the filterable and text-column seams a value
 does not have (task-1791593959-9liyj7).
@@ -874,9 +878,42 @@ const { pages, paging } = useLivePagesPaging(conversationsGone, {}); // data-vie
     anchoring on a landing that changed, none drawn under `isPaged` yet
     anchored, a live source scrolled deep keeping its drawn rows bounded
     with every row accounted for), `placeholder-heights.test.ts` (the
-    sizing rules) and, deployed, `e2e/live-pages-scroll.ts` (every row seen
-    at `--step 0.4` / `0.8`, no row on screen moving on its own).
+    sizing rules), each view's `paged-conformance.test.tsx` (list, table,
+    gallery, icons — below) and, deployed, `e2e/live-pages-scroll.ts` (every row seen
+    at `--step 0.4` / `0.8`, no row on screen moving on its own, no row
+    changing its x; `--view <type>` picks the view by its switcher chip's
+    `data-view-type`, `--scroller` / `--width` / `--expect-placeholders`
+    for a sidebar list, a gallery's column count, and a run that must
+    release).
+  - **A grid keeps its columns.** A page released mid-line would restart
+    the next card in column 0 and reflow everything below it. The flat
+    read's placeholders reach the view as `DataViewRenderProps.placeholders`
+    (present exactly when the body draws them; a declared section's are on
+    `section.paging`), and a grid view keeps its band's phase through
+    `useGridPhase` (web barrel): it records the absolute cell index each
+    cell was drawn at and, while pages stand above the band, starts it with
+    `index mod columns` empty spacer cells (no `data-row-key`), keyed by
+    absolute line (`line:<n>@<columns>`) so a windowed line survives a
+    release. The gallery and icons views use it; a stacked view needs
+    nothing.
 
+- **The conformance harness** (`web/testing`): `mountPagedDataView({ view,
+  bundle, layout })` mounts ONE view through the real seam
+  (`DataViewShellFrame` around `DataViewBody`, a fake one-instance model)
+  inside a scroller the test drives, with an IntersectionObserver and
+  `getBoundingClientRect` answering from a laid-out page — `"stack"` (rows one
+  below the other) or `{ columns, linePx }` (a lane-aware grid: cells fill
+  lines, `data-grid-pad` spacers take a cell, each grid element starts a line;
+  the gallery's and icons' column probes are stubbed to `columns`).
+  `describePagedConformance({ view, layout, windowAbove? })` is the contract
+  every view runs in its own `paged-conformance.test.tsx`: a released page is
+  one placeholder (`data-row-key` + `data-page-placeholder`, drawn as
+  loading) exactly as tall as the room its rows took, a release writes no
+  scroll, a landing that changed size is anchored; on a grid, a page ending
+  mid-line keeps every card's column (plain and windowed) and a windowed
+  release keeps the mounted lines' DOM. A new view type adds that one file.
+  **Gap:** the grouped table draws no declared section's `before`
+  placeholders (see the table's CLAUDE.md, "Paged").
 - `isPaged(row)` names the rows the read supplies (absent: all). They sit in
   `rows` in the read's order, so the last one is the **tail**.
 - **The next page loads only while the tail is on screen**: not folded (rule
@@ -1946,7 +1983,7 @@ stand-in (`rows={[]}` beside a server origin) cannot be spelled:
   keeps the union (pinned by `web/internal/body-types.test.ts`).
 
 ```ts
-// web — once, next to the list (the collection is declared `scroll: true`)
+// web — once, next to the list (any collection with a window)
 export const threadsSource = liveDataSource(mailThreads, { searchable: ["subject", "snippet"] });
 // web
 <DataView<MailThread> storageKey={…} fields={fields} views={["list"]}
@@ -2326,8 +2363,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 65 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×57
+  - Contributes: 67 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×59
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
@@ -2423,6 +2460,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FoldRule`
     - `GlobalRowOrderContribution`
     - `GlobalRowOrderProps`
+    - `GridLine`
+    - `GridPhase`
     - `GroupBucket`
     - `GroupByController`
     - `GroupByRule`
@@ -2490,6 +2529,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useFilterClock`
     - `useFilterController`
     - `useFlatRows`
+    - `useGridPhase`
     - `useGroupByController`
     - `useGroupingClock`
     - `useGroupingRegistry`
@@ -2506,8 +2546,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useRowFilter`
     - `useSortController`
 - Server:
-  - Contributes: 59 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×57
+  - Contributes: 61 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×59
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getConfig`
@@ -2632,9 +2672,9 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `splitFieldSections`
     - `UNGROUPED_FOLD_KEY`
 - Cross-plugin:
-  - Imported by: 89 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 91 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×30
-    - `apps` ×21
+    - `apps` ×22
     - `debug` ×11
     - `primitives` ×8
     - `conversations` ×7
@@ -2645,6 +2685,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `history/dialog`
     - `page/links`
     - `runs`
+    - `shell/notifications`
     - `ui/theme-engine/theme-gallery`
 - Exemptions:
   - Exempts itself from:
@@ -2656,11 +2697,16 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `reorder/editor` (0 debt)
 - Test helpers:
   - Web: `@plugins/primitives/plugins/data-view/web/testing`
+    - `consumerPaging` — A consumer's paging (`DataViewProps.paging`): placeholders before and after the rows, every viewport report pushed to `reports`, nothing to grow.
+    - `describePagedConformance` — The paged-view contract every DataView view honours, run against `view` mounted through the real body on a laid-out page (`mountPagedDataView`):
     - `lowerFilterGroup` — Lower a DataView `FilterGroup` into a filter-language `Filter`, each rule through its operator's `lower` with `ctx.column` = the field id.
     - `lowersToMatch` — Does a rule `op(operand)` keep a row whose field projects to `value`? — the in-memory evaluator's exact path for one rule: `op.lower` over a column of `domain` (an incomplete rule, `undefined`, keeps every row), the DataView domain adapter, then the filter language's `matchesFilter`.
+    - `mountPagedDataView` — Mount ONE view of a paged DataView against a laid-out page — through the real seam (`DataViewShellFrame` around `DataViewBody`, the body every DataView renders), with a fake one-instance view model, inside a scroller whose `scrollTop` the test drives and an IntersectionObserver that answers from the layout, as a browser does.
+    - `PAGED_VIEWPORT_PX` — The scroller's visible height.
     - `renameColumns` — Rename every clause's column through `rename` (field id → column name).
     - `resolveLiveFields` — Resolve a schema against a live source — and check it where it is declared.
     - `testField` — A minimal option-less field for a test that calls `op.lower` directly.
+    - Types: `PagedDataView`, `PagedLayout`, `PagedViewUnderTest`
 - Sub-plugins:
   - **`capsule-toolbar`** — Capsule toolbar arrangement for the data-view primitive: the collapsed view chip, a borderless search field (focused by /), the control triggers as circles and a round filled create button, all in…
   - **`custom-columns`** — User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Persists per-row…

@@ -242,8 +242,8 @@ environment.
   named-but-unspawned is `ship`, which means the build is what is running.
 - **`deploy_runs`** — the **record**: one row per launched run, so _what is live
   on this box, and what happened before_ survives a restart. Read back as the
-  `deployRunHistory` live collection (`deploy.run-history`, a `scroll: true`
-  window whose `columnScope` is the History surface; `deploy-history`'s section
+  `deployRunHistory` live collection (`deploy.run-history`, a window read as
+  key-range pages, whose `columnScope` is the History surface; `deploy-history`'s section
   scopes it per deployment and renders it), swept at 90 days. It is also the **lock** (above) and the
   **re-attach index** (below).
 

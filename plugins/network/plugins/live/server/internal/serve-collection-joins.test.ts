@@ -163,18 +163,14 @@ const SPEC = {
   maxLimit: 50,
 } as const;
 const collection = () => liveCollection(`test.live.joins-${seq++}`, SPEC);
-// A scroll collection: its tuples may carry page cuts.
-const scrollCollection = () =>
-  liveCollection(`test.live.joins-${seq++}`, { ...SPEC, scroll: true });
 
 function compile(
   opts: {
     required?: boolean;
-    scroll?: boolean;
     script?: (q: RecordedQuery) => unknown[];
   } = {},
 ) {
-  const c = opts.scroll ? scrollCollection() : collection();
+  const c = collection();
   const recording = recordingQueryDb(opts.script);
   const specs = compileCollection(c, {
     from: songs,
@@ -746,7 +742,10 @@ describe("serveCollection with joins — the SQL", () => {
     expect(calls[0]!.sql).toStartWith(
       'select "songs"."id", "songs"."title", "songs"."created_at", ' +
         '"playback"."last_played_at", "playback"."plays", "artist"."name", ' +
-        '"label"."name", "cc"."value" from "songs"',
+        '"label"."name", "cc"."value", ' +
+        // …then the row key's parts: the order key, then the id.
+        '"songs"."created_at"::text as "__row_key_0", "songs"."id"::text as "__row_key_1" ' +
+        'from "songs"',
     );
   });
 });
@@ -870,7 +869,6 @@ describe("serveCollection with joins — provenance property", () => {
     for (const required of [false, true]) {
       const { c, window, rows, groups, calls } = compile({
         required,
-        scroll: true,
       });
       const idsOf = (
         window.membership as {
@@ -1186,7 +1184,7 @@ describe("serveCollection with joins — a joined column's wire form", () => {
       filterable: { blob: liveText() },
       sortable: ["id"],
       default: { orderBy: [["id", "asc"]], limit: 1 },
-      maxLimit: 1,
+      maxLimit: 2,
     });
     expect(() =>
       compileCollection(c, {

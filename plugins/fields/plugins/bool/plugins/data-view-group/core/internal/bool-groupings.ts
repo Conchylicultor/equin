@@ -1,4 +1,5 @@
 import type {
+  FieldDef,
   FieldGrouping,
   FieldValue,
   GroupBucket,
@@ -12,14 +13,23 @@ import type {
  * Order puts `false` first, matching the type's own `asc` reading ("Unchecked
  * first", `boolIdentity.directionLabels`).
  *
- * Nothing is planned per render, so the plan phase closes over nothing.
+ * A field names its two sections through its own `options` (`value` `"true"`
+ * / `"false"`) — the notifications pane's `read` reads "Unread" / "Read",
+ * not "No" / "Yes"; a field declaring none gets Yes / No.
  */
-function bucketBool(value: FieldValue): GroupBucket {
-  return {
+function bucketBool(
+  field: FieldDef<unknown>,
+): (value: FieldValue) => GroupBucket {
+  const labelOf = (v: boolean): string =>
+    field.options?.find((o) => o.value === String(v))?.label ??
+    (v ? "Yes" : "No");
+  const yes = labelOf(true);
+  const no = labelOf(false);
+  return (value) => ({
     key: String(value),
-    label: value ? "Yes" : "No",
+    label: value ? yes : no,
     order: value ? 1 : 0,
-  };
+  });
 }
 
 export const boolGroupings: FieldGrouping[] = [
@@ -28,6 +38,6 @@ export const boolGroupings: FieldGrouping[] = [
     id: "value",
     label: "Value",
     oneBucketPerValue: true,
-    plan: () => bucketBool,
+    plan: ({ field }) => bucketBool(field),
   },
 ];

@@ -3,9 +3,9 @@
  * research/2026-10-01-global-scoped-change-routing-p5-p8.md), on a throwaway
  * database seeded with the real migration chain: the real `reportsList`
  * declaration compiled exactly as its `serveCollection` compiles it, registered
- * on the server-core runtime, and the real `reportsProducer` mounted with
- * `mountProducersForTest` routing into the real `routeChange` — no trigger, no
- * LISTEN consumer: `reports` has none.
+ * on a resource runtime of the suite's own, and the real `reportsProducer`
+ * mounted with `mountProducersForTest` routing into the feed's own routing
+ * (`createChangeRouter`) — no trigger, no LISTEN consumer: `reports` has none.
  *
  * A random workload of the table's four writes, each through the REAL writer
  * — report upserts (`writeReport`, the rate-limited flag included), investigate
@@ -35,22 +35,17 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
-import { routeChange } from "@plugins/database/plugins/change-feed/server";
 import {
   assertRouteTablesCovered,
+  createChangeRouter,
   findCarriedProducedRoutes,
   flushNow,
   mountProducersForTest,
 } from "@plugins/database/plugins/change-feed/server/testing";
 import {
-  defineResource,
-  notificationsWsHandler,
-  routedTableRequirements,
-  scopedResourceTables,
+  createResourceRuntime,
   type ResourceParams,
-  setRelationBases,
-} from "@plugins/framework/plugins/server-core/core";
-import { clearRelationBases } from "@plugins/framework/plugins/server-core/core/testing";
+} from "@plugins/framework/plugins/resource-runtime/core";
 import { sweepExpired } from "@plugins/infra/plugins/retention/server/testing";
 import {
   makeClientView,
@@ -87,7 +82,16 @@ const truth = new Map<
   (params: ResourceParams) => Promise<unknown> | unknown
 >();
 
-const handler = notificationsWsHandler as unknown as {
+// The suite's OWN runtime, never server-core's process-global one:
+// `./singularity test` runs every bun suite in one process, and any suite that
+// loads `reports/server` registers the real `reports.list` on the global
+// registry at module eval — so registering it there too throws
+// `defineResource: duplicate key`, whichever suite loads second (the
+// events-core source-runs oracle does the same, for the same reason).
+const runtime = createResourceRuntime();
+const routeChange = createChangeRouter(runtime);
+
+const handler = runtime.notificationsWsHandler as unknown as {
   open(ws: unknown): void;
   message(ws: unknown, raw: string): void;
   close(ws: unknown, code: number, reason: string): void;
@@ -123,17 +127,11 @@ const tupleKey = (key: string, params: ResourceParams) =>
   `${key} ${JSON.stringify(params)}`;
 
 beforeAll(async () => {
-  // What change-feed's boot installs before its listener starts (D34). This
-  // suite reaches only routed entries, but the legacy router runs on every
-  // change too, over whatever legacy read-sets other suites in this bun
-  // process left: with no bases set it would report on each one. No views
-  // matter here, so every relation is its own base.
-  setRelationBases((r) => [r]);
   testDb = await createTestDb({ prefix: "reports_oracle" });
   await runMigrations(testDb.db);
   // The collection's three resources, compiled from the REAL declaration with
   // the options `list-resource.ts` serves it with, against this database —
-  // registered on the server-core runtime `routeChange` feeds, every loader
+  // registered on the suite's runtime `routeChange` feeds, every loader
   // run recorded. (No custom-column sets: none are contributed here.)
   const specs = compileCollection(reportsList, {
     from: _reports,
@@ -157,15 +155,15 @@ beforeAll(async () => {
     specs.window,
   ).serverOpts;
   const rowsOpts = compileWindowQuery(reportsList.rows, specs.rows).serverOpts;
-  defineResource(reportsList.window, {
+  runtime.defineResource(reportsList.window, {
     ...windowOpts,
     loader: record(reportsList.key, windowOpts.loader),
   });
-  defineResource(reportsList.rows, {
+  runtime.defineResource(reportsList.rows, {
     ...rowsOpts,
     loader: record(reportsList.rows.key, rowsOpts.loader),
   });
-  defineResource(reportsList.groups, {
+  runtime.defineResource(reportsList.groups, {
     ...specs.groups,
     loader: record(reportsList.groups.key, specs.groups.loader),
   });
@@ -184,7 +182,6 @@ beforeAll(async () => {
 }, 30_000);
 
 afterAll(async () => {
-  clearRelationBases();
   handler.close(ws, 1000, "test");
   unmount?.();
   await testDb?.drop();
@@ -300,10 +297,12 @@ describe("reports.list fed by the reports producer — differential oracle", () 
       reportsList.rows.key,
       reportsList.groups.key,
     ]);
-    const requirements = routedTableRequirements();
+    const requirements = runtime.routedTableRequirements();
     expect(requirements.some((r) => r.table === "reports")).toBe(true);
     expect(findCarriedProducedRoutes(requirements, produced)).toEqual([]);
-    const scoped = scopedResourceTables().filter((r) => keys.has(r.key));
+    const scoped = runtime
+      .scopedResourceTables()
+      .filter((r) => keys.has(r.key));
     expect(scoped.length).toBeGreaterThan(0);
     expect(() =>
       assertRouteTablesCovered(scoped, produced, new Set(), new Set()),

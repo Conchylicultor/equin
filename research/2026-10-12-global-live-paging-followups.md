@@ -1,6 +1,6 @@
 # Live paging follow-ups: what is left after key-range pages and unification
 
-Task `task-1791593959-9liyj7` (Resources track › item 7, API half). Status: **approved; session 1 implemented** (see *As landed (session 1)* at the end), session 2 pending.
+Task `task-1791593959-9liyj7` (Resources track › item 7, API half). Status: **approved; sessions 1 and 2 implemented** (see *As landed (session 1)* and *As landed (session 2)* at the end). Session 2's execution plan: `research/2026-10-13-global-live-paging-followups-session2.md`.
 
 This builds on two docs:
 - `research/2026-10-09-global-live-key-range-pages-v2.md`, for P1–P4 (on main as `1f49945319`);
@@ -232,10 +232,74 @@ All three signals are `live-pages` `clientLog` lines, written from effects (no t
 - **Tests:** `cross-page-gaps.test.ts` (8 cases), an `overflowed` assertion in `page-plan.test.ts`, and two `notifications-derive.test.ts` cases: a boot-hydrated source (no `derive` sent, one `live-pages` line) and a source still loading (no `derive`, no line).
 
 ### Open after session 1
-- **P5 must rewrite the `visible-range-minter` message's "any other collection: one window whose `limit` grows" arm** when every window pages.
-- `debug/queue`'s `useJobRows` reads `jobRuns` as one window at `JOB_RUNS_MAX_LIMIT` (5000, "the entire per-job ring") — a window read as a set the plan's table did not list. Whether the ring's total can pass the cap needs checking; if it can, it is an `all` (or a bounded-by-construction read) in session 2.
-- The `*-all.test.ts` files test the full load of each real declaration; the incremental route (entrant, exit, an unprojected write) is the generic one `serve-collection-all-oracle.test.ts` pins — none of the converted sets serves with set-specific routing.
-- `serve-collection-pages-oracle.test.ts` › "seeded: loadMore loads exactly the new page's step rows, and a merge loads nothing" fails since §1.2: its raw `sub` frame sends `derive` without `protocol`, so the server takes the `protocol-skew` fallback and loads in full. Fix: send `protocol: PROTOCOL` there (and in `serve-paged-value-oracle.test.ts`, which sends `derive` the same way).
-- `build/web/__tests__/build-button.test.tsx` mocks `@plugins/network/plugins/live/web` without `mintVisibleRange`, which data-view's `pages-viewport.ts` calls at module load.
-- The e2e runs of the session-1 verification (`screenshot.ts` on the task list and Pages Favorites, `live-sources.ts` / `sources-verify.ts`), `./singularity build` and the full `./singularity check` wait for the integration build.
+Each item below is resolved in session 2 (see *As landed (session 2)*), except where marked.
+- ~~P5 must rewrite the `visible-range-minter` message's "any other collection" arm~~ — rewritten in P5.
+- ~~`debug/queue`'s `useJobRows` reads `jobRuns` as one window~~ — `job-runs.all` (A.1).
+- The `*-all.test.ts` note is informational; no action.
+- ~~`serve-collection-pages-oracle.test.ts` sends `derive` without `protocol`~~ — fixed on main before session 2 (`PROTOCOL` is sent); the live suites pass.
+- ~~`build-button.test.tsx` mocks the live barrel without `mintVisibleRange`~~ — `pages-viewport.ts` mints lazily (0.1); the test is unchanged and passes.
+- ~~The session-1 e2e runs~~ — run in session 2 against its integration build (all checks pass; see below).
 
+## As landed (session 2)
+
+One worktree, four lanes (0, A, B, C) and a review pass, then integration builds. Execution plan and the user's decisions: `research/2026-10-13-global-live-paging-followups-session2.md`. Item 7's exit criteria are met: every window pages and no `scroll` flag exists (1), no known reader takes a window for the set (2), and the list, gallery and Queue Done views pass the table's deep-scroll checks (4).
+
+### Gate (§2.1)
+- `benchmark_boot` reports `snapshotBytes { total, perKey, rowKeyBytes }` per mode (boot-bench, measured once per mode outside the timed burst).
+- Measured on the worktree build: `$key` costs **73 B per row** (`notifications`, `build.history`). On main's real rows (200 notifications + 50 build runs) that is **~18.3 KB raw** (limit 25 KB) and **+2.1–2.4 KB gzipped, 0.21–0.24 %** of main's 1,012,384 B gzipped snapshot (limit 2 %). **Passed.** `op-store.in-flight` became an `all` set, so it carries no `$key` and has no worst case. `conversations-gone` already carried it.
+
+### Lane 0 — test baseline
+- `pages-viewport.ts` mints its `measuring` range lazily, so `build-button.test.tsx` passes unchanged.
+- **Duplicate `events.source-runs` — root cause:** `source-runs-oracle.test.ts` registered the real key on server-core's global registry in `beforeAll`, and `./singularity test` runs every bun suite in one process. The oracle now uses its own `createResourceRuntime()` + `createChangeRouter(runtime)`, as the tasks-core tree oracle did. The review pass moved three more oracles the same way (`reports-list`, `latest-run` → the `release.history` duplicate behind `schema-layer-replay`, `conversations`). Nothing under `framework/` changed. A guard against a test file registering a real key globally is filed as a follow-up.
+
+### Lane A — conversions, then P5
+- **A.1, to `all` under renamed keys:** `job-runs.all` (`finishedAt desc`; `JOB_RUNS_MAX_LIMIT` and the unused `job-runs:groups` deleted), `op-store.in-flight.all` (`requestedAt asc`, preload `boot` kept), `places.places.all`, `places.tags.all` (`rank asc`). Each states its `unbounded.reason`. `pushes` and `prompt-block-tasks` stay windows: they are per-entity reads, not taken as a set.
+- **A.2 P5:**
+  - `scroll` and `LiveScrollCollection` are deleted; the `maxLimit ≥ 2 · limit` throw applies to every window.
+  - `$key`, codec cuts, the key block and `familyOf` exist for every window.
+  - query-resource's spec splits into `WindowQueryResourceSpec` (requires `rowKey`, renamed from `scroll`, union spec included) and `PointQueryResourceSpec`. `readField` moved to the window kind.
+  - `use-live`'s `readKindOf` sends every window read to pages; `useCollection` serves groupings and id sets only.
+  - `build.history` `maxLimit` is now 100.
+  - The pager logs `pages= live=` only under a viewport or past one page.
+  - The `visible-range-minter` message is rewritten. 15 production declarations and 21 test files lost `scroll: true`, and both goldens were regenerated (the SQL golden had been stale since `d9a446a1c1`).
+- **A.3** reader-visible changes are documented in live's `CLAUDE.md`: the notifications popover stops at 400 (the step that fits under 500), any page's failure is the `error` arm, and a boot-hydrated page 0 logs `seed refused` on its first split.
+
+### Lane B — views
+- **3.1:** `DataViewInMemoryOrigin` is `rows & (hierarchy arm | paging arm)`, so `paging` beside `hierarchy` is a tsc error, pinned in `body-types.test.ts`.
+- **3.2:** `data-view/web/testing` has `mountPagedDataView({ view, bundle, layout })`, which mounts through `DataViewShellFrame` + `DataViewBody` on a laid-out page, and `describePagedConformance`. list, table, gallery and icons each run it in a `paged-conformance.test.tsx`; grids add the mid-line and windowed-release cases.
+- **3.3:** `useGridPhase` (data-view web barrel) records each cell's absolute index and pads a band with `data-grid-pad` spacers while pages stand above it. Line keys are `line:<n>@<columns>`.
+  - **Deviation:** one new render prop, `DataViewRenderProps.placeholders` (the flat read's, present exactly when the body draws them). Without it a release could not be told apart from a head delete or an in-memory search hit.
+  - The grouped table still draws no declared section's `before` placeholders (anchoring only); filed.
+- **3.4:** `live-pages-scroll.ts` gains `--view`, `--scroller`, `--width`, `--expect-placeholders`, a per-key x check, and (integration) `--click <text>` for a surface behind a control.
+- **3.5:** `done-paging.ts` gains the leave-and-return checks. No section-placeholder plumbing was needed.
+
+### Lane C — hand-rolled lists
+- **Pages trash:** a DataView `list` (`pages.trash`) inside its dialog, over `trashEntries` scoped to the pages source (search on `label`). Restore and Delete permanently are `item-actions`; Delete still confirms. The read happens only while the dialog is open. `GET /api/trash/:sourceId` is kept for agents and curl.
+- **Notifications:** a "View all" header button opens **Debug → Notifications** (`notificationsPane`, route in `core/`), a DataView `list` over the bell's own collection.
+  - Search on `title`; `type` and `variant` are facets.
+  - The authored view groups by the raw `read` column as server sections, labelled **Unread / Read** (a bool field now names its sections through its `options` — `fields/bool/data-view-group`).
+  - Open and Dismiss are item actions; Mark all read and Clear all are toolbar actions.
+  - View all closes the popover through `onClose`, so nothing is marked read (pinned in `bell-button.test.tsx` and e2e step 4b).
+- **Mail thread messages** stay a bounded exception: comments are fixed, and `MessageList` reverses its own pages, with a test that an appended older page remounts nothing.
+
+### Integration fixes
+- **list view:** a section dropped its band padding (`pt-section-body pb-sm`) on crossing the 100-row windowing threshold, so every row on screen jumped 8 px when a paged read grew past 100. This predates session 2 and was caught by `live-pages-scroll.ts`. The padding no longer depends on windowing.
+- **`bell-filter.ts`:** the bell locator also matched Debug's new "Notifications" row, so it now requires the bell's `aria-label`. Step 4b checks that the unread count did not drop, rather than that it stayed exact (a host-filed report may raise it).
+- The pane manifest records `notifications`. Three seeded overrides were authored: the Debug sidebar (Notifications after Reports), the trash and notification item actions.
+
+### Verification (deployed worktree build)
+- **Table:** `live-pages-scroll.ts` on `/agents/all-conversations` passes; **list** too, after the band fix. Each scrolls 3,200 rows down and back, with up to 21 placeholders, no row moving or changing column, and no reload.
+- **Gallery** at 800, 1280 and 1600 px, steps 0.4 and 0.8: all pass (1,500 cards each way, placeholders, 0 column moves). Run over All conversations with list and gallery views added to the worktree's user config for the run and restored after: the events list holds 162 events (main too), too few to release a page.
+- **Pages trash**, 541 seeded entries: all 542 reached both ways, DOM ≤ 100. No placeholder is expected under the 800-row stale budget.
+- **Notifications pane**, 600 seeded: all 600 reached both ways, DOM ≤ 32, no placeholder under the 1,600-row budget. `bell-filter.ts`: all 26 checks pass, including View all.
+- **Queue Done** (`done-paging.ts`): 11/11, exact "Done 5071" kept across leave-and-return.
+- **Session-1 carry-overs:** `sources-verify.ts` 21/21; `live-sources.ts` all checks pass; screenshots of the task list, Pages, the trash dialog and the notifications pane.
+- Two harness runs (`bell-filter`, `live-sources`) exited 1 only at the final network-idle wait: a request still in flight while the server shed load (429) under the e2e load. Every check passed.
+- **Observed once under the bell e2e's ~1,000 inserts:** a `live-state-noop` report for `notifications` (817 of 1,076 pushes in 60 s carried no change). Main has never filed it for this key. Filed as a follow-up.
+
+### Open after session 2
+- Prune `job_runs` rows for retired job names (114 names hold 1,814 rows; the ring keeps 20 per name forever).
+- `DataTableGroup` has no leading row, so the grouped table draws no declared section's `before` placeholders.
+- A guard against test files registering real resource keys on the global runtime.
+- The `notifications` no-op pushes under a write burst.
+- Pre-existing suite failures unrelated to this work: the tasks-core `tree-oracle` C39 case (the legacy schema rejects `$columns`, since `164ecb112b`), and the shared-process ESLint rule tests ("not found by the project service").

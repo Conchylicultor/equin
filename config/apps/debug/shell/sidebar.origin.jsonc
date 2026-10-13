@@ -1,4 +1,4 @@
-// @hash a4818cecb937
+// @hash 6188d31cf811
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -30,6 +30,7 @@
     "debug.worktree-cleanup:worktree-cleanup",
     "infra.background.catalog:background",
     "infra.events-test:events-test",
-    "plugin-meta.exhibits:exhibits"
+    "plugin-meta.exhibits:exhibits",
+    "shell.notifications:notifications"
   ]
 }

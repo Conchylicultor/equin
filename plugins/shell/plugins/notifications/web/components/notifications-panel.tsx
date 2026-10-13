@@ -3,18 +3,14 @@ import { useState } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { matchesFilter } from "@plugins/network/plugins/live/plugins/filter/core";
-import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import { appLink } from "@plugins/apps-core/plugins/tabs/web";
 import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
+import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -29,19 +25,14 @@ import {
   dismissAllNotifications,
 } from "../../shared/endpoints";
 import type { Notification } from "../../shared/schema";
+import { notificationsRoute } from "../../core";
+import { NotificationBody, notificationLink } from "./notification-body";
 
 const VARIANT_BORDER: Record<Notification["variant"], string> = {
   error: "border-l-destructive",
   warning: "border-l-warning",
   info: "border-l-info",
   success: "border-l-success",
-};
-
-const VARIANT_TEXT: Record<Notification["variant"], string> = {
-  error: "text-destructive",
-  warning: "text-warning",
-  info: "text-info",
-  success: "text-success",
 };
 
 const VARIANT_BORDER_MUTED: Record<Notification["variant"], string> = {
@@ -51,13 +42,7 @@ const VARIANT_BORDER_MUTED: Record<Notification["variant"], string> = {
   success: "border-l-success/40",
 };
 
-const VARIANT_TEXT_MUTED: Record<Notification["variant"], string> = {
-  error: "text-destructive/70",
-  warning: "text-warning/70",
-  info: "text-info/70",
-  success: "text-success/70",
-};
-
+/** The popover's row: the shared body inside its accent border, the row's link, and × dismiss. */
 function NotificationRow({
   n,
   dismiss,
@@ -67,76 +52,18 @@ function NotificationRow({
   dismiss: (id: string) => void;
   onClose: () => void;
 }) {
-  const clientId =
-    typeof n.metadata?.clientId === "string" ? n.metadata.clientId : null;
-  // An in-app link only: a row's `linkTo` may be anything the server stored.
-  const link = n.linkTo?.startsWith("/") ? n.linkTo : undefined;
+  const link = notificationLink(n);
   return (
     <Stack
       as="li"
       direction="row"
       gap="sm"
-      className={`px-md py-sm border-l-2 ${n.muted ? VARIANT_BORDER_MUTED[n.variant] : VARIANT_BORDER[n.variant]} ${n.muted || n.read ? "opacity-60" : ""} hover:bg-muted/50 ${link !== undefined ? "cursor-pointer" : ""}`}
+      className={`px-md py-sm border-l-2 ${n.muted ? VARIANT_BORDER_MUTED[n.variant] : VARIANT_BORDER[n.variant]} hover:bg-muted/50 ${link !== undefined ? "cursor-pointer" : ""}`}
       {...activationProps(
         link !== undefined ? afterOpen(appLink(link), onClose) : undefined,
       )}
     >
-      <Fill>
-        <Line className="gap-xs">
-          <Text
-            as="p"
-            variant="label"
-            className={`truncate ${n.muted ? VARIANT_TEXT_MUTED[n.variant] : VARIANT_TEXT[n.variant]}`}
-          >
-            {n.title}
-          </Text>
-          {n.muted && (
-            <Badge
-              variant="muted"
-              title="Low-signal / expected — dimmed, kept out of the unread badge, and never toasted."
-            >
-              muted
-            </Badge>
-          )}
-        </Line>
-        {n.description && n.description !== n.title && (
-          <Text
-            as="p"
-            variant="caption"
-            className="text-muted-foreground line-clamp-2"
-          >
-            {n.description}
-          </Text>
-        )}
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the metadata row from the description above */}
-        <Stack direction="row" gap="sm" align="center" className="mt-0.5">
-          <RelativeTime
-            date={n.lastSeenAt}
-            className="text-3xs text-muted-foreground"
-          />
-          {n.count > 1 && (
-            <span
-              className="text-3xs text-muted-foreground tabular-nums"
-              title={`Recurred ${n.count} times — collapsed into one entry`}
-            >
-              &times;{n.count > 99 ? "99+" : n.count}
-            </span>
-          )}
-          {n.type && (
-            <span className="text-3xs text-muted-foreground">{n.type}</span>
-          )}
-          {clientId != null && (
-            <span className="text-3xs text-muted-foreground">
-              {clientId === getTabId() ? "this tab" : "another tab"}
-            </span>
-          )}
-          {link !== undefined && (
-            <span className="text-3xs text-muted-foreground hover:text-foreground">
-              View &rarr;
-            </span>
-          )}
-        </Stack>
-      </Fill>
+      <NotificationBody n={n} />
       <Text
         as="button"
         variant="body"
@@ -422,18 +349,38 @@ export function NotificationsPanel({
         <Text variant="body" className="font-semibold">
           Notifications
         </Text>
-        {!empty && (
+        <Stack direction="row" gap="sm" align="center">
+          {!empty && (
+            <Text
+              as="button"
+              variant="caption"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                dismissAll.mutate({});
+              }}
+            >
+              Clear all
+            </Text>
+          )}
+          {/* The whole collection as a DataView (Debug → Notifications). It
+              leaves through `onClose` — the same way a row's link does — which
+              closes the popover WITHOUT the bell's mark-all-read: that runs
+              only on the popover's own dismissal (`onOpenChange`), and the pane
+              offers its own "Mark all read". */}
           <Text
             as="button"
             variant="caption"
             className="text-muted-foreground hover:text-foreground"
-            onClick={() => {
-              dismissAll.mutate({});
-            }}
+            {...activationProps(
+              afterOpen(
+                appLink(notificationsRoute.link(debugApp, {})),
+                onClose,
+              ),
+            )}
           >
-            Clear all
+            View all
           </Text>
-        )}
+        </Stack>
       </Stack>
       {empty ? (
         <Text

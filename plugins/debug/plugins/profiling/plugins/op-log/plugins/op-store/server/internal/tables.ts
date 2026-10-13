@@ -83,7 +83,7 @@ export const _opLogOps = deriveUpdatedAt(
       index("op_log_ops_requested_idx").on(t.requestedAt.desc()),
       index("op_log_ops_slug_requested_idx").on(t.opSlug, t.requestedAt),
       index("op_log_ops_kind_requested_idx").on(t.kind, t.requestedAt),
-      // The in-flight set: the `opsInFlight` window and the reconciler's
+      // The in-flight set: the `opsInFlight` set and the reconciler's
       // candidates. Partial, so it stays as small as what is running.
       index("op_log_ops_in_flight_idx")
         .on(t.requestedAt)

@@ -87,8 +87,8 @@ Debug → Claude CLI Calls' detail pane and an event run's Model call section
 both compose it.
 
 Debug → Claude CLI Calls lists the log through `claudeCliCalls`
-(`core/resources.ts`, key `claude-cli-calls`), a `scroll: true`
-`liveCollection` over `claude_cli_calls` backing a live DataView: newest first,
+(`core/resources.ts`, key `claude-cli-calls`), a `liveCollection` over
+`claude_cli_calls` backing a live DataView (key-range pages): newest first,
 100 rows by default, grown up to `RECENT_CALLS_LIMIT` — the recorder's own
 trim, so a fully grown window is the whole log (and a `contains` search over
 the prompt text scans at most that many rows). Search runs over

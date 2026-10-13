@@ -14,11 +14,16 @@ import {
   waitSplit,
   type Aggregate,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import { bootBenchRun, type IterResult } from "../../shared/endpoints";
+import {
+  bootBenchRun,
+  type IterResult,
+  type SnapshotBytes,
+} from "../../shared/endpoints";
 import { resolveFixtures } from "./fixtures";
 import { resetEldProbe, readEldProbe } from "./eld-probe";
 import { startHostGateLoad } from "./load-generator";
 import { readSnapshotBloat, type SnapshotBloat } from "./snapshot-bloat";
+import { measureSnapshotBytes } from "./snapshot-bytes";
 
 const DEFAULT_ITERATIONS = 10;
 const DEFAULT_WARMUP = 2;
@@ -181,21 +186,32 @@ export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
     return out;
   }
 
+  // The snapshot's bytes: one extra assemble, OUTSIDE the timed burst (the
+  // set's warmup iterations absorb whatever it warmed). The same path the mode
+  // measures, so a cold capture reads no kept in-memory snapshot.
+  const measureBytes = async (cold: boolean): Promise<SnapshotBytes> =>
+    measureSnapshotBytes(await assembleBootSnapshot({ memory: !cold }));
+
   // WARM iterations run BEFORE any cold-clear (the snapshot is naturally warm on a
   // running backend). Discard the first `warmup` of each set to absorb GC. Capture
   // each mode's snapshot bloat ONCE at the start of its set — before any cold-clear
-  // DELETE churns `live_state_snapshot` (the very table being measured).
+  // DELETE churns `live_state_snapshot` (the very table being measured) — and its
+  // snapshot bytes right after.
   let warm: IterResult[] | undefined;
   let warmBloat: SnapshotBloat | undefined;
+  let warmBytes: SnapshotBytes | undefined;
   if (mode !== "cold") {
     warmBloat = await readSnapshotBloat();
+    warmBytes = await measureBytes(false);
     warm = (await runSet(false, warmup + iterations)).slice(warmup);
   }
 
   let cold: IterResult[] | undefined;
   let coldBloat: SnapshotBloat | undefined;
+  let coldBytes: SnapshotBytes | undefined;
   if (mode !== "warm") {
     coldBloat = await readSnapshotBloat();
+    coldBytes = await measureBytes(true);
     cold = (await runSet(true, warmup + iterations)).slice(warmup);
   }
 
@@ -203,5 +219,6 @@ export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
     fixtures,
     runs: { cold, warm },
     snapshotBloat: { cold: coldBloat, warm: warmBloat },
+    snapshotBytes: { cold: coldBytes, warm: warmBytes },
   };
 });

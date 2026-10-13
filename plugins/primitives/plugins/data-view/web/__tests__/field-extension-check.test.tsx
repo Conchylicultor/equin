@@ -61,7 +61,6 @@ const songs = liveCollection("test.data-view.field-extension-check", {
   sortable: ["title"],
   default: { orderBy: [["title", "asc"]], limit: 2 },
   maxLimit: 6,
-  scroll: true,
 });
 const source = liveDataSource(songs, { searchable: ["title"] });
 

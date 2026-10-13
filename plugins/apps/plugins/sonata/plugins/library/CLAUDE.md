@@ -98,9 +98,9 @@ state, and the `useAvailable` gate. Sonata-specific on top of it:
 ## The song list (`songLibrary`)
 
 `songLibrary` (`core/resources.ts`, key `"sonata.songs"`) is a `liveCollection`
-over `sonata_songs` — H 100, M 500, default order `createdAt desc` — declared
-`scroll: true` (the library DataView reads it as live key-range pages through
-`songLibrarySource`, `web/source.ts`, searching title and composer) and
+over `sonata_songs` — H 100, M 500, default order `createdAt desc` — read by
+the library DataView as live key-range pages through `songLibrarySource`
+(`web/source.ts`, searching title and composer), and declared
 `contributed: true`. Served by `songLibraryServed` (`serveCollection(songLibrary,
 { from: _songs })`), which compiles at boot once the contributions are collected.
 

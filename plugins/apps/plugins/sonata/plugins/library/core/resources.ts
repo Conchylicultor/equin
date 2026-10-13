@@ -9,7 +9,7 @@ import { SongSchema, type SongRow } from "./schemas";
 
 /**
  * The song library: `sonata_songs` as a live collection, read by the library
- * DataView as live key-range pages (`scroll: true`) and by the player one row at
+ * DataView as live key-range pages and by the player one row at
  * a time (`useLiveRow`). No placeholder: a window or row not loaded yet is
  * `loading`, never `[]` / not-found.
  *
@@ -41,7 +41,6 @@ export const songLibrary = liveCollection("sonata.songs", {
   sortable: ["title", "composer", "source", "durationSec", "createdAt"],
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },
   maxLimit: 500,
-  scroll: true,
   contributed: true,
   columnScope: "sonata.library",
 });

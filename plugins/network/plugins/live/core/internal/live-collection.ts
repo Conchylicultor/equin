@@ -58,8 +58,8 @@ export interface LiveWindowCodec<F, S extends string> {
   defaultOrderBy: LiveOrderBy<S>;
   /**
    * Canonical encode. Throws on an undeclared column, an op its domain does
-   * not take, a bad operand, a limit above `maxLimit`, or a cut (`bounds`) on a
-   * collection not declared `scroll` / not a row key of the query's order.
+   * not take, a bad operand, a limit above `maxLimit`, or a cut (`bounds`)
+   * that is not a row key of the query's order.
    */
   encode: (
     query?: LiveQuery<F, S>,
@@ -235,12 +235,6 @@ export interface LiveCollection<
   filterable: F;
   sortable: readonly S[];
   /**
-   * Declared `scroll: true`: its window takes page cuts and projects each
-   * row's `$key`, so it may be read as key-range pages (`useLive`, a live
-   * DataView source).
-   */
-  scroll: boolean;
-  /**
    * Declared `contributed: true`: other plugins may add columns to it
    * (`liveColumns`), carried on every row under `$columns`.
    */
@@ -270,27 +264,15 @@ export interface LiveCollection<
 }
 
 /**
- * A collection declared `scroll: true` — the only kind read as key-range
- * pages (`useLive`, and so a live DataView source): its window projects
- * each row's `$key` and takes `after` / `until` cuts.
- */
-export type LiveScrollCollection<Row, F, S extends string> = LiveCollection<
-  Row,
-  F,
-  S
-> & { scroll: true };
-
-/**
  * What `liveCollection` mints for a window declaration: a collection whose row
- * carries `$columns` when declared `contributed`, and flagged `scroll` when
- * declared so. Never a union (`arms: null`): a single-table collection is what
+ * carries `$columns` when declared `contributed` (or reaching exposures).
+ * Never a union (`arms: null`): a single-table collection is what
  * `serveCollection` serves.
  */
 export type LiveCollectionOf<
   Row,
   F,
   S extends string,
-  Sc,
   Co,
   Cn = undefined,
   Ex = undefined,
@@ -299,7 +281,6 @@ export type LiveCollectionOf<
   : [Ex] extends [undefined]
     ? LiveCollection<Row, F, S>
     : LiveCollection<WithContributedColumns<Row>, F, S>) &
-  (Sc extends true ? { scroll: true } : unknown) &
   (Cn extends true ? { count: LiveCountDescriptor<F> } : { count: null }) & {
     arms: null;
   };
@@ -320,8 +301,8 @@ export interface LiveArms<D extends string = string> {
 }
 
 /**
- * A UNION collection (`liveCollection(key, { arms })`): a scroll collection
- * whose rows carry `$columns` — each arm's own columns, under its kind
+ * A UNION collection (`liveCollection(key, { arms })`): a window whose rows
+ * carry `$columns` — each arm's own columns, under its kind
  * (`liveArmColumns`) — and whose `discriminator` field names a row's arm.
  */
 export type LiveArmsCollection<
@@ -330,7 +311,6 @@ export type LiveArmsCollection<
   S extends string,
   D extends keyof Row & string = keyof Row & string,
 > = LiveCollection<WithContributedColumns<Row>, F, S> & {
-  scroll: true;
   contributed: false;
   columnScope: null;
   arms: LiveArms<D>;
@@ -386,18 +366,15 @@ export interface LiveCollectionSpec<Row, F, S extends string> {
   filterable: F;
   sortable: readonly S[];
   default: { orderBy: LiveOrderBy<S>; limit: number };
-  /** Hard cap on any window's limit. There is no unbounded spelling. */
+  /**
+   * Hard cap on any window's limit. There is no unbounded spelling. At least
+   * `2 · default.limit` (a declaration throw): every window is read as
+   * key-range pages, and a page that splits is read at `2 · default.limit`,
+   * so it holds its rows with a step of headroom before it is full again.
+   */
   maxLimit: number;
   /** Default `"none"`. A preload reaches the DEFAULT WINDOW only (see {@link LivePreload}). */
   preload?: LivePreload;
-  /**
-   * May be read as key-range pages (`useLive`, a live DataView source):
-   * the window projects each row's `$key` and takes `after` / `until` cuts.
-   * Needs `maxLimit ≥ 2 · default.limit` (a declaration throw): a page that
-   * splits is read at `2 · default.limit`, so it holds its rows with a step of
-   * headroom before it is full again.
-   */
-  scroll?: true;
   /**
    * Other plugins may contribute columns to it (`liveColumns` handles, served
    * by `serveColumns` in a `LiveColumns.Serve` contribution): its rows carry
@@ -441,10 +418,9 @@ export interface LiveCollectionSpec<Row, F, S extends string> {
 /**
  * A UNION collection's declaration (T12): a window over N arms — tables of
  * several kinds listed in one order, each arm's own columns declared by
- * `liveArmColumns` and riding its rows under `$columns[<arm>]`. Always a
- * scroll (`scroll: true`, required): a union is listed as a live DataView.
- * Its column vocabulary is closed — every arm's set is a static handle — so it
- * takes no `contributed` columns and no `columnScope`.
+ * `liveArmColumns` and riding its rows under `$columns[<arm>]`. Its column
+ * vocabulary is closed — every arm's set is a static handle — so it takes no
+ * `contributed` columns and no `columnScope`.
  */
 export interface LiveArmsSpec<
   Row,
@@ -453,11 +429,10 @@ export interface LiveArmsSpec<
   D extends string,
 > extends Omit<
   LiveCollectionSpec<Row, F, S>,
-  "scroll" | "contributed" | "columnScope" | "arms" | "count" | "exposes"
+  "contributed" | "columnScope" | "arms" | "count" | "exposes"
 > {
   /** The row field naming each row's arm (its value is the arm's kind). */
   arms: LiveArms<D>;
-  scroll: true;
   contributed?: never;
   columnScope?: never;
   exposes?: never;
@@ -511,7 +486,6 @@ export interface LiveNoWindowSpec<
   sortable?: never;
   default?: never;
   maxLimit?: never;
-  scroll?: never;
   contributed?: never;
   columnScope?: never;
   arms?: never;
@@ -538,8 +512,8 @@ export type LiveAllSpec<Row> = LiveNoWindowSpec<Row, LiveAllOrder<Row>> & {
  * `filterable` / `preload`), it is lookup-only and mints `${key}:rows` alone —
  * for a table whose rows are only ever read by id (one row per mounted block).
  *
- * Declared with `arms` (and so `scroll: true`), it is a UNION collection over
- * several tables: see {@link LiveArmsSpec}.
+ * Declared with `arms`, it is a UNION collection over several tables: see
+ * {@link LiveArmsSpec}.
  *
  * Declared with `all` (and no window field), it holds every row, in one
  * declared order: it mints `key` (the whole ordered set, param-less) and
@@ -566,14 +540,12 @@ export function liveCollection<
   Row,
   const F extends LiveFilterable<Row>,
   const S extends keyof Row & string = never,
-  const Sc extends true | undefined = undefined,
   const Co extends true | undefined = undefined,
   const Cn extends true | undefined = undefined,
   const Ex extends LiveExposes | undefined = undefined,
 >(
   key: string,
   spec: LiveCollectionSpec<Row, F, S> & {
-    scroll?: Sc;
     contributed?: Co;
     count?: Cn;
     exposes?: Ex;
@@ -583,7 +555,7 @@ export function liveCollection<
       ]: never;
     };
   },
-): LiveCollectionOf<Row, F, S, Sc, Co, Cn, Ex>;
+): LiveCollectionOf<Row, F, S, Co, Cn, Ex>;
 export function liveCollection<
   Row,
   const Al extends LiveAllOrder<Row> | undefined = undefined,
@@ -612,7 +584,7 @@ export function liveCollection<Row, F, S extends string>(
     return allCollection(key, spec as LiveAllSpec<Row>);
   if (spec.arms !== undefined) {
     // An untyped caller could pass what the overload forbids (T12): a union's
-    // column vocabulary is its arms' static handles, and it is always a scroll.
+    // column vocabulary is its arms' static handles.
     const fail = (message: string): never => {
       throw new Error(`liveCollection("${key}"): ${message}`);
     };
@@ -628,11 +600,6 @@ export function liveCollection<Row, F, S extends string>(
     }
     if (spec.default === undefined) {
       fail("`arms` without `default` — a union collection is a window.");
-    }
-    if ((spec as { scroll?: unknown }).scroll !== true) {
-      fail(
-        "`arms` needs `scroll: true` — a union collection is listed as a scroll.",
-      );
     }
     const discriminator = spec.arms.discriminator;
     if (!Object.hasOwn(spec.row.shape, discriminator)) {
@@ -671,7 +638,6 @@ const NOT_ALL_FIELDS: readonly string[] = [
   "filterable",
   "sortable",
   "maxLimit",
-  "scroll",
   "contributed",
   "columnScope",
   "count",
@@ -801,7 +767,6 @@ const WINDOW_FIELDS: readonly string[] = [
   "sortable",
   "maxLimit",
   "preload",
-  "scroll",
   "contributed",
   "columnScope",
   "arms",
@@ -828,12 +793,12 @@ function fullCollection<Row, F, S extends string>(
   key: string,
   spec: LiveCollectionSpec<Row, F, S> | LiveArmsSpec<Row, F, S, string>,
 ): LiveCollection<Row, F, S> {
-  const scroll = spec.scroll === true;
-  if (scroll && spec.maxLimit < 2 * spec.default.limit) {
+  if (spec.maxLimit < 2 * spec.default.limit) {
     throw new Error(
-      `liveCollection("${key}"): \`scroll: true\` needs maxLimit ≥ 2 · default.limit ` +
-        `(${2 * spec.default.limit}), got ${spec.maxLimit} — a page that splits is read at ` +
-        `2 · default.limit, a step of headroom over the rows it holds.`,
+      `liveCollection("${key}"): maxLimit must be ≥ 2 · default.limit ` +
+        `(${2 * spec.default.limit}), got ${spec.maxLimit} — a window is read as key-range ` +
+        `pages, and a page that splits is read at 2 · default.limit, a step of headroom ` +
+        `over the rows it holds.`,
     );
   }
   const contributed = spec.contributed === true;
@@ -858,7 +823,6 @@ function fullCollection<Row, F, S extends string>(
   const codec = createLiveQueryCodec<keyof F & string, S>({
     key,
     id: spec.id,
-    scroll,
     contributed,
     columnScope,
     arms: arms !== null,
@@ -889,25 +853,23 @@ function fullCollection<Row, F, S extends string>(
     spec.preload === undefined || spec.preload === "none"
       ? {}
       : { preload: spec.preload };
-  // A scroll window's rows carry the server-minted `$key` beside the row
-  // fields: declared on the wire schema (so the runtime's parse keeps it), and
-  // split off by every read before rows reach a consumer.
+  // Every window row carries the server-minted `$key` beside the row fields
+  // (its position in the order, where a page may be cut): declared on the
+  // wire schema (so the runtime's parse keeps it), and split off by every
+  // read before rows reach a consumer.
   // A scoped collection's window rows carry `$scoped` beside them when the
   // tuple orders by a scoped column (the member values its order signature
   // reads) — declared the same way, split off the same way.
   const windowKeys: Record<string, z.ZodTypeAny> = {
-    ...(scroll ? { [LIVE_ROW_KEY]: z.string().nullable() } : {}),
+    [LIVE_ROW_KEY]: z.string().nullable(),
     ...(columnScope !== null
       ? { [LIVE_SCOPED_KEY]: z.record(z.string(), z.unknown()).optional() }
       : {}),
   };
-  const windowRow: ZodParser<Row> =
-    Object.keys(windowKeys).length > 0
-      ? (z.intersection(
-          row as unknown as z.ZodTypeAny,
-          z.object(windowKeys),
-        ) as unknown as ZodParser<Row>)
-      : row;
+  const windowRow = z.intersection(
+    row as unknown as z.ZodTypeAny,
+    z.object(windowKeys),
+  ) as unknown as ZodParser<Row>;
   const window = Object.assign(
     windowQueryResourceDescriptor(key, windowRow, spec.id, {
       defaultLimit: spec.default.limit,
@@ -990,7 +952,6 @@ function fullCollection<Row, F, S extends string>(
     count,
     filterable: spec.filterable,
     sortable: spec.sortable,
-    scroll,
     contributed,
     columnScope,
     arms,

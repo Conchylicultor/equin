@@ -23,6 +23,7 @@ import {
   liveCollection,
   liveColumns,
   LIVE_COLUMNS_KEY,
+  LIVE_ROW_KEY,
 } from "@plugins/network/plugins/live/core";
 import { liveNumber } from "@plugins/network/plugins/live/plugins/filter/core";
 import { serveCollection } from "./serve-collection";
@@ -60,8 +61,16 @@ describe("contributed collection — the deferred bind", () => {
       filterable: { count: liveNumber() },
       sortable: ["count"],
     });
+    // The row as the database answers it: its fields, the contributor's
+    // column, and the row key's parts (the order key, then the id).
     const recording = recordingQueryDb(() => [
-      { id: "s1", title: "t", "plays.count": 7 },
+      {
+        id: "s1",
+        title: "t",
+        "plays.count": 7,
+        __row_key_0: "t",
+        __row_key_1: "s1",
+      },
     ]);
     const served = serveCollection(c, { from: songs, db: recording.db });
     // Declared at module eval: every minted key, and its Declare.
@@ -88,9 +97,15 @@ describe("contributed collection — the deferred bind", () => {
     ]);
     bindDeferredResources();
 
-    const rows = await served.window.load(c.window.window.encode());
+    // A window row carries its `$key` beside the row type's fields.
+    const rows: unknown[] = await served.window.load(c.window.window.encode());
     expect(rows).toEqual([
-      { id: "s1", title: "t", [LIVE_COLUMNS_KEY]: { plays: { count: 7 } } },
+      {
+        id: "s1",
+        title: "t",
+        [LIVE_COLUMNS_KEY]: { plays: { count: 7 } },
+        [LIVE_ROW_KEY]: '["t","s1"]',
+      },
     ]);
     expect(recording.calls[0]!.sql).toContain(
       'left join "contrib_boot_songs_ext_plays" "plays"',

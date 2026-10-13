@@ -29,13 +29,16 @@ import {
   useResolveCell,
   useResolveCellEditor,
   useResolveOperatorSet,
+  useGridPhase,
   type DataViewRenderProps,
   type DataViewRowEntry,
   type DataViewDensity,
   type DataViewSection,
   type FieldDef,
+  type GridLine,
   type ManualOrderConfig,
 } from "@plugins/primitives/plugins/data-view/web";
+import type { DataViewPagePlaceholders } from "@plugins/primitives/plugins/data-view/core";
 import { useIconColumns } from "./use-icon-columns";
 
 /** Above this tile count a section windows its grid, one measured lane per
@@ -138,14 +141,6 @@ function nextTile(
   return best;
 }
 
-/** Split a flat list into lanes of `size` (the column count). */
-function chunk<T>(items: readonly T[], size: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < items.length; i += size)
-    out.push(items.slice(i, i + size));
-  return out;
-}
-
 /**
  * Wraps one tile with its sortable drag wiring: the tile follows the pointer
  * while dragged and the others of its section reflow around it (the grid
@@ -212,7 +207,6 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
       selectedRowId: props.selectedRowId,
     },
   );
-  const { probeRef, columns } = useIconColumns();
   // The roving tab stop: the tile the keyboard user last focused. Absent (or no
   // longer an activating tile) → the selected row's tile, else the first.
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
@@ -351,66 +345,6 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
     );
   };
 
-  const renderGrid = (
-    entries: DataViewRowEntry<unknown>[],
-    activeId: string | null,
-    group: string | null,
-  ): ReactNode => {
-    // A section whose tiles are all folded draws no grid — its header and fold
-    // line say everything.
-    if (entries.length === 0) return null;
-    if (entries.length <= VIRTUALIZE_THRESHOLD) {
-      return (
-        <Grid
-          cellWidth={CELL_WIDTH}
-          gap={geometry.gap}
-          className={geometry.classes}
-        >
-          {entries.map((entry) => renderEntry(entry, group))}
-        </Grid>
-      );
-    }
-    const lanes = columns > 0 ? chunk(entries, columns) : [];
-    const laneKey = (lane: DataViewRowEntry<unknown>[]) =>
-      lane.map((e) => e.key).join("|");
-    // Pin the lane holding the drag source, so scrolling it out of the window
-    // does not unmount its draggable and cancel the drop — and raise it, so the
-    // dragged tile paints over the lanes it crosses.
-    const activeLane = activeId
-      ? lanes.find((lane) => lane.some((e) => e.key === activeId))
-      : undefined;
-    return (
-      <>
-        <Grid
-          ref={probeRef}
-          aria-hidden
-          cellWidth={CELL_WIDTH}
-          gap={geometry.gap}
-          className={cn(geometry.classes, "h-0")}
-        />
-        {columns > 0 ? (
-          <VirtualRows<DataViewRowEntry<unknown>[]>
-            items={lanes}
-            estimateSize={geometry.laneEstimate}
-            getKey={laneKey}
-            keepMounted={activeLane ? [laneKey(activeLane)] : undefined}
-            raisedKey={activeLane ? laneKey(activeLane) : undefined}
-          >
-            {(lane) => (
-              <Grid
-                cellWidth={CELL_WIDTH}
-                gap={geometry.gap}
-                className={cn(geometry.classes, geometry.lanePad)}
-              >
-                {lane.map((entry) => renderEntry(entry, group))}
-              </Grid>
-            )}
-          </VirtualRows>
-        ) : null}
-      </>
-    );
-  };
-
   // One section's body: its grid inside the section's `SectionBody` band, which
   // pays the rail and ends in the fold line.
   const renderSection = (
@@ -422,7 +356,17 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
       foldLines={props.foldLines}
       className="pb-sm"
     >
-      {renderGrid(section.entries, activeId, section.key)}
+      {/* A section whose tiles are all folded draws no grid — its header and
+          fold line say everything. */}
+      {section.entries.length === 0 ? null : (
+        <IconsGrid
+          section={section}
+          placeholders={props.placeholders}
+          geometry={geometry}
+          activeId={activeId}
+          renderEntry={renderEntry}
+        />
+      )}
     </SectionBody>
   );
 
@@ -490,6 +434,106 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
     >
       {(activeId) => root(activeId)}
     </RankReorderProvider>
+  );
+}
+
+/**
+ * One section's tile grid: the plain grid up to the threshold, one measured
+ * lane per windowed row above it. Its own component, so each band measures its
+ * own column count and records its own phase (`useGridPhase`): while the
+ * read's pages above it are placeholders, the band starts with as many empty
+ * spacer cells as keep every tile in the column it was drawn in — a release or
+ * a landing never reflows the tiles below it. The spacers carry no
+ * `data-row-key` (nor a role), so the viewport, anchoring, the arrow keys and
+ * drag never see them.
+ */
+function IconsGrid({
+  section,
+  placeholders,
+  geometry,
+  activeId,
+  renderEntry,
+}: {
+  section: DataViewSection<unknown>;
+  placeholders: DataViewPagePlaceholders | undefined;
+  geometry: (typeof GEOMETRY)[DataViewDensity];
+  activeId: string | null;
+  renderEntry: (
+    entry: DataViewRowEntry<unknown>,
+    group: string | null,
+  ) => ReactNode;
+}): ReactNode {
+  const entries = section.entries;
+  const phase = useGridPhase(
+    section,
+    placeholders,
+    entries.map((e) => e.key),
+  );
+  // Live column count — in both branches when the band pages, so the pad is
+  // right in the render a release happens in.
+  const { probeRef, columns } = useIconColumns();
+  const windowed = entries.length > VIRTUALIZE_THRESHOLD;
+  const probe =
+    windowed || phase.paged ? (
+      <Grid
+        ref={probeRef}
+        aria-hidden
+        cellWidth={CELL_WIDTH}
+        gap={geometry.gap}
+        className={cn(geometry.classes, "h-0")}
+      />
+    ) : null;
+  const spacer = (i: number) => (
+    <div key={`::pad:${i}`} aria-hidden data-grid-pad="" />
+  );
+  if (!windowed) {
+    return (
+      <>
+        {probe}
+        <Grid
+          cellWidth={CELL_WIDTH}
+          gap={geometry.gap}
+          className={geometry.classes}
+        >
+          {Array.from({ length: phase.pad(columns) }, (_, i) => spacer(i))}
+          {entries.map((entry) => renderEntry(entry, section.key))}
+        </Grid>
+      </>
+    );
+  }
+  const lanes = phase.lines(entries, columns);
+  // Pin the lane holding the drag source, so scrolling it out of the window
+  // does not unmount its draggable and cancel the drop — and raise it, so the
+  // dragged tile paints over the lanes it crosses. Keyed like every lane, by
+  // its absolute line.
+  const activeLane = activeId
+    ? lanes.find((lane) => lane.cells.some((e) => e?.key === activeId))
+    : undefined;
+  return (
+    <>
+      {probe}
+      {columns > 0 ? (
+        <VirtualRows<GridLine<DataViewRowEntry<unknown>>>
+          items={lanes}
+          estimateSize={geometry.laneEstimate}
+          getKey={(lane) => lane.key}
+          keepMounted={activeLane ? [activeLane.key] : undefined}
+          raisedKey={activeLane?.key}
+        >
+          {(lane) => (
+            <Grid
+              cellWidth={CELL_WIDTH}
+              gap={geometry.gap}
+              className={cn(geometry.classes, geometry.lanePad)}
+            >
+              {lane.cells.map((entry, i) =>
+                entry === null ? spacer(i) : renderEntry(entry, section.key),
+              )}
+            </Grid>
+          )}
+        </VirtualRows>
+      ) : null}
+    </>
   );
 }
 

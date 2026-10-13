@@ -1,4 +1,4 @@
-import type { LiveScrollCollection } from "@plugins/network/plugins/live/core";
+import type { LiveCollection } from "@plugins/network/plugins/live/core";
 import { startPages } from "../../shared/page-plan";
 import { pageSourceOf } from "../internal/page-source";
 
@@ -10,7 +10,7 @@ import { pageSourceOf } from "../internal/page-source";
  * reader and a plain one share it.
  */
 export function pageZeroParams<Row, F, S extends string>(
-  collection: LiveScrollCollection<Row, F, S>,
+  collection: LiveCollection<Row, F, S>,
 ): Record<string, string> {
   const source = pageSourceOf(collection);
   const [start] = startPages({ ...source.limits, staleRows: 0 }).pages;

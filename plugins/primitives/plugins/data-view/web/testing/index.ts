@@ -6,3 +6,17 @@ export { lowerFilterGroup } from "../internal/evaluate-filter";
 // The live source's real field plan and field → column rename, so a host's
 // test lowers exactly as the live source does (e.g. mail's authored tabs).
 export { renameColumns, resolveLiveFields } from "../internal/live-fields";
+// A paged DataView against a laid-out page: one view mounted through the real
+// body, a scroller the test drives and an IntersectionObserver answering from
+// the layout — every view's paged-conformance suite runs on it.
+export {
+  consumerPaging,
+  mountPagedDataView,
+  PAGED_VIEWPORT_PX,
+} from "./paged-data-view";
+export type {
+  PagedDataView,
+  PagedLayout,
+  PagedViewUnderTest,
+} from "./paged-data-view";
+export { describePagedConformance } from "./paged-conformance";

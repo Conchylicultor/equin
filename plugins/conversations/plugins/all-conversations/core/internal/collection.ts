@@ -78,7 +78,6 @@ export const allConversations = liveCollection("conversations.all", {
   sortable: CONVERSATION_SORTABLE,
   default: CONVERSATION_LIST_DEFAULT,
   maxLimit: CONVERSATION_LIST_MAX_LIMIT,
-  scroll: true,
   columnScope: "all-conversations",
   exposes: CONVERSATION_LIST_EXPOSES,
   // Counted: the list's section count is exact while only its scope applies.
@@ -98,7 +97,6 @@ export const conversationHistory = liveCollection("conversations.history", {
   sortable: CONVERSATION_SORTABLE,
   default: CONVERSATION_LIST_DEFAULT,
   maxLimit: CONVERSATION_LIST_MAX_LIMIT,
-  scroll: true,
   columnScope: "conversations-sidebar",
   exposes: CONVERSATION_LIST_EXPOSES,
   // Counted: the list's section count is exact while only its scope applies.

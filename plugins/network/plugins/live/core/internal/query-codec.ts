@@ -43,8 +43,6 @@ export interface LiveQueryCodecSpec {
   key: string;
   /** The row field that identifies a row — the order's tiebreaker, and a cut's last element. */
   id: string;
-  /** A scroll collection's window takes page cuts (`after` / `until`); any other refuses them. */
-  scroll: boolean;
   /** A contributed collection's queries may name its contributors' columns (by wire name); any other's may not. */
   contributed: boolean;
   /** A collection's column scope: its queries may name scoped sets of that scope; `null` = none. */
@@ -397,14 +395,7 @@ export function createLiveQueryCodec<C extends string, S extends string>(
     orderBy: LiveOrderBy<S>,
     which: "after" | "until",
     onFail: (message: string) => never = fail,
-  ): LiveCutKey => {
-    if (!spec.scroll) {
-      onFail(
-        `"${which}" is a page cut — only a collection declared \`scroll: true\` takes one`,
-      );
-    }
-    return parseRowKey(raw, cutArity(orderBy), which, onFail);
-  };
+  ): LiveCutKey => parseRowKey(raw, cutArity(orderBy), which, onFail);
 
   const encode = (
     query?: AnyWindowQuery,

@@ -36,6 +36,23 @@ describe("boolGroupings", () => {
     expect(bucket(false)).toEqual({ key: "false", label: "No", order: 0 });
   });
 
+  test("a field names its sections through its options", () => {
+    const plan = boolGroupings[0]!.plan({
+      ...CTX,
+      field: {
+        id: "read",
+        label: "Read",
+        type: "bool",
+        options: [
+          { value: "false", label: "Unread" },
+          { value: "true", label: "Read" },
+        ],
+      } as FieldDef<unknown>,
+    });
+    expect(plan(false)).toEqual({ key: "false", label: "Unread", order: 0 });
+    expect(plan(true)).toEqual({ key: "true", label: "Read", order: 1 });
+  });
+
   test("No sorts before Yes — the type's own `asc` reading", () => {
     expect(bucket(false).order).toBeLessThan(bucket(true).order);
   });

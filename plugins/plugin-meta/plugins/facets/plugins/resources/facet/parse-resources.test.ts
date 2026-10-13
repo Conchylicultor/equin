@@ -116,7 +116,7 @@ describe("buildDescriptorIndex", () => {
       export const windowed = liveCollection("windowed", {
         row: z.object({ all: z.string() }), id: "id",
         filterable: { all: liveText() }, sortable: ["all"],
-        default: { orderBy: [["all", "asc"]], limit: 10 }, maxLimit: 10,
+        default: { orderBy: [["all", "asc"]], limit: 10 }, maxLimit: 20,
       });
     `;
     const index = buildDescriptorIndex([file(src)], { ownerPlugin: false });
@@ -137,7 +137,7 @@ describe("buildDescriptorIndex", () => {
     const src = `
       export const both = liveCollection("both", {
         row: S, id: "id", filterable: {}, sortable: ["n"],
-        default: { orderBy: [["n", "asc"]], limit: 10 }, maxLimit: 10,
+        default: { orderBy: [["n", "asc"]], limit: 10 }, maxLimit: 20,
         all: { orderBy: [["n", "asc"]], unbounded: { reason: "r" } },
       });
     `;

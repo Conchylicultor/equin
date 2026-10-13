@@ -4,7 +4,7 @@ import {
   type LivePagesQuery,
   type LivePagesResult,
 } from "@plugins/network/plugins/live/web";
-import type { LiveScrollCollection } from "@plugins/network/plugins/live/core";
+import type { LiveCollection } from "@plugins/network/plugins/live/core";
 import type { DataViewPaging } from "../../core";
 import { pagesPaging } from "./pages-paging";
 import { usePagesViewport } from "./pages-viewport";
@@ -13,7 +13,7 @@ import { usePagesViewport } from "./pages-viewport";
 export type LivePagesPaging = Omit<DataViewPaging<unknown>, "isPaged">;
 
 /**
- * Read a `scroll: true` collection as live key-range pages for a DataView to
+ * Read a collection's window as live key-range pages for a DataView to
  * show: `pages` is `network/live`'s `useLive(c, query, { viewport })` read, and `paging` (once
  * it is `ready`, else `null`) is what the DataView showing its rows takes as
  * `paging` — whose `viewport` is where the DataView reports the rows it has
@@ -23,7 +23,7 @@ export type LivePagesPaging = Omit<DataViewPaging<unknown>, "isPaged">;
  * `isPaged` / `total` added as the consumer knows them).
  */
 export function useLivePagesPaging<Row, F, S extends string>(
-  collection: LiveScrollCollection<Row, F, S> | null,
+  collection: LiveCollection<Row, F, S> | null,
   query: LivePagesQuery<F, S> | null,
   options?: { resetKey?: string },
 ): { pages: LivePagesResult<Row>; paging: LivePagesPaging | null } {

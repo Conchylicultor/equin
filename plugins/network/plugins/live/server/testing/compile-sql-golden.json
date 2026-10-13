@@ -8,7 +8,8 @@
             "kind": "window",
             "windowIdsOf": "$function",
             "orderSignatureOf": "$function",
-            "limitOf": "$function"
+            "limitOf": "$function",
+            "familyOf": "$function"
           },
           "debounceMs": 25
         },
@@ -55,19 +56,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\" from \"golden_rows\" where \"golden_rows\".\"dismissed\" = $1 order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
+                  "sql": "select \"id\", \"n\", \"n\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" where \"golden_rows\".\"dismissed\" = $1 order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
                   "params": [
                     0,
                     100
@@ -86,19 +89,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" in ($2, $3))",
+                  "sql": "select \"id\", \"n\", \"n\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" in ($2, $3))",
                   "params": [
                     0,
                     "r1",
@@ -152,19 +157,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\" from \"golden_rows\" where \"golden_rows\".\"dismissed\" = $1 order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
+                  "sql": "select \"id\", \"n\", \"n\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" where \"golden_rows\".\"dismissed\" = $1 order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
                   "params": [
                     0,
                     100
@@ -202,19 +209,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\" from \"golden_rows\" where \"golden_rows\".\"dismissed\" = $1 order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
+                  "sql": "select \"id\", \"n\", \"n\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" where \"golden_rows\".\"dismissed\" = $1 order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
                   "params": [
                     0,
                     500
@@ -233,19 +242,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" in ($2, $3))",
+                  "sql": "select \"id\", \"n\", \"n\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" in ($2, $3))",
                   "params": [
                     0,
                     "r1",
@@ -299,19 +310,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\" from \"golden_rows\" where \"golden_rows\".\"dismissed\" = $1 order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
+                  "sql": "select \"id\", \"n\", \"n\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" where \"golden_rows\".\"dismissed\" = $1 order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
                   "params": [
                     0,
                     500
@@ -335,7 +348,8 @@
             "kind": "window",
             "windowIdsOf": "$function",
             "orderSignatureOf": "$function",
-            "limitOf": "$function"
+            "limitOf": "$function",
+            "familyOf": "$function"
           }
         },
         "membership": "window",
@@ -379,19 +393,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\" from \"golden_rows\" order by \"golden_rows\".\"id\" DESC NULLS LAST limit $1",
+                  "sql": "select \"id\", \"n\", \"id\"::text as \"__row_key_0\" from \"golden_rows\" order by \"golden_rows\".\"id\" DESC NULLS LAST limit $1",
                   "params": [
                     7
                   ]
@@ -409,19 +425,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\" from \"golden_rows\" where \"golden_rows\".\"id\" in ($1, $2)",
+                  "sql": "select \"id\", \"n\", \"id\"::text as \"__row_key_0\" from \"golden_rows\" where \"golden_rows\".\"id\" in ($1, $2)",
                   "params": [
                     "r1",
                     "r2"
@@ -473,19 +491,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\" from \"golden_rows\" order by \"golden_rows\".\"id\" DESC NULLS LAST limit $1",
+                  "sql": "select \"id\", \"n\", \"id\"::text as \"__row_key_0\" from \"golden_rows\" order by \"golden_rows\".\"id\" DESC NULLS LAST limit $1",
                   "params": [
                     7
                   ]
@@ -508,7 +528,8 @@
             "kind": "window",
             "windowIdsOf": "$function",
             "orderSignatureOf": "$function",
-            "limitOf": "$function"
+            "limitOf": "$function",
+            "familyOf": "$function"
           }
         },
         "membership": "window",
@@ -554,19 +575,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\",\"__row_key_2:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\",\"__row_key_2:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\", \"parent_id\" from \"golden_rows\" order by \"golden_rows\".\"parent_id\" ASC NULLS LAST, \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $1",
+                  "sql": "select \"id\", \"n\", \"parent_id\", \"parent_id\"::text as \"__row_key_0\", \"n\"::text as \"__row_key_1\", \"id\"::text as \"__row_key_2\" from \"golden_rows\" order by \"golden_rows\".\"parent_id\" ASC NULLS LAST, \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $1",
                   "params": [
                     10
                   ]
@@ -584,19 +607,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\",\"__row_key_2:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\",\"__row_key_2:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\", \"parent_id\" from \"golden_rows\" where \"golden_rows\".\"id\" in ($1, $2)",
+                  "sql": "select \"id\", \"n\", \"parent_id\", \"parent_id\"::text as \"__row_key_0\", \"n\"::text as \"__row_key_1\", \"id\"::text as \"__row_key_2\" from \"golden_rows\" where \"golden_rows\".\"id\" in ($1, $2)",
                   "params": [
                     "r1",
                     "r2"
@@ -648,19 +673,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\",\"__row_key_2:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\",\"__row_key_2:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\", \"parent_id\" from \"golden_rows\" order by \"golden_rows\".\"parent_id\" ASC NULLS LAST, \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $1",
+                  "sql": "select \"id\", \"n\", \"parent_id\", \"parent_id\"::text as \"__row_key_0\", \"n\"::text as \"__row_key_1\", \"id\"::text as \"__row_key_2\" from \"golden_rows\" order by \"golden_rows\".\"parent_id\" ASC NULLS LAST, \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $1",
                   "params": [
                     10
                   ]
@@ -683,7 +710,8 @@
             "kind": "window",
             "windowIdsOf": "$function",
             "orderSignatureOf": "$function",
-            "limitOf": "$function"
+            "limitOf": "$function",
+            "familyOf": "$function"
           }
         },
         "membership": "window",
@@ -729,19 +757,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\", \"parent_id\" from \"golden_rows\" order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $1",
+                  "sql": "select \"id\", \"n\", \"parent_id\", \"n\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $1",
                   "params": [
                     10
                   ]
@@ -759,19 +789,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\", \"parent_id\" from \"golden_rows\" where \"golden_rows\".\"id\" in ($1, $2)",
+                  "sql": "select \"id\", \"n\", \"parent_id\", \"n\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" where \"golden_rows\".\"id\" in ($1, $2)",
                   "params": [
                     "r1",
                     "r2"
@@ -823,19 +855,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\", \"parent_id\" from \"golden_rows\" order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $1",
+                  "sql": "select \"id\", \"n\", \"parent_id\", \"n\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $1",
                   "params": [
                     10
                   ]
@@ -873,19 +907,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\", \"parent_id\" from \"golden_rows\" where \"golden_rows\".\"dismissed\" = $1 order by \"golden_rows\".\"parent_id\" ASC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
+                  "sql": "select \"id\", \"n\", \"parent_id\", \"parent_id\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" where \"golden_rows\".\"dismissed\" = $1 order by \"golden_rows\".\"parent_id\" ASC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
                   "params": [
                     1,
                     20
@@ -904,19 +940,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\", \"parent_id\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" in ($2, $3))",
+                  "sql": "select \"id\", \"n\", \"parent_id\", \"parent_id\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" in ($2, $3))",
                   "params": [
                     1,
                     "r1",
@@ -970,19 +1008,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\", \"parent_id\" from \"golden_rows\" where \"golden_rows\".\"dismissed\" = $1 order by \"golden_rows\".\"parent_id\" ASC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
+                  "sql": "select \"id\", \"n\", \"parent_id\", \"parent_id\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" where \"golden_rows\".\"dismissed\" = $1 order by \"golden_rows\".\"parent_id\" ASC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
                   "params": [
                     1,
                     20
@@ -1019,19 +1059,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\", \"parent_id\" from \"golden_rows\" order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $1",
+                  "sql": "select \"id\", \"n\", \"parent_id\", \"n\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $1",
                   "params": [
                     40
                   ]
@@ -1049,19 +1091,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\", \"parent_id\" from \"golden_rows\" where \"golden_rows\".\"id\" in ($1, $2)",
+                  "sql": "select \"id\", \"n\", \"parent_id\", \"n\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" where \"golden_rows\".\"id\" in ($1, $2)",
                   "params": [
                     "r1",
                     "r2"
@@ -1113,19 +1157,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\", \"parent_id\" from \"golden_rows\" order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $1",
+                  "sql": "select \"id\", \"n\", \"parent_id\", \"n\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $1",
                   "params": [
                     40
                   ]
@@ -1148,7 +1194,8 @@
             "kind": "window",
             "windowIdsOf": "$function",
             "orderSignatureOf": "$function",
-            "limitOf": "$function"
+            "limitOf": "$function",
+            "familyOf": "$function"
           }
         },
         "membership": "window",
@@ -1194,19 +1241,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\" from \"golden_rows\" where \"golden_rows\".\"n\" > $1 order by \"golden_rows\".\"n\" ASC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
+                  "sql": "select \"id\", \"n\", \"n\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" where \"golden_rows\".\"n\" > $1 order by \"golden_rows\".\"n\" ASC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
                   "params": [
                     3,
                     3
@@ -1225,19 +1274,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\" from \"golden_rows\" where (\"golden_rows\".\"n\" > $1 and \"golden_rows\".\"id\" in ($2, $3))",
+                  "sql": "select \"id\", \"n\", \"n\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" where (\"golden_rows\".\"n\" > $1 and \"golden_rows\".\"id\" in ($2, $3))",
                   "params": [
                     3,
                     "r1",
@@ -1291,19 +1342,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\" from \"golden_rows\" where \"golden_rows\".\"n\" > $1 order by \"golden_rows\".\"n\" ASC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
+                  "sql": "select \"id\", \"n\", \"n\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" where \"golden_rows\".\"n\" > $1 order by \"golden_rows\".\"n\" ASC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
                   "params": [
                     3,
                     3
@@ -1327,7 +1380,8 @@
             "kind": "window",
             "windowIdsOf": "$function",
             "orderSignatureOf": "$function",
-            "limitOf": "$function"
+            "limitOf": "$function",
+            "familyOf": "$function"
           }
         },
         "membership": "window",
@@ -1374,19 +1428,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"parent_id\", \"n\", \"dismissed\" from \"golden_rows\" where \"golden_rows\".\"dismissed\" = $1 order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
+                  "sql": "select \"id\", \"parent_id\", \"n\", \"dismissed\", \"n\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" where \"golden_rows\".\"dismissed\" = $1 order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
                   "params": [
                     0,
                     5
@@ -1405,19 +1461,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"parent_id\", \"n\", \"dismissed\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" in ($2, $3))",
+                  "sql": "select \"id\", \"parent_id\", \"n\", \"dismissed\", \"n\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" in ($2, $3))",
                   "params": [
                     0,
                     "r1",
@@ -1471,19 +1529,21 @@
                     "id": "r1",
                     "n": 1,
                     "parentId": "p",
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "r2",
                     "n": 2,
                     "parentId": null,
-                    "dismissed": 0
+                    "dismissed": 0,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"parent_id\", \"n\", \"dismissed\" from \"golden_rows\" where \"golden_rows\".\"dismissed\" = $1 order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
+                  "sql": "select \"id\", \"parent_id\", \"n\", \"dismissed\", \"n\"::text as \"__row_key_0\", \"id\"::text as \"__row_key_1\" from \"golden_rows\" where \"golden_rows\".\"dismissed\" = $1 order by \"golden_rows\".\"n\" DESC NULLS LAST, \"golden_rows\".\"id\" ASC NULLS LAST limit $2",
                   "params": [
                     0,
                     5
@@ -2128,7 +2188,8 @@
             "kind": "window",
             "windowIdsOf": "$function",
             "orderSignatureOf": "$function",
-            "limitOf": "$function"
+            "limitOf": "$function",
+            "familyOf": "$function"
           },
           "validateParams": "$function"
         },
@@ -2452,7 +2513,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -2462,13 +2524,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) order by \"golden_songs\".\"created_at\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $3",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"golden_songs\".\"created_at\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) order by \"golden_songs\".\"created_at\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $3",
                   "params": [
                     "songs",
                     "c1",
@@ -2492,7 +2555,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -2502,13 +2566,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"golden_songs\".\"id\" in ($3, $4)",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"golden_songs\".\"created_at\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"golden_songs\".\"id\" in ($3, $4)",
                   "params": [
                     "songs",
                     "c1",
@@ -2568,7 +2633,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -2578,13 +2644,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) order by \"golden_songs\".\"created_at\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $3",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"golden_songs\".\"created_at\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) order by \"golden_songs\".\"created_at\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $3",
                   "params": [
                     "songs",
                     "c1",
@@ -2661,7 +2728,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -2671,13 +2739,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"artist\".\"name\" = $3::text order by \"label\".\"name\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"label\".\"name\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"artist\".\"name\" = $3::text order by \"label\".\"name\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
                   "params": [
                     "songs",
                     "c1",
@@ -2702,7 +2771,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -2712,13 +2782,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where (\"artist\".\"name\" = $3::text and \"golden_songs\".\"id\" in ($4, $5))",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"label\".\"name\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where (\"artist\".\"name\" = $3::text and \"golden_songs\".\"id\" in ($4, $5))",
                   "params": [
                     "songs",
                     "c1",
@@ -2780,7 +2851,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -2790,13 +2862,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"artist\".\"name\" = $3::text order by \"label\".\"name\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"label\".\"name\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"artist\".\"name\" = $3::text order by \"label\".\"name\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
                   "params": [
                     "songs",
                     "c1",
@@ -2875,7 +2948,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -2885,13 +2959,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"playback\".\"plays\" > $3::float8 order by \"cc\".\"value\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"cc\".\"value\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"playback\".\"plays\" > $3::float8 order by \"cc\".\"value\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
                   "params": [
                     "songs",
                     "c1",
@@ -2916,7 +2991,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -2926,13 +3002,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where (\"playback\".\"plays\" > $3::float8 and \"golden_songs\".\"id\" in ($4, $5))",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"cc\".\"value\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where (\"playback\".\"plays\" > $3::float8 and \"golden_songs\".\"id\" in ($4, $5))",
                   "params": [
                     "songs",
                     "c1",
@@ -2994,7 +3071,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -3004,13 +3082,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"playback\".\"plays\" > $3::float8 order by \"cc\".\"value\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"cc\".\"value\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"playback\".\"plays\" > $3::float8 order by \"cc\".\"value\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
                   "params": [
                     "songs",
                     "c1",
@@ -3090,7 +3169,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\",\"__row_key_2:0\"]"
                   },
                   {
                     "id": "s2",
@@ -3100,13 +3180,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\",\"__row_key_2:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"cc\".\"value\" ILIKE $3::text order by \"playback\".\"plays\" DESC NULLS LAST, \"golden_songs\".\"title\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"playback\".\"plays\"::text as \"__row_key_0\", \"golden_songs\".\"title\"::text as \"__row_key_1\", \"golden_songs\".\"id\"::text as \"__row_key_2\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"cc\".\"value\" ILIKE $3::text order by \"playback\".\"plays\" DESC NULLS LAST, \"golden_songs\".\"title\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
                   "params": [
                     "songs",
                     "c1",
@@ -3131,7 +3212,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\",\"__row_key_2:0\"]"
                   },
                   {
                     "id": "s2",
@@ -3141,13 +3223,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\",\"__row_key_2:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where (\"cc\".\"value\" ILIKE $3::text and \"golden_songs\".\"id\" in ($4, $5))",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"playback\".\"plays\"::text as \"__row_key_0\", \"golden_songs\".\"title\"::text as \"__row_key_1\", \"golden_songs\".\"id\"::text as \"__row_key_2\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where (\"cc\".\"value\" ILIKE $3::text and \"golden_songs\".\"id\" in ($4, $5))",
                   "params": [
                     "songs",
                     "c1",
@@ -3209,7 +3292,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\",\"__row_key_2:0\"]"
                   },
                   {
                     "id": "s2",
@@ -3219,13 +3303,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\",\"__row_key_2:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"cc\".\"value\" ILIKE $3::text order by \"playback\".\"plays\" DESC NULLS LAST, \"golden_songs\".\"title\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"playback\".\"plays\"::text as \"__row_key_0\", \"golden_songs\".\"title\"::text as \"__row_key_1\", \"golden_songs\".\"id\"::text as \"__row_key_2\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"cc\".\"value\" ILIKE $3::text order by \"playback\".\"plays\" DESC NULLS LAST, \"golden_songs\".\"title\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
                   "params": [
                     "songs",
                     "c1",
@@ -3899,7 +3984,8 @@
             "kind": "window",
             "windowIdsOf": "$function",
             "orderSignatureOf": "$function",
-            "limitOf": "$function"
+            "limitOf": "$function",
+            "familyOf": "$function"
           },
           "validateParams": "$function"
         },
@@ -4227,7 +4313,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -4237,13 +4324,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) order by \"golden_songs\".\"created_at\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $3",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"golden_songs\".\"created_at\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) order by \"golden_songs\".\"created_at\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $3",
                   "params": [
                     "songs",
                     "c1",
@@ -4267,7 +4355,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -4277,13 +4366,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"golden_songs\".\"id\" in ($3, $4)",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"golden_songs\".\"created_at\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"golden_songs\".\"id\" in ($3, $4)",
                   "params": [
                     "songs",
                     "c1",
@@ -4343,7 +4433,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -4353,13 +4444,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) order by \"golden_songs\".\"created_at\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $3",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"golden_songs\".\"created_at\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) order by \"golden_songs\".\"created_at\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $3",
                   "params": [
                     "songs",
                     "c1",
@@ -4436,7 +4528,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -4446,13 +4539,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"artist\".\"name\" = $3::text order by \"label\".\"name\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"label\".\"name\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"artist\".\"name\" = $3::text order by \"label\".\"name\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
                   "params": [
                     "songs",
                     "c1",
@@ -4477,7 +4571,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -4487,13 +4582,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where (\"artist\".\"name\" = $3::text and \"golden_songs\".\"id\" in ($4, $5))",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"label\".\"name\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where (\"artist\".\"name\" = $3::text and \"golden_songs\".\"id\" in ($4, $5))",
                   "params": [
                     "songs",
                     "c1",
@@ -4555,7 +4651,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -4565,13 +4662,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"artist\".\"name\" = $3::text order by \"label\".\"name\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"label\".\"name\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"artist\".\"name\" = $3::text order by \"label\".\"name\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
                   "params": [
                     "songs",
                     "c1",
@@ -4654,7 +4752,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -4664,13 +4763,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"playback\".\"plays\" > $3::float8 order by \"cc\".\"value\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"cc\".\"value\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"playback\".\"plays\" > $3::float8 order by \"cc\".\"value\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
                   "params": [
                     "songs",
                     "c1",
@@ -4695,7 +4795,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -4705,13 +4806,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where (\"playback\".\"plays\" > $3::float8 and \"golden_songs\".\"id\" in ($4, $5))",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"cc\".\"value\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where (\"playback\".\"plays\" > $3::float8 and \"golden_songs\".\"id\" in ($4, $5))",
                   "params": [
                     "songs",
                     "c1",
@@ -4773,7 +4875,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -4783,13 +4886,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"playback\".\"plays\" > $3::float8 order by \"cc\".\"value\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"cc\".\"value\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"playback\".\"plays\" > $3::float8 order by \"cc\".\"value\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
                   "params": [
                     "songs",
                     "c1",
@@ -4873,7 +4977,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\",\"__row_key_2:0\"]"
                   },
                   {
                     "id": "s2",
@@ -4883,13 +4988,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\",\"__row_key_2:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"cc\".\"value\" ILIKE $3::text order by \"playback\".\"plays\" DESC NULLS LAST, \"golden_songs\".\"title\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"playback\".\"plays\"::text as \"__row_key_0\", \"golden_songs\".\"title\"::text as \"__row_key_1\", \"golden_songs\".\"id\"::text as \"__row_key_2\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"cc\".\"value\" ILIKE $3::text order by \"playback\".\"plays\" DESC NULLS LAST, \"golden_songs\".\"title\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
                   "params": [
                     "songs",
                     "c1",
@@ -4914,7 +5020,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\",\"__row_key_2:0\"]"
                   },
                   {
                     "id": "s2",
@@ -4924,13 +5031,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\",\"__row_key_2:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where (\"cc\".\"value\" ILIKE $3::text and \"golden_songs\".\"id\" in ($4, $5))",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"playback\".\"plays\"::text as \"__row_key_0\", \"golden_songs\".\"title\"::text as \"__row_key_1\", \"golden_songs\".\"id\"::text as \"__row_key_2\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where (\"cc\".\"value\" ILIKE $3::text and \"golden_songs\".\"id\" in ($4, $5))",
                   "params": [
                     "songs",
                     "c1",
@@ -4992,7 +5100,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\",\"__row_key_2:0\"]"
                   },
                   {
                     "id": "s2",
@@ -5002,13 +5111,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\",\"__row_key_2:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"cc\".\"value\" ILIKE $3::text order by \"playback\".\"plays\" DESC NULLS LAST, \"golden_songs\".\"title\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\", \"playback\".\"plays\"::text as \"__row_key_0\", \"golden_songs\".\"title\"::text as \"__row_key_1\", \"golden_songs\".\"id\"::text as \"__row_key_2\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"cc\".\"value\" ILIKE $3::text order by \"playback\".\"plays\" DESC NULLS LAST, \"golden_songs\".\"title\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $4",
                   "params": [
                     "songs",
                     "c1",
@@ -5699,7 +5809,8 @@
             "kind": "window",
             "windowIdsOf": "$function",
             "orderSignatureOf": "$function",
-            "limitOf": "$function"
+            "limitOf": "$function",
+            "familyOf": "$function"
           },
           "validateParams": "$function"
         },
@@ -6007,7 +6118,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -6017,13 +6129,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where (\"playback\".\"plays\" > $1 and \"artist\".\"name\" <> 'hidden') order by \"golden_songs\".\"created_at\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $2",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where (\"playback\".\"plays\" > $1 and \"artist\".\"name\" <> 'hidden') order by \"golden_songs\".\"created_at\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $2",
                   "params": [
                     0,
                     10
@@ -6046,7 +6159,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -6056,13 +6170,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where ((\"playback\".\"plays\" > $1 and \"artist\".\"name\" <> 'hidden') and \"golden_songs\".\"id\" in ($2, $3))",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where ((\"playback\".\"plays\" > $1 and \"artist\".\"name\" <> 'hidden') and \"golden_songs\".\"id\" in ($2, $3))",
                   "params": [
                     0,
                     "r1",
@@ -6120,7 +6235,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -6130,13 +6246,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where (\"playback\".\"plays\" > $1 and \"artist\".\"name\" <> 'hidden') order by \"golden_songs\".\"created_at\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $2",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where (\"playback\".\"plays\" > $1 and \"artist\".\"name\" <> 'hidden') order by \"golden_songs\".\"created_at\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $2",
                   "params": [
                     0,
                     10
@@ -6206,7 +6323,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -6216,13 +6334,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where (\"playback\".\"plays\" > $1 and \"artist\".\"name\" ILIKE $2::text) order by \"golden_songs\".\"created_at\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $3",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where (\"playback\".\"plays\" > $1 and \"artist\".\"name\" ILIKE $2::text) order by \"golden_songs\".\"created_at\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $3",
                   "params": [
                     0,
                     "%x%",
@@ -6246,7 +6365,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -6256,13 +6376,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where ((\"playback\".\"plays\" > $1 and \"artist\".\"name\" ILIKE $2::text) and \"golden_songs\".\"id\" in ($3, $4))",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where ((\"playback\".\"plays\" > $1 and \"artist\".\"name\" ILIKE $2::text) and \"golden_songs\".\"id\" in ($3, $4))",
                   "params": [
                     0,
                     "%x%",
@@ -6322,7 +6443,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -6332,13 +6454,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where (\"playback\".\"plays\" > $1 and \"artist\".\"name\" ILIKE $2::text) order by \"golden_songs\".\"created_at\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $3",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where (\"playback\".\"plays\" > $1 and \"artist\".\"name\" ILIKE $2::text) order by \"golden_songs\".\"created_at\" DESC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $3",
                   "params": [
                     0,
                     "%x%",
@@ -6413,7 +6536,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -6423,13 +6547,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where (\"playback\".\"plays\" > $1 and \"artist\".\"name\" <> 'hidden') order by \"label\".\"name\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $2",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\", \"label\".\"name\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where (\"playback\".\"plays\" > $1 and \"artist\".\"name\" <> 'hidden') order by \"label\".\"name\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $2",
                   "params": [
                     0,
                     10
@@ -6452,7 +6577,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -6462,13 +6588,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where ((\"playback\".\"plays\" > $1 and \"artist\".\"name\" <> 'hidden') and \"golden_songs\".\"id\" in ($2, $3))",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\", \"label\".\"name\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where ((\"playback\".\"plays\" > $1 and \"artist\".\"name\" <> 'hidden') and \"golden_songs\".\"id\" in ($2, $3))",
                   "params": [
                     0,
                     "r1",
@@ -6526,7 +6653,8 @@
                     "plays": 2,
                     "artistName": "x",
                     "labelName": "l",
-                    "c1": "v"
+                    "c1": "v",
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]"
                   },
                   {
                     "id": "s2",
@@ -6536,13 +6664,14 @@
                     "plays": null,
                     "artistName": null,
                     "labelName": null,
-                    "c1": null
+                    "c1": null,
+                    "$key": "[null,\"__row_key_1:1\"]"
                   }
                 ]
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where (\"playback\".\"plays\" > $1 and \"artist\".\"name\" <> 'hidden') order by \"label\".\"name\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $2",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\", \"label\".\"name\"::text as \"__row_key_0\", \"golden_songs\".\"id\"::text as \"__row_key_1\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where (\"playback\".\"plays\" > $1 and \"artist\".\"name\" <> 'hidden') order by \"label\".\"name\" ASC NULLS LAST, \"golden_songs\".\"id\" ASC NULLS LAST limit $2",
                   "params": [
                     0,
                     10
@@ -7121,7 +7250,7 @@
         }
       }
     },
-    "scroll": {
+    "cuts": {
       "select": [
         "id",
         "title",
@@ -14063,7 +14192,8 @@
             "kind": "window",
             "windowIdsOf": "$function",
             "orderSignatureOf": "$function",
-            "limitOf": "$function"
+            "limitOf": "$function",
+            "familyOf": "$function"
           },
           "validateParams": "$function"
         },
@@ -14477,6 +14607,7 @@
                     "createdAt": {
                       "$date": "2026-10-12T10:00:00.000Z"
                     },
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]",
                     "$columns": {
                       "golden_xp_tasks_ext_track": {
                         "track": "main"
@@ -14492,6 +14623,7 @@
                     "createdAt": {
                       "$date": "2026-10-12T10:00:00.000Z"
                     },
+                    "$key": "[null,\"__row_key_1:1\"]",
                     "$columns": {
                       "golden_xp_tasks_ext_track": {
                         "track": "sidequest"
@@ -14505,7 +14637,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" order by \"golden_xp_convs\".\"created_at\" DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $3",
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2), \"golden_xp_convs\".\"created_at\"::text as \"__row_key_0\", \"golden_xp_convs\".\"id\"::text as \"__row_key_1\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" order by \"golden_xp_convs\".\"created_at\" DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $3",
                   "params": [
                     "main",
                     0,
@@ -14527,6 +14659,7 @@
                     "createdAt": {
                       "$date": "2026-10-12T10:00:00.000Z"
                     },
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]",
                     "$columns": {
                       "golden_xp_tasks_ext_track": {
                         "track": "main"
@@ -14542,6 +14675,7 @@
                     "createdAt": {
                       "$date": "2026-10-12T10:00:00.000Z"
                     },
+                    "$key": "[null,\"__row_key_1:1\"]",
                     "$columns": {
                       "golden_xp_tasks_ext_track": {
                         "track": "sidequest"
@@ -14555,7 +14689,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where \"golden_xp_convs\".\"id\" in ($3, $4)",
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2), \"golden_xp_convs\".\"created_at\"::text as \"__row_key_0\", \"golden_xp_convs\".\"id\"::text as \"__row_key_1\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where \"golden_xp_convs\".\"id\" in ($3, $4)",
                   "params": [
                     "main",
                     0,
@@ -14611,6 +14745,7 @@
                     "createdAt": {
                       "$date": "2026-10-12T10:00:00.000Z"
                     },
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]",
                     "$columns": {
                       "golden_xp_tasks_ext_track": {
                         "track": "main"
@@ -14626,6 +14761,7 @@
                     "createdAt": {
                       "$date": "2026-10-12T10:00:00.000Z"
                     },
+                    "$key": "[null,\"__row_key_1:1\"]",
                     "$columns": {
                       "golden_xp_tasks_ext_track": {
                         "track": "sidequest"
@@ -14639,7 +14775,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" order by \"golden_xp_convs\".\"created_at\" DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $3",
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2), \"golden_xp_convs\".\"created_at\"::text as \"__row_key_0\", \"golden_xp_convs\".\"id\"::text as \"__row_key_1\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" order by \"golden_xp_convs\".\"created_at\" DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $3",
                   "params": [
                     "main",
                     0,
@@ -14716,6 +14852,7 @@
                     "createdAt": {
                       "$date": "2026-10-12T10:00:00.000Z"
                     },
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]",
                     "$columns": {
                       "golden_xp_tasks_ext_track": {
                         "track": "main"
@@ -14731,6 +14868,7 @@
                     "createdAt": {
                       "$date": "2026-10-12T10:00:00.000Z"
                     },
+                    "$key": "[null,\"__row_key_1:1\"]",
                     "$columns": {
                       "golden_xp_tasks_ext_track": {
                         "track": "sidequest"
@@ -14744,7 +14882,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $3) = $4::text order by \"golden_xp_convs\".\"created_at\" DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $5",
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2), \"golden_xp_convs\".\"created_at\"::text as \"__row_key_0\", \"golden_xp_convs\".\"id\"::text as \"__row_key_1\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $3) = $4::text order by \"golden_xp_convs\".\"created_at\" DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $5",
                   "params": [
                     "main",
                     0,
@@ -14768,6 +14906,7 @@
                     "createdAt": {
                       "$date": "2026-10-12T10:00:00.000Z"
                     },
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]",
                     "$columns": {
                       "golden_xp_tasks_ext_track": {
                         "track": "main"
@@ -14783,6 +14922,7 @@
                     "createdAt": {
                       "$date": "2026-10-12T10:00:00.000Z"
                     },
+                    "$key": "[null,\"__row_key_1:1\"]",
                     "$columns": {
                       "golden_xp_tasks_ext_track": {
                         "track": "sidequest"
@@ -14796,7 +14936,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where (COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $3) = $4::text and \"golden_xp_convs\".\"id\" in ($5, $6))",
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2), \"golden_xp_convs\".\"created_at\"::text as \"__row_key_0\", \"golden_xp_convs\".\"id\"::text as \"__row_key_1\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where (COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $3) = $4::text and \"golden_xp_convs\".\"id\" in ($5, $6))",
                   "params": [
                     "main",
                     0,
@@ -14856,6 +14996,7 @@
                     "createdAt": {
                       "$date": "2026-10-12T10:00:00.000Z"
                     },
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]",
                     "$columns": {
                       "golden_xp_tasks_ext_track": {
                         "track": "main"
@@ -14871,6 +15012,7 @@
                     "createdAt": {
                       "$date": "2026-10-12T10:00:00.000Z"
                     },
+                    "$key": "[null,\"__row_key_1:1\"]",
                     "$columns": {
                       "golden_xp_tasks_ext_track": {
                         "track": "sidequest"
@@ -14884,7 +15026,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $3) = $4::text order by \"golden_xp_convs\".\"created_at\" DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $5",
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2), \"golden_xp_convs\".\"created_at\"::text as \"__row_key_0\", \"golden_xp_convs\".\"id\"::text as \"__row_key_1\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $3) = $4::text order by \"golden_xp_convs\".\"created_at\" DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $5",
                   "params": [
                     "main",
                     0,
@@ -14968,6 +15110,7 @@
                     "createdAt": {
                       "$date": "2026-10-12T10:00:00.000Z"
                     },
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]",
                     "$columns": {
                       "golden_xp_tasks_ext_track": {
                         "track": "main"
@@ -14983,6 +15126,7 @@
                     "createdAt": {
                       "$date": "2026-10-12T10:00:00.000Z"
                     },
+                    "$key": "[null,\"__row_key_1:1\"]",
                     "$columns": {
                       "golden_xp_tasks_ext_track": {
                         "track": "sidequest"
@@ -14996,9 +15140,10 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $3) = $4::text order by COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $5) DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $6",
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $3)::text as \"__row_key_0\", \"golden_xp_convs\".\"id\"::text as \"__row_key_1\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $4) = $5::text order by COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $6) DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $7",
                   "params": [
                     "main",
+                    0,
                     0,
                     "main",
                     "main",
@@ -15021,6 +15166,7 @@
                     "createdAt": {
                       "$date": "2026-10-12T10:00:00.000Z"
                     },
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]",
                     "$columns": {
                       "golden_xp_tasks_ext_track": {
                         "track": "main"
@@ -15036,6 +15182,7 @@
                     "createdAt": {
                       "$date": "2026-10-12T10:00:00.000Z"
                     },
+                    "$key": "[null,\"__row_key_1:1\"]",
                     "$columns": {
                       "golden_xp_tasks_ext_track": {
                         "track": "sidequest"
@@ -15049,9 +15196,10 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where (COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $3) = $4::text and \"golden_xp_convs\".\"id\" in ($5, $6))",
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $3)::text as \"__row_key_0\", \"golden_xp_convs\".\"id\"::text as \"__row_key_1\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where (COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $4) = $5::text and \"golden_xp_convs\".\"id\" in ($6, $7))",
                   "params": [
                     "main",
+                    0,
                     0,
                     "main",
                     "main",
@@ -15110,6 +15258,7 @@
                     "createdAt": {
                       "$date": "2026-10-12T10:00:00.000Z"
                     },
+                    "$key": "[\"__row_key_0:0\",\"__row_key_1:0\"]",
                     "$columns": {
                       "golden_xp_tasks_ext_track": {
                         "track": "main"
@@ -15125,6 +15274,7 @@
                     "createdAt": {
                       "$date": "2026-10-12T10:00:00.000Z"
                     },
+                    "$key": "[null,\"__row_key_1:1\"]",
                     "$columns": {
                       "golden_xp_tasks_ext_track": {
                         "track": "sidequest"
@@ -15138,9 +15288,10 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $3) = $4::text order by COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $5) DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $6",
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $3)::text as \"__row_key_0\", \"golden_xp_convs\".\"id\"::text as \"__row_key_1\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $4) = $5::text order by COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $6) DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $7",
                   "params": [
                     "main",
+                    0,
                     0,
                     "main",
                     "main",
@@ -15858,12 +16009,14 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where \"golden_xp_convs\".\"id\" in ($3, $4)",
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where \"golden_xp_convs\".\"id\" = ANY($3::text[])",
                   "params": [
                     "main",
                     0,
-                    "c1",
-                    "c2"
+                    [
+                      "c1",
+                      "c2"
+                    ]
                   ]
                 }
               ],
@@ -15909,12 +16062,14 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where \"golden_xp_convs\".\"id\" in ($3, $4)",
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where \"golden_xp_convs\".\"id\" = ANY($3::text[])",
                   "params": [
                     "main",
                     0,
-                    "p9",
-                    "p8"
+                    [
+                      "p9",
+                      "p8"
+                    ]
                   ]
                 }
               ],

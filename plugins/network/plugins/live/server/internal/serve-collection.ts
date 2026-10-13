@@ -49,6 +49,7 @@ import {
   type ReadColumn,
   type QueryDb,
   type SelectMap,
+  type PointQueryResourceSpec,
   type WindowOrderKey,
   type WindowQueryResourceSpec,
 } from "@plugins/infra/plugins/query-resource/server";
@@ -244,7 +245,7 @@ export interface DefaultScope<
 
 /** A lookup-only collection's one spec: the `:rows` point read. */
 export interface LookupCollectionSpecs {
-  rows: WindowQueryResourceSpec<PointParams>;
+  rows: PointQueryResourceSpec<PointParams>;
   /** The derived projection: exactly the row schema's keys. */
   select: SelectMap;
 }
@@ -758,7 +759,7 @@ export function compileCollection<
   });
   const withDb = opts.db ? { db: opts.db } : {};
   const withJoins = joinSpecs.length > 0 ? { joins: joinSpecs } : {};
-  const rows: WindowQueryResourceSpec<PointParams> = {
+  const rows: PointQueryResourceSpec<PointParams> = {
     from: opts.from,
     select,
     ...withJoins,
@@ -1053,21 +1054,18 @@ export function compileCollection<
             recomputeOn: scoped.map((set) => set.recomputeOn(scope)),
           }
         : {}),
-      // A scroll collection's window: page cuts (decoded strictly by the
-      // codec) and each row's server-minted `$key`.
-      ...(collection.scroll
-        ? {
-            scroll: {
-              cutsOf: (params: LiveWindowParams) => {
-                const { after, until } = decode(params);
-                return { after, until };
-              },
-              familyOf: codec.familyOf,
-              keyField: LIVE_ROW_KEY,
-              maxKeyBytes: LIVE_ROW_KEY_MAX_BYTES,
-            },
-          }
-        : {}),
+      // Every window is read as key-range pages: its page cuts (decoded
+      // strictly by the codec), its family (what a page is derived from), and
+      // each row's server-minted `$key`.
+      rowKey: {
+        cutsOf: (params: LiveWindowParams) => {
+          const { after, until } = decode(params);
+          return { after, until };
+        },
+        familyOf: codec.familyOf,
+        keyField: LIVE_ROW_KEY,
+        maxKeyBytes: LIVE_ROW_KEY_MAX_BYTES,
+      },
       ...withEncode,
       ...withDb,
     },

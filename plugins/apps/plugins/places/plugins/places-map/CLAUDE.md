@@ -8,8 +8,10 @@ Reference UI: prototype `proto-1791725279-9yramg` at its defaults
 ## The screen (`web/components/places-screen.tsx`)
 
 `PlacesScreen` waits for both live reads (`usePlaces`, `usePlaceTags`,
-combined) — the pins, the sidebar's counts and the card all need both, so
-nothing renders an empty map or zero counts for a read that has not landed.
+combined) — each the WHOLE set (an `all` collection: every place, every tag,
+never a window's newest slice) — the pins, the sidebar's counts and the card
+all need both, so nothing renders an empty map or zero counts for a read that
+has not landed.
 Then `PlacesSurface` renders, inside a `relative h-full` box:
 
 - `<DataView storageKey="places.map" views={["map","gallery","list"]}

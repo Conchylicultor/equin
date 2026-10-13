@@ -27,7 +27,13 @@ import {
 } from "./arm-plan";
 import type { ReadColumn } from "./joins";
 import { compiledRoutePlan, routedBase } from "./routes";
-import type { QueryDb, WindowOrderKey, WindowQueryResourceSpec } from "./spec";
+import type {
+  BoundedQueryResourceSpec,
+  PointQueryResourceSpec,
+  QueryDb,
+  WindowOrderKey,
+  WindowQueryResourceSpec,
+} from "./spec";
 
 // The bounded-membership (window / point) compiler for the bounded working-set
 // contract (research/2026-07-18-global-bounded-working-set-resource-contract.md);
@@ -107,8 +113,8 @@ interface WindowOuter<P extends ResourceParams> extends AssembleOuter {
   key: string;
   /** The subscription's decoded limit, clamped to `maxLimit`. */
   limitOf: (params: P) => number;
-  /** A scroll window's page family (`scroll.familyOf`): stated, a page may be derived. */
-  familyOf?: (params: P) => string;
+  /** The window's page family (`rowKey.familyOf`): a page may be derived from pages of it. */
+  familyOf: (params: P) => string;
   /** How a projected field is read off an encoded row (the order signature). */
   readField: (row: Record<string, unknown>, field: string) => unknown;
   validateParams?: (params: ResourceParams) => void;
@@ -230,15 +236,15 @@ export function assembleWindow<Row, P extends ResourceParams>(
     return rows.map((r) => String(r[arm.keyField]));
   };
 
-  // `limitOf` — the same clamped limit — and a scroll window's `familyOf`
-  // let the runtime derive a fresh tuple from rows other tuples of the same
-  // query hold (a paged read's split or merge).
+  // `limitOf` — the same clamped limit — and the window's `familyOf` let
+  // the runtime derive a fresh tuple from rows other tuples of the same query
+  // hold (a paged read's split or merge).
   const membership: KeyedMembership<P> = {
     kind: "window",
     windowIdsOf,
     orderSignatureOf,
     limitOf: outer.limitOf,
-    ...(outer.familyOf !== undefined ? { familyOf: outer.familyOf } : {}),
+    familyOf: outer.familyOf,
   };
   const scopePolicy: ScopePolicy<P> = scopePolicyOf(arm, membership);
 
@@ -297,7 +303,7 @@ export function assemblePoint<Row, P extends ResourceParams>(
  */
 export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
   contract: AnyWindowContract<Row, P & WindowParams>,
-  spec: WindowQueryResourceSpec<P>,
+  spec: BoundedQueryResourceSpec<P>,
 ): CompiledWindowQuery<Row, P> {
   const key = contract.key;
   guard(
@@ -332,6 +338,9 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
     spec.debounceMs != null ? { debounceMs: spec.debounceMs } : {};
 
   if (spec.point) {
+    // Read as untyped: the point kind types every window field out, and these
+    // guards are for a caller the types did not reach (a cast).
+    const loose = spec as unknown as Partial<WindowQueryResourceSpec<P>>;
     const codec = (contract as PointQueryResourceContract<Row>).point;
     guard(
       codec,
@@ -339,14 +348,15 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
       "spec declares `point` but the descriptor carries no point codec — a point resource is a `liveCollection`'s `:rows` sibling (network/live): declare the collection and serve it with `serveCollection`, which compiles `c.rows` with `point: { by }`.",
     );
     guard(
-      spec.orderBy === undefined &&
-        spec.signatureColumns === undefined &&
-        spec.scroll === undefined,
+      loose.orderBy === undefined &&
+        loose.signatureColumns === undefined &&
+        loose.readField === undefined &&
+        loose.rowKey === undefined,
       key,
-      "`orderBy` / `signatureColumns` / `scroll` are meaningless with `point` — point sets are unordered (entrants append), so there is no order to cut or key.",
+      "`orderBy` / `signatureColumns` / `readField` / `rowKey` are meaningless with `point` — point sets are unordered (entrants append), so there is no order to sign, cut or key.",
     );
     guard(
-      spec.families === undefined && spec.recomputeOn === undefined,
+      loose.families === undefined && loose.recomputeOn === undefined,
       key,
       "`families` / `recomputeOn` are window-only — a point read is by id, with no `where` or order to name a family member.",
     );
@@ -369,6 +379,7 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
   }
 
   // Window kind.
+  const win = spec as WindowQueryResourceSpec<P>;
   const codec = (contract as WindowQueryResourceContract<Row, P & WindowParams>)
     .window;
   guard(
@@ -377,11 +388,16 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
     "spec declares `window` but the descriptor carries no window codec — a window resource is a `liveCollection` (network/live) declared with `default` and `maxLimit`: declare it there and serve it with `serveCollection`, which compiles `c.window` with `window`.",
   );
   guard(
-    spec.orderBy !== undefined,
+    win.orderBy !== undefined,
     key,
     "a bounded window REQUIRES `orderBy` — without a total order, `LIMIT n` names no stable window.",
   );
-  const specMaxLimit = spec.window!.maxLimit;
+  guard(
+    win.rowKey !== undefined,
+    key,
+    "a bounded window REQUIRES `rowKey` — every window is read as key-range pages, so each tuple may be cut and each row carries its key.",
+  );
+  const specMaxLimit = win.window.maxLimit;
   guard(
     specMaxLimit === undefined ||
       codec.maxLimit === undefined ||
@@ -406,7 +422,7 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
     `the descriptor's defaultLimit (${codec.defaultLimit}) exceeds window.maxLimit (${maxLimit}) — the default window would be silently truncated.`,
   );
 
-  const orderSpec = spec.orderBy;
+  const orderSpec = win.orderBy;
   const staticOrder: WindowOrderKey[] | undefined =
     typeof orderSpec === "function"
       ? undefined
@@ -414,21 +430,19 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
         ? orderSpec
         : [orderSpec];
   guard(
-    staticOrder || (spec.signatureColumns && spec.signatureColumns.length > 0),
+    staticOrder || (win.signatureColumns && win.signatureColumns.length > 0),
     key,
     "a function `orderBy` REQUIRES a non-empty `signatureColumns` — the union of every column it may sort by, each projected, so an UPDATE to the columns a tuple sorts by re-derives its window.",
   );
   // The universe each tuple's order signature is cut from: the declared order
   // columns for a static order, else every column any tuple may sort by.
   const signatureColumns: ReadColumn[] =
-    spec.signatureColumns ?? staticOrder!.map((k) => k.col);
+    win.signatureColumns ?? staticOrder!.map((k) => k.col);
 
   const arm = planArm<Row, P>({
     ...relationSet,
-    ...(spec.identity !== undefined ? { identity: spec.identity } : {}),
-    ...(spec.recomputeOn !== undefined
-      ? { recomputeOn: spec.recomputeOn }
-      : {}),
+    ...(win.identity !== undefined ? { identity: win.identity } : {}),
+    ...(win.recomputeOn !== undefined ? { recomputeOn: win.recomputeOn } : {}),
     mode: {
       kind: "window",
       order: staticOrder
@@ -438,22 +452,22 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
             resolve: orderSpec as (params: P) => WindowOrderKey[],
           },
       signatureColumns,
-      ...(spec.families !== undefined ? { families: spec.families } : {}),
-      ...(spec.scroll !== undefined ? { scroll: spec.scroll } : {}),
+      ...(win.families !== undefined ? { families: win.families } : {}),
+      rowKey: win.rowKey,
     },
   });
 
   // The subscription's decoded limit, clamped — ONE helper feeds the loader
   // AND `windowIdsOf`.
   const decodeLimit =
-    spec.window!.limitOf ?? ((params: P) => codec.decode(params).limit);
-  const validateParams = spec.window!.validateParams;
+    win.window.limitOf ?? ((params: P) => codec.decode(params).limit);
+  const validateParams = win.window.validateParams;
   return assembleWindow<Row, P>([arm], {
     key,
     limitOf: (params) => Math.min(decodeLimit(params), maxLimit),
-    ...(spec.scroll !== undefined ? { familyOf: spec.scroll.familyOf } : {}),
+    familyOf: win.rowKey.familyOf,
     readField:
-      spec.readField ??
+      win.readField ??
       ((row: Record<string, unknown>, field: string): unknown => row[field]),
     ...(validateParams !== undefined ? { validateParams } : {}),
     ...encodeRow,
@@ -493,18 +507,17 @@ export function deferredWindowQueryResource<
 ): Resource<Row[], P>;
 export function deferredWindowQueryResource<Row>(
   descriptor: PointQueryResourceContract<Row>,
-  specOf: () => WindowQueryResourceSpec<PointParams>,
+  specOf: () => PointQueryResourceSpec<PointParams>,
 ): Resource<Row[], PointParams>;
 export function deferredWindowQueryResource<Row>(
   descriptor: AnyWindowContract<Row>,
   specOf: () =>
-    | WindowQueryResourceSpec<WindowParams>
-    | WindowQueryResourceSpec<PointParams>,
+    WindowQueryResourceSpec<WindowParams> | PointQueryResourceSpec<PointParams>,
 ): Resource<Row[], WindowParams> | Resource<Row[], PointParams> {
   return defineDeferredResource(descriptor, () => {
     const { serverOpts, keyField } = compileWindowQuery(
       descriptor,
-      specOf() as WindowQueryResourceSpec<WindowParams | PointParams>,
+      specOf() as BoundedQueryResourceSpec<WindowParams | PointParams>,
     );
     assertKeyField(descriptor as AnyWindowContract<unknown>, keyField);
     return serverOpts;
@@ -527,17 +540,16 @@ export function windowQueryResource<
 ): Resource<Row[], P>;
 export function windowQueryResource<Row>(
   descriptor: PointQueryResourceContract<Row>,
-  spec: WindowQueryResourceSpec<PointParams>,
+  spec: PointQueryResourceSpec<PointParams>,
 ): Resource<Row[], PointParams>;
 export function windowQueryResource<Row>(
   descriptor: AnyWindowContract<Row>,
   spec:
-    | WindowQueryResourceSpec<WindowParams>
-    | WindowQueryResourceSpec<PointParams>,
+    WindowQueryResourceSpec<WindowParams> | PointQueryResourceSpec<PointParams>,
 ): Resource<Row[], WindowParams> | Resource<Row[], PointParams> {
   const { serverOpts, keyField } = compileWindowQuery(
     descriptor,
-    spec as WindowQueryResourceSpec<WindowParams | PointParams>,
+    spec as BoundedQueryResourceSpec<WindowParams | PointParams>,
   );
   assertKeyField(descriptor as AnyWindowContract<unknown>, keyField);
   return defineResource(descriptor, serverOpts);

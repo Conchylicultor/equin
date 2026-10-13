@@ -55,6 +55,18 @@ function collection() {
 const rows = (count: number): Row[] =>
   Array.from({ length: count }, (_, i) => ({ id: `r${i}`, n: i, on: true }));
 
+/** A row's server-minted `$key` in the default order (`n`, then the id). */
+const keyOf = (i: number) => JSON.stringify([String(i), `r${i}`]);
+/**
+ * Window rows as the wire carries them, rows [from, to) each with its `$key`
+ * — what a page is cut at. Seeded with `setQueryData`, which skips the parse,
+ * so a row seeded without one could never be cut.
+ */
+const keyed = (to: number, from = 0) =>
+  rows(to)
+    .slice(from)
+    .map((r, i) => ({ ...r, $key: keyOf(from + i) }));
+
 function mount<R>(live: LiveStateHarness, useHook: () => R) {
   vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
   const rendered = renderHook(useHook, { wrapper: live.Wrapper });
@@ -65,7 +77,7 @@ describe("useLive — window", () => {
   it("the default read subscribes on the declaration's default tuple and reports canGrow on a full window", async () => {
     const c = collection();
     const live = createLiveStateHarness();
-    live.queryClient.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
+    live.queryClient.setQueryData(queryKeyFor(c.key, { limit: "2" }), keyed(2));
 
     const { result } = mount(live, () => useLive(c));
     await waitFor(() => expect(result.current.status).toBe("ready"));
@@ -126,31 +138,43 @@ describe("useLive — window", () => {
     ).toHaveLength(1);
   });
 
-  it("loadMore stays settled on the previous rows while the grown window loads, then settles on it; canGrow ends at maxLimit", async () => {
+  it("loadMore splits the last page — no reload of a larger window: settled on the rows while the new page loads; canGrow stops a step short of maxLimit", async () => {
     const c = collection();
     const live = createLiveStateHarness();
-    live.queryClient.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
+    live.queryClient.setQueryData(queryKeyFor(c.key, { limit: "2" }), keyed(2));
 
-    const { result } = mount(live, () => useLive(c));
+    const { result, notifications } = mount(live, () => useLive(c));
     await waitFor(() => expect(result.current.status).toBe("ready"));
+    const observe = vi.spyOn(notifications, "observe");
+    observe.mockClear();
 
     act(() => {
       const r = result.current;
       if (r.status !== "ready") throw new Error("unreachable");
       r.loadMore();
     });
-    // The limit-4 tuple has no value yet: still settled, on the old rows.
+    // The new page has no value yet: still settled, on the rows it has.
     const mid = result.current;
-    if (mid.status !== "ready") throw new Error("grow must not flash loading");
+    if (mid.status !== "ready")
+      throw new Error("a split must not flash loading");
     expect(mid.growing).toBe(true);
     expect(mid.data).toEqual(rows(2));
     expect(mid.canGrow).toBe(false);
+    // Two pages, cut at the last row: its known half (at twice the step) and
+    // the new page past it — never the old window at a larger limit.
+    const head = c.window.window.encode({ limit: 4 }, { until: keyOf(1) });
+    const next = c.window.window.encode({ limit: 2 }, { after: keyOf(1) });
+    const subscribed = observe.mock.calls
+      .filter(([key]) => key === c.key)
+      .map((call) => JSON.stringify(call[1]));
+    expect(subscribed).toEqual(
+      expect.arrayContaining([JSON.stringify(head), JSON.stringify(next)]),
+    );
+    expect(subscribed).not.toContain(JSON.stringify({ limit: "4" }));
 
     act(() => {
-      live.queryClient.setQueryData(
-        queryKeyFor(c.key, { limit: "4" }),
-        rows(4),
-      );
+      live.queryClient.setQueryData(queryKeyFor(c.key, head), keyed(2));
+      live.queryClient.setQueryData(queryKeyFor(c.key, next), keyed(4, 2));
     });
     await waitFor(() => {
       const r = result.current;
@@ -160,33 +184,15 @@ describe("useLive — window", () => {
     });
     const grown = result.current;
     if (grown.status !== "ready") throw new Error("unreachable");
-    expect(grown.canGrow).toBe(true);
-
-    // 4 + 2 clamps to maxLimit 5; a full 5-row window cannot grow further.
-    act(() => {
-      grown.loadMore();
-    });
-    act(() => {
-      live.queryClient.setQueryData(
-        queryKeyFor(c.key, { limit: "5" }),
-        rows(5),
-      );
-    });
-    await waitFor(() => {
-      const r = result.current;
-      expect(r.status === "ready" && !r.growing && r.data.length === 5).toBe(
-        true,
-      );
-    });
-    const end = result.current;
-    if (end.status !== "ready") throw new Error("unreachable");
-    expect(end.canGrow).toBe(false);
+    expect(grown.data).toEqual(rows(4));
+    // 4 rows + a page of 2 would pass maxLimit (5): the pager stops here.
+    expect(grown.canGrow).toBe(false);
   });
 
   it("a short window cannot grow", async () => {
     const c = collection();
     const live = createLiveStateHarness();
-    live.queryClient.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(1));
+    live.queryClient.setQueryData(queryKeyFor(c.key, { limit: "2" }), keyed(1));
     const { result } = mount(live, () => useLive(c));
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const r = result.current;
@@ -255,14 +261,16 @@ describe("useLive — result identity", () => {
     if (next.status !== "ready") throw new Error("unreachable");
     expect(next.data).toEqual(changed);
     expect(next.growing).toBe(false);
-    // Same limit: loadMore itself did not change.
-    expect(next.loadMore).toBe(first.loadMore);
+    // `loadMore` is the page plan's: a push that changes the rows the plan
+    // reads may re-plan, so it is not pinned across one (the result is new
+    // anyway); across a push that changes nothing, the result above is kept
+    // whole, `loadMore` included.
   });
 
-  it("a grow is settled on the previous rows (stable while it loads), then settles on the larger window with a new loadMore", async () => {
+  it("a split is settled on the rows it has (stable while it loads), then settles on both pages with a new loadMore", async () => {
     const c = collection();
     const live = createLiveStateHarness();
-    live.queryClient.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
+    live.queryClient.setQueryData(queryKeyFor(c.key, { limit: "2" }), keyed(2));
     const { result, rerender } = mount(live, () => useLive(c));
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const first = result.current;
@@ -272,7 +280,8 @@ describe("useLive — result identity", () => {
       first.loadMore();
     });
     const mid = result.current;
-    if (mid.status !== "ready") throw new Error("grow must not flash loading");
+    if (mid.status !== "ready")
+      throw new Error("a split must not flash loading");
     expect(mid.growing).toBe(true);
     expect(mid.data).toEqual(rows(2));
     rerender();
@@ -280,8 +289,18 @@ describe("useLive — result identity", () => {
 
     act(() => {
       live.queryClient.setQueryData(
-        queryKeyFor(c.key, { limit: "4" }),
-        rows(4),
+        queryKeyFor(
+          c.key,
+          c.window.window.encode({ limit: 4 }, { until: keyOf(1) }),
+        ),
+        keyed(2),
+      );
+      live.queryClient.setQueryData(
+        queryKeyFor(
+          c.key,
+          c.window.window.encode({ limit: 2 }, { after: keyOf(1) }),
+        ),
+        keyed(4, 2),
       );
     });
     await waitFor(() => {
@@ -292,8 +311,7 @@ describe("useLive — result identity", () => {
     });
     const grown = result.current;
     if (grown.status !== "ready") throw new Error("unreachable");
-    expect(grown.canGrow).toBe(true);
-    // The limit moved 2 → 4, so the next grow starts from the new one.
+    // The plan moved to two pages, so loadMore is the new plan's.
     expect(grown.loadMore).not.toBe(first.loadMore);
     rerender();
     expect(result.current).toBe(grown);
@@ -972,10 +990,10 @@ describe("status arms", () => {
     expect(result.current.status).toBe("ready");
   });
 
-  it("a grow that fails is the error arm, with the window it grew from as `stale`", async () => {
+  it("a new page that fails is the error arm, with the rows shown as `stale`", async () => {
     const c = collection();
     const live = createLiveStateHarness();
-    live.queryClient.setQueryData(queryKeyFor(c.key, { limit: "2" }), rows(2));
+    live.queryClient.setQueryData(queryKeyFor(c.key, { limit: "2" }), keyed(2));
     const { result } = mount(live, () => useLive(c));
     await waitFor(() => expect(result.current.status).toBe("ready"));
 
@@ -984,16 +1002,27 @@ describe("status arms", () => {
       if (r.status !== "ready") throw new Error("unreachable");
       r.loadMore();
     });
-    expect(result.current.status).toBe("ready"); // growing, on the old rows
+    expect(result.current.status).toBe("ready"); // growing, on the rows shown
 
-    // The grown window's read fails the way a failed sub heals: the fetch runs
+    const head = queryKeyFor(
+      c.key,
+      c.window.window.encode({ limit: 4 }, { until: keyOf(1) }),
+    );
+    const next = queryKeyFor(
+      c.key,
+      c.window.window.encode({ limit: 2 }, { after: keyOf(1) }),
+    );
+    act(() => {
+      live.queryClient.setQueryData(head, keyed(2));
+    });
+    // The new page's read fails the way a failed sub heals: the fetch runs
     // directly on the query (`fetchAfterSubError`'s `prefetchQuery`) — a
     // placeholder-less window query is disabled until its first value, so
     // `refetchQueries` would skip it.
     await act(async () => {
       await live.queryClient.prefetchQuery({
-        queryKey: queryKeyFor(c.key, { limit: "4" }),
-        queryFn: () => Promise.reject(new Error("grow failed")),
+        queryKey: next,
+        queryFn: () => Promise.reject(new Error("page failed")),
         staleTime: 0,
       });
     });
@@ -1001,15 +1030,12 @@ describe("status arms", () => {
     await waitFor(() => expect(result.current.status).toBe("error"));
     const r = result.current;
     if (r.status !== "error") throw new Error("unreachable");
-    expect(r.error.message).toBe("grow failed");
+    expect(r.error.message).toBe("page failed");
     expect(r.stale).toEqual(rows(2));
 
-    // Retrying the grown window recovers it.
+    // The page's read recovering recovers the list.
     act(() => {
-      live.queryClient.setQueryData(
-        queryKeyFor(c.key, { limit: "4" }),
-        rows(4),
-      );
+      live.queryClient.setQueryData(next, keyed(4, 2));
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const grown = result.current;
@@ -1042,7 +1068,7 @@ describe("status arms", () => {
   });
 });
 
-describe("useLive — a scroll collection's window", () => {
+describe("useLive — a window's rows", () => {
   it("hands rows out without `$key` — the error arm's last-known rows too", async () => {
     const c = liveCollection(`test.use-live.scroll.${seq++}`, {
       row: Row,
@@ -1051,7 +1077,6 @@ describe("useLive — a scroll collection's window", () => {
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 2 },
       maxLimit: 6,
-      scroll: true,
     });
     const live = createLiveStateHarness();
     const { result, notifications } = mount(live, () => useLive(c));

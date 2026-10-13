@@ -1,0 +1,21 @@
+// @hash 6ec84829688d
+{
+  // Debug → Notifications (plugins/shell/plugins/notifications): every
+  // undismissed notification — the bell popover's "View all". One list view,
+  // grouped on the raw `read` column (server sections, unread first, each with
+  // its exact count) and newest first inside each. `read` is the column, not
+  // the badge's "counted unread" (which also requires an unmuted error or
+  // warning), so an unread info row sits under the unread section here.
+  "views": [
+    {
+      "id": "all",
+      "name": "All",
+      "icon": "notifications",
+      "view": {
+        "type": "list",
+        "groupBy": { "fieldId": "read", "groupingId": "value" },
+        "sort": [{ "fieldId": "createdAt", "direction": "desc" }]
+      }
+    }
+  ]
+}

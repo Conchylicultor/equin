@@ -113,15 +113,13 @@ const SPEC = {
   maxLimit: 50,
 } as const;
 const collection = () => liveCollection(`test.live.expr-${seq++}`, SPEC);
-const scrollCollection = () =>
-  liveCollection(`test.live.expr-${seq++}`, { ...SPEC, scroll: true });
 
 const LABEL = `("xsongs"."title" || ' by ' || coalesce("artist"."name", '?'))`;
 const UPPER = `(upper("artist"."name"))`;
 const PLAYS = `(COALESCE("playback"."plays", $`;
 
-function compile(opts: { scroll?: boolean } = {}) {
-  const c = opts.scroll ? scrollCollection() : collection();
+function compile() {
+  const c = collection();
   const recording = recordingQueryDb();
   const specs = compileCollection(c, {
     from: songs,
@@ -179,7 +177,7 @@ describe("serveCollection with expression fields — SQL", () => {
   });
 
   test("sorted, and cut with NULL handling from its declared nullability, each operand cast to its sqlType", async () => {
-    const { c, window, calls } = compile({ scroll: true });
+    const { c, window, calls } = compile();
     const w = c.window.window;
     // A nullable expression: its cut's seek admits the NULLs ordered last.
     await window.loader(

@@ -17,8 +17,8 @@ export type BootTraceItem = z.infer<typeof BootTraceItemSchema>;
 /**
  * The saved boot traces (`boot_traces`), newest first, as the Boot Profiles
  * browse pane's live source. The row is the metadata projection — the server
- * projects exactly these keys, so the snapshot blob never rides the list. A
- * scroll window (100 a page); a save (Copy permalink) or the 30-day retention
+ * projects exactly these keys, so the snapshot blob never rides the list. Read
+ * as key-range pages (100 a page); a save (Copy permalink) or the 30-day retention
  * sweep reaches it through the change feed.
  */
 export const bootTraces = liveCollection("debug.boot-traces", {
@@ -28,7 +28,6 @@ export const bootTraces = liveCollection("debug.boot-traces", {
   sortable: ["createdAt", "worktree"],
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },
   maxLimit: 500,
-  scroll: true,
 });
 
 /**

@@ -126,7 +126,7 @@ export interface UnionOrderKey {
   dir: "asc" | "desc";
 }
 
-/** A tuple's scroll cuts: each a row key of exactly its order (the tiebreaker included). */
+/** A tuple's page cuts: each a row key of exactly its order (the tiebreaker included). */
 export interface UnionCuts {
   after?: readonly (string | null)[];
   until?: readonly (string | null)[];
@@ -170,12 +170,12 @@ export interface UnionCollectionSpec<
     /** The tuple's limit (already clamped). */
     limitOf: (params: WP) => number;
     cutsOf: (params: WP) => UnionCuts;
-    /** The tuple's page family: one string per query, whatever its cuts and limit (see `WindowQueryResourceSpec.scroll.familyOf`). */
+    /** The tuple's page family: one string per query, whatever its cuts and limit (see `WindowQueryResourceSpec.rowKey.familyOf`). */
     familyOf: (params: WP) => string;
     validateParams?: (params: ResourceParams) => void;
   };
-  /** Where a window row carries its scroll key, and the key's byte bound. */
-  scroll: { keyField: string; maxKeyBytes: number };
+  /** Where a window row carries its row key, and the key's byte bound. */
+  rowKey: { keyField: string; maxKeyBytes: number };
   point: { idsOf: (params: PP) => string[] };
   groups: { query: (params: GP) => UnionGroupsQuery };
   /** How the order signature reads a name off a (wire-encoded) row. */
@@ -504,8 +504,8 @@ export function compileUnionCollection<
       for (let i = 0; i < parts; i++)
         values.push(r[`__p${i}`] as string | null);
       const json = JSON.stringify(values);
-      out[spec.scroll.keyField] =
-        Buffer.byteLength(json, "utf8") > spec.scroll.maxKeyBytes ? null : json;
+      out[spec.rowKey.keyField] =
+        Buffer.byteLength(json, "utf8") > spec.rowKey.maxKeyBytes ? null : json;
     }
     return out;
   };

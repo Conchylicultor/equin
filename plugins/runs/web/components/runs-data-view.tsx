@@ -15,7 +15,8 @@ import { Runs } from "../internal/slots";
 import { RUNS_VIEW } from "../internal/view-id";
 
 /**
- * The live source: the `runs` union window, read as a scroll. Everything a
+ * The live source: the `runs` union window, read as live key-range pages.
+ * Everything a
  * person types into the search box is a name or an error — never an id, which
  * would make the box a lookup rather than a search.
  */
@@ -70,10 +71,10 @@ export interface RunsDataViewProps {
  * **Runs** — every long-running operation on this machine, from every ledger, in
  * one list.
  *
- * One ordinary `<DataView>` over the `runs` union window (a live scroll): the
- * rows arrive already merged, so the host needs to know nothing about arms.
- * Filter, sort and search compile to SQL across every ledger at once, the
- * scroll walks across arm boundaries without duplicating or dropping a row,
+ * One ordinary `<DataView>` over the `runs` union window (live key-range
+ * pages): the rows arrive already merged, so the host needs to know nothing
+ * about arms. Filter, sort and search compile to SQL across every ledger at
+ * once, the pages cut across arm boundaries without duplicating or dropping a row,
  * and a write to one ledger refills just the rows it changed.
  *
  * The same component at every density: a build popover and a full debug pane are

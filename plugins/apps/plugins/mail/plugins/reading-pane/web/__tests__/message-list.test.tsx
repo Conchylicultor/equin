@@ -1,7 +1,8 @@
 /**
- * The reading pane's list over a thread's live window: messages render in the
- * order given (the pane hands them oldest→newest), and "Load older messages"
- * appears exactly while the window can grow — or is growing — and grows it.
+ * The reading pane's list over a thread's live pages: the newest-first pages
+ * render reversed (oldest→newest), a page of older messages lands above the
+ * cards shown without remounting any, and "Load older messages" appears
+ * exactly while there is more — or a page is loading — and pages it.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -70,10 +71,10 @@ const LOAD_OLDER = { name: /load older messages/i };
 const loadOlder = () => screen.queryByRole("button", LOAD_OLDER);
 
 describe("MessageList", () => {
-  it("renders the messages in the given order, the last one open", () => {
+  it("renders the newest-first window oldest→newest, the newest one open", () => {
     render(
       <MessageList
-        messages={[message("m1"), message("m2"), message("m3")]}
+        newestFirst={[message("m3"), message("m2"), message("m1")]}
         older={paging()}
       />,
     );
@@ -87,13 +88,13 @@ describe("MessageList", () => {
   });
 
   it("offers no older messages when the window holds the whole thread", () => {
-    render(<MessageList messages={[message("m1")]} older={paging()} />);
+    render(<MessageList newestFirst={[message("m1")]} older={paging()} />);
     expect(loadOlder()).toBeNull();
   });
 
   it("grows the window when older messages can be loaded", () => {
     const older = paging({ canGrow: true });
-    render(<MessageList messages={[message("m1")]} older={older} />);
+    render(<MessageList newestFirst={[message("m1")]} older={older} />);
     fireEvent.click(screen.getByRole("button", LOAD_OLDER));
     expect(older.loadMore).toHaveBeenCalledTimes(1);
   });
@@ -101,7 +102,7 @@ describe("MessageList", () => {
   it("keeps the button, loading, while the grown window loads", () => {
     render(
       <MessageList
-        messages={[message("m1")]}
+        newestFirst={[message("m1")]}
         older={paging({ growing: true })}
       />,
     );
@@ -109,8 +110,37 @@ describe("MessageList", () => {
     expect(button.getAttribute("data-loading")).toBe("true");
   });
 
+  it("an older page lands above the shown cards, in order, remounting none", () => {
+    const page0 = [message("m5"), message("m4"), message("m3")];
+    const page1 = [message("m2"), message("m1")];
+    const { rerender } = render(
+      <MessageList newestFirst={page0} older={paging({ canGrow: true })} />,
+    );
+    const before = new Map(
+      screen.getAllByTestId("card").map((c) => [c.textContent, c]),
+    );
+    // `loadMore` split: the pages are concatenated in window order, so the
+    // older page follows page 0 — and comes first once reversed.
+    rerender(
+      <MessageList newestFirst={[...page0, ...page1]} older={paging()} />,
+    );
+    const cards = screen.getAllByTestId("card");
+    expect(cards.map((c) => c.textContent)).toEqual([
+      "m1",
+      "m2",
+      "m3",
+      "m4",
+      "m5",
+    ]);
+    for (const id of ["m3", "m4", "m5"]) {
+      expect(cards.find((c) => c.textContent === id)).toBe(before.get(id));
+    }
+    expect(cards.at(-1)!.getAttribute("data-open")).toBe("true");
+    expect(loadOlder()).toBeNull();
+  });
+
   it("says the thread is empty when no message is loaded", () => {
-    render(<MessageList messages={[]} older={paging()} />);
+    render(<MessageList newestFirst={[]} older={paging()} />);
     expect(screen.getByText("This thread has no messages.")).not.toBeNull();
     expect(loadOlder()).toBeNull();
   });

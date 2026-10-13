@@ -4,7 +4,7 @@ The Events app's main surface: every event, as a **live DataView**
 (`defineDataView("events.list")`) over the `events.list` collection
 (`core/internal/collection.ts`). The set grows without bound and the user
 filters/sorts across all of it, so filter/sort/search compile to SQL per window
-tuple, read as live key-range pages (`scroll: true`) — the mail threads shape.
+tuple, read as live key-range pages — the mail threads shape.
 
 ```
 core/internal/fields.ts       the shared field-id vocabulary (browser-safe data)

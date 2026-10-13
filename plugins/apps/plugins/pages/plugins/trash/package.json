@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-apps-pages-trash",
-  "description": "Pages trash: lists soft-deleted pages in the Pages sidebar with restore and permanent-delete actions.",
+  "description": "Pages trash consumer: contributes a Trash entry into the Pages sidebar, opening a dialog that lists soft-deleted pages as a live DataView with Restore and Delete permanently row actions.",
   "private": true,
   "version": "0.0.1"
 }

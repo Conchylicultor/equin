@@ -66,7 +66,7 @@ export interface TupleReads {
 
 /**
  * One tuple's order: its keys, their ORDER BY, and the extra projection it
- * rides — a scroll's row-key parts, and the family members it orders by
+ * rides — its row-key parts, and the family members it orders by
  * (`members`: each one's projection alias and join alias).
  */
 export interface OrderPlan {
@@ -91,7 +91,7 @@ export interface ArmOrder<P> {
   memberAliasOf(col: ReadColumn): string | undefined;
   /** The tuple's order plan (memoized per canonical order). */
   orderPlanOf(params: P): OrderPlan;
-  /** The tuple's scroll cuts on the order side, if any. */
+  /** The tuple's page cuts on the order side, if any. */
   cutWhere(params: P): SQL | undefined;
   /**
    * The projected field of each signature column, in `signatureColumns`
@@ -185,8 +185,8 @@ export interface ArmInput<P extends ResourceParams> {
         /** The columns any tuple may order by — the universe the signature is cut from. */
         signatureColumns: readonly ReadColumn[];
         families?: { joins: readonly JoinFamily[]; valuesKey: string };
-        /** A scroll window: its cuts, and where each row's key is folded. */
-        scroll?: NonNullable<WindowQueryResourceSpec<P>["scroll"]>;
+        /** Its tuples' page cuts, and where each row's key is folded. */
+        rowKey: WindowQueryResourceSpec<P>["rowKey"];
       };
 }
 
@@ -200,7 +200,7 @@ function guard(
   }
 }
 
-/** The projection alias of a scroll row key's i-th part (never a row field: it is folded away). */
+/** The projection alias of a row key's i-th part (never a row field: it is folded away). */
 const rowKeyPart = (i: number): string => `__row_key_${i}`;
 
 /** The projection alias of the i-th family member a tuple orders by (folded under `valuesKey`). */
@@ -543,7 +543,7 @@ export function planArm<Row, P extends ResourceParams>(
   // Declared order keys + the pk tiebreaker (skipped when a key already targets
   // the pk column — same rule as keyset's `buildSortKeys`), rendered with
   // explicit NULLS LAST so a cut's seek stays symmetric. ONE key list per
-  // order feeds the ORDER BY, a scroll's cuts and its row keys, so the three
+  // order feeds the ORDER BY, a page's cuts and its row keys, so the three
   // cannot disagree about what the order is.
   //
   // A column a LEFT join reads is NULL for a host with no joined row, whatever
@@ -565,7 +565,7 @@ export function planArm<Row, P extends ResourceParams>(
     }
     return keys;
   };
-  const scroll = mode.scroll;
+  const rowKey = mode.rowKey;
   const planOrder = (declared: readonly WindowOrderKey[]): OrderPlan => {
     const keys = orderKeys(declared);
     const members = declared.flatMap((k, i) => {
@@ -579,14 +579,12 @@ export function planArm<Row, P extends ResourceParams>(
       sql: orderByClauses(keys),
       keySelect: {
         // The row key's parts, as Postgres's own text: exact, whatever the type.
-        ...(scroll
-          ? Object.fromEntries(
-              keys.map((k, i) => [
-                rowKeyPart(i),
-                sql`${k.col}::text`.as(rowKeyPart(i)),
-              ]),
-            )
-          : {}),
+        ...Object.fromEntries(
+          keys.map((k, i) => [
+            rowKeyPart(i),
+            sql`${k.col}::text`.as(rowKeyPart(i)),
+          ]),
+        ),
         ...Object.fromEntries(
           members.map(({ part, col }) => [part, sql`${col}`.as(part)]),
         ),
@@ -647,8 +645,7 @@ export function planArm<Row, P extends ResourceParams>(
   // is a key's exact text, cast back to its column's type — so Postgres
   // compares the value it stored, not a rounded one.
   const cutWhere = (params: P): SQL | undefined => {
-    if (!scroll) return undefined;
-    const { after, until } = scroll.cutsOf(params);
+    const { after, until } = rowKey.cutsOf(params);
     if (after === undefined && until === undefined) return undefined;
     const { keys } = orderPlanOf(params);
     const operands = (
@@ -676,7 +673,7 @@ export function planArm<Row, P extends ResourceParams>(
     return parts.length === 1 ? parts[0] : and(...parts);
   };
 
-  // Folds a scroll row's key parts into its row key (the canonical JSON of the
+  // Folds a row's key parts into its row key (the canonical JSON of the
   // parts; `null` over the byte bound), and the family members the tuple
   // orders by into `valuesKey` (by join alias); drops the parts: they are not
   // row fields. Every full and scoped row goes through it, before `encodeRow`.
@@ -691,21 +688,18 @@ export function planArm<Row, P extends ResourceParams>(
   };
   const fold = (rows: Row[], params: P): Row[] => {
     const plan = orderPlanOf(params);
-    if (!scroll && plan.members.length === 0) return rows;
     const n = plan.keys.length;
     return rows.map((r) => {
       const row = { ...(r as Record<string, unknown>) };
-      if (scroll) {
-        const parts: (string | null)[] = [];
-        for (let i = 0; i < n; i++) {
-          assertProjected(row, rowKeyPart(i));
-          parts.push(row[rowKeyPart(i)] as string | null);
-          delete row[rowKeyPart(i)];
-        }
-        const json = JSON.stringify(parts);
-        row[scroll.keyField] =
-          Buffer.byteLength(json, "utf8") > scroll.maxKeyBytes ? null : json;
+      const parts: (string | null)[] = [];
+      for (let i = 0; i < n; i++) {
+        assertProjected(row, rowKeyPart(i));
+        parts.push(row[rowKeyPart(i)] as string | null);
+        delete row[rowKeyPart(i)];
       }
+      const json = JSON.stringify(parts);
+      row[rowKey.keyField] =
+        Buffer.byteLength(json, "utf8") > rowKey.maxKeyBytes ? null : json;
       if (plan.members.length > 0) {
         const values: Record<string, unknown> = {};
         for (const [part, alias] of plan.members) {
@@ -759,7 +753,7 @@ export function planArm<Row, P extends ResourceParams>(
       signatureFields,
       signatureOf,
     },
-    // A scroll row's key parts and the family members its order reads ride
+    // A row's key parts and the family members its order reads ride
     // the projection (see `planOrder`); a select-all spec projects the
     // source's columns explicitly so they can join them.
     fullQuery: (params, limit) => {

@@ -5,7 +5,7 @@ import { EVENT_LIST_FILTERABLE, EVENT_LIST_SORTABLE } from "./fields";
 /**
  * The events list's live collection: every event with its source's ref
  * (`sourceType` / `sourceConfig`), read by the DataView as live key-range pages
- * (`scroll: true` — the set grows without bound) and kept fresh by the routed
+ * (the set grows without bound) and kept fresh by the routed
  * change feed, with no revision tick and no refetch of the loaded pages:
  *
  * - an event write refills exactly that event in the live pages that hold (or now
@@ -30,6 +30,5 @@ export const eventsList = liveCollection("events.list", {
   sortable: EVENT_LIST_SORTABLE,
   default: { orderBy: [["startsAt", "asc"]], limit: 100 },
   maxLimit: 500,
-  scroll: true,
   columnScope: "events.list",
 });

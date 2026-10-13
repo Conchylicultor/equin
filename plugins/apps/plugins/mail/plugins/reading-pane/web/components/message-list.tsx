@@ -11,17 +11,23 @@ import type { MailMessage } from "@plugins/apps/plugins/mail/plugins/mail-core/c
 import { MessageCard } from "./message-card";
 
 export interface MessageListProps {
-  /** The loaded messages, oldest→newest. */
-  messages: MailMessage[];
-  /** The window's paging handles: growing it loads OLDER messages. */
+  /**
+   * The loaded messages in the window's own order — NEWEST first, every loaded
+   * page in turn (an older page appends to the end). Shown reversed.
+   */
+  newestFirst: readonly MailMessage[];
+  /** The window's paging handles: `loadMore` adds the next page of OLDER messages. */
   older: ResourcePaging;
 }
 
 // The scrolling body of the reading pane: the thread's loaded messages, oldest→
-// newest, each a collapsible card. The last (newest) card is expanded by
-// default. A thread longer than the loaded window offers "Load older messages"
-// above the first card.
-export function MessageList({ messages, older }: MessageListProps) {
+// newest (the newest-first window reversed), each a collapsible card keyed by
+// message id — so a page of older messages lands ABOVE the cards already shown
+// without remounting any of them. The last (newest) card is expanded by
+// default. A thread longer than the loaded pages offers "Load older messages"
+// above the first card, until the collection's 500 cap.
+export function MessageList({ newestFirst, older }: MessageListProps) {
+  const messages = [...newestFirst].reverse();
   if (messages.length === 0) {
     return (
       <Center axis="both">

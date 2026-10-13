@@ -5,9 +5,10 @@
  * database seeded with the real migration chain, through the REAL feed: the
  * real declarations compiled exactly as `collection.ts` serves them (the owner
  * joins attempt → task, the All list's `unless: "kind"` default), registered on
- * the server-core runtime, the change-feed's routed triggers installed from the
- * routes they registered (the first routed layouts on `conversations`,
- * `attempts` and `tasks`), its LISTEN consumer, and `routeChange`.
+ * a resource runtime of the suite's own, the change-feed's routed triggers
+ * installed from the routes they registered (the first routed layouts on
+ * `conversations`, `attempts` and `tasks`), its LISTEN consumer, and the
+ * feed's own routing (`createChangeRouter`).
  *
  * The tuples are the ones the surfaces subscribe: the All pane's default
  * segment, its Kind = System filter (the default dropped), a search over the
@@ -46,23 +47,16 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
-import {
-  routeChange,
-  type FeedChange,
-} from "@plugins/database/plugins/change-feed/server";
+import type { FeedChange } from "@plugins/database/plugins/change-feed/server";
 import {
   createChangeFeedListener,
+  createChangeRouter,
   rebuildTriggers,
 } from "@plugins/database/plugins/change-feed/server/testing";
 import {
-  defineResource,
-  notificationsWsHandler,
-  routedTableRequirements,
+  createResourceRuntime,
   type ResourceParams,
-  setRelationBases,
-} from "@plugins/framework/plugins/server-core/core";
-import { clearRelationBases } from "@plugins/framework/plugins/server-core/core/testing";
-import { createResourceRuntime } from "@plugins/framework/plugins/resource-runtime/core";
+} from "@plugins/framework/plugins/resource-runtime/core";
 import {
   makeClientView,
   type ClientView,
@@ -107,7 +101,16 @@ const truth = new Map<
   (params: ResourceParams) => Promise<unknown> | unknown
 >();
 
-const handler = notificationsWsHandler as unknown as {
+// The suite's OWN runtime, never server-core's process-global one:
+// `./singularity test` runs every bun suite in one process, and any suite that
+// loads `all-conversations/server` registers the real collections on the
+// global registry at module eval — so registering them there too throws
+// `defineResource: duplicate key`, whichever suite loads second (the
+// events-core source-runs oracle does the same, for the same reason).
+const runtime = createResourceRuntime();
+const routeChange = createChangeRouter(runtime);
+
+const handler = runtime.notificationsWsHandler as unknown as {
   open(ws: unknown): void;
   message(ws: unknown, raw: string): void;
   close(ws: unknown, code: number, reason: string): void;
@@ -153,18 +156,12 @@ const tupleKey = (key: string, params: ResourceParams) =>
   `${key} ${JSON.stringify(params)}`;
 
 beforeAll(async () => {
-  // What change-feed's boot installs before its listener starts (D34). This
-  // suite reaches only routed entries, but the legacy router runs on every
-  // change too, over whatever legacy read-sets other suites in this bun
-  // process left: with no bases set it would report on each one. No views
-  // matter here, so every relation is its own base.
-  setRelationBases((r) => [r]);
   testDb = await createTestDb({ prefix: "conv_lists_oracle" });
   await runMigrations(testDb.db);
   const db = testDb.db as unknown as QueryDb;
   // Both collections, compiled from the REAL declarations with the options
   // `collection.ts` serves them with, against this database — registered on
-  // the server-core runtime `routeChange` feeds, every loader run recorded.
+  // the suite's runtime `routeChange` feeds, every loader run recorded.
   // (No custom-column sets: none are contributed here.)
   const record =
     <P extends ResourceParams, R>(
@@ -200,7 +197,7 @@ beforeAll(async () => {
       collection.window,
       specs.window,
     ).serverOpts;
-    defineResource(collection.window, {
+    runtime.defineResource(collection.window, {
       ...windowOpts,
       loader: record(collection.key, windowOpts.loader),
     });
@@ -211,7 +208,7 @@ beforeAll(async () => {
     allConversations.rows,
     all.rows,
   ).serverOpts;
-  defineResource(allConversations.rows, {
+  runtime.defineResource(allConversations.rows, {
     ...rowsOpts,
     loader: record(allConversations.rows.key, rowsOpts.loader),
   });
@@ -222,7 +219,7 @@ beforeAll(async () => {
   await rebuildTriggers(
     testDb.db,
     { feedExempt: new Set(), optedOut: new Set(), produced: new Set() },
-    routedTableRequirements(),
+    runtime.routedTableRequirements(),
   );
   listener = createChangeFeedListener({
     connectionString: () => testDb.connectionString,
@@ -250,7 +247,6 @@ beforeAll(async () => {
 }, 60_000);
 
 afterAll(async () => {
-  clearRelationBases();
   handler.close(ws, 1000, "test");
   await listener?.stop();
   await testDb?.drop();

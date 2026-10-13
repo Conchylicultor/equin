@@ -71,7 +71,6 @@ const convs = () =>
     sortable: ["title", "createdAt"],
     default: { orderBy: [["createdAt", "desc"]], limit: 2 },
     maxLimit: 6,
-    scroll: true,
   });
 type C = ReturnType<typeof convs>;
 

@@ -6,9 +6,12 @@ import { MailMessageSchema } from "@plugins/apps/plugins/mail/plugins/mail-core/
 // one thread's window of it (`useLive(threadMessages, { where: { threadId } })`).
 // The default window is the NEWEST 100 (`internalDate desc`, max 500): a
 // reading pane most needs a long thread's latest replies, so the pane reverses
-// the window for display (oldest→newest) and `loadMore` pages OLDER messages.
-// A message with no internal date (rare) sorts last under `desc` — so in a
-// thread longer than the window it shows only once the window has grown to it.
+// the window for display (oldest→newest) and `loadMore` splits off the next
+// key-range page of OLDER messages (pages, never a reload of the ones shown).
+// A documented bounded exception to DataView: the pane reads ONE thread, so the
+// 500 cap stays (`loadMore` stops at it). A message with no internal date
+// (rare) sorts last under `desc` — so in a thread longer than one page it shows
+// only once paging has reached it.
 //
 // The `threadId` filter is immutable (a message never changes threads) and
 // `internalDate` is insert-immutable, so an in-place update — a flag flip, a

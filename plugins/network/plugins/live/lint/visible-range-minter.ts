@@ -49,9 +49,8 @@ export default createRule({
         "`useLivePagesPaging` (it calls `useLive` with the viewport the " +
         "DataView measures) and hand its `paging` to the DataView drawing " +
         "the rows; a list with no DataView reads `useLive(c, query)` with no " +
-        "viewport — of a `scroll: true` collection or a paged value, every " +
-        "page live, capped at `maxLimit`; of any other collection, one " +
-        "window whose `limit` grows — see " +
+        "viewport — a collection's window or a paged value, every page " +
+        "live, capped at `maxLimit` — see " +
         "plugins/network/plugins/live/CLAUDE.md (Paged reads).",
     },
   },

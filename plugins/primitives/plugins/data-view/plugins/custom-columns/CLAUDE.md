@@ -65,7 +65,7 @@ how the caller obtained it.
   `data_view_custom_values` once per column it names (a join FAMILY, one route: an
   alias on `row_key`, kept to the surface's rows, matched per tuple on the columns
   it reads), each value read through its type's cast (`resolveFieldValueTextCast`,
-  whose `sqlType` a scroll cut casts back through). The members are the surface's
+  whose `sqlType` a page cut casts back through). The members are the surface's
   definitions as its config says NOW (read at request time). The field extension,
   handed `liveColumnScope`, binds each filterable or sortable column
   (`scopedLiveColumns(scope, CUSTOM_COLUMNS_SET, …).column(id)`), declared in the

@@ -11,10 +11,10 @@ every CLI process. **Never import this plugin's `server` barrel from CLI code.**
 
 ## Collections (`core`)
 
-| collection | rows | default window |
+| collection | rows | read as |
 |---|---|---|
-| `opsInFlight` (`op-store.in-flight`) | `closed_by IS NULL` — boot-preloaded | `requestedAt asc`, 200 (max 500) |
-| `opsHistory` (`op-store.history`) | every stored op (30-day retention) | `requestedAt desc`, 500 (max 2000) |
+| `opsInFlight` (`op-store.in-flight.all`) | `closed_by IS NULL` — boot-preloaded | the whole set (`all`), `requestedAt asc` |
+| `opsHistory` (`op-store.history`) | every stored op (30-day retention) | a window, `requestedAt desc`, 500 (max 2000) |
 
 Both serve `OpRowSchema`: the reducer's `OpFoldState` flattened onto columns plus
 `closedWaitMs` (sum of the closed waits). The open wait's elapsed time is not
@@ -86,15 +86,14 @@ filesystem event; the 30 s tick is what notices it.
 
 ## Plugin reference
 
-- Description: Op-store web presence: eagerly registers the boot-critical op-store.in-flight live collection so boot-snapshot can hydrate it before first paint. Op-log read model: every serving backend ingests the host-global op-log.jsonl (and its rotations) into its own op_log_ops table behind a durable (inode, offset) cursor committed with the rows, reconciles in-flight ops whose process is gone (main appends a reconciler terminal to the log; a worktree closes locally only after an ingest gap), and serves the rows as the opsInFlight and opsHistory live collections, with a 30-day retention sweep.
+- Description: Op-store web presence: eagerly registers the boot-critical op-store.in-flight.all live collection so boot-snapshot can hydrate it before first paint. Op-log read model: every serving backend ingests the host-global op-log.jsonl (and its rotations) into its own op_log_ops table behind a durable (inode, offset) cursor committed with the rows, reconciles in-flight ops whose process is gone (main appends a reconciler terminal to the log; a worktree closes locally only after an ingest gap), and serves the rows as the opsInFlight and opsHistory live collections, with a 30-day retention sweep.
 - Server:
   - Contributes:
     - `resource.declare` "op-store.history"
     - `resource.declare` "op-store.history:groups"
     - `resource.declare` "op-store.history:rows"
-    - `resource.declare` "op-store.in-flight"
-    - `resource.declare` "op-store.in-flight:groups"
-    - `resource.declare` "op-store.in-flight:rows"
+    - `resource.declare` "op-store.in-flight.all"
+    - `resource.declare` "op-store.in-flight.all:rows"
   - Uses:
     - `database.db`
     - `database/derived-updated-at.deriveUpdatedAt`
@@ -118,9 +117,8 @@ filesystem event; the 30 s tick is what notices it.
     - `op-store.history` (keyed, window)
     - `op-store.history:groups` (push)
     - `op-store.history:rows` (keyed, point)
-    - `op-store.in-flight` (keyed, window)
-    - `op-store.in-flight:groups` (push)
-    - `op-store.in-flight:rows` (keyed, point)
+    - `op-store.in-flight.all` (keyed)
+    - `op-store.in-flight.all:rows` (keyed, point)
 - Core:
   - Uses:
     - `debug/profiling/op-log.OpenWait`

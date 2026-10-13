@@ -72,7 +72,7 @@ export async function loadTriggers(): Promise<TriggerRow[]> {
   return out;
 }
 
-// The emit() log over `event_emissions`: its scroll window (newest first) and
+// The emit() log over `event_emissions`: its window (newest first) and
 // its `:rows` / `:groups` siblings. Every stored column is on the wire — the
 // row is the entity (`EmissionRow`) bound by name, plus `match`, the one
 // computed field: `matched_count = 0`, the same fact `matchedCount` states, so

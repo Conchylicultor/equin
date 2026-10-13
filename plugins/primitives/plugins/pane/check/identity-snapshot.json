@@ -463,6 +463,12 @@
       "parent": null
     },
     {
+      "paneId": "notifications",
+      "segment": "notifications",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "page-detail",
       "segment": "page/:pageId",
       "appIndex": false,

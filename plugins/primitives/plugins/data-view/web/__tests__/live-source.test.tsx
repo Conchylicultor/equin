@@ -103,7 +103,6 @@ const threads = () =>
     sortable: ["subject", "lastMessageAt", "folder"],
     default: { orderBy: [["lastMessageAt", "desc"]], limit: 2 },
     maxLimit: 6,
-    scroll: true,
   });
 type C = ReturnType<typeof threads>;
 

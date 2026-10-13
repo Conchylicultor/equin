@@ -123,8 +123,8 @@ export const DEAD_JOBS_ARCHIVE_CAP = 2000;
 /**
  * Debug → Queue's Dead tab: the dead-letter archive as a live collection — a
  * bounded window, newest archived first (200, grown to at most
- * `DEAD_JOBS_ARCHIVE_CAP`), plus its `:rows` / `:groups` siblings. Declared
- * `scroll` so it backs a live DataView: search runs over `jobName` /
+ * `DEAD_JOBS_ARCHIVE_CAP`), plus its `:rows` / `:groups` siblings. It backs
+ * a live DataView (key-range pages): search runs over `jobName` /
  * `lastError`, `jobName` is a facet (a `:groups` grouping of the whole
  * archive), and `attempts` / `diedAt` / `archivedAt` filter and sort. The
  * archive is trimmed to `DEAD_JOBS_ARCHIVE_CAP` rows, so a `contains` over
@@ -145,7 +145,6 @@ export const deadJobs = liveCollection("dead-jobs", {
   sortable: ["archivedAt", "diedAt", "jobName", "attempts"],
   default: { orderBy: [["archivedAt", "desc"]], limit: 200 },
   maxLimit: DEAD_JOBS_ARCHIVE_CAP,
-  scroll: true,
 });
 
 // ─── Run history (see server/internal/run-stats.ts) ────────────────────────
@@ -184,51 +183,35 @@ export const JobRunRowSchema = z.object({
   /**
    * How long the run waited for a worker slot: `startedAt − queuedAt` in ms,
    * floored at 0 (the two come from different clocks). Not a stored column —
-   * the served collection computes it in SQL, so it filters and sorts on the
-   * server. NULL when `queuedAt` is.
+   * the served collection computes it in SQL. NULL when `queuedAt` is.
    */
   waitMs: z.number().nullable(),
 });
 export type JobRunRow = z.infer<typeof JobRunRowSchema>;
 
 /**
- * The ceiling of a `jobRuns` window: the WHOLE run history. `job_runs` is a
- * ring of `RECENT_RUNS_RING` (20) runs per job name, so it holds at most
- * 20 × (job names ever run) rows — about 2100 on main. 5000 leaves room for the
- * job count to more than double before a fully grown window stops being the
- * whole table, and keeps a `contains` over `error` a scan of a few thousand
- * rows at worst.
+ * Debug → Queue's run history: EVERY recorded run, as the whole ordered set
+ * (`all`, newest finished first) plus its `:rows` point sibling. Its one
+ * reader, the Jobs list, merges it with the live graphile queue on the client
+ * and filters, sorts and groups the merge there — so it needs every run, and a
+ * window would silently drop the oldest past its edge. Bounded by the table: a
+ * per-job ring of `RECENT_RUNS_RING` (20) runs (server/internal/tables.ts), so
+ * 20 × (job names ever run) rows — about 1,800 on main. No poll and no notify:
+ * `job_runs` is a public table, so the change feed routes each finished run's
+ * write (an insert, or an overwrite of the ring slot it lands in) to the set.
+ *
+ * The key is `job-runs.all`, not the old window's `job-runs`: no bundle ever
+ * declared this key with another contract, so a tab on an older one gets
+ * `unknown-key` (a `skew` verdict) and never parses these rows.
  */
-export const JOB_RUNS_MAX_LIMIT = 5000;
-
-/**
- * Debug → Queue's run history: every recorded run, as a live collection — a
- * bounded window, newest finished first (100, grown to at most
- * `JOB_RUNS_MAX_LIMIT`, which is the whole ring), plus its `:rows` /
- * `:groups` siblings. Declared `scroll` so it backs a live DataView: search
- * over `jobName` / `error`, `jobName` / `outcome` / `hold` facets (groupings
- * of the whole history), `durationMs` / `waitMs` / the two timestamps filter
- * and sort. Bounded by construction: the table is a per-job ring
- * (server/internal/tables.ts). No poll and no notify: `job_runs` is a public
- * table, so the change feed moves every subscribed window when a finished run
- * is written (an insert, or an overwrite of the ring slot it lands in).
- */
-export const jobRuns = liveCollection("job-runs", {
+export const jobRuns = liveCollection("job-runs.all", {
   row: JobRunRowSchema,
   id: "id",
-  filterable: {
-    jobName: liveText(),
-    outcome: liveText(JobRunOutcomeSchema),
-    hold: liveText(HoldClassSchema),
-    error: liveText(),
-    durationMs: liveNumber(),
-    waitMs: liveNumber(),
-    attempt: liveNumber(),
-    startedAt: liveInstant(),
-    finishedAt: liveInstant(),
+  all: {
+    orderBy: [["finishedAt", "desc"]],
+    unbounded: {
+      reason:
+        "a ring of 20 per job name, and the Jobs list merges and filters every run on the client",
+    },
   },
-  sortable: ["finishedAt", "startedAt", "durationMs", "waitMs", "jobName"],
-  default: { orderBy: [["finishedAt", "desc"]], limit: 100 },
-  maxLimit: JOB_RUNS_MAX_LIMIT,
-  scroll: true,
 });

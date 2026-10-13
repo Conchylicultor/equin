@@ -6,9 +6,10 @@
  * `GET /api/release/latest` + `release.history-revision` tick — on a throwaway
  * database seeded with the real migration chain, through the REAL feed: the
  * real `releaseHistory` declaration compiled as `release-runs-resource.ts`
- * serves it (this namespace's runs only), registered on the server-core
- * runtime, the change-feed's routed triggers installed from the routes it
- * registered, its LISTEN consumer, and `routeChange`.
+ * serves it (this namespace's runs only), registered on a resource runtime of
+ * the suite's own, the change-feed's routed triggers installed from the routes
+ * it registered, its LISTEN consumer, and the feed's own routing
+ * (`createChangeRouter`).
  *
  * A seeded random workload of the engine's own writes runs one statement at a
  * time: a release claimed (INSERT — in this namespace or another, whose rows a
@@ -33,22 +34,16 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
-import {
-  routeChange,
-  type FeedChange,
-} from "@plugins/database/plugins/change-feed/server";
+import type { FeedChange } from "@plugins/database/plugins/change-feed/server";
 import {
   createChangeFeedListener,
+  createChangeRouter,
   rebuildTriggers,
 } from "@plugins/database/plugins/change-feed/server/testing";
 import {
-  defineResource,
-  notificationsWsHandler,
-  routedTableRequirements,
+  createResourceRuntime,
   type ResourceParams,
-  setRelationBases,
-} from "@plugins/framework/plugins/server-core/core";
-import { clearRelationBases } from "@plugins/framework/plugins/server-core/core/testing";
+} from "@plugins/framework/plugins/resource-runtime/core";
 import {
   makeClientView,
   type ClientView,
@@ -80,7 +75,17 @@ const truth = new Map<
   (params: ResourceParams) => Promise<unknown> | unknown
 >();
 
-const handler = notificationsWsHandler as unknown as {
+// The suite's OWN runtime, never server-core's process-global one:
+// `./singularity test` runs every bun suite in one process, and any suite that
+// loads `release/server` (directly, or through a barrel import of a plugin
+// that reads it) registers the real `release.history` on the global registry
+// at module eval — so registering it there too throws `defineResource:
+// duplicate key`, whichever suite loads second (the events-core source-runs
+// oracle does the same, for the same reason).
+const runtime = createResourceRuntime();
+const routeChange = createChangeRouter(runtime);
+
+const handler = runtime.notificationsWsHandler as unknown as {
   open(ws: unknown): void;
   message(ws: unknown, raw: string): void;
   close(ws: unknown, code: number, reason: string): void;
@@ -121,18 +126,12 @@ const FOREIGN_NS = "singularity";
 const COMPOSITIONS = ["comp-a", "comp-b"] as const;
 
 beforeAll(async () => {
-  // What change-feed's boot installs before its listener starts (D34). This
-  // suite reaches only routed entries, but the legacy router runs on every
-  // change too, over whatever legacy read-sets other suites in this bun
-  // process left: with no bases set it would report on each one. No views
-  // matter here, so every relation is its own base.
-  setRelationBases((r) => [r]);
   testDb = await createTestDb({ prefix: "release_latest_oracle" });
   await runMigrations(testDb.db);
   // The collection's resources, compiled from the REAL declaration with the
   // options `release-runs-resource.ts` serves it with (its base predicate over
   // a fixed namespace: a test process declares none) — registered on the
-  // server-core runtime `routeChange` feeds, every loader run recorded. No
+  // suite's runtime `routeChange` feeds, every loader run recorded. No
   // custom-column sets: none are contributed here.
   const specs = compileCollection(releaseHistory, {
     from: _releaseRuns,
@@ -156,7 +155,7 @@ beforeAll(async () => {
     releaseHistory.window,
     specs.window,
   ).serverOpts;
-  defineResource(releaseHistory.window, {
+  runtime.defineResource(releaseHistory.window, {
     ...windowOpts,
     loader: record(releaseHistory.key, windowOpts.loader),
   });
@@ -165,7 +164,7 @@ beforeAll(async () => {
   await rebuildTriggers(
     testDb.db,
     { feedExempt: new Set(), optedOut: new Set(), produced: new Set() },
-    routedTableRequirements(),
+    runtime.routedTableRequirements(),
   );
   listener = createChangeFeedListener({
     connectionString: () => testDb.connectionString,
@@ -193,7 +192,6 @@ beforeAll(async () => {
 }, 60_000);
 
 afterAll(async () => {
-  clearRelationBases();
   handler.close(ws, 1000, "test");
   await listener?.stop();
   await testDb?.drop();
@@ -268,7 +266,7 @@ const T0 = Date.parse("2026-10-01T00:00:00.000Z");
 describe("release.history at limit 1 — the newest run, scoped differential oracle", () => {
   test("the collection routes release_runs", () => {
     expect(
-      routedTableRequirements().some((r) => r.table === "release_runs"),
+      runtime.routedTableRequirements().some((r) => r.table === "release_runs"),
     ).toBe(true);
   });
 

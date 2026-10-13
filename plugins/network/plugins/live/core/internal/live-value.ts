@@ -416,7 +416,7 @@ export interface LivePagedSpec<Item, Meta> {
  * A KEY-RANGE-PAGED external value: one page per tuple `{ q, limit, after?,
  * until? }` (the question, the page's limit and its cuts — server-minted row
  * keys), its payload the page's items, each carrying its `$key`. Read through
- * `useLive` like a scroll collection's window: with a viewport, the pages near
+ * `useLive` like a collection's window: with a viewport, the pages near
  * it live and no depth limit; without one, every page live, capped at
  * `maxLimit` items. No `schema` (it is derived), no `params`, no preload;
  * served `source: "external"` only — a paged Postgres list is a
@@ -576,7 +576,7 @@ export type LivePagedPages<
   /**
    * A page is a KEYED window (D3): each item identified by its `paged.id`,
    * so a change reaches the page as a keyed delta and a page can be seeded
-   * from the items other pages of its question hold — exactly a scroll
+   * from the items other pages of its question hold — exactly a
    * collection's window.
    */
   keyed: { keyOf: (row: unknown) => string };

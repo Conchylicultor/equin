@@ -10,7 +10,7 @@ import {
 
 /**
  * The threads list's live collection: `mail_threads`, read by the DataView as
- * live key-range pages (`scroll: true`) and kept fresh by the routed change
+ * live key-range pages and kept fresh by the routed change
  * feed — a thread write refills exactly that thread in the live pages that hold (or
  * now admit) it, with no revision tick and no refetch of the loaded pages.
  *
@@ -49,7 +49,6 @@ export const mailThreads = liveCollection("mail.threads", {
   sortable: ["subject", "lastMessageAt", "messageCount"],
   default: { orderBy: [["lastMessageAt", "desc"]], limit: 100 },
   maxLimit: 500,
-  scroll: true,
   columnScope: "mail-threads",
 });
 

@@ -79,9 +79,13 @@ interface FakeDataViewProps {
   viewOptions?: { list?: { leading?: (row: never) => ReactNode } };
 }
 
-vi.mock("@plugins/primitives/plugins/data-view/web", async () => {
+// Partial: the rest of the barrel stays real, so a module this band reaches
+// that builds a DataView source at load (the notifications pane, reached
+// through another plugin's barrel) still evaluates.
+vi.mock("@plugins/primitives/plugins/data-view/web", async (importOriginal) => {
   const { createElement } = await import("react");
   return {
+    ...(await importOriginal<object>()),
     defineDataView: (id: string) => id,
     DataView: (props: FakeDataViewProps) => {
       const frame = props.toolbar?.frame;

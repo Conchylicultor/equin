@@ -222,7 +222,7 @@ describe("preloadedKeysIn", () => {
       });
       export const lazy = liveCollection("lazy", {
         row: S, id: "id", filterable: {}, sortable: ["name"],
-        default: { orderBy: [["name", "asc"]], limit: 1 }, maxLimit: 1,
+        default: { orderBy: [["name", "asc"]], limit: 1 }, maxLimit: 2,
         preload: "none",
       });
     `;

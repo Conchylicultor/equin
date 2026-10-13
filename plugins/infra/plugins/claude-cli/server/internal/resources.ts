@@ -13,7 +13,7 @@ import {
 import { _claudeCliCalls } from "./tables";
 import { listCallsFor, parseOccurredAt } from "./list-calls";
 
-// The call log over `claude_cli_calls`: its scroll window (newest first,
+// The call log over `claude_cli_calls`: its window (newest first,
 // filterable / searchable — see the collection), its `:rows` point sibling and
 // the `:groups` the pane's Source / Model facets read. The table row and
 // `ClaudeCliCall` both derive from the single `claudeCliCallFields` record

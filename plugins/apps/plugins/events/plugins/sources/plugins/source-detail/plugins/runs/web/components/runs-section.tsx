@@ -28,8 +28,8 @@ import { RunRow } from "./run-row";
 const RUNS_VIEW = defineDataView("events.source-runs");
 
 /**
- * The live source: the `events.source-runs` window, read as a scroll (the
- * ledger keeps 30 days, past one window on a short cadence). "Which run said
+ * The live source: the `events.source-runs` window, read as live key-range
+ * pages (the ledger keeps 30 days, past one window on a short cadence). "Which run said
  * that" is the one thing anyone searches a ledger for, so the search box
  * matches the error and the outcome.
  */

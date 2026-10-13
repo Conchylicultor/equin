@@ -33,15 +33,19 @@ sub-page cascade wipe — see
   disagree. Returns the entry id for the domain to stamp onto its flagged rows
   (e.g. `page_blocks.trash_entry_id`), making restore an exact
   `WHERE trash_entry_id = :id` with no subtree re-walk.
-- **Endpoints** — `GET /api/trash/:sourceId`,
-  `POST /api/trash/:sourceId/:entryId/{restore,purge}`. A consumed (already
+- **Endpoints** — `GET /api/trash/:sourceId` (for agents / curl; the UI reads
+  the live collection), `POST /api/trash/:sourceId/:entryId/{restore,purge}`. A consumed (already
   restored/purged) entry is a typed `404`, never a silent no-op; an
   unregistered source id is a LOUD throw (config error). Action-before-delete
   ordering makes both retryable: a failing `restore`/`purge` leaves the entry.
 - **`trashEntries` live collection** (`core/resources.ts`, key
-  `trash-entries`) — the ledger as a bounded window, newest-deleted first (100,
-  grown to at most 500), `filterable: { sourceId }`; a source's trash is
-  `useLive(trashEntries, { where: { sourceId } })`. Served by
+  `trash-entries`) — the ledger as a bounded window, newest-deleted first
+  (pages of 100; at most 500 rows to a reader with no viewport),
+  `filterable: { sourceId, label }`; a source's trash is
+  `useLive(trashEntries, { where: { sourceId } })`, or — as the Pages Trash
+  dialog lists it — a DataView over
+  `liveDataSource(trashEntries, { searchable: ["label"] }).scoped({ where: { sourceId } })`,
+  which pages by its viewport with no depth cap. Served by
   `serveCollection(trashEntries, { from: _trashEntries })`. No hand-notify
   anywhere: the L4 change-feed on `trash_entries` moves every subscribed window
   on every mutation, in-process or not.

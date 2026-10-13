@@ -294,31 +294,41 @@ useLive(graphNodes, { select: countNodes });                          // a slice
     `PagedResourceResult<Row>`: `ResourceResult<Row[]>`
     (`status: "loading" | "error" | "ready"`, see `live-state/CLAUDE.md`) whose
     `ready` arm adds live-state's `ResourcePaging`: `canGrow`, `growing` and
-    `loadMore()`, never past `maxLimit` rows. How it grows depends on the
-    collection:
-    - **A scroll collection** (`scroll: true`) is read as key-range pages,
-      every one live: `loadMore()` splits the last page — one new page,
-      seeded — and page 0 is this same window tuple (*Paged reads* below).
-    - **A non-scroll collection, until P5** (task-1791593959-9liyj7 puts
-      `$key` on every window, then deletes this path): the window is ONE
-      tuple whose `limit` grows — `canGrow` is `rows.length === limit && limit
-      < maxLimit`, and `loadMore()` grows by one default page, clamped to
-      `maxLimit`. While a grown window loads the hook stays `ready` on the
-      previous rows (`growing: true`) — the previous tuple stays subscribed
-      only until the grown one has a value — so a list that already rendered
-      never flashes a spinner. A grow that FAILS before its first value is
-      the `error` arm with the previous window as `stale`. Each grow step is a
-      new tuple, a full load of the larger window.
+    `loadMore()`, never past `maxLimit` rows. Every window is read as
+    key-range pages, every one live (*Paged reads* below): page 0 is this
+    same window tuple (the one boot hydrates), and `loadMore()` SPLITS the
+    last page — one new page, seeded — never a reload of a larger window.
+    While the new page loads the hook stays `ready` on the rows it has
+    (`growing: true`), so a list that already rendered never flashes a
+    spinner. What a reader sees of it (P5 of
+    `research/2026-10-13-global-live-paging-followups-session2.md`, A.3):
+    - **The cap stops one step short** when `maxLimit` is not a multiple of
+      the step: a new page must fit under `maxLimit` rows whole, so a 200/500
+      window (the notifications popover) stops at 400; a 100/500 one reaches
+      500.
+    - **Any page's failure is the `error` arm**, with the rows shown as
+      `stale` — not only page 0's.
+    - **A boot-hydrated page 0** cannot seed its first split (its value is
+      the boot snapshot's, `appliedSeq` 0): the first `loadMore()` logs
+      `seed refused` and loads `(a, k]` in full — latency only.
+    - The readers whose `loadMore()` used to reload a larger window and now
+      splits: the pages trash, the bookmarks bar and start page, the
+      notifications popover and mail's "Load older". The API is unchanged.
   - A **grouping** — `{ groupBy, where?, limit? }` — returns the same
     `LiveListResult`, of `{ value: V | null; count: number }`. `groupBy` is any
     declared filterable column of a `text` / `number` / `boolean` domain, and
     `V` is the ROW field's type. Groups are ordered count descending, then value
     (code-point order); NULL is its own group, selected with
     `{ isEmpty: true }`. `orderBy` is a type error (the order is fixed). Default
-    limit 50, max `LIST_MAX`;
-    `canGrow` / `loadMore()` page through groups exactly like rows. `where`
-    applies as given — to keep every chip visible while one is picked, leave the
-    grouped column out of it.
+    limit 50, max `LIST_MAX`. A grouping is the one list read that is ONE
+    tuple whose `limit` grows: `canGrow` is `groups.length === limit && limit
+    < max`, and `loadMore()` reloads it at one more default page of groups,
+    clamped. While the grown tuple loads the hook stays `ready` on the
+    previous groups (`growing: true`) — the previous tuple stays subscribed
+    only until the grown one has a value — and a grow that FAILS before its
+    first value is the `error` arm with the previous groups as `stale`.
+    `where` applies as given — to keep every chip visible while one is
+    picked, leave the grouped column out of it.
   - A **total** — `{ count: true, where? }` — on a collection declared
     `count: true`: `ResourceResult<number>`, how many rows match `where`
     (see *Totals*). A `null` query (and collection) reads nothing (pending):
@@ -383,9 +393,9 @@ A read of "more rows" than one bounded tuple holds is **key-range pages**:
 each page is one bounded tuple `(after, until]` at a `limit`, the pages tile
 the order by server-minted cuts, and the pages are planned by ONE pure planner
 (`shared/page-plan.ts`) read by ONE hook (`web/internal/use-pages.ts`) behind
-ONE entry point, `useLive`. Two kinds of source page this way — a collection
-declared `scroll: true` (its window) and a value declared `paged` (an external
-source's items) — and they plug in through one seam
+ONE entry point, `useLive`. Two kinds of source page this way — every
+collection's window and a value declared `paged` (an external source's items)
+— and they plug in through one seam
 (`web/internal/page-source.ts`), never into the planner or the hook. Design:
 research/2026-10-09-global-live-key-range-pages-v2.md (the plan, the
 viewport, the stale budget and its placeholders, seeded derivation) and
@@ -418,9 +428,8 @@ collections and values — D1–D3 below).
   `maxLimit` such a reader always had. The cap is the boundedness rule, not
   a second mechanism. Only the viewport mode has placeholders and per-page
   notices — different STATES, hence its own result shape; the plain mode
-  keeps the list result every window read hands out. A non-scroll
-  collection's plain window read still grows its `limit` (*Read* above) until
-  task-1791593959-9liyj7's P5 puts `$key` on every window.
+  keeps the list result every window read hands out. No window read grows
+  by reloading a larger window: only a grouping does (*Read* above).
 - **D3 — one runtime path.** Every page is a keyed window membership entry
   whatever its source; the source decides only how a change ARRIVES —
   Postgres as a routed change carrying the affected ids (a collection's
@@ -435,15 +444,17 @@ collections and values — D1–D3 below).
   socket only under the same one, and a derivation asked under another
   protocol loads in full — `protocol-skew`).
 
-### Collections — `scroll: true`
+### Collections — every window
 
-- **Declare.** `scroll: true` needs `maxLimit ≥ 2 · default.limit` (a
-  declaration throw): a page that splits is read at `2 · default.limit`, a step
-  of headroom over the rows it holds. `maxLimit` bounds one page's `limit`; it is
-  no depth bound under a viewport. The collection is typed
-  `LiveScrollCollection` (`scroll: true`), which is what `useLive`'s paged
-  read and `liveDataSource` take.
-- **`$key` — the server-minted row key.** Every full and scoped row of a scroll
+- **Declare.** There is nothing to declare: every window pages (P5 of
+  `research/2026-10-13-global-live-paging-followups-session2.md` deleted the
+  old `scroll: true` flag — a stray one is a tsc error). A window needs
+  `maxLimit ≥ 2 · default.limit` (a declaration throw): a page that splits is
+  read at `2 · default.limit`, a step of headroom over the rows it holds.
+  `maxLimit` bounds one page's `limit`; it is no depth bound under a viewport.
+  `LiveCollection` is what `useLive`'s paged read and `liveDataSource` take
+  (a lookup-only or `all` collection has no window: a tsc error).
+- **`$key` — the server-minted row key.** Every full and scoped row of every
   window carries `$key`: the canonical JSON array of the tuple's order keys as
   exact Postgres text (`col::text` — a µs `timestamptz`, a long `numeric`, a
   `float8` cross exactly), then the id (omitted when the order already names it).
@@ -453,9 +464,12 @@ collections and values — D1–D3 below).
   (`useLive` splits it off, one copy per row object).
 - **Cuts.** A window tuple may carry `after` (exclusive) and `until` (inclusive)
   — each a `$key` verbatim, never derived on the client (a decoded row lost the
-  exact text). The codec refuses them on a collection not declared `scroll`, and
-  decodes them strictly (exactly the order's arity, a non-NULL id, canonical
-  JSON). The compiler renders them on the ORDER side over the tuple's own keys
+  exact text). The codec decodes them strictly (exactly the order's arity, a
+  non-NULL id, canonical JSON), on every window. `serveCollection` hands
+  query-resource the key block for every window (the window spec's required
+  `rowKey`: the cuts, the page family `familyOf`, the key field), so any
+  window's page may be derived from pages of its query, and a point spec
+  cannot spell one (tsc). The compiler renders them on the ORDER side over the tuple's own keys
   (keyset's `seekPredicate` / `atOrBeforePredicate`, each operand cast back to its
   column's type) — never through `where`, so a sortable-but-not-filterable order
   column takes cuts, and the routes and roles are those of the tuple without them.
@@ -464,7 +478,7 @@ collections and values — D1–D3 below).
 
 A read paged over an EXTERNAL source (an archive, a provider, a list held in
 memory) whose items have positions to cut at. A paged Postgres list is a
-scroll collection, never this.
+collection's window, never this.
 
 ```ts
 // core/
@@ -551,7 +565,7 @@ useLive(metricDetails.meta, selector);           // the per-question sibling: Re
 
 ### The read — `useLive(source, query, { viewport? })`
 
-`source` is a scroll collection or a paged value; the overloads are
+`source` is a collection (its window) or a paged value; the overloads are
 appended after the window and grouping ones, so a window query's `where:
 or(…)` keeps its contextual typing. Below, "`default.limit`" is the source's
 step — a collection's `default.limit`, a value's `paged.limit` (or the read's
@@ -599,11 +613,9 @@ step — a collection's `default.limit`, a value's `paged.limit` (or the read's
   page a live insert pushes past them is dropped (the one before it
   becomes the last). Its result is the plain `LiveListResult` (a page's
   failure under the rows shown is the `error` arm with them as `stale`).
-  Every plain window read of a scroll collection reads it this way (e.g.
+  Every plain window read reads it this way (e.g.
   `use-conversations.ts`, `recovery-view.tsx`, `use-release-info.ts`,
-  `song-library.tsx`). A
-  non-scroll collection keeps the window's limit growth (*Read* above,
-  until P5).
+  `song-library.tsx`, the notifications popover).
 - **Both modes** — the plan's mechanics (*Liveness*, *The stale budget* and
   the placeholders apply under a viewport only; without one every page is live):
   - **One call site, one kind of read.** `useLive` holds the kind its first
@@ -628,7 +640,7 @@ step — a collection's `default.limit`, a value's `paged.limit` (or the read's
     (live-state's seeded derivation): the server answers from the snapshots it
     holds when the sources are pages of the same query (the codec's
     `familyOf`: the `where` and `order`, served as the window's
-    `scroll.familyOf`) and quiescent at the version sliced — no load, a
+    `rowKey.familyOf`) and quiescent at the version sliced — no load, a
     value-less `sub-ack` the client fills with its slice — and loads the tuple
     whole otherwise. The hook subscribes a seeded page before it releases the
     pages it replaces (`useResources` observes the new tuples first), so the
@@ -716,7 +728,8 @@ step — a collection's `default.limit`, a value's `paged.limit` (or the read's
     loading. A `null` collection and query read nothing (a surface whose origin is
     not live still calls the hook, so its hook order is fixed).
   - **Logs.** The `live-pages` channel records the plan's shape as it changes
-    (`pages=N live=M`), a collapse, and a read that stops short — and three
+    (`pages=N live=M` — only once it says something: under a viewport, or
+    past one page; a plain window read that never paged writes none), a collapse, and a read that stops short — and three
     signals that decide follow-ups (research/2026-10-12-global-live-paging-followups.md):
     - `overflow-split gap Nms` — from the commit an overflow split mints its
       rest page (`(m, b]`, read whole: `reconcile`'s `overflowed`) to the
@@ -926,12 +939,13 @@ DataView surface (research/2026-09-29-global-scoped-change-routing.md P3).
 
 A collection declared with `arms: { discriminator }` lists rows of several
 KINDS — each served from its own table — in one window (the runs of every run
-kind): `liveCollection(key, { row, id, arms: { discriminator: "kind" }, scroll:
-true, filterable, sortable, default, maxLimit })`. Its id is the union row key
+kind): `liveCollection(key, { row, id, arms: { discriminator: "kind" },
+filterable, sortable, default, maxLimit })`. Its id is the union row key
 `kind:raw` (query-resource's `armKeyCodec`).
 
-- **The overload (T12).** `scroll: true` is required (a union is listed as a
-  live DataView); `contributed` and `columnScope` are `never` — a union's
+- **The overload (T12).** A union is a window like any other (read as
+  key-range pages, listed as a live DataView); `contributed` and
+  `columnScope` are `never` — a union's
   column vocabulary is its arms' static handles. The discriminator is a row
   field (tsc) other than the id. An untyped caller's stray field throws. The
   collection is `LiveArmsCollection` (`arms` set); every single-table
@@ -1428,7 +1442,7 @@ never add one.
 - Typed-query value: `{ q: string }` — the question's `canonicalJson` (a
   paged value's meta sibling too). Paged value: `{ q: string; limit: string;
   after?: string; until?: string }` — the question, the page's limit and its
-  cuts, exactly a scroll window's (server-minted `$key`s, verbatim; absent at
+  cuts, exactly a collection window's (server-minted `$key`s, verbatim; absent at
   the order's start / end), so page 0 at the declared limit is `{ q, limit }`.
 - Decode is STRICT for all of them: the filter through `decodeFilter` (throws
   unless exactly canonical), the rest by re-encoding — so one logical query
@@ -1438,7 +1452,7 @@ never add one.
 
 ## Plugin reference
 
-- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); a scroll collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; LiveExposures.Register registers an entity extension's exposed fields (with their cells) for every list whose collection reaches its entity, read by useExposures. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+- Description: Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; LiveExposures.Register registers an entity extension's exposed fields (with their cells) for every list whose collection reaches its entity, read by useExposures. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
 - Web:
   - Slots: `LiveExposures.Register`
   - Slot contributors:
@@ -1477,8 +1491,8 @@ never add one.
     - `useLive`
     - `useLiveRow`
 - Server:
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/query-resource` ×22
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/query-resource` ×23
     - `database/sql-column` ×2
     - `network/live/filter.filterSql`
   - Exports (types):
@@ -1621,7 +1635,6 @@ never add one.
     - `LiveRowSchema`
     - `LiveRowsCollection`
     - `LiveScopedColumns`
-    - `LiveScrollCollection`
     - `LiveSnapshotBrand`
     - `LiveSortDirection`
     - `LiveTooLarge`
@@ -1654,8 +1667,8 @@ never add one.
     - `liveValue`
     - `scopedLiveColumns`
 - Cross-plugin:
-  - Imported by: 221 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×62
+  - Imported by: 220 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×61
     - `conversations` ×35
     - `tasks` ×26
     - `debug` ×23

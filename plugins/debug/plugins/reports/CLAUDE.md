@@ -6,8 +6,9 @@ never hidden here. A crash is the first `kind` of report; future kinds (e.g. slo
 operations) appear here too.
 
 Opened from the Debug sidebar ("Reports"). The list is a live DataView over
-`reportsList` (`reports.list`, declared in `@plugins/reports/core`): a scroll
-collection whose sort / filter / search compile to SQL server-side, with the
+`reportsList` (`reports.list`, declared in `@plugins/reports/core`): a
+collection read as live key-range pages, whose sort / filter / search compile
+to SQL server-side, with the
 Kind and Source filter options read live as its facets (a grouping of the whole
 table, value-sorted). The detail pane — and its route resolve — reads one row
 with `useLiveRow(reportsList, id)`.

@@ -19,7 +19,11 @@ export function usePagesViewport(): {
   viewport: VisibleRange;
   sink: DataViewViewportSink;
 } {
-  const [viewport, setViewport] = useState<VisibleRange>(MEASURING);
+  // Minted lazily, never at module load: a test that hand-mocks the live
+  // barrel (without `mintVisibleRange`) must still import data-view.
+  const [viewport, setViewport] = useState<VisibleRange>(() =>
+    mintVisibleRange({ kind: "measuring" }),
+  );
   const sink = useMemo(
     (): DataViewViewportSink => ({
       report: (rows: DataViewVisibleRows) =>
@@ -40,8 +44,6 @@ function sameRows(a: VisibleRange, b: DataViewVisibleRows): boolean {
     (a.first === b.first && a.last === b.last)
   );
 }
-
-const MEASURING = mintVisibleRange({ kind: "measuring" });
 
 /** A sink for a paging that pages by no viewport (one bounded read, a section not read yet). */
 export const NO_VIEWPORT: DataViewViewportSink = { report: () => {} };

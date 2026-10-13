@@ -39,7 +39,7 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 /**
  * A Postgres type name, optionally an array of one (`text`, `double
- * precision`, `text[]`) — interpolated raw into casts (a scroll cut's
+ * precision`, `text[]`) — interpolated raw into casts (a page cut's
  * operand), so it is checked at declaration.
  */
 export const SQL_TYPE_RE = /^[A-Za-z][A-Za-z0-9_ ]*(\[\])?$/;

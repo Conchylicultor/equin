@@ -21,10 +21,9 @@ const scrolled = (limit: number) =>
     sortable: ["endedAt", "title"],
     default: { orderBy: [["endedAt", "desc"]], limit },
     maxLimit: 4 * limit,
-    scroll: true,
   });
 
-describe("pageSourceOf — a scroll collection", () => {
+describe("pageSourceOf — a collection's window", () => {
   it("page 0 of the empty question is the default tuple (boot-snapshot equality)", () => {
     for (const limit of [1, 20, 100]) {
       const c = scrolled(limit);
@@ -38,7 +37,6 @@ describe("pageSourceOf — a scroll collection", () => {
       sortable: ["endedAt"],
       default: { orderBy: [["endedAt", "desc"]], limit: 50 },
       maxLimit: 500,
-      scroll: true,
       count: true,
       preload: "boot",
     });

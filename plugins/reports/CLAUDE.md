@@ -32,7 +32,7 @@ occurrences inside it only bump `count`.
 
 ## Readers are live; the table's change source is a producer
 
-Every reader reads `reports.list` (`core/resources.ts`), a scroll
+Every reader reads `reports.list` (`core/resources.ts`), a
 `liveCollection` served by `serveCollection` (`server/internal/list-resource.ts`):
 the Reports DataView's window, the detail pane's by-id row (`useLiveRow`, its
 `:rows`) and the kind / source filter options (its `:groups`, read as DataView

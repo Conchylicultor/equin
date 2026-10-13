@@ -37,6 +37,33 @@ measured row of `columns` cards, the count read off an `aria-hidden h-0` probe g
 `VirtualRows` self-discovers the pane's scroll parent and folds the sticky chrome
 into its measured `scrollMargin`, so the two compose with no wiring.
 
+Each section's grid is its own component (`GalleryGrid`), so it measures its own
+column count and records its own layout.
+
+## Paged: a release never moves a card to another column
+
+A paged read releases far pages into placeholders above the grid
+(`DataViewRenderProps.placeholders` for the flat read, `section.paging` for a
+declared section). A page boundary rarely falls on a line boundary, so without
+help the first surviving card would restart in column 0 and every card below it
+would reflow. The band keeps its phase instead (data-view's `useGridPhase`): it
+records the absolute cell index each card was drawn at, and while pages stand
+above it starts with `index mod columns` empty spacer cells
+(`aria-hidden data-grid-pad`, no `data-row-key` — the viewport, anchoring and
+selection never see them). The placeholder is as tall as the lines the page
+took, so every card stays exactly where it was. With nothing released above,
+the band starts at column 0 (in memory, a client search narrowing the cards
+never pads). A paged band mounts the probe in both branches, so the column count
+is known in the render a release happens in.
+
+Windowed lines are keyed by ABSOLUTE line, `line:<n>@<columns>`, so a release or
+a landing keeps every mounted line's DOM; a live insert at the read's head still
+reflows the cards after it (a true reflow). Pinned by
+`web/__tests__/paged-phase.test.tsx` (the view alone) and
+`web/__tests__/paged-conformance.test.tsx` (through the real body: data-view's
+`describePagedConformance`, plain and windowed); deployed, by `data-view/e2e/live-pages-scroll.ts
+--view gallery` (no row changes its x).
+
 ## Options
 
 `options` (= `viewOptions.gallery`) is a `GalleryViewOptions<TRow>`:
@@ -93,8 +120,8 @@ hand-roll a *button* inside the body. It just has no card to own.
 - Description: Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
 - Web:
   - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×20
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×22
     - `primitives/css/ui-kit` ×2
     - `primitives/row-actions` ×2
     - `primitives/css/badge.Badge`

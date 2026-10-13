@@ -1,5 +1,5 @@
 /**
- * A scroll collection's `$key` against a real Postgres: a row key is the exact
+ * A window's `$key` against a real Postgres: a row key is the exact
  * text of each order key, so a cut at a row splits the order exactly AT that
  * row — for the types a decoded row would round: a `timestamptz` with µs the
  * driver reads as a ms `Date`, a long `numeric`, and a `float8` a naive text
@@ -55,7 +55,6 @@ const collection = liveCollection("test.live.scroll-key-roundtrip", {
   sortable: ["t", "num", "f", "b"],
   default: { orderBy: [["t", "asc"]], limit: 10 },
   maxLimit: 30,
-  scroll: true,
 });
 
 // Values that collide once rounded: four instants inside ONE millisecond,

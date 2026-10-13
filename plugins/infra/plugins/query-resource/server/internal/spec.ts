@@ -114,20 +114,25 @@ export interface WindowOrderKey {
 }
 
 /**
- * The declarative input to `compileWindowQuery` / `windowQueryResource` — a bounded-membership
- * (window / point) read. Exactly
- * ONE of `window` / `point` must be declared, and it must match the descriptor
- * kind — a `liveCollection`'s window (`c.window`) or its `:rows` point sibling
- * (`c.rows`), which `serveCollection` (network/live) compiles through here.
+ * The declarative input to `compileWindowQuery` / `windowQueryResource` — a
+ * bounded-membership read, of one of two kinds matching the descriptor's: a
+ * `liveCollection`'s window (`c.window`, {@link WindowQueryResourceSpec}) or
+ * its `:rows` point sibling (`c.rows`, {@link PointQueryResourceSpec}), which
+ * `serveCollection` (network/live) compiles through here. Each kind holds only
+ * its own fields — a point spec cannot spell an order, a row key or a family
+ * (tsc) — and `windowQueryResource`'s overloads pair each with its descriptor.
  * There is deliberately NO `limit` / `recompute` / `scopedMembership` here:
  * the bound comes from the subscription params (clamped to `maxLimit`), and
  * membership is always incremental. Nor `edges`: the compiled resource is
  * ROUTED (its routes name the table it reads), and a routed entry takes no
  * cascade — it routes the tables it reads itself.
  */
-export interface WindowQueryResourceSpec<
+export type BoundedQueryResourceSpec<
   P extends ResourceParams = ResourceParams,
-> {
+> = WindowQueryResourceSpec<P> | PointQueryResourceSpec<P>;
+
+/** What both kinds of a bounded spec read: the relation set, its projection and its scope. */
+interface BoundedSpecBase<P extends ResourceParams> {
   /** The table to read: a base table, or an entity. Never a view (see `RoutedSource`). */
   from: RoutedSource;
   /**
@@ -138,25 +143,6 @@ export interface WindowQueryResourceSpec<
    * explicit (`select`), each joined column rendered against its alias.
    */
   joins?: readonly JoinSpec[];
-  /**
-   * Join FAMILIES (see `JoinFamily`, `core/`): side tables joined once per
-   * MEMBER a tuple's `where` / order names — a DataView surface's custom
-   * columns. The caller renders a member's value through its own plan
-   * (`JoinPlan.readMember`, over these same family objects); this compiler joins
-   * exactly the members a tuple's SQL references, emits ONE route per family,
-   * and reads it as `membership` with a `match` on the members that tuple reads.
-   * A member a tuple orders by is projected under `valuesKey` (an object keyed
-   * by the member's join alias) so the tuple's order signature sees it move.
-   * Window kind only.
-   */
-  families?: { joins: readonly JoinFamily[]; valuesKey: string };
-  /**
-   * External upstream tuples whose change moves this compile's vocabulary (the
-   * members a family may name, how their values cast): passed to the runtime as
-   * the routed entry's `recomputeOn` — every subscribed tuple recomputes FULL
-   * and its read-set memo is dropped.
-   */
-  recomputeOn?: ReadonlyArray<RoutedRecomputeOn>;
   /**
    * Overrides the derived pk (the table's single primary). For `point`,
    * `point.by` IS the identity pk. A pk that is not the table's primary key
@@ -186,15 +172,53 @@ export interface WindowQueryResourceSpec<
    */
   whereReads?: readonly (PgColumn | SQL)[];
   /**
-   * Window total order — REQUIRED for `window`, forbidden for `point` (point
-   * sets are unordered). Static keys, or a per-params resolver
+   * The wire row, derived IN JS from each selected row — every row a loader
+   * returns (full, scoped refill and point) goes through it, so the order
+   * signature reads the encoded row too. For a column whose stored form cannot
+   * cross the JSON wire as is (a `bytea`: sql-column's `withWire`); never done
+   * in SQL, where `encode(…, 'base64')` folds lines at 76 chars.
+   */
+  encodeRow?: (row: Record<string, unknown>) => Record<string, unknown>;
+  /** Fixed-window trailing debounce (ms) for this resource's flushes. */
+  debounceMs?: number;
+  /** Test seam. Defaults to the real per-worktree drizzle `db`. */
+  db?: QueryDb;
+}
+
+/**
+ * The window kind: an ordered, bounded window whose every tuple may be one
+ * key-range page of a paged read (`rowKey`).
+ */
+export interface WindowQueryResourceSpec<
+  P extends ResourceParams = ResourceParams,
+> extends BoundedSpecBase<P> {
+  /**
+   * Join FAMILIES (see `JoinFamily`, `core/`): side tables joined once per
+   * MEMBER a tuple's `where` / order names — a DataView surface's custom
+   * columns. The caller renders a member's value through its own plan
+   * (`JoinPlan.readMember`, over these same family objects); this compiler joins
+   * exactly the members a tuple's SQL references, emits ONE route per family,
+   * and reads it as `membership` with a `match` on the members that tuple reads.
+   * A member a tuple orders by is projected under `valuesKey` (an object keyed
+   * by the member's join alias) so the tuple's order signature sees it move.
+   */
+  families?: { joins: readonly JoinFamily[]; valuesKey: string };
+  /**
+   * External upstream tuples whose change moves this compile's vocabulary (the
+   * members a family may name, how their values cast): passed to the runtime as
+   * the routed entry's `recomputeOn` — every subscribed tuple recomputes FULL
+   * and its read-set memo is dropped.
+   */
+  recomputeOn?: ReadonlyArray<RoutedRecomputeOn>;
+  /**
+   * The window's total order. Static keys, or a per-params resolver
    * (`(params) => WindowOrderKey[]`, like `where`) for a client-chosen sort: the
    * compiler resolves it per subscription tuple and memoizes the rendered
    * ORDER BY per canonical order (column name + dir + nullable). Either way the
    * pk tiebreaker and NULLS LAST are appended. A resolver REQUIRES
    * `signatureColumns`.
    */
-  orderBy?:
+  orderBy:
     WindowOrderKey | WindowOrderKey[] | ((params: P) => WindowOrderKey[]);
   /**
    * Every column a tuple's order may read — REQUIRED with a function
@@ -208,15 +232,15 @@ export interface WindowQueryResourceSpec<
    */
   signatureColumns?: (PgColumn | SQL)[];
   /**
-   * Ordered-window kind. `maxLimit` clamps every subscription's decoded
-   * `limit` (the loader AND `windowIdsOf`, identically). It may instead come
-   * from the descriptor (`contract.window.maxLimit`); when both are given they
-   * must be equal, and at least one is required. The default limit lives ONLY
-   * on the descriptor (the `liveCollection`'s `default.limit`) — the single
-   * source both the client read and the boot path use; the compiler asserts
+   * `maxLimit` clamps every subscription's decoded `limit` (the loader AND
+   * `windowIdsOf`, identically). It may instead come from the descriptor
+   * (`contract.window.maxLimit`); when both are given they must be equal, and
+   * at least one is required. The default limit lives ONLY on the descriptor
+   * (the `liveCollection`'s `default.limit`) — the single source both the
+   * client read and the boot path use; the compiler asserts
    * `defaultLimit <= maxLimit` at module eval.
    */
-  window?: {
+  window: {
     maxLimit?: number;
     /**
      * The subscription's decoded limit, when the descriptor's codec cannot
@@ -236,21 +260,6 @@ export interface WindowQueryResourceSpec<
     validateParams?: (params: ResourceParams) => void;
   };
   /**
-   * Explicit point-set kind. `by` is the column the subscribed id set matches —
-   * it IS the resource's identity pk (the change-feed routes by intersecting
-   * changed identity ids with each tuple's set, so any other column could
-   * never intersect). Redundant `identity.pk`, if given, must equal it.
-   */
-  point?: { by: PgColumn };
-  /**
-   * The wire row, derived IN JS from each selected row — every row a loader
-   * returns (full, scoped refill and point) goes through it, so the order
-   * signature reads the encoded row too. For a column whose stored form cannot
-   * cross the JSON wire as is (a `bytea`: sql-column's `withWire`); never done
-   * in SQL, where `encode(…, 'base64')` folds lines at 76 chars.
-   */
-  encodeRow?: (row: Record<string, unknown>) => Record<string, unknown>;
-  /**
    * How a projected field is read off an ENCODED row — what the order
    * signature reads. Default `row[field]`; an `encodeRow` that moves a field
    * (a collection folding contributed columns into `$columns`) says where it
@@ -258,10 +267,10 @@ export interface WindowQueryResourceSpec<
    */
   readField?: (row: Record<string, unknown>, field: string) => unknown;
   /**
-   * A scroll window (window kind only): a tuple may be one SEGMENT of a deep
-   * scroll — its order cut by an exclusive `after` and an inclusive `until`
-   * row key — and every full / scoped row carries its own row key in
-   * `keyField`, so a client can cut the order at a row without re-deriving it.
+   * Every tuple may be one key-range PAGE of a paged read — its order cut by
+   * an exclusive `after` and an inclusive `until` row key — and every full /
+   * scoped row carries its own row key in `keyField`, so a client can cut the
+   * order at a row without re-deriving it.
    *
    * A row key is the canonical JSON array of the tuple's order keys (the
    * declared ones, then the pk unless one already is) as exact Postgres text
@@ -272,7 +281,7 @@ export interface WindowQueryResourceSpec<
    * back to its column's type), never through `where`: they read only order
    * columns, which the routes and the per-tuple signature already cover.
    */
-  scroll?: {
+  rowKey: {
     /** The tuple's cuts, each exactly one value per order key (the codec checked it). */
     cutsOf: (params: P) => {
       after?: readonly (string | null)[];
@@ -290,8 +299,29 @@ export interface WindowQueryResourceSpec<
     /** A row key's JSON over this many bytes is projected as `null`. */
     maxKeyBytes: number;
   };
-  /** Fixed-window trailing debounce (ms) for this resource's flushes. */
-  debounceMs?: number;
-  /** Test seam. Defaults to the real per-worktree drizzle `db`. */
-  db?: QueryDb;
+  point?: never;
+}
+
+/**
+ * The point-set kind: an explicit id set, unordered (entrants append) — so
+ * nothing to order, sign, cut or key, and no `where` / order to name a family
+ * member: every window-only field is `never`.
+ */
+export interface PointQueryResourceSpec<
+  P extends ResourceParams = ResourceParams,
+> extends BoundedSpecBase<P> {
+  /**
+   * `by` is the column the subscribed id set matches — it IS the resource's
+   * identity pk (the change-feed routes by intersecting changed identity ids
+   * with each tuple's set, so any other column could never intersect).
+   * Redundant `identity.pk`, if given, must equal it.
+   */
+  point: { by: PgColumn };
+  window?: never;
+  orderBy?: never;
+  signatureColumns?: never;
+  families?: never;
+  recomputeOn?: never;
+  readField?: never;
+  rowKey?: never;
 }

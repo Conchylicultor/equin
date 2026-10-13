@@ -1,4 +1,8 @@
-import type { IterResult, BootBenchRunResponse } from "../../shared/endpoints";
+import type {
+  IterResult,
+  BootBenchRunResponse,
+  SnapshotBytes,
+} from "../../shared/endpoints";
 
 export interface Stat {
   min: number;
@@ -27,12 +31,18 @@ export function min(xs: number[]): number {
 
 export function median(xs: number[]): number {
   if (xs.length === 0) throw new Error("median of empty array");
-  return percentile([...xs].sort((a, b) => a - b), 50);
+  return percentile(
+    [...xs].sort((a, b) => a - b),
+    50,
+  );
 }
 
 export function p95(xs: number[]): number {
   if (xs.length === 0) throw new Error("p95 of empty array");
-  return percentile([...xs].sort((a, b) => a - b), 95);
+  return percentile(
+    [...xs].sort((a, b) => a - b),
+    95,
+  );
 }
 
 export function stat(xs: number[]): Stat {
@@ -73,6 +83,9 @@ export interface ModeAggregate {
   // The mode's `live_state_snapshot` bloat, captured once at the start of the set
   // (attached by buildReport — not aggregated over iterations).
   snapshotBloat?: ModeBloat;
+  // The mode's boot-snapshot bytes (total / per key / row-key bytes per row),
+  // captured once at the start of the set (attached by buildReport).
+  snapshotBytes?: SnapshotBytes;
 }
 
 type ModeBloat = NonNullable<BootBenchRunResponse["snapshotBloat"]>["cold"];
@@ -162,7 +175,10 @@ export function aggregateMode(iters: IterResult[]): ModeAggregate {
     }
     firstSubscribe[k] =
       loaderMs.length > 0
-        ? { loaderMs: stat(loaderMs), onFirstSubscribeMs: stat(onFirstSubscribeMs) }
+        ? {
+            loaderMs: stat(loaderMs),
+            onFirstSubscribeMs: stat(onFirstSubscribeMs),
+          }
         : null;
   }
 
@@ -182,7 +198,9 @@ export function aggregateMode(iters: IterResult[]): ModeAggregate {
   return {
     iterations: iters.length,
     bootSnapshotTotalMs: stat(iters.map((it) => it.bootSnapshot.totalMs)),
-    bootSnapshotPersistedReadMs: stat(iters.map((it) => it.bootSnapshot.persistedReadMs)),
+    bootSnapshotPersistedReadMs: stat(
+      iters.map((it) => it.bootSnapshot.persistedReadMs),
+    ),
     bootSnapshotPerKey,
     firstSubscribe,
     eventLoopMaxMs: stat(iters.map((it) => it.eventLoop.maxMs)),
@@ -199,11 +217,18 @@ export interface BootBenchReport {
 }
 
 export function buildReport(res: BootBenchRunResponse): BootBenchReport {
-  // Attach each mode's once-per-set bloat capture (not aggregated over iterations).
+  // Attach each mode's once-per-set captures — bloat and snapshot bytes (not
+  // aggregated over iterations).
   const cold = res.runs.cold ? aggregateMode(res.runs.cold) : undefined;
-  if (cold && res.snapshotBloat?.cold) cold.snapshotBloat = res.snapshotBloat.cold;
+  if (cold && res.snapshotBloat?.cold)
+    cold.snapshotBloat = res.snapshotBloat.cold;
+  if (cold && res.snapshotBytes?.cold)
+    cold.snapshotBytes = res.snapshotBytes.cold;
   const warm = res.runs.warm ? aggregateMode(res.runs.warm) : undefined;
-  if (warm && res.snapshotBloat?.warm) warm.snapshotBloat = res.snapshotBloat.warm;
+  if (warm && res.snapshotBloat?.warm)
+    warm.snapshotBloat = res.snapshotBloat.warm;
+  if (warm && res.snapshotBytes?.warm)
+    warm.snapshotBytes = res.snapshotBytes.warm;
 
   return {
     fixtures: res.fixtures,

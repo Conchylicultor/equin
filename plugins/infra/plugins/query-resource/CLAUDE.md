@@ -571,7 +571,7 @@ row's wire shape are the caller's.
 - **Total order.** The tuple's keys, then the row key. Inside an arm a constant
   key orders nothing and is dropped from its ORDER BY, but the cut (keyset
   `seekPredicate` / `atOrBeforePredicate`) runs over every key, constants
-  included, each operand cast to the column's type. The scroll row key is the
+  included, each operand cast to the column's type. The row key is the
   outer `u."__c<i>"::text` of each key — the union's own text.
 - **A14 at bind:** kinds unique and `KIND_RE`; `id` the base table's
   single-column primary key; every column's `sqlType` a type name, and every
@@ -606,7 +606,7 @@ each member reads. A window spec takes them as `families: { joins, valuesKey }`
   `row[valuesKey]` by join alias, where its order signature reads it (the
   signature universe `signatureColumns` is static; members are not in it).
   `whereReads` does not apply to members: their route's columns are the family's.
-- A cast member's scroll cut casts back through the expression's own SQL type
+- A cast member's page cut casts back through the expression's own SQL type
   (`JoinPlan.sqlTypeOf`), not its raw column's. A per-tuple order is memoized by
   its keys' RENDERING (an expression key by its object and SQL type), not by
   relation and column name — a retyped member keeps its alias and column but
@@ -713,7 +713,12 @@ reproduces whatever the refactor broke.
 The bounded-working-set compiler: the subscription's params tuple names a
 **bounded selector**, so a change costs O(changed) + O(window), never
 O(collection), and the value is never the whole table. Two kinds, one compiler —
-exactly ONE of `window` / `point` per spec, matching the descriptor kind. What
+two spec TYPES, `WindowQueryResourceSpec` (`window`, `orderBy` and `rowKey`
+required, the window-only `signatureColumns` / `families` / `recomputeOn` /
+`readField` beside them) and `PointQueryResourceSpec` (`point`, every
+window-only field `never`), so a point spec cannot spell an order, a row key
+or a family (tsc); `windowQueryResource`'s overloads pair each with its
+descriptor kind, and the module-eval guards stay for an untyped caller. What
 `serveCollection` derives for a collection `c` over a table (never written by
 hand):
 
@@ -725,6 +730,7 @@ windowQueryResource(c.window, {
   orderBy: (params) => decoded.orderBy,      // { col, dir, nullable }[], per tuple
   signatureColumns,                          // every sortable column
   window: {},                                // maxLimit rides the descriptor's codec
+  rowKey: { cutsOf, familyOf, keyField: "$key", maxKeyBytes },  // every window pages
 });
 windowQueryResource(c.rows, {
   from: table,
@@ -745,12 +751,12 @@ see *Routes* above):
   (the ids-only windowed query — same where/order/limit as the loader, so the
   membership authority cannot drift from it), and `orderSignatureOf`, emitted as
   `membership: { kind: "window", windowIdsOf, orderSignatureOf, limitOf,
-  familyOf? }` — `limitOf` the same clamped limit (required by the runtime: a
+  familyOf }` — `limitOf` the same clamped limit (required by the runtime: a
   window holding fewer rows is not full, so its exits need no `windowIdsOf`)
-  and, for a scroll window, `familyOf` its `scroll.familyOf`, which together
-  let the runtime derive a fresh tuple from rows other tuples of the same query
-  hold (resource-runtime's *Seeded derivation*; the union window states both,
-  its `window.familyOf` required). `orderBy` is
+  and `familyOf` its `rowKey.familyOf`, which together let the runtime derive
+  a fresh tuple from rows other tuples of the same query hold
+  (resource-runtime's *Seeded derivation*; the union window states both, its
+  `window.familyOf` required). `orderBy` is
   `{ col, dir }` pairs, not raw SQL: the compiler appends the pk tiebreaker (a
   window must be a prefix of a strict total order) and renders explicit
   `NULLS LAST`, and a future cursor derives its keyset seek
@@ -790,18 +796,19 @@ query (content-only updates stay on the zero-ids-query in-place path), so prefer
 mostly-stable order columns for very hot rows. The mutable-`where` rule above does
 NOT apply here: a where-flip is a detected membership exit/entry.
 
-**Scroll pages (`scroll`).** A window spec may declare `scroll: { cutsOf,
-familyOf, keyField, maxKeyBytes }` (network/live passes it for a collection declared
-`scroll: true`): each tuple may be one key-range page of a paged read — its order cut
-by an exclusive `after` and an inclusive `until` row key — and every full and
-scoped row carries its own row key in `keyField`. `familyOf` names the query a
-page belongs to (one string for every page of it, whatever its cuts and limit:
-network/live's codec reads its `where` and `order`) — only a scroll window
-states one, so only a page derives. ONE key list per tuple order
+**Key-range pages (`rowKey`).** Every window spec declares `rowKey: { cutsOf,
+familyOf, keyField, maxKeyBytes }` (required by the window kind; network/live
+passes it for every collection window): each tuple may be one key-range page of
+a paged read — its order cut by an exclusive `after` and an inclusive `until`
+row key — and every full and scoped row carries its own row key in `keyField`.
+`familyOf` names the query a page belongs to (one string for every page of it,
+whatever its cuts and limit: network/live's codec reads its `where` and
+`order`), so any window's page may be derived. ONE key list per tuple order
 (the declared keys, then the pk unless one already is) feeds the ORDER BY, the
 cuts and the row keys, so the three cannot disagree. The row key is the
-canonical JSON of each key's `col::text` (projected under `__row_key_<i>` and
-folded in JS, `null` over `maxKeyBytes`); cuts render on the order side
+canonical JSON of each key's `col::text` (projected under `__row_key_<i>` by
+the full and scoped loads — never by `windowIdsOf` — and folded in JS, `null`
+over `maxKeyBytes`); cuts render on the order side
 (`primitives/keyset`'s `seekPredicate` for `after`, `atOrBeforePredicate` for
 `until`, each operand cast `$n::<the key column's type>`), ANDed after the
 tuple's `where` has been checked against its `whereReads` universe — so a
@@ -827,7 +834,8 @@ comes from the params; membership is always incremental); bounded resources are 
 fallback loader at the descriptor's `defaultParams` — the identical tuple a
 bare `useLive(c)` subscribes to. `defaultLimit` lives ONLY on the descriptor
 (the client default and the boot default must be one number); the spec carries
-at most `maxLimit`. Every misuse (window+point, missing `orderBy`,
+at most `maxLimit`. Every misuse (window+point, missing `orderBy` or `rowKey`,
+an order / row key / family on a point spec,
 `defaultLimit > maxLimit`, spec/descriptor `maxLimit` disagreement, a function
 `orderBy` without `signatureColumns`, an unprojected signature column, kind/descriptor drift, `point.by` ≠ identity pk,
 `queryPk` ≠ derived keyField) throws at module eval — a bad spec is a boot crash,
@@ -891,6 +899,7 @@ importing `db` never touches a worktree — no test env shim needed.
     - `CompiledGroups`
     - `CompiledUnion`
     - `EntitySource`
+    - `PointQueryResourceSpec`
     - `QueryDb`
     - `ReadColumn`
     - `RoutedSource`

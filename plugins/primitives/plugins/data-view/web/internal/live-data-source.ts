@@ -4,7 +4,7 @@ import {
   type Filter,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import type {
-  LiveScrollCollection,
+  LiveCollection,
   LiveWhere,
 } from "@plugins/network/plugins/live/core";
 import type {
@@ -18,13 +18,13 @@ import type {
 // `core/internal/live-data-source.ts`).
 
 /**
- * Declare a live DataView source over a `scroll: true` collection (a
- * collection without it is a tsc error). `searchable` names the text columns
+ * Declare a live DataView source over a collection's window (a lookup-only or
+ * `all` collection has none: a tsc error). `searchable` names the text columns
  * the search box matches; `facets` the text columns whose values the Filter
  * control offers as options, read live (`LiveDataSource.facets`).
  */
 export function liveDataSource<Row, F, S extends string>(
-  collection: LiveScrollCollection<Row, F, S>,
+  collection: LiveCollection<Row, F, S>,
   opts: {
     searchable: readonly LiveSearchableColumn<F>[];
     facets?: readonly LiveFacetColumn<F>[];
@@ -55,11 +55,7 @@ export function liveDataSource<Row, F, S extends string>(
     );
   }
   const codec = collection.window.window;
-  const erased = collection as unknown as LiveScrollCollection<
-    Row,
-    unknown,
-    string
-  >;
+  const erased = collection as unknown as LiveCollection<Row, unknown, string>;
   const make = (scope: Filter | undefined): LiveDataSourceOf<Row, F> => ({
     kind: "live",
     collection: erased,

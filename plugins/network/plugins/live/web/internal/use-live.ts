@@ -24,7 +24,6 @@ import type {
   LivePlainValue,
   LiveQueryValue,
   LiveRowsCollection,
-  LiveScrollCollection,
   LiveValue,
   LiveValueOrigin,
 } from "@plugins/network/plugins/live/core";
@@ -38,28 +37,26 @@ import {
   type LiveValuePagesOptions,
 } from "./use-pages";
 import type { LivePagesQuery } from "./page-source";
-import { withoutWindowFields } from "./window-fields";
 
 // The read half of a `liveCollection`. A consumer asks a QUERY — a window
 // (`where` / `orderBy` / `limit`), a grouping (`groupBy`) or an explicit id set
 // — and never picks the wire resource or its params: the window goes to `key`,
 // a grouping to `:groups`, an id set to the `:rows` point sibling, and the
-// encoding is the declaration's own codec. A grouping is a window over the
-// grouped relation, so it shares the window's result and grow logic; only a
-// read whose result has different STATES (`useLiveRow`) gets its own hook.
+// encoding is the declaration's own codec. A window is read as key-range
+// pages; a grouping shares the window's list result, grown by its limit; only
+// a read whose result has different STATES (`useLiveRow`) gets its own hook.
 // A `liveValue` is read by the same hook: its result is `ResourceResult<T>`,
 // the states every read already has, so it gets no hook of its own.
 
 /**
- * A window read: the paged read every grow-able read with no viewport
- * returns, never past `maxLimit` rows. A scroll collection or a paged value
- * is read as key-range pages, every one live: `loadMore()` splits the last
- * page, and a page that fails under the rows shown is the error arm with
- * them as `stale`. Any other collection (until P5, task-1791593959-9liyj7)
- * is one tuple whose limit grows: `canGrow` is "the window is full and below
- * `maxLimit`", `loadMore()` grows it by one default page (clamped to
- * `maxLimit`), and a grow that FAILS is the error arm with the window it grew
- * from as `stale`.
+ * A list read: the paged read every grow-able read with no viewport returns,
+ * never past `maxLimit` rows. A collection's window or a paged value is read
+ * as key-range pages, every one live: `loadMore()` splits the last page, and
+ * a page that fails under the rows shown is the error arm with them as
+ * `stale`. A grouping is one tuple whose limit grows: `canGrow` is "the list
+ * is full and below `maxLimit`", `loadMore()` grows it by one default page
+ * (clamped to `maxLimit`), and a grow that FAILS is the error arm with the
+ * list it grew from as `stale`.
  */
 export type LiveListResult<
   Row,
@@ -144,12 +141,12 @@ export type LiveRowResult<Row> =
 type AnyDescriptor = ResourceDescriptor<unknown, Record<string, string>>;
 
 /**
- * A growable list query, reduced to what the grow logic needs: the resource,
- * how to encode it at a given limit, the limit asked for, and the step / cap a
+ * A grouping query, reduced to what the grow logic needs: the resource, how
+ * to encode it at a given limit, the limit asked for, and the step / cap a
  * grow moves by. `base` (the query WITHOUT its limit, canonically encoded)
  * identifies which list a grow belongs to.
  */
-interface ListShape {
+interface GroupShape {
   descriptor: AnyDescriptor;
   base: string;
   encode: (limit: number) => Record<string, string>;
@@ -158,34 +155,20 @@ interface ListShape {
   maxLimit: number;
 }
 
-function listShape<Row, F, S extends string>(
+function groupShape<Row, F, S extends string>(
   collection: LiveCollection<Row, F, S>,
-  query: LiveQuery<F, S> | LiveGroupQuery<F> | undefined,
-): ListShape {
-  if (query && "groupBy" in query && query.groupBy !== undefined) {
-    const codec = collection.groups.groups;
-    // `groupBy` present ⇒ the group arm (a window query types it `never`).
-    const groupQuery = query as LiveGroupQuery<F>;
-    // The WHOLE query goes to the codec (limit replaced), so a stray `orderBy`
-    // from an untyped caller throws there instead of being dropped here.
-    const encode = (limit: number) => codec.encode({ ...groupQuery, limit });
-    return {
-      descriptor: collection.groups as AnyDescriptor,
-      // `groupBy` rides in `base`, so a grow never outlives a change of column.
-      base: JSON.stringify(["groups", encode(1)]),
-      encode,
-      askedLimit: query.limit ?? codec.defaultLimit,
-      step: codec.defaultLimit,
-      maxLimit: codec.maxLimit,
-    };
-  }
-  const codec = collection.window.window;
-  const { where, orderBy, columns } = (query ?? {}) as LiveQuery<F, S>;
+  query: LiveGroupQuery<F>,
+): GroupShape {
+  const codec = collection.groups.groups;
+  // The WHOLE query goes to the codec (limit replaced), so a stray `orderBy`
+  // from an untyped caller throws there instead of being dropped here.
+  const encode = (limit: number) => codec.encode({ ...query, limit });
   return {
-    descriptor: collection.window as AnyDescriptor,
-    base: JSON.stringify(["window", codec.encode({ where, orderBy, columns })]),
-    encode: (limit) => codec.encode({ where, orderBy, columns, limit }),
-    askedLimit: query?.limit ?? codec.defaultLimit,
+    descriptor: collection.groups as AnyDescriptor,
+    // `groupBy` rides in `base`, so a grow never outlives a change of column.
+    base: JSON.stringify(encode(1)),
+    encode,
+    askedLimit: query.limit ?? codec.defaultLimit,
     step: codec.defaultLimit,
     maxLimit: codec.maxLimit,
   };
@@ -195,16 +178,20 @@ function listShape<Row, F, S extends string>(
  * Read a live collection. The QUERY's shape picks what is read — a consumer
  * never names a wire resource or its params.
  *
- * - `useLive(c)` / `useLive(c, { where, orderBy, limit })` — a bounded window.
- *   Its settled arm adds `canGrow` / `growing` / `loadMore()`; while a grown
- *   window loads, the hook STAYS settled on the previous rows (`growing: true`)
- *   — those rows are server-vouched and still subscribed — so `if (pending)`
- *   never flashes a spinner over a list that already rendered. A `scroll:
- *   true` collection's window is read as key-range pages (see below).
+ * - `useLive(c)` / `useLive(c, { where, orderBy, limit })` — a bounded window,
+ *   read as key-range pages, every one live (page 0 is this window tuple —
+ *   the one boot hydrates). Its settled arm adds `canGrow` / `growing` /
+ *   `loadMore()`: `loadMore()` splits the last page (one new page, seeded —
+ *   never a reload of a larger window), and it never pages past `maxLimit`
+ *   rows. While a new page loads the hook STAYS settled on the rows it has
+ *   (`growing: true`), so `if (pending)` never flashes a spinner over a list
+ *   that already rendered. Under a viewport, see below.
  * - `useLive(c, { groupBy, where?, limit? })` — the values a text / number /
  *   boolean filterable column takes (with counts), ordered by count desc then
- *   value; each value typed as the row field. The same list result
- *   as a window: `loadMore()` pages through groups.
+ *   value; each value typed as the row field. The same list result as a
+ *   window, but one tuple whose limit grows: `loadMore()` reloads the
+ *   grouping at one more page of groups, and while the grown one loads the
+ *   hook stays settled on the previous groups (`growing: true`).
  * - `useLive(c, { count: true, where? })` — how many rows match `where`, as
  *   `ResourceResult<number>`, kept live; only on a collection declared
  *   `count: true`. `null` in place of the query (or of both) reads nothing
@@ -276,20 +263,19 @@ export function useLive<Row, F, S extends string>(
   query: LiveCountQuery<F> | null,
 ): ResourceResult<number>;
 /**
- * - `useLive(scrollCollection, query, { viewport, resetKey? })` — a
- *   `scroll: true` collection read with no depth limit, its key-range pages
- *   kept live by the rows a surface has on screen (`viewport`, a branded
- *   `VisibleRange` only data-view mints): `LivePagesResult<Row>`, with
- *   per-page errors and the placeholders past the stale budget. `query` has no
- *   `limit` (the pages own the limits); `null` for both reads nothing
- *   (loading) with the hook order kept.
+ * - `useLive(c, query, { viewport, resetKey? })` — a collection's window read
+ *   with no depth limit, its key-range pages kept live by the rows a surface
+ *   has on screen (`viewport`, a branded `VisibleRange` only data-view mints):
+ *   `LivePagesResult<Row>`, with per-page errors and the placeholders past the
+ *   stale budget. `query` has no `limit` (the pages own the limits); `null`
+ *   for both reads nothing (loading) with the hook order kept.
  *
- *   Without a viewport, `useLive(scrollCollection, query?)` is the window
- *   overload above, read as the same pages, every one live: `loadMore()`
- *   splits the last page, and never pages past `maxLimit` rows.
+ *   Without a viewport, `useLive(c, query?)` is the window overload above,
+ *   read as the same pages, every one live: `loadMore()` splits the last
+ *   page, and never pages past `maxLimit` rows.
  */
 export function useLive<Row, F, S extends string>(
-  collection: LiveScrollCollection<Row, F, S> | null,
+  collection: LiveCollection<Row, F, S> | null,
   query: LivePagesQuery<F, S> | null,
   options: LivePagesOptions,
 ): LivePagesResult<Row>;
@@ -371,7 +357,7 @@ export function useLive<
 ): readonly LiveValueRead<V, T, C>[];
 /**
  * - `useLive(pagedValue, query, { viewport, resetKey? })` — a key-range-paged
- *   value (`liveValue(key, { query, paged })`) read like a scroll collection
+ *   value (`liveValue(key, { query, paged })`) read like a collection's window
  *   under a viewport: `LivePagesResult<Item>`, no depth limit. `null` for
  *   both reads nothing (loading).
  * - `useLive(pagedValue, query, { limit? })` — no viewport: every page live,
@@ -473,7 +459,7 @@ export function useLive<Row, F, S extends string>(
       // Before `null → count`: a paged read passes a `null` collection to
       // read nothing (a detached or sectioned DataView), keeping its hooks.
       return useViewportPages(
-        source as LiveScrollCollection<Row, F, S> | null,
+        source as LiveCollection<Row, F, S> | null,
         query as LivePagesQuery<F, S> | null,
         options as LivePagesOptions,
       );
@@ -529,14 +515,13 @@ export function useLive<Row, F, S extends string>(
       );
     case "all-pages":
       return useAllPages(
-        source as LiveScrollCollection<Row, F, S>,
+        source as LiveCollection<Row, F, S>,
         (query ?? undefined) as LiveQuery<F, S> | undefined,
       );
     case "collection":
       return useCollection(
         source as LiveCollection<Row, F, S> | LiveRowsCollection<Row>,
-        (query ?? undefined) as
-          LiveQuery<F, S> | LiveGroupQuery<F> | LiveIdsQuery | undefined,
+        query as LiveGroupQuery<F> | LiveIdsQuery,
       );
   }
   /* eslint-enable react-hooks/rules-of-hooks */
@@ -553,7 +538,7 @@ const READ_KIND = {
   "value-list": "list of value tuples",
   all: "whole `all` set",
   "all-pages": "window read (its pages every one live, no viewport)",
-  collection: "window, grouping or id set",
+  collection: "grouping or id set",
 } as const;
 type ReadKind = keyof typeof READ_KIND;
 
@@ -598,15 +583,13 @@ function readKindOf(
   if (query === null || (query !== undefined && "count" in query)) {
     return "count";
   }
-  // A window read of a scroll collection: its pages, every one live.
+  // Any other window read: its pages, every one live. A grouping and an id
+  // set are one tuple each.
   const isGroups =
     query !== undefined &&
     "groupBy" in query &&
     (query as { groupBy?: unknown }).groupBy !== undefined;
-  if ((source as { scroll?: boolean }).scroll === true && !isIds && !isGroups) {
-    return "all-pages";
-  }
-  return "collection";
+  return isIds || isGroups ? "collection" : "all-pages";
 }
 
 /** A source's key, for an error message. */
@@ -822,18 +805,23 @@ const SKIPPED_COUNT: ResourceDescriptor<number, Record<string, string>> = {
   },
 };
 
+/**
+ * A grouping (one tuple whose limit grows) or an explicit id set (the `:rows`
+ * point sibling, no paging fields). A window read never comes here: it is
+ * read as pages ({@link useAllPages}).
+ */
 function useCollection<Row, F, S extends string>(
   collection: LiveCollection<Row, F, S> | LiveRowsCollection<Row>,
-  query?: LiveQuery<F, S> | LiveGroupQuery<F> | LiveIdsQuery,
+  query: LiveGroupQuery<F> | LiveIdsQuery,
 ): LiveListResult<unknown> | ResourceResult<Row[]> {
-  const ids = query && "ids" in query ? query.ids : undefined;
-  // An id set reads `:rows` alone — it never touches the window codec, which a
-  // lookup-only collection does not have. A list query is typed to a full one.
+  const ids = "ids" in query ? query.ids : undefined;
+  // An id set reads `:rows` alone — it never touches the groups codec, which a
+  // lookup-only collection does not have. A grouping is typed to a full one.
   const shape =
     ids === undefined
-      ? listShape(
+      ? groupShape(
           collection as LiveCollection<Row, F, S>,
-          query as LiveQuery<F, S> | LiveGroupQuery<F> | undefined,
+          query as LiveGroupQuery<F>,
         )
       : null;
 
@@ -878,9 +866,8 @@ function useCollection<Row, F, S extends string>(
 
   // The list result keeps its identity (and so does `loadMore`) until what it
   // is built from changes, as `useResource`'s own results do between pushes:
-  // consumers memoize on it (a Set of ids built per row of a tree, say). Every
-  // input below is a primitive or one of those results — never `shape`, which
-  // `listShape` rebuilds on every render.
+  // consumers memoize on it. Every input below is a primitive or one of those
+  // results — never `shape`, which `groupShape` rebuilds on every render.
   const base = shape?.base ?? null;
   const step = shape?.step ?? 0;
   const maxLimit = shape?.maxLimit ?? 0;
@@ -889,23 +876,10 @@ function useCollection<Row, F, S extends string>(
     if (base === null || next === limit) return;
     setGrown({ base, from: limit, limit: next });
   }, [base, limit, step, maxLimit, setGrown]);
-  // A scroll collection's window rows carry `$key`, a scoped one's `$scoped`;
-  // a list read hands rows out without them (a grouping's rows never have one).
-  const strip =
-    shape !== null &&
-    shape.descriptor === (collection as { window?: unknown }).window &&
-    ((collection as { scroll?: boolean }).scroll === true ||
-      ((collection as { columnScope?: string | null }).columnScope ?? null) !==
-        null);
-  const rowsOf = useCallback(
-    (data: unknown[]): unknown[] =>
-      strip ? data.map(withoutWindowFields) : data,
-    [strip],
-  );
   const list = useMemo((): LiveListResult<unknown> => {
     switch (current.status) {
       case "ready": {
-        const data = rowsOf(current.data as unknown[]);
+        const data = current.data as unknown[];
         return {
           ...current,
           data,
@@ -915,13 +889,13 @@ function useCollection<Row, F, S extends string>(
         };
       }
       case "loading":
-        // A grow in flight stays READY on the rows it grew from — those are
+        // A grow in flight stays READY on the groups it grew from — those are
         // server-vouched and still subscribed — so the list never flashes a
-        // spinner over rows it already rendered.
+        // spinner over groups it already rendered.
         if (growUnsettled && previous.status === "ready") {
           return {
             status: "ready",
-            data: rowsOf(previous.data as unknown[]),
+            data: previous.data as unknown[],
             refetch: previous.refetch,
             canGrow: false,
             growing: true,
@@ -931,7 +905,7 @@ function useCollection<Row, F, S extends string>(
         return current as LiveListResult<unknown>;
       case "error":
         // A grow that failed before its first value: the error, with the
-        // window it grew from as `stale` (a surface can keep showing it).
+        // list it grew from as `stale` (a surface can keep showing it).
         if (
           growUnsettled &&
           current.stale === undefined &&
@@ -940,19 +914,13 @@ function useCollection<Row, F, S extends string>(
           return {
             status: "error",
             error: current.error,
-            stale: rowsOf(previous.data as unknown[]),
+            stale: previous.data as unknown[],
             refetch: current.refetch,
           };
         }
-        // The last-known rows on the error arm are handed out like ready
-        // ones — without the window fields.
-        return (
-          current.stale === undefined
-            ? current
-            : { ...current, stale: rowsOf(current.stale as unknown[]) }
-        ) as LiveListResult<unknown>;
+        return current as LiveListResult<unknown>;
     }
-  }, [growUnsettled, previous, current, limit, maxLimit, loadMore, rowsOf]);
+  }, [growUnsettled, previous, current, limit, maxLimit, loadMore]);
 
   if (shape === null) return current as ResourceResult<Row[]>;
   return list;

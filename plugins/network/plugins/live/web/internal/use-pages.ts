@@ -10,8 +10,8 @@ import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import {
   LIVE_ROW_KEY,
   type LivePagedValue,
+  type LiveCollection,
   type LiveQuery,
-  type LiveScrollCollection,
   type LiveValueOrigin,
 } from "@plugins/network/plugins/live/core";
 import { withoutWindowFields } from "./window-fields";
@@ -42,8 +42,8 @@ import {
   type PagesTruncation,
 } from "../../shared/page-plan";
 
-// The paged read `useLive` dispatches a `scroll: true` collection's window and
-// a paged value to — a live read built from KEY-RANGE pages
+// The paged read `useLive` dispatches a collection's window and a paged value
+// to — a live read built from KEY-RANGE pages
 // (`shared/page-plan`), each one bounded tuple. The hook reads its source
 // through the page-source seam (`./page-source`): which resource a page is a
 // tuple of, and how it encodes. The plan decides the pages and
@@ -193,7 +193,7 @@ const OVERFLOW_BATCHES = 8;
 type Observation = PageObservation<RowEntry, ResourceError>;
 
 /**
- * Read a `scroll: true` collection — or a paged value — as live key-range
+ * Read a collection's window — or a paged value — as live key-range
  * pages kept live by a viewport — `useLive(source, query, { viewport,
  * resetKey? })`. `query` is a collection's filter and order, a value's
  * question (`null` = nothing to read yet: loading, nothing read); the read
@@ -210,7 +210,7 @@ type Observation = PageObservation<RowEntry, ResourceError>;
  */
 export function useViewportPages<Row, F, S extends string, Meta, Q, QIn>(
   source:
-    | LiveScrollCollection<Row, F, S>
+    | LiveCollection<Row, F, S>
     | LivePagedValue<Row, Meta, Q, QIn, LiveValueOrigin>
     | null,
   query: LivePagesQuery<F, S> | null,
@@ -224,7 +224,7 @@ export function useViewportPages<Row, F, S extends string, Meta, Q, QIn>(
   return usePages(
     // Either kind: `pageSourceOf` dispatches on the declaration itself, and
     // the overloads have already paired each with its own query type.
-    pageSourceOf(source as LiveScrollCollection<Row, F, S> | null),
+    pageSourceOf(source as LiveCollection<Row, F, S> | null),
     query,
     {
       viewport: options.viewport,
@@ -235,7 +235,7 @@ export function useViewportPages<Row, F, S extends string, Meta, Q, QIn>(
 }
 
 /**
- * A plain window read of a `scroll: true` collection — `useLive(c, query?)`
+ * A plain window read of a collection — `useLive(c, query?)`
  * with no viewport — as key-range pages, every one live: the first page is
  * the window tuple a plain read always subscribed (`query.limit`, else the
  * default — so the boot snapshot's tuple still hydrates it), `loadMore()`
@@ -247,7 +247,7 @@ export function useViewportPages<Row, F, S extends string, Meta, Q, QIn>(
  * still shown (`stale`).
  */
 export function useAllPages<Row, F, S extends string>(
-  collection: LiveScrollCollection<Row, F, S>,
+  collection: LiveCollection<Row, F, S>,
   query: LiveQuery<F, S> | undefined,
 ): PagedResourceResult<Row> {
   const { limit, ...rest } = query ?? {};
@@ -273,8 +273,8 @@ export interface LiveValuePagesOptions {
  * A plain read of a paged value — `useLive(v, query | null, { limit? })` with
  * no viewport — as key-range pages, every one live: page 0 is `{ q, limit }`,
  * `loadMore()` splits the last page, and the read never pages past
- * `paged.maxLimit` items. Its result is the plain list result, as a scroll
- * collection's plain read: a page's failure under the items shown is the
+ * `paged.maxLimit` items. Its result is the plain list result, as a
+ * collection's plain window read: a page's failure under the items shown is the
  * `error` arm with them as `stale`.
  */
 export function useValuePages<Item, Meta, Q, QIn>(
@@ -684,11 +684,13 @@ function usePages<Row, Q, P extends Record<string, string>>(
   }, [liveReads, source]);
 
   // The plan's shape, logged as it changes: how deep the read is, and how
-  // much of it is live.
+  // much of it is live — once that says something: a read with no viewport
+  // on its one page (every plain window read that never paged) logs nothing.
+  const pageCount = readCurrent?.state.pages.length ?? 0;
   const shape =
-    readCurrent === null
+    readCurrent === null || (capped && pageCount <= 1)
       ? null
-      : `pages=${readCurrent.state.pages.length} live=${readCurrent.state.pages.filter((p) => p.live).length}`;
+      : `pages=${pageCount} live=${readCurrent.state.pages.filter((p) => p.live).length}`;
   useEffect(() => {
     if (shape === null) return;
     clientLog("live-pages", `[${source.key}] ${shape}`);

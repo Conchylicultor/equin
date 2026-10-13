@@ -12,7 +12,7 @@ import { _places, _placeTags } from "./tables";
 import { replaceDeletedTag } from "./tag-edits";
 
 // Tag CRUD. Every failure throws an `HttpError` (404 unknown tag, 400 a refused
-// edit); the rows reach the UI through the live `places.tags` collection.
+// edit); the rows reach the UI through the live `places.tags.all` collection.
 
 export async function listTags(): Promise<PlaceTag[]> {
   return db.select().from(_placeTags);

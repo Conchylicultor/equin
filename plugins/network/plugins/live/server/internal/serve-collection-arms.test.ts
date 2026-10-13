@@ -25,7 +25,6 @@ describe("serveCollection refuses a union collection", () => {
       row: Row,
       id: "runKey",
       arms: { discriminator: "kind" },
-      scroll: true,
       filterable: {},
       sortable: ["kind"],
       default: { orderBy: [["kind", "asc"]], limit: 10 },

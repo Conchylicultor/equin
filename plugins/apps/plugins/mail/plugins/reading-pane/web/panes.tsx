@@ -33,7 +33,9 @@ function useThreadTitle({
 }: {
   threadId: string;
 }): string | undefined {
-  // Same window the pane body reads (newest first), so this shares its subscription.
+  // The same query the pane body reads (newest first), so its first page is the
+  // body's page 0 subscription. This read never pages: the body's "Load older
+  // messages" adds pages to the body's own read, and the title stays on page 0.
   const result = useLive(threadMessages, { where: { threadId } });
   switch (result.status) {
     case "loading":
@@ -42,15 +44,15 @@ function useThreadTitle({
     case "ready":
       break;
   }
-  // The subject is stable across a thread; the oldest LOADED message carries it
-  // (in a thread longer than the window that is a reply, so its "Re:" form).
+  // The subject is stable across a thread; page 0's oldest message carries it
+  // (in a thread longer than one page that is a reply, so its "Re:" form).
   return result.data.at(-1)?.subject?.trim() || "(no subject)";
 }
 
 function ThreadPaneView(): ReactNode {
   const { threadId } = threadPane.useParams();
   // The thread's newest messages (the collection's default window is newest
-  // first); `loadMore` grows it backwards in time.
+  // first); `loadMore` pages backwards in time.
   const result = useLive(threadMessages, { where: { threadId } });
 
   if (result.status === "loading") {
@@ -73,11 +75,9 @@ function ThreadPaneView(): ReactNode {
     );
   }
 
-  // The pane reads oldest→newest, so the newest-first window is reversed.
-  const messages = [...result.data].reverse();
   return (
     <PaneChrome pane={threadPane}>
-      <MessageList messages={messages} older={result} />
+      <MessageList newestFirst={result.data} older={result} />
     </PaneChrome>
   );
 }

@@ -16,7 +16,7 @@ before first paint. This must live with the value's OWNER: it is read only by
 the Studio release pane, which is lazy-loaded, so nothing else guarantees eager
 registration and boot-snapshot would otherwise file a crash report every boot.
 (The composition-scoped history and its run detail flow through the
-`release.history` live collection — a namespace-scoped scroll window — and the
+`release.history` live collection — a namespace-scoped window — and the
 `release.runs` lookup collection — one run by id — neither of which is
 preloaded, so neither needs eager registration.)
 
@@ -280,7 +280,7 @@ the two endpoints that selected it).
     with `useLiveRow(releaseRuns, runId)` (`found: false` = no such run). Any
     namespace's run resolves by id.
   - `releaseHistory` — `release.history`, this namespace's runs (a base
-    `where` on `namespace`, read at bind) as a `scroll: true` window: the Studio
+    `where` on `namespace`, read at bind) as a window: the Studio
     history DataView's live source, scoped per composition by the pane. Its
     `columnScope` is that surface (`studio.release.history`), so the surface's
     custom columns sort and filter it server-side

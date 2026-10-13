@@ -1,10 +1,10 @@
 import { z } from "zod";
 import type { ResourceDescriptor } from "@plugins/primitives/plugins/live-state/web";
 import type {
+  LiveCollection,
   LivePagedPages,
   LivePagedParams,
   LiveQuery,
-  LiveScrollCollection,
   LiveValueOrigin,
   LiveWindowParams,
 } from "@plugins/network/plugins/live/core";
@@ -14,7 +14,7 @@ import type { Page } from "../../shared/page-plan";
 // source says which resource a page is one tuple of, how a question and a page
 // encode into that tuple, how big a page is, and how a row names itself. The
 // hook and the plan (`shared/page-plan.ts`) know nothing else of the source,
-// so another kind of source plugs in here, never into them. Two do: a scroll
+// so another kind of source plugs in here, never into them. Two do: a
 // collection's window, and a paged value's pages — each page a keyed window
 // on the server, so either may be sent seeded (`derive`).
 
@@ -55,7 +55,7 @@ export interface PageSource<Row, Q, P extends Record<string, string>> {
   idField: string;
 }
 
-/** A scroll collection's page source. */
+/** A collection's page source: its window's tuples. */
 export type CollectionPageSource<Row, F, S extends string> = PageSource<
   Row,
   LivePagesQuery<F, S>,
@@ -80,20 +80,20 @@ const sources = new WeakMap<
 >();
 
 /**
- * The page source of a scroll collection — its window tuples, cut at server-
+ * The page source of a collection — its window tuples, cut at server-
  * minted row keys — or of a paged value — its page tuples, cut the same way —
  * or, for `null`, the detached source a read with nothing to read stands on
  * (its hook order stays fixed; nothing is ever encoded or read through it).
  */
 export function pageSourceOf<Row, F, S extends string>(
-  source: LiveScrollCollection<Row, F, S> | null,
+  source: LiveCollection<Row, F, S> | null,
 ): CollectionPageSource<Row, F, S>;
 export function pageSourceOf<Item, Q, QIn>(
   source: LivePagedPages<Item, Q, QIn, LiveValueOrigin> | null,
 ): ValuePageSource<Item, QIn>;
 export function pageSourceOf(
   // biome-ignore lint/suspicious/noExplicitAny: erased as `AnyPagedValue` is.
-  source: LiveScrollCollection<any, any, any> | AnyPagedValue | null,
+  source: LiveCollection<any, any, any> | AnyPagedValue | null,
 ): unknown {
   if (source === null) {
     return DETACHED as unknown as PageSource<
@@ -136,7 +136,7 @@ function valueSource<Item, Q, QIn>(
 }
 
 function collectionSource<Row, F, S extends string>(
-  collection: LiveScrollCollection<Row, F, S>,
+  collection: LiveCollection<Row, F, S>,
 ): CollectionPageSource<Row, F, S> {
   const codec = collection.window.window;
   return {

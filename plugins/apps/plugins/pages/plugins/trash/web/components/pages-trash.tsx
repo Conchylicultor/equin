@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 
 import {
   Button,
@@ -7,28 +7,18 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import {
+  DataView,
+  defineDataView,
+  liveDataSource,
+  type FieldDef,
+} from "@plugins/primitives/plugins/data-view/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import {
-  useLive,
-  type LiveListResult,
-} from "@plugins/network/plugins/live/web";
-import {
-  InfiniteScrollFooter,
-  useInfiniteScroll,
-} from "@plugins/primitives/plugins/cursor-pagination/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   trashEntries,
-  restoreTrash,
   purgeTrash,
   type TrashEntry,
 } from "@plugins/infra/plugins/trash/core";
@@ -36,37 +26,62 @@ import {
 // the server chokepoint and this dialog can never drift apart.
 import { PAGES_TRASH_SOURCE } from "@plugins/page/plugins/editor/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
 import { PagesSidebarRow } from "@plugins/apps/plugins/pages/plugins/shell/web";
+import { PurgeTrashEntryContext, TrashItemActions } from "./trash-item-actions";
 
 const deleteIcon = symbol("delete");
-const descriptionIcon = symbol("description");
-const restoreFromTrashIcon = symbol("restore-from-trash");
-const deleteForeverIcon = symbol("delete-forever");
+
+// Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
+const TRASH_VIEW = defineDataView("pages.trash");
+
+// The pages source's slice of the trash ledger, newest-deleted first, read as
+// live key-range pages kept live by the rows on screen: a trash, restore, purge
+// or the 30-day sweep reaches the open list through the change feed, and the
+// scroll pages the whole trash with no depth cap. Search matches the label
+// captured at trash time.
+const trashSource = liveDataSource(trashEntries, {
+  searchable: ["label"],
+}).scoped({ where: { sourceId: PAGES_TRASH_SOURCE } });
+
+// `label` is the entry's name (the page title when it was trashed; its value
+// stays the column's, an empty one only drawn as "Untitled"); `deletedAt` the
+// one sortable column, trailing as a relative time.
+const fields: FieldDef<TrashEntry>[] = [
+  {
+    id: "label",
+    label: "Page",
+    type: "text",
+    value: (e) => e.label,
+    cell: (e) => e.label || "Untitled",
+    primary: true,
+    sortable: false,
+    filterable: false,
+  },
+  {
+    id: "deletedAt",
+    label: "Deleted",
+    type: "date",
+    value: (e) => e.deletedAt,
+    cell: (e) => <RelativeTime date={e.deletedAt} />,
+    align: "end",
+    sortable: true,
+    filterable: false,
+  },
+];
 
 /**
  * Sidebar "Trash" trigger: a Row that opens a dialog listing the pages that have
- * been soft-deleted. Each entry can be restored or permanently deleted; the
- * permanent delete is gated behind a confirm dialog (the FK cascade fires at
- * purge, so it is irreversible). The list updates live via the `trashEntries`
- * collection filtered to the pages source — restore/purge just mutate and the
- * row disappears. It shows the newest-deleted window and grows it when the
- * dialog is scrolled to its end.
+ * been soft-deleted, as a DataView over the live `trashEntries` collection
+ * scoped to the pages source. Each entry can be restored or permanently
+ * deleted (row actions); the permanent delete is gated behind a confirm dialog
+ * (the FK cascade fires at purge, so it is irreversible). Restore and purge
+ * just mutate — the row leaves the list through the change feed.
  */
 export function PagesTrash() {
   const [open, setOpen] = useState(false);
+  // Entry pending a purge confirmation (null = no confirmation open).
   const [confirmEntry, setConfirmEntry] = useState<TrashEntry | null>(null);
-  const result = useLive(trashEntries, {
-    where: { sourceId: PAGES_TRASH_SOURCE },
-  });
-  const restore = useEndpointMutation(restoreTrash);
   const purge = useEndpointMutation(purgeTrash);
-
-  const onRestore = (entry: TrashEntry) => {
-    restore.mutate({
-      params: { sourceId: PAGES_TRASH_SOURCE, entryId: entry.id },
-    });
-  };
 
   const onConfirmPurge = () => {
     if (!confirmEntry) return;
@@ -75,37 +90,6 @@ export function PagesTrash() {
       { onSuccess: () => setConfirmEntry(null) },
     );
   };
-
-  let body: ReactNode;
-  switch (result.status) {
-    case "loading":
-      body = <Loading />;
-      break;
-    case "error":
-      body = (
-        <ResourceErrorInline
-          variant="block"
-          subject="the trash"
-          error={result.error}
-          refetch={result.refetch}
-        />
-      );
-      break;
-    case "ready":
-      body =
-        result.data.length === 0 ? (
-          <Placeholder>Trash is empty</Placeholder>
-        ) : (
-          <TrashList
-            list={result}
-            restoring={restore.isPending}
-            purging={purge.isPending}
-            onRestore={onRestore}
-            onPurge={setConfirmEntry}
-          />
-        );
-      break;
-  }
 
   return (
     <>
@@ -122,7 +106,22 @@ export function PagesTrash() {
           <DialogDescription>
             Deleted pages are kept for 30 days before being permanently removed.
           </DialogDescription>
-          {body}
+          {/* The content mounts only while the dialog is open, so the trash
+              is read (and subscribed) only then. The DataView never owns a
+              scroll; this box is its one scroller. */}
+          <Scroll axis="y" className="max-h-96">
+            <PurgeTrashEntryContext.Provider value={setConfirmEntry}>
+              <DataView<TrashEntry>
+                storageKey={TRASH_VIEW}
+                source={trashSource}
+                fields={fields}
+                views={["list"]}
+                density="compact"
+                itemActions={TrashItemActions}
+                emptyState="Trash is empty"
+              />
+            </PurgeTrashEntryContext.Provider>
+          </Scroll>
         </DialogContent>
       </Dialog>
 
@@ -162,68 +161,5 @@ export function PagesTrash() {
         </DialogContent>
       </Dialog>
     </>
-  );
-}
-
-/**
- * The loaded window of the trash, growing by one page when its end scrolls into
- * view. Its own component so the grow observer mounts with the dialog's
- * content, and so sees the sentinel it watches.
- */
-function TrashList({
-  list,
-  restoring,
-  purging,
-  onRestore,
-  onPurge,
-}: {
-  list: Extract<LiveListResult<TrashEntry>, { status: "ready" }>;
-  restoring: boolean;
-  purging: boolean;
-  onRestore: (entry: TrashEntry) => void;
-  onPurge: (entry: TrashEntry) => void;
-}) {
-  const scroll = useInfiniteScroll({
-    hasNextPage: list.canGrow,
-    isFetchingNextPage: list.growing,
-    isFetchNextPageError: false,
-    fetchNextPage: list.loadMore,
-    rootMargin: "200px",
-  });
-  return (
-    <Scroll axis="y" className="max-h-96">
-      <Stack gap="2xs">
-        {/* eslint-disable-next-line data-view/no-adhoc-row-list -- modal trash dialog; revisit if Trash becomes a pane */}
-        {list.data.map((entry) => (
-          <Row
-            key={entry.id}
-            icon={<Icon icon={descriptionIcon} />}
-            actionsAlwaysVisible
-            actions={
-              <Inline gap="xs">
-                <Text variant="caption" tone="muted">
-                  <RelativeTime date={entry.deletedAt} />
-                </Text>
-                <IconButton
-                  icon={restoreFromTrashIcon}
-                  label="Restore"
-                  disabled={restoring}
-                  onClick={() => onRestore(entry)}
-                />
-                <IconButton
-                  icon={deleteForeverIcon}
-                  label="Delete permanently"
-                  disabled={purging}
-                  onClick={() => onPurge(entry)}
-                />
-              </Inline>
-            }
-          >
-            <Text>{entry.label || "Untitled"}</Text>
-          </Row>
-        ))}
-      </Stack>
-      <InfiniteScrollFooter handle={scroll} />
-    </Scroll>
   );
 }

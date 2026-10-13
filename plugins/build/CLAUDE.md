@@ -195,13 +195,15 @@ main, and unscoped it would surface main's stale runs as this checkout's own.
 Its row is `BuildRunSchema`, so the ledger's internal `pid` never reaches the
 wire.
 
-- **The window** — newest `startedAt` first, 50 (also its max), declared
-  `preload: "boot"`: the Build button's label is first-paint chrome, so the boot
-  snapshot hydrates the default window. All three list readers take the default
-  window, `useLive(buildHistory)`: the button and the popover read its newest
-  row, and `serve-composition`'s freshness signature folds it for the newest
-  finished run naming its composition. A window is never L2-persisted, so a
-  cold boot loads its 50 rows fresh.
+- **The window** — newest `startedAt` first, 50 a page (at most 100: every
+  window is read as key-range pages, and a page that splits is read at twice
+  its step), declared `preload: "boot"`: the Build button's label is
+  first-paint chrome, so the boot snapshot hydrates the default window. All
+  four list readers take the default window, `useLive(buildHistory)`, and none
+  pages past it: the button, the popover and the build-activity hook read its
+  newest rows, and `serve-composition`'s freshness signature folds it for the
+  newest finished run naming its composition. A window is never
+  L2-persisted, so a cold boot loads its 50 rows fresh.
 - **One run** — `build-info` and `build-fix` read
   `useLiveRow(buildHistory, runId)`, the `:rows` point read: a run older than
   the newest 50 is still found, and `found: false` means this namespace has no

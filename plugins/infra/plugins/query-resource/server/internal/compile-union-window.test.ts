@@ -85,7 +85,7 @@ function spec(
       cutsOf: (p) => (p.after ? { after: JSON.parse(p.after) } : {}),
       familyOf: (p) => JSON.stringify([p.kinds ?? null, p.order ?? null]),
     },
-    scroll: { keyField: "$key", maxKeyBytes: 1024 },
+    rowKey: { keyField: "$key", maxKeyBytes: 1024 },
     point: { idsOf: (p) => (p.kinds ?? "").split(",").filter(Boolean) },
     groups: {
       query: (p) => ({
@@ -195,7 +195,7 @@ describe("compileUnionCollection — the shapes", () => {
     expect(calls[0]!.params).toContainEqual(["1", "abc"]);
   });
 
-  test("rows decode per arm, name back to fields, and carry the scroll key", async () => {
+  test("rows decode per arm, name back to fields, and carry the row key", async () => {
     const { compiled } = spec([armA(), armB()], () => [
       {
         __kind: "b",

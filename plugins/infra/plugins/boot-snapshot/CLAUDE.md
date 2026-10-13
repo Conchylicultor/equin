@@ -132,6 +132,7 @@ How it works:
 - Cross-plugin:
   - Imported by: `debug/profiling/boot-bench`
   - Endpoint callers:
+    - `boot-bench`
     - `live-state`
     - `live-state-stale-drop`
     - `read-set`

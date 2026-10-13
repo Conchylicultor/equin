@@ -15,7 +15,12 @@
  *  4. scrolling back to the top a step at a time, the placeholders above
  *     landing as rows never move a row on screen, every row seen on the way
  *     down is seen again (steps under a screen), the order holds, and the
- *     head shows again.
+ *     head shows again;
+ *  5. no row ever changes its x (its column, in a gallery or icons grid): a
+ *     page released or landing above a grid keeps every card where it was
+ *     drawn (the view's phase pad). A live insert at the read's head does
+ *     reflow a grid's cards (a true reflow), so run a grid with no writes
+ *     landing in its head mid-run.
  *
  * Read-only: it seeds nothing. Run against a deploy whose list holds 30+
  * pages (`--rows` is how many distinct rows to scroll through before
@@ -24,6 +29,19 @@
  *
  *   ./singularity run plugins/primitives/plugins/data-view/e2e/live-pages-scroll.ts \
  *     --path /agents/all-conversations [--rows 3200] [--step 0.4] [--expect <n>] [--out /tmp/live-pages] [--headed]
+ *
+ * `--view <type>` switches the surface to its first view of that type
+ * (`gallery`, `list`, …) before anything is measured, through the switcher
+ * chip's `data-view-type`. `--scroller <css>` names the scroll container
+ * (default: the widest scrollable ancestor of the rows — pass it for a list
+ * in a sidebar, e.g. Queue Done). `--width <px>` sets the viewport width (a
+ * gallery's column count). `--expect-placeholders` fails the run when no
+ * page placeholder was ever drawn (the read never released a page, so the
+ * run proved nothing about releases).
+ *
+ * `--click <text>` clicks the control with that exact text first (a sidebar
+ * entry opening a dialog — the Pages Trash), and waits for the rows inside
+ * the `--scroller` it names.
  *
  * `--trace 1` records every write to the scroller's offset (with its stack),
  * every scroll event and every frame's layout around the window, and prints
@@ -34,6 +52,8 @@ import type { Page } from "playwright";
 import {
   arg,
   boot,
+  DEFAULT_VIEWPORT,
+  flag,
   numArg,
   report,
   requirePage,
@@ -43,7 +63,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const PAGE = requirePage(
-  "live-pages-scroll.ts --path <route> [--rows N] [--expect N] [--out <prefix>]",
+  "live-pages-scroll.ts --path <route> [--click <text>] [--view <type>] [--scroller <css>] [--width <px>] [--expect-placeholders] [--rows N] [--expect N] [--out <prefix>]",
 );
 const OUT = arg("out") ?? "/tmp/live-pages-scroll";
 const TARGET_ROWS = numArg("rows", 3200);
@@ -55,6 +75,14 @@ const DUMP = arg("dump");
 const STEP = Number(arg("step") ?? "0.4");
 /** How far a row on screen may move on its own during a step (sub-pixel rounding). */
 const MAX_DRIFT_PX = 1;
+/** The view type to switch to first, if any. */
+const VIEW = arg("view");
+/** The scroll container, if not the widest scrollable ancestor of the rows. */
+const SCROLLER = arg("scroller");
+const WIDTH = numArg("width", DEFAULT_VIEWPORT.width);
+const EXPECT_PLACEHOLDERS = flag("expect-placeholders");
+/** Text of a control to click before measuring (opens the surface under test). */
+const CLICK = arg("click");
 
 const ROW = "[data-row-key]:not([data-page-placeholder])";
 /** `--trace`: record every write to the scroller's position with its stack. */
@@ -72,13 +100,59 @@ interface Sample {
   placeholders: number;
   /** Total height of the placeholders above the first visible row, px. */
   placeholderPxAbove: number;
+  /** Every real row's left edge relative to the scroller, by key — its column. */
+  lefts: Record<string, number>;
 }
 
 /**
- * Tags the scroll container: of the scrollable ancestors of every row, the
- * widest — the page's main list, not a sidebar list beside it.
+ * Switches the surface to its first view of `type`: clicks that view's
+ * switcher chip (unless it is already the active one — a click on the active
+ * chip opens its settings) and waits for its rows.
+ */
+async function switchView(page: Page, type: string): Promise<void> {
+  const chip = page.locator(`[data-view-type="${type}"]`).first();
+  await chip.waitFor({ state: "visible", timeout: 30_000 });
+  if ((await chip.getAttribute("aria-pressed")) !== "true") await chip.click();
+  await page
+    .locator(`[data-view-type="${type}"][aria-pressed="true"]`)
+    .first()
+    .waitFor({ timeout: 30_000 });
+  await page
+    .locator(ROW)
+    .first()
+    .waitFor({ state: "visible", timeout: 60_000 });
+  // The new view's rows settle like the head did at boot.
+  await page.waitForTimeout(1500);
+}
+
+/**
+ * Clicks the control whose text is exactly `text` and waits for rows inside the
+ * `--scroller` (required: the rows a click reveals sit beside the page's own).
+ */
+async function openSurface(page: Page, text: string): Promise<void> {
+  if (SCROLLER === undefined) throw new Error("--click needs --scroller");
+  await page.getByText(text, { exact: true }).first().click();
+  await page
+    .locator(`${SCROLLER} ${ROW}`)
+    .first()
+    .waitFor({ state: "visible", timeout: 60_000 });
+  await page.waitForTimeout(1500);
+}
+
+/**
+ * Tags the scroll container: `--scroller` when given, else of the scrollable
+ * ancestors of every row, the widest — the page's main list, not a sidebar
+ * list beside it.
  */
 async function tagScroller(page: Page): Promise<void> {
+  if (SCROLLER !== undefined) {
+    await page.evaluate((css) => {
+      const el = document.querySelector(css);
+      if (el === null) throw new Error(`--scroller ${css} matches nothing`);
+      el.setAttribute("data-e2e-scroller", "");
+    }, SCROLLER);
+    return;
+  }
   await page.evaluate((sel) => {
     const scrollers = new Set<HTMLElement>();
     for (const row of document.querySelectorAll(sel)) {
@@ -121,7 +195,13 @@ async function sample(page: Page): Promise<Sample> {
       return true;
     });
     const phs = [...sc.querySelectorAll("[data-page-placeholder]")];
+    const lefts: Record<string, number> = {};
+    for (const r of rows) {
+      lefts[r.getAttribute("data-row-key")!] =
+        r.getBoundingClientRect().left - box.left;
+    }
     return {
+      lefts,
       scrollTop: sc.scrollTop,
       scrollHeight: sc.scrollHeight,
       dom: rows.map((r) => r.getAttribute("data-row-key")!),
@@ -374,13 +454,19 @@ async function drainTrace(page: Page): Promise<unknown[]> {
 }
 
 await withBrowser(async (h) => {
-  const r = report(`live pages — deep scroll of ${new URL(PAGE).pathname}`);
-  const { page } = await h.session();
+  const r = report(
+    `live pages — deep scroll of ${new URL(PAGE).pathname}${VIEW ? ` (${VIEW})` : ""} at ${WIDTH}px`,
+  );
+  const { page } = await h.session({
+    viewport: { width: WIDTH, height: DEFAULT_VIEWPORT.height },
+  });
   await boot(page, PAGE, {
     marker: ROW,
     timeoutMs: 120_000,
     settleMs: 1500,
   });
+  if (CLICK !== undefined) await openSurface(page, CLICK);
+  if (VIEW !== undefined) await switchView(page, VIEW);
   await page.evaluate(() => {
     (window as unknown as { __noReload?: boolean }).__noReload = true;
   });
@@ -401,6 +487,27 @@ await withBrowser(async (h) => {
   const first = await settled(page);
   if (first === null) throw new Error("the head never settled");
   learn(first.dom);
+
+  // 5. Every row's x, as first drawn: a row drawn again at another x moved
+  // column — across a release or a landing above it, never on its own.
+  const leftOf = new Map<string, number>();
+  const columnShifts: string[] = [];
+  let shifted = 0;
+  const checkColumns = (where: string, x: Sample) => {
+    for (const [k, left] of Object.entries(x.lefts)) {
+      const was = leftOf.get(k);
+      if (was !== undefined && Math.abs(was - left) > MAX_DRIFT_PX) {
+        shifted++;
+        if (columnShifts.length < 10) {
+          columnShifts.push(
+            `${where}: row ${k} moved from x ${Math.round(was)} to ${Math.round(left)} (placeholders ${x.placeholders})`,
+          );
+        }
+      }
+      leftOf.set(k, left);
+    }
+  };
+  checkColumns("head", first);
   const headKeys = first.visible.slice(0, 5);
 
   const violations: string[] = [];
@@ -479,6 +586,7 @@ await withBrowser(async (h) => {
       lastKnown = i;
     }
     learn(s.dom);
+    checkColumns(`step ${steps}`, s);
     trace.push({
       step: steps,
       top: s.scrollTop,
@@ -561,6 +669,8 @@ await withBrowser(async (h) => {
     if (s !== null) {
       for (const k of s.dom) seenUp.add(k);
       maxDom = Math.max(maxDom, s.dom.length);
+      maxPlaceholders = Math.max(maxPlaceholders, s.placeholders);
+      checkColumns(`up ${up}`, s);
     }
     if (s === null) {
       backViolations.push(`up ${up}: a placeholder never resolved`);
@@ -602,6 +712,13 @@ await withBrowser(async (h) => {
     top.value.visible.slice(0, headKeys.length),
     headKeys,
   );
+  r.eq(`no row changed column (${shifted} moves)`, columnShifts, []);
+  if (EXPECT_PLACEHOLDERS) {
+    r.ok(
+      `the read released pages into placeholders (at most ${maxPlaceholders} at once)`,
+      maxPlaceholders > 0,
+    );
+  }
   r.ok(
     "the page never reloaded",
     await page.evaluate(
