@@ -151,6 +151,9 @@ function GoogleMapCanvas({
           clickableIcons={false}
           streetViewControl={false}
           mapTypeControl={false}
+          // The app owns fullscreen (the action bar's view option); Google's
+          // top-right button would sit under the floating action bar.
+          fullscreenControl={false}
         >
           <FitCamera overlays={overlays} fitPadding={fitPadding} />
           <FitControl overlays={overlays} fitPadding={fitPadding} />
