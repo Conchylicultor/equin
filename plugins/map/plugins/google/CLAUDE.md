@@ -24,8 +24,10 @@ The only map-vendor code in the repo. Everything else draws maps through
   by `OverlayPin`: a plain `OverlayView` that portals the pin's React content
   into the overlay pane, anchored at its bottom centre. It owns what the marker
   used to give for free: click and Enter/Space activation (the container is a
-  `role="button"`), the stacking order, and `preventMapHitsAndGesturesFrom` so a
-  press on a pin does not start a pan.
+  `role="button"`), the stacking order, and stopping presses and clicks at the pin
+  so they do not pan the map or count as a map click. The wheel is NOT stopped
+  (unlike Google's `preventMapHitsAndGesturesFrom`): scrolling over a pin zooms
+  the map like anywhere else, instead of scrolling the page.
 - **Clustering** (`ClusteredPins`, only when `cluster` is set): pins are
   projected to world pixels (`getProjection().fromLatLngToPoint` × 2^zoom),
   which depend on the zoom alone, so only `zoom_changed` re-clusters, never a

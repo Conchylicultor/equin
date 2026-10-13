@@ -90,6 +90,27 @@ export function OverlayPin({
   );
 }
 
+/**
+ * The events a pin keeps from the map: a press on it is not the start of a pan,
+ * a click is not a map click, a double click does not zoom. The wheel is
+ * deliberately absent — it bubbles on so scrolling over a pin zooms the map as
+ * it does anywhere else. Google's `preventMapHitsAndGesturesFrom` stops the
+ * wheel too, which leaves the page to scroll (and bounce) under the cursor.
+ */
+const PIN_OWNED_EVENTS = [
+  "click",
+  "dblclick",
+  "auxclick",
+  "contextmenu",
+  "mousedown",
+  "pointerdown",
+  "touchstart",
+] as const;
+
+function stopPropagation(e: Event) {
+  e.stopPropagation();
+}
+
 interface PinOverlay extends google.maps.OverlayView {
   /** The element the pin's content is portalled into. */
   readonly container: HTMLDivElement;
@@ -112,8 +133,9 @@ function createPinOverlay(maps: google.maps.MapsLibrary): PinOverlay {
       this.container.style.position = "absolute";
       // Bottom centre on the point, as an Advanced Marker anchors its content.
       this.container.style.transform = ANCHOR_TRANSFORM.bottom;
-      // A press on the pin is not the start of a pan, nor a click on the map.
-      maps.OverlayView.preventMapHitsAndGesturesFrom(this.container);
+      for (const type of PIN_OWNED_EVENTS) {
+        this.container.addEventListener(type, stopPropagation);
+      }
     }
 
     moveTo(position: LatLng) {
