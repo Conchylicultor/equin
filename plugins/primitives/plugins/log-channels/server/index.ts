@@ -6,7 +6,13 @@ import { getLogChannels, emitLogs } from "../core/endpoints";
 
 export { Log, defineLogSink } from "./internal/log";
 export type { LogChannel, LogStream } from "./internal/log";
-export { listChannels, logsDirFor, readChannelEntries, readChannelJson } from "./internal/persist";
+export {
+  listChannels,
+  logsDirFor,
+  readChannelEntries,
+  readChannelJson,
+  readChannelJsonAsync,
+} from "./internal/persist";
 
 export default {
   httpRoutes: {

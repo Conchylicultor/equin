@@ -26,6 +26,7 @@ export {
   configConflictLocations,
   configV2ModifiedCountsSchema,
   configModifiedCounts,
+  configRawFile,
 } from "./internal/resource";
 export type {
   ConfigV2Values,

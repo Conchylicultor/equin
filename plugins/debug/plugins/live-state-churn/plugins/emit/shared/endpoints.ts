@@ -23,34 +23,11 @@ export const stopEmit = defineEndpoint({
   response: EmitStatusSchema,
 });
 
+// The status as one request/response read, for the window-level imperative
+// API's `status()` (the headless e2e driver's handle). The pane reads the live
+// `live-state-emit.status` value instead (shared/resources.ts).
 export const getEmitStatus = defineEndpoint({
   route: "GET /api/debug/live-state-emit/status",
   response: EmitStatusSchema,
   dedupe: true,
-});
-
-// A minimal typed view of the kernel-served `GET /api/resources/_debug` route,
-// to populate the resource dropdown. The route is handled INSIDE the shared
-// resource runtime (`handleResourcesDebug`) — that handler stays the single
-// authoritative source; this endpoint only declares the contract so the pane can
-// `useEndpoint` it. `shared/` is plugin-private, so we cannot import read-set's
-// or live-state-health's view of the same route — declaring a second contract
-// over the same route is the established pattern (zod strips unknown keys, so the
-// views coexist). We model only what the dropdown consumes (`key`, `mode`,
-// `subscribers`); `.passthrough()` tolerates the rest of the rich kernel payload.
-export const listResourcesForEmit = defineEndpoint({
-  route: "GET /api/resources/_debug",
-  response: z
-    .object({
-      resources: z.array(
-        z
-          .object({
-            key: z.string(),
-            mode: z.string(),
-            subscribers: z.number(),
-          })
-          .passthrough(),
-      ),
-    })
-    .passthrough(),
 });

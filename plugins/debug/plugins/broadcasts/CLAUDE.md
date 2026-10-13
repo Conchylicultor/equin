@@ -4,20 +4,26 @@
 
 ## Plugin reference
 
-- Description: View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
+- Description: View and edit the CLI's broadcasts.json (plugins/framework/plugins/cli/broadcasts.json in the main checkout): the broadcast messages printed on stale worktrees. View and edit the CLI's broadcasts.json from the UI: the broadcasts.entries live value (watched through the dir hub) and its PUT.
 - Web:
-  - Slots: `broadcastsPane.Actions`
-  - Slot contributors: `broadcastsPane.Actions` ← `primitives.pane`
+  - Slots:
+    - `broadcastsPane.Actions`
+    - `item-actions`
+  - Slot contributors:
+    - `broadcastsPane.Actions` ← `primitives.pane`
+    - `item-actions` ← `debug.broadcasts`
   - Contributes:
     - `Pane.Register` "debug-broadcasts"
     - `DebugApp.Sidebar` "Broadcasts"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `item-actions` "delete" → `DeleteBroadcastAction`
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×5
     - `primitives/css/ui-kit` ×3
     - `primitives/pane` ×3
-    - `infra/endpoints` ×2
     - `apps/debug/shell.DebugApp`
+    - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
-    - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
@@ -26,22 +32,22 @@
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/icon-button.IconButton`
-    - `primitives/loading.Loading`
+    - `primitives/live-state.foldResource`
     - `ui/icons.Icon`
   - Exports (values): `broadcastsPane`
 - Server:
+  - Contributes: `resource.declare` "broadcasts.entries"
   - Uses:
     - `infra/endpoints.implement`
+    - `infra/file-watcher.acquireDirWatch`
     - `infra/worktree.ensureMainWorktreeRoot`
-  - Routes:
-    - `GET /api/debug/broadcasts`
-    - `PUT /api/debug/broadcasts`
-- Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/components/broadcasts-panel.tsx` (debt)
+    - `network/live.serveValue`
+  - Resources: `broadcasts.entries` (push, notified)
+  - Routes: `PUT /api/debug/broadcasts`
 - Shared:
   - Exports (types): `WriteBroadcastsBody`
   - Exports (values):
-    - `getBroadcasts`
+    - `broadcastEntries`
     - `writeBroadcasts`
     - `WriteBroadcastsBodySchema`
 - Cross-plugin:

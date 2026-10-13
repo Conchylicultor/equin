@@ -180,6 +180,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "debug.boot-profile.debug-boot-profile.actions", pluginId: "debug.boot-profile", configName: "debug-boot-profile.actions" },
   { slotId: "debug.boot-profile.debug-boot-profiles-list.actions", pluginId: "debug.boot-profile", configName: "debug-boot-profiles-list.actions" },
   { slotId: "debug.broadcasts.debug-broadcasts.actions", pluginId: "debug.broadcasts", configName: "debug-broadcasts.actions" },
+  { slotId: "debug.broadcasts.item-actions", pluginId: "debug.broadcasts", configName: "item-actions" },
   { slotId: "debug.claude-cli-calls.claude-cli-call-detail.actions", pluginId: "debug.claude-cli-calls", configName: "claude-cli-call-detail.actions" },
   { slotId: "debug.claude-cli-calls.claude-cli-calls.actions", pluginId: "debug.claude-cli-calls", configName: "claude-cli-calls.actions" },
   { slotId: "debug.config-orphans.config-orphans.actions", pluginId: "debug.config-orphans", configName: "config-orphans.actions" },

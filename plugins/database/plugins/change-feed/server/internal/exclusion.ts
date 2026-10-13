@@ -35,9 +35,10 @@ import { defineServerContribution } from "@plugins/framework/plugins/server-core
 // resource may name an excluded table in a route. Its delivery fires only on a
 // change to that table, which an excluded (trigger-less) table
 // can never produce — so the policy would be dead config that silently degrades
-// the resource to hydrate-on-mount. A surface that reads an excluded table should
-// be an endpoint read on open, like the Slow Ops pane's `listSlowOps` (a live
-// value over it would never update); one that must stay live makes the table a
+// the resource to hydrate-on-mount. A surface that reads an excluded table is
+// served as an external `snapshot` value with a Refresh affordance (a routed
+// one would never update; an endpoint read on open is `live/no-endpoint-read`
+// debt); one that must stay live makes the table a
 // change producer — or, for an aggregate recomputed on the writer's own cadence
 // rather than per row, is served external and notified by that writer (the
 // latency ledger's summary, on its minute flush). The no-db-backed-notify check

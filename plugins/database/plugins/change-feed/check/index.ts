@@ -59,8 +59,8 @@ const check: Check = {
       // it vacuous: fail rather than pass on a scan that saw nothing.
       return {
         ok: false,
-        message: `Cannot resolve the table of ${unresolved.length} change producer(s) — no \`const <binding> = …pgTable("<name>", …)\` found:\n    ${unresolved.map((d) => `${d.path}:${d.line}  table: ${d.binding}`).join("\n    ")}`,
-        hint: "Pass `defineChangeProducer` the table's own binding (the identifier its `pgTable(…)` declaration is assigned to), not an alias or an expression.",
+        message: `Cannot resolve the table of ${unresolved.length} change producer(s) — no \`const <binding> = …pgTable("<name>", …)\` / \`…defineEntity("<name>", …)\` (or \`<entity>.table\` of one) found:\n    ${unresolved.map((d) => `${d.path}:${d.line}  table: ${d.binding}`).join("\n    ")}`,
+        hint: "Pass `defineChangeProducer` the table's own binding (the identifier its `pgTable(…)` / `defineEntity(…)` declaration — or that entity's `.table` — is assigned to), not an alias or an expression.",
       };
     }
 

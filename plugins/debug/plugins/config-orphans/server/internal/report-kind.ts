@@ -69,7 +69,7 @@ function describe(d: StrandedConfigPayload): string {
 
 /** Audit this namespace's saved settings and file the report if any are stranded. */
 export async function reportStrandedConfig(): Promise<void> {
-  const stranded = auditUserConfigOrphans().orphans.filter(
+  const stranded = (await auditUserConfigOrphans()).orphans.filter(
     (o) => o.riskClass === "stranded-data",
   );
   if (stranded.length === 0) return;

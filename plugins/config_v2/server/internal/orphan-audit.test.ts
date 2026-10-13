@@ -49,8 +49,8 @@ describe("auditUserConfigOrphans", () => {
     live("new-hier/moved.jsonc"), // same name "moved", different hier → relocated target
   ];
 
-  test("classifies every orphan and excludes the live file", () => {
-    const { orphans } = auditUserConfigOrphans(dir, descriptors);
+  test("classifies every orphan and excludes the live file", async () => {
+    const { orphans } = await auditUserConfigOrphans(dir, descriptors);
     const byKey = new Map(orphans.map((o) => [o.storeKey, o]));
 
     // The live descriptor's files never surface.
@@ -62,14 +62,18 @@ describe("auditUserConfigOrphans", () => {
       riskClass: "noise",
       reason: "removed",
     });
-    expect(byKey.get("noise-hier/lonely")!.files.map((f) => f.role)).toEqual(["origin"]);
+    expect(byKey.get("noise-hier/lonely")!.files.map((f) => f.role)).toEqual([
+      "origin",
+    ]);
     expect(byKey.get("noise-hier/lonely")!.relocatedToHier).toBeUndefined();
 
     // stranded-data / removed — a real base override.
     const stranded = byKey.get("data-hier/stranded")!;
     expect(stranded.riskClass).toBe("stranded-data");
     expect(stranded.reason).toBe("removed");
-    expect(new Set(stranded.files.map((f) => f.role))).toEqual(new Set(["origin", "override"]));
+    expect(new Set(stranded.files.map((f) => f.role))).toEqual(
+      new Set(["origin", "override"]),
+    );
 
     // stranded-data / removed — a scoped override (@app strips to the base key).
     const scoped = byKey.get("scoped-hier/scoped")!;
@@ -89,16 +93,18 @@ describe("auditUserConfigOrphans", () => {
     expect(moved.relocatedToHier).toBe("new-hier");
   });
 
-  test("data-bearing orphans sort ahead of noise, deterministically", () => {
-    const { orphans } = auditUserConfigOrphans(dir, descriptors);
+  test("data-bearing orphans sort ahead of noise, deterministically", async () => {
+    const { orphans } = await auditUserConfigOrphans(dir, descriptors);
     const stranded = orphans.filter((o) => o.riskClass === "stranded-data");
     // Both stranded entries come before the first noise entry.
     const firstNoiseIdx = orphans.findIndex((o) => o.riskClass === "noise");
     expect(firstNoiseIdx).toBe(stranded.length);
   });
 
-  test("a missing config dir yields no orphans", () => {
-    expect(auditUserConfigOrphans(join(dir, "does-not-exist"), descriptors)).toEqual({
+  test("a missing config dir yields no orphans", async () => {
+    expect(
+      await auditUserConfigOrphans(join(dir, "does-not-exist"), descriptors),
+    ).toEqual({
       orphans: [],
     });
   });

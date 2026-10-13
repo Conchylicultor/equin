@@ -1,6 +1,9 @@
 import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import { join, relative } from "node:path";
 import type { ConfigDescriptor, ConfigValues } from "../../core";
+import { configRawFile } from "../../core";
+import { serveValue } from "@plugins/network/plugins/live/server";
+import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import type { FieldsRecord, InferFieldValue } from "@plugins/fields/core";
 import {
   computeHash,
@@ -18,10 +21,11 @@ import {
   BASE_SCOPE,
 } from "./scope-paths";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { watchFileChange } from "./config-watcher";
+import { configWatcherArmed, watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
 import {
   configConflictServed,
+  configRegistryReady,
   configTiersServed,
   configValuesServed,
   getDescriptorByStorePath,
@@ -347,12 +351,128 @@ async function buildEntry(
   return entry;
 }
 
+// The git-layer files of one document. Git-layer files live in the repo, not
+// the per-worktree user dir. A scoped override is expressed in git at
+// config/<dir>/@app/<id>/<name>.jsonc, but its origin anchor is always the BASE
+// origin (config/<dir>/<name>.origin.jsonc) — no scoped origin is ever
+// committed. So the override path takes the scope segment while the origin path
+// stays base.
+function gitLayerPaths(
+  storePath: string,
+  scopeId: string | undefined,
+): { gitOverridePath: string; gitOriginPath: string } {
+  const parts = storePath.replace(/\.jsonc$/, "").split("/");
+  const dir = parts.slice(0, -1).join("/");
+  const name = parts[parts.length - 1]!;
+  return {
+    gitOverridePath: join(
+      repoConfigDir(),
+      dir,
+      scopeSegment(scopeId),
+      `${name}.jsonc`,
+    ),
+    gitOriginPath: join(repoConfigDir(), dir, `${name}.origin.jsonc`),
+  };
+}
+
+function readRaw(path: string): string | null {
+  try {
+    return readFileSync(path, "utf-8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    return null;
+  }
+}
+
+/**
+ * Watch the git layer of one document for as long as its raw text is read: the
+ * repo's config tree, filtered to the document's two git files. Nothing else
+ * signals them — a build propagates them into the user layer (which
+ * `notifyDocument` covers), but the raw view shows them before that build.
+ */
+async function watchGitLayer(
+  storePath: string,
+  scopeId: string | undefined,
+  notify: () => void,
+): Promise<() => void> {
+  const { gitOverridePath, gitOriginPath } = gitLayerPaths(storePath, scopeId);
+  const release = await acquireDirWatch({
+    dir: repoConfigDir(),
+    scope: "subtree",
+    onChange: (events) => {
+      if (
+        events.some(
+          (e) => e.path === gitOverridePath || e.path === gitOriginPath,
+        )
+      )
+        notify();
+    },
+  });
+  // A write between the first load and either watch opening (this git-layer
+  // one, or the user-layer config-files watcher armed in `onReady`) produced
+  // no event; one re-read once both are live closes that gap.
+  try {
+    await configWatcherArmed();
+  } catch (err) {
+    release();
+    throw err;
+  }
+  notify();
+  return release;
+}
+
+/**
+ * The raw text of one document's four layered files (`config-v2.raw-file`).
+ *
+ * `notified`, from both halves of its truth: the user-layer override and origin
+ * are the cache entry's own files, so the registry's one document fan-out
+ * (`notifyDocument`, run by `refreshEntry` on every watcher event and every
+ * in-process write) moves this value with the document, its conflicts and its
+ * tiers; the git layer is watched while subscribed (`watchGitLayer`).
+ *
+ * Paths are returned relative to their layer root (user config dir / repo root)
+ * so the UI can label each section with a compact, non-wrapping location rather
+ * than a noisy absolute path. The label already names the layer.
+ */
+export const configRawFileServed = serveValue(configRawFile, {
+  source: "external",
+  changes: "notified",
+  loader: async ({ path, scopeId }) => {
+    await configRegistryReady();
+    const descriptor = getDescriptorByStorePath(path);
+    if (!descriptor) {
+      throw configRawFile.refuse("missing", `No descriptor for "${path}"`);
+    }
+    const entry = getEntry(descriptor, scopeId ?? BASE_SCOPE);
+    if (!entry) {
+      throw configRawFile.refuse(
+        "missing",
+        `No config document for "${path}"${scopeId ? ` in scope "${scopeId}"` : ""}`,
+      );
+    }
+    const { gitOverridePath, gitOriginPath } = gitLayerPaths(path, scopeId);
+    return {
+      override: readRaw(entry.userOverwritesPath),
+      overridePath: relative(CONFIG_DIR, entry.userOverwritesPath),
+      origin: readRaw(entry.userOriginPath),
+      originPath: relative(CONFIG_DIR, entry.userOriginPath),
+      gitOverride: readRaw(gitOverridePath),
+      gitOverridePath: relative(REPO_ROOT, gitOverridePath),
+      gitOrigin: readRaw(gitOriginPath),
+      gitOriginPath: relative(REPO_ROOT, gitOriginPath),
+    };
+  },
+  whileSubscribed: ({ path, scopeId }, notify) =>
+    watchGitLayer(path, scopeId, notify),
+});
+
 // The per-document live values: each keyed `{ path, scopeId? }`, each a
 // function of the same file trio, so each moves whenever the document does.
 const perDocument = [
   configValuesServed,
   configConflictServed,
   configTiersServed,
+  configRawFileServed,
 ];
 
 // THE document fan-out for a (storePath, scopeId) change — the one call every
@@ -904,66 +1024,6 @@ export function mergeConflictByPath(
   noteWrite(opts, entry);
 
   return { resolved, conflictKeys: conflicts };
-}
-
-export function getRawFileContent(
-  storePath: string,
-  scopeId?: string,
-): {
-  override: string | null;
-  overridePath: string;
-  origin: string | null;
-  originPath: string;
-  gitOverride: string | null;
-  gitOverridePath: string;
-  gitOrigin: string | null;
-  gitOriginPath: string;
-} {
-  const descriptor = getDescriptorByStorePath(storePath);
-  if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
-
-  const entry = getEntry(descriptor, scopeId ?? BASE_SCOPE);
-  if (!entry) throw new Error(`No cache entry for "${storePath}"`);
-
-  const readRaw = (path: string): string | null => {
-    try {
-      return readFileSync(path, "utf-8");
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-      return null;
-    }
-  };
-
-  // Git-layer files live in the repo, not the per-worktree user dir. A scoped
-  // override is expressed in git at config/<dir>/@app/<id>/<name>.jsonc, but its
-  // origin anchor is always the BASE origin (config/<dir>/<name>.origin.jsonc) —
-  // no scoped origin is ever committed. So the override path takes the scope
-  // segment while the origin path stays base.
-  const parts = storePath.replace(/\.jsonc$/, "").split("/");
-  const dir = parts.slice(0, -1).join("/");
-  const name = parts[parts.length - 1]!;
-  const gitScopeSeg = scopeSegment(scopeId);
-  const gitOverridePath = join(
-    repoConfigDir(),
-    dir,
-    gitScopeSeg,
-    `${name}.jsonc`,
-  );
-  const gitOriginPath = join(repoConfigDir(), dir, `${name}.origin.jsonc`);
-
-  // Paths are returned relative to their layer root (user config dir / repo root)
-  // so the UI can label each section with a compact, non-wrapping location rather
-  // than a noisy absolute path. The label already names the layer.
-  return {
-    override: readRaw(entry.userOverwritesPath),
-    overridePath: relative(CONFIG_DIR, entry.userOverwritesPath),
-    origin: readRaw(entry.userOriginPath),
-    originPath: relative(CONFIG_DIR, entry.userOriginPath),
-    gitOverride: readRaw(gitOverridePath),
-    gitOverridePath: relative(REPO_ROOT, gitOverridePath),
-    gitOrigin: readRaw(gitOriginPath),
-    gitOriginPath: relative(REPO_ROOT, gitOriginPath),
-  };
 }
 
 export function deleteOverrideByPath(

@@ -1,12 +1,13 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { handleRead } from "./internal/handle-read";
 import { handleWrite } from "./internal/handle-write";
-import { getBroadcasts, writeBroadcasts } from "../shared/endpoints";
+import { broadcastEntriesServed } from "./internal/entries-served";
+import { writeBroadcasts } from "../shared/endpoints";
 
 export default {
-  description: "View and edit cli/broadcasts.json from the UI.",
+  description:
+    "View and edit the CLI's broadcasts.json from the UI: the broadcasts.entries live value (watched through the dir hub) and its PUT.",
   httpRoutes: {
-    [getBroadcasts.route]: handleRead,
     [writeBroadcasts.route]: handleWrite,
   },
+  contributions: [...broadcastEntriesServed.declare],
 } satisfies ServerPluginDefinition;

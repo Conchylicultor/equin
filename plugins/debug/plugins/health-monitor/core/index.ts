@@ -5,11 +5,11 @@ export {
   HealthSampleSchema,
   HostSampleSchema,
   HealthSeriesSchema,
-  GetHealthDataResponseSchema,
+  HealthDataSchema,
 } from "./schema";
 export type {
   HealthSample,
   HostSample,
   HealthSeries,
-  GetHealthDataResponse,
+  HealthData,
 } from "./schema";

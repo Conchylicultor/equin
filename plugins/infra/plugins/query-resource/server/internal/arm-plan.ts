@@ -30,6 +30,7 @@ import {
   type RelationColumn,
 } from "./joins";
 import { baseIdentityRoute, type RawRoute, type RoutedBase } from "./routes";
+import { anyOf } from "./raw-sql";
 import type {
   QueryDb,
   QueryStep,
@@ -457,9 +458,14 @@ export function planArm<Row, P extends ResourceParams>(
       routes: reads.routes,
       tuple: reads.tuple,
       ...recomputeOn,
+      // A point set's ids are the client's (`:rows` params — a URL, a stale
+      // link), which nothing checked against the pk's type: one the pk cannot
+      // hold (`"x"` against a uuid) is absent, like an unknown id, never an
+      // invalid-input error that fails the whole load. The runtime's own
+      // refill ids (vouched for) pass the same check unchanged.
       pointQuery: (params, ids) => {
         const { where: w, included } = reads.tuple(params);
-        const pred = inArray(pkColumn, [...ids]);
+        const pred = anyOf(pkColumn, ids, { invalid: "absent" });
         return selectFrom(included).where(w ? and(w, pred)! : pred);
       },
       fold: (rows) => rows,

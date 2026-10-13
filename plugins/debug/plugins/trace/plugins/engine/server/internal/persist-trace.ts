@@ -1,12 +1,14 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { db } from "@plugins/database/server";
 import type { TripContext, TraceSnapshot } from "../../core";
-import { _traces } from "./tables";
+import { tracesProducer } from "./producer";
 
-// Assemble the snapshot envelope and insert one durable row. Runs inside the
-// engine's runWithoutProfiling scope (its caller), so the insert never re-feeds
-// the profiler. The flat trigger* / duration* / threshold* columns duplicate the
-// snapshot's trigger so the list endpoint never selects the blob.
+// Assemble the snapshot envelope and insert one durable row through the traces
+// change producer (./producer), which routes the new id to the live list and
+// lookup. Runs inside the engine's runWithoutProfiling scope (its caller), so
+// the insert never re-feeds the profiler. The flat trigger* / duration* /
+// threshold* columns duplicate the snapshot's trigger so the list never
+// projects the blob.
 export async function persistTrace(
   ctx: TripContext,
   events: Record<string, unknown>,
@@ -22,13 +24,18 @@ export async function persistTrace(
     events,
   };
 
-  await db.insert(_traces).values({
-    id: ctx.id,
-    worktree: snapshot.worktree,
-    triggerKind: ctx.trigger.kind,
-    triggerLabel: ctx.trigger.label,
-    durationMs: ctx.trigger.durationMs,
-    thresholdMs: ctx.trigger.thresholdMs,
-    snapshot,
-  });
+  await tracesProducer.mutate(
+    db,
+    (q, t) =>
+      q.insert(t).values({
+        id: ctx.id,
+        worktree: snapshot.worktree,
+        triggerKind: ctx.trigger.kind,
+        triggerLabel: ctx.trigger.label,
+        durationMs: ctx.trigger.durationMs,
+        thresholdMs: ctx.trigger.thresholdMs,
+        snapshot,
+      }),
+    { latency: "background" },
+  );
 }

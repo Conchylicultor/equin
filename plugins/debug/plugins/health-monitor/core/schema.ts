@@ -115,9 +115,13 @@ export const HealthSeriesSchema = z.object({
 });
 export type HealthSeries = z.infer<typeof HealthSeriesSchema>;
 
-export const GetHealthDataResponseSchema = z.object({
+// The Health pane's whole read: every worktree's series and the host samples
+// over the last `windowMs`, as read from disk at `readAtMs` (epoch ms — the
+// "now" a backend's sample age is measured against).
+export const HealthDataSchema = z.object({
   series: z.array(HealthSeriesSchema),
   hostSamples: z.array(HostSampleSchema),
   windowMs: z.number(),
+  readAtMs: z.number(),
 });
-export type GetHealthDataResponse = z.infer<typeof GetHealthDataResponseSchema>;
+export type HealthData = z.infer<typeof HealthDataSchema>;

@@ -1097,7 +1097,9 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));  // MANY tuples → on
   reader asks. The descriptor is `load: "on-demand"` branded `snapshot: true`
   (`LiveSnapshotBrand` — every other declaration's type says `snapshot?:
   undefined`); its `serveValue` must declare `changes: { snapshot }` (tsc, and
-  a throw), and its `useLive` result adds `refresh()`. Never beside `preload`
+  a throw), and its `useLive` result adds `refresh()`. A plain `useLive(value)`
+  read re-measures on every mount, a remount over a still-cached read too
+  (the cached read stays on screen meanwhile). Never beside `preload`
   or `paged` (tsc, and a throw).
 - **Bytes — `bytes: true`.** A binary payload (a file's bytes, an image):
   `liveValue(key, { bytes: true, params | query, maxBytes?, refusals? })`
@@ -1644,14 +1646,14 @@ never add one.
     - `liveValue`
     - `scopedLiveColumns`
 - Cross-plugin:
-  - Imported by: 207 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 221 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×62
     - `conversations` ×35
     - `tasks` ×26
+    - `debug` ×23
     - `active-data` ×12
     - `infra` ×11
     - `page` ×10
-    - `debug` ×9
     - `build` ×6
     - `primitives` ×5
     - `plugin-meta` ×4
@@ -1691,23 +1693,10 @@ never add one.
     - `build/build-profiling` (1 debt)
     - `build/serve-composition` (1 debt)
     - `code-explorer/file-resolve` (1 debt)
-    - `config_v2/settings` (3 debt)
-    - `debug/broadcasts` (1 debt)
-    - `debug/config-orphans` (2 debt)
-    - `debug/health-monitor` (1 debt)
-    - `debug/heap-snapshot` (1 debt)
-    - `debug/live-state-churn/emit` (1 debt)
-    - `debug/live-state-health` (1 debt)
     - `debug/logs` (1 debt)
-    - `debug/memory` (1 debt)
-    - `debug/profiling/boot` (1 debt)
     - `debug/profiling/build` (1 debt)
-    - `debug/profiling/runtime` (1 debt)
-    - `debug/read-set` (1 debt)
     - `debug/slow-ops/cluster` (1 debt)
-    - `debug/slow-ops/pane` (1 debt)
     - `debug/timeline` (1 debt)
-    - `debug/trace/pane` (2 debt)
     - `debug/worktree-cleanup` (1 debt)
     - `framework/central-core` (0 debt)
     - `framework/resource-runtime` (0 debt)

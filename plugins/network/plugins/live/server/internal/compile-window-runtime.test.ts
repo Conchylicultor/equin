@@ -66,9 +66,10 @@ function liveDb() {
     ) => {
       const { sql, params } = dialect.sqlToQuery(q.getSQL());
       let rows: unknown[];
-      if (sql.includes(" in (")) {
-        // Scoped refill / point read: params are the requested ids.
-        rows = (params as string[])
+      if (sql.includes(" in (") || sql.includes(" = ANY(")) {
+        // Scoped refill (`in ($1, …)`) / point read (`= ANY($1::text[])`, the
+        // id list as one array param): the params are the requested ids.
+        rows = (params.flat() as string[])
           .filter((id) => table.has(id))
           .map((id) => ({ id, n: table.get(id)!.n }));
       } else {
@@ -118,8 +119,8 @@ function sortDb() {
       const { sql, params } = dialect.sqlToQuery(q.getSQL());
       const all = [...table.entries()].map(([id, c]) => ({ id, ...c }));
       let rows: unknown[];
-      if (sql.includes(" in (")) {
-        const ids = params as string[];
+      if (sql.includes(" in (") || sql.includes(" = ANY(")) {
+        const ids = params.flat() as string[];
         rows = all.filter((r) => ids.includes(r.id));
       } else {
         const col = sql.includes(`order by "sorted"."m"`) ? "m" : "n";

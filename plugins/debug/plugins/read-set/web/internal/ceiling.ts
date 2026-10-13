@@ -1,4 +1,4 @@
-import type { ResourcePolicy, ResourceReadSet } from "../../shared/schema";
+import type { ResourceDebug, ResourcePolicy } from "../../core";
 
 // The read-set ceiling (A7): what a change costs each entry, read off the
 // runtime's own fields — `policy` (what the entry is) and `legacyReach` (the
@@ -75,7 +75,7 @@ const byKey = (a: { key: string }, b: { key: string }): number =>
  * - `pureExternal` — external entries with no legacy reach.
  * - `keys` — every key under its policy.
  */
-export function computeCeiling(resources: readonly ResourceReadSet[]): Ceiling {
+export function computeCeiling(resources: readonly ResourceDebug[]): Ceiling {
   const legacyFull: LegacyFullEntry[] = [];
   const routedFull: RoutedFullEntry[] = [];
   const drift: DriftEntry[] = [];

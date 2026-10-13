@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import {
@@ -626,6 +626,17 @@ function isSnapshot(decl: object): boolean {
  * changes, like every `useLive` result.
  */
 function useSnapshotRead<T>(read: ResourceResult<T>): LiveSnapshotResult<T> {
+  // A snapshot is measured when its reader mounts. A first mount's read does
+  // that (the on-demand HTTP read), but a remount over a read still cached
+  // (the query client's `staleTime: Infinity`) would otherwise show the old
+  // measure as `ready` without asking — so a mount that finds one cached
+  // re-measures it once, keeping the cached read on screen meanwhile.
+  const [remeasure] = useState(() =>
+    read.status === "loading" ? null : read.refetch,
+  );
+  useEffect(() => {
+    if (remeasure !== null) void remeasure();
+  }, [remeasure]);
   return useMemo(() => ({ ...read, refresh: read.refetch }), [read]);
 }
 

@@ -1,9 +1,6 @@
 import { useMemo, useState, type ReactElement } from "react";
-import {
-  useEndpoint,
-  getEndpointErrorMessage,
-  EndpointError,
-} from "@plugins/infra/plugins/endpoints/web";
+import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -21,63 +18,70 @@ import {
 } from "@plugins/debug/plugins/profiling/web";
 import {
   Trace,
-  getTrace,
-  listTraces,
   type TraceSelection,
 } from "@plugins/debug/plugins/trace/plugins/engine/web";
-import type { TraceSnapshot } from "@plugins/debug/plugins/trace/plugins/engine/core";
+import {
+  traceById,
+  traceEvents,
+  type TraceSnapshot,
+} from "@plugins/debug/plugins/trace/plugins/engine/core";
 import { overlaps } from "../internal/incidents";
 import { triggerVariant } from "../internal/trigger-meta";
 import { traceDetailPane } from "../panes";
 
-// Detail render: load one trace's full snapshot, then paint the unified Gantt —
-// the trip row (rendered here from the generic trigger, naming no class) + one
-// dispatched Trace.Lane per snapshot.events section in registry (insertion)
-// order. A bar/chip click feeds the shared bottom detail strip.
+// Detail render: read one trace's full snapshot by id (the `debug.trace` point
+// lookup), then paint the unified Gantt — the trip row (rendered here from the
+// generic trigger, naming no class) + one dispatched Trace.Lane per
+// snapshot.events section in registry (insertion) order. A bar/chip click
+// feeds the shared bottom detail strip. A non-uuid id (a hand-typed or stale
+// URL) is answered not-found by the point read itself, like an unknown uuid.
 export function TraceDetail({ id }: { id: string }): ReactElement {
-  const { data, error, isLoading } = useEndpoint(getTrace, { id });
+  const result = useLiveRow(traceById, id);
 
-  if (isLoading) {
+  if (result.status === "loading") {
     return (
       <Center axis="both" className="h-full">
         <Loading />
       </Center>
     );
   }
-  if (error) {
-    const notFound = error instanceof EndpointError && error.status === 404;
+  if (result.status === "error") {
     return (
       <Center axis="both" className="h-full p-2xl text-center">
-        <Placeholder tone={notFound ? "muted" : "error"}>
-          {notFound
-            ? `No trace with id "${id}".`
-            : getEndpointErrorMessage(error)}
-        </Placeholder>
+        <ResourceErrorInline
+          variant="block"
+          subject="the trace"
+          error={result.error}
+          refetch={result.refetch}
+        />
       </Center>
     );
   }
-  if (!data) {
+  if (!result.found) {
     return (
-      <Center axis="both" className="h-full">
-        <Loading />
+      <Center axis="both" className="h-full p-2xl text-center">
+        <Placeholder tone="muted">{`No trace with id "${id}".`}</Placeholder>
       </Center>
     );
   }
 
+  const { snapshot } = result.row;
   return (
     <>
-      <AlsoInWindow id={id} snapshot={data.snapshot} />
-      <TraceGantt snapshot={data.snapshot} />
+      <AlsoInWindow id={id} snapshot={snapshot} />
+      <TraceGantt snapshot={snapshot} />
     </>
   );
 }
 
 // "Also in this window" — the sibling traces whose wall-clock window overlaps
-// this trace's window, from the same cheap 200-newest metadata the Events tab
-// uses (deduped by the endpoint layer). One-click hop between the co-occurring
-// traces of a single incident. The count is a LOWER BOUND — rate-limited
-// siblings never persist — so the subtitle says groups may be incomplete.
-// Hidden entirely for a solo trace.
+// this trace's window, from the same cheap 200-newest metadata window the
+// Events tab reads (`debug.traces`, one shared subscription). One-click hop
+// between the co-occurring traces of a single incident. The count is a LOWER
+// BOUND — rate-limited siblings never persist — so the subtitle says groups may
+// be incomplete. Hidden for a solo trace; while the window loads the strip is
+// not drawn yet (it is an optional aid above the Gantt, so it claims nothing),
+// and a failed read says so with a retry.
 function AlsoInWindow({
   id,
   snapshot,
@@ -86,7 +90,7 @@ function AlsoInWindow({
   snapshot: TraceSnapshot;
 }): ReactElement | null {
   const openPane = useOpenPane();
-  const { data: list } = useEndpoint(listTraces, {});
+  const list = useLive(traceEvents);
 
   const siblings = useMemo(() => {
     const end = Date.parse(snapshot.wallTime);
@@ -94,7 +98,8 @@ function AlsoInWindow({
       startMs: end - (snapshot.atMs - snapshot.windowStartMs),
       endMs: end,
     };
-    return (list?.items ?? [])
+    if (list.status === "loading" || list.status === "error") return null;
+    return list.data
       .filter((t) => {
         if (t.id === id) return false;
         const tEnd = Date.parse(t.wallTime);
@@ -104,7 +109,19 @@ function AlsoInWindow({
       .sort((a, b) => a.deltaS - b.deltaS);
   }, [list, id, snapshot.wallTime, snapshot.atMs, snapshot.windowStartMs]);
 
-  if (siblings.length === 0) return null;
+  if (list.status === "error") {
+    return (
+      <div className="border-b px-lg py-sm">
+        <ResourceErrorInline
+          variant="inline"
+          subject="the traces in this window"
+          error={list.error}
+          refetch={list.refetch}
+        />
+      </div>
+    );
+  }
+  if (siblings === null || siblings.length === 0) return null;
 
   return (
     <div className="border-b px-lg py-sm">

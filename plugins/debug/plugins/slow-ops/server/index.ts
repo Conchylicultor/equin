@@ -2,12 +2,12 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { ConfigV2, watchConfig } from "@plugins/config_v2/server";
 import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
 import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
-import { listSlowOps, slowOpConfig } from "../core";
+import { slowOpConfig } from "../core";
 import { submitClientSlowOp } from "../shared/endpoints";
 import { _slowOps } from "./internal/tables";
 import { slowOpKind } from "./internal/slow-op-kind";
 import { handleClientSlowOp } from "./internal/handle-client-slow-op";
-import { handleListSlowOps } from "./internal/handle-list-slow-ops";
+import { slowOpsServed } from "./internal/slow-ops-served";
 import { installSlowSpanHook } from "./internal/install-slow-span";
 import { slowOpsRetention } from "./internal/retention";
 
@@ -18,21 +18,22 @@ export { readSlowOpMarkers } from "./internal/read-markers";
 
 export default {
   description:
-    "Durable slow-op store: deduped per-operation aggregates with caller attribution, plus the slow-op report kind. Subscribes to runtime-profiler slow spans and client signals; files one deduped report per distinct slow operation (investigation task filed on demand).",
+    "Durable slow-op store: deduped per-operation aggregates with caller attribution, plus the slow-op report kind and the slow-ops.list snapshot value the pane reads. Subscribes to runtime-profiler slow spans and client signals; files one deduped report per distinct slow operation (investigation task filed on demand).",
   contributions: [
+    ...slowOpsServed.declare,
     ConfigV2.Register({ descriptor: slowOpConfig }),
     slowOpKind,
     // A deduped slow-op aggregate UPDATEs a hot row on every threshold-exceeding
     // span — thousands/min under load. Wiring per-statement live-state
     // invalidation onto it made slow_ops the single largest source of change-feed
     // churn (a self-amplifying loop: slow app → more slow-op writes → more notify
-    // cascade → slower app). The Slow Ops pane reads it on open through
-    // `listSlowOps` (GET /api/slow-ops) instead of live-ticking — a live value
-    // over an excluded table would never update. See the change-feed exclusion doc.
+    // cascade → slower app). The Slow Ops pane reads it through the
+    // `slow-ops.list` external snapshot value (re-read on open / Refresh)
+    // instead of live-ticking. See the change-feed exclusion doc.
     ExcludeFromChangeFeed({
       table: _slowOps,
       reason:
-        "High-churn deduped observability counter; live-ticking it amplifies the very slowness it records. Pane hydrates on open.",
+        "High-churn deduped observability counter; live-ticking it amplifies the very slowness it records. Pane re-reads a snapshot on open / Refresh.",
     }),
     // A slow-op row aggregates operations observed on the machine that recorded
     // them. `worktree` is a label for the cross-worktree Cluster view, not a
@@ -46,7 +47,6 @@ export default {
     }),
   ],
   httpRoutes: {
-    [listSlowOps.route]: handleListSlowOps,
     [submitClientSlowOp.route]: handleClientSlowOp,
   },
   register: [slowOpsRetention],

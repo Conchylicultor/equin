@@ -1,17 +1,7 @@
-import { getProfilingData } from "@plugins/framework/plugins/server-core/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { getGatewayBootReport } from "@plugins/debug/plugins/boot-monitor/server";
 import { getBootProfiling } from "../../core";
+import { readBootProfile } from "./boot-profile";
 
-export const handleBootProfiling = implement(getBootProfiling, () => {
-  const server = getProfilingData();
-  const gateway = getGatewayBootReport();
-  return {
-    spans: server.spans,
-    totalMs: server.totalDurationMs,
-    memoryCheckpoints: server.memoryCheckpoints,
-    processStartedAt: performance.timeOrigin,
-    bootStartOffsetMs: server.bootStartOffsetMs,
-    ...(gateway ? { gateway } : {}),
-  };
-});
+// Kept for the cold-start e2e (`debug/profiling/cold-start/e2e/cold-start.ts`),
+// which reads the profile over plain HTTP; the pane reads `profiling.boot`.
+export const handleBootProfiling = implement(getBootProfiling, readBootProfile);

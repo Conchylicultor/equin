@@ -1,1 +1,2 @@
-export { listMemoryFiles, readMemoryFile } from "./endpoints";
+export { memoryFile, memoryFiles } from "./resources";
+export type { MemoryFile } from "./resources";

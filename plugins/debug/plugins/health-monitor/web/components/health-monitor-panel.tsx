@@ -19,10 +19,8 @@ import {
   tooltipLabelStyle,
   yAxisFormatter,
 } from "@plugins/stats/plugins/commits/web";
-import {
-  useEndpoint,
-  getEndpointErrorMessage,
-} from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   SectionLabel,
   Text,
@@ -39,11 +37,9 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { loadSeverity } from "@plugins/debug/plugins/slow-ops/core";
-import { getHealthData } from "../../shared/endpoints";
+import { healthMonitorSeries } from "../../shared/resources";
 import type { HealthSeries, HostSample } from "../../core";
 
-const WINDOW_MS = 2 * 60 * 60 * 1000; // 2h (v1 fixed window)
-const POLL_MS = 10_000;
 const SAMPLE_BUCKET_MS = 10_000; // align spikes to the 10s sample grid
 
 type ChartRow = Record<string, number>;
@@ -430,34 +426,35 @@ function HostSection({
 }
 
 export function HealthMonitorPanel(): ReactElement {
-  const { data, error, dataUpdatedAt } = useEndpoint(
-    getHealthData,
-    {},
-    /* eslint-disable polling-safety/no-refetch-interval -- a sampled time series read from disk by main, meant to answer even when the backend a push would come from is wedged */
-    { query: { windowMs: WINDOW_MS }, refetchInterval: POLL_MS },
-    /* eslint-enable polling-safety/no-refetch-interval */
-  );
+  // Pushed by the server after each of its sampler ticks (every 10 s).
+  const result = useLive(healthMonitorSeries);
 
-  if (error) {
+  if (result.status === "error") {
     return (
       <Inset pad="lg">
-        <Placeholder tone="error">{getEndpointErrorMessage(error)}</Placeholder>
+        <ResourceErrorInline
+          variant="block"
+          subject="health samples"
+          error={result.error}
+          refetch={result.refetch}
+        />
       </Inset>
     );
   }
-  if (!data) {
+  if (result.status === "loading") {
     return (
       <Inset pad="lg">
         <Placeholder>Loading…</Placeholder>
       </Inset>
     );
   }
+  const data = result.data;
 
   return (
     <Inset pad="lg">
       <Stack gap="xl">
         <HostSection samples={data.hostSamples} />
-        <BackendsSection series={data.series} now={dataUpdatedAt} />
+        <BackendsSection series={data.series} now={data.readAtMs} />
         {data.series.length === 0 ? (
           <Placeholder>
             No health samples yet — the sampler warms up within ~10s.

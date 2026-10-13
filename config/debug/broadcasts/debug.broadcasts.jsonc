@@ -1,0 +1,13 @@
+// @hash 6ec84829688d
+{
+  // Debug → Broadcasts: the entries of the CLI's broadcasts.json, in file
+  // order (the order the CLI prints them in) — so no sort.
+  "views": [
+    {
+      "id": "all",
+      "name": "All",
+      "icon": "feedback",
+      "view": { "type": "list" }
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import { closeSync, fstatSync, openSync, readdirSync, readSync } from "node:fs";
+import { open } from "node:fs/promises";
 import { join } from "node:path";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { sanitizeChannel } from "@plugins/infra/plugins/file-sink/core";
@@ -93,21 +94,67 @@ export function readTail(
       if (read === 0) break;
       offset += read;
     }
-    let text = buf.toString("utf8", 0, offset);
-    if (start > 0) {
-      const nl = text.indexOf("\n");
-      text = nl === -1 ? "" : text.slice(nl + 1);
-    }
-    const entries: { t: number; stream?: LogStream; line: string }[] = [];
-    for (const line of text.split("\n")) {
-      if (!line) continue;
-      const parsed = tryParseEntry(line);
-      // Tolerate corrupt/partial lines (e.g. a half-flushed append).
-      if (parsed) entries.push(parsed);
-    }
-    return entries.slice(-tail);
+    return parseTail(buf.toString("utf8", 0, offset), start > 0, tail);
   } finally {
     closeSync(fd);
+  }
+}
+
+// Split a tail read into its envelope entries, the newest `tail` kept. A read
+// that did not start at offset 0 begins mid-line, so its first line is dropped.
+function parseTail(
+  text: string,
+  startedMidFile: boolean,
+  tail: number,
+): { t: number; stream?: LogStream; line: string }[] {
+  if (startedMidFile) {
+    const nl = text.indexOf("\n");
+    text = nl === -1 ? "" : text.slice(nl + 1);
+  }
+  const entries: { t: number; stream?: LogStream; line: string }[] = [];
+  for (const line of text.split("\n")) {
+    if (!line) continue;
+    const parsed = tryParseEntry(line);
+    // Tolerate corrupt/partial lines (e.g. a half-flushed append).
+    if (parsed) entries.push(parsed);
+  }
+  return entries.slice(-tail);
+}
+
+// `readTail` without blocking the event loop: the same bounded positioned read,
+// through `fs/promises`. For a caller on a hot async path (a live-resource
+// loader re-reading many files), where a sync read would freeze every other
+// loader, socket send and request for its whole duration.
+export async function readTailAsync(
+  file: string,
+  tail: number,
+): Promise<{ t: number; stream?: LogStream; line: string }[] | null> {
+  let handle: Awaited<ReturnType<typeof open>>;
+  try {
+    handle = await open(file, "r");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+  try {
+    const size = (await handle.stat()).size;
+    const start = Math.max(0, size - READ_TAIL_BYTES);
+    const length = size - start;
+    const buf = Buffer.allocUnsafe(length);
+    let offset = 0;
+    while (offset < length) {
+      const { bytesRead } = await handle.read(
+        buf,
+        offset,
+        length - offset,
+        start + offset,
+      );
+      if (bytesRead === 0) break;
+      offset += bytesRead;
+    }
+    return parseTail(buf.toString("utf8", 0, offset), start > 0, tail);
+  } finally {
+    await handle.close();
   }
 }
 
@@ -116,8 +163,11 @@ export function readChannelEntries(
   channel: string,
   tail: number,
 ): { t: number; stream?: LogStream; line: string }[] | null {
-  const file = join(logsDirFor(worktree), sanitizeChannel(channel) + ".jsonl");
-  return readTail(file, tail);
+  return readTail(channelFile(worktree, channel), tail);
+}
+
+function channelFile(worktree: string, channel: string): string {
+  return join(logsDirFor(worktree), sanitizeChannel(channel) + ".jsonl");
 }
 
 // Read a channel whose payload lines are each a JSON object of type `T`: unwrap
@@ -137,7 +187,26 @@ export function readChannelJson<T>(
   tail: number,
   schema: ZodParser<T>,
 ): T[] {
-  const entries = readChannelEntries(worktree, channel, tail);
+  return parseJsonEntries(readChannelEntries(worktree, channel, tail), schema);
+}
+
+// `readChannelJson` without blocking the event loop (see `readTailAsync`).
+export async function readChannelJsonAsync<T>(
+  worktree: string,
+  channel: string,
+  tail: number,
+  schema: ZodParser<T>,
+): Promise<T[]> {
+  return parseJsonEntries(
+    await readTailAsync(channelFile(worktree, channel), tail),
+    schema,
+  );
+}
+
+function parseJsonEntries<T>(
+  entries: { line: string }[] | null,
+  schema: ZodParser<T>,
+): T[] {
   if (!entries) return [];
   const out: T[] = [];
   for (const entry of entries) {

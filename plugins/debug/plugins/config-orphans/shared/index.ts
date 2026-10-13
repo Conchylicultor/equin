@@ -1,1 +1,1 @@
-export { configOrphans } from "./endpoints";
+export { configOrphansReport } from "./report";

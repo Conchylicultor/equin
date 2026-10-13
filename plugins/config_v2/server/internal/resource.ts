@@ -70,6 +70,16 @@ export function markRegistryReady(): void {
   resolveRegistryReady();
 }
 
+/**
+ * Resolves once `initRegistry` has registered every descriptor. A loader that
+ * reads the registry (`getAllDescriptors`, a document by path) awaits it, since
+ * resource subscriptions are served before `onReadyBlocking` runs: answered
+ * early, it would see an empty registry.
+ */
+export function configRegistryReady(): Promise<void> {
+  return registryReady;
+}
+
 // Wraps a loader so it resolves only after initRegistry has populated the
 // registry (descriptorByPath / configGetter). Pre-readiness
 // the server already serves subscriptions, so without this gate a loader answers
@@ -78,7 +88,7 @@ function whenRegistryReady<A, R>(
   fn: (arg: A) => R | Promise<R>,
 ): (arg: A) => Promise<R> {
   return async (arg: A) => {
-    await registryReady;
+    await configRegistryReady();
     return fn(arg);
   };
 }

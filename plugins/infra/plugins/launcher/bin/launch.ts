@@ -99,9 +99,9 @@ process.env.SINGULARITY_SENTINEL_WORKER_JS ??= join(
   "sentinel",
   "worker.js",
 );
-// The raw git-layer config tree is read by getRawFileContent (Settings "View
-// raw") and gitBacksScope (per-app un-fork). REPO_ROOT resolves into the compiled
-// binary's virtual FS, so point these at the vendored tree.
+// The raw git-layer config tree is read by the config-v2.raw-file loader
+// (Settings "View raw") and gitBacksScope (per-app un-fork). REPO_ROOT resolves
+// into the compiled binary's virtual FS, so point these at the vendored tree.
 process.env.SINGULARITY_REPO_CONFIG_DIR ??= join(bundleRoot, "config");
 // The served frontend. In dev this derives from the namespace
 // (`~/.singularity/worktrees/<name>/web`); a release ships one bundle whose web

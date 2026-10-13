@@ -372,6 +372,7 @@ run everywhere.
     - `isHostSingleton`
     - `isRelease`
     - `listWorktreeDirs`
+    - `listWorktreeDirsAsync`
     - `META_APP_ROOTS`
     - `PGREP`
     - `PLUGINS_DIR`

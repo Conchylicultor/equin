@@ -1,8 +1,6 @@
 import { useMemo } from "react";
-import {
-  foldResource,
-  useEndpointResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import type { OrphanEntry } from "@plugins/config_v2/core";
 import {
   DataView,
@@ -13,7 +11,7 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { configOrphans } from "../../shared/endpoints";
+import { configOrphansReport } from "../../shared/report";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const ORPHANS_VIEW = defineDataView("debug.config-orphans");
@@ -37,7 +35,7 @@ function formatBytes(bytes: number): string {
 const NO_ORPHANS: OrphanEntry[] = [];
 
 export function ConfigOrphansPanel() {
-  const audit = useEndpointResource(configOrphans, {});
+  const audit = useLive(configOrphansReport);
   // The DataView renders the loading and failed states (`readiness`); only a
   // ready audit's rows reach the view.
   const orphans = foldResource(audit, {

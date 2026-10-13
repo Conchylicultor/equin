@@ -1,4 +1,5 @@
 import { readdirSync, statSync } from "node:fs";
+import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { worktreesDir } from "./paths";
 
@@ -31,4 +32,33 @@ export function listDirNames(dir: string): string[] {
     if (isDir) dirs.push(name);
   }
   return dirs;
+}
+
+// `listWorktreeDirs` without blocking the event loop — for a caller on a hot
+// async path (a live-resource loader), where ~200 sync stats would freeze every
+// other loader and request for the scan's whole duration.
+export async function listWorktreeDirsAsync(): Promise<string[]> {
+  return listDirNamesAsync(worktreesDir());
+}
+
+export async function listDirNamesAsync(dir: string): Promise<string[]> {
+  let names: string[];
+  try {
+    names = await readdir(dir);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw err;
+  }
+  const flags = await Promise.all(
+    names.map(async (name) => {
+      try {
+        return (await stat(join(dir, name))).isDirectory();
+      } catch (err) {
+        // A worktree dir can vanish mid-scan (concurrent reap); treat as absent.
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+        return false;
+      }
+    }),
+  );
+  return names.filter((_, i) => flags[i]);
 }

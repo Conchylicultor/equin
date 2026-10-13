@@ -1,0 +1,17 @@
+// @hash 6ec84829688d
+{
+  // Debug → Memory: the project's memory files, grouped by kind (the index
+  // first), alphabetical inside each kind.
+  "views": [
+    {
+      "id": "by-type",
+      "name": "By type",
+      "icon": "memory",
+      "view": {
+        "type": "list",
+        "groupBy": { "fieldId": "type", "groupingId": "value" },
+        "sort": [{ "fieldId": "name", "direction": "asc" }]
+      }
+    }
+  ]
+}

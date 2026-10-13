@@ -3,34 +3,38 @@ import {
   cn,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useState, useCallback, useMemo } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import {
-  fetchEndpoint,
-  useEndpoint,
-} from "@plugins/infra/plugins/endpoints/web";
+  DataView,
+  defineDataView,
+  type FieldDef,
+} from "@plugins/primitives/plugins/data-view/web";
 import { OP_KIND_IDS, type OpKind } from "@plugins/infra/plugins/worktree/core";
+import { writeBroadcasts, type BroadcastEntry } from "../../shared/endpoints";
+import { broadcastEntries } from "../../shared/resources";
 import {
-  getBroadcasts,
-  writeBroadcasts,
-  type BroadcastEntry,
-} from "../../shared/endpoints";
+  BroadcastItemActions,
+  DeleteBroadcastContext,
+  type BroadcastRow,
+} from "./broadcast-item-actions";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const addIcon = symbol("add");
-const deleteIcon = symbol("delete");
-const refreshIcon = symbol("refresh");
+
+// Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
+const BROADCASTS_VIEW = defineDataView("debug.broadcasts");
 
 type BroadcastSeverity = BroadcastEntry["severity"];
 type BroadcastCommand = OpKind;
@@ -43,6 +47,77 @@ const SEVERITY_STYLES: Record<BroadcastSeverity, string> = {
 
 const ALL_COMMANDS: readonly BroadcastCommand[] = OP_KIND_IDS;
 
+const NO_ENTRIES: BroadcastEntry[] = [];
+
+// The file's order is the order the CLI prints them in, so the view keeps it
+// (no sort in its config). `index` is the entry's position in the file — the
+// row key, and what Delete removes.
+const fields: FieldDef<BroadcastRow>[] = [
+  {
+    id: "message",
+    label: "Message",
+    type: "text",
+    primary: true,
+    value: (r) => r.entry.message,
+    sortable: false,
+    filterable: false,
+  },
+  {
+    id: "since",
+    label: "Since",
+    type: "text",
+    value: (r) => (r.entry.since ? `since: ${r.entry.since.slice(0, 8)}` : ""),
+    cell: (r) =>
+      r.entry.since ? (
+        <span className="font-mono">since: {r.entry.since.slice(0, 8)}</span>
+      ) : null,
+    sortable: false,
+    filterable: false,
+  },
+  {
+    id: "until",
+    label: "Until",
+    type: "text",
+    value: (r) => (r.entry.until ? `until: ${r.entry.until.slice(0, 8)}` : ""),
+    cell: (r) =>
+      r.entry.until ? (
+        <span className="font-mono">until: {r.entry.until.slice(0, 8)}</span>
+      ) : null,
+    sortable: false,
+    filterable: false,
+  },
+  {
+    id: "commands",
+    label: "Commands",
+    type: "text",
+    value: (r) => (r.entry.commands ? `[${r.entry.commands.join(", ")}]` : ""),
+    sortable: false,
+    filterable: false,
+  },
+  {
+    id: "severity",
+    label: "Severity",
+    type: "enum",
+    options: [
+      { value: "error", label: "error" },
+      { value: "warning", label: "warning" },
+      { value: "info", label: "info" },
+    ],
+    value: (r) => r.entry.severity,
+    cell: (r) => (
+      <Badge
+        colorClass={SEVERITY_STYLES[r.entry.severity]}
+        className={rigidClass()}
+      >
+        {r.entry.severity}
+      </Badge>
+    ),
+    align: "end",
+    sortable: false,
+    filterable: true,
+  },
+];
+
 function defaultForm() {
   return {
     severity: "warning" as BroadcastSeverity,
@@ -54,9 +129,26 @@ function defaultForm() {
 }
 
 export function BroadcastsPanel() {
-  const { data, isLoading, refetch } = useEndpoint(getBroadcasts, {});
-  const entries = useMemo(() => data?.entries ?? [], [data]);
-  const filePath = data?.path ?? "";
+  // Live: the file's own watch pushes every change, the pane's saves included.
+  const result = useLive(broadcastEntries);
+  // The loaded file, for the edits: each rewrites it whole, so neither a
+  // pending nor a failed read can be edited (null).
+  const ready = foldResource(result, {
+    loading: () => null,
+    error: () => null,
+    ready: (d) => d,
+  });
+  // The DataView renders the loading and failed states (`readiness`); only a
+  // ready read's rows reach the view.
+  const entries = foldResource(result, {
+    loading: () => NO_ENTRIES,
+    error: () => NO_ENTRIES,
+    ready: (d) => d.entries,
+  });
+  const rows = useMemo<BroadcastRow[]>(
+    () => entries.map((entry, index) => ({ index, entry })),
+    [entries],
+  );
 
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -68,16 +160,15 @@ export function BroadcastsPanel() {
       setSaving(true);
       setError(null);
       try {
-        const result = await fetchEndpoint(
+        const res = await fetchEndpoint(
           writeBroadcasts,
           {},
           { body: { entries: updated } },
         );
-        if (!result.ok) {
-          setError("error" in result ? result.error : "Save failed");
+        if (!res.ok) {
+          setError("error" in res ? res.error : "Save failed");
           return false;
         }
-        void refetch();
         return true;
         // eslint-disable-next-line promise-safety/no-absorbed-failure -- the error IS surfaced to the user via setError(String(e)); false is the save-handler's failure status the caller branches on, not a swallowed error
       } catch (e) {
@@ -87,18 +178,26 @@ export function BroadcastsPanel() {
         setSaving(false);
       }
     },
-    [refetch],
+    [],
   );
 
-  const handleDelete = useCallback(
-    async (index: number) => {
-      await save(entries.filter((_, i) => i !== index));
-    },
-    [entries, save],
+  // Every edit rewrites the file from the entries on screen, so it waits for
+  // them: an edit made before the read lands would drop the file's entries.
+  const deleteRow = useMemo(
+    () =>
+      ready === null
+        ? null
+        : {
+            saving,
+            remove: async (index: number) => {
+              await save(ready.entries.filter((_, i) => i !== index));
+            },
+          },
+    [ready, saving, save],
   );
 
   const handleAdd = useCallback(async () => {
-    if (!form.message.trim()) return;
+    if (ready === null || !form.message.trim()) return;
     const entry: BroadcastEntry = {
       severity: form.severity,
       message: form.message.trim(),
@@ -106,12 +205,12 @@ export function BroadcastsPanel() {
     if (form.since.trim()) entry.since = form.since.trim();
     if (form.until.trim()) entry.until = form.until.trim();
     if (form.commands.length > 0) entry.commands = [...form.commands];
-    const ok = await save([...entries, entry]);
+    const ok = await save([...ready.entries, entry]);
     if (ok) {
       setForm(defaultForm);
       setShowForm(false);
     }
-  }, [form, entries, save]);
+  }, [form, ready, save]);
 
   const toggleCommand = (cmd: BroadcastCommand) => {
     setForm((f) => ({
@@ -130,25 +229,23 @@ export function BroadcastsPanel() {
           <Text as="span" variant="label">
             Broadcast Messages
           </Text>
-          {filePath && (
+          {ready && (
             <p
               // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny one-off offset below label, no parent gap to own it
               className="mt-0.5 truncate font-mono text-3xs text-muted-foreground/50"
-              title={filePath}
+              title={ready.path}
             >
-              {filePath}
+              {ready.path}
             </p>
           )}
         </Fill>
         <Stack direction="row" gap="xs" align="center" className={rigidClass()}>
           <ControlSizeProvider size="sm">
-            <IconButton
-              icon={refreshIcon}
-              label="Refresh"
-              variant="ghost"
-              onClick={() => refetch()}
-            />
-            <Button className="gap-xs" onClick={() => setShowForm((v) => !v)}>
+            <Button
+              className="gap-xs"
+              disabled={ready === null}
+              onClick={() => setShowForm((v) => !v)}
+            >
               <Icon icon={addIcon} className="size-4" />
               Add
             </Button>
@@ -305,7 +402,7 @@ export function BroadcastsPanel() {
               </Button>
               <Button
                 loading={saving}
-                disabled={!form.message.trim()}
+                disabled={ready === null || !form.message.trim()}
                 onClick={() => handleAdd()}
               >
                 Add
@@ -317,75 +414,19 @@ export function BroadcastsPanel() {
 
       {/* Entry list */}
       <Scroll fill>
-        {isLoading ? (
-          <Center className="h-full">
-            <Loading />
-          </Center>
-        ) : entries.length === 0 ? (
-          <Center className="h-full">
-            <Text as="div" variant="body" className="text-muted-foreground">
-              No active broadcasts
-            </Text>
-          </Center>
-        ) : (
-          <ul className="divide-y">
-            {entries.map((entry, i) => (
-              <Stack
-                as="li"
-                key={i}
-                direction="row"
-                gap="md"
-                align="start"
-                className="px-lg py-md hover:bg-muted/30"
-              >
-                <Badge
-                  colorClass={SEVERITY_STYLES[entry.severity]}
-                  // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset to align badge with first text line
-                  className={cn("mt-0.5", rigidClass())}
-                >
-                  {entry.severity}
-                </Badge>
-                <Fill>
-                  <Text as="p" variant="body">
-                    {entry.message}
-                  </Text>
-                  {(entry.since ?? entry.until ?? entry.commands) && (
-                    <Stack
-                      direction="row"
-                      wrap
-                      gap="sm"
-                      align="center"
-                      // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset below message line
-                      className="mt-1 font-mono text-3xs text-muted-foreground"
-                    >
-                      {entry.since && (
-                        <span>since: {entry.since.slice(0, 8)}</span>
-                      )}
-                      {entry.until && (
-                        <span>until: {entry.until.slice(0, 8)}</span>
-                      )}
-                      {entry.commands && (
-                        <span className="font-sans">
-                          [{entry.commands.join(", ")}]
-                        </span>
-                      )}
-                    </Stack>
-                  )}
-                </Fill>
-                <ControlSizeProvider size="xs">
-                  <IconButton
-                    icon={deleteIcon}
-                    label="Delete"
-                    variant="ghost"
-                    className="text-muted-foreground hover:text-destructive"
-                    loading={saving}
-                    onClick={() => handleDelete(i)}
-                  />
-                </ControlSizeProvider>
-              </Stack>
-            ))}
-          </ul>
-        )}
+        <DeleteBroadcastContext.Provider value={deleteRow}>
+          <DataView<BroadcastRow>
+            storageKey={BROADCASTS_VIEW}
+            rows={rows}
+            readiness={result}
+            rowKey={(r) => String(r.index)}
+            searchAccessor={(r) => r.entry.message}
+            fields={fields}
+            views={["list"]}
+            itemActions={BroadcastItemActions}
+            emptyState="No active broadcasts"
+          />
+        </DeleteBroadcastContext.Provider>
       </Scroll>
     </Stack>
   );

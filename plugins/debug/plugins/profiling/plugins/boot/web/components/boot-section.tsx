@@ -1,11 +1,13 @@
-import { useEffect, type ReactElement } from "react";
+import { useEffect, useRef, type ReactElement } from "react";
 import {
   GanttSection,
   groupByPhase,
   useProfilingContext,
   type PhaseConfig,
 } from "@plugins/debug/plugins/profiling/web";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   Stack,
   Inset,
@@ -16,7 +18,7 @@ import {
   type ColumnDef,
 } from "@plugins/primitives/plugins/data-table/web";
 import {
-  getBootProfiling,
+  bootProfiling,
   type ProfilingData,
   type MemoryCheckpoint,
 } from "../../core";
@@ -238,14 +240,44 @@ function MemorySummary({
 
 export function BootSection(): ReactElement | null {
   const { refreshKey } = useProfilingContext();
-  const { data, refetch } = useEndpoint(getBootProfiling, {});
+  // A snapshot: read on mount, re-read on the pane's Refresh.
+  const result = useLive(bootProfiling);
+  const { refresh } = result;
 
-  // refetch is not a state setter, so this effect is clean (no set-state-in-effect).
+  // The mount already read it; only a LATER Refresh re-reads.
+  const seenKey = useRef(refreshKey);
   useEffect(() => {
-    void refetch();
-  }, [refetch, refreshKey]);
+    if (seenKey.current === refreshKey) return;
+    seenKey.current = refreshKey;
+    void refresh();
+  }, [refresh, refreshKey]);
 
-  if (!data || data.spans.length === 0) return null;
+  switch (result.status) {
+    case "loading":
+      return (
+        <Inset pad="lg">
+          <Loading variant="block" />
+        </Inset>
+      );
+    case "error":
+      return (
+        <Inset pad="lg">
+          <ResourceErrorInline
+            variant="block"
+            subject="the boot profile"
+            error={result.error}
+            refetch={result.refetch}
+          />
+        </Inset>
+      );
+    case "ready":
+      return <BootProfile data={result.data} />;
+  }
+}
+
+function BootProfile({ data }: { data: ProfilingData }): ReactElement | null {
+  // A process that recorded no span has no boot to draw.
+  if (data.spans.length === 0) return null;
 
   const grouped = groupByPhase(data.spans);
   return (

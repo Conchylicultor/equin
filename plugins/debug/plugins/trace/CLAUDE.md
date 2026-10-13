@@ -27,7 +27,9 @@ engine+kind split:
 
 - **`engine`** — the generic machinery: the `TraceEventClass` registry,
   `captureTrace()` (admission → sync capture → async enrich/persist), the
-  `traces` table + 7-day sweep, and the list/get/test endpoints. Owns the
+  `traces` table (an in-process change producer, no trigger) + 7-day sweep,
+  the `debug.traces` list window and `debug.trace` lookup, and the test-trigger
+  endpoint. Owns the
   registry and generic interfaces; **never names a class**.
 - **`spans` / `gates` / `contention` / `stall` / `boot` / `client-boot`** — the
   **built-in event classes**, each a real registry contributor (not an engine

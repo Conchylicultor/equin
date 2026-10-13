@@ -12,8 +12,11 @@ import type TS from "typescript";
 //  1. the producers: `const <producer> = defineChangeProducer({ table:
 //     <binding>, … })` — the binding (an identifier) names the produced table,
 //     the producer variable is whose `.mutate` may write it;
-//  2. each binding's SQL name: the `pgTable("<name>", …)` its declaration
-//     calls (through any wrapper, e.g. `deriveUpdatedAt(pgTable(…))`);
+//  2. each binding's SQL name: the `pgTable("<name>", …)` or
+//     `defineEntity("<name>", …)` its declaration calls (through any wrapper,
+//     e.g. `deriveUpdatedAt(pgTable(…))`), or — for an entity's table bound
+//     apart (`const _t = entity.table`) — the one its entity's declaration in
+//     the same file calls;
 //  3. the writes: a drizzle `.insert(<t>)` / `.update(<t>)` / `.delete(<t>)`
 //     whose `<t>` is a produced binding IN THAT FILE'S SCOPE — declared there,
 //     imported (under any alias), re-bound (`const t = _reports`), or reached
@@ -108,10 +111,69 @@ export function findProducerDecls(
   return out;
 }
 
+/** The callees whose first string argument is a table's SQL name. */
+const TABLE_DECLARERS = new Set(["pgTable", "defineEntity"]);
+
+// The SQL table names `expr` declares: the first string argument of each
+// `pgTable(…)` / `defineEntity(…)` call within it (through any wrapper), or —
+// when it is `<entity>.table` — those of `<entity>`'s own initializer in
+// `decls` (one hop: an entity is declared by its `defineEntity` call).
+function declaredTableNames(
+  ts: typeof TS,
+  expr: TS.Expression,
+  decls: ReadonlyMap<string, TS.Expression>,
+): string[] {
+  const names: string[] = [];
+  walk(expr, ts, (inner) => {
+    if (!ts.isCallExpression(inner)) return;
+    const callee = calleeName(ts, inner);
+    if (callee === null || !TABLE_DECLARERS.has(callee)) return;
+    const first = inner.arguments[0];
+    if (
+      first &&
+      (ts.isStringLiteral(first) || ts.isNoSubstitutionTemplateLiteral(first))
+    ) {
+      names.push(first.text);
+    }
+  });
+  if (
+    names.length === 0 &&
+    ts.isPropertyAccessExpression(expr) &&
+    expr.name.text === "table" &&
+    ts.isIdentifier(expr.expression)
+  ) {
+    const entity = decls.get(expr.expression.text);
+    if (entity && !ts.isPropertyAccessExpression(entity)) {
+      return declaredTableNames(ts, entity, decls);
+    }
+  }
+  return names;
+}
+
+// Every `const <name> = <initializer>` in a file, by name.
+function fileDecls(
+  ts: typeof TS,
+  sf: TS.SourceFile,
+): Map<string, TS.Expression> {
+  const decls = new Map<string, TS.Expression>();
+  walk(sf, ts, (node) => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer
+    ) {
+      decls.set(node.name.text, node.initializer);
+    }
+  });
+  return decls;
+}
+
 /**
- * Pass 2: each binding's SQL table name — the first string argument of a
- * `pgTable(…)` call inside a `const <binding> = …` initializer. A binding
- * declared in several files maps to every name found.
+ * Pass 2: each binding's SQL table name — what a `const <binding> = …`
+ * initializer declares (`pgTable("<name>", …)` / `defineEntity("<name>", …)`,
+ * through any wrapper, or `<entity>.table` resolved through its entity's
+ * declaration in the same file). A binding declared in several files maps to
+ * every name found.
  */
 export function resolveTableNames(
   ts: typeof TS,
@@ -121,31 +183,15 @@ export function resolveTableNames(
   const out = new Map<string, Set<string>>();
   for (const source of sources) {
     const sf = parse(ts, source);
-    walk(sf, ts, (node) => {
-      if (
-        !ts.isVariableDeclaration(node) ||
-        !ts.isIdentifier(node.name) ||
-        !bindings.has(node.name.text) ||
-        !node.initializer
-      ) {
-        return;
+    const decls = fileDecls(ts, sf);
+    for (const [binding, initializer] of decls) {
+      if (!bindings.has(binding)) continue;
+      for (const name of declaredTableNames(ts, initializer, decls)) {
+        const names = out.get(binding) ?? new Set<string>();
+        names.add(name);
+        out.set(binding, names);
       }
-      const binding = node.name.text;
-      walk(node.initializer, ts, (inner) => {
-        if (!ts.isCallExpression(inner)) return;
-        if (calleeName(ts, inner) !== "pgTable") return;
-        const first = inner.arguments[0];
-        if (
-          first &&
-          (ts.isStringLiteral(first) ||
-            ts.isNoSubstitutionTemplateLiteral(first))
-        ) {
-          const names = out.get(binding) ?? new Set<string>();
-          names.add(first.text);
-          out.set(binding, names);
-        }
-      });
-    });
+    }
   }
   return out;
 }
@@ -173,8 +219,8 @@ function callsWithin(ts: typeof TS, expr: TS.Node, callee: string): boolean {
 
 /**
  * The names a file's scope gives to members of `originals`: each original it
- * declares itself (a `const <original> = …<declaredBy>(…)`, so an unrelated
- * local that only shares the name is not one), each it imports
+ * declares itself (a `const <original> = …` whose initializer `declares`, so an
+ * unrelated local that only shares the name is not one), each it imports
  * (`import { a as b }` maps `b` → `a`), and each local re-bound to one
  * (`const b = a`). Local → original.
  */
@@ -182,7 +228,7 @@ function scopeNames(
   ts: typeof TS,
   sf: TS.SourceFile,
   originals: ReadonlySet<string>,
-  declaredBy: string,
+  declares: (initializer: TS.Expression) => boolean,
 ): Map<string, string> {
   const out = new Map<string, string>();
   const rebinds: Array<[string, string]> = [];
@@ -194,7 +240,7 @@ function scopeNames(
     }
     if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
       if (originals.has(node.name.text)) {
-        if (node.initializer && callsWithin(ts, node.initializer, declaredBy)) {
+        if (node.initializer && declares(node.initializer)) {
           out.set(node.name.text, node.name.text);
         }
       } else if (node.initializer && ts.isIdentifier(node.initializer)) {
@@ -292,12 +338,15 @@ export function findProducedWrites(
   const out: ProducedWrite[] = [];
   for (const source of sources) {
     const sf = parse(ts, source);
-    const inScope = scopeNames(ts, sf, bindings, "pgTable");
-    const producersInScope = scopeNames(
+    const decls = fileDecls(ts, sf);
+    const inScope = scopeNames(
       ts,
       sf,
-      producers,
-      "defineChangeProducer",
+      bindings,
+      (init) => declaredTableNames(ts, init, decls).length > 0,
+    );
+    const producersInScope = scopeNames(ts, sf, producers, (init) =>
+      callsWithin(ts, init, "defineChangeProducer"),
     );
     const lines = source.src.split("\n");
     const push = (

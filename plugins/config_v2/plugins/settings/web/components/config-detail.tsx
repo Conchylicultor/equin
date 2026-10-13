@@ -5,17 +5,19 @@ import { useMemo, useCallback, useState } from "react";
 
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import {
-  useEndpoint,
-  useEndpointMutation,
-} from "@plugins/infra/plugins/endpoints/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   matchResource,
+  ResourceErrorInline,
   useCombinedResources,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
-import { configValues, removeDescriptorScope } from "@plugins/config_v2/core";
+import {
+  configRawFile,
+  configValues,
+  removeDescriptorScope,
+} from "@plugins/config_v2/core";
 import type {
   ConfigV2ConflictEntry,
   ConfigV2ConflictLocations,
@@ -27,12 +29,7 @@ import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/we
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import {
-  acknowledgeConflict,
-  deleteOverride,
-  mergeConflict,
-  getConfigRawFile,
-} from "../../core";
+import { acknowledgeConflict, deleteOverride, mergeConflict } from "../../core";
 import { configDetailPane } from "../internal/panes";
 import { buildConflictContext } from "../internal/conflict-context";
 import { conflictScopes } from "../internal/conflict-locations";
@@ -565,7 +562,12 @@ function ConfigDetailBody({
                       )}
                   </Stack>
                 </Text>
-                {showDiff && <InvalidDiff storePath={registration.storePath} />}
+                {showDiff && (
+                  <InvalidDiff
+                    storePath={registration.storePath}
+                    scopeId={scopeId}
+                  />
+                )}
               </>
             ) : isSoftConflict ? (
               <Text
@@ -656,7 +658,10 @@ function ConfigDetailBody({
                   </Stack>
                 </Text>
                 {showDiff && (
-                  <ConflictDiff storePath={registration.storePath} />
+                  <ConflictDiff
+                    storePath={registration.storePath}
+                    scopeId={scopeId}
+                  />
                 )}
               </>
             ))}
@@ -697,16 +702,20 @@ function RawFileView({
   storePath: string;
   scopeId: string | undefined;
 }) {
-  const { data, isPending } = useEndpoint(
-    getConfigRawFile,
-    {},
-    {
-      query: { storePath, ...(scopeId ? { scopeId } : {}) },
-    },
-  );
+  const raw = useLive(configRawFile, { path: storePath, scopeId });
 
-  if (isPending) return <Loading />;
-  if (!data) return <Placeholder>No data</Placeholder>;
+  if (raw.status === "loading") return <Loading />;
+  if (raw.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the raw files"
+        error={raw.error}
+        refetch={raw.refetch}
+      />
+    );
+  }
+  const data = raw.data;
 
   // The running app resolves to the user-layer origin (the propagated git config).
   // It normally equals the git origin; when it diverges a build/propagation is

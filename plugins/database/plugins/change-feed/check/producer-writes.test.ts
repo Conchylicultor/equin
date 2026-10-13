@@ -57,6 +57,42 @@ describe("producer-writes scan", () => {
     expect(tablesMap()).toEqual(new Map([["_reports", new Set(["reports"])]]));
   });
 
+  test("resolves an entity's table: `defineEntity(…)` or `<entity>.table`", () => {
+    const entityTables = `
+const traces = defineEntity("traces", traceFields, { primaryKey: "id" });
+export const _traces = traces.table;
+export const _inline = defineEntity("inline_rows", fields).table;
+const notAnEntity = { table: 1 };
+export const _bogus = notAnEntity.table;
+`;
+    expect(
+      resolveTableNames(
+        ts,
+        [{ rel: "tables.ts", src: entityTables }],
+        new Set(["_traces", "_inline", "_bogus"]),
+      ),
+    ).toEqual(
+      new Map([
+        ["_traces", new Set(["traces"])],
+        ["_inline", new Set(["inline_rows"])],
+      ]),
+    );
+    // A write beside the entity's own declaration is in scope too.
+    expect(
+      findProducedWrites(
+        ts,
+        [
+          {
+            rel: "tables.ts",
+            src: `${entityTables}\nawait db.delete(_traces).where(p);`,
+          },
+        ],
+        new Map([["_traces", new Set(["traces"])]]),
+        new Set(["tracesProducer"]),
+      ).map((w) => [w.kind, w.line]),
+    ).toEqual([["drizzle", 8]]);
+  });
+
   test("flags a drizzle write on the binding outside mutate", () => {
     expect(
       writes([

@@ -1,5 +1,10 @@
 import { useMemo, type ReactElement } from "react";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import {
+  matchResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   SectionLabel,
   Text,
@@ -11,9 +16,9 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
-  resourcesDebugEndpoint,
+  resourcesDebug,
   type ResourceDebug,
-} from "../../shared/endpoints";
+} from "@plugins/debug/plugins/read-set/core";
 
 // Server-fed companion to the client `ResourcesSection`: the authoritative
 // server view of every registered resource's fan-out (max per-pk subscriber
@@ -21,7 +26,9 @@ import {
 // single-call ms over the profiling window). The client section shows what THIS
 // tab subscribes to; this one shows the whole server's delivery cost — together
 // they answer "is a cheap loader being hammered, and how wide does it fan out?".
-// Default-sorted by call-rate desc so the hottest loader is on top.
+// Default-sorted by call-rate desc so the hottest loader is on top. Reads the
+// `resources.debug` snapshot (owned by debug/read-set): measured on mount and
+// on Refresh, never pushed.
 //
 // Composed from <Stack> rows + <Inline>, NOT a DataTable: the pane is a single
 // flowing scroll column shared by every section, and DataTable pins its header
@@ -34,34 +41,69 @@ function maxFanOut(subCounts: Record<string, number>): number {
 }
 
 export function ServerResourcesSection(): ReactElement {
-  const { data } = useEndpoint(resourcesDebugEndpoint, {});
-
-  const rows = useMemo<ResourceDebug[]>(() => {
-    if (!data) return [];
-    return [...data.resources].sort(
-      (a, b) =>
-        (b.loaderStats?.ratePerMin ?? 0) - (a.loaderStats?.ratePerMin ?? 0),
-    );
-  }, [data]);
+  const result = useLive(resourcesDebug);
 
   return (
     <Stack as="section" gap="sm">
-      <SectionLabel>
-        Server resources <span className="opacity-60">{rows.length}</span>
-      </SectionLabel>
-      {!data ? (
+      <Stack direction="row" align="center" gap="sm">
+        <Fill>
+          <SectionLabel>
+            Server resources{" "}
+            {/* The count only; the loading / failed states render below. */}
+            {matchResource(result, {
+              loading: () => null,
+              error: () => null,
+              ready: (data) => (
+                <span className="opacity-60">{data.resources.length}</span>
+              ),
+            })}
+          </SectionLabel>
+        </Fill>
+        <Button variant="outline" onClick={() => result.refresh()}>
+          Refresh
+        </Button>
+      </Stack>
+      {result.status === "loading" ? (
         <Loading />
-      ) : rows.length === 0 ? (
-        <Text variant="caption" tone="muted">
-          No registered resources.
-        </Text>
+      ) : result.status === "error" ? (
+        <ResourceErrorInline
+          variant="inline"
+          subject="server resources"
+          error={result.error}
+          refetch={result.refetch}
+        />
       ) : (
-        <Stack gap="2xs">
-          {rows.map((r) => (
-            <ServerResourceRow key={r.key} r={r} />
-          ))}
-        </Stack>
+        <ServerResourceRows resources={result.data.resources} />
       )}
+    </Stack>
+  );
+}
+
+function ServerResourceRows({
+  resources,
+}: {
+  resources: ResourceDebug[];
+}): ReactElement {
+  const rows = useMemo(
+    () =>
+      [...resources].sort(
+        (a, b) =>
+          (b.loaderStats?.ratePerMin ?? 0) - (a.loaderStats?.ratePerMin ?? 0),
+      ),
+    [resources],
+  );
+  if (rows.length === 0) {
+    return (
+      <Text variant="caption" tone="muted">
+        No registered resources.
+      </Text>
+    );
+  }
+  return (
+    <Stack gap="2xs">
+      {rows.map((r) => (
+        <ServerResourceRow key={r.key} r={r} />
+      ))}
     </Stack>
   );
 }

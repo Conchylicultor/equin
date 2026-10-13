@@ -1,5 +1,7 @@
 import { useMemo, useState, type ReactElement } from "react";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   SectionLabel,
   Text,
@@ -17,8 +19,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { resourcesReadSetEndpoint } from "../../shared/endpoints";
-import type { ResourceFreshness, ResourceReadSet } from "../../shared/schema";
+import {
+  resourcesDebug,
+  type ResourceDebug,
+  type ResourceFreshness,
+} from "../../core";
 import {
   computeCeiling,
   type Ceiling,
@@ -27,8 +32,9 @@ import {
   type RoutedFullEntry,
 } from "../internal/ceiling";
 
-// Web-only debug pane consuming `GET /api/resources/_debug`. Everything below is
-// derived purely client-side from the payload: `resources[].notifyStats`,
+// Debug pane over the `resources.debug` snapshot value (the runtime's `_debug`
+// payload, re-measured on mount and on Refresh). Everything below is derived
+// purely client-side from the payload: `resources[].notifyStats`,
 // `resources[].readSet` (the captured loader→table index the server records, in
 // view / table / rollup space), `resources[].policy` (what the entry is:
 // routed, legacy-full, external or unbound — the runtime's own
@@ -69,7 +75,7 @@ interface NotifyEntry {
 }
 
 /** Invert every resource's readSet into table → sorted unique reader keys. */
-function buildCapturedIndex(resources: ResourceReadSet[]): TableEntry[] {
+function buildCapturedIndex(resources: ResourceDebug[]): TableEntry[] {
   const byTable = new Map<string, Set<string>>();
   for (const r of resources) {
     for (const table of r.readSet) {
@@ -91,7 +97,7 @@ function buildCapturedIndex(resources: ResourceReadSet[]): TableEntry[] {
  * gap candidates (hand > 0, no feed or producer delivery) first. Resources that
  * have never notified (every counter 0) are dropped — nothing to compare yet.
  */
-function buildNotifyEntries(resources: ResourceReadSet[]): NotifyEntry[] {
+function buildNotifyEntries(resources: ResourceDebug[]): NotifyEntry[] {
   return resources
     .map((r) => ({
       key: r.key,
@@ -124,7 +130,7 @@ const FRESHNESS_ORDER: readonly ResourceFreshness["kind"][] = [
 ];
 
 /** Every resource with a declared freshness, grouped by arm (see `FRESHNESS_ORDER`), then by key. */
-function buildFreshnessEntries(resources: ResourceReadSet[]): FreshnessEntry[] {
+function buildFreshnessEntries(resources: ResourceDebug[]): FreshnessEntry[] {
   const entries: FreshnessEntry[] = [];
   for (const r of resources) {
     if (r.freshness !== null)
@@ -138,15 +144,41 @@ function buildFreshnessEntries(resources: ResourceReadSet[]): FreshnessEntry[] {
 }
 
 export function ReadSetView(): ReactElement {
-  /* eslint-disable polling-safety/no-refetch-interval -- inspects the live-state runtime itself; a resource of its own read set would perturb what it measures */
-  const { data } = useEndpoint(
-    resourcesReadSetEndpoint,
-    {},
-    { refetchInterval: 5000 },
-  );
-  /* eslint-enable polling-safety/no-refetch-interval */
+  // A snapshot: measured when read, never pushed — a resource the pane
+  // subscribes to would perturb what it measures. Refresh re-measures.
+  const result = useLive(resourcesDebug);
 
-  const resources = useMemo(() => data?.resources ?? [], [data]);
+  if (result.status === "loading") {
+    return (
+      <Scroll className="h-full p-lg">
+        <Loading variant="rows" />
+      </Scroll>
+    );
+  }
+  if (result.status === "error") {
+    return (
+      <Scroll className="h-full p-lg">
+        <ResourceErrorInline
+          variant="block"
+          subject="the resource registry"
+          error={result.error}
+          refetch={result.refetch}
+        />
+      </Scroll>
+    );
+  }
+  return (
+    <ReadSetBody resources={result.data.resources} refresh={result.refresh} />
+  );
+}
+
+function ReadSetBody({
+  resources,
+  refresh,
+}: {
+  resources: ResourceDebug[];
+  refresh: () => Promise<void>;
+}): ReactElement {
   const captured = useMemo(() => buildCapturedIndex(resources), [resources]);
   const ceiling = useMemo(() => computeCeiling(resources), [resources]);
   const notifyEntries = useMemo(
@@ -158,18 +190,17 @@ export function ReadSetView(): ReactElement {
     [resources],
   );
 
-  if (!data) {
-    return (
-      <Scroll className="h-full p-lg">
-        <Loading variant="rows" />
-      </Scroll>
-    );
-  }
-
   return (
     <Scroll className="h-full p-lg">
       <Stack gap="xl">
-        <Caveat />
+        <Stack gap="sm">
+          <Stack direction="row" gap="none" justify="end">
+            <Button variant="outline" onClick={() => refresh()}>
+              Refresh
+            </Button>
+          </Stack>
+          <Caveat />
+        </Stack>
         <NotifyProvenanceSection entries={notifyEntries} />
         <CapturedIndexSection entries={captured} />
         <CeilingSection ceiling={ceiling} />

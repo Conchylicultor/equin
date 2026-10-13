@@ -10,9 +10,9 @@
   - Exports (types): `PlaceholderProps`
   - Exports (values): `Placeholder`
 - Cross-plugin:
-  - Imported by: 84 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 82 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×28
-    - `debug` ×19
+    - `debug` ×17
     - `primitives` ×13
     - `page` ×7
     - `conversations` ×4

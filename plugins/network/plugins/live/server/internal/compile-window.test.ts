@@ -12,7 +12,14 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { integer, pgTable, pgView, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  integer,
+  pgTable,
+  pgView,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import type { WindowQueryResourceContract } from "@plugins/infra/plugins/query-resource/core";
 import { parsedJson } from "@plugins/database/plugins/sql-column/server";
 import {
@@ -329,9 +336,9 @@ describe("compileWindowQuery — point", () => {
     expect(keyField).toBe("conversationId");
     await serverOpts.loader({ ids: "c1,c2" });
     expect(calls[0]!.sql).toBe(
-      `select "parent_id", "n" from "rows" where "rows"."parent_id" in ($1, $2)`,
+      `select "parent_id", "n" from "rows" where "rows"."parent_id" = ANY($1::text[])`,
     );
-    expect(calls[0]!.params).toEqual(["c1", "c2"]);
+    expect(calls[0]!.params).toEqual([["c1", "c2"]]);
 
     const membership = serverOpts.membership!;
     expect(membership.kind).toBe("point");
@@ -347,7 +354,28 @@ describe("compileWindowQuery — point", () => {
       db,
     });
     await serverOpts.loader({ ids: "a,b,c" }, { affectedIds: ["b"] });
-    expect(calls[0]!.params).toEqual(["b"]);
+    expect(calls[0]!.params).toEqual([["b"]]);
+  });
+
+  test("an id the pk cannot hold is absent, never a cast error", async () => {
+    // The point set is client-supplied (`:rows` params — a stale or hand-typed
+    // URL): against a uuid pk each id is checked with pg_input_is_valid, so
+    // "not-a-uuid" reads as an unknown id rather than failing the whole load.
+    const uuidRows = pgTable("uuid_rows", {
+      id: uuid("id").primaryKey(),
+      n: integer("n").notNull(),
+    });
+    const { db, calls } = fakeDb();
+    const { serverOpts } = compileWindowQuery(ptDescriptor(), {
+      from: uuidRows,
+      point: { by: uuidRows.id },
+      db,
+    });
+    await serverOpts.loader({ ids: "not-a-uuid" });
+    expect(calls[0]!.sql).toBe(
+      `select "id", "n" from "uuid_rows" where "uuid_rows"."id" = ANY(ARRAY(SELECT x::uuid FROM unnest($1::text[]) AS x WHERE pg_input_is_valid(x, $2)))`,
+    );
+    expect(calls[0]!.params).toEqual([["not-a-uuid"], "uuid"]);
   });
 
   test("an empty id set short-circuits to [] with NO query", async () => {
@@ -372,7 +400,7 @@ describe("compileWindowQuery — point", () => {
     await serverOpts.loader({ ids: "a" });
     expect(calls[0]!.sql).toBe(
       `select "id", "parent_id", "n", "dismissed", "icon" from "rows" ` +
-        `where ("rows"."dismissed" = $1 and "rows"."id" in ($2))`,
+        `where ("rows"."dismissed" = $1 and "rows"."id" = ANY($2::text[]))`,
     );
   });
 
@@ -392,9 +420,9 @@ describe("compileWindowQuery — point", () => {
     expect(keyField).toBe("conversationId");
     await serverOpts.loader({ ids: "c1,c2" });
     expect(calls[0]!.sql).toBe(
-      `select "parent_id", "icon", "n" from "rows" where "rows"."parent_id" in ($1, $2)`,
+      `select "parent_id", "icon", "n" from "rows" where "rows"."parent_id" = ANY($1::text[])`,
     );
-    expect(calls[0]!.params).toEqual(["c1", "c2"]);
+    expect(calls[0]!.params).toEqual([["c1", "c2"]]);
   });
 });
 

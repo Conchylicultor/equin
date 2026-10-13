@@ -1,16 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import {
-  resourceReadSetSchema,
-  type ResourceReadSet,
-} from "../../shared/schema";
+  resourceDebugSchema,
+  type ResourceDebug,
+} from "../../core/resources-debug";
 import { computeCeiling } from "./ceiling";
 
 // Every fixture goes through the pane's own schema, so a fixture the server
 // could not have sent (a missing field, an unknown policy) fails here first.
 function entry(
-  over: Partial<ResourceReadSet> & Pick<ResourceReadSet, "key" | "policy">,
-): ResourceReadSet {
-  return resourceReadSetSchema.parse({
+  over: Partial<ResourceDebug> & Pick<ResourceDebug, "key" | "policy">,
+): ResourceDebug {
+  return resourceDebugSchema.parse({
+    mode: "push",
+    subscribers: 0,
+    subCounts: {},
     readSet: [],
     legacyReach: [],
     routes: null,
@@ -213,7 +216,7 @@ describe("computeCeiling", () => {
     expect(() =>
       entry({
         key: "x",
-        policy: "scoped" as unknown as ResourceReadSet["policy"],
+        policy: "scoped" as unknown as ResourceDebug["policy"],
       }),
     ).toThrow();
   });

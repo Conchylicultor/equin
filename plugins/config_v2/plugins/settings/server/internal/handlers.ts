@@ -5,7 +5,6 @@ import {
   acknowledgeConflictByPath,
   deleteOverrideByPath,
   mergeConflictByPath,
-  getRawFileContent,
 } from "@plugins/config_v2/server";
 import { setConfigField } from "@plugins/config_v2/core";
 import { originOf } from "@plugins/infra/plugins/request-origin/core";
@@ -14,7 +13,6 @@ import {
   acknowledgeConflict,
   deleteOverride,
   mergeConflict,
-  getConfigRawFile,
 } from "../../core";
 
 // Every write below passes `originOf(req)` — NEVER a literal. A hardcoded
@@ -98,20 +96,6 @@ export const handleMergeConflict = implement(
         writer: originOf(req),
         scopeId: body.scopeId,
       });
-    } catch (err) {
-      throw new HttpError(
-        400,
-        err instanceof Error ? err.message : String(err),
-      );
-    }
-  },
-);
-
-export const handleGetRawFile = implement(
-  getConfigRawFile,
-  async ({ query }) => {
-    try {
-      return getRawFileContent(query.storePath, query.scopeId);
     } catch (err) {
       throw new HttpError(
         400,

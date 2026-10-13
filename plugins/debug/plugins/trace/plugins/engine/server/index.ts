@@ -1,16 +1,16 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ConfigV2 } from "@plugins/config_v2/server";
-import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
 import {
   ExcludeFromBackup,
   ExcludeFromFork,
 } from "@plugins/database/plugins/admin/server";
 import { traceConfig } from "../core";
-import { listTraces, getTrace, testTrigger } from "../shared/endpoints";
-import { handleListTraces, handleGetTrace } from "./internal/handlers";
+import { testTrigger } from "../shared/endpoints";
 import { handleTestTrigger } from "./internal/handle-test-trigger";
 import { traceRetention } from "./internal/retention";
 import { _traces } from "./internal/tables";
+import { tracesProducer } from "./internal/producer";
+import { traceByIdServed, traceEventsServed } from "./internal/resources";
 
 // The generic perf-event trace registry + captureTrace entry point.
 export { defineTraceEventClass, TraceEventClass } from "./internal/registry";
@@ -23,20 +23,17 @@ export { _traces } from "./internal/tables";
 
 export default {
   description:
-    "The generic slow-event trace engine: the TraceEventClass registry, captureTrace() admission + coherent-instant capture + async enrich/persist into the durable traces table, list/get endpoints, a daily 7-day sweep, and the test-trigger verification endpoint.",
+    "The generic slow-event trace engine: the TraceEventClass registry, captureTrace() admission + coherent-instant capture + async enrich/persist into the durable traces table (fed to live readers by an in-process change producer), the debug.traces list window and debug.trace by-id lookup, a daily 7-day sweep, and the test-trigger verification endpoint.",
   contributions: [
     ConfigV2.Register({ descriptor: traceConfig }),
     // A trace is inserted EXACTLY when a span tripped its slow threshold — i.e.
-    // when the system is already under load. Wiring per-statement live-state
-    // invalidation onto it would push a change-feed recompute cascade at the
-    // worst possible moment and can self-amplify (slow app → more traces → more
-    // notify → slower app) — the same recorded reason slow_ops is excluded. The
-    // Slow Events list hydrates on open (GET /api/traces) instead of live-ticking.
-    ExcludeFromChangeFeed({
-      table: _traces,
-      reason:
-        "Written exactly when the system is slow; live-ticking it amplifies the very slowness it records. Slow Events list hydrates on open.",
-    }),
+    // when the system is already under load — so `traces` carries no
+    // change-feed trigger: its in-process change producer routes each insert
+    // (and the sweep's deletes), coalesced to one flush per 2 s (./internal/producer).
+    tracesProducer.declare,
+    // The Slow Events list (metadata window) and the detail pane's by-id lookup.
+    ...traceEventsServed.declare,
+    ...traceByIdServed.declare,
     // A trace is 7-day debugging evidence about the machine that produced it,
     // reachable only from a report/timeline row filed in the SAME database. A
     // forked worktree inherits neither those pointers nor any reason to read
@@ -57,8 +54,6 @@ export default {
     }),
   ],
   httpRoutes: {
-    [listTraces.route]: handleListTraces,
-    [getTrace.route]: handleGetTrace,
     [testTrigger.route]: handleTestTrigger,
   },
   register: [traceRetention],

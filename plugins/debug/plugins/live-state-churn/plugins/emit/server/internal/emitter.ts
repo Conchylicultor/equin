@@ -37,6 +37,21 @@ const state: EmitState = {
   lastSubscriberCount: 0,
 };
 
+// Status observers: every change to `state` that `getStatus()` reports (start,
+// stop, auto-stop, each tick) calls them — the live `live-state-emit.status`
+// value's change source. Called on the emitter's own timer: cheap, never throws.
+type StatusObserver = () => void;
+const statusObservers = new Set<StatusObserver>();
+export function onEmitStatusChange(cb: StatusObserver): () => void {
+  statusObservers.add(cb);
+  return () => {
+    statusObservers.delete(cb);
+  };
+}
+function statusChanged(): void {
+  for (const cb of statusObservers) cb();
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
@@ -76,10 +91,12 @@ export function startEmitting(
     // no DB change → an empty-diff no-op push (the exact real-churn code path).
     state.lastSubscriberCount = triggerResourcePush(key);
     state.ticks++;
+    statusChanged();
   }, intervalMs);
 
   state.autoStopTimer = setTimeout(stopEmitting, lifetimeMs);
 
+  statusChanged();
   return getStatus();
 }
 
@@ -94,6 +111,7 @@ export function stopEmitting(): EmitStatus {
     state.autoStopTimer = null;
   }
   state.active = false;
+  statusChanged();
   return getStatus();
 }
 

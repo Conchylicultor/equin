@@ -3,12 +3,16 @@ import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { broadcastsPane } from "./panes";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import {
+  BroadcastItemActions,
+  DeleteBroadcastAction,
+} from "./components/broadcast-item-actions";
 
 export { broadcastsPane } from "./panes";
 
 export default {
   description:
-    "View and edit cli/broadcasts.json broadcast messages for stale worktrees.",
+    "View and edit the CLI's broadcasts.json (plugins/framework/plugins/cli/broadcasts.json in the main checkout): the broadcast messages printed on stale worktrees.",
   contributions: [
     Pane.Register({ pane: broadcastsPane }),
     DebugApp.Sidebar({
@@ -17,6 +21,10 @@ export default {
       icon: symbol("feedback"),
       opens: { pane: broadcastsPane, params: {} },
     }),
+    BroadcastItemActions({ id: "delete", component: DeleteBroadcastAction }),
   ],
-  slots: { "debug-broadcasts": broadcastsPane },
+  slots: {
+    "debug-broadcasts": broadcastsPane,
+    itemActions: BroadcastItemActions,
+  },
 } satisfies PluginDefinition;

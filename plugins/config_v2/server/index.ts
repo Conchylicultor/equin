@@ -10,7 +10,11 @@ import {
   initConfigWatcher,
   shutdownConfigWatcher,
 } from "./internal/config-watcher";
-import { initRegistry, shutdownRegistry } from "./internal/registry";
+import {
+  configRawFileServed,
+  initRegistry,
+  shutdownRegistry,
+} from "./internal/registry";
 import {
   configValuesServed,
   configConflictServed,
@@ -37,17 +41,18 @@ export {
   acknowledgeConflictByPath,
   deleteOverrideByPath,
   mergeConflictByPath,
-  getRawFileContent,
 } from "./internal/registry";
 export type { ConfigWriteOpts } from "./internal/registry";
 export {
   configValuesServed,
+  configRegistryReady,
   getAllDescriptors,
   getConfigScopeIds,
   getScopedDescriptors,
 } from "./internal/resource";
 export { auditUserConfigOrphans } from "./internal/orphan-audit";
 export { onConfigDirChange } from "./internal/config-dir-change";
+export { configWatcherArmed } from "./internal/config-watcher";
 export {
   forkScope,
   deleteScope,
@@ -70,6 +75,7 @@ export default {
     ...configConflictLocationsServed.declare,
     ...configModifiedCountsServed.declare,
     ...configTiersServed.declare,
+    ...configRawFileServed.declare,
   ],
   register: [configFilesWatcher],
   httpRoutes: {

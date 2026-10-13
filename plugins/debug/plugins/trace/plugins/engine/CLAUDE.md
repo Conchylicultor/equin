@@ -111,14 +111,23 @@ wire schema both derive from the single `traceFields` record (`core/fields.ts` v
 is one zod-pinned **jsonb** blob (`snapshot`) — deliberately not normalized: its
 `events` sections are class-owned open shapes, and SQL columns would freeze them and
 defeat the open registry. The flat `triggerKind` / `triggerLabel` / `durationMs` /
-`thresholdMs` columns are list metadata: `GET /api/traces` reads them and **never
-selects the (tens-of-KB) blob**.
+`thresholdMs` columns are list metadata: the `debug.traces` window
+(`core/resources.ts`) projects them, plus two scalar extractions off the blob
+(`wallTime`, `windowSpanMs`), and **never projects the (tens-of-KB) blob**. One
+trace with its snapshot is the `debug.trace` point lookup (`useLiveRow`).
 
-- **`ExcludeFromChangeFeed` — yes.** A trace is inserted *exactly* when the system
-  is already loaded, so per-statement live-state invalidation would push a recompute
-  cascade at the worst moment and can self-amplify (slow → more traces → more notify
-  → slower) — the same recorded reason `slow_ops` is excluded. The Slow Events list
-  therefore hydrates on open (`GET /api/traces`, newest first), no live resource.
+- **A change producer, not a trigger** (`server/internal/producer.ts`). A trace is
+  inserted *exactly* when the system is already loaded, so a per-statement
+  trigger + changelog + NOTIFY would add load at the worst moment and can
+  self-amplify (slow → more traces → more notify → slower). Instead
+  `persistTrace` writes through `tracesProducer.mutate`, which routes the
+  inserted id to the live readers from this process, coalesced to one flush per
+  2 s (the retention sweep deletes through it too). Every writer runs in the
+  serving backend (A13 — `mutate` throws elsewhere): every `captureTrace` caller
+  is an `onReady`-started hook or monitor (exec children skip `onReady`), a
+  plain backend job, or a backend endpoint. Volatile: a pending change is lost on
+  restart and an open reader reloads in full on resubscribe, so no reader of
+  `traces` may be L2-persisted.
 - **7-day TTL sweep** (`debug.trace-cleanup`): a `defineJob`, `singleton`,
   `perWorktree`, daily cron. A trace is debugging evidence, not a durable
   artifact; retention is a code constant, not config.
@@ -188,7 +197,7 @@ expandable JSON.
 
 ## Plugin reference
 
-- Description: Trace-engine web surface: the Trace.Lane / Trace.TriggerSummary dispatch slots (with generic fallbacks so a new event class or trigger kind is visible by default), plus the trace config registration for Settings → Config. The generic slow-event trace engine: the TraceEventClass registry, captureTrace() admission + coherent-instant capture + async enrich/persist into the durable traces table, list/get endpoints, a daily 7-day sweep, and the test-trigger verification endpoint.
+- Description: Trace-engine web surface: the Trace.Lane / Trace.TriggerSummary dispatch slots (with generic fallbacks so a new event class or trigger kind is visible by default), plus the trace config registration for Settings → Config. The generic slow-event trace engine: the TraceEventClass registry, captureTrace() admission + coherent-instant capture + async enrich/persist into the durable traces table (fed to live readers by an in-process change producer), the debug.traces list window and debug.trace by-id lookup, a daily 7-day sweep, and the test-trigger verification endpoint.
 - Web:
   - Slots:
     - `Trace.Lane`
@@ -209,18 +218,18 @@ expandable JSON.
     - `primitives/slot-render.defineDispatchSlot`
   - Exports (types):
     - `TraceLaneProps`
-    - `TraceListItem`
     - `TraceSelection`
     - `TraceSelectionField`
     - `TraceTriggerSummaryProps`
-  - Exports (values):
-    - `getTrace`
-    - `listTraces`
-    - `Trace`
+  - Exports (values): `Trace`
 - Server:
   - Contributes:
     - `ConfigV2.Register` "trace"
-    - `change-feed-exclusion` "traces"
+    - `change-producer` "traces"
+    - `resource.declare` "debug.trace:rows"
+    - `resource.declare` "debug.traces"
+    - `resource.declare` "debug.traces:groups"
+    - `resource.declare` "debug.traces:rows"
     - `fork-data-exclusion` "traces"
     - `backup-data-exclusion` "traces"
   - Uses:
@@ -229,8 +238,7 @@ expandable JSON.
     - `database.db`
     - `database/admin.ExcludeFromBackup`
     - `database/admin.ExcludeFromFork`
-    - `database/change-feed.ExcludeFromChangeFeed`
-    - `infra/endpoints.HttpError`
+    - `database/change-feed.defineChangeProducer`
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defaultRandom`
@@ -238,6 +246,7 @@ expandable JSON.
     - `infra/host/duress.createShedBuffer`
     - `infra/host/duress.ShedSummary`
     - `infra/retention.defineRetention`
+    - `network/live.serveCollection`
     - `reports.recordReport`
   - DB schema: `plugins/debug/plugins/trace/plugins/engine/server/internal/tables.ts`
   - Exports (types):
@@ -249,10 +258,12 @@ expandable JSON.
     - `defineTraceEventClass`
     - `TraceEventClass`
   - Register: `defineJob('retention.traces')`
-  - Routes:
-    - `GET /api/traces`
-    - `GET /api/traces/:id`
-    - `POST /api/debug/trace/test-trigger`
+  - Resources:
+    - `debug.trace:rows` (keyed, point)
+    - `debug.traces` (keyed, window)
+    - `debug.traces:groups` (push)
+    - `debug.traces:rows` (keyed, point)
+  - Routes: `POST /api/debug/trace/test-trigger`
 - Core:
   - Uses:
     - `config_v2.defineConfig`
@@ -265,17 +276,24 @@ expandable JSON.
     - `fields/json/config.jsonField`
     - `fields/text/config.textField`
     - `fields/uuid/config.uuidField`
+    - `network/live.liveCollection`
+    - `network/live/filter.liveInstant`
+    - `network/live/filter.liveText`
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `RingEvent`
     - `Trace`
+    - `TraceListItem`
     - `TraceSnapshot`
     - `TraceTrigger`
     - `TripContext`
   - Exports (values):
+    - `traceById`
     - `traceConfig`
     - `traceDetailRoute`
+    - `traceEvents`
     - `traceFields`
+    - `TraceListItemSchema`
     - `traceListRoute`
     - `TraceSchema`
     - `TraceSnapshotSchema`

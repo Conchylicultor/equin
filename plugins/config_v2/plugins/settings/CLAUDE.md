@@ -90,16 +90,16 @@ renderer, which only the running app has.
   - Contributes:
     - `Pane.Register` "config-v2-detail"
     - `Pane.Register` "config-v2-nav"
-  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2/fields` ×4
     - `primitives/data-view` ×4
     - `primitives/live-state` ×4
     - `primitives/pane` ×4
-    - `infra/endpoints` ×2
     - `primitives/css/ui-kit` ×2
     - `apps-core/app-icon.AppIconView`
     - `apps-core.Apps`
     - `config_v2.useConfigRegistrations`
+    - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
@@ -142,7 +142,6 @@ renderer, which only the running app has.
   - Uses:
     - `config_v2.acknowledgeConflictByPath`
     - `config_v2.deleteOverrideByPath`
-    - `config_v2.getRawFileContent`
     - `config_v2.mergeConflictByPath`
     - `config_v2.resetConfigByPath`
     - `config_v2.setConfigByPath`
@@ -152,14 +151,12 @@ renderer, which only the running app has.
     - `POST /api/config-v2/acknowledge-conflict`
     - `POST /api/config-v2/delete-override`
     - `POST /api/config-v2/merge-conflict`
-    - `GET /api/config-v2/raw-file`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
   - Exports (values):
     - `acknowledgeConflict`
     - `CONFIG_CATEGORY_ID`
     - `deleteOverride`
-    - `getConfigRawFile`
     - `mergeConflict`
     - `resetConfigField`
 - Cross-plugin:
@@ -169,8 +166,6 @@ renderer, which only the running app has.
     - `config_v2/config-link`
     - `config_v2/settings/conflict-agent`
     - `debug/config-orphans`
-- Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/components/config-detail.tsx`, `web/components/conflict-diff.tsx`, `web/components/invalid-diff.tsx` (debt)
 - Sub-plugins:
   - **`conflict-agent`** — Ask-an-agent button inside the config detail's conflict banners: opens the standard task-draft popover pre-filled with a factual description of the conflict (which fields disagree, and how).
 

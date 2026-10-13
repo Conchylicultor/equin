@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Synthetic no-op live-state push emitter: drives N pushes/sec for a chosen resource so churn-driven render/DOM bugs reproduce deterministically, surfaced as the Debug → Live-State Emit pane and the window.__liveStateEmit API. Synthetic no-op live-state push emitter: drives N triggerResourcePush calls/sec for a chosen resource on a bounded setInterval (hard auto-stop cap), so churn-driven render/DOM bugs reproduce deterministically. Surfaced as the Debug → Live-State Emit pane. The /api/resources/_debug route powering the resource dropdown is served by the kernel, not here.
+- Description: Synthetic no-op live-state push emitter: drives N pushes/sec for a chosen resource so churn-driven render/DOM bugs reproduce deterministically, surfaced as the Debug → Live-State Emit pane and the window.__liveStateEmit API. Synthetic no-op live-state push emitter: drives N triggerResourcePush calls/sec for a chosen resource on a bounded setInterval (hard auto-stop cap), so churn-driven render/DOM bugs reproduce deterministically. Surfaced as the Debug → Live-State Emit pane. Its status is the live-state-emit.status value, notified by the emitter on every change; the resource dropdown reads debug/read-set's resources.debug snapshot.
 - Web:
   - Slots: `liveStateEmitPane.Actions`
   - Slot contributors: `liveStateEmitPane.Actions` ← `primitives.pane`
@@ -12,28 +12,32 @@
     - `Pane.Register` "debug-live-state-emit"
     - `DebugApp.Sidebar` "Live-State Emit"
     - `Core.Root` → `EmitInstaller`
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
-    - `infra/endpoints` ×4
+    - `infra/endpoints` ×3
+    - `primitives/live-state` ×3
     - `primitives/pane` ×3
     - `primitives/css/spacing` ×2
     - `primitives/css/text` ×2
     - `apps/debug/shell.DebugApp`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`
     - `ui/icons.Icon`
   - Exports (values): `liveStateEmitPane`
 - Server:
-  - Uses: `infra/endpoints.implement`
+  - Contributes: `resource.declare` "live-state-emit.status"
+  - Uses:
+    - `infra/endpoints.implement`
+    - `network/live.serveValue`
+  - Resources: `live-state-emit.status` (push, notified)
   - Routes:
     - `POST /api/debug/live-state-emit/start`
     - `POST /api/debug/live-state-emit/stop`
     - `GET /api/debug/live-state-emit/status`
 - Exemptions:
-  - Exempts itself from:
-    - `detached-work-safety/no-raw-set-interval` — `server/internal/emitter.ts` (sanctioned)
-    - `live/no-endpoint-read` — `web/components/emit-pane.tsx` (debt)
+  - Exempts itself from: `detached-work-safety/no-raw-set-interval` — `server/internal/emitter.ts` (sanctioned)
 - Core:
   - Exports (types):
     - `EmitStartOptions`

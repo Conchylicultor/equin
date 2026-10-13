@@ -43,9 +43,9 @@ async function loadSampleRows({ tableName }: { tableName: string }) {
 
 // A snapshot, not `db`: the loader samples ANY public relation the reader
 // names, and the change feed covers only some of them — a view, a derived-table
-// rollup or an `ExcludeFromChangeFeed` table (`traces`, `slow_ops`, the latency
-// ledger) never fires, so under `db` its sample would sit frozen at its first
-// load while claiming to be fresh. Re-read whenever a reader asks; the section
+// rollup or an `ExcludeFromChangeFeed` table (`slow_ops`, the latency ledger)
+// never fires, so under `db` its sample would sit frozen at its first load
+// while claiming to be fresh. Re-read whenever a reader asks; the section
 // offers Refresh. (A `no-db-backed-notify` sanctioned exemption in this
 // plugin's exempt/index.ts records the Postgres read.)
 export const tableSampleRowsServed = serveValue(tableSampleRows, {

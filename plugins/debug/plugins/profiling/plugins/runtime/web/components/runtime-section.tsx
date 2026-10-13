@@ -1,9 +1,12 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, type ReactElement } from "react";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
-  useEndpoint,
-  useEndpointMutation,
-} from "@plugins/infra/plugins/endpoints/web";
+  foldResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   DataView,
   defineDataView,
@@ -13,7 +16,8 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { formatDuration } from "@plugins/debug/plugins/profiling/web";
-import { getRuntimeProfile, resetRuntimeProfile } from "../../shared/endpoints";
+import { resetRuntimeProfile } from "../../shared/endpoints";
+import { runtimeProfile } from "../../shared/resources";
 import {
   SPAN_KINDS,
   type SpanKind,
@@ -272,23 +276,42 @@ const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
   },
 ];
 
-export function RuntimeSection(): ReactElement | null {
-  const { data } = useEndpoint(getRuntimeProfile, {});
-
-  const resetMutation = useEndpointMutation(resetRuntimeProfile, {
-    invalidates: [getRuntimeProfile],
+export function RuntimeSection(): ReactElement {
+  // A snapshot of the in-memory recorder: measured on mount, on Refresh and
+  // after Reset window. NOT pushed — it moves on every span.
+  const profile = useLive(runtimeProfile);
+  // The rows are memoized above the per-state returns below (hooks order), so
+  // they fold every state; only the ready arm renders them.
+  const data = foldResource(profile, {
+    loading: () => null,
+    error: () => null,
+    ready: (d) => d,
   });
 
+  const resetMutation = useEndpointMutation(resetRuntimeProfile);
+
   const rows = useMemo<RuntimeRow[]>(() => {
-    if (!data) return [];
+    if (data === null) return [];
     const tag = (kind: RuntimeKind, aggs: AggRow[]): RuntimeRow[] =>
       aggs.map((r) => ({ ...r, kind }));
     return SPAN_KINDS.flatMap((k) => tag(k, toAggRows(data.aggregates[k])));
   }, [data]);
 
-  if (!data) return null;
+  if (profile.status === "loading") {
+    return <Loading variant="spinner" label="Reading the runtime profile…" />;
+  }
+  if (profile.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the runtime profile"
+        error={profile.error}
+        refetch={profile.refetch}
+      />
+    );
+  }
 
-  const title = `Runtime — recent max · ${formatDuration(data.windowMs)} window`;
+  const title = `Runtime — recent max · ${formatDuration(profile.data.windowMs)} window`;
 
   return (
     <DataView<RuntimeRow>
@@ -298,13 +321,20 @@ export function RuntimeSection(): ReactElement | null {
       storageKey={RUNTIME_VIEW}
       title={title}
       actions={
-        <Button
-          variant="ghost"
-          loading={resetMutation.isPending}
-          onClick={() => resetMutation.mutate({})}
-        >
-          Reset window
-        </Button>
+        <Stack direction="row" gap="xs">
+          <Button variant="ghost" onClick={() => profile.refresh()}>
+            Refresh
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={async () => {
+              await resetMutation.mutateAsync({});
+              await profile.refresh();
+            }}
+          >
+            Reset window
+          </Button>
+        </Stack>
       }
       defaultView="table"
       emptyState="No runtime spans recorded"

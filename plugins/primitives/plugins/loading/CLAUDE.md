@@ -61,12 +61,12 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `LoadingVariant`
   - Exports (values): `Loading`
 - Cross-plugin:
-  - Imported by: 183 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 185 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×62
     - `ui` ×19
     - `primitives` ×17
     - `conversations` ×16
-    - `debug` ×14
+    - `debug` ×16
     - `tasks` ×13
     - `page` ×8
     - `build` ×4

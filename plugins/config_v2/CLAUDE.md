@@ -350,10 +350,12 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `resource.declare` "config-v2.conflict-locations"
     - `resource.declare` "config-v2.conflicts"
     - `resource.declare` "config-v2.modified-counts"
+    - `resource.declare` "config-v2.raw-file"
     - `resource.declare` "config-v2.scopes"
     - `resource.declare` "config-v2.tiers"
     - `resource.declare` "config-v2.values"
   - Uses:
+    - `infra/file-watcher.acquireDirWatch`
     - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/paths.REPO_ROOT`
@@ -368,8 +370,10 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
   - Exports (values):
     - `acknowledgeConflictByPath`
     - `auditUserConfigOrphans`
+    - `configRegistryReady`
     - `ConfigV2`
     - `configValuesServed`
+    - `configWatcherArmed`
     - `deleteOverrideByPath`
     - `deleteScope`
     - `forkConfig`
@@ -379,7 +383,6 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `getConfig`
     - `getConfigScopeIds`
     - `getFieldStorageProvider`
-    - `getRawFileContent`
     - `getScopedDescriptors`
     - `hasFieldStorageProvider`
     - `mergeConflictByPath`
@@ -395,6 +398,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `config-v2.conflict-locations` (push, notified)
     - `config-v2.conflicts` (push, notified)
     - `config-v2.modified-counts` (push, notified)
+    - `config-v2.raw-file` (push, notified)
     - `config-v2.scopes` (push, notified)
     - `config-v2.tiers` (push, notified)
     - `config-v2.values` (push, notified)
@@ -443,6 +447,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `configConflictLocations`
     - `configFileOwner`
     - `configModifiedCounts`
+    - `configRawFile`
     - `configScopes`
     - `configTiers`
     - `configV2ConflictEntrySchema`
@@ -513,7 +518,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
   - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear…
   - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
   - **`ledger`** — The rewrite-saved-config-once ledger: replays keyed entries (plugin moves, config migrations) onto a namespace's user-layer config before propagation, recording each per namespace and keeping the…
-  - **`settings`** [exempt] — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field…
+  - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field…
     - Plugins:
       - **`conflict-agent`** — Ask-an-agent button inside the config detail's conflict banners: opens the standard task-draft popover pre-filled with a factual description of the conflict (which fields disagree, and how).
 

@@ -174,6 +174,7 @@ count accumulates across drops.
     - `logsDirFor`
     - `readChannelEntries`
     - `readChannelJson`
+    - `readChannelJsonAsync`
   - Routes:
     - `GET /api/logs/channels`
     - `POST /api/logs/emit`

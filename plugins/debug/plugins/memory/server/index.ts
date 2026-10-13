@@ -1,12 +1,9 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { listFiles } from "./internal/list-files";
-import { readMemoryFile } from "./internal/read-file";
-import { listMemoryFiles, readMemoryFile as readMemoryFileEndpoint } from "../shared/endpoints";
+import { memoryFilesServed } from "./internal/files-served";
+import { memoryFileServed } from "./internal/file-served";
 
 export default {
-  description: "Browse Claude Code auto-memory files for the current project.",
-  httpRoutes: {
-    [listMemoryFiles.route]: listFiles,
-    [readMemoryFileEndpoint.route]: readMemoryFile,
-  },
+  description:
+    "The memory.files listing and memory.file content live values, each watched through the dir hub.",
+  contributions: [...memoryFilesServed.declare, ...memoryFileServed.declare],
 } satisfies ServerPluginDefinition;

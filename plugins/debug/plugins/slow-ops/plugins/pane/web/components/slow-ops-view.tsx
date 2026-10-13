@@ -1,10 +1,11 @@
 import { useMemo, type ReactElement } from "react";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
-  useEndpoint,
-  getEndpointErrorMessage,
-} from "@plugins/infra/plugins/endpoints/web";
+  matchResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   DataView,
   defineDataView,
@@ -19,7 +20,7 @@ import { appLink } from "@plugins/apps-core/plugins/tabs/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { traceDetailRoute } from "@plugins/debug/plugins/trace/plugins/engine/core";
 import {
-  listSlowOps,
+  slowOpsValue,
   type SlowOp,
   type CallerBreakdown,
   type SlowOpMeasures,
@@ -147,24 +148,45 @@ function MeasureLines({
 const sumWaits = (waits: Record<string, number>): number =>
   Object.values(waits).reduce((a, b) => a + b, 0);
 
-// Read on every open: `slow_ops` is change-feed-excluded, so there is no live
-// read of it to subscribe to (see `listSlowOps`). `refetchOnMount: "always"`
-// overrides the app QueryClient's `staleTime: Infinity`, so reopening the tab
-// shows the aggregates as they are now, painting the previous read meanwhile.
+// A snapshot, re-read on every mount and on Refresh: `slow_ops` is
+// change-feed-excluded, so nothing is pushed (see `slowOpsValue`).
 export function SlowOpsView() {
-  const ops = useEndpoint(listSlowOps, {}, { refetchOnMount: "always" });
-  if (ops.isPending) return <Loading />;
-  if (ops.isError) {
-    return (
-      <Placeholder tone="error">
-        {getEndpointErrorMessage(ops.error)}
-      </Placeholder>
-    );
-  }
-  return <SlowOpsViewInner ops={ops.data} />;
+  const ops = useLive(slowOpsValue);
+  return matchResource(ops, {
+    loading: () => <Loading />,
+    error: (error) => (
+      <ResourceErrorInline
+        variant="block"
+        subject="slow operations"
+        error={error}
+        refetch={ops.refetch}
+      />
+    ),
+    ready: (data) => (
+      <SlowOpsViewInner
+        ops={data}
+        refresh={
+          <Button
+            variant="outline"
+            onClick={async () => {
+              await ops.refresh();
+            }}
+          >
+            Refresh
+          </Button>
+        }
+      />
+    ),
+  });
 }
 
-function SlowOpsViewInner({ ops }: { ops: SlowOp[] }) {
+function SlowOpsViewInner({
+  ops,
+  refresh,
+}: {
+  ops: SlowOp[];
+  refresh: ReactElement;
+}) {
   // Default ranking: aggregate impact (total time across all occurrences). A
   // structural bottleneck — one query draining many routes — surfaces at the top.
   const data = useMemo(
@@ -286,6 +308,7 @@ function SlowOpsViewInner({ ops }: { ops: SlowOp[] }) {
       rowKey={(r) => r.id}
       storageKey={SLOW_OPS_LOCAL}
       defaultView="table"
+      actions={refresh}
       emptyState="No slow operations recorded"
     />
   );

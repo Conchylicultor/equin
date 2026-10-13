@@ -1570,11 +1570,13 @@
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" in ($2, $3))",
+                  "sql": "select \"id\", \"n\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" = ANY($2::text[]))",
                   "params": [
                     0,
-                    "r1",
-                    "r2"
+                    [
+                      "r1",
+                      "r2"
+                    ]
                   ]
                 }
               ],
@@ -1602,11 +1604,13 @@
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" in ($2, $3))",
+                  "sql": "select \"id\", \"n\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" = ANY($2::text[]))",
                   "params": [
                     0,
-                    "p9",
-                    "p8"
+                    [
+                      "p9",
+                      "p8"
+                    ]
                   ]
                 }
               ],
@@ -1675,11 +1679,13 @@
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" in ($2, $3))",
+                  "sql": "select \"id\", \"n\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" = ANY($2::text[]))",
                   "params": [
                     0,
-                    "p9",
-                    "p8"
+                    [
+                      "p9",
+                      "p8"
+                    ]
                   ]
                 }
               ],
@@ -1770,10 +1776,12 @@
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"parent_id\", \"n\", \"dismissed\" from \"golden_rows\" where \"golden_rows\".\"id\" in ($1, $2)",
+                  "sql": "select \"id\", \"parent_id\", \"n\", \"dismissed\" from \"golden_rows\" where \"golden_rows\".\"id\" = ANY($1::text[])",
                   "params": [
-                    "r1",
-                    "r2"
+                    [
+                      "r1",
+                      "r2"
+                    ]
                   ]
                 }
               ],
@@ -1801,10 +1809,12 @@
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"parent_id\", \"n\", \"dismissed\" from \"golden_rows\" where \"golden_rows\".\"id\" in ($1, $2)",
+                  "sql": "select \"id\", \"parent_id\", \"n\", \"dismissed\" from \"golden_rows\" where \"golden_rows\".\"id\" = ANY($1::text[])",
                   "params": [
-                    "p9",
-                    "p8"
+                    [
+                      "p9",
+                      "p8"
+                    ]
                   ]
                 }
               ],
@@ -1871,10 +1881,12 @@
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"parent_id\", \"n\", \"dismissed\" from \"golden_rows\" where \"golden_rows\".\"id\" in ($1, $2)",
+                  "sql": "select \"id\", \"parent_id\", \"n\", \"dismissed\" from \"golden_rows\" where \"golden_rows\".\"id\" = ANY($1::text[])",
                   "params": [
-                    "p9",
-                    "p8"
+                    [
+                      "p9",
+                      "p8"
+                    ]
                   ]
                 }
               ],
@@ -1964,10 +1976,12 @@
               },
               "queries": [
                 {
-                  "sql": "select \"parent_id\", \"n\" from \"golden_rows\" where \"golden_rows\".\"parent_id\" in ($1, $2)",
+                  "sql": "select \"parent_id\", \"n\" from \"golden_rows\" where \"golden_rows\".\"parent_id\" = ANY($1::text[])",
                   "params": [
-                    "r1",
-                    "r2"
+                    [
+                      "r1",
+                      "r2"
+                    ]
                   ]
                 }
               ],
@@ -1995,10 +2009,12 @@
               },
               "queries": [
                 {
-                  "sql": "select \"parent_id\", \"n\" from \"golden_rows\" where \"golden_rows\".\"parent_id\" in ($1, $2)",
+                  "sql": "select \"parent_id\", \"n\" from \"golden_rows\" where \"golden_rows\".\"parent_id\" = ANY($1::text[])",
                   "params": [
-                    "p9",
-                    "p8"
+                    [
+                      "p9",
+                      "p8"
+                    ]
                   ]
                 }
               ],
@@ -2065,10 +2081,12 @@
               },
               "queries": [
                 {
-                  "sql": "select \"parent_id\", \"n\" from \"golden_rows\" where \"golden_rows\".\"parent_id\" in ($1, $2)",
+                  "sql": "select \"parent_id\", \"n\" from \"golden_rows\" where \"golden_rows\".\"parent_id\" = ANY($1::text[])",
                   "params": [
-                    "p9",
-                    "p8"
+                    [
+                      "p9",
+                      "p8"
+                    ]
                   ]
                 }
               ],
@@ -3791,12 +3809,14 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"golden_songs\".\"id\" in ($3, $4)",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"golden_songs\".\"id\" = ANY($3::text[])",
                   "params": [
                     "songs",
                     "c1",
-                    "s1",
-                    "s2"
+                    [
+                      "s1",
+                      "s2"
+                    ]
                   ]
                 }
               ],
@@ -3832,12 +3852,14 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"golden_songs\".\"id\" in ($3, $4)",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"golden_songs\".\"id\" = ANY($3::text[])",
                   "params": [
                     "songs",
                     "c1",
-                    "p9",
-                    "p8"
+                    [
+                      "p9",
+                      "p8"
+                    ]
                   ]
                 }
               ],
@@ -5587,12 +5609,14 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"golden_songs\".\"id\" in ($3, $4)",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"golden_songs\".\"id\" = ANY($3::text[])",
                   "params": [
                     "songs",
                     "c1",
-                    "s1",
-                    "s2"
+                    [
+                      "s1",
+                      "s2"
+                    ]
                   ]
                 }
               ],
@@ -5628,12 +5652,14 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"golden_songs\".\"id\" in ($3, $4)",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"cc\".\"value\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) where \"golden_songs\".\"id\" = ANY($3::text[])",
                   "params": [
                     "songs",
                     "c1",
-                    "p9",
-                    "p8"
+                    [
+                      "p9",
+                      "p8"
+                    ]
                   ]
                 }
               ],
@@ -7025,10 +7051,12 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where (\"playback\".\"plays\" > $1 and \"golden_songs\".\"id\" in ($2))",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where (\"playback\".\"plays\" > $1 and \"golden_songs\".\"id\" = ANY($2::text[]))",
                   "params": [
                     0,
-                    "s1"
+                    [
+                      "s1"
+                    ]
                   ]
                 }
               ],
@@ -7064,11 +7092,13 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where (\"playback\".\"plays\" > $1 and \"golden_songs\".\"id\" in ($2, $3))",
+                  "sql": "select \"golden_songs\".\"id\", \"golden_songs\".\"title\", \"golden_songs\".\"created_at\", \"playback\".\"last_played_at\", \"playback\".\"plays\", \"artist\".\"name\", \"label\".\"name\", \"golden_songs\".\"title\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where (\"playback\".\"plays\" > $1 and \"golden_songs\".\"id\" = ANY($2::text[]))",
                   "params": [
                     0,
-                    "p9",
-                    "p8"
+                    [
+                      "p9",
+                      "p8"
+                    ]
                   ]
                 }
               ],
@@ -8488,10 +8518,12 @@
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"title\", \"played_at\", \"duration_sec\", \"owner\" from \"golden_tracks\" where (\"golden_tracks\".\"owner\" = $1 and \"golden_tracks\".\"id\" in ($2))",
+                  "sql": "select \"id\", \"title\", \"played_at\", \"duration_sec\", \"owner\" from \"golden_tracks\" where (\"golden_tracks\".\"owner\" = $1 and \"golden_tracks\".\"id\" = ANY($2::text[]))",
                   "params": [
                     "me",
-                    "t1"
+                    [
+                      "t1"
+                    ]
                   ]
                 }
               ],
@@ -8530,11 +8562,13 @@
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"title\", \"played_at\", \"duration_sec\", \"owner\" from \"golden_tracks\" where (\"golden_tracks\".\"owner\" = $1 and \"golden_tracks\".\"id\" in ($2, $3))",
+                  "sql": "select \"id\", \"title\", \"played_at\", \"duration_sec\", \"owner\" from \"golden_tracks\" where (\"golden_tracks\".\"owner\" = $1 and \"golden_tracks\".\"id\" = ANY($2::text[]))",
                   "params": [
                     "me",
-                    "p9",
-                    "p8"
+                    [
+                      "p9",
+                      "p8"
+                    ]
                   ]
                 }
               ],
@@ -9623,9 +9657,11 @@
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"title\", \"n\" from \"golden_sc_songs\" where \"golden_sc_songs\".\"id\" in ($1)",
+                  "sql": "select \"id\", \"title\", \"n\" from \"golden_sc_songs\" where \"golden_sc_songs\".\"id\" = ANY($1::text[])",
                   "params": [
-                    "a"
+                    [
+                      "a"
+                    ]
                   ]
                 }
               ],
@@ -9651,10 +9687,12 @@
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"title\", \"n\" from \"golden_sc_songs\" where \"golden_sc_songs\".\"id\" in ($1, $2)",
+                  "sql": "select \"id\", \"title\", \"n\" from \"golden_sc_songs\" where \"golden_sc_songs\".\"id\" = ANY($1::text[])",
                   "params": [
-                    "p9",
-                    "p8"
+                    [
+                      "p9",
+                      "p8"
+                    ]
                   ]
                 }
               ],
@@ -10484,11 +10522,13 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_contrib_songs\".\"id\", \"golden_contrib_songs\".\"title\", COALESCE(\"playback\".\"play_count\", $1), \"playback\".\"last_played_at\" from \"golden_contrib_songs\" left join \"golden_contrib_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_contrib_songs\".\"id\" where \"golden_contrib_songs\".\"id\" in ($2, $3)",
+                  "sql": "select \"golden_contrib_songs\".\"id\", \"golden_contrib_songs\".\"title\", COALESCE(\"playback\".\"play_count\", $1), \"playback\".\"last_played_at\" from \"golden_contrib_songs\" left join \"golden_contrib_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_contrib_songs\".\"id\" where \"golden_contrib_songs\".\"id\" = ANY($2::text[])",
                   "params": [
                     0,
-                    "s1",
-                    "s2"
+                    [
+                      "s1",
+                      "s2"
+                    ]
                   ]
                 }
               ],
@@ -10526,11 +10566,13 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_contrib_songs\".\"id\", \"golden_contrib_songs\".\"title\", COALESCE(\"playback\".\"play_count\", $1), \"playback\".\"last_played_at\" from \"golden_contrib_songs\" left join \"golden_contrib_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_contrib_songs\".\"id\" where \"golden_contrib_songs\".\"id\" in ($2, $3)",
+                  "sql": "select \"golden_contrib_songs\".\"id\", \"golden_contrib_songs\".\"title\", COALESCE(\"playback\".\"play_count\", $1), \"playback\".\"last_played_at\" from \"golden_contrib_songs\" left join \"golden_contrib_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_contrib_songs\".\"id\" where \"golden_contrib_songs\".\"id\" = ANY($2::text[])",
                   "params": [
                     0,
-                    "p9",
-                    "p8"
+                    [
+                      "p9",
+                      "p8"
+                    ]
                   ]
                 }
               ],
@@ -10626,11 +10668,13 @@
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" in ($2, $3))",
+                  "sql": "select \"id\", \"n\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" = ANY($2::text[]))",
                   "params": [
                     0,
-                    "r1",
-                    "r2"
+                    [
+                      "r1",
+                      "r2"
+                    ]
                   ]
                 }
               ],
@@ -10658,11 +10702,13 @@
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" in ($2, $3))",
+                  "sql": "select \"id\", \"n\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" = ANY($2::text[]))",
                   "params": [
                     0,
-                    "p9",
-                    "p8"
+                    [
+                      "p9",
+                      "p8"
+                    ]
                   ]
                 }
               ],
@@ -10731,11 +10777,13 @@
               },
               "queries": [
                 {
-                  "sql": "select \"id\", \"n\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" in ($2, $3))",
+                  "sql": "select \"id\", \"n\" from \"golden_rows\" where (\"golden_rows\".\"dismissed\" = $1 and \"golden_rows\".\"id\" = ANY($2::text[]))",
                   "params": [
                     0,
-                    "p9",
-                    "p8"
+                    [
+                      "p9",
+                      "p8"
+                    ]
                   ]
                 }
               ],

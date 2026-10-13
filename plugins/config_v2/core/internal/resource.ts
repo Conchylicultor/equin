@@ -165,3 +165,33 @@ export type ConfigV2ModifiedCounts = z.infer<
 export const configModifiedCounts = liveValue("config-v2.modified-counts", {
   schema: configV2ModifiedCountsSchema,
 });
+
+// The raw text of one config document's four layered files: the user layer
+// (~/.singularity/state/config/<wt>/) override + origin (what the running app
+// resolves to), and the git layer (<repo>/config/) override + origin (the
+// defaults). The settings raw view surfaces them as User → Git → Origin, and the
+// conflict / invalid diffs compare two of them. `*Path` is the on-disk location,
+// relative to its layer root (always present, even when the file is absent and its
+// content is null), so the UI labels each layer with its real path.
+const configV2RawFileSchema = z.object({
+  override: z.string().nullable(),
+  overridePath: z.string(),
+  origin: z.string().nullable(),
+  originPath: z.string(),
+  gitOverride: z.string().nullable(),
+  gitOverridePath: z.string(),
+  gitOrigin: z.string().nullable(),
+  gitOriginPath: z.string(),
+});
+
+// Keyed `{ path, scopeId? }` exactly like `configValues`, so the registry's one
+// document fan-out (`notifyDocument`) moves it with the document, its conflicts
+// and its tiers — the user-layer half. The git-layer half (repo files only a
+// build propagates) is watched while subscribed. A path no descriptor is
+// registered for — or a scope with no document of its own loaded — is refused
+// `missing`.
+export const configRawFile = liveValue("config-v2.raw-file", {
+  schema: configV2RawFileSchema,
+  params: ["path", "scopeId?"],
+  refusals: ["missing"],
+});

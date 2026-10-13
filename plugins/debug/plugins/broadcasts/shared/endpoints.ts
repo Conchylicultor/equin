@@ -2,7 +2,7 @@ import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { OP_KIND_IDS } from "@plugins/infra/plugins/worktree/core";
 
-const BroadcastEntrySchema = z.object({
+export const BroadcastEntrySchema = z.object({
   severity: z.enum(["error", "warning", "info"]),
   message: z.string(),
   since: z.string().optional(),
@@ -11,18 +11,6 @@ const BroadcastEntrySchema = z.object({
   commands: z.array(z.enum(OP_KIND_IDS)).optional(),
 });
 export type BroadcastEntry = z.infer<typeof BroadcastEntrySchema>;
-
-const GetBroadcastsResponseSchema = z.object({
-  ok: z.literal(true),
-  entries: z.array(BroadcastEntrySchema),
-  path: z.string(),
-});
-export type GetBroadcastsResponse = z.infer<typeof GetBroadcastsResponseSchema>;
-
-export const getBroadcasts = defineEndpoint({
-  route: "GET /api/debug/broadcasts",
-  response: GetBroadcastsResponseSchema,
-});
 
 export const WriteBroadcastsBodySchema = z.object({
   entries: z.array(z.unknown()),

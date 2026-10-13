@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  useEndpoint,
   useEndpointMutation,
   getEndpointErrorMessage,
 } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import {
+  foldResource,
+  ResourceErrorInline,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
+import { resourcesDebug } from "@plugins/debug/plugins/read-set/core";
 import {
   Button,
   Input,
@@ -24,50 +30,48 @@ import {
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { DEFAULT_EMIT_DURATION_MS, MAX_EMIT_RATE } from "../../core";
 import {
-  startEmit,
-  stopEmit,
-  getEmitStatus,
-  listResourcesForEmit,
-} from "../../shared/endpoints";
+  DEFAULT_EMIT_DURATION_MS,
+  MAX_EMIT_RATE,
+  type EmitStatus,
+} from "../../core";
+import { startEmit, stopEmit } from "../../shared/endpoints";
+import { liveStateEmitStatus } from "../../shared/resources";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const boltIcon = symbol("bolt");
 
-// Status polls while a session is active so ticks/lastSubscriberCount/remaining
-// stay live. This is a debug-pane read of a server-owned in-memory snapshot — the
-// emitter itself is the push generator; there is no live-state resource to
-// subscribe to for its own status, so a slow refetch is the simplest faithful
-// read. The interval only runs while the pane is mounted (debug-only surface).
-const STATUS_REFETCH_MS = 1000;
-
 export function EmitPane() {
-  const { data: resourcesData } = useEndpoint(listResourcesForEmit, {});
-  const status = useEndpoint(
-    getEmitStatus,
-    {},
-    {
-      // eslint-disable-next-line polling-safety/no-refetch-interval -- the emitter is the push generator; its own status has no resource (see above)
-      refetchInterval: STATUS_REFETCH_MS,
-    },
-  );
-  const active = status.data?.active ?? false;
-
-  const start = useEndpointMutation(startEmit, {
-    invalidates: [getEmitStatus],
+  // The resource registry: a snapshot (debug/read-set's `resources.debug`),
+  // measured on mount and on the Refresh button beside the dropdown.
+  const resources = useLive(resourcesDebug);
+  // The emitter's status, pushed by the emitter on every change (≤ 1/s).
+  const status = useLive(liveStateEmitStatus);
+  // Controls lock while a session runs, or until the status is known.
+  const locked = foldResource(status, {
+    loading: () => true,
+    error: () => true,
+    ready: (s) => s.active,
   });
-  const stop = useEndpointMutation(stopEmit, { invalidates: [getEmitStatus] });
+
+  const start = useEndpointMutation(startEmit);
+  const stop = useEndpointMutation(stopEmit);
 
   // Only keyed resources with subscribers can produce an OBSERVABLE no-op push —
   // an empty-diff push to nobody is unobservable. Sort by subscriber count desc.
+  // The dropdown's own loading / failed states render beside it.
+  const resourceList = foldResource(resources, {
+    loading: () => null,
+    error: () => null,
+    ready: (d) => d,
+  });
   const candidates = useMemo(() => {
-    const all = resourcesData?.resources ?? [];
-    return all
+    if (resourceList === null) return [];
+    return resourceList.resources
       .filter((r) => r.mode === "keyed" && r.subscribers > 0)
       .sort((a, b) => b.subscribers - a.subscribers);
-  }, [resourcesData]);
+  }, [resourceList]);
 
   const [selectedKey, setSelectedKey] = useState<string>("");
   const [manualKey, setManualKey] = useState<string>("");
@@ -121,7 +125,20 @@ export function EmitPane() {
           </Stack>
 
           <Stack as="section" gap="sm">
-            <SectionLabel>Resource</SectionLabel>
+            <Stack direction="row" gap="sm" align="center" justify="between">
+              <SectionLabel>Resource</SectionLabel>
+              <Button variant="outline" onClick={() => resources.refresh()}>
+                Refresh
+              </Button>
+            </Stack>
+            {resources.status === "error" ? (
+              <ResourceErrorInline
+                variant="inline"
+                subject="the resource registry"
+                error={resources.error}
+                refetch={resources.refetch}
+              />
+            ) : null}
             <Select
               items={dropdownItems}
               value={selectedKey || null}
@@ -129,7 +146,7 @@ export function EmitPane() {
                 setSelectedKey(v ?? "");
                 setManualKey("");
               }}
-              disabled={active || candidates.length === 0}
+              disabled={locked || candidates.length === 0}
             >
               <SelectTrigger aria-label="Resource key" className="w-full">
                 <SelectValue>
@@ -150,10 +167,14 @@ export function EmitPane() {
               value={manualKey}
               onChange={(e) => setManualKey(e.target.value)}
               placeholder="…or type any resource key (off-screen / no subscribers)"
-              disabled={active}
+              disabled={locked}
               aria-label="Manual resource key"
             />
-            {candidates.length === 0 ? (
+            {resources.status === "loading" ? (
+              <Text variant="caption" tone="muted">
+                Reading the resource registry…
+              </Text>
+            ) : resources.status === "ready" && candidates.length === 0 ? (
               <Text variant="caption" tone="muted">
                 No keyed resources with live subscribers right now — open a view
                 that renders one, or type a key above.
@@ -175,7 +196,7 @@ export function EmitPane() {
                   step={0.1}
                   value={rate}
                   onChange={(e) => setRate(Number(e.target.value))}
-                  disabled={active}
+                  disabled={locked}
                   aria-label="Pushes per second"
                   className="w-32"
                 />
@@ -190,7 +211,7 @@ export function EmitPane() {
                   step={0.5}
                   value={durationMin}
                   onChange={(e) => setDurationMin(Number(e.target.value))}
-                  disabled={active}
+                  disabled={locked}
                   aria-label="Auto-stop minutes"
                   className="w-32"
                 />
@@ -200,7 +221,7 @@ export function EmitPane() {
 
           <Stack as="section" gap="sm">
             <Stack direction="row" gap="sm" align="center">
-              {active ? (
+              {status.status === "ready" && status.data.active ? (
                 <Button
                   variant="destructive"
                   onClick={() => void stop.mutateAsync({})}
@@ -220,7 +241,7 @@ export function EmitPane() {
                       },
                     })
                   }
-                  disabled={start.isPending || !effectiveKey}
+                  disabled={start.isPending || !effectiveKey || locked}
                 >
                   {start.isPending ? "Starting…" : "Start"}
                 </Button>
@@ -233,7 +254,7 @@ export function EmitPane() {
 
           <Stack as="section" gap="sm">
             <SectionLabel>Status</SectionLabel>
-            <StatusView status={status.data} nowMs={nowMs} />
+            <StatusView status={status} nowMs={nowMs} />
           </Stack>
         </Stack>
       </Inset>
@@ -242,22 +263,24 @@ export function EmitPane() {
 }
 
 function StatusView({
-  status,
+  status: result,
   nowMs,
 }: {
-  status:
-    | {
-        active: boolean;
-        key: string | null;
-        rate: number;
-        endsAtMs: number | null;
-        ticks: number;
-        lastSubscriberCount: number;
-      }
-    | undefined;
+  status: ResourceResult<EmitStatus>;
   nowMs: number;
 }) {
-  if (!status) return <Placeholder>Loading…</Placeholder>;
+  if (result.status === "loading") return <Placeholder>Loading…</Placeholder>;
+  if (result.status === "error") {
+    return (
+      <ResourceErrorInline
+        variant="block"
+        subject="the emitter status"
+        error={result.error}
+        refetch={result.refetch}
+      />
+    );
+  }
+  const status = result.data;
   if (!status.active) {
     return (
       <Text variant="caption" tone="muted">

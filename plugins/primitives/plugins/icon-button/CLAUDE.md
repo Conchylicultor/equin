@@ -62,13 +62,13 @@ icon+count button it stands in for — carries a per-site
   - Exports (types): `IconButtonProps`
   - Exports (values): `IconButton`
 - Cross-plugin:
-  - Imported by: 114 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 113 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×43
     - `primitives` ×19
     - `conversations` ×15
     - `page` ×7
     - `tasks` ×7
-    - `debug` ×6
+    - `debug` ×5
     - `config_v2` ×3
     - `infra` ×3
     - `apps-core` ×2

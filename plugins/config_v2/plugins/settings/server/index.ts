@@ -6,7 +6,6 @@ import {
   acknowledgeConflict,
   deleteOverride,
   mergeConflict,
-  getConfigRawFile,
   CONFIG_CATEGORY_ID,
 } from "../core";
 import {
@@ -15,7 +14,6 @@ import {
   handleAcknowledgeConflict,
   handleDeleteOverride,
   handleMergeConflict,
-  handleGetRawFile,
 } from "./internal/handlers";
 
 export default {
@@ -30,6 +28,5 @@ export default {
     [acknowledgeConflict.route]: handleAcknowledgeConflict,
     [deleteOverride.route]: handleDeleteOverride,
     [mergeConflict.route]: handleMergeConflict,
-    [getConfigRawFile.route]: handleGetRawFile,
   },
 } satisfies ServerPluginDefinition;

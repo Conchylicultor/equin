@@ -1,6 +1,6 @@
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { handleHealthData } from "./internal/handle-health-data";
+import { healthSeriesServed } from "./internal/health-series";
 import {
   processSamplerTimer,
   startProcessSampler,
@@ -20,7 +20,6 @@ export { onStackSamples } from "./internal/stall-profiler";
 export type { StackSampleObserver } from "./internal/stall-profiler";
 export { onHostSample } from "./internal/host-sampler";
 export type { HostSampleObserver } from "./internal/host-sampler";
-import { getHealthData } from "../shared/endpoints";
 
 // The health JSONL line shapes, for server-side consumers that scan the same
 // per-worktree files this plugin writes (debug/timeline's health heat lanes).
@@ -30,9 +29,7 @@ export type { HealthSample, HostSample } from "../core";
 export default {
   description:
     "Continuous per-backend health sampler: event-loop lag, GC/heap pressure, and phys_footprint appended to per-worktree JSONL (read from disk even when a backend is wedged), plus main-only host metrics. Surfaced as the Debug → Health pane.",
-  httpRoutes: {
-    [getHealthData.route]: handleHealthData,
-  },
+  contributions: [...healthSeriesServed.declare],
   register: [processSamplerTimer, hostSamplerTimer],
   onReady: () => {
     startProcessSampler();

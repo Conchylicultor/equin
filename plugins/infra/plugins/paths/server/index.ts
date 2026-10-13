@@ -63,7 +63,10 @@ export {
 } from "./internal/bins";
 export type { ClaudeBinLookup } from "./internal/bins";
 
-export { listWorktreeDirs } from "../core/internal/worktree-dirs";
+export {
+  listWorktreeDirs,
+  listWorktreeDirsAsync,
+} from "../core/internal/worktree-dirs";
 
 // The checkout half of a namespace, and the namespace that mints from it.
 // Answering the first means asking git which root owns `.git`, not comparing a
