@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
@@ -45,8 +47,11 @@ export interface MapViewProps {
    */
   fitPadding?: MapPadding;
   /**
-   * Shown instead of a map when there are no overlays — the host's own words
-   * for "nothing to show yet". The renderer is never mounted for an empty map.
+   * The host's own words for "nothing to show", floated on a card over the
+   * map while there are no overlays — or `null` for a bare map (a host that
+   * already says the count elsewhere). The map itself stays mounted either
+   * way: an overlay set that empties (a filter matching nothing) and fills
+   * again keeps the user's pan and zoom.
    */
   empty: ReactNode;
 }
@@ -59,7 +64,8 @@ function ignoreActivate(): void {}
  * Picks the first `GeoMap.Renderer`, renders that renderer's set-up action while
  * it says it is blocked, and otherwise mounts it with every pin already routed
  * through `GeoMap.Pin` — so neither the caller nor the renderer ever styles a
- * pin, and neither names the other.
+ * pin, and neither names the other. The renderer is mounted whatever the
+ * overlays: an empty set floats `empty` over the map rather than replacing it.
  */
 export function MapView({
   overlays,
@@ -83,10 +89,6 @@ export function MapView({
     );
   }
 
-  if (overlays.length === 0) {
-    return <Center className="size-full">{empty}</Center>;
-  }
-
   const tiles = renderer.tiles;
   const renderPin = (pin: MapPin, active: boolean) => (
     <GeoMap.Pin.Dispatch pin={pin} active={active} tiles={tiles} />
@@ -107,12 +109,22 @@ export function MapView({
     focusId,
     fitPadding,
   };
-  return <RendererGate renderer={renderer} props={props} />;
+  const notice =
+    overlays.length === 0 && empty !== null ? (
+      <Pin to="center" layer="raised" decorative>
+        <Surface level="overlay" className="p-md">
+          {empty}
+        </Surface>
+      </Pin>
+    ) : null;
+  return <RendererGate renderer={renderer} props={props} notice={notice} />;
 }
 
 interface GateProps {
   renderer: RendererItem;
   props: MapRendererProps;
+  /** Floated over the mounted map (the empty notice), never over a set-up state. */
+  notice: ReactNode;
 }
 
 /**
@@ -121,11 +133,16 @@ interface GateProps {
  * express, and this still puts it through the slot's middleware chain — so a
  * renderer crash is contained to the map.
  */
-function renderRenderer({ renderer, props }: GateProps): ReactNode {
-  return renderIsolated(
-    GeoMap.Renderer,
-    renderer as unknown as Contribution,
-    props,
+function renderRenderer({ renderer, props, notice }: GateProps): ReactNode {
+  return (
+    <div className="relative size-full">
+      {renderIsolated(
+        GeoMap.Renderer,
+        renderer as unknown as Contribution,
+        props,
+      )}
+      {notice}
+    </div>
   );
 }
 
@@ -134,22 +151,24 @@ function renderRenderer({ renderer, props }: GateProps): ReactNode {
  * contribution literal), so branching on it keeps both arms rules-of-hooks
  * clean — the shape the place block's provider gate uses.
  */
-function RendererGate({ renderer, props }: GateProps) {
+function RendererGate({ renderer, props, notice }: GateProps) {
   if (renderer.useReadiness) {
     return (
       <GatedRenderer
         renderer={renderer}
         props={props}
+        notice={notice}
         useReadiness={renderer.useReadiness}
       />
     );
   }
-  return renderRenderer({ renderer, props });
+  return renderRenderer({ renderer, props, notice });
 }
 
 function GatedRenderer({
   renderer,
   props,
+  notice,
   useReadiness,
 }: GateProps & { useReadiness: Hook<() => MapRendererReadiness> }) {
   const readiness = useReadiness();
@@ -161,7 +180,7 @@ function GatedRenderer({
         </Center>
       );
     case "ready":
-      return renderRenderer({ renderer, props });
+      return renderRenderer({ renderer, props, notice });
     case "blocked": {
       const Action = renderer.AccessAction;
       return (

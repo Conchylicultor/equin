@@ -41,6 +41,8 @@ function primaryLabel<TRow>(
  * is one pin on a full-bleed map, clustered by default. Clicking a pin
  * activates its row — the same per-row activation the other views wire to a
  * click — and the selected row's pin renders active and is panned into view.
+ * The map stays mounted when the filtered rows empty out, so narrowing and
+ * widening the filter never moves the user's camera.
  *
  * `rows`/`fields`/`options` arrive type-erased as `unknown`; this is the
  * documented re-cast boundary for the view child.
@@ -135,12 +137,15 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
         fitPadding={options.fitPadding}
         onActivate={onActivate}
         empty={
-          props.emptyState ?? (
-            <Placeholder>
-              {rows.length === 0
-                ? "Nothing to show on the map."
-                : "None of these have a location yet."}
-            </Placeholder>
+          // The surface's empty state speaks for an empty LIST. A list the
+          // search or filter emptied is just a bare map (the map stays put,
+          // and the surface's counts say why); rows with no location say so.
+          props.rows.length === 0 ? (
+            (props.emptyState ?? (
+              <Placeholder>Nothing to show on the map.</Placeholder>
+            ))
+          ) : rows.length === 0 ? null : (
+            <Placeholder>None of these have a location yet.</Placeholder>
           )
         }
       />

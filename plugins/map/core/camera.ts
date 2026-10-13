@@ -87,15 +87,3 @@ export function cameraFor(positions: readonly LatLng[]): MapCamera {
   }
   return { kind: "bounds", bounds: { south, west, north, east } };
 }
-
-/**
- * A stable identity for a SET of positions: equal for the same coordinates in
- * any order. A renderer re-frames only when this changes, so an edit that does
- * not move anything (a renamed place, a re-render) keeps the user's pan and zoom.
- */
-export function positionsKey(positions: readonly LatLng[]): string {
-  return positions
-    .map((p) => `${p.lat},${p.lng}`)
-    .sort()
-    .join(";");
-}

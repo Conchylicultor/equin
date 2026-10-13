@@ -4379,11 +4379,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "places-map"
               - `GeoMap.Pin` → `SavedPlacePin`
               - `GeoMap.Cluster` → `SavedPlaceCluster`
-            - Uses: 64 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 67 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `apps/places/places-core` ×8
+              - `primitives/data-view` ×6
               - `primitives/collapsible` ×5
               - `primitives/css/ui-kit` ×4
-              - `primitives/data-view` ×4
               - `map` ×3
               - `primitives/live-state` ×3
               - `apps/places/tag-manager` ×2
@@ -4403,6 +4403,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/line.Line`
               - `primitives/css/pin.Pin`
               - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
               - `primitives/css/spacing.Stack`
               - `primitives/css/surface.Surface`
@@ -24225,7 +24226,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses:
       - `primitives/css/center.Center`
       - `primitives/css/line.Line`
+      - `primitives/css/pin.Pin`
       - `primitives/css/placeholder.Placeholder`
+      - `primitives/css/surface.Surface`
       - `primitives/css/text.Text`
       - `primitives/css/ui-kit.cn`
       - `primitives/loading.Loading`
@@ -24252,7 +24255,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/data-view/map`
   - Core:
     - Exports (types):
+      - `CameraView`
       - `ClusterPoint`
+      - `FlyPath`
       - `LatLng`
       - `MapArea`
       - `MapBounds`
@@ -24264,20 +24269,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `MapStrokeStyle`
       - `MapTileScheme`
       - `MapTone`
+      - `MapViewport`
       - `PinCluster`
     - Exports (values):
       - `cameraFor`
       - `clusterPins`
       - `clusterPinType`
       - `DEFAULT_CLUSTER_RADIUS_PX`
+      - `flyPath`
       - `MAP_TONE_TOKEN`
       - `MIXED_PIN_TYPE`
       - `NO_MAP_PADDING`
       - `overlayPositions`
-      - `positionsKey`
       - `SINGLE_POINT_ZOOM`
+      - `viewFor`
   - Plugins:
-    - **`google`** — Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them only when the set of positions changes, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Lazily loaded off the boot wave.
+    - **`google`** — Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them once and then only from its Fit control, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Lazily loaded off the boot wave.
       - Web:
         - Contributes: `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
         - Uses:
@@ -24286,8 +24293,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/google-maps.useMapsBrowserConfig`
           - `map.GeoMap`
           - `primitives/css/center.Center`
+          - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
+          - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/lazy-component.lazyComponent`
           - `primitives/loading.Loading`
@@ -29494,7 +29504,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pin`
               - `pinClasses`
           - Cross-plugin:
-            - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×18
               - `apps` ×15
               - `page` ×9
@@ -29502,6 +29512,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core` ×2
               - `tasks` ×2
               - `debug/logs`
+              - `map`
               - `reorder/editor`
               - `screenshot/draw-on-app`
               - `ui/tab-bar`
@@ -29570,8 +29581,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 110 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
-              - `apps` ×20
+            - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+              - `apps` ×21
               - `conversations` ×20
               - `primitives` ×18
               - `debug` ×10
@@ -29857,12 +29868,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `SurfaceProps`
             - Exports (values): `Surface`
           - Cross-plugin:
-            - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/css/plugins/surface/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/surface/REFERENCE.md)
+            - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/css/plugins/surface/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/surface/REFERENCE.md)
               - `apps` ×9
               - `primitives` ×7
               - `page` ×4
               - `apps-core` ×2
               - `infra` ×2
+              - `map` ×2
               - `conversations/agents`
               - `debug/queue`
               - `fields/json/config`
@@ -31780,7 +31792,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `IconButtonProps`
         - Exports (values): `IconButton`
       - Cross-plugin:
-        - Imported by: 112 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 113 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×42
           - `primitives` ×19
           - `conversations` ×15
@@ -31795,6 +31807,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell` ×2
           - `ui` ×2
           - `fields/enum/column-config`
+          - `map/google`
     - **`icon-picker`** — Searchable, categorized picker over the Material Symbols set: a windowed grid of runtime-symbol cells browsing and searching Google's vendored Material Symbols metadata; onSelect hands back the picked SavedSymbolName. avatar, the page icon button and the callout panel compose it.
       - Web:
         - Uses:

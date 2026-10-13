@@ -1,10 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  SINGLE_POINT_ZOOM,
-  cameraFor,
-  overlayPositions,
-  positionsKey,
-} from "./camera";
+import { SINGLE_POINT_ZOOM, cameraFor, overlayPositions } from "./camera";
 import type { MapOverlay } from "./overlays";
 
 describe("cameraFor", () => {
@@ -59,19 +54,5 @@ describe("overlayPositions", () => {
       { lat: 3, lng: 3 },
       { lat: 4, lng: 4 },
     ]);
-  });
-});
-
-describe("positionsKey", () => {
-  test("ignores order", () => {
-    const a = { lat: 1, lng: 2 };
-    const b = { lat: 3, lng: 4 };
-    expect(positionsKey([a, b])).toBe(positionsKey([b, a]));
-  });
-
-  test("changes when a position moves", () => {
-    expect(positionsKey([{ lat: 1, lng: 2 }])).not.toBe(
-      positionsKey([{ lat: 1, lng: 2.0001 }]),
-    );
   });
 });

@@ -17,10 +17,12 @@ Plain data, no React:
   (`tone: MapTone`, `dashed`, `width`), never colours. `MAP_TONE_TOKEN` maps each
   tone to the theme's CSS variable, and the renderer resolves it where it paints,
   so a map re-themes with the app.
-- Camera helpers: `overlayPositions`, `cameraFor` (none / one point at street
-  zoom / fit bounds) and `positionsKey`, an order-insensitive identity for a set
-  of positions. A renderer re-frames only when that key changes, so an edit that
-  moves nothing keeps the user's pan and zoom.
+- Camera helpers: `overlayPositions` and `cameraFor` (none / one point at
+  street zoom / fit bounds); `viewFor` turns a framing into the `CameraView`
+  (centre + whole zoom) it puts a map of a given size in, keeping the framed
+  area clear of the covered edges; `flyPath` is the smooth zoom-and-pan
+  between two views (van Wijk & Nuij: a far jump zooms out, glides, zooms
+  in) with its duration — a renderer just plays its frames.
 - `MapPadding` (`{ top, right, bottom, left }` px, `NO_MAP_PADDING`): the room
   chrome floating over the map covers.
 - Clustering: `clusterPins(points, radiusPx)` greedily groups pins already
@@ -31,8 +33,10 @@ Plain data, no React:
 ## Host and slots (`web/`)
 
 - `<MapView overlays activeId onActivate cluster focusId empty/>` fills its
-  parent; the caller owns the size. With no overlays it renders `empty` and
-  never mounts a renderer. `cluster={{ radiusPx? }}` (default 48) opts into
+  parent; the caller owns the size. The renderer is mounted whatever the
+  overlays: with none, `empty` floats on a card over the map (`null`: a bare
+  map) — a set that empties (a filter matching nothing) and fills again keeps
+  the camera. `cluster={{ radiusPx? }}` (default 48) opts into
   clustering — without it every pin is drawn on its own. `focusId` pans to a pin
   when it changes and is off-screen, never refitting or zooming. `fitPadding`
   (a `MapPadding`, default none) names the edges floating chrome covers: fitting
@@ -52,7 +56,12 @@ Plain data, no React:
   nothing floats). **A renderer never styles
   a pin**: it places the node that `renderPin` returns. That node is
   `GeoMap.Pin.Dispatch`, already isolated by the slot middleware. A renderer
-  owns the camera, meaning fit-to-bounds and the single-point zoom.
+  owns the camera, and **the camera is the user's**: it frames the overlays
+  once (the first time there are any — fit-to-bounds, or the single-point
+  zoom), then never moves on its own — a changed overlay set (a filter, an
+  edit, a new pin) keeps the pan and zoom. Instead it offers a **Fit** control
+  that flies (`flyPath`, never a jump) to frame the overlays showing now, on
+  demand.
 - `GeoMap.Pin` — a dispatch slot keyed on `pin.pinType`. Its component gets
   `{ pin, active }`. The fallback is a neutral dot, so an unclaimed type is still
   visible.
@@ -82,7 +91,9 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
   - Uses:
     - `primitives/css/center.Center`
     - `primitives/css/line.Line`
+    - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/loading.Loading`
@@ -109,7 +120,9 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `primitives/data-view/map`
 - Core:
   - Exports (types):
+    - `CameraView`
     - `ClusterPoint`
+    - `FlyPath`
     - `LatLng`
     - `MapArea`
     - `MapBounds`
@@ -121,18 +134,20 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `MapStrokeStyle`
     - `MapTileScheme`
     - `MapTone`
+    - `MapViewport`
     - `PinCluster`
   - Exports (values):
     - `cameraFor`
     - `clusterPins`
     - `clusterPinType`
     - `DEFAULT_CLUSTER_RADIUS_PX`
+    - `flyPath`
     - `MAP_TONE_TOKEN`
     - `MIXED_PIN_TYPE`
     - `NO_MAP_PADDING`
     - `overlayPositions`
-    - `positionsKey`
     - `SINGLE_POINT_ZOOM`
+    - `viewFor`
 - Sub-plugins:
   - **`google`** — Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons…
 

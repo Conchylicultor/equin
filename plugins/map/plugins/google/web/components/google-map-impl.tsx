@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   APIProvider,
+  ControlPosition,
   Map as GoogleMap,
+  MapControl,
   Polygon,
   Polyline,
   useMap,
@@ -10,10 +12,15 @@ import {
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
   cameraFor,
   overlayPositions,
-  positionsKey,
+  viewFor,
+  type CameraView,
   type MapArea,
   type MapOverlay,
   type MapPadding,
@@ -35,6 +42,7 @@ import { MapErrorCard } from "./map-error-card";
 import { GOOGLE_COLOR_SCHEME, GOOGLE_TILES } from "../internal/tiles";
 import { OverlayPin } from "./overlay-pin";
 import { ClusteredPins } from "./clustered-pins";
+import { flyCamera } from "../internal/fly-camera";
 
 /**
  * Google's own places (shops, museums, restaurants, parks' names) are hidden:
@@ -58,6 +66,7 @@ const FIT_PADDING_PX = 48;
 const DEFAULT_STROKE_PX = 3;
 /** Opacity of an area's fill under its outline. */
 const AREA_FILL_OPACITY = 0.15;
+const fitIcon = symbol("fit-screen");
 
 /**
  * The Google Maps renderer. Reads the browser config itself rather than taking
@@ -144,6 +153,7 @@ function GoogleMapCanvas({
           mapTypeControl={false}
         >
           <FitCamera overlays={overlays} fitPadding={fitPadding} />
+          <FitControl overlays={overlays} fitPadding={fitPadding} />
           <FocusCamera
             overlays={overlays}
             focusId={focusId}
@@ -180,9 +190,10 @@ function GoogleMapCanvas({
 }
 
 /**
- * Frames every overlay, but only when the SET of positions changes — so the
- * user's own pan and zoom survive edits that move nothing (a renamed place, a
- * re-render, a new unplaced item).
+ * Frames the overlays ONCE: the first time the map has any to frame (on mount,
+ * or when the first overlay arrives on an empty map). After that the camera is
+ * the user's — a filter, an edit or a new overlay never pans or zooms it; the
+ * Fit control re-frames on demand.
  */
 function FitCamera({
   overlays,
@@ -192,31 +203,94 @@ function FitCamera({
   fitPadding: MapPadding;
 }) {
   const map = useMap();
-  const positions = overlayPositions(overlays);
-  const key = positionsKey(positions);
-  const latest = useLatestRef(positions);
+  const latest = useLatestRef(overlays);
   // Read at fit time, never a trigger: chrome opening (a detail card) must not
   // reframe the user's map — FocusCamera brings a covered selection out.
   const padding = useLatestRef(fitPadding);
+  const framed = useRef(false);
+  const hasOverlays = overlays.length > 0;
 
   useEffect(() => {
-    if (map === null) return;
-    const camera = cameraFor(latest.current);
-    switch (camera.kind) {
-      case "none":
-        return;
-      case "point":
-        map.setZoom(camera.zoom);
-        map.setCenter(paddedCenter(map, camera.center, padding.current));
-        return;
-      case "bounds":
-        map.fitBounds(camera.bounds, fitBoundsPadding(padding.current));
-        return;
-    }
-    // `key` is the trigger; `latest` / `padding` carry what it stands for.
-  }, [map, key, latest, padding]);
+    if (map === null || framed.current || !hasOverlays) return;
+    framed.current = true;
+    const view = frameView(map, latest.current, padding.current);
+    if (view !== null) map.moveCamera(view);
+    // `hasOverlays` is the trigger; `latest` / `padding` carry what it frames.
+  }, [map, hasOverlays, latest, padding]);
 
   return null;
+}
+
+/**
+ * The map's Fit button, beside Google's own camera controls (bottom right):
+ * flies to frame every overlay showing now, in the area the chrome leaves
+ * uncovered — zooming out, gliding and zooming back in, never a jump. A
+ * second click restarts the flight from wherever it is. Disabled while there
+ * is nothing to frame.
+ */
+function FitControl({
+  overlays,
+  fitPadding,
+}: {
+  overlays: readonly MapOverlay[];
+  fitPadding: MapPadding;
+}) {
+  const map = useMap();
+  const stopFlight = useRef<(() => void) | null>(null);
+  useEffect(() => () => stopFlight.current?.(), []);
+  const fit = () => {
+    if (map === null) return;
+    const view = frameView(map, overlays, fitPadding);
+    if (view === null) return;
+    stopFlight.current?.();
+    stopFlight.current = flyCamera(map, view);
+  };
+  return (
+    <MapControl position={ControlPosition.RIGHT_BOTTOM}>
+      {/* The inset keeps the button off the map's edge, as Google's own
+          controls sit. */}
+      <Inset pad="sm">
+        <Surface level="overlay">
+          <IconButton
+            icon={fitIcon}
+            label="Fit to the map's places"
+            side="left"
+            disabled={map === null || overlays.length === 0}
+            onClick={fit}
+          />
+        </Surface>
+      </Inset>
+    </MapControl>
+  );
+}
+
+/** Furthest a framing zooms in on several overlays close together. */
+const MAX_FIT_ZOOM = 18;
+
+/**
+ * The view framing every overlay: one point at street zoom, else their
+ * bounds, in the area the chrome leaves uncovered (plus the renderer's own
+ * margin). `null` with nothing to frame.
+ */
+function frameView(
+  map: google.maps.Map,
+  overlays: readonly MapOverlay[],
+  padding: MapPadding,
+): CameraView | null {
+  const camera = cameraFor(overlayPositions(overlays));
+  if (camera.kind === "none") return null;
+  const div = map.getDiv();
+  return viewFor(
+    camera,
+    { width: div.clientWidth, height: div.clientHeight },
+    {
+      top: FIT_PADDING_PX + padding.top,
+      right: FIT_PADDING_PX + padding.right,
+      bottom: FIT_PADDING_PX + padding.bottom,
+      left: FIT_PADDING_PX + padding.left,
+    },
+    MAX_FIT_ZOOM,
+  );
 }
 
 /**

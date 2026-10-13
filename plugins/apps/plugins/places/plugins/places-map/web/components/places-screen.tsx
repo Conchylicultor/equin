@@ -25,7 +25,7 @@ import {
   usePlaceTags,
 } from "@plugins/apps/plugins/places/plugins/places-core/web";
 import { TagManagerPanel } from "@plugins/apps/plugins/places/plugins/tag-manager/web";
-import { placeFieldDefs } from "../internal/fields";
+import { placeFieldDefs, placeSearchText } from "../internal/fields";
 import { useClickAway } from "../internal/use-click-away";
 import { useCoveredEdges } from "../internal/use-covered-edges";
 import { SAVED_PLACE_PIN_TYPE, placeVisual } from "../internal/place-visual";
@@ -169,7 +169,7 @@ function PlacesSurface({
         storageKey={PLACES_VIEW}
         rows={places}
         rowKey={(p) => p.id}
-        searchAccessor={(p) => `${p.name} ${p.address} ${p.note}`}
+        searchAccessor={placeSearchText}
         searchPlaceholder="Search places"
         fields={fields}
         views={["map", "gallery", "list"]}

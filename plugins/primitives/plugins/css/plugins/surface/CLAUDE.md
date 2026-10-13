@@ -121,12 +121,13 @@ never be clobbered.
   - Exports (types): `SurfaceProps`
   - Exports (values): `Surface`
 - Cross-plugin:
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×9
     - `primitives` ×7
     - `page` ×4
     - `apps-core` ×2
     - `infra` ×2
+    - `map` ×2
     - `conversations/agents`
     - `debug/queue`
     - `fields/json/config`

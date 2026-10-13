@@ -1,13 +1,16 @@
 import { useMemo, useState, type ReactNode } from "react";
 import {
   useDataViewControls,
+  useFlatRows,
   useRowFilter,
+  type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
@@ -49,6 +52,7 @@ import {
   type TagFilterState,
 } from "../internal/sidebar-filter";
 import { AppShellBrand } from "@plugins/primitives/plugins/app-shell/web";
+import { placeSearchText } from "../internal/fields";
 import { TagChip } from "./tag-chip";
 
 const checkIcon = symbol("check");
@@ -100,11 +104,21 @@ export function TagSidebar({
   onNewTag,
   onManageTags,
 }: TagSidebarProps) {
-  const { filter: controller, fields } = useDataViewControls();
+  const { filter: controller, fields, activeState } = useDataViewControls();
   const { filter, setFilter, resolveOperatorSet } = controller;
   const state = useMemo(() => sidebarState(filter), [filter]);
   const write = (next: SidebarState) =>
     setFilter(applySidebarState(filter, next));
+
+  // The header's count: the places the view shows now (filter and search, as
+  // the views apply them) out of every saved place.
+  const shown = useFlatRows(
+    places,
+    fields as FieldDef<Place>[],
+    activeState,
+    resolveOperatorSet,
+    placeSearchText,
+  ).length;
 
   // Faceted counts: the rows the rest of the view filter keeps.
   const rest = useMemo(() => withoutSidebarRules(filter), [filter]);
@@ -145,9 +159,7 @@ export function TagSidebar({
                   <Fill>
                     <Text variant="heading">Places</Text>
                   </Fill>
-                  <Text variant="count" tone="muted">
-                    {places.length}
-                  </Text>
+                  <PlaceCount shown={shown} total={places.length} />
                   <CollapsibleChevron className="size-4 text-muted-foreground" />
                 </CollapsibleTrigger>
               </Fill>
@@ -492,5 +504,32 @@ function FilterCheck({
         <Icon icon={removeIcon} className="size-3" />
       ) : null}
     </Center>
+  );
+}
+
+/**
+ * How many places show, always on screen: the total alone while nothing
+ * narrows the view, "3 / 12" (the shown part emphasised) while a filter or
+ * search does — so a view narrowed to nothing reads "0 / 12", not an empty
+ * map that seems to have lost everything.
+ */
+function PlaceCount({ shown, total }: { shown: number; total: number }) {
+  if (shown === total) {
+    return (
+      <Text variant="count" tone="muted">
+        {total}
+      </Text>
+    );
+  }
+  // Two leaves on one tight line (a leaf is its own block in a single-line
+  // context, so one nested in another would break the reading in two).
+  return (
+    <Line
+      className={cn("gap-2xs", rigidClass())}
+      aria-label={`${shown} of ${total} places shown`}
+    >
+      <Text variant="count">{shown}</Text>
+      <Text variant="count" tone="muted">{`/ ${total}`}</Text>
+    </Line>
   );
 }

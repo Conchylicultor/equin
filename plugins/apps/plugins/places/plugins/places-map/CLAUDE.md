@@ -49,6 +49,11 @@ was (an `or` root is wrapped, never rewritten). All of it is pure and
 unit-tested in `web/internal/sidebar-filter.ts` (`sidebarState`,
 `applySidebarState`, `cycleTag`, `applySidebarClick`, `withoutSidebarRules`).
 
+The header always says how many places show: the total alone, or `shown /
+total` while the filter or search narrows the view (`useFlatRows` over the
+active view state with the same `placeSearchText` the DataView searches by) —
+the one place a view narrowed to nothing is explained; the map stays bare.
+
 A row click cycles include → exclude → off; including a tag replaces any
 included tag it subsumes or narrows. A row's count is `tagPlaceCounts` over the
 places the REST of the filter keeps (`withoutSidebarRules` → `useRowFilter`),
@@ -109,11 +114,11 @@ Picking saves (`savePlace`) and selects the place; `maps-not-configured`
     - `Pane.Register` "places-map"
     - `GeoMap.Pin` → `SavedPlacePin`
     - `GeoMap.Cluster` → `SavedPlaceCluster`
-  - Uses: 64 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 67 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/places/places-core` ×8
+    - `primitives/data-view` ×6
     - `primitives/collapsible` ×5
     - `primitives/css/ui-kit` ×4
-    - `primitives/data-view` ×4
     - `map` ×3
     - `primitives/live-state` ×3
     - `apps/places/tag-manager` ×2
@@ -133,6 +138,7 @@ Picking saves (`savePlace`) and selects the place; `maps-not-configured`
     - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`

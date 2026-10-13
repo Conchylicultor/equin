@@ -30,6 +30,14 @@ export function tagOptions(tags: readonly PlaceTag[]): FieldOption[] {
 }
 
 /**
+ * What the search box matches a place on — the DataView's `searchAccessor`,
+ * and the sidebar's shown count, which must agree with it.
+ */
+export function placeSearchText(p: Place): string {
+  return `${p.name} ${p.address} ${p.note}`;
+}
+
+/**
  * The Places DataView schema. `tags` filters on EVERY tag id the place
  * carries (status included, so the sidebar can include / exclude Todo and
  * Done), and draws the non-status ones as coloured chips; `status` is the

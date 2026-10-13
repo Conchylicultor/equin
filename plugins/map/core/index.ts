@@ -14,11 +14,17 @@ export {
   NO_MAP_PADDING,
   cameraFor,
   overlayPositions,
-  positionsKey,
   type MapBounds,
   type MapCamera,
   type MapPadding,
 } from "./camera";
+export {
+  flyPath,
+  viewFor,
+  type FlyPath,
+  type CameraView,
+  type MapViewport,
+} from "./fly";
 export {
   DEFAULT_CLUSTER_RADIUS_PX,
   MIXED_PIN_TYPE,

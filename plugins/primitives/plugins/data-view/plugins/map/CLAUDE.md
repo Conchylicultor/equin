@@ -26,8 +26,12 @@ on a full-bleed `<MapView>` (`plugins/map`), clustered by default.
   `onRowOpen` when the row does not activate. `selectedRowId` is the map's
   `activeId` (its pin renders active) and `focusId` (panned into view when
   off-screen).
-- **Empty.** No pin at all → the host's `emptyState`, else a `Placeholder`
-  (through `MapView`'s `empty`; the renderer is never mounted).
+- **Empty.** No pin at all → the map stays mounted (narrowing and widening a
+  filter never unmounts or moves it), with a notice floated over it
+  (`MapView`'s `empty`) only when there is something to explain: the host's
+  `emptyState` when the list itself is empty, "None of these have a location
+  yet." when rows show but none is placed. A list the search or filter
+  emptied is a bare map — the surface's own counts say so.
 
 ## Layout
 

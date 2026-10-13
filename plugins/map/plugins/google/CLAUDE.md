@@ -32,6 +32,13 @@ The only map-vendor code in the repo. Everything else draws maps through
   projected to world pixels (`getProjection().fromLatLngToPoint` × 2^zoom),
   which depend on the zoom alone, so only `zoom_changed` re-clusters, never a
   pan. Clusters go through the same `OverlayPin`, anchored at the centre.
+- **Camera**: `FitCamera` frames once (the first time there are overlays,
+  `moveCamera` straight there); `FitControl` — our `IconButton` on an overlay
+  surface, placed with `MapControl` at `RIGHT_BOTTOM` above Google's camera
+  control — flies there on click (`internal/fly-camera.ts`: one `moveCamera`
+  per animation frame along the core's `flyPath`, fractional zoom switched on
+  for the flight only, since a raster map otherwise snaps to whole zooms; a
+  press, wheel or drag stops it). Both target `frameView` → core `viewFor`.
 - **Covered edges** (`fitPadding`): `fitBounds` gets `FIT_PADDING_PX` plus
   each edge's padding (`fitBoundsPadding`, also for a cluster click); a single
   point and a focused pin are centred in the uncovered area (`paddedCenter`,
@@ -43,7 +50,7 @@ The only map-vendor code in the repo. Everything else draws maps through
 
 ## Plugin reference
 
-- Description: Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them only when the set of positions changes, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Lazily loaded off the boot wave.
+- Description: Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them once and then only from its Fit control, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Lazily loaded off the boot wave.
 - Web:
   - Contributes: `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
   - Uses:
@@ -52,8 +59,11 @@ The only map-vendor code in the repo. Everything else draws maps through
     - `integrations/google-maps.useMapsBrowserConfig`
     - `map.GeoMap`
     - `primitives/css/center.Center`
+    - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
+    - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`
     - `primitives/loading.Loading`
