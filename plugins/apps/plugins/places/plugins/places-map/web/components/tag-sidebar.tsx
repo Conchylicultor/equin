@@ -20,6 +20,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import {
   flattenTagTree,
   tagDescendants,
@@ -78,10 +79,12 @@ export interface TagSidebarProps {
  * `useDataViewControls()` — the filter is the one source of truth, and the
  * sidebar owns only its top-level nested-tags rules (`sidebar-filter.ts`).
  *
- * Header: "Places" and the total; the "Tagged / Not tagged" summary with the
- * any / all switch and Clear (once anything is picked); a tag search. Body:
- * the tree, each row's count being how many places the REST of the filter
- * keeps that carry the tag or a tag nested under it. A click cycles
+ * Header: "Places" and the total — a click folds the sidebar to its header
+ * (remembered per device) — then the "Tagged / Not tagged" summary with the
+ * any / all switch and Clear (once anything is picked), shown folded too, so
+ * an active tag filter never hides. Body: a tag search and the tree, each
+ * row's count being how many places the REST of the filter keeps that carry
+ * the tag or a tag nested under it. A click cycles
  * include → exclude → off. Footer: + New tag, Manage tags.
  */
 export function TagSidebar({
@@ -110,21 +113,40 @@ export function TagSidebar({
   );
   const picked = (ids: readonly string[]) =>
     ids.map((id) => byId.get(id)).filter((t): t is PlaceTag => !!t);
+  const [open, setOpen] = useDraft("places.tag-sidebar.open", true);
 
   return (
+    // `fill`: the floating aside card hugs this column's height up to the
+    // surface's, so the tree scrolls between a header and footer that stay put.
     <Column
-      className="h-full w-72"
+      fill
+      className="w-72"
       header={
         <Stack gap="sm" className="p-sm">
-          <Line className="gap-sm px-xs pt-xs">
-            <BrandMark />
-            <Fill>
-              <Text variant="heading">Places</Text>
-            </Fill>
-            <Text variant="count" tone="muted">
-              {places.length}
-            </Text>
-          </Line>
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
+            onClick={() => setOpen(!open)}
+            className="rounded-md text-left hover:bg-hover-fill"
+          >
+            <Line className="gap-sm p-xs">
+              <BrandMark />
+              <Fill>
+                <Text variant="heading">Places</Text>
+              </Fill>
+              <Text variant="count" tone="muted">
+                {places.length}
+              </Text>
+              <Icon
+                icon={chevronIcon}
+                className={cn(
+                  "size-4 text-muted-foreground transition-transform",
+                  open && "rotate-90",
+                )}
+              />
+            </Line>
+          </button>
           {state.include.length + state.exclude.length > 0 ? (
             <FilterSummary
               include={picked(state.include)}
@@ -139,25 +161,29 @@ export function TagSidebar({
         </Stack>
       }
       body={
-        <TagTree
-          tags={tags}
-          counts={counts}
-          state={state}
-          onCycle={(id) => write(cycleTag(state, id, tags))}
-        />
+        open ? (
+          <TagTree
+            tags={tags}
+            counts={counts}
+            state={state}
+            onCycle={(id) => write(cycleTag(state, id, tags))}
+          />
+        ) : undefined
       }
       footer={
-        <Line className="gap-2xs border-t p-xs">
-          <Button variant="ghost" onClick={onNewTag}>
-            <Icon icon={addIcon} />
-            New tag
-          </Button>
-          <Fill />
-          <Button variant="ghost" onClick={onManageTags}>
-            <Icon icon={tuneIcon} />
-            Manage tags
-          </Button>
-        </Line>
+        open ? (
+          <Line className="gap-2xs border-t p-xs">
+            <Button variant="ghost" onClick={onNewTag}>
+              <Icon icon={addIcon} />
+              New tag
+            </Button>
+            <Fill />
+            <Button variant="ghost" onClick={onManageTags}>
+              <Icon icon={tuneIcon} />
+              Manage tags
+            </Button>
+          </Line>
+        ) : undefined
       }
     />
   );

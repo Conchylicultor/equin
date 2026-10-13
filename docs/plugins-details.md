@@ -4373,7 +4373,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "places-map"
               - `GeoMap.Pin` → `SavedPlacePin`
               - `GeoMap.Cluster` → `SavedPlaceCluster`
-            - Uses: 57 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 58 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `apps/places/places-core` ×8
               - `primitives/css/ui-kit` ×4
               - `primitives/data-view` ×4
@@ -4405,6 +4405,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/latest-ref.useEventCallback`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+              - `primitives/persistent-draft.useDraft`
               - `primitives/shortcuts.useSurfaceShortcuts`
               - `ui/icons.Icon`
         - **`shell`** — The Places app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the map's index pane is shown, and the app's own light-only theme, which the places app selects.
@@ -30329,7 +30330,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
-        - Uses: 82 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 83 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `primitives/css/ui-kit` ×11
           - `primitives/data-view/view-core` ×8
           - `network/live` ×5
@@ -30338,6 +30339,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/slot-render` ×4
           - `config_v2` ×2
           - `primitives/collapsible` ×2
+          - `primitives/css/overlay` ×2
           - `primitives/css/row` ×2
           - `primitives/css/sticky/stack` ×2
           - `primitives/css/sticky` ×2
@@ -30351,7 +30353,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.IdKinds`
           - `primitives/css/fill.fillClasses`
           - `primitives/css/inline.Inline`
-          - `primitives/css/overlay.Overlay`
           - `primitives/css/pin.Pin`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/rigid.rigidClass`
@@ -33431,8 +33432,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `yieldToMain`
     - **`persistent-draft`** — Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency.
       - Cross-plugin:
-        - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/persistent-draft/REFERENCE.md`](../plugins/primitives/plugins/persistent-draft/REFERENCE.md)
-          - `apps` ×8
+        - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/persistent-draft/REFERENCE.md`](../plugins/primitives/plugins/persistent-draft/REFERENCE.md)
+          - `apps` ×9
           - `primitives` ×7
           - `conversations` ×5
           - `page/editor`

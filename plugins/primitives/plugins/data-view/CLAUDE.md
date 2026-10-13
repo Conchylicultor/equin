@@ -992,8 +992,11 @@ tools floating over it — `floating-toolbar` is the reference arrangement).
   in-flow band.
 - **`DataViewProps.aside?: ReactNode`** — a host panel (a facet sidebar) placed
   by `BandSurface` (`web/components/band-surface.tsx`): beside an overlay band
-  a floating `Surface level="overlay"` card on the left (the surface's height
-  minus `md` gutters, its own scroll; the panel sizes its own width), measured
+  a floating `Surface level="overlay"` card on the left (the panel sizes its own
+  width AND height, capped at the surface's height minus `md` gutters; the card
+  is a flex column, so a panel that scrolls its own body is a `<Column fill>`
+  whose header and footer stay put; the rest of the span is click-through, so a
+  panel folded to its header leaves the view below reachable), measured
   so the band's `asideInset` is `calc(md + width)`; beside an in-flow band a
   sticky left column, with `asideInset` `"0px"` (the band already starts past
   it). It renders inside a `DataViewControlsProvider`, so it reads and edits
@@ -2312,7 +2315,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 82 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×11
     - `primitives/data-view/view-core` ×8
     - `network/live` ×5
@@ -2321,6 +2324,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/slot-render` ×4
     - `config_v2` ×2
     - `primitives/collapsible` ×2
+    - `primitives/css/overlay` ×2
     - `primitives/css/row` ×2
     - `primitives/css/sticky/stack` ×2
     - `primitives/css/sticky` ×2
@@ -2334,7 +2338,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ids.IdKinds`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/inline.Inline`
-    - `primitives/css/overlay.Overlay`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`

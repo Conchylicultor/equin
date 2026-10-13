@@ -5,6 +5,8 @@ import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import { OverlayInteractive } from "@plugins/primitives/plugins/css/plugins/overlay/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { spaceLength } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
@@ -89,19 +91,32 @@ export function BandSurface(props: {
         </Scroll>
         {bandNode}
         {asideNode ? (
+          // The pin spans the surface's height (less the gutters) but is
+          // click-through: the card inside hugs its aside's own height, capped
+          // at the pin's, so an aside that folds to its header (the Places tag
+          // sidebar) leaves the view below it reachable.
           <Pin
             to="left"
             stretch
             offset={GUTTER}
             spanOffset={GUTTER}
             layer="nav"
+            decorative
             ref={asideRef}
           >
-            {/* `overlay`: the floating-panel role (its own corners, ring and
-                shadow), the same material as the band's floating cards. */}
-            <Surface level="overlay" className="h-full">
-              <Scroll className="h-full">{asideNode}</Scroll>
-            </Surface>
+            {/* The card is a flex item of the pin's full-height column: it is
+                its content's height, yielding (down to the pin's height) when
+                the content is taller. Its post-flex height is definite (the
+                column's is), so the aside's column inside fills exactly it. */}
+            <Stack gap="none" className="h-full">
+              {/* `overlay`: the floating-panel role (its own corners, ring and
+                  shadow), the same material as the band's floating cards. */}
+              <Surface level="overlay" className={yieldClass("y")}>
+                <Stack gap="none" as={OverlayInteractive} className="h-full">
+                  {asideNode}
+                </Stack>
+              </Surface>
+            </Stack>
           </Pin>
         ) : null}
       </>

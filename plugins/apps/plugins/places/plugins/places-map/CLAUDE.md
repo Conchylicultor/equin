@@ -58,6 +58,12 @@ The tree rows are transient filter chrome (the brief's exemption from
 DataView): a disclosure button beside a `Row` (never nested in it), the
 tri-state box, `TagMark`, name, count. Roots start open.
 
+Clicking the header's title line ("Places", the total, a chevron) folds the
+sidebar to its header — tree and footer gone, the tag-filter summary kept —
+remembered per device (`useDraft("places.tag-sidebar.open")`). The aside card
+hugs the sidebar's height (it is a `<Column fill>`), so the folded card is
+just the header and the map below it is reachable.
+
 ## Pins (`GeoMap.Pin` / `GeoMap.Cluster` for `saved-place`)
 
 - `SavedPlacePin` — the drop: 30px head (`PlaceDropHead`: a square with three
@@ -103,7 +109,7 @@ Picking saves (`savePlace`) and selects the place; `maps-not-configured`
     - `Pane.Register` "places-map"
     - `GeoMap.Pin` → `SavedPlacePin`
     - `GeoMap.Cluster` → `SavedPlaceCluster`
-  - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/places/places-core` ×8
     - `primitives/css/ui-kit` ×4
     - `primitives/data-view` ×4
@@ -135,6 +141,7 @@ Picking saves (`savePlace`) and selects the place; `maps-not-configured`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+    - `primitives/persistent-draft.useDraft`
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `ui/icons.Icon`
 
