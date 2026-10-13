@@ -22,7 +22,12 @@ import {
   type ReadColumn,
   type SelectMap,
 } from "@plugins/infra/plugins/query-resource/server";
-import type { LiveAllCollection } from "@plugins/network/plugins/live/core";
+import {
+  LIVE_COLUMNS_KEY,
+  type LiveAllCollection,
+} from "@plugins/network/plugins/live/core";
+import { exposureFolds } from "./exposure-folds";
+import type { ExposingExtension } from "./serve-columns";
 import {
   isEntitySource,
   type CollectionSource,
@@ -40,7 +45,10 @@ import {
 // current and L2 persists) and `key:rows` (the point sibling). It is never
 // contributed, scoped or a union: those paths compile at boot from other
 // plugins' contributions, while an `all` collection's definition (A18) is
-// fixed at module eval.
+// fixed at module eval. The one exception is its `exposes`: the exposures it
+// reaches (`LiveColumns.Expose`) are folded at boot (`serveCollection` defers
+// both halves), and the fold is part of the definition — the joins and
+// projections move the SQL, and `wire.ids` names the folded fields.
 
 /** A field bound to a column of the base, a row-wise join or a rollup — never an aggregate. */
 type ColumnBinding<Refs> = Exclude<
@@ -151,7 +159,13 @@ export type ServeAllCollectionOptions<
   throttleMs?: number;
   /** Test seam. Defaults to the real per-worktree drizzle `db`. */
   db?: QueryDb;
-} & AllColumnOverrides<T, Row, keyof Row & string, J> &
+} & AllColumnOverrides<
+  T,
+  Row,
+  // `$columns` is folded (an exposing set's exposures), never bound.
+  Exclude<keyof Row & string, typeof LIVE_COLUMNS_KEY>,
+  J
+> &
   WireCheck<T, Row>;
 
 /** An `all` collection's compiled server halves (query-resource's `CompiledAllCollection`). */
@@ -179,6 +193,7 @@ export function compileAllSpecs<Row>(
     Row,
     readonly AllJoinSpec[]
   >,
+  exposed: readonly ExposingExtension[] = [],
 ): AllCollectionSpecs<Row> {
   const fail = (message: string): never => {
     throw new Error(`serveCollection("${collection.key}"): ${message}`);
@@ -212,9 +227,35 @@ export function compileAllSpecs<Row>(
     string,
     ((j: unknown) => unknown) | undefined
   >;
+  // The exposures its `exposes` reaches (`./exposure-folds`), each joined
+  // under its slice and projected flat under its wire names, then folded into
+  // `$columns[<slice>]` by `wire.encodeRow`.
+  const exposes = collection.exposes ?? null;
+  const folds = exposureFolds(
+    exposes,
+    table,
+    opts.joins ?? [],
+    exposed,
+    { fields: collection.rowKeys, sets: [] },
+    fail,
+  );
+  const exposedFields = new Map<
+    string,
+    { slice: string; field: string; schema: unknown }
+  >();
+  for (const { handle } of folds) {
+    for (const field of handle.fields) {
+      exposedFields.set(handle.wireName(field), {
+        slice: handle.name,
+        field,
+        schema: handle.rowShape[field],
+      });
+    }
+  }
   const rowShape = collection.row.shape as Readonly<Record<string, unknown>>;
   const fieldSchema = (name: string): ZodParser<unknown> => {
-    const schema = rowShape[name] as Partial<ZodParser<unknown>> | undefined;
+    const schema = (exposedFields.get(name)?.schema ?? rowShape[name]) as
+      Partial<ZodParser<unknown>> | undefined;
     if (typeof schema?.safeParse !== "function") {
       return fail(`row schema field "${name}" is not a zod schema.`);
     }
@@ -235,16 +276,35 @@ export function compileAllSpecs<Row>(
       Readonly<Record<string, unknown>> | undefined
     >;
     const out: SelectMap = {};
-    for (const name of collection.rowKeys) {
+    // An exposed field binds to its own join's column of the same name.
+    const exposedRefs = folds.flatMap(({ handle, join }) =>
+      handle.fields.map((field) => {
+        const ref = j[join.alias]?.[field] as ColumnRef | undefined;
+        return [
+          handle.wireName(field),
+          ref ??
+            fail(
+              `exposed field "${handle.wireName(field)}" is not a wire column of its extension "${join.alias}".`,
+            ),
+        ] as const;
+      }),
+    );
+    for (const name of [
+      ...collection.rowKeys,
+      ...exposedRefs.map(([wire]) => wire),
+    ]) {
+      const exposedRef = exposedRefs.find(([wire]) => wire === name)?.[1];
       const override = overrides[name];
       const sourceCol = sourceColumns[name];
-      const binding: unknown = override
-        ? override(bind.j)
-        : sourceCol
-          ? ({ from: BASE_RELATION, col: sourceCol } satisfies ColumnRef)
-          : fail(
-              `row field "${name}" binds to no column of the source — pass it in \`columns\`.`,
-            );
+      const binding: unknown = exposedRef
+        ? exposedRef
+        : override
+          ? override(bind.j)
+          : sourceCol
+            ? ({ from: BASE_RELATION, col: sourceCol } satisfies ColumnRef)
+            : fail(
+                `row field "${name}" binds to no column of the source — pass it in \`columns\`.`,
+              );
       let read: ReadColumn;
       if (isExprField(binding)) {
         if (binding.wire !== undefined) wireRefused(name);
@@ -284,12 +344,37 @@ export function compileAllSpecs<Row>(
     return out;
   };
   const where = opts.where;
+  const joins: readonly AllJoinSpec[] = [
+    ...(opts.joins ?? []),
+    ...folds.map((f) => f.join),
+  ];
+  // The fold: every reached slice under `$columns` (present even with no field
+  // projected — the row schema requires the key), each field moved out of its
+  // flat wire name. `encodeRow` is code the definition cannot read, so its id
+  // names exactly the fields it moves (A18).
+  const slices = folds.map((f) => f.handle.name);
+  const fold = (row: Record<string, unknown>): Record<string, unknown> => {
+    const out = { ...row };
+    const cols: Record<string, Record<string, unknown>> = Object.fromEntries(
+      slices.map((slice) => [slice, {}]),
+    );
+    for (const [wire, { slice, field }] of exposedFields) {
+      cols[slice]![field] = out[wire];
+      delete out[wire];
+    }
+    out[LIVE_COLUMNS_KEY] = cols;
+    return out;
+  };
+  const foldId = `exposed:${[...exposedFields.keys()].sort().join(",")}`;
   return compileAllCollection(
     { all: collection.all, rows: collection.rows },
     {
       from: opts.from,
-      ...(opts.joins !== undefined ? { joins: opts.joins } : {}),
+      ...(joins.length > 0 ? { joins } : {}),
       select,
+      ...(exposes === null
+        ? {}
+        : { wire: { encodeRow: fold, ids: { [LIVE_COLUMNS_KEY]: foldId } } }),
       ...(where === undefined
         ? {}
         : {

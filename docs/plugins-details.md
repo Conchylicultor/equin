@@ -10653,12 +10653,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UpdateAgentBodySchema`
     - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the agent-manager sidebar. Serves the two conversation-list collections — `conversations.all` (system conversations hidden by a default scope) and `conversations.history` — over `_conversations` with the owner joins (attempt → task), routed: a conversation, attempt or task write refills only the rows it changes.
       - Web:
-        - Slots:
-          - `allConversationsPane.Actions`
-          - `AllConversationsFields`
-        - Slot contributors:
-          - `allConversationsPane.Actions` ← `primitives.pane`
-          - `AllConversationsFields` ← `conversations.usage`
+        - Slots: `allConversationsPane.Actions`
+        - Slot contributors: `allConversationsPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "all-conversations"
           - `Shell.Sidebar` "Conversations"
@@ -10672,7 +10668,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
-          - `primitives/data-view.defineFieldExtensions`
           - `primitives/data-view.liveDataSource`
           - `primitives/pane.defineRoute`
           - `primitives/pane.Pane`
@@ -10681,7 +10676,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/relative-time.RelativeTime`
           - `shell.Shell`
         - Exports (values):
-          - `AllConversationsFields`
           - `allConversationsPane`
           - `useConversationFieldDefs`
       - Server:
@@ -10720,7 +10714,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/filter.liveText`
           - `tasks/tasks-core.ConversationKindSchema`
           - `tasks/tasks-core.ConversationSchema`
+          - `tasks/tasks-core.conversationsEntityRef`
           - `tasks/tasks-core.ConversationStatusSchema`
+          - `tasks/tasks-core.tasksEntityRef`
         - Exports (types):
           - `ConversationFieldSpec`
           - `ConversationFieldType`
@@ -10737,9 +10733,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversationModelOptions`
       - Cross-plugin:
         - Imported by:
+          - `conversations/conversations-view/data-view`
           - `conversations/conversations-view/data-view/history`
           - `conversations/conversations-view/data-view/queue`
-          - `conversations/usage`
     - **`commit-conversation`** — The commit row action that opens the conversation which wrote a commit (its Singularity-Conversation trailer) in a new browser tab.
       - Web:
         - Uses:
@@ -13575,12 +13571,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Plugins:
             - **`history`** — Contributes the History list (a live source over the `conversations.history` collection) as the History source of the merged conversation-sidebar DataView.
               - Web:
-                - Slots:
-                  - `history-actions`
-                  - `HistoryFields`
-                - Slot contributors:
-                  - `history-actions` ← `conversations.conversations-view.data-view.history`
-                  - `HistoryFields` ← `conversations.usage`
+                - Slots: `history-actions`
+                - Slot contributors: `history-actions` ← `conversations.conversations-view.data-view.history`
                 - Contributes:
                   - `SidebarSources` "History" → `HistorySource`
                   - `history-actions` "close" → `CloseConvAction`
@@ -13589,13 +13581,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversations-view/data-view.ConversationSidebarProps`
                   - `conversations/conversations-view/data-view.SidebarConversationItem`
                   - `conversations/conversations-view/data-view.SidebarSources`
-                  - `primitives/data-view.defineFieldExtensions`
                   - `primitives/data-view.defineItemActions`
                   - `primitives/data-view.liveDataSource`
                   - `primitives/icon-button.IconButton`
-                - Exports (values): `HistoryFields`
-              - Cross-plugin:
-                - Imported by: `conversations/usage`
             - **`queue`** — Contributes the priority Queue (pin/status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.
               - Web:
                 - Slots: `queue-actions`
@@ -14407,18 +14395,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unwrapRelayEnvelopes`
           - `userPromptText`
           - `wrapPreprompt`
-    - **`usage`** — Cost, Tokens and Agents fields on the conversation lists (All-conversations, sidebar History), bound to the lists' `usage` columns so they sort and filter server-side. Per-conversation usage — cost, tokens and launched sub-agents — counted incrementally from the transcripts (the anchored session chain plus every sub-agent), stored in conversations_ext_usage and served as the conversation lists' `usage` columns.
+    - **`usage`** — Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side. Per-conversation usage — cost, tokens and launched sub-agents — counted incrementally from the transcripts (the anchored session chain plus every sub-agent), stored in conversations_ext_usage and exposed to every conversation list (LiveColumns.Expose).
       - Web:
-        - Contributes:
-          - `AllConversationsFields` "usage" → `AllConversationsUsageFields`
-          - `HistoryFields` "usage" → `HistoryUsageFields`
-        - Uses:
-          - `conversations/all-conversations.AllConversationsFields`
-          - `conversations/conversations-view/data-view/history.HistoryFields`
+        - Contributes: `LiveExposures.Register` "conversations_ext_usage"
+        - Uses: `network/live.LiveExposures`
       - Server:
         - Contributes:
-          - `live.columns.serve` "conversations.all ← usage"
-          - `live.columns.serve` "conversations.history ← usage"
+          - `live.columns.expose` "conversations ← conversations_ext_usage"
           - `change-feed-exclusion` "conversation_usage_files"
         - Uses:
           - `conversations/conversation-view/jsonl-viewer/subagents.listSubagentEntries`
@@ -14435,7 +14418,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/paths.isHostSingleton`
           - `infra/warmup.defineWarmup`
           - `network/live.LiveColumns`
-          - `network/live.serveColumns`
           - `stats/cost.currentPriceTable`
           - `stats/cost.onPriceTableUpdated`
           - `tasks/tasks-core._conversations`
@@ -19967,11 +19949,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 148 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 149 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×46
               - `primitives` ×24
               - `page` ×23
-              - `conversations` ×16
+              - `conversations` ×17
               - `apps-core` ×5
               - `debug` ×5
               - `tasks` ×4
@@ -21527,7 +21509,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `sqlDefault`
       - Core:
         - Uses: `fields.fieldsToZodObject`
-        - Exports (values): `wireSchema`
+        - Exports (types): `EntityRef`
+        - Exports (values):
+          - `entityRef`
+          - `wireSchema`
       - Cross-plugin:
         - Imported by:
           - `apps/browser/bookmarks`
@@ -21577,6 +21562,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities.wireSchema`
         - Exports (types):
           - `AnyExtensionShape`
+          - `EntityExposure`
+          - `ExposedAbsent`
+          - `ExposedField`
+          - `ExposedFieldDecl`
+          - `ExposedOption`
+          - `ExposesDecl`
+          - `ExposureRow`
+          - `ExposureRowSchema`
           - `ExtensionFields`
           - `ExtensionServerOnly`
           - `ExtensionShape`
@@ -23026,6 +23019,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/sql-projection.decodedRow`
           - `database/sql-projection.decoderOrigin`
           - `database/sql-projection.nullable`
+          - `database/sql-projection.parsed`
           - `database/sql-projection.SqlDecoderLike`
           - `primitives/keyset.atOrBeforePredicate`
           - `primitives/keyset.orderByClauses`
@@ -24304,8 +24298,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
-    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); a scroll collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); a scroll collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; LiveExposures.Register registers an entity extension's exposed fields (with their cells) for every list whose collection reaches its entity, read by useExposures. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
       - Web:
+        - Slots: `LiveExposures.Register`
+        - Slot contributors:
+          - `LiveExposures.Register` ← `conversations.usage`
+          - `LiveExposures.Register` ← `tasks.task-track`
         - Uses:
           - `primitives/live-state.PagedResourceResult`
           - `primitives/live-state.ResourceDerivation`
@@ -24317,7 +24315,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/live-state.useResources`
           - `primitives/log-channels.clientLog`
         - Exports (types):
+          - `ExposedFieldPresentation`
           - `LiveAllSelect`
+          - `LiveExposureRegistration`
           - `LiveIdsQuery`
           - `LiveListResult`
           - `LivePageError`
@@ -24330,8 +24330,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PagesTruncation`
           - `VisibleRange`
         - Exports (values):
+          - `LiveExposures`
           - `mapRow`
           - `mintVisibleRange`
+          - `useExposures`
           - `useLive`
           - `useLiveRow`
       - Server:
@@ -24434,6 +24436,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveDecodedCountQuery`
           - `LiveDecodedGroupQuery`
           - `LiveDecodedQuery`
+          - `LiveExposedColumns`
+          - `LiveExposes`
           - `LiveFilterable`
           - `LiveFilterableOf`
           - `LiveGroup`
@@ -24497,6 +24501,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ScopedColumnMember`
           - `WithContributedColumns`
         - Exports (values):
+          - `exposedColumns`
           - `isPointId`
           - `LIVE_COLUMNS_KEY`
           - `LIVE_QUERY_MAX_BYTES`
@@ -30330,10 +30335,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
-        - Uses: 83 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 84 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `primitives/css/ui-kit` ×11
           - `primitives/data-view/view-core` ×8
-          - `network/live` ×5
+          - `network/live` ×6
           - `primitives/live-state` ×5
           - `primitives/css/control-panel` ×4
           - `primitives/slot-render` ×4
@@ -30546,6 +30551,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewProps`
           - `DataViewRenderProps`
           - `DataViewRowEntry`
+          - `DataViewRowsCollection`
           - `DataViewRowsComplete`
           - `DataViewSearch`
           - `DataViewSection`
@@ -32591,6 +32597,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/events/event-list`
           - `apps/pages/page-tree`
           - `conversations/all-conversations`
+          - `conversations/conversations-view/data-view`
           - `conversations/conversations-view/data-view/history`
           - `debug/logs`
           - `infra/endpoints`
@@ -34853,8 +34860,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 243 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×243
+    - Contributes: 241 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×241
     - Uses: 21 symbols — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
       - `reorder/editor` ×5
       - `config_v2` ×3
@@ -34879,8 +34886,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 242 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×242
+    - Contributes: 240 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×240
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -37865,11 +37872,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/annotations/todo/task-link`
           - `page/prompt/link`
           - `tasks`
-    - **`task-track`** — Per-task track (main | sidequest): the track badge, a `track` enum field in the tasks DataView (badge cell, groupable, filterable), and the clickable Track control the task detail header renders to switch it. Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (the whole set for the task list, point reads for one task), and the endpoint that switches a task's track, and the tasks.trackChanged trigger event every track write emits.
+    - **`task-track`** — Per-task track (main | sidequest): the track badge, a `track` enum field in the tasks DataView (badge cell, groupable, filterable), the clickable Track control the task detail header renders to switch it, and the exposed `track` field of every list whose rows reach a task. Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (the whole set for the task list, point reads for one task), the endpoint that switches a task's track, the tasks.trackChanged trigger event every track write emits, and the track exposed to every list whose rows reach a task (LiveColumns.Expose).
       - Web:
-        - Contributes: `Tasks.Fields` "track" → `TrackField`
+        - Contributes:
+          - `Tasks.Fields` "track" → `TrackField`
+          - `LiveExposures.Register` "tasks_ext_track"
         - Uses:
           - `infra/endpoints.fetchEndpoint`
+          - `network/live.LiveExposures`
           - `network/live.mapRow`
           - `network/live.useLive`
           - `network/live.useLiveRow`
@@ -37887,12 +37897,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `resource.declare` "task-tracks.all"
           - `resource.declare` "task-tracks.all:rows"
+          - `live.columns.expose` "tasks ← tasks_ext_track"
         - Uses:
           - `database.db`
           - `database.DbExecutor`
           - `infra/endpoints.implement`
           - `infra/entity-extensions.defineExtension`
           - `infra/events.defineTriggerEvent`
+          - `network/live.LiveColumns`
           - `network/live.serveCollection`
           - `tasks/tasks-core._tasks`
           - `tasks/tasks-core.TaskStatus`
@@ -38117,6 +38129,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/text/config.enumTextField`
           - `fields/text/config.parsedTextField`
           - `fields/text/config.textField`
+          - `infra/entities.entityRef`
           - `network/live.liveCollection`
           - `network/live/filter.liveText`
           - `primitives/pane.defineRoute`
@@ -38139,6 +38152,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ADOPTED_SPAWNED_BY`
           - `attemptRows`
           - `AttemptSchema`
+          - `attemptsEntityRef`
           - `AttemptStatusSchema`
           - `BLOCKED_STATUSES`
           - `buildTaskPrompt`
@@ -38147,6 +38161,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversationsActive`
           - `conversationsById`
           - `ConversationSchema`
+          - `conversationsEntityRef`
           - `conversationsGone`
           - `conversationsSystem`
           - `ConversationStatusSchema`
@@ -38165,6 +38180,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskGraph`
           - `taskRows`
           - `TaskSchema`
+          - `tasksEntityRef`
           - `tasksRootRoute`
           - `TaskStatusSchema`
           - `TRAILER_LOG_FORMAT`

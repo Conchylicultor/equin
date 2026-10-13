@@ -777,7 +777,12 @@ function useCount<Row, F, S extends string>(
   const paramsKey =
     query === null || descriptor === null
       ? null
-      : JSON.stringify(descriptor.count.encode({ where: query.where }));
+      : JSON.stringify(
+          descriptor.count.encode({
+            where: query.where,
+            columns: query.columns,
+          }),
+        );
   const params = useMemo(
     () =>
       paramsKey === null

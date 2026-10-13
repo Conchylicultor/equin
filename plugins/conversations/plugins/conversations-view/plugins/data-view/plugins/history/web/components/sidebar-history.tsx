@@ -1,6 +1,5 @@
 import { createContext, useContext, type ReactElement } from "react";
 import {
-  defineFieldExtensions,
   defineItemActions,
   liveDataSource,
 } from "@plugins/primitives/plugins/data-view/web";
@@ -26,13 +25,6 @@ const closeIcon = symbol("close");
 // Per-consumer trailing-action slot. The close action contribution lives in this
 // plugin's `web/index.ts`.
 export const HistoryItemActions = defineItemActions<ConversationListLiveRow>();
-
-/**
- * Fields other plugins add to the History list — typically bound to their
- * contributed columns of `conversations.history` (read off `$columns`), so the
- * list sorts and filters by them server-side.
- */
-export const HistoryFields = defineFieldExtensions<ConversationListLiveRow>();
 
 /**
  * The per-render close handler cannot ride on `itemActions` props (item-action
@@ -89,7 +81,6 @@ export function HistorySource({
     <CloseConversationContext.Provider value={onCloseConversation}>
       {render<ConversationListLiveRow>({
         fields,
-        fieldExtensions: HistoryFields,
         source: historySource,
         selectedRowId: activeId ?? undefined,
         rowActivation: (c) => linkTo(c.id),

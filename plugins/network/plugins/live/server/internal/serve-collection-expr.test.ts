@@ -210,7 +210,9 @@ describe("serveCollection with expression fields — SQL", () => {
     const { c, groups, calls } = compile();
     await groups.loader(c.groups.groups.encode({ groupBy: "label" }));
     const q = calls.at(-1)!.sql;
-    expect(q).toContain(`group by ${LABEL}`);
+    // Selected as the value; grouped and ordered by its ordinal.
+    expect(q).toContain(`select ${LABEL}, count(*)`);
+    expect(q).toContain("group by 1 order by count(*) DESC, 1 ASC NULLS LAST");
     expect(q).toContain(`left join "xartists" "artist"`);
   });
 });

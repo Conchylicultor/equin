@@ -1,24 +1,22 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { AllConversationsFields } from "@plugins/conversations/plugins/all-conversations/web";
-import { HistoryFields } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/history/web";
+import { LiveExposures } from "@plugins/network/plugins/live/web";
 import {
-  AllConversationsUsageFields,
-  HistoryUsageFields,
-} from "./components/usage-fields";
+  formatTokensCompact,
+  formatUsd,
+} from "@plugins/stats/plugins/cost/core";
+import { conversationUsageShape } from "../shared/shape";
 
 export default {
   description:
-    "Cost, Tokens and Agents fields on the conversation lists (All-conversations, sidebar History), bound to the lists' `usage` columns so they sort and filter server-side.",
+    "Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side.",
   contributions: [
-    AllConversationsFields({
-      id: "usage",
-      section: null,
-      component: AllConversationsUsageFields,
-    }),
-    HistoryFields({
-      id: "usage",
-      section: null,
-      component: HistoryUsageFields,
+    LiveExposures.Register({
+      exposure: conversationUsageShape.exposure,
+      present: {
+        costUsd: { cell: formatUsd, width: "6rem", align: "end" },
+        tokens: { cell: formatTokensCompact, width: "6rem", align: "end" },
+        agentCount: { width: "5rem", align: "end" },
+      },
     }),
   ],
 } satisfies PluginDefinition;

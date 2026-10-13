@@ -97,6 +97,7 @@ export type {
   DataViewSearch,
   DataViewDataOrigin,
   DataViewInMemoryOrigin,
+  DataViewRowsCollection,
   DataViewPaging,
   DataViewPagingTotal,
   DataViewRowsComplete,

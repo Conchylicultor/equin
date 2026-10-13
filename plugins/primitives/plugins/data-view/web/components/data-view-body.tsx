@@ -66,6 +66,10 @@ import {
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { PendingMoveOverlay } from "../internal/use-pending-move-overlay";
 import { CollectFieldExtensions } from "../internal/field-extensions";
+import {
+  useExposedFields,
+  withExposedFields,
+} from "../internal/exposed-fields";
 import { CollectFacetOptions } from "../internal/facet-options";
 import { CollectRowOrder } from "../internal/row-order";
 import {
@@ -202,7 +206,12 @@ export function DataViewSectionsBody<TRow>(
 function CollectBodyFields<TRow>(props: {
   source: Pick<
     DataViewBodyProps<TRow>,
-    "fields" | "fieldExtensions" | "storageKey" | "rowKey" | "source"
+    | "fields"
+    | "fieldExtensions"
+    | "storageKey"
+    | "rowKey"
+    | "source"
+    | "collection"
   >;
   children: (
     fields: FieldDef<unknown>[],
@@ -224,11 +233,25 @@ function CollectBodyFields<TRow>(props: {
         : (source.rowKey as (row: TRow, index: number) => string),
     [live, source.rowKey],
   );
-  // Fields are checked where they are declared: the host's own here, each
-  // field-extension contributor's inside its own `render(fields)` (its error
-  // boundary contains the crash and names it).
+  // The fields every extension the rows' collection reaches exposes (a live
+  // source's, or the in-memory rows' declared `collection`), appended to the
+  // host's own — a duplicate id throws.
+  const collection = live?.collection ?? source.collection;
+  const exposed = useExposedFields(collection, live !== undefined);
+  const base = useMemo(
+    () =>
+      withExposedFields(
+        source.fields as FieldDef<unknown>[],
+        exposed,
+        collection?.key,
+      ),
+    [source.fields, exposed, collection],
+  );
+  // Fields are checked where they are declared: the host's own (and the
+  // exposed ones) here, each field-extension contributor's inside its own
+  // `render(fields)` (its error boundary contains the crash and names it).
   checkFieldColumns(
-    source.fields as FieldDef<unknown>[],
+    base,
     live as LiveDataSource<unknown> | undefined,
     resolveOperatorSet,
     "the host's fields",
@@ -253,7 +276,7 @@ function CollectBodyFields<TRow>(props: {
             ]
           : [DataViewSlots.FieldExtension]
       }
-      base={source.fields as FieldDef<unknown>[]}
+      base={base}
       storageKey={source.storageKey}
       rowKey={rowKey as (row: unknown, index: number) => string}
       liveColumnScope={liveColumnScope}

@@ -21,6 +21,8 @@ export type {
   ScopedColumnMember,
   WithContributedColumns,
 } from "./internal/live-columns";
+export { exposedColumns } from "./internal/exposed-columns";
+export type { LiveExposedColumns } from "./internal/exposed-columns";
 export { liveValue } from "./internal/live-value";
 export { LIVE_QUERY_MAX_BYTES } from "./internal/query-value";
 export type {
@@ -77,6 +79,7 @@ export type {
   LiveCountCodec,
   LiveCountDescriptor,
   LiveCountedCollection,
+  LiveExposes,
   LiveGroupCodec,
   LiveGroupsDescriptor,
   LiveLookupCollection,

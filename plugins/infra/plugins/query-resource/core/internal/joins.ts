@@ -59,12 +59,20 @@ interface JoinWire {
 
 /**
  * A 1:1 side table keyed by its host's id (`infra/entity-extensions`), joined
- * LEFT: a host with no side row still reads, with the side columns NULL. `key`
- * is the side table's host-key column (its primary key), `parentKey` the host
- * column it references — the base table's id, and the compiled resource's
- * identity. Made by an extension handle's `join(alias)`, never by hand.
+ * LEFT: a host with no side row still reads, with the side columns NULL (or
+ * their defaults — see `absent`). `key` is the side table's host-key column
+ * (its primary key), `parentKey` the column it references — by default the
+ * base table's id, and the compiled resource's identity. Made by an extension
+ * handle's `join(alias, opts?)`, never by hand.
  *
  * Its route is an `alias` on `key`: a side row I / U / D is a host U.
+ *
+ * With `on`, it is the extension of a RELATED entity instead (a conversation
+ * list reading its task's `tasks_ext_track`): LEFT on `key = on`, `on` a
+ * column of the base or of an EARLIER join naming the parent's id
+ * (`attempt.taskId`). It routes as a non-required lookup does — `reverse` on
+ * `key`, probed through `on`'s chain: a side row's write reaches the hosts
+ * whose `on` names its parent.
  */
 export interface ExtensionJoin<
   A extends string = string,
@@ -75,6 +83,15 @@ export interface ExtensionJoin<
   table: T;
   key: PgColumn;
   parentKey: PgColumn;
+  /** The host-side column naming the parent (see above); absent = the base's identity. */
+  on?: ColumnRef;
+  /**
+   * What a host with no side row reads per column (by property name): a
+   * literal its read COALESCEs to — overriding the column's literal DB
+   * default — or `null` (read NULL, no COALESCE). An exposing extension's
+   * fields (`exposure.fields[f].absent`).
+   */
+  absent?: Readonly<Record<string, string | number | boolean | null>>;
 }
 
 /**

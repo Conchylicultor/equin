@@ -7,5 +7,15 @@ export type {
   ExtensionShapeDef,
   ExtensionWireShape,
 } from "./internal/define-extension-shape";
+export type {
+  EntityExposure,
+  ExposedAbsent,
+  ExposedField,
+  ExposedFieldDecl,
+  ExposedOption,
+  ExposesDecl,
+  ExposureRow,
+  ExposureRowSchema,
+} from "./internal/exposure";
 export { EXTENSION_TIMESTAMPS } from "./internal/reserved";
 export type { ExtensionTimestamp } from "./internal/reserved";

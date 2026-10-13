@@ -54,9 +54,9 @@ export interface LiveFieldPlan<TRow> {
   handles: ReadonlyMap<string, LiveColumnsDeclaration>;
   /**
    * Field id → the column a `GROUP BY` can count it by: the collection's OWN
-   * filterable column of a text / number / boolean domain (what the live
-   * codec's `checkGroupBy` accepts). A contributed column is never one — a
-   * grouping reads the collection's own columns only.
+   * filterable column, or an EXPOSED one, of a text / number / boolean domain
+   * (what the live codec's `checkGroupBy` accepts). A contributed column is
+   * never one — the server groups by its own and its exposed columns only.
    */
   groupColumns: ReadonlyMap<string, LiveGroupColumn>;
 }
@@ -65,6 +65,8 @@ export interface LiveFieldPlan<TRow> {
 export interface LiveGroupColumn {
   name: string;
   domain: LiveGroupableDomain;
+  /** The exposed column set it belongs to — the grouping hands it to the codec; absent for an own column. */
+  handle?: LiveColumnsDeclaration;
 }
 
 const GROUPABLE_DOMAINS: ReadonlySet<string> = new Set<LiveGroupableDomain>([
@@ -138,6 +140,17 @@ function columnFor<TRow>(
           );
         }
         break;
+      case "exposed":
+        // An exposure is read by every collection whose `exposes` reaches
+        // its entity — never named by one.
+        if (
+          !Object.values(c.exposes ?? {}).some((r) => r.name === owner.entity)
+        ) {
+          throw new Error(
+            `data-view: field "${field.id}" names exposed columns of entity "${owner.entity}", but this DataView reads "${c.key}", whose \`exposes\` does not reach it.`,
+          );
+        }
+        break;
       default:
         owner satisfies never;
     }
@@ -199,18 +212,26 @@ export function resolveLiveFields<TRow>(
     if (column === null) continue;
     columnOf.set(field.id, column.name);
     if (column.handle) handles.set(column.handle.name, column.handle);
-    const own = Object.hasOwn(ownFilterable, column.name)
-      ? ownFilterable[column.name]
-      : undefined;
+    // What the server can `GROUP BY`: an own filterable column, or an
+    // exposed one (its domain is the exposed set's).
+    const exposed =
+      column.handle?.owner.kind === "exposed" ? column.handle : undefined;
+    const groupDomain =
+      exposed !== undefined
+        ? column.domain
+        : column.handle === undefined &&
+            Object.hasOwn(ownFilterable, column.name)
+          ? (ownFilterable[column.name]?.domain ?? null)
+          : null;
     if (
       field.value !== undefined &&
-      column.handle === undefined &&
-      own !== undefined &&
-      GROUPABLE_DOMAINS.has(own.domain)
+      groupDomain !== null &&
+      GROUPABLE_DOMAINS.has(groupDomain)
     ) {
       groupColumns.set(field.id, {
         name: column.name,
-        domain: own.domain as LiveGroupableDomain,
+        domain: groupDomain as LiveGroupableDomain,
+        ...(exposed !== undefined ? { handle: exposed } : {}),
       });
     }
     if (field.value !== undefined && field.sortable !== false) {

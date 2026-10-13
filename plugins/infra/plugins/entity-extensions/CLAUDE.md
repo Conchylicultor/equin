@@ -48,9 +48,9 @@ await songTranspose.delete(songId);
 
 This creates `sonata_songs_ext_transpose(parent_id text PK FK → sonata_songs.id ON DELETE CASCADE ON UPDATE CASCADE, semitones integer NOT NULL DEFAULT 0, created_at timestamptz NOT NULL DEFAULT now(), updated_at …)`. Drizzle-kit picks the table up via the `tables.ts` pattern in `SCHEMA_GLOBS` (`plugins/database/plugins/migrations/core/internal/schema-glob-patterns.ts`) — no central registration.
 
-### `defineExtensionShape({ key, fields, serverOnly?, wireTimestamps? })` — `core/`
+### `defineExtensionShape({ key, fields, serverOnly?, wireTimestamps?, exposes? })` — `core/`
 
-Returns a frozen `{ key, fields, serverOnly, schema }`:
+Returns a frozen `{ key, fields, serverOnly, schema, exposure }`:
 
 - `fields` is the **complete** field record, in column order: `{ [key]: textField(), ...fields, createdAt: dateField(), updatedAt: dateField() }`. The order is load-bearing — drizzle-kit diffs columns positionally, and it is the order every extension table has always had.
 - `serverOnly` is the plugin's `serverOnly` plus every timestamp not listed in `wireTimestamps`.
@@ -64,6 +64,26 @@ Built on `defineEntity`. The table is `<parent>_ext_<name>`; the key column is t
 - `indexes` — see below.
 
 The handle is an `Entity` (`name`, `table`, `schema`, `wireColumns`) plus `key`, `get(id)`, `upsert(id, values)`, `update(id, patch)` and `delete(id)`, all keyed on `table[key]`. `schema` **is** `shape.schema` — the same object, not a rebuilt one. `upsert`'s values are the plugin's own columns, every one without a DB default **required** (tsc): it is an `INSERT … ON CONFLICT DO UPDATE`, and Postgres checks NOT NULL on the proposed insert row before it sees the conflict, so a partial upsert fails even when the row exists. To change some columns of an existing row, use `update` (a plain `UPDATE`; `undefined` when there is no row). Neither writes `updatedAt` (see below).
+
+### `exposes` — fields every list of the parent shows
+
+`defineExtensionShape({ …, exposes: { parent, name, fields: { f: { label, absent, options? } } } })`
+declares, once, which own fields every list whose rows reach `parent` (an
+`EntityRef` — `entityRef("tasks")`, tasks-core's `tasksEntityRef`) shows, sorts,
+filters and groups by. `absent` is what a parent with NO side row reads (track:
+`"main"`, usage: `0`); the wire type is the field's widened by it. `options`
+must name every wire value (tsc). The shape carries the resolved
+`exposure: EntityExposure | null` (`slice` = `<parent>_ext_<name>`).
+`defineExtension` asserts the parent table and name match the exposure and a
+literal `meta.columns[f].default` equals `absent`.
+
+Wire it in the plugin's two runtimes — `LiveColumns.Expose(ext)` (server) and
+`LiveExposures.Register({ exposure: shape.exposure, present? })` (web, with
+per-field `cell` / `width` / `align`); the `live:exposures-registered` check
+enforces both. A collection names the entities it reaches (`liveCollection({
+exposes })`) and folds every exposure of them — see `network/live`'s CLAUDE.md,
+"Exposed fields". `tasks/task-track` and `conversations/usage` are the
+reference exposures.
 
 ### The key is named after the parent
 
@@ -200,6 +220,14 @@ Never hand-edit the generated SQL to interleave the DML: the push-time hand-edit
     - `infra/entities.wireSchema`
   - Exports (types):
     - `AnyExtensionShape`
+    - `EntityExposure`
+    - `ExposedAbsent`
+    - `ExposedField`
+    - `ExposedFieldDecl`
+    - `ExposedOption`
+    - `ExposesDecl`
+    - `ExposureRow`
+    - `ExposureRowSchema`
     - `ExtensionFields`
     - `ExtensionServerOnly`
     - `ExtensionShape`

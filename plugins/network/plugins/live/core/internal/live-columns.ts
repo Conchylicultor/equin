@@ -54,7 +54,9 @@ export type WithContributedColumns<Row> = Row & {
  * - `scoped` — a data-defined set (`scopedLiveColumns`), read by whichever
  *   collection declares `scope` as its `columnScope`;
  * - `arm` — one arm's own columns on an `arms` (union) collection
- *   (`liveArmColumns`), present only on that arm's rows.
+ *   (`liveArmColumns`), present only on that arm's rows;
+ * - `exposed` — an entity extension's exposed fields (`exposedColumns`), read
+ *   by every collection whose `exposes` reaches `entity`.
  */
 export type LiveColumnsOwner =
   | { readonly kind: "contributed"; readonly collection: string }
@@ -63,7 +65,8 @@ export type LiveColumnsOwner =
       readonly kind: "arm";
       readonly collection: string;
       readonly arm: string;
-    };
+    }
+  | { readonly kind: "exposed"; readonly entity: string };
 
 /**
  * What every reader of a column set needs of it — the codec (which wire names
@@ -181,7 +184,7 @@ export function liveColumns<
  * What a typed column set (contributed or arm) shares: its declaration, its
  * row schema and filter / sort vocabulary, and the refs a list binds to.
  */
-type TypedColumnsParts<CRow, F, S extends string> = Omit<
+export type TypedColumnsParts<CRow, F, S extends string> = Omit<
   LiveColumnsDeclaration,
   "owner"
 > & {
@@ -197,7 +200,7 @@ type TypedColumnsParts<CRow, F, S extends string> = Omit<
  * caller's object, completed with its owner and `read`) — what a minted ref
  * carries, read when a ref is minted, never during construction.
  */
-function typedColumns<CRow, F, S extends string>(
+export function typedColumns<CRow, F, S extends string>(
   owner: LiveColumnsOwner,
   name: string,
   spec: { row: LiveRowSchema<CRow>; filterable: F; sortable: readonly S[] },

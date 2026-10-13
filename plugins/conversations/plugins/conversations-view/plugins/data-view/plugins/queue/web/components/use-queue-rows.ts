@@ -1,4 +1,5 @@
 import { useLive } from "@plugins/network/plugins/live/web";
+import type { WithContributedColumns } from "@plugins/network/plugins/live/core";
 import { useMemo, useState } from "react";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
@@ -41,6 +42,14 @@ export type QueueSection =
   | "done";
 
 /**
+ * A conversation as both queue reads deliver it: its exposed fields (the
+ * task's track) ride under `$columns` (`conversationsActive` /
+ * `conversationsGone` declare `exposes`), which the Queue's DataView reads
+ * through its `collection`.
+ */
+type QueueConversation = WithContributedColumns<Conversation>;
+
+/**
  * One flat DataView row per conversation. Extends {@link Conversation} with the
  * section classification + the group-level queue flags (set identically on every
  * member of a task-group, so whichever member the aggregate picks as the
@@ -51,7 +60,7 @@ export type QueueSection =
  * Working too — a pinned group that starts running comes back to Pinned when it
  * finishes.
  */
-export type QueueRow = Conversation & {
+export type QueueRow = QueueConversation & {
   section: QueueSection;
   rank: Rank | null;
   pinned: boolean;
@@ -207,7 +216,7 @@ export function useQueueRows(): {
     // Representative first, then the remaining members — so the aggregate entry's
     // key equals the representative id. Group-level flags apply to every member.
     const emitGroup = (
-      group: TaskGroup,
+      group: TaskGroup<QueueConversation>,
       section: QueueSection,
       flags: {
         ranked: boolean;
@@ -236,7 +245,7 @@ export function useQueueRows(): {
       }
     };
 
-    const emitFlat = (conv: Conversation, section: QueueSection): void => {
+    const emitFlat = (conv: QueueConversation, section: QueueSection): void => {
       out.push({
         ...conv,
         section,

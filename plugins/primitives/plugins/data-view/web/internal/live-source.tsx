@@ -326,13 +326,18 @@ export function useLiveSource<TRow>(args: {
         ...(where === undefined ? [] : filterColumns(where)),
         ...order.map(([c]) => c),
       ]);
+      // A sectioned view's section reads name the grouped column too.
+      if (grouped.kind === "sections") named.add(grouped.column.name);
       const columns = [...plan.handles.values()].filter((h) =>
         [...named].some((c) => c.startsWith(`${h.name}.`)),
       );
       if (grouped.kind === "sections" && where !== undefined) {
-        // A `GROUP BY` counts over the collection's own columns only.
+        // A `GROUP BY` counts over the collection's own and exposed columns
+        // only — never a contributed one.
         const contributed = [...filterColumns(where)].filter((c) =>
-          [...plan.handles.values()].some((h) => c.startsWith(`${h.name}.`)),
+          [...plan.handles.values()].some(
+            (h) => h.owner.kind !== "exposed" && c.startsWith(`${h.name}.`),
+          ),
         );
         if (contributed.length > 0) {
           return {
@@ -695,6 +700,7 @@ function useSectionedReads<TRow>(args: {
         source={source as LiveDataSource<unknown>}
         column={lowering.grouped.column.name}
         where={lowering.where}
+        columns={lowering.columns}
         readKey={groupsKey}
         onResult={onGroups}
       />

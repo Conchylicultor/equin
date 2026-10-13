@@ -3325,7 +3325,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"title\", count(*) as \"count\" from \"golden_songs\" group by \"golden_songs\".\"title\" order by count(*) DESC, \"golden_songs\".\"title\" ASC NULLS LAST limit $1",
+                  "sql": "select \"title\", count(*) as \"count\" from \"golden_songs\" group by 1 order by count(*) DESC, 1 ASC NULLS LAST limit $1",
                   "params": [
                     50
                   ]
@@ -3382,7 +3382,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"label\".\"name\", count(*) as \"count\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where \"playback\".\"plays\" > $1::float8 group by \"label\".\"name\" order by count(*) DESC, \"label\".\"name\" ASC NULLS LAST limit $2",
+                  "sql": "select \"label\".\"name\", count(*) as \"count\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" left join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where \"playback\".\"plays\" > $1::float8 group by 1 order by count(*) DESC, 1 ASC NULLS LAST limit $2",
                   "params": [
                     1,
                     50
@@ -3427,7 +3427,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"cc\".\"value\", count(*) as \"count\" from \"golden_songs\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) group by \"cc\".\"value\" order by count(*) DESC, \"cc\".\"value\" ASC NULLS LAST limit $3",
+                  "sql": "select \"cc\".\"value\", count(*) as \"count\" from \"golden_songs\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) group by 1 order by count(*) DESC, 1 ASC NULLS LAST limit $3",
                   "params": [
                     "songs",
                     "c1",
@@ -5110,7 +5110,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"title\", count(*) as \"count\" from \"golden_songs\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" group by \"golden_songs\".\"title\" order by count(*) DESC, \"golden_songs\".\"title\" ASC NULLS LAST limit $1",
+                  "sql": "select \"golden_songs\".\"title\", count(*) as \"count\" from \"golden_songs\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" group by 1 order by count(*) DESC, 1 ASC NULLS LAST limit $1",
                   "params": [
                     50
                   ]
@@ -5167,7 +5167,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"label\".\"name\", count(*) as \"count\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where \"playback\".\"plays\" > $1::float8 group by \"label\".\"name\" order by count(*) DESC, \"label\".\"name\" ASC NULLS LAST limit $2",
+                  "sql": "select \"label\".\"name\", count(*) as \"count\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_labels\" \"label\" on \"label\".\"id\" = \"artist\".\"label_id\" where \"playback\".\"plays\" > $1::float8 group by 1 order by count(*) DESC, 1 ASC NULLS LAST limit $2",
                   "params": [
                     1,
                     50
@@ -5218,7 +5218,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"cc\".\"value\", count(*) as \"count\" from \"golden_songs\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) group by \"cc\".\"value\" order by count(*) DESC, \"cc\".\"value\" ASC NULLS LAST limit $3",
+                  "sql": "select \"cc\".\"value\", count(*) as \"count\" from \"golden_songs\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" left join \"golden_custom_values\" \"cc\" on (\"cc\".\"row_key\" = \"golden_songs\".\"id\" and \"cc\".\"data_view_id\" = $1 and \"cc\".\"column_id\" = $2) group by 1 order by count(*) DESC, 1 ASC NULLS LAST limit $3",
                   "params": [
                     "songs",
                     "c1",
@@ -6626,7 +6626,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"golden_songs\".\"title\", count(*) as \"count\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" where (\"playback\".\"plays\" > $1 and \"artist\".\"name\" <> 'hidden') group by \"golden_songs\".\"title\" order by count(*) DESC, \"golden_songs\".\"title\" ASC NULLS LAST limit $2",
+                  "sql": "select \"golden_songs\".\"title\", count(*) as \"count\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" where (\"playback\".\"plays\" > $1 and \"artist\".\"name\" <> 'hidden') group by 1 order by count(*) DESC, 1 ASC NULLS LAST limit $2",
                   "params": [
                     0,
                     50
@@ -6678,7 +6678,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"artist\".\"name\", count(*) as \"count\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" where (\"playback\".\"plays\" > $1 and \"artist\".\"name\" = $2::text) group by \"artist\".\"name\" order by count(*) DESC, \"artist\".\"name\" ASC NULLS LAST limit $3",
+                  "sql": "select \"artist\".\"name\", count(*) as \"count\" from \"golden_songs\" left join \"golden_songs_ext_playback\" \"playback\" on \"playback\".\"parent_id\" = \"golden_songs\".\"id\" inner join \"golden_artists\" \"artist\" on \"artist\".\"id\" = \"golden_songs\".\"artist_id\" where (\"playback\".\"plays\" > $1 and \"artist\".\"name\" = $2::text) group by 1 order by count(*) DESC, 1 ASC NULLS LAST limit $3",
                   "params": [
                     0,
                     "x",
@@ -8393,7 +8393,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"owner\", count(*) as \"count\" from \"golden_tracks\" where \"golden_tracks\".\"owner\" = $1 group by \"golden_tracks\".\"owner\" order by count(*) DESC, \"golden_tracks\".\"owner\" ASC NULLS LAST limit $2",
+                  "sql": "select \"owner\", count(*) as \"count\" from \"golden_tracks\" where \"golden_tracks\".\"owner\" = $1 group by 1 order by count(*) DESC, 1 ASC NULLS LAST limit $2",
                   "params": [
                     "me",
                     50
@@ -9546,7 +9546,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"title\", count(*) as \"count\" from \"golden_sc_songs\" group by \"golden_sc_songs\".\"title\" order by count(*) DESC, \"golden_sc_songs\".\"title\" ASC NULLS LAST limit $1",
+                  "sql": "select \"title\", count(*) as \"count\" from \"golden_sc_songs\" group by 1 order by count(*) DESC, 1 ASC NULLS LAST limit $1",
                   "params": [
                     50
                   ]
@@ -10375,7 +10375,7 @@
               },
               "queries": [
                 {
-                  "sql": "select \"title\", count(*) as \"count\" from \"golden_contrib_songs\" group by \"golden_contrib_songs\".\"title\" order by count(*) DESC, \"golden_contrib_songs\".\"title\" ASC NULLS LAST limit $1",
+                  "sql": "select \"title\", count(*) as \"count\" from \"golden_contrib_songs\" group by 1 order by count(*) DESC, 1 ASC NULLS LAST limit $1",
                   "params": [
                     50
                   ]
@@ -13973,6 +13973,3919 @@
                       "p9",
                       "p8"
                     ],
+                    [
+                      "p9",
+                      "p8"
+                    ]
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            "empty": {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "exposed": {
+    "window": {
+      "select": [
+        "id",
+        "title",
+        "createdAt",
+        "golden_xp_tasks_ext_track.track",
+        "golden_xp_convs_ext_usage.cost"
+      ],
+      "window": {
+        "options": {
+          "membership": {
+            "kind": "window",
+            "windowIdsOf": "$function",
+            "orderSignatureOf": "$function",
+            "limitOf": "$function"
+          },
+          "validateParams": "$function"
+        },
+        "membership": "window",
+        "routes": [
+          {
+            "route": {
+              "id": "base",
+              "table": "golden_xp_convs",
+              "map": {
+                "kind": "identity"
+              },
+              "columns": [
+                "id",
+                "attempt_id",
+                "title",
+                "created_at"
+              ]
+            }
+          },
+          {
+            "route": {
+              "id": "attempt",
+              "table": "golden_xp_attempts",
+              "columns": [
+                "id",
+                "task_id"
+              ],
+              "map": {
+                "kind": "reverse",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"id\" from \"golden_xp_convs\" where \"golden_xp_convs\".\"attempt_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"id\" from \"golden_xp_convs\" where (\"golden_xp_convs\".\"attempt_id\" = ANY($1::text[]) and \"golden_xp_convs\".\"id\" = ANY($2::text[])) limit $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"id\" from \"golden_xp_convs\" where \"golden_xp_convs\".\"attempt_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          },
+          {
+            "route": {
+              "id": "task",
+              "table": "golden_xp_tasks",
+              "columns": [
+                "id"
+              ],
+              "map": {
+                "kind": "reverse",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where (\"attempt\".\"task_id\" = ANY($1::text[]) and \"golden_xp_convs\".\"id\" = ANY($2::text[])) limit $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          },
+          {
+            "route": {
+              "id": "golden_xp_tasks_ext_track",
+              "table": "golden_xp_tasks_ext_track",
+              "columns": [
+                "parent_id",
+                "track"
+              ],
+              "map": {
+                "kind": "reverse",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where (\"attempt\".\"task_id\" = ANY($1::text[]) and \"golden_xp_convs\".\"id\" = ANY($2::text[])) limit $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          },
+          {
+            "route": {
+              "id": "golden_xp_convs_ext_usage",
+              "table": "golden_xp_convs_ext_usage",
+              "columns": [
+                "parent_id",
+                "cost"
+              ],
+              "map": {
+                "kind": "alias"
+              }
+            }
+          }
+        ],
+        "tuples": {
+          "default": {
+            "params": {
+              "limit": "10"
+            },
+            "uses": {
+              "value": [
+                [
+                  "base",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "attempt_id",
+                      "created_at"
+                    ]
+                  }
+                ],
+                [
+                  "attempt",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "id",
+                      "task_id"
+                    ]
+                  }
+                ],
+                [
+                  "task",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "id"
+                    ]
+                  }
+                ],
+                [
+                  "golden_xp_tasks_ext_track",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "golden_xp_convs_ext_usage",
+                  {
+                    "role": "value"
+                  }
+                ]
+              ]
+            },
+            "full": {
+              "result": {
+                "value": [
+                  {
+                    "id": "c1",
+                    "title": "a",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "main"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 0
+                      }
+                    }
+                  },
+                  {
+                    "id": "c2",
+                    "title": "b",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 7
+                      }
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" order by \"golden_xp_convs\".\"created_at\" DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $3",
+                  "params": [
+                    "main",
+                    0,
+                    10
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 1,
+                "orderBy": 4
+              }
+            },
+            "scoped": {
+              "result": {
+                "value": [
+                  {
+                    "id": "c1",
+                    "title": "a",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "main"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 0
+                      }
+                    }
+                  },
+                  {
+                    "id": "c2",
+                    "title": "b",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 7
+                      }
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where \"golden_xp_convs\".\"id\" in ($3, $4)",
+                  "params": [
+                    "main",
+                    0,
+                    "r1",
+                    "r2"
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 1,
+                "orderBy": 3
+              }
+            },
+            "ids": {
+              "result": {
+                "value": [
+                  "c1",
+                  "c2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" order by \"golden_xp_convs\".\"created_at\" DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $1",
+                  "params": [
+                    10
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 1,
+                "orderBy": 2
+              }
+            },
+            "signatures": {
+              "result": {
+                "value": [
+                  "\"2026-10-12T10:00:00.000Z\"",
+                  "\"2026-10-12T10:00:00.000Z\""
+                ]
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 1
+              }
+            },
+            "again": {
+              "result": {
+                "value": [
+                  {
+                    "id": "c1",
+                    "title": "a",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "main"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 0
+                      }
+                    }
+                  },
+                  {
+                    "id": "c2",
+                    "title": "b",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 7
+                      }
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" order by \"golden_xp_convs\".\"created_at\" DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $3",
+                  "params": [
+                    "main",
+                    0,
+                    10
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 1,
+                "orderBy": 4
+              }
+            }
+          },
+          "sidequests": {
+            "params": {
+              "limit": "10",
+              "where": "{\"column\":\"golden_xp_tasks_ext_track.track\",\"op\":\"eq\",\"operand\":\"sidequest\"}"
+            },
+            "uses": {
+              "value": [
+                [
+                  "base",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "attempt_id",
+                      "created_at"
+                    ]
+                  }
+                ],
+                [
+                  "attempt",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "id",
+                      "task_id"
+                    ]
+                  }
+                ],
+                [
+                  "task",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "id"
+                    ]
+                  }
+                ],
+                [
+                  "golden_xp_tasks_ext_track",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "parent_id",
+                      "track"
+                    ]
+                  }
+                ],
+                [
+                  "golden_xp_convs_ext_usage",
+                  {
+                    "role": "value"
+                  }
+                ]
+              ]
+            },
+            "full": {
+              "result": {
+                "value": [
+                  {
+                    "id": "c1",
+                    "title": "a",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "main"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 0
+                      }
+                    }
+                  },
+                  {
+                    "id": "c2",
+                    "title": "b",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 7
+                      }
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $3) = $4::text order by \"golden_xp_convs\".\"created_at\" DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $5",
+                  "params": [
+                    "main",
+                    0,
+                    "main",
+                    "sidequest",
+                    10
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 1,
+                "orderBy": 4
+              }
+            },
+            "scoped": {
+              "result": {
+                "value": [
+                  {
+                    "id": "c1",
+                    "title": "a",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "main"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 0
+                      }
+                    }
+                  },
+                  {
+                    "id": "c2",
+                    "title": "b",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 7
+                      }
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where (COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $3) = $4::text and \"golden_xp_convs\".\"id\" in ($5, $6))",
+                  "params": [
+                    "main",
+                    0,
+                    "main",
+                    "sidequest",
+                    "r1",
+                    "r2"
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 1,
+                "orderBy": 3
+              }
+            },
+            "ids": {
+              "result": {
+                "value": [
+                  "c1",
+                  "c2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1) = $2::text order by \"golden_xp_convs\".\"created_at\" DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $3",
+                  "params": [
+                    "main",
+                    "sidequest",
+                    10
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 1,
+                "orderBy": 2
+              }
+            },
+            "signatures": {
+              "result": {
+                "value": [
+                  "\"2026-10-12T10:00:00.000Z\"",
+                  "\"2026-10-12T10:00:00.000Z\""
+                ]
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 1
+              }
+            },
+            "again": {
+              "result": {
+                "value": [
+                  {
+                    "id": "c1",
+                    "title": "a",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "main"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 0
+                      }
+                    }
+                  },
+                  {
+                    "id": "c2",
+                    "title": "b",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 7
+                      }
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $3) = $4::text order by \"golden_xp_convs\".\"created_at\" DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $5",
+                  "params": [
+                    "main",
+                    0,
+                    "main",
+                    "sidequest",
+                    10
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 1,
+                "orderBy": 4
+              }
+            }
+          },
+          "mainByCost": {
+            "params": {
+              "limit": "10",
+              "where": "{\"column\":\"golden_xp_tasks_ext_track.track\",\"op\":\"eq\",\"operand\":\"main\"}",
+              "order": "[[\"golden_xp_convs_ext_usage.cost\",\"desc\"]]"
+            },
+            "uses": {
+              "value": [
+                [
+                  "base",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "attempt_id",
+                      "id"
+                    ]
+                  }
+                ],
+                [
+                  "attempt",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "id",
+                      "task_id"
+                    ]
+                  }
+                ],
+                [
+                  "task",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "id"
+                    ]
+                  }
+                ],
+                [
+                  "golden_xp_tasks_ext_track",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "parent_id",
+                      "track"
+                    ]
+                  }
+                ],
+                [
+                  "golden_xp_convs_ext_usage",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "cost",
+                      "parent_id"
+                    ]
+                  }
+                ]
+              ]
+            },
+            "full": {
+              "result": {
+                "value": [
+                  {
+                    "id": "c1",
+                    "title": "a",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "main"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 0
+                      }
+                    }
+                  },
+                  {
+                    "id": "c2",
+                    "title": "b",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 7
+                      }
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $3) = $4::text order by COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $5) DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $6",
+                  "params": [
+                    "main",
+                    0,
+                    "main",
+                    "main",
+                    0,
+                    10
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 1,
+                "orderBy": 4
+              }
+            },
+            "scoped": {
+              "result": {
+                "value": [
+                  {
+                    "id": "c1",
+                    "title": "a",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "main"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 0
+                      }
+                    }
+                  },
+                  {
+                    "id": "c2",
+                    "title": "b",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 7
+                      }
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where (COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $3) = $4::text and \"golden_xp_convs\".\"id\" in ($5, $6))",
+                  "params": [
+                    "main",
+                    0,
+                    "main",
+                    "main",
+                    "r1",
+                    "r2"
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 1,
+                "orderBy": 3
+              }
+            },
+            "ids": {
+              "result": {
+                "value": [
+                  "c1",
+                  "c2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1) = $2::text order by COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $3) DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $4",
+                  "params": [
+                    "main",
+                    "main",
+                    0,
+                    10
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 1,
+                "orderBy": 2
+              }
+            },
+            "signatures": {
+              "result": {
+                "value": [
+                  "0",
+                  "7"
+                ]
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 1
+              }
+            },
+            "again": {
+              "result": {
+                "value": [
+                  {
+                    "id": "c1",
+                    "title": "a",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "main"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 0
+                      }
+                    }
+                  },
+                  {
+                    "id": "c2",
+                    "title": "b",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 7
+                      }
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $3) = $4::text order by COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $5) DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST limit $6",
+                  "params": [
+                    "main",
+                    0,
+                    "main",
+                    "main",
+                    0,
+                    10
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 1,
+                "orderBy": 4
+              }
+            }
+          }
+        }
+      },
+      "groups": {
+        "options": {
+          "mode": "push",
+          "validateParams": "$function"
+        },
+        "routes": [
+          {
+            "id": "base",
+            "table": "golden_xp_convs",
+            "map": {
+              "kind": "full",
+              "reason": "a grouping counts every row its filter matches — any written row may move a count"
+            },
+            "columns": [
+              "id",
+              "attempt_id",
+              "title"
+            ]
+          },
+          {
+            "id": "attempt",
+            "table": "golden_xp_attempts",
+            "map": {
+              "kind": "full",
+              "reason": "a grouping over join \"attempt\" — any written row of it may move a count"
+            },
+            "columns": [
+              "id",
+              "task_id"
+            ]
+          },
+          {
+            "id": "task",
+            "table": "golden_xp_tasks",
+            "map": {
+              "kind": "full",
+              "reason": "a grouping over join \"task\" — any written row of it may move a count"
+            },
+            "columns": [
+              "id"
+            ]
+          },
+          {
+            "id": "golden_xp_tasks_ext_track",
+            "table": "golden_xp_tasks_ext_track",
+            "map": {
+              "kind": "full",
+              "reason": "a grouping over join \"golden_xp_tasks_ext_track\" — any written row of it may move a count"
+            },
+            "columns": [
+              "parent_id",
+              "track"
+            ]
+          },
+          {
+            "id": "golden_xp_convs_ext_usage",
+            "table": "golden_xp_convs_ext_usage",
+            "map": {
+              "kind": "full",
+              "reason": "a grouping over join \"golden_xp_convs_ext_usage\" — any written row of it may move a count"
+            },
+            "columns": [
+              "parent_id",
+              "cost"
+            ]
+          }
+        ],
+        "tuples": {
+          "track": {
+            "params": {
+              "groupBy": "golden_xp_tasks_ext_track.track",
+              "limit": "50"
+            },
+            "uses": {
+              "value": [
+                [
+                  "base",
+                  {
+                    "role": "membership"
+                  }
+                ],
+                [
+                  "attempt",
+                  {
+                    "role": "membership"
+                  }
+                ],
+                [
+                  "task",
+                  {
+                    "role": "membership"
+                  }
+                ],
+                [
+                  "golden_xp_tasks_ext_track",
+                  {
+                    "role": "membership"
+                  }
+                ]
+              ]
+            },
+            "load": {
+              "result": {
+                "value": [
+                  {
+                    "value": null,
+                    "count": 2
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), count(*) as \"count\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" group by 1 order by count(*) DESC, 1 ASC NULLS LAST limit $2",
+                  "params": [
+                    "main",
+                    50
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          },
+          "cost": {
+            "params": {
+              "groupBy": "golden_xp_convs_ext_usage.cost",
+              "limit": "50"
+            },
+            "uses": {
+              "value": [
+                [
+                  "base",
+                  {
+                    "role": "membership"
+                  }
+                ],
+                [
+                  "attempt",
+                  {
+                    "role": "membership"
+                  }
+                ],
+                [
+                  "task",
+                  {
+                    "role": "membership"
+                  }
+                ],
+                [
+                  "golden_xp_convs_ext_usage",
+                  {
+                    "role": "membership"
+                  }
+                ]
+              ]
+            },
+            "load": {
+              "result": {
+                "value": [
+                  {
+                    "value": null,
+                    "count": 2
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $1), count(*) as \"count\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" group by 1 order by count(*) DESC, 1 ASC NULLS LAST limit $2",
+                  "params": [
+                    0,
+                    50
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          },
+          "trackOfCostly": {
+            "params": {
+              "groupBy": "golden_xp_tasks_ext_track.track",
+              "limit": "50",
+              "where": "{\"column\":\"golden_xp_convs_ext_usage.cost\",\"op\":\"gt\",\"operand\":0}"
+            },
+            "uses": {
+              "value": [
+                [
+                  "base",
+                  {
+                    "role": "membership"
+                  }
+                ],
+                [
+                  "attempt",
+                  {
+                    "role": "membership"
+                  }
+                ],
+                [
+                  "task",
+                  {
+                    "role": "membership"
+                  }
+                ],
+                [
+                  "golden_xp_tasks_ext_track",
+                  {
+                    "role": "membership"
+                  }
+                ],
+                [
+                  "golden_xp_convs_ext_usage",
+                  {
+                    "role": "membership"
+                  }
+                ]
+              ]
+            },
+            "load": {
+              "result": {
+                "value": [
+                  {
+                    "value": null,
+                    "count": 2
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), count(*) as \"count\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) > $3::float8 group by 1 order by count(*) DESC, 1 ASC NULLS LAST limit $4",
+                  "params": [
+                    "main",
+                    0,
+                    0,
+                    50
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          }
+        }
+      },
+      "keyField": "id",
+      "point": {
+        "options": {
+          "membership": {
+            "kind": "point",
+            "idsOf": "$function"
+          }
+        },
+        "membership": "point",
+        "routes": [
+          {
+            "route": {
+              "id": "base",
+              "table": "golden_xp_convs",
+              "map": {
+                "kind": "identity"
+              },
+              "columns": [
+                "id",
+                "attempt_id",
+                "title",
+                "created_at"
+              ]
+            }
+          },
+          {
+            "route": {
+              "id": "attempt",
+              "table": "golden_xp_attempts",
+              "columns": [
+                "id",
+                "task_id"
+              ],
+              "map": {
+                "kind": "reverse",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"id\" from \"golden_xp_convs\" where \"golden_xp_convs\".\"attempt_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"id\" from \"golden_xp_convs\" where (\"golden_xp_convs\".\"attempt_id\" = ANY($1::text[]) and \"golden_xp_convs\".\"id\" = ANY($2::text[])) limit $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"id\" from \"golden_xp_convs\" where \"golden_xp_convs\".\"attempt_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          },
+          {
+            "route": {
+              "id": "task",
+              "table": "golden_xp_tasks",
+              "columns": [
+                "id"
+              ],
+              "map": {
+                "kind": "reverse",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where (\"attempt\".\"task_id\" = ANY($1::text[]) and \"golden_xp_convs\".\"id\" = ANY($2::text[])) limit $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          },
+          {
+            "route": {
+              "id": "golden_xp_tasks_ext_track",
+              "table": "golden_xp_tasks_ext_track",
+              "columns": [
+                "parent_id",
+                "track"
+              ],
+              "map": {
+                "kind": "reverse",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where (\"attempt\".\"task_id\" = ANY($1::text[]) and \"golden_xp_convs\".\"id\" = ANY($2::text[])) limit $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          },
+          {
+            "route": {
+              "id": "golden_xp_convs_ext_usage",
+              "table": "golden_xp_convs_ext_usage",
+              "columns": [
+                "parent_id",
+                "cost"
+              ],
+              "map": {
+                "kind": "alias"
+              }
+            }
+          }
+        ],
+        "tuples": {
+          "two": {
+            "params": {
+              "ids": "c1,c2"
+            },
+            "uses": {
+              "value": [
+                [
+                  "base",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "attempt_id"
+                    ]
+                  }
+                ],
+                [
+                  "attempt",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "id",
+                      "task_id"
+                    ]
+                  }
+                ],
+                [
+                  "task",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "id"
+                    ]
+                  }
+                ],
+                [
+                  "golden_xp_tasks_ext_track",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "golden_xp_convs_ext_usage",
+                  {
+                    "role": "value"
+                  }
+                ]
+              ]
+            },
+            "ids": {
+              "value": [
+                "c1",
+                "c2"
+              ]
+            },
+            "full": {
+              "result": {
+                "value": [
+                  {
+                    "id": "c1",
+                    "title": "a",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "main"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 0
+                      }
+                    }
+                  },
+                  {
+                    "id": "c2",
+                    "title": "b",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 7
+                      }
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where \"golden_xp_convs\".\"id\" in ($3, $4)",
+                  "params": [
+                    "main",
+                    0,
+                    "c1",
+                    "c2"
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            "scoped": {
+              "result": {
+                "value": [
+                  {
+                    "id": "c1",
+                    "title": "a",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "main"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 0
+                      }
+                    }
+                  },
+                  {
+                    "id": "c2",
+                    "title": "b",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      },
+                      "golden_xp_convs_ext_usage": {
+                        "cost": 7
+                      }
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select \"golden_xp_convs\".\"id\", \"golden_xp_convs\".\"title\", \"golden_xp_convs\".\"created_at\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1), COALESCE(\"golden_xp_convs_ext_usage\".\"cost\", $2) from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" inner join \"golden_xp_tasks\" \"task\" on \"task\".\"id\" = \"attempt\".\"task_id\" left join \"golden_xp_tasks_ext_track\" on \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" left join \"golden_xp_convs_ext_usage\" on \"golden_xp_convs_ext_usage\".\"parent_id\" = \"golden_xp_convs\".\"id\" where \"golden_xp_convs\".\"id\" in ($3, $4)",
+                  "params": [
+                    "main",
+                    0,
+                    "p9",
+                    "p8"
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            "empty": {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "all": {
+      "keyField": "id",
+      "definition": "9bd279120ed8faff0396e2dabd43bb2613fd098947b52512c836444a74498151",
+      "options": {
+        "scopedMembership": {
+          "orderOf": "$function",
+          "orderSignatureOf": "$function"
+        }
+      },
+      "routes": [
+        {
+          "route": {
+            "id": "base",
+            "table": "golden_xp_convs",
+            "map": {
+              "kind": "identity"
+            },
+            "columns": [
+              "id",
+              "attempt_id",
+              "title",
+              "created_at"
+            ]
+          }
+        },
+        {
+          "route": {
+            "id": "attempt",
+            "table": "golden_xp_attempts",
+            "columns": [
+              "id",
+              "task_id"
+            ],
+            "map": {
+              "kind": "reverse",
+              "resolve": "$function"
+            }
+          },
+          "resolve": [
+            {
+              "result": {
+                "value": [
+                  "h1",
+                  "h2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"id\" from \"golden_xp_convs\" where \"golden_xp_convs\".\"attempt_id\" = ANY($1::text[]) limit $2",
+                  "params": [
+                    [
+                      "x1",
+                      "x2"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": [
+                  "h1",
+                  "h2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"id\" from \"golden_xp_convs\" where (\"golden_xp_convs\".\"attempt_id\" = ANY($1::text[]) and \"golden_xp_convs\".\"id\" = ANY($2::text[])) limit $3",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    [
+                      "h2",
+                      "h1"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": "over-cap"
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"id\" from \"golden_xp_convs\" where \"golden_xp_convs\".\"attempt_id\" = ANY($1::text[]) limit $2",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    2
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          ]
+        },
+        {
+          "route": {
+            "id": "task",
+            "table": "golden_xp_tasks",
+            "columns": [
+              "id"
+            ],
+            "map": {
+              "kind": "reverse",
+              "resolve": "$function"
+            }
+          },
+          "resolve": [
+            {
+              "result": {
+                "value": [
+                  "h1",
+                  "h2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                  "params": [
+                    [
+                      "x1",
+                      "x2"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": [
+                  "h1",
+                  "h2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where (\"attempt\".\"task_id\" = ANY($1::text[]) and \"golden_xp_convs\".\"id\" = ANY($2::text[])) limit $3",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    [
+                      "h2",
+                      "h1"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": "over-cap"
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    2
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          ]
+        },
+        {
+          "route": {
+            "id": "golden_xp_tasks_ext_track",
+            "table": "golden_xp_tasks_ext_track",
+            "columns": [
+              "parent_id",
+              "track"
+            ],
+            "map": {
+              "kind": "reverse",
+              "resolve": "$function"
+            }
+          },
+          "resolve": [
+            {
+              "result": {
+                "value": [
+                  "h1",
+                  "h2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                  "params": [
+                    [
+                      "x1",
+                      "x2"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": [
+                  "h1",
+                  "h2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where (\"attempt\".\"task_id\" = ANY($1::text[]) and \"golden_xp_convs\".\"id\" = ANY($2::text[])) limit $3",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    [
+                      "h2",
+                      "h1"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": "over-cap"
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    2
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          ]
+        }
+      ],
+      "uses": {
+        "value": [
+          [
+            "base",
+            {
+              "role": "membership",
+              "moves": [
+                "attempt_id",
+                "created_at"
+              ]
+            }
+          ],
+          [
+            "attempt",
+            {
+              "role": "membership",
+              "moves": [
+                "id",
+                "task_id"
+              ]
+            }
+          ],
+          [
+            "task",
+            {
+              "role": "membership",
+              "moves": [
+                "id"
+              ]
+            }
+          ],
+          [
+            "golden_xp_tasks_ext_track",
+            {
+              "role": "value"
+            }
+          ]
+        ]
+      },
+      "full": {
+        "result": {
+          "value": [
+            {
+              "id": "r1",
+              "title": "T",
+              "createdAt": {
+                "$date": "2026-10-12T10:00:00.000Z"
+              },
+              "$columns": {
+                "golden_xp_tasks_ext_track": {
+                  "track": "sidequest"
+                }
+              }
+            },
+            {
+              "id": "r2",
+              "title": "T",
+              "createdAt": {
+                "$date": "2026-10-12T10:00:00.000Z"
+              },
+              "$columns": {
+                "golden_xp_tasks_ext_track": {
+                  "track": "sidequest"
+                }
+              }
+            }
+          ]
+        },
+        "queries": [
+          {
+            "sql": "SELECT \"golden_xp_convs\".\"id\" AS \"id\", \"golden_xp_convs\".\"title\" AS \"title\", \"golden_xp_convs\".\"created_at\" AS \"createdAt\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1) AS \"golden_xp_tasks_ext_track.track\" FROM \"golden_xp_convs\" INNER JOIN \"golden_xp_attempts\" \"attempt\" ON \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" INNER JOIN \"golden_xp_tasks\" \"task\" ON \"task\".\"id\" = \"attempt\".\"task_id\" LEFT JOIN \"golden_xp_tasks_ext_track\" \"golden_xp_tasks_ext_track\" ON \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" ORDER BY \"golden_xp_convs\".\"created_at\" DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST",
+            "params": [
+              "main"
+            ]
+          }
+        ],
+        "resolved": {
+          "where": 0,
+          "orderBy": 0
+        }
+      },
+      "scoped": {
+        "result": {
+          "value": [
+            {
+              "id": "r1",
+              "title": "T",
+              "createdAt": {
+                "$date": "2026-10-12T10:00:00.000Z"
+              },
+              "$columns": {
+                "golden_xp_tasks_ext_track": {
+                  "track": "sidequest"
+                }
+              }
+            },
+            {
+              "id": "r2",
+              "title": "T",
+              "createdAt": {
+                "$date": "2026-10-12T10:00:00.000Z"
+              },
+              "$columns": {
+                "golden_xp_tasks_ext_track": {
+                  "track": "sidequest"
+                }
+              }
+            }
+          ]
+        },
+        "queries": [
+          {
+            "sql": "SELECT \"golden_xp_convs\".\"id\" AS \"id\", \"golden_xp_convs\".\"title\" AS \"title\", \"golden_xp_convs\".\"created_at\" AS \"createdAt\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1) AS \"golden_xp_tasks_ext_track.track\" FROM \"golden_xp_convs\" INNER JOIN \"golden_xp_attempts\" \"attempt\" ON \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" INNER JOIN \"golden_xp_tasks\" \"task\" ON \"task\".\"id\" = \"attempt\".\"task_id\" LEFT JOIN \"golden_xp_tasks_ext_track\" \"golden_xp_tasks_ext_track\" ON \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" WHERE \"golden_xp_convs\".\"id\" = ANY($2::text[])",
+            "params": [
+              "main",
+              [
+                "r1",
+                "r2"
+              ]
+            ]
+          }
+        ],
+        "resolved": {
+          "where": 0,
+          "orderBy": 0
+        }
+      },
+      "orderIds": {
+        "result": {
+          "value": [
+            "r2",
+            "r1"
+          ]
+        },
+        "queries": [
+          {
+            "sql": "SELECT \"golden_xp_convs\".\"id\" AS __id FROM \"golden_xp_convs\" INNER JOIN \"golden_xp_attempts\" \"attempt\" ON \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" INNER JOIN \"golden_xp_tasks\" \"task\" ON \"task\".\"id\" = \"attempt\".\"task_id\" ORDER BY \"golden_xp_convs\".\"created_at\" DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST",
+            "params": []
+          }
+        ],
+        "resolved": {
+          "where": 0,
+          "orderBy": 0
+        }
+      },
+      "signatures": {
+        "result": {
+          "value": [
+            "\"2026-10-12T10:00:00.000Z\"",
+            "\"2026-10-12T10:00:00.000Z\""
+          ]
+        },
+        "queries": [],
+        "resolved": {
+          "where": 0,
+          "orderBy": 0
+        }
+      },
+      "rows": {
+        "options": {
+          "membership": {
+            "kind": "point",
+            "idsOf": "$function"
+          }
+        },
+        "membership": "point",
+        "routes": [
+          {
+            "route": {
+              "id": "base",
+              "table": "golden_xp_convs",
+              "map": {
+                "kind": "identity"
+              },
+              "columns": [
+                "id",
+                "attempt_id",
+                "title",
+                "created_at"
+              ]
+            }
+          },
+          {
+            "route": {
+              "id": "attempt",
+              "table": "golden_xp_attempts",
+              "columns": [
+                "id",
+                "task_id"
+              ],
+              "map": {
+                "kind": "reverse",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"id\" from \"golden_xp_convs\" where \"golden_xp_convs\".\"attempt_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"id\" from \"golden_xp_convs\" where (\"golden_xp_convs\".\"attempt_id\" = ANY($1::text[]) and \"golden_xp_convs\".\"id\" = ANY($2::text[])) limit $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"id\" from \"golden_xp_convs\" where \"golden_xp_convs\".\"attempt_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          },
+          {
+            "route": {
+              "id": "task",
+              "table": "golden_xp_tasks",
+              "columns": [
+                "id"
+              ],
+              "map": {
+                "kind": "reverse",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where (\"attempt\".\"task_id\" = ANY($1::text[]) and \"golden_xp_convs\".\"id\" = ANY($2::text[])) limit $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          },
+          {
+            "route": {
+              "id": "golden_xp_tasks_ext_track",
+              "table": "golden_xp_tasks_ext_track",
+              "columns": [
+                "parent_id",
+                "track"
+              ],
+              "map": {
+                "kind": "reverse",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where (\"attempt\".\"task_id\" = ANY($1::text[]) and \"golden_xp_convs\".\"id\" = ANY($2::text[])) limit $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          }
+        ],
+        "tuples": {
+          "one": {
+            "params": {
+              "ids": "r1"
+            },
+            "uses": {
+              "value": [
+                [
+                  "base",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "attempt_id",
+                      "created_at"
+                    ]
+                  }
+                ],
+                [
+                  "attempt",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "id",
+                      "task_id"
+                    ]
+                  }
+                ],
+                [
+                  "task",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "id"
+                    ]
+                  }
+                ],
+                [
+                  "golden_xp_tasks_ext_track",
+                  {
+                    "role": "value"
+                  }
+                ]
+              ]
+            },
+            "ids": {
+              "value": [
+                "r1"
+              ]
+            },
+            "full": {
+              "result": {
+                "value": [
+                  {
+                    "id": "r1",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      }
+                    }
+                  },
+                  {
+                    "id": "r2",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      }
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "SELECT \"golden_xp_convs\".\"id\" AS \"id\", \"golden_xp_convs\".\"title\" AS \"title\", \"golden_xp_convs\".\"created_at\" AS \"createdAt\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1) AS \"golden_xp_tasks_ext_track.track\" FROM \"golden_xp_convs\" INNER JOIN \"golden_xp_attempts\" \"attempt\" ON \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" INNER JOIN \"golden_xp_tasks\" \"task\" ON \"task\".\"id\" = \"attempt\".\"task_id\" LEFT JOIN \"golden_xp_tasks_ext_track\" \"golden_xp_tasks_ext_track\" ON \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" WHERE \"golden_xp_convs\".\"id\" = ANY($2::text[])",
+                  "params": [
+                    "main",
+                    [
+                      "r1"
+                    ]
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            "scoped": {
+              "result": {
+                "value": [
+                  {
+                    "id": "r1",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      }
+                    }
+                  },
+                  {
+                    "id": "r2",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      }
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "SELECT \"golden_xp_convs\".\"id\" AS \"id\", \"golden_xp_convs\".\"title\" AS \"title\", \"golden_xp_convs\".\"created_at\" AS \"createdAt\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1) AS \"golden_xp_tasks_ext_track.track\" FROM \"golden_xp_convs\" INNER JOIN \"golden_xp_attempts\" \"attempt\" ON \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" INNER JOIN \"golden_xp_tasks\" \"task\" ON \"task\".\"id\" = \"attempt\".\"task_id\" LEFT JOIN \"golden_xp_tasks_ext_track\" \"golden_xp_tasks_ext_track\" ON \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" WHERE \"golden_xp_convs\".\"id\" = ANY($2::text[])",
+                  "params": [
+                    "main",
+                    [
+                      "p9",
+                      "p8"
+                    ]
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            "empty": {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          },
+          "two": {
+            "params": {
+              "ids": "r1,r2"
+            },
+            "uses": {
+              "value": [
+                [
+                  "base",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "attempt_id",
+                      "created_at"
+                    ]
+                  }
+                ],
+                [
+                  "attempt",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "id",
+                      "task_id"
+                    ]
+                  }
+                ],
+                [
+                  "task",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "id"
+                    ]
+                  }
+                ],
+                [
+                  "golden_xp_tasks_ext_track",
+                  {
+                    "role": "value"
+                  }
+                ]
+              ]
+            },
+            "ids": {
+              "value": [
+                "r1",
+                "r2"
+              ]
+            },
+            "full": {
+              "result": {
+                "value": [
+                  {
+                    "id": "r1",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      }
+                    }
+                  },
+                  {
+                    "id": "r2",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      }
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "SELECT \"golden_xp_convs\".\"id\" AS \"id\", \"golden_xp_convs\".\"title\" AS \"title\", \"golden_xp_convs\".\"created_at\" AS \"createdAt\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1) AS \"golden_xp_tasks_ext_track.track\" FROM \"golden_xp_convs\" INNER JOIN \"golden_xp_attempts\" \"attempt\" ON \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" INNER JOIN \"golden_xp_tasks\" \"task\" ON \"task\".\"id\" = \"attempt\".\"task_id\" LEFT JOIN \"golden_xp_tasks_ext_track\" \"golden_xp_tasks_ext_track\" ON \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" WHERE \"golden_xp_convs\".\"id\" = ANY($2::text[])",
+                  "params": [
+                    "main",
+                    [
+                      "r1",
+                      "r2"
+                    ]
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            "scoped": {
+              "result": {
+                "value": [
+                  {
+                    "id": "r1",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      }
+                    }
+                  },
+                  {
+                    "id": "r2",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {
+                      "golden_xp_tasks_ext_track": {
+                        "track": "sidequest"
+                      }
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "SELECT \"golden_xp_convs\".\"id\" AS \"id\", \"golden_xp_convs\".\"title\" AS \"title\", \"golden_xp_convs\".\"created_at\" AS \"createdAt\", COALESCE(\"golden_xp_tasks_ext_track\".\"track\", $1) AS \"golden_xp_tasks_ext_track.track\" FROM \"golden_xp_convs\" INNER JOIN \"golden_xp_attempts\" \"attempt\" ON \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" INNER JOIN \"golden_xp_tasks\" \"task\" ON \"task\".\"id\" = \"attempt\".\"task_id\" LEFT JOIN \"golden_xp_tasks_ext_track\" \"golden_xp_tasks_ext_track\" ON \"golden_xp_tasks_ext_track\".\"parent_id\" = \"attempt\".\"task_id\" WHERE \"golden_xp_convs\".\"id\" = ANY($2::text[])",
+                  "params": [
+                    "main",
+                    [
+                      "p9",
+                      "p8"
+                    ]
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            "empty": {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "allUnfolded": {
+      "keyField": "id",
+      "definition": "73e156919432cbdc7f7d4560bf0c98facc37166a11222ced2e13d2c45c0fdf0a",
+      "options": {
+        "scopedMembership": {
+          "orderOf": "$function",
+          "orderSignatureOf": "$function"
+        }
+      },
+      "routes": [
+        {
+          "route": {
+            "id": "base",
+            "table": "golden_xp_convs",
+            "map": {
+              "kind": "identity"
+            },
+            "columns": [
+              "id",
+              "attempt_id",
+              "title",
+              "created_at"
+            ]
+          }
+        },
+        {
+          "route": {
+            "id": "attempt",
+            "table": "golden_xp_attempts",
+            "columns": [
+              "id",
+              "task_id"
+            ],
+            "map": {
+              "kind": "reverse",
+              "resolve": "$function"
+            }
+          },
+          "resolve": [
+            {
+              "result": {
+                "value": [
+                  "h1",
+                  "h2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"id\" from \"golden_xp_convs\" where \"golden_xp_convs\".\"attempt_id\" = ANY($1::text[]) limit $2",
+                  "params": [
+                    [
+                      "x1",
+                      "x2"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": [
+                  "h1",
+                  "h2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"id\" from \"golden_xp_convs\" where (\"golden_xp_convs\".\"attempt_id\" = ANY($1::text[]) and \"golden_xp_convs\".\"id\" = ANY($2::text[])) limit $3",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    [
+                      "h2",
+                      "h1"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": "over-cap"
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"id\" from \"golden_xp_convs\" where \"golden_xp_convs\".\"attempt_id\" = ANY($1::text[]) limit $2",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    2
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          ]
+        },
+        {
+          "route": {
+            "id": "task",
+            "table": "golden_xp_tasks",
+            "columns": [
+              "id"
+            ],
+            "map": {
+              "kind": "reverse",
+              "resolve": "$function"
+            }
+          },
+          "resolve": [
+            {
+              "result": {
+                "value": [
+                  "h1",
+                  "h2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                  "params": [
+                    [
+                      "x1",
+                      "x2"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": [
+                  "h1",
+                  "h2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where (\"attempt\".\"task_id\" = ANY($1::text[]) and \"golden_xp_convs\".\"id\" = ANY($2::text[])) limit $3",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    [
+                      "h2",
+                      "h1"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": "over-cap"
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    2
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          ]
+        }
+      ],
+      "uses": {
+        "value": [
+          [
+            "base",
+            {
+              "role": "membership",
+              "moves": [
+                "attempt_id",
+                "created_at"
+              ]
+            }
+          ],
+          [
+            "attempt",
+            {
+              "role": "membership",
+              "moves": [
+                "id",
+                "task_id"
+              ]
+            }
+          ],
+          [
+            "task",
+            {
+              "role": "membership",
+              "moves": [
+                "id"
+              ]
+            }
+          ]
+        ]
+      },
+      "full": {
+        "result": {
+          "value": [
+            {
+              "id": "r1",
+              "title": "T",
+              "createdAt": {
+                "$date": "2026-10-12T10:00:00.000Z"
+              },
+              "$columns": {}
+            },
+            {
+              "id": "r2",
+              "title": "T",
+              "createdAt": {
+                "$date": "2026-10-12T10:00:00.000Z"
+              },
+              "$columns": {}
+            }
+          ]
+        },
+        "queries": [
+          {
+            "sql": "SELECT \"golden_xp_convs\".\"id\" AS \"id\", \"golden_xp_convs\".\"title\" AS \"title\", \"golden_xp_convs\".\"created_at\" AS \"createdAt\" FROM \"golden_xp_convs\" INNER JOIN \"golden_xp_attempts\" \"attempt\" ON \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" INNER JOIN \"golden_xp_tasks\" \"task\" ON \"task\".\"id\" = \"attempt\".\"task_id\" ORDER BY \"golden_xp_convs\".\"created_at\" DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST",
+            "params": []
+          }
+        ],
+        "resolved": {
+          "where": 0,
+          "orderBy": 0
+        }
+      },
+      "scoped": {
+        "result": {
+          "value": [
+            {
+              "id": "r1",
+              "title": "T",
+              "createdAt": {
+                "$date": "2026-10-12T10:00:00.000Z"
+              },
+              "$columns": {}
+            },
+            {
+              "id": "r2",
+              "title": "T",
+              "createdAt": {
+                "$date": "2026-10-12T10:00:00.000Z"
+              },
+              "$columns": {}
+            }
+          ]
+        },
+        "queries": [
+          {
+            "sql": "SELECT \"golden_xp_convs\".\"id\" AS \"id\", \"golden_xp_convs\".\"title\" AS \"title\", \"golden_xp_convs\".\"created_at\" AS \"createdAt\" FROM \"golden_xp_convs\" INNER JOIN \"golden_xp_attempts\" \"attempt\" ON \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" INNER JOIN \"golden_xp_tasks\" \"task\" ON \"task\".\"id\" = \"attempt\".\"task_id\" WHERE \"golden_xp_convs\".\"id\" = ANY($1::text[])",
+            "params": [
+              [
+                "r1",
+                "r2"
+              ]
+            ]
+          }
+        ],
+        "resolved": {
+          "where": 0,
+          "orderBy": 0
+        }
+      },
+      "orderIds": {
+        "result": {
+          "value": [
+            "r2",
+            "r1"
+          ]
+        },
+        "queries": [
+          {
+            "sql": "SELECT \"golden_xp_convs\".\"id\" AS __id FROM \"golden_xp_convs\" INNER JOIN \"golden_xp_attempts\" \"attempt\" ON \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" INNER JOIN \"golden_xp_tasks\" \"task\" ON \"task\".\"id\" = \"attempt\".\"task_id\" ORDER BY \"golden_xp_convs\".\"created_at\" DESC NULLS LAST, \"golden_xp_convs\".\"id\" ASC NULLS LAST",
+            "params": []
+          }
+        ],
+        "resolved": {
+          "where": 0,
+          "orderBy": 0
+        }
+      },
+      "signatures": {
+        "result": {
+          "value": [
+            "\"2026-10-12T10:00:00.000Z\"",
+            "\"2026-10-12T10:00:00.000Z\""
+          ]
+        },
+        "queries": [],
+        "resolved": {
+          "where": 0,
+          "orderBy": 0
+        }
+      },
+      "rows": {
+        "options": {
+          "membership": {
+            "kind": "point",
+            "idsOf": "$function"
+          }
+        },
+        "membership": "point",
+        "routes": [
+          {
+            "route": {
+              "id": "base",
+              "table": "golden_xp_convs",
+              "map": {
+                "kind": "identity"
+              },
+              "columns": [
+                "id",
+                "attempt_id",
+                "title",
+                "created_at"
+              ]
+            }
+          },
+          {
+            "route": {
+              "id": "attempt",
+              "table": "golden_xp_attempts",
+              "columns": [
+                "id",
+                "task_id"
+              ],
+              "map": {
+                "kind": "reverse",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"id\" from \"golden_xp_convs\" where \"golden_xp_convs\".\"attempt_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"id\" from \"golden_xp_convs\" where (\"golden_xp_convs\".\"attempt_id\" = ANY($1::text[]) and \"golden_xp_convs\".\"id\" = ANY($2::text[])) limit $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"id\" from \"golden_xp_convs\" where \"golden_xp_convs\".\"attempt_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          },
+          {
+            "route": {
+              "id": "task",
+              "table": "golden_xp_tasks",
+              "columns": [
+                "id"
+              ],
+              "map": {
+                "kind": "reverse",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where (\"attempt\".\"task_id\" = ANY($1::text[]) and \"golden_xp_convs\".\"id\" = ANY($2::text[])) limit $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"golden_xp_convs\".\"id\" from \"golden_xp_convs\" inner join \"golden_xp_attempts\" \"attempt\" on \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" where \"attempt\".\"task_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          }
+        ],
+        "tuples": {
+          "one": {
+            "params": {
+              "ids": "r1"
+            },
+            "uses": {
+              "value": [
+                [
+                  "base",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "attempt_id",
+                      "created_at"
+                    ]
+                  }
+                ],
+                [
+                  "attempt",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "id",
+                      "task_id"
+                    ]
+                  }
+                ],
+                [
+                  "task",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "id"
+                    ]
+                  }
+                ]
+              ]
+            },
+            "ids": {
+              "value": [
+                "r1"
+              ]
+            },
+            "full": {
+              "result": {
+                "value": [
+                  {
+                    "id": "r1",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {}
+                  },
+                  {
+                    "id": "r2",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {}
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "SELECT \"golden_xp_convs\".\"id\" AS \"id\", \"golden_xp_convs\".\"title\" AS \"title\", \"golden_xp_convs\".\"created_at\" AS \"createdAt\" FROM \"golden_xp_convs\" INNER JOIN \"golden_xp_attempts\" \"attempt\" ON \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" INNER JOIN \"golden_xp_tasks\" \"task\" ON \"task\".\"id\" = \"attempt\".\"task_id\" WHERE \"golden_xp_convs\".\"id\" = ANY($1::text[])",
+                  "params": [
+                    [
+                      "r1"
+                    ]
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            "scoped": {
+              "result": {
+                "value": [
+                  {
+                    "id": "r1",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {}
+                  },
+                  {
+                    "id": "r2",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {}
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "SELECT \"golden_xp_convs\".\"id\" AS \"id\", \"golden_xp_convs\".\"title\" AS \"title\", \"golden_xp_convs\".\"created_at\" AS \"createdAt\" FROM \"golden_xp_convs\" INNER JOIN \"golden_xp_attempts\" \"attempt\" ON \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" INNER JOIN \"golden_xp_tasks\" \"task\" ON \"task\".\"id\" = \"attempt\".\"task_id\" WHERE \"golden_xp_convs\".\"id\" = ANY($1::text[])",
+                  "params": [
+                    [
+                      "p9",
+                      "p8"
+                    ]
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            "empty": {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          },
+          "two": {
+            "params": {
+              "ids": "r1,r2"
+            },
+            "uses": {
+              "value": [
+                [
+                  "base",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "attempt_id",
+                      "created_at"
+                    ]
+                  }
+                ],
+                [
+                  "attempt",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "id",
+                      "task_id"
+                    ]
+                  }
+                ],
+                [
+                  "task",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "id"
+                    ]
+                  }
+                ]
+              ]
+            },
+            "ids": {
+              "value": [
+                "r1",
+                "r2"
+              ]
+            },
+            "full": {
+              "result": {
+                "value": [
+                  {
+                    "id": "r1",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {}
+                  },
+                  {
+                    "id": "r2",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {}
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "SELECT \"golden_xp_convs\".\"id\" AS \"id\", \"golden_xp_convs\".\"title\" AS \"title\", \"golden_xp_convs\".\"created_at\" AS \"createdAt\" FROM \"golden_xp_convs\" INNER JOIN \"golden_xp_attempts\" \"attempt\" ON \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" INNER JOIN \"golden_xp_tasks\" \"task\" ON \"task\".\"id\" = \"attempt\".\"task_id\" WHERE \"golden_xp_convs\".\"id\" = ANY($1::text[])",
+                  "params": [
+                    [
+                      "r1",
+                      "r2"
+                    ]
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            "scoped": {
+              "result": {
+                "value": [
+                  {
+                    "id": "r1",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {}
+                  },
+                  {
+                    "id": "r2",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-12T10:00:00.000Z"
+                    },
+                    "$columns": {}
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "SELECT \"golden_xp_convs\".\"id\" AS \"id\", \"golden_xp_convs\".\"title\" AS \"title\", \"golden_xp_convs\".\"created_at\" AS \"createdAt\" FROM \"golden_xp_convs\" INNER JOIN \"golden_xp_attempts\" \"attempt\" ON \"attempt\".\"id\" = \"golden_xp_convs\".\"attempt_id\" INNER JOIN \"golden_xp_tasks\" \"task\" ON \"task\".\"id\" = \"attempt\".\"task_id\" WHERE \"golden_xp_convs\".\"id\" = ANY($1::text[])",
+                  "params": [
                     [
                       "p9",
                       "p8"

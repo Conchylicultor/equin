@@ -286,11 +286,11 @@ own `requestfailed` listener calls it too. Diagnosis:
   - Uses: `framework/tooling/guards.MODULE_EXTENSION`
   - Exports (values): `isE2eScriptPath`
 - Cross-plugin:
-  - Imported by: 148 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 149 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×46
     - `primitives` ×24
     - `page` ×23
-    - `conversations` ×16
+    - `conversations` ×17
     - `apps-core` ×5
     - `debug` ×5
     - `tasks` ×4

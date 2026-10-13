@@ -2,7 +2,8 @@ import type { z } from "zod";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { enumTextField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
-import { STORED_TASK_TRACKS } from "../core";
+import { tasksEntityRef } from "@plugins/tasks/plugins/tasks-core/core";
+import { DEFAULT_TASK_TRACK, STORED_TASK_TRACKS, TRACK_META } from "../core";
 
 // One row per NON-default-track task, stored in the `tasks_ext_track`
 // entity-extension table (1:1 per task), which `server/internal/tables.ts`
@@ -10,10 +11,25 @@ import { STORED_TASK_TRACKS } from "../core";
 // `sidequest`): absence of a row IS the main track, so `main` has no spelling
 // here. `createdAt` (when the task left main) rides on the wire as a plain
 // field of the shape.
+//
+// It EXPOSES the track to every list whose rows reach a task (`exposes` —
+// the conversation lists today): a task with no row reads `main`, each value
+// presents as its `TRACK_META` chip. No list is named here.
 export const taskTrackShape = defineExtensionShape({
   key: "taskId",
   fields: { track: enumTextField(STORED_TASK_TRACKS) },
   wireTimestamps: ["createdAt"],
+  exposes: {
+    parent: tasksEntityRef,
+    name: "track",
+    fields: {
+      track: {
+        label: "Track",
+        absent: DEFAULT_TASK_TRACK,
+        options: TRACK_META,
+      },
+    },
+  },
 });
 export const TaskTrackRowSchema = taskTrackShape.schema;
 export type TaskTrackRow = z.infer<typeof TaskTrackRowSchema>;

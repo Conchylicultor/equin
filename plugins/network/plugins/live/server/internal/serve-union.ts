@@ -222,6 +222,7 @@ export function compileUnion<
         break;
       case "contributed":
       case "scoped":
+      case "exposed":
         fail(
           `columns "${b.columns.name}" are a ${owner.kind} set — an arm binds its own \`liveArmColumns\`.`,
         );

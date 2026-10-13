@@ -47,6 +47,14 @@ export {
   RECENT_GONE_LIMIT,
 } from "./resources";
 
+// The tasks-core entities by reference (`exposes` declarations). See
+// ./entity-refs.ts.
+export {
+  attemptsEntityRef,
+  conversationsEntityRef,
+  tasksEntityRef,
+} from "./entity-refs";
+
 export { buildTaskPrompt } from "./build-task-prompt";
 
 // The single dependency-graph value object + settled predicate. Every traversal

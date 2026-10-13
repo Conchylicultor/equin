@@ -2,10 +2,10 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
 import { opensPane } from "@plugins/primitives/plugins/app-shell/web";
-import { allConversationsPane, AllConversationsFields } from "./panes";
+import { allConversationsPane } from "./panes";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
-export { allConversationsPane, AllConversationsFields } from "./panes";
+export { allConversationsPane } from "./panes";
 export { useConversationFieldDefs } from "./internal/fields";
 
 export default {
@@ -22,6 +22,5 @@ export default {
   ],
   slots: {
     "all-conversations": allConversationsPane,
-    fields: AllConversationsFields,
   },
 } satisfies PluginDefinition;

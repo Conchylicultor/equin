@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { z } from "zod";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
-import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import {
+  enumTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineExtensionShape } from "./define-extension-shape";
 
 describe("defineExtensionShape", () => {
@@ -135,3 +139,150 @@ export type _WireRow = Expect<
   >
 >;
 export type _Key = Expect<Equal<typeof typedShape.key, "songId">>;
+
+// ── exposes: the fields an extension shows in every list of its parent ───────
+describe("defineExtensionShape — exposes", () => {
+  const tasks = entityRef("tasks");
+  const STORED = ["sidequest"] as const;
+
+  test("an absent outside the stored schema widens the wire schema", () => {
+    const shape = defineExtensionShape({
+      key: "taskId",
+      fields: { track: enumTextField(STORED) },
+      exposes: {
+        parent: tasks,
+        name: "track",
+        fields: {
+          track: {
+            label: "Track",
+            absent: "main",
+            options: {
+              main: { label: "Main", variant: "primary" },
+              sidequest: { label: "Sidequest", variant: "info" },
+            },
+          },
+        },
+      },
+    });
+    const exposure = shape.exposure;
+    expect(exposure.slice).toBe("tasks_ext_track");
+    expect(exposure.parent).toBe(tasks);
+    expect(exposure.fields.track.typeId).toBe("text");
+    expect(exposure.fields.track.absent).toBe("main");
+    expect(exposure.fields.track.options).toEqual({
+      main: { label: "Main", variant: "primary" },
+      sidequest: { label: "Sidequest", variant: "info" },
+    });
+    // The stored schema refuses "main"; the wire schema takes both.
+    expect(shape.fields.track.schema.safeParse("main").success).toBe(false);
+    expect(exposure.fields.track.wire.parse("main")).toBe("main");
+    expect(exposure.fields.track.wire.parse("sidequest")).toBe("sidequest");
+    expect(exposure.fields.track.wire.safeParse("other").success).toBe(false);
+    expect(exposure.row.parse({ track: "main" })).toEqual({ track: "main" });
+  });
+
+  test("an absent the field already holds keeps its schema; null makes it nullable", () => {
+    const shape = defineExtensionShape({
+      key: "conversationId",
+      fields: { cost: intField(), note: textField() },
+      exposes: {
+        parent: entityRef("conversations"),
+        name: "usage",
+        fields: {
+          cost: { label: "Cost", absent: 0 },
+          note: { label: "Note", absent: null },
+        },
+      },
+    });
+    const { fields } = shape.exposure;
+    expect(fields.cost.wire).toBe(shape.fields.cost.schema);
+    expect(fields.note.wire.parse(null)).toBeNull();
+    expect(fields.cost.options).toBeNull();
+  });
+
+  test("a shape without exposes has a null exposure", () => {
+    expect(
+      defineExtensionShape({ key: "songId", fields: {} }).exposure,
+    ).toBeNull();
+  });
+
+  test("an untyped caller exposing a server-only field throws", () => {
+    expect(() =>
+      defineExtensionShape({
+        key: "songId",
+        fields: { hash: textField() },
+        serverOnly: ["hash"],
+        exposes: {
+          parent: entityRef("songs"),
+          name: "x",
+          fields: { hash: { label: "Hash", absent: null } },
+        } as never,
+      }),
+    ).toThrow(/"hash" is server-only/);
+  });
+
+  test("an untyped caller exposing an unknown field throws", () => {
+    expect(() =>
+      defineExtensionShape({
+        key: "songId",
+        fields: {},
+        exposes: {
+          parent: entityRef("songs"),
+          name: "x",
+          fields: { nope: { label: "Nope", absent: null } },
+        } as never,
+      }),
+    ).toThrow(/"nope" is not one of the extension's own fields/);
+  });
+});
+
+// ── Compile-time: what `exposes` may name ──────────────────────────────────
+const exposedShape = defineExtensionShape({
+  key: "taskId",
+  fields: { track: enumTextField(["sidequest"] as const), hash: textField() },
+  serverOnly: ["hash"],
+  exposes: {
+    parent: entityRef("tasks"),
+    name: "track",
+    fields: { track: { label: "Track", absent: "main" } },
+  },
+});
+// The exposed row is the stored value widened by `absent`.
+export type _ExposedRow = Expect<
+  Equal<
+    z.infer<typeof exposedShape.exposure.row>,
+    { track: "sidequest" | "main" }
+  >
+>;
+// Type-only: refused declarations, never called (each would throw at runtime).
+export const _refusedExposes = (): void => {
+  // A server-only field cannot be exposed.
+  // @ts-expect-error — `hash` is server-only.
+  defineExtensionShape({
+    key: "taskId",
+    fields: { track: enumTextField(["sidequest"] as const), hash: textField() },
+    serverOnly: ["hash"],
+    exposes: {
+      parent: entityRef("tasks"),
+      name: "track",
+      fields: { hash: { label: "Hash", absent: null } },
+    },
+  });
+  // Options name every wire value.
+  // @ts-expect-error — "main" (the absent value) has no option.
+  defineExtensionShape({
+    key: "taskId",
+    fields: { track: enumTextField(["sidequest"] as const) },
+    exposes: {
+      parent: entityRef("tasks"),
+      name: "track",
+      fields: {
+        track: {
+          label: "Track",
+          absent: "main",
+          options: { sidequest: { label: "Sidequest" } },
+        },
+      },
+    },
+  });
+};

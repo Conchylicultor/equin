@@ -3,7 +3,11 @@ import {
   liveCollection,
   type WithContributedColumns,
 } from "@plugins/network/plugins/live/core";
-import { ConversationSchema } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  ConversationSchema,
+  conversationsEntityRef,
+  tasksEntityRef,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { CONVERSATION_FILTERABLE, CONVERSATION_SORTABLE } from "./fields";
 
 /**
@@ -34,9 +38,8 @@ export const ConversationListRowSchema = ConversationSchema.pick({
 export type ConversationListRow = z.infer<typeof ConversationListRowSchema>;
 
 /**
- * A row as the two live lists deliver it: the list row plus every contributed
- * column under `$columns` (both collections are `contributed: true`). What a
- * field extension of either list is typed over.
+ * A row as the two live lists deliver it: the list row plus every exposed
+ * field under `$columns` (both collections declare `exposes`).
  */
 export type ConversationListLiveRow =
   WithContributedColumns<ConversationListRow>;
@@ -49,6 +52,15 @@ const CONVERSATION_LIST_DEFAULT = {
   limit: 100,
 } as const;
 const CONVERSATION_LIST_MAX_LIMIT = 500;
+/**
+ * What a list row reaches: the conversation itself (`base` — its usage) and
+ * its task (`task`, the owner joins' lookup — its track). Every field an
+ * extension of either exposes sorts, filters and groups the lists server-side.
+ */
+const CONVERSATION_LIST_EXPOSES = {
+  base: conversationsEntityRef,
+  task: tasksEntityRef,
+} as const;
 
 /**
  * The All-conversations pane's list: every conversation, newest first, read as
@@ -68,9 +80,7 @@ export const allConversations = liveCollection("conversations.all", {
   maxLimit: CONVERSATION_LIST_MAX_LIMIT,
   scroll: true,
   columnScope: "all-conversations",
-  // Other plugins' columns (conversations/usage: cost, tokens, agents) sort
-  // and filter it too, under `$columns.<contributor>`.
-  contributed: true,
+  exposes: CONVERSATION_LIST_EXPOSES,
   // Counted: the list's section count is exact while only its scope applies.
   count: true,
 });
@@ -90,7 +100,7 @@ export const conversationHistory = liveCollection("conversations.history", {
   maxLimit: CONVERSATION_LIST_MAX_LIMIT,
   scroll: true,
   columnScope: "conversations-sidebar",
-  contributed: true,
+  exposes: CONVERSATION_LIST_EXPOSES,
   // Counted: the list's section count is exact while only its scope applies.
   count: true,
 });

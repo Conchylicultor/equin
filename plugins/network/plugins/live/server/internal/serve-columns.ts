@@ -10,6 +10,7 @@ import type {
   JoinRef,
   JoinWireColumns,
 } from "@plugins/infra/plugins/query-resource/core";
+import type { EntityExposure } from "@plugins/infra/plugins/entity-extensions/core";
 import type { FilterDomainId } from "@plugins/network/plugins/live/plugins/filter/core";
 import type {
   LiveColumnsDeclaration,
@@ -193,6 +194,24 @@ export function serveScopedColumns<P extends Record<string, string>>(spec: {
   };
 }
 
+// ── Exposed fields ─────────────────────────────────────────────────────────
+// An entity extension declaring `exposes` (entity-extensions) is served by
+// handing its handle to `LiveColumns.Expose`: every collection whose `exposes`
+// reaches the exposure's parent entity — directly (`base`) or through a lookup
+// join — folds it in at boot, joining the extension LEFT (keyed on the base's
+// id, or on the lookup's `on` column) under the exposure's slice. Neither the
+// extension nor the collection names the other.
+
+/**
+ * What `LiveColumns.Expose` takes: an entity extension handle that exposes
+ * fields (`defineExtension` over a shape declaring `exposes` — one exposing
+ * none is a tsc error) — its exposure, and the join that reads it.
+ */
+export interface ExposingExtension {
+  readonly exposure: EntityExposure;
+  join(alias: string, opts?: { on: ColumnRef }): ExtensionJoin;
+}
+
 export const LiveColumns = {
   /**
    * A contributed collection's columns, served by the plugin that owns them
@@ -209,5 +228,14 @@ export const LiveColumns = {
    */
   Scoped: defineServerContribution<ServedScopedColumns>("live.columns.scoped", {
     docLabel: (s) => s.name,
+  }),
+  /**
+   * An entity extension's exposed fields (`LiveColumns.Expose(ext)`): every
+   * collection whose `exposes` reaches the exposure's parent entity folds them
+   * into its rows. Collected at boot. An exposure no collection reaches is
+   * not an error — an entity may have no list yet.
+   */
+  Expose: defineServerContribution<ExposingExtension>("live.columns.expose", {
+    docLabel: (e) => `${e.exposure.parent.name} ← ${e.exposure.slice}`,
   }),
 };

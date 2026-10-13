@@ -260,14 +260,24 @@ afterAll(async () => {
 
 const views = new Map<string, { view: ClientView; from: number }>();
 
+/**
+ * A row's fields compare as a set: a fresh load folds `$columns` after the
+ * server-minted `$key`, a client view applies them in frame order.
+ */
+function sortedKeys(row: unknown): unknown {
+  return row !== null && typeof row === "object" && !Array.isArray(row)
+    ? Object.fromEntries(
+        Object.entries(row).sort(([a], [b]) => (a < b ? -1 : 1)),
+      )
+    : row;
+}
+
 /** A point set is unordered (an entrant appends), so it compares by id. */
 function comparable(key: string, value: unknown): string {
-  if (key !== allConversations.rows.key || !Array.isArray(value)) {
-    return JSON.stringify(value);
-  }
-  return JSON.stringify(
-    [...(value as { id: string }[])].sort((a, b) => (a.id < b.id ? -1 : 1)),
-  );
+  if (!Array.isArray(value)) return JSON.stringify(value);
+  const rows = value.map(sortedKeys) as { id: string }[];
+  if (key !== allConversations.rows.key) return JSON.stringify(rows);
+  return JSON.stringify(rows.sort((a, b) => (a.id < b.id ? -1 : 1)));
 }
 
 function viewOf(key: string, params: ResourceParams): ClientView {

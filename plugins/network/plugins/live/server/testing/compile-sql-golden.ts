@@ -57,6 +57,8 @@ import type {
 } from "@plugins/primitives/plugins/live-state/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { enumTextField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import {
@@ -64,6 +66,7 @@ import {
   liveText,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import {
+  exposedColumns,
   liveCollection,
   liveColumns,
   scopedLiveColumns,
@@ -1478,6 +1481,182 @@ async function allCases(): Promise<Record<string, Json>> {
   };
 }
 
+// ── The `exposed` group (fields declared once, phase 1) ──────────────────────
+//
+// Collections declaring `exposes` fold every served exposure of the entities
+// they reach: a base exposure (`golden_xp_convs_ext_usage`, joined on the
+// host's id — an alias route, COALESCE to its `absent` 0) and a related one
+// (`golden_xp_tasks_ext_track`, joined on the `attempt` lookup's `on` — a
+// reverse route probed through that chain, COALESCE to its `absent` "main",
+// bound plain and decoded through its widened schema). Recorded for a window
+// (a filter and a sort on the exposed columns, a grouping on each — the
+// grouped COALESCE named by ordinal, so its bound `absent` is rendered once)
+// and for an `all` set, with and without the exposure (its definition moves).
+
+const xpTasks = pgTable("golden_xp_tasks", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+});
+const xpAttempts = pgTable("golden_xp_attempts", {
+  id: text("id").primaryKey(),
+  taskId: text("task_id").notNull(),
+});
+const xpConvs = pgTable("golden_xp_convs", {
+  id: text("id").primaryKey(),
+  attemptId: text("attempt_id").notNull(),
+  title: text("title").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
+const xpTasksRef = entityRef("golden_xp_tasks");
+const xpConvsRef = entityRef("golden_xp_convs");
+const xpTrack = defineExtension(
+  xpTasks,
+  "track",
+  defineExtensionShape({
+    key: "taskId",
+    fields: { track: enumTextField(["sidequest"] as const) },
+    exposes: {
+      parent: xpTasksRef,
+      name: "track",
+      fields: { track: { label: "Track", absent: "main" } },
+    },
+  }),
+);
+const xpUsage = defineExtension(
+  xpConvs,
+  "usage",
+  defineExtensionShape({
+    key: "conversationId",
+    fields: { cost: intField() },
+    exposes: {
+      parent: xpConvsRef,
+      name: "usage",
+      fields: { cost: { label: "Cost", absent: 0 } },
+    },
+  }),
+  { columns: { cost: { default: 0 } } },
+);
+const xpOwnerJoins = [
+  {
+    kind: "lookup",
+    alias: "attempt",
+    table: xpAttempts,
+    pk: xpAttempts.id,
+    on: { from: "base", col: xpConvs.attemptId },
+    required: true,
+  } satisfies LookupJoin<"attempt", typeof xpAttempts>,
+  {
+    kind: "lookup",
+    alias: "task",
+    table: xpTasks,
+    pk: xpTasks.id,
+    on: { from: "attempt", col: xpAttempts.taskId },
+    required: true,
+  } satisfies LookupJoin<"task", typeof xpTasks>,
+] as const;
+const XpRow = z.object({
+  id: z.string(),
+  title: z.string(),
+  createdAt: z.date(),
+});
+
+async function exposedCases(): Promise<Record<string, Json>> {
+  const out: Record<string, Json> = {};
+  const TRACK = "golden_xp_tasks_ext_track.track";
+  const COST = "golden_xp_convs_ext_usage.cost";
+  const track = exposedColumns(xpTrack.exposure);
+  const usage = exposedColumns(xpUsage.exposure);
+
+  {
+    const c = liveCollection("golden.exposed-window", {
+      row: XpRow,
+      id: "id",
+      filterable: { title: liveText() },
+      sortable: ["createdAt"],
+      default: { orderBy: [["createdAt", "desc"]], limit: 10 },
+      maxLimit: 30,
+      exposes: { base: xpConvsRef, task: xpTasksRef },
+    });
+    const createdAt = new Date("2026-10-12T10:00:00.000Z");
+    const { db, h } = harness([
+      { id: "c1", title: "a", createdAt, [TRACK]: "main", [COST]: 0 },
+      { id: "c2", title: "b", createdAt, [TRACK]: "sidequest", [COST]: 7 },
+    ]);
+    const specs = compileCollection(
+      c,
+      { from: xpConvs, joins: xpOwnerJoins, db },
+      [],
+      [],
+      [xpTrack, xpUsage],
+    );
+    const columns = [track, usage];
+    const encode = (q: object) =>
+      c.window.window.encode({ ...q, columns } as never);
+    out.window = await collectionRecord(h, c, specs, {
+      window: {
+        default: encode({}),
+        sidequests: encode({ where: { [TRACK]: "sidequest" } }),
+        mainByCost: encode({
+          where: { [TRACK]: "main" },
+          orderBy: [[COST, "desc"]],
+        }),
+      },
+      point: { two: c.rows.point.encode(["c1", "c2"]) },
+      groups: {
+        track: c.groups.groups.encode({
+          groupBy: TRACK as never,
+          columns,
+        }),
+        cost: c.groups.groups.encode({
+          groupBy: COST as never,
+          columns,
+        }),
+        trackOfCostly: c.groups.groups.encode({
+          groupBy: TRACK as never,
+          where: { [COST]: { gt: 0 } } as never,
+          columns,
+        }),
+      },
+    });
+  }
+
+  {
+    const all = liveCollection("golden.exposed-all", {
+      row: XpRow,
+      id: "id",
+      all: {
+        orderBy: [["createdAt", "desc"]],
+        unbounded: { reason: "a golden fixture" },
+      },
+      exposes: { task: xpTasksRef },
+    });
+    const sample = {
+      id: "r1",
+      title: "T",
+      createdAt: "2026-10-12T10:00:00.000Z",
+    };
+    out.all = await allRecord(
+      (db) =>
+        compileCollection(
+          all,
+          { from: xpConvs, joins: xpOwnerJoins, db },
+          [],
+          [],
+          [xpTrack, xpUsage],
+        ),
+      { ...sample, [TRACK]: "sidequest" },
+    );
+    // No exposure served: the rows still carry `$columns`, and the
+    // definition differs from the folded one.
+    out.allUnfolded = await allRecord(
+      (db) =>
+        compileCollection(all, { from: xpConvs, joins: xpOwnerJoins, db }),
+      sample,
+    );
+  }
+  return out;
+}
+
 /**
  * The whole golden record, deterministic for one source tree: every case
  * builds its own declarations (unique keys) and recording db, in a fixed order.
@@ -1488,5 +1667,6 @@ export async function recordCompileGolden(): Promise<Json> {
     point: await directPointCases(),
     collections: await collectionCases(),
     all: await allCases(),
+    exposed: await exposedCases(),
   };
 }

@@ -10,6 +10,13 @@ import {
 } from "@plugins/fields/plugins/date/plugins/config/core";
 import { wireSchema } from "@plugins/infra/plugins/entities/core";
 import {
+  resolveExposure,
+  type EntityExposure,
+  type ExposesCheck,
+  type ExposesDecl,
+  type ExposureRow,
+} from "./exposure";
+import {
   assertNoReservedKeys,
   EXTENSION_TIMESTAMPS,
   type ExtensionTimestamp,
@@ -57,12 +64,17 @@ export interface ExtensionShape<
   F extends FieldsRecord,
   S extends keyof F & string = never,
   W extends ExtensionTimestamp = never,
+  E extends EntityExposure | null = null,
 > {
   readonly key: K;
   // The complete record, in column order (see `defineExtensionShape`).
   readonly fields: ExtensionFields<K, F>;
   readonly serverOnly: readonly ExtensionServerOnly<S, W>[];
   readonly schema: z.ZodObject<ExtensionWireShape<K, F, S, W>>;
+  // The fields the extension exposes to every list of its parent (or of an
+  // entity reaching it) — `null` when it declares no `exposes`. See
+  // `./exposure.ts`.
+  readonly exposure: E;
 }
 
 // The structural bound `defineExtension` takes a shape through. Deliberately
@@ -74,6 +86,7 @@ export interface AnyExtensionShape {
   readonly fields: FieldsRecord;
   readonly serverOnly: readonly string[];
   readonly schema: z.AnyZodObject;
+  readonly exposure: EntityExposure | null;
 }
 
 export interface ExtensionShapeDef<
@@ -94,6 +107,10 @@ export interface ExtensionShapeDef<
   // the primitive, and leaving them off keeps a write that changes nothing from
   // sending a row diff just because `updatedAt` moved.
   wireTimestamps?: readonly W[];
+  // The own fields every list of the parent shows, filters and groups by —
+  // with what a parent with no side row reads (`./exposure.ts`). A server-only
+  // field, a timestamp or the key cannot be exposed (tsc).
+  exposes?: ExposesDecl;
 }
 
 // Declare an extension's row once, in browser-safe code. `defineExtension`
@@ -105,7 +122,32 @@ export function defineExtensionShape<
   F extends FieldsRecord,
   S extends keyof F & string = never,
   W extends ExtensionTimestamp = never,
->(def: ExtensionShapeDef<K, F, S, W>): ExtensionShape<K, F, S, W> {
+>(
+  def: ExtensionShapeDef<K, F, S, W> & { exposes?: undefined },
+): ExtensionShape<K, F, S, W>;
+// With `exposes`: `X` keeps each `absent` literal (`"main"`), so the exposed
+// row's type is the stored value widened by it; `ExposesCheck` rejects a key
+// that is not an own wire field and an `options` record that does not name
+// exactly the wire values.
+export function defineExtensionShape<
+  K extends string,
+  F extends FieldsRecord,
+  const X extends ExposesDecl,
+  S extends keyof F & string = never,
+  W extends ExtensionTimestamp = never,
+>(
+  def: ExtensionShapeDef<K, F, S, W> & {
+    exposes: X & ExposesCheck<NoInfer<F>, NoInfer<S>, X>;
+  },
+): ExtensionShape<K, F, S, W, EntityExposure<ExposureRow<F, X>>>;
+export function defineExtensionShape<
+  K extends string,
+  F extends FieldsRecord,
+  S extends keyof F & string,
+  W extends ExtensionTimestamp,
+>(
+  def: ExtensionShapeDef<K, F, S, W>,
+): ExtensionShape<K, F, S, W, EntityExposure | null> {
   const { key, fields } = def;
   assertNoReservedKeys(key, fields);
 
@@ -134,5 +176,9 @@ export function defineExtensionShape<
     fields: fullFields,
     serverOnly,
     schema: wireSchema(fullFields, serverOnly),
+    exposure:
+      def.exposes === undefined
+        ? null
+        : resolveExposure(key, fields, serverOnly, def.exposes),
   });
 }

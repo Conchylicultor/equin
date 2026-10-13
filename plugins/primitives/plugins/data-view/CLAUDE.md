@@ -1698,6 +1698,21 @@ row and bound as the field's `column`, so the server sorts and filters by it —
 Sonata's play-count field is `{ value: (s) => playbackColumns.read(s).playCount,
 column: playbackColumns.column("playCount") }`.
 
+**Exposed fields come before the fold, with no contributor.** An entity
+extension that EXPOSES fields (`defineExtensionShape({ exposes })`, registered
+by `LiveExposures.Register` — `network/live`, "Exposed fields") is in the
+schema of every DataView whose rows reach its entity: `useExposedFields`
+(`web/internal/exposed-fields.ts`) derives one `FieldDef` per exposed field
+(id the bare field key — saved views keep naming it; `enum` with its options
+when it declares them, else its field type; the registration's cell / width /
+align), and `CollectBodyFields` appends them to the host's fields before
+`CollectFieldExtensions` — an id the host (or another exposure) already uses
+throws. The collection is the live source's, or — for in-memory rows taken
+from one (the Queue) — the origin's `collection` prop; only a live source
+binds `column`, so an exposed groupable column groups as server sections
+(`LiveGroupColumn.handle` goes to the groups read). Prefer an exposure over a
+per-list field-extension slot for a field of an entity extension.
+
 **A field's own read: `pending` and `readError`, never a stand-in value.** A
 contributor whose values come from a read of its own states where that read
 is — never folds "not known yet" into a value. `pending: true` while it loads
@@ -2004,8 +2019,9 @@ export const threadsSource = liveDataSource(mailThreads, { searchable: ["subject
   source (what it reads) both take:
   - **Server sections** — a `oneBucketPerValue` grouping (identity, enum, bool;
     never a date bucket) over a **groupable** column: the collection's OWN
-    filterable text / number / boolean column (`LiveFieldPlan.groupColumns`;
-    what live's `checkGroupBy` accepts — a contributed column never is). The
+    filterable text / number / boolean column, or an EXPOSED one
+    (`LiveFieldPlan.groupColumns`; what live's `checkGroupBy` accepts — a
+    contributed column never is). The
     origin is `SourceView` `kind: "sectioned"` (`useLiveSource` →
     `useSectionedReads`): ONE `useLive(c, { groupBy, where, limit: LIST_MAX })`
     over the SAME lowered `scope ∧ filter ∧ search` the rows use lists every
@@ -2315,10 +2331,10 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 84 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×11
     - `primitives/data-view/view-core` ×8
-    - `network/live` ×5
+    - `network/live` ×6
     - `primitives/live-state` ×5
     - `primitives/css/control-panel` ×4
     - `primitives/slot-render` ×4
@@ -2531,6 +2547,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewProps`
     - `DataViewRenderProps`
     - `DataViewRowEntry`
+    - `DataViewRowsCollection`
     - `DataViewRowsComplete`
     - `DataViewSearch`
     - `DataViewSection`

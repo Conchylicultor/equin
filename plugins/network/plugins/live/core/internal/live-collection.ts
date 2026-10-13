@@ -5,6 +5,7 @@ import {
   type ResourceDescriptor,
   type ResourcePreload,
 } from "@plugins/primitives/plugins/live-state/core";
+import type { EntityRef } from "@plugins/infra/plugins/entities/core";
 import type {
   AllQueryResourceContract,
   PointQueryResourceContract,
@@ -104,9 +105,13 @@ export interface LiveGroupCodec<F> {
   maxLimit: number;
   /** Canonical encode. Throws on a non-groupable `groupBy`, a bad `where`, a limit above max, or an `orderBy`. */
   encode: (query: LiveGroupQuery<F>) => LiveGroupParams;
-  /** STRICT decode. Throws unless `params` is exactly a canonical encoding. */
+  /**
+   * STRICT decode. Throws unless `params` is exactly a canonical encoding. The
+   * server passes the column sets a grouping may name (its exposed ones).
+   */
   decode: (
     params: Record<string, string>,
+    columns?: readonly LiveColumnsDeclaration[],
   ) => LiveDecodedGroupQuery<keyof F & string>;
 }
 
@@ -124,9 +129,18 @@ export type LiveGroupsDescriptor<F> = ResourceDescriptor<
 /** The count descriptor's codec: the count query ⇄ wire-params pair. */
 export interface LiveCountCodec {
   /** Canonical encode. Throws on a bad `where`. */
-  encode: (query: { where?: object }) => LiveCountParams;
-  /** STRICT decode. Throws unless `params` is exactly a canonical encoding. */
-  decode: (params: Record<string, string>) => LiveDecodedCountQuery;
+  encode: (query: {
+    where?: object;
+    columns?: readonly LiveColumnsDeclaration[];
+  }) => LiveCountParams;
+  /**
+   * STRICT decode. Throws unless `params` is exactly a canonical encoding. The
+   * server passes the column sets a count's `where` may name.
+   */
+  decode: (
+    params: Record<string, string>,
+    columns?: readonly LiveColumnsDeclaration[],
+  ) => LiveDecodedCountQuery;
 }
 
 /**
@@ -186,7 +200,21 @@ export interface LiveRowsCollection<Row> {
   row: LiveRowSchema<Row>;
   /** The row schema's keys — exactly the fields the server projects. */
   rowKeys: readonly (keyof Row & string)[];
+  /**
+   * Declared `exposes`: the entities whose extensions' exposed fields its rows
+   * carry under `$columns` — relation (`base`, or a declared lookup join's
+   * alias) → entity. `null` = none.
+   */
+  exposes: LiveExposes | null;
 }
+
+/**
+ * What a collection's rows reach: `base` (the collection's own entity) or the
+ * alias of a lookup join its server half declares → the entity it reads. Every
+ * extension exposing fields of one of those entities folds into the rows
+ * (`$columns[<slice>]`) — the collection names none of them.
+ */
+export type LiveExposes = Readonly<Record<string, EntityRef>>;
 
 /** A full collection: the point sibling plus a default window and groupings to list it by. */
 export interface LiveCollection<
@@ -265,9 +293,12 @@ export type LiveCollectionOf<
   Sc,
   Co,
   Cn = undefined,
+  Ex = undefined,
 > = (Co extends true
   ? LiveContributedCollection<Row, F, S>
-  : LiveCollection<Row, F, S>) &
+  : [Ex] extends [undefined]
+    ? LiveCollection<Row, F, S>
+    : LiveCollection<WithContributedColumns<Row>, F, S>) &
   (Sc extends true ? { scroll: true } : unknown) &
   (Cn extends true ? { count: LiveCountDescriptor<F> } : { count: null }) & {
     arms: null;
@@ -392,6 +423,15 @@ export interface LiveCollectionSpec<Row, F, S extends string> {
    * applies. Leave it off a large or write-hot table.
    */
   count?: true;
+  /**
+   * The entities its rows reach (see {@link LiveExposes}): every extension
+   * exposing fields of one of them folds into the rows under `$columns` (the
+   * row type becomes `Row & { $columns }`), and a query sorts, filters and
+   * groups by them under their wire names (`<slice>.<field>`). Its server half
+   * compiles at boot, once the `LiveColumns.Expose` contributions are
+   * collected.
+   */
+  exposes?: LiveExposes;
   /** A union collection is the `arms` overload's ({@link LiveArmsSpec}). */
   arms?: never;
   /** A whole ordered set is the `all` overload's ({@link LiveAllSpec}). */
@@ -413,13 +453,14 @@ export interface LiveArmsSpec<
   D extends string,
 > extends Omit<
   LiveCollectionSpec<Row, F, S>,
-  "scroll" | "contributed" | "columnScope" | "arms" | "count"
+  "scroll" | "contributed" | "columnScope" | "arms" | "count" | "exposes"
 > {
   /** The row field naming each row's arm (its value is the arm's kind). */
   arms: LiveArms<D>;
   scroll: true;
   contributed?: never;
   columnScope?: never;
+  exposes?: never;
   /** Not yet: a union's total would sum its arms' counts. */
   count?: never;
 }
@@ -461,6 +502,11 @@ export interface LiveNoWindowSpec<
   all?: Al;
   /** Only the whole set preloads. Default `"none"`. */
   preload?: [Al] extends [undefined] ? never : LivePreload;
+  /**
+   * Only the whole set reaches exposures (see {@link LiveExposes}): its rows
+   * carry them under `$columns`, compiled at boot like a window's.
+   */
+  exposes?: [Al] extends [undefined] ? never : LiveExposes;
   filterable?: never;
   sortable?: never;
   default?: never;
@@ -523,26 +569,32 @@ export function liveCollection<
   const Sc extends true | undefined = undefined,
   const Co extends true | undefined = undefined,
   const Cn extends true | undefined = undefined,
+  const Ex extends LiveExposes | undefined = undefined,
 >(
   key: string,
   spec: LiveCollectionSpec<Row, F, S> & {
     scroll?: Sc;
     contributed?: Co;
     count?: Cn;
+    exposes?: Ex;
     filterable: {
       [
         K in Exclude<keyof F, keyof Row> | Extract<keyof F, LiveReservedColumn>
       ]: never;
     };
   },
-): LiveCollectionOf<Row, F, S, Sc, Co, Cn>;
+): LiveCollectionOf<Row, F, S, Sc, Co, Cn, Ex>;
 export function liveCollection<
   Row,
   const Al extends LiveAllOrder<Row> | undefined = undefined,
+  const Ex extends LiveExposes | undefined = undefined,
 >(
   key: string,
-  spec: LiveNoWindowSpec<Row, Al>,
-): LiveNoWindowCollection<Row, Al>;
+  spec: LiveNoWindowSpec<Row, Al> & { exposes?: Ex },
+): LiveNoWindowCollection<
+  [Ex] extends [undefined] ? Row : WithContributedColumns<Row>,
+  Al
+>;
 export function liveCollection<Row, F, S extends string>(
   key: string,
   spec:
@@ -564,12 +616,14 @@ export function liveCollection<Row, F, S extends string>(
     const fail = (message: string): never => {
       throw new Error(`liveCollection("${key}"): ${message}`);
     };
-    const stray = (["contributed", "columnScope", "count"] as const).filter(
+    const stray = (
+      ["contributed", "columnScope", "count", "exposes"] as const
+    ).filter(
       (f) => (spec as unknown as Record<string, unknown>)[f] !== undefined,
     );
     if (stray.length > 0) {
       fail(
-        `${stray.join(", ")} beside \`arms\` — a union collection's columns are its arms' own (\`liveArmColumns\`), never contributed or scoped, and it has no total yet.`,
+        `${stray.join(", ")} beside \`arms\` — a union collection's columns are its arms' own (\`liveArmColumns\`), never contributed, scoped or exposed, and it has no total yet.`,
       );
     }
     if (spec.default === undefined) {
@@ -605,7 +659,7 @@ export function liveCollection<Row, F, S extends string>(
           `lookup-only collection has no window to list, sort, cap or preload.`,
       );
     }
-    return { ...rowsPart(key, spec), all: undefined };
+    return { ...rowsPart(key, spec, null), all: undefined };
   }
   return fullCollection(key, spec as LiveCollectionSpec<Row, F, S>);
 }
@@ -678,9 +732,13 @@ function allCollection<Row>(
     if (seen.has(field)) fail(`\`all.orderBy\` names "${field}" twice`);
     seen.add(field);
   }
+  // A set reaching exposures carries them under `$columns`, declared on the
+  // row schema like a window's (`rowKeys` stay the author's fields).
+  const exposes = checkExposes(key, spec.exposes);
+  const row = exposes === null ? spec.row : withColumnsSchema(key, spec.row);
   // Minted before `:rows`, as a window is (descriptor registration order).
   // `"none"` is the absence of the descriptor field.
-  const descriptor = allResourceDescriptor(key, spec.row, spec.id, {
+  const descriptor = allResourceDescriptor(key, row, spec.id, {
     all: {
       orderBy: Object.freeze(
         orderBy.map(([f, d]) => Object.freeze([f, d] as const)),
@@ -691,11 +749,54 @@ function allCollection<Row>(
       ? {}
       : { preload: spec.preload }),
   });
-  return { ...rowsPart(key, spec), all: descriptor };
+  return {
+    ...rowsPart(key, { row, id: spec.id }, exposes),
+    rowKeys: Object.keys(spec.row.shape) as (keyof Row & string)[],
+    all: descriptor,
+  };
 }
 
-/** The spec fields that only mean something beside `default`. */
+/** A relation of `exposes` is `base` or a join alias: a plain identifier. */
+const RELATION_RE = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+
+/**
+ * Check a declared `exposes` (see {@link LiveExposes}) — what no type states:
+ * an empty one, a relation that is no identifier, a value that is not an
+ * `EntityRef`, one entity reached through two relations (its exposures would
+ * fold twice under one slice).
+ */
+function checkExposes(
+  key: string,
+  exposes: LiveExposes | undefined,
+): LiveExposes | null {
+  if (exposes === undefined) return null;
+  const fail = (message: string): never => {
+    throw new Error(`liveCollection("${key}"): \`exposes\` ${message}`);
+  };
+  const entries = Object.entries(exposes);
+  if (entries.length === 0) fail("is empty — leave it out.");
+  const seen = new Map<string, string>();
+  for (const [relation, ref] of entries) {
+    if (!RELATION_RE.test(relation)) {
+      fail(`names relation "${relation}", which is not an identifier.`);
+    }
+    if (ref?.kind !== "entity") {
+      fail(`maps "${relation}" to a value that is not an EntityRef.`);
+    }
+    const other = seen.get(ref.name);
+    if (other !== undefined) {
+      fail(
+        `reaches entity "${ref.name}" through both "${other}" and "${relation}" — one entity, one relation (its exposures fold once).`,
+      );
+    }
+    seen.set(ref.name, relation);
+  }
+  return Object.freeze({ ...exposes });
+}
+
+/** The spec fields that only mean something beside `default` (or `all`). */
 const WINDOW_FIELDS: readonly string[] = [
+  "exposes",
   "filterable",
   "sortable",
   "maxLimit",
@@ -711,6 +812,7 @@ const WINDOW_FIELDS: readonly string[] = [
 function rowsPart<Row>(
   key: string,
   spec: { row: LiveRowSchema<Row>; id: keyof Row & string },
+  exposes: LiveExposes | null,
 ): LiveRowsCollection<Row> {
   return {
     key,
@@ -718,6 +820,7 @@ function rowsPart<Row>(
     id: spec.id,
     row: spec.row,
     rowKeys: Object.keys(spec.row.shape) as (keyof Row & string)[],
+    exposes,
   };
 }
 
@@ -735,12 +838,19 @@ function fullCollection<Row, F, S extends string>(
   }
   const contributed = spec.contributed === true;
   const arms: LiveArms | null = spec.arms ?? null;
+  const exposes = checkExposes(
+    key,
+    (spec as { exposes?: LiveExposes }).exposes,
+  );
   // A contributed collection's rows carry `$columns` beside the author's
   // fields: declared on the row schema (so every parse keeps it), never bound
   // to a column (the server folds the contributors' projections into it). A
-  // union's rows carry its arms' own columns the same way.
+  // union's rows carry its arms' own columns the same way, and a collection
+  // reaching exposures its exposed slices.
   const row =
-    contributed || arms !== null ? withColumnsSchema(key, spec.row) : spec.row;
+    contributed || arms !== null || exposes !== null
+      ? withColumnsSchema(key, spec.row)
+      : spec.row;
   const columnScope = spec.columnScope ?? null;
   if (columnScope !== null && columnScope.length === 0) {
     throw new Error(`liveCollection("${key}"): \`columnScope\` is empty`);
@@ -752,6 +862,7 @@ function fullCollection<Row, F, S extends string>(
     contributed,
     columnScope,
     arms: arms !== null,
+    exposes: exposes === null ? [] : Object.values(exposes).map((r) => r.name),
     // `LiveFilterable`'s keys are optional; a declared one always holds a column.
     filterable: spec.filterable as unknown as Filterable,
     sortable: spec.sortable,
@@ -813,7 +924,7 @@ function fullCollection<Row, F, S extends string>(
   // Minted after the window, as it always was (descriptor registration order).
   // `rowKeys` stay the author's fields: `$columns` is folded, never bound.
   const base = {
-    ...rowsPart(key, { row, id: spec.id }),
+    ...rowsPart(key, { row, id: spec.id }, exposes),
     rowKeys: Object.keys(spec.row.shape) as (keyof Row & string)[],
   };
   const groupCodec: LiveGroupCodec<F> = {
@@ -895,7 +1006,7 @@ function withColumnsSchema<Row>(
   const extend = (row as unknown as { extend?: unknown }).extend;
   if (typeof extend !== "function") {
     throw new Error(
-      `liveCollection("${key}"): a contributed or union collection's row must be a zod object`,
+      `liveCollection("${key}"): a contributed, union or exposing collection's row must be a zod object`,
     );
   }
   if (Object.hasOwn(row.shape, LIVE_COLUMNS_KEY)) {

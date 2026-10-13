@@ -185,7 +185,11 @@ export function planGroupArm<
 
   // NULL is its own group (sorted last among equal counts); the cluster's `C`
   // collation makes the value tiebreak code-point order, matching the filter
-  // language's `compareScalars`.
+  // language's `compareScalars`. The grouped value is named by its ORDINAL
+  // (`1`) in GROUP BY and ORDER BY, never rendered again: a column that is an
+  // expression with bound parameters (an exposed field's `COALESCE(col, $n)`)
+  // would render a new `$n` per copy, which Postgres reads as a different
+  // expression from the one selected.
   const query = ({ q, included }: GroupTuple): QueryStep<Row> => {
     let step: QueryStep<Row> = joins.apply(
       db
@@ -195,8 +199,8 @@ export function planGroupArm<
     );
     if (q.where) step = step.where(q.where);
     return step
-      .groupBy(q.column)
-      .orderBy(sql`count(*) DESC`, sql`${q.column} ASC NULLS LAST`)
+      .groupBy(sql`1`)
+      .orderBy(sql`count(*) DESC`, sql`1 ASC NULLS LAST`)
       .limit(q.limit);
   };
 

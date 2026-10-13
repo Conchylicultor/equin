@@ -313,7 +313,11 @@ async function checkAttempts(): Promise<number> {
 async function checkActiveConversations(): Promise<number> {
   return inParis(async (db, raw) => {
     const compiled = compileActiveConversations(db);
-    const full = (await compiled.all.loader({})) as Rec[];
+    const loaded = (await compiled.all.loader({})) as Rec[];
+    // The set reaches its task's exposures (`exposes`); none is served here,
+    // so every row's `$columns` is empty — the rest is the view's row.
+    expect(loaded.map((r) => r.$columns)).toEqual(loaded.map(() => ({})));
+    const full = loaded.map(({ $columns: _c, ...rest }) => rest as Rec);
     const view = (await raw.select().from(conversations)).filter(
       (c) => c.status !== "done" && c.kind !== "system",
     );
@@ -362,7 +366,7 @@ async function checkActiveConversations(): Promise<number> {
       { affectedIds: [...s, "conv-none"] },
     );
     expect(sortedById(scoped)).toEqual(
-      json(full)
+      json(loaded)
         .filter((r) => s.includes(String(r.id)))
         .sort(byId),
     );

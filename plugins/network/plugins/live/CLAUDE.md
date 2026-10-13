@@ -202,8 +202,10 @@ useLive(graphNodes, { select: countNodes });                          // a slice
     `point: { by: <id column> }` with no client filter.
   - `:groups` is a plain (non-keyed) push value per grouping tuple, compiled by
     query-resource's `compileGroupsQuery`: `SELECT col AS value, count(*) …
-    WHERE <base> AND <where> GROUP BY col ORDER BY count(*) DESC, col NULLS LAST
-    LIMIT n`. A write to the table recomputes every subscribed grouping tuple
+    WHERE <base> AND <where> GROUP BY 1 ORDER BY count(*) DESC, 1 NULLS LAST
+    LIMIT n` — the value named by its ordinal, so a column that is an
+    expression with bound parameters (an exposed field's `COALESCE(col,
+    $absent)`) renders once. A write to the table recomputes every subscribed grouping tuple
     (its `reach` plan: one `full` route on the table), a write to any other
     table reaches none, and push mode drops a byte-identical result. Each value
     is checked against the ROW schema's field (a group value is a stored value;
@@ -819,6 +821,55 @@ contributions: [LiveColumns.Serve(serveColumns(playbackColumns, { join: songPlay
 - **Custom columns** (data-view's user-defined columns) are the open-vocabulary
   twin of this seam: a *scoped* column set, below.
 
+## Exposed fields — `exposes` / `LiveColumns.Expose` / `exposedColumns`
+
+An entity extension declares, once, the fields it EXPOSES
+(`defineExtensionShape({ exposes: { parent, name, fields } })` —
+entity-extensions; each field's `label`, its `absent` value for a parent with
+no side row, its `options`). A collection declares the ENTITIES its rows reach
+— `liveCollection(key, { …, exposes: { base: conversationsEntityRef, task:
+tasksEntityRef } })`, `base` its own entity, any other key the alias of a
+LOOKUP join its server half declares — and every exposure of those entities
+folds in. Neither names the other (phase 1 of fields-declared-once,
+`research/2026-10-12-global-fields-declared-once-phase1.md`).
+
+- **Serve.** The extension's plugin contributes `LiveColumns.Expose(ext)`
+  (its handle; one exposing nothing is a tsc error). An `exposes` collection —
+  window or `all` — is DEFERRED and folds every reached exposure at
+  `bindDeferredResources` (`./server/internal/exposure-folds.ts`): `base` →
+  `ext.join(slice)` (alias route), a lookup `R` → `ext.join(slice, { on: R.on
+  })` (LEFT, `reverse` route probed through R's chain). Asserted at bind:
+  `base` is the collection's table, `R` a lookup over the entity's table whose
+  pk is the extension's parent key, no slice or field name collides (with a
+  row field or another set). An exposure no collection reaches is not an
+  error.
+- **Rows.** `$columns[<slice>][<field>]`, wire names `<slice>.<field>`
+  (`tasks_ext_track.track`); a missing side row reads `absent` (COALESCE). An
+  `all` set folds through `wire: { encodeRow, ids: { $columns:
+  "exposed:<sorted wire names>" } }`, so its L2 definition moves with the fold.
+- **Columns.** `exposedColumns(exposure)` (core, memoized per exposure) is the
+  column set, owner `{ kind: "exposed", entity }`: every field filterable in
+  the domain its TYPE reads in (text / enum → text, int / float / number →
+  number, date → instant, bool → boolean, tags → stringArray; any other type
+  throws), every one but a string array sortable; `.column(f)` a ref,
+  `.read(row)` the parsed slice. A codec takes it only on a collection whose
+  `exposes` reaches its entity.
+- **Groups and counts** read an exposed groupable column on the server:
+  `c.groups.groups.encode({ groupBy: "<slice>.<field>", columns })`, `{ count:
+  true, where, columns }`; the server decodes against the exposures it serves
+  (its `validateParams` replaces the descriptor's, as the window's does).
+- **Web.** `c.exposes` lists the reached entities. The extension's web barrel
+  contributes `LiveExposures.Register({ exposure: shape.exposure, present? })`
+  (`present[f]`: `cell(value)`, `width`, `align`), read by `useExposures()`;
+  data-view's `useExposedFields` turns every registered exposure a list's
+  collection reaches into its fields (id the bare field key), bound to their
+  exposed columns under a live source — groupable ones group as server
+  sections — or read off `$columns` over in-memory rows (`collection` prop).
+- **The `live:exposures-registered` check**: every exposing
+  `defineExtensionShape` is folded by its own plugin's server
+  (`LiveColumns.Expose(h)` of a `defineExtension` handle over it) and
+  registered by its own plugin's web (`LiveExposures.Register(…)` naming it).
+
 ## Scoped column sets — `columnScope` / `LiveColumns.Scoped` / `scopedLiveColumns`
 
 A collection declared with `columnScope: "<DataView id>"` sorts and filters by
@@ -1377,8 +1428,12 @@ never add one.
 
 ## Plugin reference
 
-- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); a scroll collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); a scroll collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; LiveExposures.Register registers an entity extension's exposed fields (with their cells) for every list whose collection reaches its entity, read by useExposures. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
 - Web:
+  - Slots: `LiveExposures.Register`
+  - Slot contributors:
+    - `LiveExposures.Register` ← `conversations.usage`
+    - `LiveExposures.Register` ← `tasks.task-track`
   - Uses:
     - `primitives/live-state.PagedResourceResult`
     - `primitives/live-state.ResourceDerivation`
@@ -1390,7 +1445,9 @@ never add one.
     - `primitives/live-state.useResources`
     - `primitives/log-channels.clientLog`
   - Exports (types):
+    - `ExposedFieldPresentation`
     - `LiveAllSelect`
+    - `LiveExposureRegistration`
     - `LiveIdsQuery`
     - `LiveListResult`
     - `LivePageError`
@@ -1403,8 +1460,10 @@ never add one.
     - `PagesTruncation`
     - `VisibleRange`
   - Exports (values):
+    - `LiveExposures`
     - `mapRow`
     - `mintVisibleRange`
+    - `useExposures`
     - `useLive`
     - `useLiveRow`
 - Server:
@@ -1507,6 +1566,8 @@ never add one.
     - `LiveDecodedCountQuery`
     - `LiveDecodedGroupQuery`
     - `LiveDecodedQuery`
+    - `LiveExposedColumns`
+    - `LiveExposes`
     - `LiveFilterable`
     - `LiveFilterableOf`
     - `LiveGroup`
@@ -1570,6 +1631,7 @@ never add one.
     - `ScopedColumnMember`
     - `WithContributedColumns`
   - Exports (values):
+    - `exposedColumns`
     - `isPointId`
     - `LIVE_COLUMNS_KEY`
     - `LIVE_QUERY_MAX_BYTES`

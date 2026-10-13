@@ -10,30 +10,37 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { QueueData } from "../core";
 
 /** A live conversation carrying its resolved queue rank and pin. */
-export type RankedConversation = Conversation & { rank: Rank; pinned: boolean };
+export type RankedConversation<C extends Conversation = Conversation> = C & {
+  rank: Rank;
+  pinned: boolean;
+};
 
 /** A task-group: every ranked conversation sharing a `taskId`, sharing one rank. */
-export type TaskGroup = {
+export type TaskGroup<C extends Conversation = Conversation> = {
   taskId: string;
-  selected: RankedConversation;
-  members: RankedConversation[];
+  selected: RankedConversation<C>;
+  members: RankedConversation<C>[];
   count: number;
 };
 
-/** The settled classification of the queue, partitioned into read-time sections. */
-export interface ClassifiedQueue {
-  pinnedGroups: TaskGroup[];
-  waitingGroups: TaskGroup[];
-  workingGroups: TaskGroup[];
+/**
+ * The settled classification of the queue, partitioned into read-time sections.
+ * `C` is the conversation row as read (with whatever it carries beside the
+ * conversation — its exposed `$columns`), handed back as is.
+ */
+export interface ClassifiedQueue<C extends Conversation = Conversation> {
+  pinnedGroups: TaskGroup<C>[];
+  waitingGroups: TaskGroup<C>[];
+  workingGroups: TaskGroup<C>[];
   /**
    * Running conversations with no queue rank yet (a fresh launch before its
    * rank is seeded, or one whose seed never ran). Still Working: the section
    * answers "what is running right now", which does not depend on a rank.
    */
-  workingUnranked: Conversation[];
+  workingUnranked: C[];
   allWaitingCount: number;
   blockedIds: Set<string>;
-  unranked: Conversation[];
+  unranked: C[];
   /**
    * Live conversations nothing launched: sessions main found running and
    * adopted (`isAdoptedConversation`) — typically an agent's own
@@ -41,9 +48,9 @@ export interface ClassifiedQueue {
    * whatever their rank or status, so they are visible without passing for
    * the user's work.
    */
-  lost: Conversation[];
-  disconnected: Conversation[];
-  recentGone: Conversation[];
+  lost: C[];
+  disconnected: C[];
+  recentGone: C[];
 }
 
 /**
@@ -59,20 +66,20 @@ export interface ClassifiedQueue {
  * Kept free of React and of the DataView so the partitioning stays testable and
  * reusable by any presentation of the queue.
  */
-export function classifyQueue(data: {
-  active: Conversation[];
-  gone: Conversation[];
+export function classifyQueue<C extends Conversation>(data: {
+  active: C[];
+  gone: C[];
   queue: QueueData;
   tasks: TaskListItem[];
-}): ClassifiedQueue {
+}): ClassifiedQueue<C> {
   const { active, gone, queue, tasks } = data;
   const ranks = new Map(queue.ranks.map((r) => [r.conversationId, r]));
   const taskStatusMap = new Map(tasks.map((t) => [t.id, t.status]));
-  const ranked: RankedConversation[] = [];
+  const ranked: RankedConversation<C>[] = [];
   const blocked = new Set<string>();
-  const noRank: Conversation[] = [];
-  const workingNoRank: Conversation[] = [];
-  const lost: Conversation[] = [];
+  const noRank: C[] = [];
+  const workingNoRank: C[] = [];
+  const lost: C[] = [];
 
   for (const c of active) {
     if (
@@ -104,16 +111,16 @@ export function classifyQueue(data: {
   ranked.sort((a, b) => Rank.compare(a.rank, b.rank));
 
   // Group by taskId
-  const taskMap = new Map<string, RankedConversation[]>();
+  const taskMap = new Map<string, RankedConversation<C>[]>();
   for (const conv of ranked) {
     const list = taskMap.get(conv.taskId);
     if (list) list.push(conv);
     else taskMap.set(conv.taskId, [conv]);
   }
 
-  const pinnedWaiting: TaskGroup[] = [];
-  const waiting: TaskGroup[] = [];
-  const working: TaskGroup[] = [];
+  const pinnedWaiting: TaskGroup<C>[] = [];
+  const waiting: TaskGroup<C>[] = [];
+  const working: TaskGroup<C>[] = [];
   let waitingCount = 0;
   for (const [taskId, members] of taskMap) {
     if (members.length === 0) continue;
@@ -124,7 +131,7 @@ export function classifyQueue(data: {
       b.createdAt > a.createdAt ? b : a,
     );
     const selected = workingMember ?? mostRecent;
-    const group: TaskGroup = {
+    const group: TaskGroup<C> = {
       taskId,
       selected,
       members,
@@ -139,7 +146,7 @@ export function classifyQueue(data: {
       waitingCount += members.filter((m) => m.status === "waiting").length;
     }
   }
-  const byRank = (a: TaskGroup, b: TaskGroup): number =>
+  const byRank = (a: TaskGroup<C>, b: TaskGroup<C>): number =>
     Rank.compare(a.selected.rank, b.selected.rank);
   pinnedWaiting.sort(byRank);
   waiting.sort(byRank);

@@ -4,18 +4,13 @@
 
 ## Plugin reference
 
-- Description: Cost, Tokens and Agents fields on the conversation lists (All-conversations, sidebar History), bound to the lists' `usage` columns so they sort and filter server-side. Per-conversation usage — cost, tokens and launched sub-agents — counted incrementally from the transcripts (the anchored session chain plus every sub-agent), stored in conversations_ext_usage and served as the conversation lists' `usage` columns.
+- Description: Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side. Per-conversation usage — cost, tokens and launched sub-agents — counted incrementally from the transcripts (the anchored session chain plus every sub-agent), stored in conversations_ext_usage and exposed to every conversation list (LiveColumns.Expose).
 - Web:
-  - Contributes:
-    - `AllConversationsFields` "usage" → `AllConversationsUsageFields`
-    - `HistoryFields` "usage" → `HistoryUsageFields`
-  - Uses:
-    - `conversations/all-conversations.AllConversationsFields`
-    - `conversations/conversations-view/data-view/history.HistoryFields`
+  - Contributes: `LiveExposures.Register` "conversations_ext_usage"
+  - Uses: `network/live.LiveExposures`
 - Server:
   - Contributes:
-    - `live.columns.serve` "conversations.all ← usage"
-    - `live.columns.serve` "conversations.history ← usage"
+    - `live.columns.expose` "conversations ← conversations_ext_usage"
     - `change-feed-exclusion` "conversation_usage_files"
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/subagents.listSubagentEntries`
@@ -32,7 +27,6 @@
     - `infra/paths.isHostSingleton`
     - `infra/warmup.defineWarmup`
     - `network/live.LiveColumns`
-    - `network/live.serveColumns`
     - `stats/cost.currentPriceTable`
     - `stats/cost.onPriceTableUpdated`
     - `tasks/tasks-core._conversations`

@@ -41,11 +41,14 @@ The track is decided per filing and is NOT inherited by subtasks (it is not a
 
 ## Plugin reference
 
-- Description: Per-task track (main | sidequest): the track badge, a `track` enum field in the tasks DataView (badge cell, groupable, filterable), and the clickable Track control the task detail header renders to switch it. Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (the whole set for the task list, point reads for one task), and the endpoint that switches a task's track, and the tasks.trackChanged trigger event every track write emits.
+- Description: Per-task track (main | sidequest): the track badge, a `track` enum field in the tasks DataView (badge cell, groupable, filterable), the clickable Track control the task detail header renders to switch it, and the exposed `track` field of every list whose rows reach a task. Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (the whole set for the task list, point reads for one task), the endpoint that switches a task's track, the tasks.trackChanged trigger event every track write emits, and the track exposed to every list whose rows reach a task (LiveColumns.Expose).
 - Web:
-  - Contributes: `Tasks.Fields` "track" → `TrackField`
+  - Contributes:
+    - `Tasks.Fields` "track" → `TrackField`
+    - `LiveExposures.Register` "tasks_ext_track"
   - Uses:
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.LiveExposures`
     - `network/live.mapRow`
     - `network/live.useLive`
     - `network/live.useLiveRow`
@@ -63,12 +66,14 @@ The track is decided per filing and is NOT inherited by subtasks (it is not a
   - Contributes:
     - `resource.declare` "task-tracks.all"
     - `resource.declare` "task-tracks.all:rows"
+    - `live.columns.expose` "tasks ← tasks_ext_track"
   - Uses:
     - `database.db`
     - `database.DbExecutor`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
     - `infra/events.defineTriggerEvent`
+    - `network/live.LiveColumns`
     - `network/live.serveCollection`
     - `tasks/tasks-core._tasks`
     - `tasks/tasks-core.TaskStatus`

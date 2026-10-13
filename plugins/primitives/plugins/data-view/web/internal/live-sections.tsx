@@ -168,10 +168,12 @@ export function GroupsRead(props: {
   source: LiveDataSource<unknown>;
   column: string;
   where: Filter | undefined;
+  /** The exposed column sets the grouped column and `where` name (by wire name). */
+  columns: readonly LiveColumnsDeclaration[];
   readKey: string;
   onResult: (readKey: string, result: GroupsResult) => void;
 }): ReactNode {
-  const { source, column, where, readKey, onResult } = props;
+  const { source, column, where, columns, readKey, onResult } = props;
   const collection = source.collection as unknown as GroupsCollection;
   const read = useLive(collection, {
     groupBy: column,
@@ -179,6 +181,7 @@ export function GroupsRead(props: {
       ? {}
       : { where: where as LiveWhere<Record<string, { domain: "text" }>> }),
     limit: collection.groups.groups.maxLimit,
+    ...(columns.length > 0 ? { columns } : {}),
   });
   useEffect(() => onResult(readKey, read), [onResult, readKey, read]);
   return null;

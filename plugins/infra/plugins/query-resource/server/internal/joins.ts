@@ -25,11 +25,19 @@ import {
 } from "drizzle-orm/pg-core";
 import type { CompiledRollupSource } from "@plugins/database/plugins/derived-tables/core";
 import type { DerivedRead } from "@plugins/framework/plugins/resource-runtime/core";
+import { z } from "zod";
+import { columnSchema } from "@plugins/database/plugins/sql-column/server";
+import {
+  parsed,
+  type SqlDecoderLike,
+} from "@plugins/database/plugins/sql-projection/server";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   BASE_RELATION,
   familyMember,
   type ColumnRef,
   type ExprField,
+  type ExtensionJoin,
   type JoinFamily,
   type JoinSpec,
   type KeyedSideJoin,
@@ -403,6 +411,46 @@ function literalDefault(col: PgColumn): string | number | boolean | undefined {
 }
 
 /**
+ * What an extension column reads where the side row is missing, as the
+ * COALESCE's second operand and the decoder the read maps with — or
+ * `undefined` (read the raw column: NULL for a missing row).
+ *
+ * - A declared `absent` (an exposing extension's) wins: `null` reads NULL; a
+ *   literal is bound PLAIN (`sql.param(value)`), never through the column's
+ *   write encoder — an `absent` is a value the side table never stores (track's
+ *   `"main"`), which a decoding column (`parsedText` over the stored
+ *   `["sidequest"]`) would refuse. For the same reason such a column decodes
+ *   the read through its schema widened by the literal (`parsed`, so a
+ *   persisted compile's definition still reads it as data).
+ * - Else the column's literal DB default, bound through the column (unchanged).
+ */
+function missingRowRead(
+  spec: ExtensionJoin,
+  key: string,
+  col: PgColumn,
+): { param: SQL; decoder: SqlDecoderLike | undefined } | undefined {
+  if (spec.absent !== undefined && Object.hasOwn(spec.absent, key)) {
+    const value = spec.absent[key]!;
+    if (value === null) return undefined;
+    const schema = columnSchema(col) as z.ZodTypeAny | undefined;
+    const widened =
+      schema === undefined || schema.safeParse(value).success
+        ? undefined
+        : parsed(
+            z.union([schema, z.literal(value)]) as ZodParser<
+              NonNullable<unknown>
+            >,
+            `${spec.alias}.${col.name} (absent ${JSON.stringify(value)})`,
+          );
+    return { param: sql`${sql.param(value)}`, decoder: widened };
+  }
+  const fallback = literalDefault(col);
+  return fallback === undefined
+    ? undefined
+    : { param: sql`${sql.param(fallback, col)}`, decoder: undefined };
+}
+
+/**
  * The key of `select` projecting `col` (same relation, same column), or
  * undefined. A join column never matches a base column of the same name.
  */
@@ -592,12 +640,16 @@ function compilePlan(
     }
     const col = renderRaw(join, key);
     const fallback =
-      join.spec.kind === "extension" ? literalDefault(ref.col) : undefined;
+      join.spec.kind === "extension"
+        ? missingRowRead(join.spec, key, ref.col)
+        : undefined;
     if (fallback === undefined) return col;
     const cacheKey = `${ref.from}\u0000${key}`;
     let expr = defaultedCache.get(cacheKey);
     if (expr === undefined) {
-      expr = sql`COALESCE(${col}, ${sql.param(fallback, col)})`.mapWith(col);
+      expr = sql`COALESCE(${col}, ${fallback.param})`.mapWith(
+        fallback.decoder ?? col,
+      );
       defaultedCache.set(cacheKey, expr);
       readExpressions.set(expr, {
         kind: "column",
@@ -692,6 +744,35 @@ function compilePlan(
     };
     switch (spec.kind) {
       case "extension": {
+        if (spec.on !== undefined) {
+          // A RELATED host's extension: keyed on a column of the base or an
+          // earlier join, checked like a lookup's `on`.
+          const on = spec.on;
+          if (on.from !== BASE_RELATION && !byAlias.has(on.from)) {
+            fail(
+              `extension join "${alias}": its \`on\` names "${on.from}", which is not the base or a join declared before it (A4).`,
+            );
+          }
+          if (on.from === alias) {
+            fail(
+              `extension join "${alias}": its \`on\` names the join itself (A4).`,
+            );
+          }
+          if (primaryOf(spec.table) !== spec.key) {
+            fail(
+              `extension join "${alias}": its key "${spec.key.name}" is not the single-column primary key of "${getTableName(spec.table)}" — an extension is 1:1 with its parent (A4).`,
+            );
+          }
+          const onCol = rawRender(on);
+          if (onCol.getSQLType() !== spec.key.getSQLType()) {
+            fail(
+              `extension join "${alias}": its \`on\` "${onCol.name}" is ${onCol.getSQLType()}, but its key "${spec.key.name}" is ${spec.key.getSQLType()} — join on a column naming the parent's id (A4).`,
+            );
+          }
+          pending.parent = on.from === BASE_RELATION ? null : on.from;
+          pending.on = eq(own(spec.key, "key"), onCol);
+          break;
+        }
         if (spec.parentKey.table !== base.table) {
           fail(
             `extension join "${alias}" hangs off table "${getTableName(spec.parentKey.table)}", not the base "${baseName}" — an extension is joined onto its own parent (A4).`,
@@ -1439,12 +1520,22 @@ function reverseMap(
   host: JoinRouteHost,
 ): Extract<RawHostMap, { kind: "reverse" | "full" }> {
   const spec = join.spec;
-  if (spec.kind !== "lookup") {
-    throw new Error(`reverseMap: join "${join.alias}" is not a lookup`);
+  // A lookup, or a related host's extension (`on` set): both are keyed on a
+  // column of the joined table (`pk` / `key`) matched by a host-side `on`.
+  const keyed =
+    spec.kind === "lookup"
+      ? { table: spec.table, pk: spec.pk, on: spec.on }
+      : spec.kind === "extension" && spec.on !== undefined
+        ? { table: spec.table, pk: spec.key, on: spec.on }
+        : undefined;
+  if (keyed === undefined) {
+    throw new Error(
+      `reverseMap: join "${join.alias}" is neither a lookup nor an extension keyed by \`on\``,
+    );
   }
   const { plan } = host;
-  const table = getTableName(spec.table);
-  const chain = chainOf(plan, spec.on);
+  const table = getTableName(keyed.table);
+  const chain = chainOf(plan, keyed.on);
   for (const alias of chain) {
     const hop = plan.joins.find((j) => j.alias === alias)!;
     if (getTableName(hop.table) === table) {
@@ -1454,13 +1545,15 @@ function reverseMap(
       };
     }
   }
-  const on = plan.columnOf(plan.render(spec.on));
+  const on = plan.columnOf(plan.render(keyed.on));
   return {
     kind: "reverse",
     // On the changed table's own PK the changed values ARE `change.ids`, so no
     // key need be carried (the rule `joinRoute`'s alias arm applies); a lookup
     // on a UNIQUE non-PK column (A4) reads that column off the carried keys.
-    ...(tablePrimary(spec.table) === spec.pk ? {} : { column: spec.pk.name }),
+    ...(tablePrimary(keyed.table) === keyed.pk
+      ? {}
+      : { column: keyed.pk.name }),
     resolve: async (changed, within, cap) => {
       if (changed.length === 0 || (within !== null && within.size === 0)) {
         return [];
@@ -1497,6 +1590,14 @@ function joinRoute(
   const base = { id: join.alias, table: getTableName(spec.table), columns };
   switch (spec.kind) {
     case "extension":
+      // A related host's extension (`on` not the host identity) is resolved
+      // in the drain like a lookup (see `reverseMap`).
+      if (
+        spec.on !== undefined &&
+        !(spec.on.from === BASE_RELATION && spec.on.col === host.pk)
+      ) {
+        return { ...base, map: reverseMap(join, host) };
+      }
       // The key IS the side table's primary key (checked): its ids are host ids.
       return { ...base, map: { kind: "alias" } };
     case "lookup": {

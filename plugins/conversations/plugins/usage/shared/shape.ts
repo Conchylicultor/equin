@@ -1,6 +1,7 @@
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
+import { conversationsEntityRef } from "@plugins/tasks/plugins/tasks-core/core";
 
 /**
  * One conversation's usage totals — the conversation's own transcripts (every
@@ -16,6 +17,11 @@ import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/c
  *
  * Token counts are floats (double precision), not ints: a long workflow's cache
  * reads pass the 32-bit integer range.
+ *
+ * Cost, tokens and agents are EXPOSED to every list whose rows are
+ * conversations (`exposes`, `base`): each sorts and filters them server-side,
+ * and a conversation not counted yet reads 0 (the table's defaults agree —
+ * `defineExtension` asserts it).
  */
 export const conversationUsageShape = defineExtensionShape({
   key: "conversationId",
@@ -24,5 +30,14 @@ export const conversationUsageShape = defineExtensionShape({
     tokens: floatField(),
     cacheReadTokens: floatField(),
     agentCount: intField(),
+  },
+  exposes: {
+    parent: conversationsEntityRef,
+    name: "usage",
+    fields: {
+      costUsd: { label: "Cost", absent: 0 },
+      tokens: { label: "Tokens", absent: 0 },
+      agentCount: { label: "Agents", absent: 0 },
+    },
   },
 });

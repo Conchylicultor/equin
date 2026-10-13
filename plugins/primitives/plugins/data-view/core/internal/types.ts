@@ -6,7 +6,10 @@ import type {
   FilterDomainId,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/core";
-import type { LiveColumnRef } from "@plugins/network/plugins/live/core";
+import type {
+  LiveColumnRef,
+  LiveRowsCollection,
+} from "@plugins/network/plugins/live/core";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
 import type {
@@ -1284,8 +1287,21 @@ export interface DataViewInMemoryOrigin<
    * collection's is a live `source` instead.
    */
   paging?: DataViewPaging<TRow>;
+  /**
+   * The live collection the rows come from, when they are one's (the Queue's
+   * `conversationsActive`, merged in memory with other reads): every field an
+   * entity extension exposes for an entity its `exposes` reaches joins the
+   * schema, read off the rows' `$columns` (`network/live`, "Exposed fields").
+   */
+  collection?: DataViewRowsCollection;
   source?: never;
 }
+
+/** What an in-memory DataView needs of the collection its rows come from. */
+export type DataViewRowsCollection = Pick<
+  LiveRowsCollection<unknown>,
+  "key" | "exposes"
+>;
 
 /** See {@link DataViewRenderProps.rowsComplete}. */
 export type DataViewRowsComplete<TRow> =
@@ -1425,6 +1441,7 @@ export interface DataViewPaging<TRow> {
 export interface DataViewLiveOrigin<TRow> {
   source: LiveDataSource<TRow>;
   rows?: never;
+  collection?: never;
   readiness?: never;
   paging?: never;
   rowKey?: never;

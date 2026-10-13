@@ -9,7 +9,6 @@ import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/she
 import {
   DataView,
   defineDataView,
-  defineFieldExtensions,
   liveDataSource,
 } from "@plugins/primitives/plugins/data-view/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -32,14 +31,6 @@ const allConversationsSource = liveDataSource(allConversations, {
   searchable: CONVERSATION_SEARCHABLE,
 });
 
-/**
- * Fields other plugins add to the All-conversations list — typically bound to
- * their contributed columns of `conversations.all` (read off `$columns`), so
- * the list sorts and filters by them server-side.
- */
-export const AllConversationsFields =
-  defineFieldExtensions<ConversationListLiveRow>();
-
 export const allConversationsPane = Pane.define({
   route: defineRoute({
     id: "all-conversations",
@@ -60,7 +51,6 @@ function AllConversationsView(): ReactElement {
       <DataView<ConversationListLiveRow>
         storageKey={ALL_CONVERSATIONS_VIEW}
         fields={fields}
-        fieldExtensions={AllConversationsFields}
         views={["table", "list"]}
         source={allConversationsSource}
         rowActivation={(c) =>

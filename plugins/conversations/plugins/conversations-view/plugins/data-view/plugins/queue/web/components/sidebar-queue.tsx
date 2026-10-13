@@ -1,5 +1,6 @@
 import { type ReactElement } from "react";
 import type { DataViewSourceProps } from "@plugins/primitives/plugins/data-view/web";
+import { conversationsActive } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   SidebarConversationItem,
   type ConversationSidebarProps,
@@ -34,6 +35,11 @@ export function QueueSource({
     <CloseConversationContext.Provider value={onCloseConversation}>
       {render<QueueRow>({
         rows,
+        // The rows are `conversationsActive`'s (and `conversationsGone`'s,
+        // which reaches the same entities): every field an extension of what
+        // they reach exposes — a task's track — joins the schema, filtered
+        // and grouped in memory.
+        collection: conversationsActive,
         fields,
         rowKey: (c) => c.id,
         readiness,

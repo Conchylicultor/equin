@@ -94,6 +94,7 @@ drizzle):
 | Kind | Join | Route |
 |---|---|---|
 | `extension` — a 1:1 side table (`infra/entity-extensions`' `ext.join(alias)`) | LEFT, `key = parentKey` (the host id) | `alias` on the side table's pk: a side I / U / D is a host U |
+| `extension` with `on` — a RELATED entity's side table (`ext.join(alias, { on })`, `on` a column of the base or an earlier join naming the parent's id) | LEFT, `key = on` | `reverse` on the side table's pk, probed through `on`'s chain like a lookup (A10 applies) |
 | `lookup` — N:1 on `pk`, `on` a column of the base or an EARLIER join (chainable) | INNER when `required`, else LEFT | `reverse` on `pk` (see *Reverse routes*), or `alias` when `on` is the host identity |
 | `keyed-side` — a composite-keyed side table (`hostKey` + fixed `selectors` covering its pk) | LEFT, on the host identity (compared as `hostKey`'s type) | `alias` on `hostKey`, `rows` = the selectors — scoped on the routed trigger's key layout |
 
@@ -156,7 +157,14 @@ drizzle):
   plan's rendered columns still reads them). A join CONDITION always compares the
   raw stored key, and a static predicate's `j` (`JoinPlan.columns()`) offers the
   raw columns — a predicate states its own NULL handling. A computed default
-  (`defaultNow()`, SQL) is never coalesced.
+  (`defaultNow()`, SQL) is never coalesced. An extension join's `absent`
+  (an exposing extension's — `exposure.fields[f].absent`) overrides the
+  default per column: `null` reads the raw column, a literal is bound PLAIN
+  (`sql.param(value)`, never the column's write encoder — track's `"main"` is
+  a value the side table never stores), and a decoding column whose schema
+  refuses the literal (`parsedText` over `["sidequest"]`) reads through
+  `parsed(z.union([schema, z.literal(value)]))`, so a persisted compile's
+  definition still reads the decoder as data.
 - `QueryDb`'s step gains `leftJoin` / `innerJoin`; `server/testing`'s
   `recordingQueryDb` is the fake that renders every query through drizzle's real
   dialect.
@@ -868,6 +876,7 @@ importing `db` never touches a worktree — no test env shim needed.
     - `database/sql-projection.decodedRow`
     - `database/sql-projection.decoderOrigin`
     - `database/sql-projection.nullable`
+    - `database/sql-projection.parsed`
     - `database/sql-projection.SqlDecoderLike`
     - `primitives/keyset.atOrBeforePredicate`
     - `primitives/keyset.orderByClauses`

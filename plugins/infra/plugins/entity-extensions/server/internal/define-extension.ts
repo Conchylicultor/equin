@@ -20,9 +20,13 @@ import {
 } from "@plugins/infra/plugins/entities/server";
 import type {
   AnyExtensionShape,
+  EntityExposure,
   ExtensionTimestamp,
 } from "@plugins/infra/plugins/entity-extensions/core";
-import type { ExtensionJoin } from "@plugins/infra/plugins/query-resource/core";
+import type {
+  ColumnRef,
+  ExtensionJoin,
+} from "@plugins/infra/plugins/query-resource/core";
 import { extensionIndexName } from "./index-names";
 
 type ParentTable = PgTable & { id: AnyPgColumn };
@@ -92,9 +96,14 @@ export interface EntityExtension<
   F extends FieldsRecord,
   D extends keyof F = never,
   S extends keyof F = never,
+  E extends EntityExposure | null = EntityExposure | null,
 > extends Entity<F, D, S> {
   // The parent key's name: the key column's JS property and the wire field.
   readonly key: K;
+  // The fields this extension exposes to every list reaching its parent — the
+  // shape's own `exposure` (same object), `null` when it exposes none.
+  // `network/live`'s `LiveColumns.Expose(ext)` serves it.
+  readonly exposure: E;
   // The full row, server-only columns included.
   //
   // Every accessor takes an optional executor (the pool by default): a caller
@@ -128,8 +137,15 @@ export interface EntityExtension<
   // refills its host row. `alias` names it in the collection's column
   // overrides (`(j) => j.playback.lastPlayedAt`), which offer only its
   // `wireColumns` — never a server-only column (by default the timestamps).
+  //
+  // `on` joins it onto a RELATED host instead (`{ from: "attempt", col:
+  // attempts.taskId }` — a column of an earlier join naming the parent's id):
+  // LEFT on that column, routed `reverse` like a lookup (a side row's write
+  // reaches the hosts whose `on` names its parent). An exposing extension's
+  // join reads each exposed field's `absent` where the side row is missing.
   join<A extends string>(
     alias: A,
+    opts?: { on: ColumnRef },
   ): ExtensionJoin<A, ExtensionTable<F, D>> & {
     wireColumns: Entity<F, D, S>["wireColumns"];
   };
@@ -143,7 +159,8 @@ type ExtensionOf<
   Sh["key"],
   Sh["fields"],
   ExtensionDefaultedKeys<Sh, M>,
-  Sh["serverOnly"][number]
+  Sh["serverOnly"][number],
+  Sh["exposure"]
 >;
 
 // Define a `<parent>_ext_<name>` 1:1 side-table from a shape
@@ -172,6 +189,10 @@ export function defineExtension<
 ): ExtensionOf<Sh, M> {
   const tableName = `${getTableName(parentTable)}_ext_${name}`;
   const { key } = shape;
+  const exposure = shape.exposure;
+  if (exposure !== null) {
+    assertExposure(exposure, tableName, getTableName(parentTable), name, meta);
+  }
 
   const builders: ExtensionIndexBuilders = {
     index: (suffix) => index(extensionIndexName(tableName, suffix)),
@@ -285,7 +306,8 @@ export function defineExtension<
     async delete(id: string, exec: DbExecutor = db): Promise<void> {
       await exec.delete(table).where(eq(keyColumn, id));
     },
-    join(alias: string): ExtensionJoin {
+    exposure,
+    join(alias: string, opts?: { on: ColumnRef }): ExtensionJoin {
       return {
         kind: "extension",
         alias,
@@ -293,7 +315,75 @@ export function defineExtension<
         key: keyColumn,
         parentKey: parentTable.id,
         wireColumns: entity.wireColumns,
+        ...(opts === undefined ? {} : { on: opts.on }),
+        ...(exposure === null
+          ? {}
+          : {
+              absent: Object.fromEntries(
+                Object.entries(exposure.fields).map(([f, x]) => [f, x.absent]),
+              ),
+            }),
       };
     },
   }) as unknown as ExtensionOf<Sh, M>;
+}
+
+// An exposure names its extension by data the browser declared (`parent`,
+// `name`, so `slice`), which must be THIS table — and an exposed field's
+// `absent` is what a parent with no side row reads in every list, so a literal
+// DB default that disagrees would make "no row" and "a defaulted row" read two
+// different values.
+function assertExposure<Sh extends AnyExtensionShape>(
+  exposure: EntityExposure,
+  tableName: string,
+  parentName: string,
+  name: string,
+  meta: ExtensionMeta<Sh>,
+): void {
+  const fail = (message: string): never => {
+    throw new Error(`defineExtension("${tableName}"): ${message}`);
+  };
+  if (exposure.parent.name !== parentName) {
+    fail(
+      `its shape exposes to entity "${exposure.parent.name}", but its parent table is "${parentName}" — \`exposes.parent\` names the parent.`,
+    );
+  }
+  if (exposure.name !== name) {
+    fail(
+      `its shape's \`exposes.name\` is "${exposure.name}", but it is defined as "${name}".`,
+    );
+  }
+  if (exposure.slice !== tableName) {
+    fail(
+      `its exposure's slice "${exposure.slice}" is not its table name — the slice names the table it is read from.`,
+    );
+  }
+  const columns = (meta.columns ?? {}) as Record<
+    string,
+    { default?: unknown } | undefined
+  >;
+  for (const [f, field] of Object.entries(exposure.fields)) {
+    const declared = columns[f]?.default;
+    const literal = literalDefaultOf(declared);
+    if (literal.kind === "literal" && literal.value !== field.absent) {
+      fail(
+        `exposed field "${f}" reads ${JSON.stringify(field.absent)} where the side row is missing, but its column defaults to ${JSON.stringify(literal.value)} — a missing row and a defaulted one must read the same value.`,
+      );
+    }
+  }
+}
+
+// A column meta's `default` as a literal, when it is one (a bare value or
+// `{ kind: "literal" }`); a computed default (`now`, SQL) is not.
+function literalDefaultOf(
+  declared: unknown,
+): { kind: "literal"; value: unknown } | { kind: "none" } {
+  if (declared === undefined) return { kind: "none" };
+  if (typeof declared === "object" && declared !== null && "kind" in declared) {
+    const d = declared as { kind: string; value?: unknown };
+    return d.kind === "literal"
+      ? { kind: "literal", value: d.value }
+      : { kind: "none" };
+  }
+  return { kind: "literal", value: declared };
 }

@@ -252,7 +252,10 @@ so a stray `defineEntity(` outside a schema-glob file is flagged.
     - `sqlDefault`
 - Core:
   - Uses: `fields.fieldsToZodObject`
-  - Exports (values): `wireSchema`
+  - Exports (types): `EntityRef`
+  - Exports (values):
+    - `entityRef`
+    - `wireSchema`
 - Cross-plugin:
   - Imported by:
     - `apps/browser/bookmarks`

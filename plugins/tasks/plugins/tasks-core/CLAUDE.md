@@ -438,6 +438,7 @@ serves them.
     - `fields/text/config.enumTextField`
     - `fields/text/config.parsedTextField`
     - `fields/text/config.textField`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `network/live/filter.liveText`
     - `primitives/pane.defineRoute`
@@ -460,6 +461,7 @@ serves them.
     - `ADOPTED_SPAWNED_BY`
     - `attemptRows`
     - `AttemptSchema`
+    - `attemptsEntityRef`
     - `AttemptStatusSchema`
     - `BLOCKED_STATUSES`
     - `buildTaskPrompt`
@@ -468,6 +470,7 @@ serves them.
     - `conversationsActive`
     - `conversationsById`
     - `ConversationSchema`
+    - `conversationsEntityRef`
     - `conversationsGone`
     - `conversationsSystem`
     - `ConversationStatusSchema`
@@ -486,6 +489,7 @@ serves them.
     - `TaskGraph`
     - `taskRows`
     - `TaskSchema`
+    - `tasksEntityRef`
     - `tasksRootRoute`
     - `TaskStatusSchema`
     - `TRAILER_LOG_FORMAT`

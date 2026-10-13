@@ -7,6 +7,7 @@ import {
   ConversationSchema,
 } from "./internal/schema";
 import { AttemptWithConversationsSchema } from "./schemas";
+import { tasksEntityRef } from "./entity-refs";
 
 // The `conversations-gone` window's default size (the newest ended
 // conversations the queue's Done section and the welcome recents show).
@@ -147,6 +148,16 @@ export const pushRows = liveCollection("pushes", {
 //
 // Boot-critical (`preload: "boot"`): the queue and the welcome view paint from
 // the boot snapshot.
+//
+// Both queue reads (`conversations-active`, `conversations-gone`) reach their
+// TASK (`exposes`, over the owner joins' `task` lookup): every field a task
+// extension exposes (its track) rides each row under `$columns`, so the Queue
+// filters and groups by it in memory with no list code. The conversation's own
+// exposures (`base`) are left off on purpose: usage upserts on every
+// transcript append, and folding it into this boot-preloaded set would push a
+// diff to every client per append — the Queue shows no usage.
+const QUEUE_EXPOSES = { task: tasksEntityRef } as const;
+
 export const conversationsActive = liveCollection("conversations-active", {
   row: ConversationSchema,
   id: "id",
@@ -158,6 +169,7 @@ export const conversationsActive = liveCollection("conversations-active", {
     },
   },
   preload: "boot",
+  exposes: QUEUE_EXPOSES,
 });
 // The live `system` conversations (machine-spawned automation): the same
 // shape and routes as `conversationsActive`, the other half of `kind`.
@@ -195,6 +207,7 @@ export const conversationsGone = liveCollection("conversations-gone", {
   scroll: true,
   count: true,
   preload: "boot",
+  exposes: QUEUE_EXPOSES,
 });
 // One conversation by id, whatever its status or age (`useLiveRow`): the
 // conversation pane, every toolbar control and chip that holds an id. A point

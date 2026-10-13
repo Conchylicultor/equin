@@ -51,6 +51,8 @@ export interface LiveQueryCodecSpec {
   columnScope: string | null;
   /** A union collection's queries may name its arms' own columns (by wire name); any other's may not. */
   arms: boolean;
+  /** The entities a collection's `exposes` reaches: its queries may name their exposed columns. */
+  exposes: readonly string[];
   filterable: Filterable;
   sortable: readonly string[];
   defaultOrderBy: LiveOrderBy<string>;
@@ -67,7 +69,18 @@ type AnyWindowQuery = {
 };
 
 /** A grouping query with its column vocabulary erased — the codec validates it at runtime. */
-type AnyGroupQuery = { groupBy: string; where?: object; limit?: number };
+type AnyGroupQuery = {
+  groupBy: string;
+  where?: object;
+  limit?: number;
+  columns?: readonly LiveColumnsDeclaration[];
+};
+
+/** A count query with its column vocabulary erased — the codec validates it at runtime. */
+type AnyCountQuery = {
+  where?: object;
+  columns?: readonly LiveColumnsDeclaration[];
+};
 
 export interface LiveQueryCodec<C extends string, S extends string> {
   encode: (
@@ -87,12 +100,22 @@ export interface LiveQueryCodec<C extends string, S extends string> {
   familyOf: (params: LiveWindowParams) => string;
   /** Canonical encode of a grouping query — the same `where` canonicalisation as a window. */
   encodeGroups: (query: AnyGroupQuery) => LiveGroupParams;
-  /** STRICT decode of a grouping query's params (throws unless exactly canonical). */
-  decodeGroups: (params: Record<string, string>) => LiveDecodedGroupQuery<C>;
+  /**
+   * STRICT decode of a grouping query's params (throws unless exactly
+   * canonical). The server passes the column sets a grouping may name (its
+   * exposed ones): `groupBy` and `where` may read them.
+   */
+  decodeGroups: (
+    params: Record<string, string>,
+    columns?: readonly LiveColumnsDeclaration[],
+  ) => LiveDecodedGroupQuery<C>;
   /** Canonical encode of a count query's `where` — the same canonicalisation as a window. */
-  encodeCount: (query: { where?: object }) => LiveCountParams;
+  encodeCount: (query: AnyCountQuery) => LiveCountParams;
   /** STRICT decode of a count query's params (throws unless exactly canonical). */
-  decodeCount: (params: Record<string, string>) => LiveDecodedCountQuery;
+  decodeCount: (
+    params: Record<string, string>,
+    columns?: readonly LiveColumnsDeclaration[],
+  ) => LiveDecodedCountQuery;
 }
 
 const PARAM_KEYS = new Set(["limit", "where", "order", "after", "until"]);
@@ -204,6 +227,13 @@ export function createLiveQueryCodec<C extends string, S extends string>(
           if (owner.collection !== spec.key) {
             fail(
               `arm columns "${handle.name}" belong to "${owner.collection}"`,
+            );
+          }
+          break;
+        case "exposed":
+          if (!spec.exposes.includes(owner.entity)) {
+            fail(
+              `a query names exposed columns "${handle.name}" of entity "${owner.entity}", which the collection's \`exposes\` does not reach`,
             );
           }
           break;
@@ -455,14 +485,15 @@ export function createLiveQueryCodec<C extends string, S extends string>(
   };
   const checkGroupBy = (
     column: unknown,
+    decl: Declaration,
     onFail: (message: string) => never = fail,
   ): C => {
-    if (typeof column !== "string" || !Object.hasOwn(spec.filterable, column)) {
+    if (typeof column !== "string" || !Object.hasOwn(decl.filterable, column)) {
       onFail(
         `groupBy ${JSON.stringify(column)} is not a filterable column — only a declared filterable column can be grouped on`,
       );
     }
-    const domain = spec.filterable[column as string]!.domain;
+    const domain = decl.filterable[column as string]!.domain;
     if (!GROUPABLE_DOMAINS.has(domain)) {
       onFail(
         `groupBy "${column as string}" is a ${domain} column — only text / number / boolean columns can be grouped on`,
@@ -488,16 +519,19 @@ export function createLiveQueryCodec<C extends string, S extends string>(
         "a grouping query has a fixed order (count desc, then value) — it takes no orderBy",
       );
     }
+    const decl = declarationOf(query.columns);
     return groupParams(
-      checkGroupBy(query.groupBy),
+      checkGroupBy(query.groupBy, decl),
       checkGroupLimit(query.limit ?? LIVE_GROUP_DEFAULT_LIMIT),
-      encodeWhere(query.where),
+      encodeWhere(query.where, decl),
     );
   };
 
   const decodeGroups = (
     params: Record<string, string>,
+    columns?: readonly LiveColumnsDeclaration[],
   ): LiveDecodedGroupQuery<C> => {
+    const decl = declarationOf(columns);
     for (const k of Object.keys(params)) {
       if (!GROUP_PARAM_KEYS.has(k))
         reject(`decodeGroups: unknown param "${k}"`);
@@ -509,9 +543,9 @@ export function createLiveQueryCodec<C extends string, S extends string>(
       );
     }
     const decoded: LiveDecodedGroupQuery<C> = {
-      groupBy: checkGroupBy(groupBy, reject),
+      groupBy: checkGroupBy(groupBy, decl, reject),
       limit: checkGroupLimit(Number(limit), reject),
-      where: decodeWhere(where),
+      where: decodeWhere(where, decl),
     };
     const canonical = groupParams(decoded.groupBy, decoded.limit, where);
     if (!sameParams(canonical, params)) {
@@ -529,24 +563,25 @@ export function createLiveQueryCodec<C extends string, S extends string>(
   const countParams = (where: string | undefined): LiveCountParams =>
     where === undefined ? {} : { where };
 
-  const encodeCount = (query: { where?: object }): LiveCountParams => {
+  const encodeCount = (query: AnyCountQuery): LiveCountParams => {
     // Typed out, but an untyped caller must not have them silently ignored.
     for (const k of ["groupBy", "orderBy", "limit"] as const) {
       if ((query as Record<string, unknown>)[k] !== undefined) {
         fail(`a count query takes a \`where\` only — got ${k}`);
       }
     }
-    return countParams(encodeWhere(query.where));
+    return countParams(encodeWhere(query.where, declarationOf(query.columns)));
   };
 
   const decodeCount = (
     params: Record<string, string>,
+    columns?: readonly LiveColumnsDeclaration[],
   ): LiveDecodedCountQuery => {
     for (const k of Object.keys(params)) {
       if (!COUNT_PARAM_KEYS.has(k)) reject(`decodeCount: unknown param "${k}"`);
     }
     const decoded: LiveDecodedCountQuery = {
-      where: decodeWhere(params.where),
+      where: decodeWhere(params.where, declarationOf(columns)),
     };
     if (!sameParams(countParams(params.where), params)) {
       reject(

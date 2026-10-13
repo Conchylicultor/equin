@@ -139,6 +139,12 @@ export interface LiveGroupQuery<
   groupBy: G;
   where?: LiveWhere<F>;
   limit?: number;
+  /**
+   * The column sets (an exposure's `exposedColumns`) its `groupBy` / `where`
+   * name by wire name — what the codec validates those names against. Not
+   * part of the wire params.
+   */
+  columns?: readonly LiveColumnsDeclaration[];
   orderBy?: never;
 }
 
@@ -151,6 +157,8 @@ export interface LiveGroupQuery<
 export interface LiveCountQuery<F> {
   count: true;
   where?: LiveWhere<F>;
+  /** The column sets its `where` names by wire name (see {@link LiveQuery.columns}). */
+  columns?: readonly LiveColumnsDeclaration[];
   groupBy?: never;
   orderBy?: never;
   limit?: never;

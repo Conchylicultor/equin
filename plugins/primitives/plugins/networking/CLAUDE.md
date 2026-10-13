@@ -139,6 +139,7 @@ built on them — see
     - `apps/events/event-list`
     - `apps/pages/page-tree`
     - `conversations/all-conversations`
+    - `conversations/conversations-view/data-view`
     - `conversations/conversations-view/data-view/history`
     - `debug/logs`
     - `infra/endpoints`
