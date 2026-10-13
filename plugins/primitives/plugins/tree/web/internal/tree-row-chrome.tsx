@@ -94,12 +94,6 @@ export type TreeRowChromeProps = {
   dragAttributes?: DraggableAttributes;
   dragListeners?: DraggableSyntheticListeners;
   /**
-   * Whether a childless row still renders a (hover-revealed) chevron. Editable
-   * trees keep it as an expand affordance (default true); read-only trees where
-   * a leaf can never gain children pass false to render only alignment space.
-   */
-  leafChevron?: boolean;
-  /**
    * Draw indent guides: one hairline per ancestor level in the row's indent
    * (`TreeGuides`). Default false — a tree opts in (`TreeListProps.guides`).
    */
@@ -189,10 +183,8 @@ export function TreeRowChrome({
   rowRef,
   dragAttributes,
   dragListeners,
-  leafChevron = true,
   guides = false,
 }: TreeRowChromeProps) {
-  const expandable = hasChildren || leafChevron;
   // A UI plugin can contribute the icon-bearing leading disclosure (merged /
   // dimmed-leaf / column). Exactly one is expected — its Region internally
   // dispatches to the active variant. With none, fall back to the inline
@@ -203,7 +195,6 @@ export function TreeRowChrome({
     icon,
     hasChildren,
     isOpen,
-    expandable,
     onToggle,
   };
   // A link row's select click reads its gestures (⌘-click opens the href in a
@@ -308,7 +299,7 @@ export function TreeRowChrome({
         ) : (
           <DefaultMergedDisclosure {...disclosureProps} />
         )
-      ) : expandable ? (
+      ) : hasChildren ? (
         <button
           type="button"
           onClick={(e) => {
@@ -320,9 +311,7 @@ export function TreeRowChrome({
           className={cn(
             "size-5 rounded-md",
             "hover:bg-background/60",
-            hasChildren
-              ? "opacity-40 group-hover/tree-row:opacity-100"
-              : "opacity-0 pointer-events-none group-hover/tree-row:opacity-60 group-hover/tree-row:pointer-events-auto",
+            "opacity-40 group-hover/tree-row:opacity-100",
           )}
         >
           <Center axis="both" className="size-full">
@@ -330,8 +319,9 @@ export function TreeRowChrome({
           </Center>
         </button>
       ) : (
-        // Read-only leaf: reserve the chevron's width for alignment, but render
-        // no expander — this row can never gain children.
+        // A leaf: reserve the chevron's width for alignment, but render no
+        // expander — a chevron exists exactly when the row has children (or a
+        // lazy row may have some). Dropping onto a leaf still nests under it.
         <span className="size-5" aria-hidden />
       )}
       {leading != null && (

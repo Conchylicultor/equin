@@ -16,7 +16,6 @@ export function DimmedLeafDisclosure({
   icon,
   hasChildren,
   isOpen,
-  expandable,
   onToggle,
 }: TreeDisclosureProps) {
   return (
@@ -26,13 +25,13 @@ export function DimmedLeafDisclosure({
         axis="both"
         className={cn(
           !hasChildren && "opacity-45 saturate-50",
-          expandable &&
+          hasChildren &&
             "group-hover/tree-row:opacity-0 group-hover/tree-row:pointer-events-none",
         )}
       >
         {icon}
       </Center>
-      {expandable && (
+      {hasChildren && (
         <TreeDisclosureToggle
           isOpen={isOpen}
           onToggle={onToggle}
@@ -40,9 +39,6 @@ export function DimmedLeafDisclosure({
           className={cn(
             "absolute inset-0",
             "opacity-0 pointer-events-none group-hover/tree-row:opacity-100 group-hover/tree-row:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto",
-            // A childless row's hover chevron stays muted too, so the hover
-            // state carries the same parent/leaf distinction as the rest state.
-            !hasChildren && "group-hover/tree-row:opacity-50",
           )}
         />
       )}

@@ -140,12 +140,12 @@ describe("data-view tree: lazy children", () => {
     const chevronOf = (label: string) =>
       getByText(label)
         .closest("[data-tree-row]")!
-        .querySelector<HTMLElement>("button[aria-label='Expand']")!;
-    // A row with children (loaded or not) shows its chevron at rest; a leaf's
-    // is the hover-only add-a-child affordance of an editable tree.
-    expect(chevronOf("src").className).not.toContain("pointer-events-none");
-    expect(chevronOf("README.md").className).toContain("pointer-events-none");
-    fireEvent.click(chevronOf("src"));
+        .querySelector<HTMLElement>("button[aria-label='Expand']");
+    // A row with children (loaded or not) shows its chevron at rest; a leaf
+    // cannot expand, so it has no chevron at all.
+    expect(chevronOf("src")!.className).not.toContain("pointer-events-none");
+    expect(chevronOf("README.md")).toBeNull();
+    fireEvent.click(chevronOf("src")!);
     expect(setExpanded).toHaveBeenCalledWith([{ id: "src", expanded: true }]);
   });
 

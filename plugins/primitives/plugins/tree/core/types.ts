@@ -14,16 +14,13 @@ import type { ReactNode } from "react";
 export interface TreeDisclosureProps {
   /** The row's identity icon. Non-null — icon-less rows never reach the slot. */
   icon: ReactNode;
-  /** Whether this row actually has children right now. */
+  /**
+   * Whether this row has children (or, lazily listed, may have some) — and so
+   * whether it gets a chevron at all. A leaf never shows one.
+   */
   hasChildren: boolean;
   /** Whether the row is currently expanded. */
   isOpen: boolean;
-  /**
-   * `hasChildren || leafChevron` — whether a chevron may be offered at all.
-   * An editable tree keeps the chevron on childless rows (a leaf can gain
-   * children by drop); a read-only tree does not.
-   */
-  expandable: boolean;
   /** Toggle expand/collapse. Undefined on rows that cannot toggle. */
   onToggle?: () => void;
 }

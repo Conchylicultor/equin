@@ -30131,13 +30131,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 398 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 397 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×101
               - `apps` ×78
               - `conversations` ×52
               - `page` ×25
-              - `ui` ×23
               - `debug` ×22
+              - `ui` ×22
               - `tasks` ×15
               - `apps-core` ×13
               - `fields` ×12
@@ -39534,7 +39534,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `primitives/css/center.Center`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/ui-kit.cn`
               - `primitives/tree.TreeDisclosureToggle`
               - `ui/tree-disclosure.TreeDisclosure`
         - **`dimmed-leaf`** — Dimmed-leaf tree disclosure — the merged box, with childless rows' icons desaturated so parents read stronger.

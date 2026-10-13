@@ -297,7 +297,6 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         depth={0}
         hasChildren={false}
         isOpen={false}
-        leafChevron={false}
         selected={key === props.selectedRowId}
         // `undefined` stays `undefined`: a non-activating row is no button.
         onSelect={

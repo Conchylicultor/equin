@@ -10,7 +10,6 @@
   - Uses:
     - `primitives/css/center.Center`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/ui-kit.cn`
     - `primitives/tree.TreeDisclosureToggle`
     - `ui/tree-disclosure.TreeDisclosure`
 
