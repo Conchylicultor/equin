@@ -171,7 +171,12 @@ describe("pinClasses", () => {
     // Left padding clears the ramp, so the buttons sit where the mask is fully
     // opaque — the fade dissolves the covered content, never the icons.
     expect(style.paddingLeft).toBe("calc(var(--space-xs) + 1.5rem)");
-    expect(style.background).toBe("var(--scrim, var(--chrome-mask))");
+    // The row's tint layered over the surface, so a translucent hover tint
+    // still hides what the scrim covers.
+    expect(style.backgroundColor).toBe("var(--chrome-mask)");
+    expect(style.backgroundImage).toBe(
+      "linear-gradient(var(--scrim, transparent), var(--scrim, transparent))",
+    );
     expect(style.borderRadius).toBe("inherit");
     expect(style.maskImage).toBe(
       "linear-gradient(to right, transparent, black 1.5rem)",
@@ -225,7 +230,8 @@ describe("pinClasses", () => {
 
   test("an unmasked pin paints nothing (the pre-existing anchors are untouched)", () => {
     const { style } = pinClasses({ ...base, to: "right", offset: "xs" });
-    expect(style.background).toBeUndefined();
+    expect(style.backgroundColor).toBeUndefined();
+    expect(style.backgroundImage).toBeUndefined();
     expect(style.maskImage).toBeUndefined();
     expect(style.right).toBe("var(--space-xs)");
   });

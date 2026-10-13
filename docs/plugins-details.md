@@ -2995,31 +2995,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `urlSourceConfigFields`
     - **`file-explorer`** — File explorer app.
       - Plugins:
-        - **`browser`** — The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — Fields, extra tree columns, and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
+        - **`browser`** — The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — Fields, extra tree columns, RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
           - Web:
             - Slots:
               - `filesHomePane.Actions`
               - `filesAtPane.Actions`
               - `FileBrowserSlots.Fields`
               - `FileBrowserSlots.Lens`
+              - `FileBrowserSlots.RowActions`
             - Slot contributors:
               - `filesHomePane.Actions` ← `primitives.pane`
               - `filesAtPane.Actions` ← `primitives.pane`
               - `FileBrowserSlots.Fields` ← `apps.file-explorer.git`
               - `FileBrowserSlots.Lens` ← `apps.file-explorer.git`
+              - `FileBrowserSlots.RowActions` ← `apps.file-explorer.browser`
             - Contributes:
               - `Pane.Register` "files-at"
               - `Pane.Register` "files-home"
               - `ThemeEngine.SubTheme` "Files document"
-            - Uses: 50 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+              - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
+              - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
+            - Uses: 54 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/css/ui-kit` ×7
-              - `primitives/data-view` ×5
+              - `primitives/data-view` ×6
+              - `infra/endpoints` ×5
               - `primitives/file-viewer` ×5
-              - `infra/endpoints` ×4
               - `primitives/pane` ×4
               - `primitives/path-bar` ×2
               - `network/live.useLive`
               - `primitives/bar.Bar`
+              - `primitives/copy-to-clipboard.useCopyToClipboard`
               - `primitives/css/center.Center`
               - `primitives/css/column.Column`
               - `primitives/css/fill.Fill`
@@ -3040,6 +3045,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/scope/surface-id.useSurfaceTabId`
               - `primitives/search.SearchInput`
               - `primitives/shortcuts.useSurfaceShortcuts`
+              - `shell/toast.showToast`
               - `ui/theme-engine.ThemeEngine`
             - Exports (types):
               - `ExplorerLensItem`
@@ -19982,8 +19988,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 150 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
-              - `apps` ×46
+            - Imported by: 151 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+              - `apps` ×47
               - `primitives` ×24
               - `page` ×23
               - `conversations` ×17
@@ -22259,7 +22265,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hostHome`
       - Cross-plugin:
         - Imported by: `apps/pages/shell`
-    - **`host-fs`** — The one host-filesystem API: list / peek / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), and POST open (Open with default app, Reveal in Finder) refused unless the Origin is the app's own *.localhost.
+    - **`host-fs`** — The one host-filesystem API: list / peek / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), POST open (Open with default app, Reveal in Finder) and POST extract (an archive beside itself, its single top-level entry as itself or several in a new folder), both refused unless the Origin is the app's own *.localhost.
       - Server:
         - Uses:
           - `infra/endpoints.HttpError`
@@ -22289,6 +22295,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GET /api/host-fs/volume`
           - `POST /api/host-fs/peek`
           - `POST /api/host-fs/open`
+          - `POST /api/host-fs/extract`
       - Core:
         - Uses:
           - `infra/endpoints.blob`
@@ -22298,6 +22305,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HostFsCompleteResult`
           - `HostFsEntry`
           - `HostFsEntryKind`
+          - `HostFsExtractResult`
           - `HostFsListResult`
           - `HostFsOpenResult`
           - `HostFsPeekResult`
@@ -22312,6 +22320,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HOST_FS_TEXT_MAX_BYTES`
           - `hostFileUrl`
           - `hostFsComplete`
+          - `hostFsExtract`
           - `hostFsList`
           - `hostFsOpen`
           - `hostFsPeek`
@@ -28889,8 +28898,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CopyButton`
           - `useCopyToClipboard`
       - Cross-plugin:
-        - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
-          - `apps` ×6
+        - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
+          - `apps` ×7
           - `page` ×4
           - `primitives` ×4
           - `conversations` ×3
@@ -34889,8 +34898,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 242 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×242
+    - Contributes: 243 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×243
     - Uses: 21 symbols — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
       - `reorder/editor` ×5
       - `config_v2` ×3
@@ -34915,8 +34924,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 241 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×241
+    - Contributes: 242 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×242
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -36261,6 +36270,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/chord/curriculum`
           - `apps/chord/trainer`
           - `apps/events/sources/refresh-all`
+          - `apps/file-explorer/browser`
           - `apps/pages/page-tree`
           - `apps/prototypes/canvas`
           - `apps/sonata/sources/midi/file-preview`

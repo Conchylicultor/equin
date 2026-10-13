@@ -16,6 +16,7 @@ and build byte URLs with `hostFileUrl(path)`.
 | `GET /api/host-fs/raw?path` (`hostFsRaw`, `hostFileUrl`) | the bytes, streamed; `Range` (one range) → 206 / 416; 404 / 403 / 400 (a directory) / 422 (an unreadable archive member) |
 | `GET /api/host-fs/volume?path` (`hostFsVolume`) | `ok {name, total, free}` · `missing` · `denied` |
 | `POST /api/host-fs/open {path, reveal?}` (`hostFsOpen`) | `opened` · `in-archive` · `missing`; 403 off-origin, 501 off macOS |
+| `POST /api/host-fs/extract {path}` (`hostFsExtract`) | `extracted {created, layout: single \| folder}` · `not-an-archive` · `missing` · `denied` · `unreadable-archive`; 403 off-origin |
 
 Images get two more reads in the `image` sub-plugin: resized copies
 (`GET /api/host-fs/image/resized`) and a folder's pixel sizes
@@ -66,6 +67,11 @@ A path may cross into an archive file: `~/Downloads/photos.zip/2022/a.jpg`.
 - **Bytes.** A member stored uncompressed is a `Blob` window of the archive and
   honours `Range`; a compressed one streams whole (200, `Accept-Ranges: none`).
   `text` gates the uncompressed size before decompressing.
+- **Extract is format-agnostic.** `extract` writes from the same cached
+  index (`archiveTree`) and member `open()`s the reads use, so a new format
+  extracts with no code here. One top-level entry (after dropping
+  `__MACOSX/` and `.DS_Store`) is extracted as itself next to the archive;
+  several go into a new folder named after the archive less its extension.
 
 `decodeTextBytes` (server barrel) is the one size + binary gate for decoding
 file bytes as text; code-explorer's git-ref reads use it too.
@@ -79,14 +85,18 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
 - **No path sandbox.** The server reads whatever the user account can read;
   **filesystem permissions are the boundary**, and hitting one is the typed
   `denied` state (e.g. `~/.Trash` without Full Disk Access).
-- **Read-only, with one side effect.** `POST open` spawns macOS `open <path>`
+- **Read-only, with two side effects.** `POST open` spawns macOS `open <path>`
   (or `open -R <path>` to reveal) through `infra/spawn`, the path one argv
   element (never a shell) and always absolute, so it cannot be read as a flag.
+  `POST extract` writes an archive's members beside it — only NEW paths (a
+  taken name gets a number, never overwritten), only under the archive's own
+  folder (member names are normalised: no `..`, no absolute path; symlink
+  members are not written), staged in a hidden sibling and renamed into place.
 - **The exposure is other web pages in the user's browser, not the user.** A
   site must not be able to read `~/.ssh` through `localhost:9000`:
   - Cross-origin `fetch` reads are blocked by CORS (no endpoint sends CORS
     headers).
-  - `POST open` refuses (403) any request whose `Origin` is not `localhost` or
+  - `POST open` and `POST extract` refuse (403) any request whose `Origin` is not `localhost` or
     `*.localhost` — a missing or `null` Origin included — since a cross-site
     form POST is a "simple request" CORS does not stop.
   - `raw` serves `Content-Disposition: inline` with
@@ -104,7 +114,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
 
 ## Plugin reference
 
-- Description: The one host-filesystem API: list / peek / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), and POST open (Open with default app, Reveal in Finder) refused unless the Origin is the app's own *.localhost.
+- Description: The one host-filesystem API: list / peek / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), POST open (Open with default app, Reveal in Finder) and POST extract (an archive beside itself, its single top-level entry as itself or several in a new folder), both refused unless the Origin is the app's own *.localhost.
 - Server:
   - Uses:
     - `infra/endpoints.HttpError`
@@ -134,6 +144,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `GET /api/host-fs/volume`
     - `POST /api/host-fs/peek`
     - `POST /api/host-fs/open`
+    - `POST /api/host-fs/extract`
 - Core:
   - Uses:
     - `infra/endpoints.blob`
@@ -143,6 +154,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `HostFsCompleteResult`
     - `HostFsEntry`
     - `HostFsEntryKind`
+    - `HostFsExtractResult`
     - `HostFsListResult`
     - `HostFsOpenResult`
     - `HostFsPeekResult`
@@ -157,6 +169,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `HOST_FS_TEXT_MAX_BYTES`
     - `hostFileUrl`
     - `hostFsComplete`
+    - `hostFsExtract`
     - `hostFsList`
     - `hostFsOpen`
     - `hostFsPeek`

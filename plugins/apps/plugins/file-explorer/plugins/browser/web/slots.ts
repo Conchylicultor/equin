@@ -1,6 +1,9 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
-import { defineFieldExtensions } from "@plugins/primitives/plugins/data-view/web";
+import {
+  defineFieldExtensions,
+  defineItemActions,
+} from "@plugins/primitives/plugins/data-view/web";
 import type { EntryRow, ExplorerLens } from "../core";
 
 /**
@@ -26,6 +29,13 @@ export const FileBrowserSlots = {
    * close over data it reads with hooks.
    */
   Fields: defineFieldExtensions<EntryRow>(),
+
+  /**
+   * A tree row's hover actions (Extract here on an archive, Copy path). Which
+   * stay inline and which sit behind the row's `⋯` is authored in this slot's
+   * config, so it is one decision for every contributor.
+   */
+  RowActions: defineItemActions<EntryRow>(),
 
   /**
    * Lenses on the folder: each `hide` rule becomes a toolbar toggle (hidden by

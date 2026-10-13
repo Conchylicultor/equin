@@ -28,4 +28,9 @@ export interface EntryRow {
    * file's.
    */
   browsable: boolean;
+  /**
+   * Set on an archive file on disk (host-fs's `archive` mark): it can be
+   * browsed, and extracted. Never set inside an archive.
+   */
+  archive?: { format: string };
 }

@@ -51,11 +51,14 @@ height. `spanOffset` is forced to `0` too, and — unlike `offset` — is *not*
 re-expressed as padding: a gap along the spanned axis is exactly the live sliver
 the scrim exists to abolish. Ramp distance is a constant, not a prop.
 
-Color is `var(--scrim, var(--chrome-mask))`. A surface painting a transient tint
-(hovered/selected `<Row>`, interactive `<Card>`) republishes `--scrim` next to
-each tint class. It is a **separate property, not a `--chrome-mask`
-re-declaration**: a translucent tint's scrim is `color-mix(…, var(--chrome-mask))`,
-and a property reading itself is a cycle CSS drops. No `:root` default either —
+Paint is `--scrim` **layered over** `--chrome-mask` (the mask as the background
+colour, the tint as a flat gradient image on top). A surface painting a transient
+tint (hovered/selected `<Row>`, interactive `<Card>`) republishes `--scrim` next
+to each tint class. Layering is what lets that tint be a translucent overlay
+(`rgb(255 255 255 / 0.05)`): painted alone it would let the covered glyphs show
+through the icons; over the opaque mask it is the row's on-screen composite. It
+is a **separate property, not a `--chrome-mask` re-declaration**: a property
+reading itself is a cycle CSS drops. No `:root` default either —
 the `var(…, fallback)` form re-resolves per element, which is what keeps it right
 inside a forked theme scope.
 

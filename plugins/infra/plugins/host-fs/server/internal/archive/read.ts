@@ -131,7 +131,7 @@ export function openArchiveMember(
  * zlib reports a malformed compressed stream through an error whose `code`
  * starts with `Z_` (`Z_DATA_ERROR`, `Z_BUF_ERROR`): that is a corrupt member.
  */
-function isCorruptStream(err: unknown): boolean {
+export function isCorruptStream(err: unknown): boolean {
   const code = (err as { code?: unknown } | undefined)?.code;
   return typeof code === "string" && code.startsWith("Z_");
 }

@@ -25,6 +25,7 @@
     - `apps/chord/curriculum`
     - `apps/chord/trainer`
     - `apps/events/sources/refresh-all`
+    - `apps/file-explorer/browser`
     - `apps/pages/page-tree`
     - `apps/prototypes/canvas`
     - `apps/sonata/sources/midi/file-preview`

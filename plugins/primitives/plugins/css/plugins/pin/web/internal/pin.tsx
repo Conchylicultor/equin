@@ -56,11 +56,16 @@ const SCRIM_FADE = "1.5rem";
  * dissolved along whichever edges face INWARD (away from the ones it is anchored
  * to), so the content underneath fades out instead of being cut mid-glyph.
  *
- * The color is `var(--scrim, var(--chrome-mask))` — the surface's published
- * background by default, with `--scrim` the override a surface that paints a
- * TRANSIENT tint over that background (a hovered/selected row, an interactive
- * card) republishes so the scrim matches what is actually on screen at reveal
- * time. It is deliberately a second property rather than a `--chrome-mask`
+ * The paint is `--scrim` LAYERED OVER `--chrome-mask` — the surface's published
+ * background, with `--scrim` the TRANSIENT tint a surface paints over that
+ * background (a hovered/selected row, an interactive card), republished so the
+ * scrim matches what is actually on screen at reveal time. Layered, not
+ * substituted: a tint is often a translucent overlay (`rgb(255 255 255 / 0.05)`
+ * — a hover that lightens whatever it sits on), and painted alone it would let
+ * the covered glyphs show through the icons. Over the opaque mask it is exactly
+ * the row's composite colour; an opaque tint simply covers the mask. The tint is
+ * an image layer (a flat `linear-gradient`) because a background has only one
+ * colour layer. It is deliberately a second property rather than a `--chrome-mask`
  * re-declaration: a row's tint is a composite *over* the ambient mask
  * (`color-mix(… , var(--chrome-mask))`), and a property whose value reads itself
  * is a cycle CSS resolves to nothing. The `var(…, …)` fallback — never a `:root`
@@ -74,7 +79,9 @@ const SCRIM_FADE = "1.5rem";
  */
 function scrimDecor(to: PinAnchor, len: string): React.CSSProperties {
   const style: React.CSSProperties = {
-    background: "var(--scrim, var(--chrome-mask))",
+    backgroundColor: "var(--chrome-mask)",
+    backgroundImage:
+      "linear-gradient(var(--scrim, transparent), var(--scrim, transparent))",
     borderRadius: "inherit",
   };
   const gradients: string[] = [];
@@ -277,7 +284,7 @@ export interface PinProps<
   spanOffset?: T extends PinEdgeAnchor ? SpaceStep : never;
   /**
    * Paint the scrim — an opaque backdrop in the covered surface's own color
-   * (`--scrim`, falling back to the surface's `--chrome-mask`), dissolved along
+   * (the `--scrim` tint layered over the surface's `--chrome-mask`), dissolved along
    * the pin's inward-facing edges so the content it covers fades out instead of
    * showing through the child. Default false.
    *

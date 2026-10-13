@@ -351,3 +351,44 @@ export const hostFsOpen = defineEndpoint({
   body: z.object({ path: z.string(), reveal: z.boolean().optional() }),
   response: HostFsOpenResultSchema,
 });
+
+// ── extract ──────────────────────────────────────────────────────────────────
+
+export const HostFsExtractResultSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("extracted"),
+    /** The archive file, absolute. */
+    path: z.string(),
+    /** What the extraction created beside the archive, absolute. */
+    created: z.string(),
+    /**
+     * `single`: the archive held one top-level entry (a folder or a file),
+     * extracted as itself. `folder`: it held several, so they were extracted
+     * into a new folder named after the archive.
+     */
+    layout: z.enum(["single", "folder"]),
+  }),
+  /** The path is not a file on disk any registered archive format claims. */
+  z.object({ kind: z.literal("not-an-archive"), path: z.string() }),
+  Missing,
+  Denied,
+  UnreadableArchive,
+]);
+export type HostFsExtractResult = z.infer<typeof HostFsExtractResultSchema>;
+
+/**
+ * Extract an archive file next to itself, the way the Finder does: an archive
+ * holding exactly one top-level entry (a folder, or a single file) puts that
+ * entry beside it; one holding several puts them in a new folder named after
+ * the archive (`photos.zip` → `photos/`). Nothing is overwritten — a name
+ * already taken gets a number (`photos 2`). The work is staged in a hidden
+ * sibling and moved into place at the end, so a failed extraction leaves
+ * nothing behind. macOS's `__MACOSX/` resource forks and `.DS_Store` files are
+ * not extracted. A request whose `Origin` is not a `*.localhost` origin is
+ * refused (403), as `open` is.
+ */
+export const hostFsExtract = defineEndpoint({
+  route: "POST /api/host-fs/extract",
+  body: z.object({ path: z.string() }),
+  response: HostFsExtractResultSchema,
+});

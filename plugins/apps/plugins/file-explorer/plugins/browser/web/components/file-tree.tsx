@@ -118,6 +118,7 @@ function buildRows(
           : {}),
         hidden: entry.hidden,
         browsable: isBrowsable(entry),
+        ...(entry.archive !== undefined ? { archive: entry.archive } : {}),
       });
       if (isBrowsable(entry)) walk(path, path);
     }
@@ -308,7 +309,8 @@ export interface FileTreeProps {
  * aligned columns (Created, Accessed, Category, Extension, Path and Link
  * target hidden until switched on) plus every `FileBrowserSlots.Fields` contribution, folders first, every folder lazily listed through host-fs on first
  * expand — an archive file (a zip) expands like one. Clicking a folder makes it the listing; clicking a file selects it
- * (and opens it beside the listing). Double-click or Enter opens either.
+ * (and opens it beside the listing). Double-click or Enter opens either. A
+ * row's hover actions are the `FileBrowserSlots.RowActions` contributions.
  */
 export function FileTree({
   root,
@@ -428,6 +430,7 @@ export function FileTree({
       rows={rows}
       fields={fields}
       fieldExtensions={FileBrowserSlots.Fields}
+      itemActions={FileBrowserSlots.RowActions}
       rowKey={(r) => r.id}
       views={["tree"]}
       storageKey={FILE_TREE_VIEW}

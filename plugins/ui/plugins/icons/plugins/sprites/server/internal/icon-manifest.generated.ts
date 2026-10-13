@@ -304,6 +304,7 @@ export const ICON_MANIFEST: {
     "train",
     "tune",
     "turn-right",
+    "unarchive",
     "undo",
     "unfold-less",
     "unfold-more",

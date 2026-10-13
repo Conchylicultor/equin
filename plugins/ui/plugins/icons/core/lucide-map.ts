@@ -316,6 +316,7 @@ export const LUCIDE_MAP = {
   train: "train-front",
   tune: "sliders-horizontal",
   "turn-right": "corner-up-right",
+  unarchive: "package-open",
   undo: "undo-2",
   "unfold-less": "chevrons-down-up",
   "unfold-more": "chevrons-up-down",
