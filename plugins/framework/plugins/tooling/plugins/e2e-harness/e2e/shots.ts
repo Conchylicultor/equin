@@ -4,6 +4,7 @@
  */
 import type { Page } from "playwright";
 import { pushDiagnostic } from "./diagnostics";
+import { flatness, hexColor } from "./pixels";
 import { TOAST } from "./toasts";
 
 /**
@@ -27,6 +28,12 @@ export type SnapResult =
  * rather than a nullable path so a caller that *does* care cannot mistake a
  * failure for a success.
  *
+ * A capture that is ONE flat colour is a failure too (`BLANK-CAPTURE`): it is
+ * the page before it painted, and a black rectangle reported as `wrote …` is
+ * the most misleading thing a screenshot can hand an agent. The file is still
+ * written, so it can be looked at. `allowBlank` is for the rare capture whose
+ * subject really is a flat fill.
+ *
  * `hideToasts` is for a picture meant to be shown (a gallery shot, docs), not
  * a diagnostic: the toasts are hidden by a style Playwright applies to this
  * capture only, so one that lands mid-capture is hidden too. What each one
@@ -37,7 +44,7 @@ export async function snap(
   page: Page,
   outPrefix: string,
   name: string,
-  opts: { timeoutMs?: number; hideToasts?: boolean } = {},
+  opts: { timeoutMs?: number; hideToasts?: boolean; allowBlank?: boolean } = {},
 ): Promise<SnapResult> {
   const path = `${outPrefix}-${name}.png`;
   try {
@@ -48,13 +55,22 @@ export async function snap(
         pushDiagnostic(`toast hidden from ${path} — ${line}`);
       }
     }
-    await page.screenshot({
+    const png = await page.screenshot({
       path,
       timeout: opts.timeoutMs ?? DEFAULT_SNAP_TIMEOUT_MS,
       ...(opts.hideToasts && {
         style: `${TOAST} { visibility: hidden !important; }`,
       }),
     });
+    if (!opts.allowBlank) {
+      const verdict = await flatness(page, png);
+      if (verdict.flat) {
+        const error = `blank capture — every pixel is ${hexColor(verdict.color)}, the page had not painted`;
+        console.log(`BLANK-CAPTURE ${path} — ${error}`);
+        pushDiagnostic(`screenshot ${path} — ${error}`);
+        return { ok: false, path, error };
+      }
+    }
     console.log(`wrote ${path}`);
     return { ok: true, path };
   } catch (err) {

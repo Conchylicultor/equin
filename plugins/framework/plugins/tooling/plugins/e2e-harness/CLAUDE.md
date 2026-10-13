@@ -265,6 +265,14 @@ returns a promise and why `no-floating-promises` requires `await r.finish()`.
 Before this, `await browser.close()` in `withBrowser`'s `finally` was silently
 skipped for those scripts, leaking a Chromium process per run.
 
+## A one-colour capture is a failure, not a screenshot
+
+A page that has not painted yet is one flat colour, and on a loaded machine
+first paint outlasts any fixed sleep. `snap()` reports such a capture as
+`BLANK-CAPTURE` / `ok: false` (`allowBlank` opts out); `screenshot.ts`
+re-captures until the screen is not flat, then waits for network idle, then
+`--wait`, and exits 1 on a page that never paints.
+
 ## `failedRequests` means "never got a response" — a 204 is not in it
 
 `capture()`'s `failedRequests` lists requests that got no response at all: a

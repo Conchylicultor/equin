@@ -19,10 +19,17 @@
 //                                         says which deploy, its path which
 //                                         screen; --base / --origin are aliases)
 //
+// The capture waits for the page to be RENDERED, not for a fixed time: it
+// re-captures until the screen is more than one flat colour (an app still
+// booting is its bare background — the "black screenshot"), then for network
+// idle, then `--wait` more for post-paint settling. A page that never paints
+// within the deadline fails the run (exit 1) instead of handing back a black
+// PNG that reads as evidence; so does any capture `snap()` finds blank.
+//
 // By default the screenshot inherits the host OS appearance (macOS dark/light)
 // so a `colorMode: "system"` app renders exactly as the user sees it. Pass
-// `--color-scheme dark|light` to force one. Other flags: --wait <ms>,
-// --viewport <WxH>, --headed.
+// `--color-scheme dark|light` to force one. Other flags: --wait <ms> (extra
+// settle after the page has painted, default 1000), --viewport <WxH>, --headed.
 //
 // Example:
 //   ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
@@ -40,11 +47,14 @@ import { pageUrl } from "./target";
 import { withBrowser } from "./browser";
 import { detectOsColorScheme, type ColorScheme } from "./color-scheme";
 import { snap } from "./shots";
+import { flatness, hexColor } from "./pixels";
+import { waitFor, ELEMENT_TIMEOUT_MS } from "./wait";
+import { waitForNetworkIdle } from "./network-idle";
 
 const url = pageUrl();
 const click = arg("click");
 const out = arg("out", "/tmp/screenshot");
-const waitMs = numArg("wait", 3000);
+const waitMs = numArg("wait", 1000);
 const viewportRaw = arg("viewport", "1400x900").split("x").map(Number);
 const viewport = {
   width: viewportRaw[0] ?? 1400,
@@ -59,9 +69,27 @@ console.log(`color-scheme: ${colorScheme}`);
 await withBrowser(async (h) => {
   const { page } = await h.session({ viewport, colorScheme });
 
-  await page.goto(url);
+  await page.goto(url, { waitUntil: "domcontentloaded" });
+  // On a loaded machine (builds holding the CPU) the app can take well over
+  // any fixed sleep to first paint — 4 s and 8 s both captured a black frame.
+  const painted = await waitFor(
+    async () => flatness(page, await page.screenshot()),
+    (v) => !v.flat,
+    { timeoutMs: ELEMENT_TIMEOUT_MS, intervalMs: 500 },
+  );
+  if (painted.value.flat) {
+    console.error(
+      `page never painted: still one flat colour (${hexColor(painted.value.color)}) ` +
+        `after ${painted.waitedMs}ms — the app did not render`,
+    );
+    await snap(page, out, "before", { allowBlank: true });
+    process.exitCode = 1;
+    return;
+  }
+  console.log(`painted after ${painted.waitedMs}ms`);
+  await waitForNetworkIdle(page);
   await page.waitForTimeout(waitMs);
-  await snap(page, out, "before");
+  if (!(await snap(page, out, "before")).ok) process.exitCode = 1;
 
   if (!click) return;
 
@@ -104,5 +132,5 @@ await withBrowser(async (h) => {
   });
   await first.click();
   await page.waitForTimeout(1500);
-  await snap(page, out, "after");
+  if (!(await snap(page, out, "after")).ok) process.exitCode = 1;
 });

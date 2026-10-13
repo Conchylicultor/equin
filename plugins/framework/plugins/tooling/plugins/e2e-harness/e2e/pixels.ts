@@ -43,7 +43,11 @@ export interface PixelGrid {
 
 /** Max per-channel difference — 0 is identical, 255 is black vs white. */
 export function colorDistance(a: Rgba, b: Rgba): number {
-  return Math.max(Math.abs(a.r - b.r), Math.abs(a.g - b.g), Math.abs(a.b - b.b));
+  return Math.max(
+    Math.abs(a.r - b.r),
+    Math.abs(a.g - b.g),
+    Math.abs(a.b - b.b),
+  );
 }
 
 /**
@@ -94,10 +98,79 @@ export async function samplePixels(page: Page, rect: Rect): Promise<PixelGrid> {
     width: clip.width,
     height: clip.height,
     at(x: number, y: number): Rgba {
-      const px = Math.min(decoded.width - 1, Math.max(0, Math.round(x * scale)));
-      const py = Math.min(decoded.height - 1, Math.max(0, Math.round(y * scale)));
+      const px = Math.min(
+        decoded.width - 1,
+        Math.max(0, Math.round(x * scale)),
+      );
+      const py = Math.min(
+        decoded.height - 1,
+        Math.max(0, Math.round(y * scale)),
+      );
       const i = (decoded.width * py + px) * 4;
-      return { r: bytes[i]!, g: bytes[i + 1]!, b: bytes[i + 2]!, a: bytes[i + 3]! };
+      return {
+        r: bytes[i]!,
+        g: bytes[i + 1]!,
+        b: bytes[i + 2]!,
+        a: bytes[i + 3]!,
+      };
     },
   };
+}
+
+/** A capture's verdict: one flat colour (and which), or real content. */
+export type Flatness = { flat: true; color: Rgba } | { flat: false };
+
+/**
+ * Is this capture ONE flat colour — a page that never painted?
+ *
+ * A screenshot of an app that has not rendered yet (still booting on a loaded
+ * machine, a dead chunk, a crashed root) is the document's bare background:
+ * every pixel the same. It decodes, it is a valid PNG, and `snap()` used to
+ * print `wrote …` for it — so agents took the black rectangle for evidence and
+ * reasoned from it. No real screen is a single colour, so "flat" is a cheap,
+ * app-agnostic proof that nothing was drawn.
+ *
+ * `tolerance` is the per-channel distance (see `colorDistance`) still counted as
+ * the same colour, so dithering or a 1-step gradient band does not count as
+ * content. Decoded in the page, like `samplePixels`; only the verdict crosses
+ * the bridge.
+ */
+export async function flatness(
+  page: Page,
+  png: Buffer,
+  tolerance = 4,
+): Promise<Flatness> {
+  return page.evaluate(
+    async ({ b64, tolerance }) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${b64}`;
+      await img.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("flatness: no 2d context");
+      ctx.drawImage(img, 0, 0);
+      const d = ctx.getImageData(0, 0, img.width, img.height).data;
+      const r = d[0]!,
+        g = d[1]!,
+        b = d[2]!,
+        a = d[3]!;
+      for (let i = 4; i < d.length; i += 4) {
+        if (
+          Math.abs(d[i]! - r) > tolerance ||
+          Math.abs(d[i + 1]! - g) > tolerance ||
+          Math.abs(d[i + 2]! - b) > tolerance
+        )
+          return { flat: false as const };
+      }
+      return { flat: true as const, color: { r, g, b, a } };
+    },
+    { b64: png.toString("base64"), tolerance },
+  );
+}
+
+/** `#rrggbb`, for a log line. */
+export function hexColor(c: Rgba): string {
+  return `#${[c.r, c.g, c.b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
