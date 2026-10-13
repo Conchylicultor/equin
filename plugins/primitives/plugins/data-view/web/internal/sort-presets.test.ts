@@ -1,7 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import type { FieldDef } from "../../core";
+import type { FieldDef, SortRule } from "../../core";
 import {
+  applyPresetRules,
   presetMatchesRules,
+  presetRulesFromLive,
   readSortPresets,
   resolvableRules,
 } from "./sort-presets";
@@ -52,7 +54,11 @@ describe("readSortPresets", () => {
 
   it("coerces a bad/absent direction to asc and skips ruleless/labelless rows", () => {
     const presets = readSortPresets([
-      { id: "p1", label: "Mixed", rules: [{ fieldId: "a" }, { fieldId: "b", direction: "nope" }] },
+      {
+        id: "p1",
+        label: "Mixed",
+        rules: [{ fieldId: "a" }, { fieldId: "b", direction: "nope" }],
+      },
       { id: "p2", rules: [] }, // no label → skipped
       { fieldId: "x" }, // not a preset → skipped
     ]);
@@ -132,5 +138,56 @@ describe("presetMatchesRules", () => {
 
   it("rejects a different length", () => {
     expect(presetMatchesRules(preset, [preset.rules[0]!])).toBe(false);
+  });
+});
+
+describe("pinned rules and presets", () => {
+  const folders: SortRule = {
+    fieldId: "folders",
+    direction: "asc",
+    pinned: true,
+  };
+  const fields: FieldDef<unknown>[] = [
+    { id: "folders", label: "Folders", value: () => 0 },
+    { id: "modified", label: "Modified", value: () => 0 },
+    { id: "name", label: "Name", value: () => "" },
+  ];
+
+  it("saving strips pinned rules and the pinned flag", () => {
+    expect(
+      presetRulesFromLive([
+        folders,
+        { fieldId: "modified", direction: "desc" },
+      ]),
+    ).toEqual([{ fieldId: "modified", direction: "desc" }]);
+  });
+
+  it("applying keeps the pinned prefix, dropping preset rules on pinned fields", () => {
+    expect(
+      applyPresetRules(
+        [folders, { fieldId: "name", direction: "asc" }],
+        [
+          { fieldId: "folders", direction: "desc" },
+          { fieldId: "modified", direction: "desc" },
+          { fieldId: "gone", direction: "asc" },
+        ],
+        fields,
+      ),
+    ).toEqual([folders, { fieldId: "modified", direction: "desc" }]);
+  });
+
+  it("matches a preset against the user rules only", () => {
+    const preset = {
+      id: "p",
+      label: "Newest",
+      rules: [{ fieldId: "modified", direction: "desc" as const }],
+    };
+    expect(
+      presetMatchesRules(preset, [
+        folders,
+        { fieldId: "modified", direction: "desc" },
+      ]),
+    ).toBe(true);
+    expect(presetMatchesRules(preset, [folders])).toBe(false);
   });
 });

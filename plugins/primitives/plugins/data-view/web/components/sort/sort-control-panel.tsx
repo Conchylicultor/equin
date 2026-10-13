@@ -6,6 +6,7 @@ import { FieldSearchList } from "../filter/field-search-list";
 import { AddSortRow } from "./add-sort-affordance";
 import { SortPresetSection, SortSavePresetPanel } from "./presets";
 import { SortRuleRow } from "./sort-rule-row";
+import { splitPinned } from "../../internal/pinned-sort";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -32,6 +33,7 @@ export function SortControlPanel(): ReactNode {
   const usedIds = new Set(sort.rules.map((r) => r.fieldId));
   const availableToAdd = sort.sortableFields.filter((f) => !usedIds.has(f.id));
   const hasRules = sort.rules.length > 0;
+  const { pinned, user } = splitPinned(sort.rules);
 
   return (
     <>
@@ -40,30 +42,44 @@ export function SortControlPanel(): ReactNode {
       {hasRules ? (
         <ControlPanel.Section>
           <ControlPanel.RuleList>
-            <SortableList
-              items={sort.rules.map((r) => r.fieldId)}
-              orientation="vertical"
-              onMove={(activeId, overId) => {
-                const toIndex = sort.rules.findIndex(
-                  (r) => r.fieldId === overId,
-                );
-                if (toIndex !== -1) sort.move(activeId, toIndex);
-              }}
-            >
-              {sort.rules.map((rule, index) => (
-                <SortRuleRow
-                  key={rule.fieldId}
-                  rule={rule}
-                  index={index}
-                  fields={sort.sortableFields.filter(
-                    (f) => !usedIds.has(f.id) || f.id === rule.fieldId,
-                  )}
-                  onChangeField={(next) => sort.setField(rule.fieldId, next)}
-                  onSetDirection={(dir) => sort.setDirection(rule.fieldId, dir)}
-                  onRemove={() => sort.removeRule(rule.fieldId)}
-                />
-              ))}
-            </SortableList>
+            {/* Pinned rules are a prefix (`pinned-sort.ts`), so each segment is
+                its own sortable list: a drag reorders within its segment and
+                never carries a rule across the boundary — pinning is the
+                trailing toggle's job. */}
+            {[pinned, user].map((segment, segmentIndex) =>
+              segment.length ? (
+                <SortableList
+                  key={segmentIndex === 0 ? "pinned" : "user"}
+                  items={segment.map((r) => r.fieldId)}
+                  orientation="vertical"
+                  onMove={(activeId, overId) => {
+                    const toIndex = sort.rules.findIndex(
+                      (r) => r.fieldId === overId,
+                    );
+                    if (toIndex !== -1) sort.move(activeId, toIndex);
+                  }}
+                >
+                  {segment.map((rule) => (
+                    <SortRuleRow
+                      key={rule.fieldId}
+                      rule={rule}
+                      index={sort.rules.indexOf(rule)}
+                      fields={sort.sortableFields.filter(
+                        (f) => !usedIds.has(f.id) || f.id === rule.fieldId,
+                      )}
+                      onChangeField={(next) =>
+                        sort.setField(rule.fieldId, next)
+                      }
+                      onSetDirection={(dir) =>
+                        sort.setDirection(rule.fieldId, dir)
+                      }
+                      onTogglePinned={() => sort.togglePinned(rule.fieldId)}
+                      onRemove={() => sort.removeRule(rule.fieldId)}
+                    />
+                  ))}
+                </SortableList>
+              ) : null,
+            )}
           </ControlPanel.RuleList>
           <AddSortRow />
         </ControlPanel.Section>
@@ -109,13 +125,18 @@ export function SortControlPanel(): ReactNode {
               — the panel is a prop-less body the toolbar mounts, and in the
               compact fold there is no popover to close at all, so "clear and
               dismiss" is not one gesture it can express in both layouts. */}
-          <ControlPanel.Row
-            icon={<Icon icon={closeIcon} />}
-            tone="danger"
-            onSelect={() => sort.clear()}
-          >
-            Clear sort
-          </ControlPanel.Row>
+          {/* Clear drops the USER rules only; with nothing but pinned rules
+              left there is nothing for it to do, so it goes (unpin or remove
+              a pinned rule from its own row). */}
+          {user.length ? (
+            <ControlPanel.Row
+              icon={<Icon icon={closeIcon} />}
+              tone="danger"
+              onSelect={() => sort.clear()}
+            >
+              Clear sort
+            </ControlPanel.Row>
+          ) : null}
         </ControlPanel.Footer>
       ) : null}
     </>

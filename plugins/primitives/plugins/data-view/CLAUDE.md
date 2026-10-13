@@ -111,6 +111,23 @@ proactively. The origin default stays `{ "views": [] }` with a stable hash
 (independent of the registered view-types), so adding a view-type never
 invalidates committed configs.
 
+**Pinned sort rules.** A `SortRule` may carry `pinned: true`: it sorts before
+every unpinned rule and nothing but its own row displaces it — a header click
+cycles the first *user* rule (`cyclePrimarySort`; a click on a pinned field's
+header flips that pin's direction, never removes it), "Clear sort" keeps the
+pins, a saved preset stores only the user rules and applying one puts them
+behind the pins. Pinned rules are a **prefix** of the list, an invariant owned by
+`web/internal/pinned-sort.ts` (`splitPinned` / `normalizeSortRules`) and enforced
+at both config boundaries (`readSortRules` on read, `setSortRules` / `setSort` on
+write). Everything that *applies* a sort (`makeSortComparator`, the tree's global
+sort, the live `orderBy` lowering) iterates the one list unchanged, so none of it
+can forget a pin; only the editing paths (`useSortController.togglePinned` /
+`move` clamped to its segment / `clear`, the sort panel's per-row pin toggle,
+presets, the table's header arrow = first user rule, `summarizeSort`'s 📌) know
+about pinning. Use it for an ordering the surface always wants first but the
+user may turn off — the file explorer pins `folders` asc (Finder's "Keep folders
+on top") in its committed config.
+
 ### Adoption is enforced (`no-adhoc-row-list`)
 
 The complementary forcing function: the `data-view/no-adhoc-row-list` lint rule

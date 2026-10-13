@@ -45,11 +45,13 @@ function coerce(value: FieldValue): string | number | undefined {
 
 /**
  * Map the data-view PRIMARY sort rule onto data-table's single-column sort
- * indicator. Secondary rules don't paint a header arrow (the sort popover is the
- * full multi-sort surface); the data-table primitive stays single-sort.
+ * indicator. The primary is the first USER rule — the one a header click cycles
+ * (`cyclePrimarySort`); a pinned prefix sorts ahead of it but is not what the
+ * headers drive. Secondary rules don't paint a header arrow (the sort popover is
+ * the full multi-sort surface); the data-table primitive stays single-sort.
  */
 function mapPrimary(rules: readonly SortRule[]): TableSortState | null {
-  const p = rules[0];
+  const p = rules.find((r) => !r.pinned);
   return p ? { columnId: p.fieldId, direction: p.direction } : null;
 }
 

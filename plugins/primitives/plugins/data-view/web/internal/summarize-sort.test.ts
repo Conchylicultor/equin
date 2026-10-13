@@ -54,4 +54,16 @@ describe("summarizeSort", () => {
       summarizeSort([{ fieldId: "gone", direction: "asc" }], sortableFields),
     ).toBeNull();
   });
+
+  it("marks a pinned top level with a pin glyph and says so aloud", () => {
+    const rules: SortRule[] = [
+      { fieldId: "title", direction: "asc", pinned: true },
+      { fieldId: "updatedAt", direction: "desc" },
+    ];
+    expect(summarizeSort(rules, sortableFields)).toEqual({
+      label: "📌 Title ↑",
+      spoken: "Title, ascending, pinned",
+      more: 1,
+    });
+  });
 });

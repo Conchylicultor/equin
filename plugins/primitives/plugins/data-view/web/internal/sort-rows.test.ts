@@ -179,4 +179,46 @@ describe("makeSortComparator", () => {
       ["a", "b", "c", "d"],
     );
   });
+
+  it("a pinned rule then a user rule: folders first, then by date", () => {
+    interface Entry {
+      id: string;
+      kind: "dir" | "file";
+      mtime: number;
+    }
+    const entryFields: FieldDef<Entry>[] = [
+      {
+        id: "folders",
+        label: "Folders",
+        type: "number",
+        value: (r) => (r.kind === "dir" ? 0 : 1),
+      },
+      {
+        id: "modified",
+        label: "Modified",
+        type: "number",
+        value: (r) => r.mtime,
+      },
+    ];
+    const rows: Entry[] = [
+      { id: "f-old", kind: "file", mtime: 1 },
+      { id: "d-new", kind: "dir", mtime: 4 },
+      { id: "f-new", kind: "file", mtime: 3 },
+      { id: "d-old", kind: "dir", mtime: 2 },
+    ];
+    const cmp = makeSortComparator(
+      [
+        { fieldId: "folders", direction: "asc", pinned: true },
+        { fieldId: "modified", direction: "desc" },
+      ],
+      entryFields,
+    );
+    expect(cmp).not.toBeNull();
+    expect([...rows].sort(cmp!).map((r) => r.id)).toEqual([
+      "d-new",
+      "d-old",
+      "f-new",
+      "f-old",
+    ]);
+  });
 });

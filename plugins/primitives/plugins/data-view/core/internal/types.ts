@@ -521,6 +521,10 @@ interface FieldDefBase<TRow> {
 export interface SortRule {
   fieldId: string;
   direction: "asc" | "desc";
+  /** Sorts before every unpinned rule; header cycling, preset apply and
+   *  "Clear sort" leave it in place. Pinned rules form a prefix of the list
+   *  (`normalizeSortRules` enforces it at the config read/write boundary). */
+  pinned?: true;
 }
 
 /** A named, reusable multi-level sort. `rules` priority = list order. */

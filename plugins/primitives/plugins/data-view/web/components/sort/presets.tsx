@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { useSortPresets } from "../../internal/use-sort-presets";
 import {
+  applyPresetRules,
   presetMatchesRules,
   resolvableRules,
 } from "../../internal/sort-presets";
@@ -39,12 +40,15 @@ function useSortPresetEntries(): {
 
   return {
     entries,
-    // Apply writes the preset's RESOLVABLE rules into the live sort, so a preset
-    // that half-resolves applies the half that does.
+    // Apply writes the preset's RESOLVABLE rules into the live sort behind the
+    // pinned prefix, so a preset that half-resolves applies the half that does
+    // and never displaces a pin.
     apply: (id) => {
       const preset = presets.presets.find((p) => p.id === id);
       if (preset) {
-        sort.setRules(resolvableRules(preset.rules, sort.sortableFields));
+        sort.setRules(
+          applyPresetRules(sort.rules, preset.rules, sort.sortableFields),
+        );
       }
     },
     // The row's trash is one click and takes the whole rule list with it, which
@@ -79,7 +83,8 @@ export function SortPresetSection(): ReactNode {
   );
 }
 
-/** The pushed "Save as preset" page — captures the live rules on submit. */
+/** The pushed "Save as preset" page — captures the live USER rules on submit
+ *  (pinned rules belong to the view, not the preset). */
 export function SortSavePresetPanel(): ReactNode {
   const { storageKey, sort } = useDataViewControls();
   const presets = useSortPresets(storageKey);

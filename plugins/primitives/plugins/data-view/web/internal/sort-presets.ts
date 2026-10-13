@@ -6,6 +6,7 @@ import type {
   SortRule,
 } from "../../core";
 import { FilterGroupSchema } from "../../core";
+import { splitPinned } from "./pinned-sort";
 
 /**
  * Pure helpers for the saved sort presets feature. Kept dependency-free
@@ -34,7 +35,8 @@ export function readSortPresets(raw: unknown): SortPreset[] {
     if (typeof row !== "object" || row === null) return;
     const r = row as Record<string, unknown>;
     if (typeof r.label !== "string") return;
-    const id = typeof r.id === "string" && r.id !== "" ? r.id : `preset-${index}`;
+    const id =
+      typeof r.id === "string" && r.id !== "" ? r.id : `preset-${index}`;
     const rawRules = Array.isArray(r.rules) ? r.rules : [];
     const rules: SortRule[] = [];
     for (const rawRule of rawRules) {
@@ -69,7 +71,8 @@ export function readFilterPresets(raw: unknown): FilterPreset[] {
     if (typeof r.label !== "string") return;
     const parsed = FilterGroupSchema.safeParse(r.group);
     if (!parsed.success) return;
-    const id = typeof r.id === "string" && r.id !== "" ? r.id : `preset-${index}`;
+    const id =
+      typeof r.id === "string" && r.id !== "" ? r.id : `preset-${index}`;
     presets.push({ id, label: r.label, group: parsed.data });
   });
   return presets;
@@ -102,16 +105,51 @@ export function resolvableRules<TRow>(
 }
 
 /**
- * True when `rules` equal a preset's rules by ordered `(fieldId, direction)` —
- * the active-indicator predicate (the live sort exactly matches the preset).
+ * The rules a preset saved from the live sort stores: the USER rules only, as
+ * plain `{ fieldId, direction }`. Pinned rules belong to the view, not to any
+ * preset — applying a preset keeps them (see `applyPresetRules`).
+ */
+export function presetRulesFromLive(rules: SortRule[]): SortRule[] {
+  return splitPinned(rules).user.map((r) => ({
+    fieldId: r.fieldId,
+    direction: r.direction,
+  }));
+}
+
+/**
+ * The live sort after applying a preset: the current pinned prefix untouched,
+ * then the preset's RESOLVABLE rules (a preset that half-resolves applies the
+ * half that does) minus any rule on an already-pinned field (a field sorts at
+ * most once).
+ */
+export function applyPresetRules<TRow>(
+  current: SortRule[],
+  presetRules: SortRule[],
+  sortableFields: FieldDef<TRow>[],
+): SortRule[] {
+  const { pinned } = splitPinned(current);
+  const pinnedIds = new Set(pinned.map((r) => r.fieldId));
+  return [
+    ...pinned,
+    ...resolvableRules(presetRules, sortableFields).filter(
+      (r) => !pinnedIds.has(r.fieldId),
+    ),
+  ];
+}
+
+/**
+ * True when the live USER rules equal a preset's rules by ordered
+ * `(fieldId, direction)` — the active-indicator predicate (the live sort, past
+ * its pinned prefix, exactly matches the preset).
  */
 export function presetMatchesRules(
   preset: SortPreset,
   rules: SortRule[],
 ): boolean {
-  if (preset.rules.length !== rules.length) return false;
+  const { user } = splitPinned(rules);
+  if (preset.rules.length !== user.length) return false;
   return preset.rules.every((pr, i) => {
-    const lr = rules[i];
+    const lr = user[i];
     return (
       lr !== undefined &&
       pr.fieldId === lr.fieldId &&

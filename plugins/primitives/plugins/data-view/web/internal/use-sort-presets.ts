@@ -3,11 +3,12 @@ import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { presetIdKind, type SortPreset, type SortRule } from "../../core";
 import { dataViewDescriptors } from "./descriptors";
-import { readSortPresets } from "./sort-presets";
+import { presetRulesFromLive, readSortPresets } from "./sort-presets";
 
 export interface SortPresetsController {
   presets: SortPreset[];
-  /** Append a new preset under an explicit stable id. */
+  /** Append a new preset under an explicit stable id. Takes the LIVE rules and
+   *  stores only the user ones — pinned rules belong to the view. */
   savePreset: (label: string, rules: SortRule[]) => void;
   deletePreset: (id: string) => void;
   renamePreset: (id: string, label: string) => void;
@@ -119,7 +120,10 @@ export function useSortPresets(storageKey: string): SortPresetsController {
 
   const savePreset = useCallback(
     (label: string, rules: SortRule[]) => {
-      commit((prev) => [...prev, { id: presetId(), label, rules }]);
+      commit((prev) => [
+        ...prev,
+        { id: presetId(), label, rules: presetRulesFromLive(rules) },
+      ]);
     },
     [commit],
   );

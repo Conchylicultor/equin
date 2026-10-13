@@ -82,4 +82,47 @@ describe("cyclePrimarySort", () => {
     cyclePrimarySort(rules, "num");
     expect(rules).toEqual(snapshot);
   });
+
+  describe("pinned rules", () => {
+    const folders: SortRule = {
+      fieldId: "folders",
+      direction: "asc",
+      pinned: true,
+    };
+
+    it("a header click on a user field keeps the pinned prefix in front", () => {
+      expect(cyclePrimarySort([folders], "when")).toEqual([
+        folders,
+        { fieldId: "when", direction: "asc" },
+      ]);
+      expect(
+        cyclePrimarySort(
+          [folders, { fieldId: "when", direction: "asc" }],
+          "when",
+        ),
+      ).toEqual([folders, { fieldId: "when", direction: "desc" }]);
+    });
+
+    it("cycling the primary to empty keeps the pinned rules", () => {
+      expect(
+        cyclePrimarySort(
+          [folders, { fieldId: "when", direction: "desc" }],
+          "when",
+        ),
+      ).toEqual([folders]);
+    });
+
+    it("a click on a pinned field flips its direction, never removing it", () => {
+      const rules: SortRule[] = [
+        folders,
+        { fieldId: "when", direction: "asc" },
+      ];
+      const once = cyclePrimarySort(rules, "folders");
+      expect(once).toEqual([
+        { ...folders, direction: "desc" },
+        { fieldId: "when", direction: "asc" },
+      ]);
+      expect(cyclePrimarySort(once, "folders")).toEqual(rules);
+    });
+  });
 });

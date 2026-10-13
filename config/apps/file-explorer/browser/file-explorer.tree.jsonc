@@ -1,8 +1,10 @@
 // @hash 6ec84829688d
 {
   // The file explorer's listing (browser/web/components/file-tree.tsx): one
-  // tree, its rows in the manual (rank) order the browser mints — folders
-  // first, then by name — until a column header picks a field sort.
+  // tree, folders kept on top by a PINNED sort rule on the hidden `folders`
+  // field — it sorts ahead of any column header the user clicks, and the sort
+  // panel unpins it (Finder's "Keep folders on top"). Ties fall back to the
+  // rank order the browser mints: by name.
   // No `visibleFields`: the aligned columns are every visible field — Name /
   // Modified / Size, then each FileBrowserSlots.Fields contribution (the git
   // badge) — so a contributed column shows without this file naming it.
@@ -11,7 +13,10 @@
       "id": "tree",
       "name": "Tree",
       "icon": "folder",
-      "view": { "type": "tree" }
+      "view": {
+        "type": "tree",
+        "sort": [{ "fieldId": "folders", "direction": "asc", "pinned": true }]
+      }
     }
   ],
   "sortPresets": [],

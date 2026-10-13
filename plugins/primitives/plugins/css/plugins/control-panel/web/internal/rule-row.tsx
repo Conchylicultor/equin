@@ -27,6 +27,11 @@ export interface ControlPanelRuleRowProps {
   value?: React.ReactNode;
   /** Extra controls in the trailing cell, rendered BEFORE the built-in remove. */
   actions?: React.ReactNode;
+  /**
+   * Paint `actions` at rest instead of on row hover — for a toggle whose ON
+   * state is itself information the row must show (a pinned sort rule's pin).
+   */
+  actionsAtRest?: boolean;
   onRemove?: () => void;
   /** Accessible name for the remove button; default "Remove". */
   removeLabel?: string;
@@ -72,6 +77,7 @@ export function ControlPanelRuleRow({
   operator,
   value,
   actions,
+  actionsAtRest = false,
   onRemove,
   removeLabel = "Remove",
   handle,
@@ -131,7 +137,8 @@ export function ControlPanelRuleRow({
 
           They differ on the one axis that is genuinely per-cluster. `actions` is
           contextual and secondary (the filter's "Turn into group"), so it fades
-          in on row hover. The remove ✕ is the builder's own verb — you add and
+          in on row hover (unless `actionsAtRest` says its state must show —
+          a pressed sort-rule pin). The remove ✕ is the builder's own verb — you add and
           drop rules constantly — and the track holds its width either way, so
           hiding it would cost discoverability and buy nothing: it lives at rest.
           The clusters render in that order, so `actions` sits before the ✕.
@@ -142,7 +149,11 @@ export function ControlPanelRuleRow({
         data-cp-cell="remove"
         className="flex items-center justify-end gap-2xs"
       >
-        {actions ? <RowActions pin={null}>{actions}</RowActions> : null}
+        {actions ? (
+          <RowActions pin={null} alwaysVisible={actionsAtRest}>
+            {actions}
+          </RowActions>
+        ) : null}
         {onRemove ? (
           <RowActions pin={null} alwaysVisible>
             <IconButton

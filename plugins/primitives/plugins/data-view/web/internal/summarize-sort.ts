@@ -16,6 +16,10 @@ import type { DataViewControlSummary } from "../slots";
  * The label leans on an arrow because the fold's row gives it one line; `spoken`
  * is what a screen reader gets instead, since "↑" reads as nothing useful.
  *
+ * A pinned top level (see `pinned-sort.ts`) is marked with a pin glyph — "📌
+ * Folders ↑ +1" — so the summary does not read as if the header the user just
+ * clicked were ignored: the pin sorts first, their rule is the "+1".
+ *
  * Pure: it takes state, never hooks (see `DataViewControlContribution.summary`).
  */
 export function summarizeSort(
@@ -33,8 +37,8 @@ export function summarizeSort(
 
   const ascending = first.direction === "asc";
   return {
-    label: `${field.label} ${ascending ? "↑" : "↓"}`,
-    spoken: `${field.label}, ${ascending ? "ascending" : "descending"}`,
+    label: `${first.pinned ? "📌 " : ""}${field.label} ${ascending ? "↑" : "↓"}`,
+    spoken: `${field.label}, ${ascending ? "ascending" : "descending"}${first.pinned ? ", pinned" : ""}`,
     more: live.length - 1,
   };
 }

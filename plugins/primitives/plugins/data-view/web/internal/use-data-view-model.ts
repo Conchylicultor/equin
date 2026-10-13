@@ -25,6 +25,7 @@ import type {
   ViewState,
 } from "../../core";
 import type { DataViewContribution } from "../slots";
+import { normalizeSortRules } from "./pinned-sort";
 import { cyclePrimarySort } from "./sort-cycle";
 import { isFilterGroup } from "./filter-shape";
 import { dataViewDescriptors } from "./descriptors";
@@ -127,13 +128,13 @@ export type ViewModel =
  * Read the host-managed sort rules off a row's raw variant value, coercing every
  * persisted form into a `SortRule[]`. Migrate-on-read — NEVER destructive (the
  * config is re-serialized to the array shape only when the user edits sort):
- *   - new array shape → as-is;
+ *   - new array shape → as-is, pinned rules partitioned to the front;
  *   - legacy single `{ fieldId, direction }` object → wrapped in `[obj]`;
  *   - null / absent → `[]`.
  */
 function readSortRules(view: VariantValue | undefined): SortRule[] {
   const raw = view?.sort;
-  if (Array.isArray(raw)) return raw as SortRule[];
+  if (Array.isArray(raw)) return normalizeSortRules(raw as SortRule[]);
   if (raw && typeof raw === "object") return [raw as SortRule];
   return [];
 }
@@ -295,10 +296,11 @@ export function useDataViewModel(
     (id: string, rules: SortRule[]) => {
       // An empty rule list is semantically "no sort" — omit the key rather than
       // persist `sort: []`, so the config row stays terse (mergeView drops
-      // undefined keys).
+      // undefined keys). Normalized so pinned rules stay a prefix on disk.
+      const next = normalizeSortRules(rules);
       core.updateView(
         id,
-        { sort: rules.length ? rules : undefined } as unknown as VariantValue,
+        { sort: next.length ? next : undefined } as unknown as VariantValue,
         { merge: true },
       );
     },
@@ -310,7 +312,9 @@ export function useDataViewModel(
       // Header shortcut: cycle the PRIMARY rule, preserving secondary rules.
       // Cycling can empty the rule list (primary desc + no secondary) — omit the
       // key in that case instead of persisting `sort: []`.
-      const next = cyclePrimarySort(readSortRules(core.viewFor(id)), fieldId);
+      const next = normalizeSortRules(
+        cyclePrimarySort(readSortRules(core.viewFor(id)), fieldId),
+      );
       core.updateView(
         id,
         { sort: next.length ? next : undefined } as unknown as VariantValue,

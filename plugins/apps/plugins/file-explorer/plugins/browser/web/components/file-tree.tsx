@@ -62,7 +62,12 @@ function listingFailure(listing: Listing): string | null {
   }
 }
 
-/** The entries a listing shows: folders first, then by name, as people sort. */
+/**
+ * The entries a listing shows, by name as people sort. Folders-first is NOT
+ * minted here: the view's pinned `folders` sort rule (FOLDERS_FIELD) owns it,
+ * so it survives a header click and the user can turn it off — one source of
+ * that ordering, not two. These ranks are the tiebreak under every sort.
+ */
 function visibleEntries(
   dir: string,
   entries: readonly HostFsEntry[],
@@ -70,15 +75,12 @@ function visibleEntries(
 ): HostFsEntry[] {
   return entries
     .filter((e) => shows(e, joinPath(dir, e.name)))
-    .sort((a, b) => {
-      const ad = a.kind === "dir" ? 0 : 1;
-      const bd = b.kind === "dir" ? 0 : 1;
-      if (ad !== bd) return ad - bd;
-      return a.name.localeCompare(b.name, undefined, {
+    .sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, {
         numeric: true,
         sensitivity: "base",
-      });
-    });
+      }),
+    );
 }
 
 /**
@@ -186,6 +188,20 @@ const KIND_FIELD: FieldDef<EntryRow> = {
   // The first column to give way to the names when the listing is narrow.
   dropOrder: 1,
   value: (r) => entryKindLabel(r),
+};
+
+/**
+ * Finder's "Keep folders on top", as a sort key: folders 0, files 1. Never a
+ * column — the config's default view pins an ascending sort rule on it, which
+ * sorts ahead of whatever header the user clicks. Unpinning or removing that
+ * rule in the sort panel mixes folders and files; re-adding it restores them.
+ */
+const FOLDERS_FIELD: FieldDef<EntryRow> = {
+  id: "folders",
+  label: "Folders",
+  type: "number",
+  visible: false,
+  value: (r) => (r.kind === "dir" ? 0 : 1),
 };
 
 /**
@@ -307,7 +323,8 @@ export interface FileTreeProps {
 /**
  * The folder's contents as a DataView tree: Name / Kind / Modified / Size in
  * aligned columns (Created, Accessed, Category, Extension, Path and Link
- * target hidden until switched on) plus every `FileBrowserSlots.Fields` contribution, folders first, every folder lazily listed through host-fs on first
+ * target hidden until switched on) plus every `FileBrowserSlots.Fields` contribution, folders first (a
+ * pinned sort rule, so they stay on top under any header sort), every folder lazily listed through host-fs on first
  * expand — an archive file (a zip) expands like one. Clicking a folder makes it the listing; clicking a file selects it
  * (and opens it beside the listing). Double-click or Enter opens either. A
  * row's hover actions are the `FileBrowserSlots.RowActions` contributions.
@@ -396,6 +413,7 @@ export function FileTree({
         value: (r) => entryExtension(r.name),
       },
       { id: "path", label: "Path", visible: false, value: (r) => r.path },
+      FOLDERS_FIELD,
       {
         id: "link",
         label: "Link target",
