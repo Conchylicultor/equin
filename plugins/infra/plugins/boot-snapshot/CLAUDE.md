@@ -67,7 +67,9 @@ Two kinds of preload, told apart by the `Resource.Declare` payload alone:
   loader alone, sequential per key — no flight, no commit watermark: nothing
   compares these values causally). Shipped in `tuples[key]` as
   `{ params, value }`; the client hydrates each. Never L2-persisted. Config's
-  documents are the first user.
+  documents are the first user. A collection's `:rows` sibling served with
+  `preloadRows: { idsOf }` is one too: its one tuple is the id set of another
+  preloaded collection's boot value (network/live's *Preload*).
 
 A route-parametrized resource nobody enumerates self-heals via its normal sub-ack.
 A load that fails is omitted from the snapshot and reported (server error

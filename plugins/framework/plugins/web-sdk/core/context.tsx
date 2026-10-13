@@ -1,22 +1,27 @@
-import { createContext, useMemo, type ReactNode } from "react";
-import { topoSortPlugins } from "@plugins/framework/plugins/plugin-loader/core";
-import { declarePluginSlots } from "@plugins/framework/plugins/slot-declaration/core";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import type { Contribution, LoadedPlugin } from "./types";
+import {
+  createPluginRegistry,
+  NO_CONTRIBUTIONS,
+  readerOf,
+  type PluginRegistry,
+  type PluginRegistryReader,
+} from "./registry";
 
-export interface PluginRuntime {
-  plugins: LoadedPlugin[];
-  contributions: Contribution[];
-  /**
-   * Keyed by the slot OBJECT. A contribution names its slot by identity (see
-   * `Contribution._slot`), so this map never needs an id — which is what lets a
-   * slot's id be derived from its declaring plugin rather than captured when the
-   * contribution was minted.
-   */
-  bySlot: Map<SlotHandle, Contribution[]>;
-}
-
-export const PluginRuntimeContext = createContext<PluginRuntime | null>(null);
+// Holds the registry's READ half — one stable object, never a per-append value,
+// so a provider re-render or a plugin append never re-renders a reader through
+// the context. Not exported: the only read is `useRawContributions(slot)`.
+const PluginRegistryContext = createContext<PluginRegistryReader | null>(null);
 
 /**
  * Prefix of the per-slot first-read User Timing marks: `slot-read:<slot id>`,
@@ -37,106 +42,97 @@ export interface SlotReadDetail {
 const readSlots = new WeakSet<SlotHandle>();
 
 /**
- * The one way to read a slot's contributions from the runtime. Every reader
+ * The one way to read a slot's contributions from the registry. Every reader
  * (`useContributions`, `.Render`, `.Mount`, `.Dispatch`, presence checks)
  * funnels here, so "which slots did this screen read" has exactly one answer.
  */
-export function contributionsOf(
-  runtime: PluginRuntime,
+function contributionsOf(
+  reader: PluginRegistryReader,
   slot: SlotHandle,
-): Contribution[] | undefined {
+): readonly Contribution[] {
+  const list = reader.read(slot);
   // A slot whose declaring plugin has not loaded yet (a deferred owner) has
   // no id; it is recorded on its first read after the declaration lands.
   if (!readSlots.has(slot) && slot._pluginId !== undefined) {
     readSlots.add(slot);
     const detail: SlotReadDetail = {
       owner: slot._pluginId,
-      contributors: [
-        ...new Set(
-          (runtime.bySlot.get(slot) ?? []).map((c) => String(c._pluginId)),
-        ),
-      ],
+      contributors: [...new Set(list.map((c) => String(c._pluginId)))],
     };
     performance.mark(`${SLOT_READ_TIMING_PREFIX}${slot.id}`, { detail });
   }
-  return runtime.bySlot.get(slot);
+  return list;
 }
 
-// Tracks plugins whose `register` array has been applied so a remount of
-// PluginProvider (or a useMemo recompute) doesn't double-invoke registry
-// writes.
-const registered = new WeakSet<LoadedPlugin>();
+const noopUnsubscribe = () => {};
 
-function runRegisterPhase(plugins: LoadedPlugin[]): LoadedPlugin[] {
-  const ordered = topoSortPlugins(plugins);
-  for (const p of ordered) {
-    if (registered.has(p)) continue;
-    registered.add(p);
-    for (const r of p.register ?? []) {
-      try {
-        const result = r.register();
-        // Web register is contractually sync; if a Promise sneaks through
-        // (mistyped helper), surface the rejection rather than letting it
-        // dangle silently.
-        if (result instanceof Promise) {
-          // eslint-disable-next-line promise-safety/no-bare-catch
-          result.catch((err) =>
-            console.error(`[plugin.${p.id}] register failed`, err),
-          );
-        }
-        // eslint-disable-next-line promise-safety/no-bare-catch
-      } catch (err) {
-        console.error(`[plugin.${p.id}] register failed`, err);
-      }
-    }
+/**
+ * A slot's stamped (`_pluginId`, unsealed) contributions, in topo order —
+ * subscribed to THAT slot only, so the component re-renders when this slot's
+ * list changes and never because some other slot's did. The array identity is
+ * stable while the list is unchanged.
+ *
+ * `slot` may be `undefined` (an optional slot a hook cannot branch on): the
+ * answer is then the empty list. Prefer `slot.useContributions()` (sealed) or
+ * the slot-render constructors; this raw read is for framework primitives that
+ * need the stamp or an unsealed payload.
+ */
+export function useRawContributions(
+  slot: SlotHandle | undefined,
+): readonly Contribution[] {
+  const reader = useContext(PluginRegistryContext);
+  if (!reader) {
+    throw new Error("slot contributions must be read within PluginProvider");
   }
-  return ordered;
+  const subscribe = useCallback(
+    (listener: () => void) =>
+      slot ? reader.subscribe(slot, listener) : noopUnsubscribe,
+    [reader, slot],
+  );
+  const getSnapshot = () =>
+    slot ? contributionsOf(reader, slot) : NO_CONTRIBUTIONS;
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
-export function PluginProvider({
-  plugins,
-  children,
-}: {
-  plugins: LoadedPlugin[];
-  children: ReactNode;
-}) {
-  const runtime = useMemo(() => {
-    const ordered = runRegisterPhase(plugins);
-    // The slot pass, sibling of the `_pluginId` contribution stamp below: each
-    // declared slot gets its declaring plugin stamped onto the slot OBJECT (not
-    // a copy — the reorder middleware looks descriptors up by reference), and
-    // two plugins claiming one slot throws. Ownership therefore comes off the
-    // declaration rather than off module-cache order.
-    //
-    // NOT a completeness check: web plugins load in tiers, so mid-boot both the
-    // created and the declared sets are partial. `created \ declared` is gated
-    // at build time, in the codegen process, which imports every barrel.
-    // `"registry"`: `ordered` IS the registry — the plugin set this browser
-    // loaded — so a slot this pass does not name is one no loaded plugin
-    // declares, not one some disabled plugin owns off-screen.
-    declarePluginSlots(ordered, "registry");
-    const contributions = ordered.flatMap((p) =>
-      (p.contributions ?? []).map((c) => ({
-        ...c,
-        _pluginId: p.id,
-        _pluginDescription: p.description,
-      })),
-    );
-    const bySlot = new Map<SlotHandle, Contribution[]>();
-    for (const c of contributions) {
-      let list = bySlot.get(c._slot);
-      if (!list) {
-        list = [];
-        bySlot.set(c._slot, list);
-      }
-      list.push(c);
-    }
-    return { plugins, contributions, bySlot };
-  }, [plugins]);
+/**
+ * Provides the plugin registry to the tree. Two forms:
+ *
+ * - `registry` — the boot path: `App` creates the registry once and appends
+ *   each loaded batch to it directly, so neither `App` nor this provider
+ *   re-renders per batch; only the readers of changed slots do.
+ * - `plugins` — a fixed (or occasionally swapped) list, for tests and
+ *   standalone mounts: the provider owns a registry and re-derives it when the
+ *   prop's identity changes.
+ */
+export function PluginProvider(
+  props: { children: ReactNode } & (
+    | { registry: PluginRegistry; plugins?: never }
+    | { plugins: LoadedPlugin[]; registry?: never }
+  ),
+) {
+  const { children } = props;
+  const plugins = "plugins" in props ? props.plugins : undefined;
+  // Created once: the registry is the ONE object the tree reads for the
+  // provider's lifetime.
+  const [reader] = useState(() => {
+    if (props.registry) return readerOf(props.registry);
+    const owned = readerOf(createPluginRegistry());
+    owned.replace(plugins ?? []);
+    return owned;
+  });
+  const applied = useRef(plugins);
+  // A swapped `plugins` prop is applied after render (a registry write
+  // notifies other components, which must not happen during this render); its
+  // readers re-render synchronously, before paint.
+  useLayoutEffect(() => {
+    if (plugins === undefined || plugins === applied.current) return;
+    applied.current = plugins;
+    reader.replace(plugins);
+  }, [reader, plugins]);
 
   return (
-    <PluginRuntimeContext.Provider value={runtime}>
+    <PluginRegistryContext.Provider value={reader}>
       {children}
-    </PluginRuntimeContext.Provider>
+    </PluginRegistryContext.Provider>
   );
 }

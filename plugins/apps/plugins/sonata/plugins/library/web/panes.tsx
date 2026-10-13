@@ -18,7 +18,7 @@ import {
 import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { barStartBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { useDeferredLoadState } from "@plugins/framework/plugins/web-sdk/core";
+import { useDeferredLoadComplete } from "@plugins/framework/plugins/web-sdk/core";
 import {
   PlayerDisplay,
   PlayerDisplayBinding,
@@ -160,7 +160,7 @@ function useSonataPlayerResolve({
   // and the loaded song then never re-hydrates (the effect below keeps a song
   // that is already loaded). So a deep link waits for the tier, as any reader
   // of a contributed set does.
-  const { deferredComplete } = useDeferredLoadState();
+  const deferredComplete = useDeferredLoadComplete();
   const loadDocument = useLoadDocument();
   const { requestSeekOnLoad, seekTo, score } = useSession();
   const { content } = useSongDocument();

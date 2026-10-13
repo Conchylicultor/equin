@@ -21,7 +21,7 @@ import { applyTree, type ReorderState } from "./sorting";
  */
 export function useReorderedEntries(
   slotId: string,
-  contributions: Contribution[],
+  contributions: readonly Contribution[],
 ): ReorderState {
   const descriptor = reorderDescriptors.get(slotId);
   if (!descriptor) {

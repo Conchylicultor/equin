@@ -5,8 +5,8 @@ import type { ComponentType } from "react";
  *
  * ## Why a module registry at all, when `InlineChip.Tag` is already a registry
  *
- * Slot contributions are readable ONLY through a React hook — `bySlot` is built
- * inside `PluginProvider`'s `useMemo`. Every reader of a chip that is not a
+ * Slot contributions are readable ONLY through a React hook — the plugin
+ * registry is read per slot, through `PluginProvider`'s context. Every reader of a chip that is not a
  * React render (the Lexical hosts' headless registries, the runs↔doc
  * projection) therefore cannot see them at all. So the chips also live here, in
  * a plain module registry any caller can read.

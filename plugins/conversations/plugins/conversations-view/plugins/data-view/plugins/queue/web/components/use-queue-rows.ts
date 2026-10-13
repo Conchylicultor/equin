@@ -30,6 +30,7 @@ import {
   type ReorderVars,
   type TaskGroup,
 } from "@plugins/conversations/plugins/conversations-view/plugins/queue/web";
+import { reuseRows } from "./reuse-rows";
 
 /** The read-time section a queue row belongs to (the enum the `section` field partitions by). */
 export type QueueSection =
@@ -83,6 +84,9 @@ type QueueDisplay = {
   rows: QueueRow[];
   dispatchReorder: (vars: ReorderVars) => void;
 };
+
+/** The display shown, and the computation it was reconciled from. */
+type HeldDisplay = { from: QueueDisplay; display: QueueDisplay };
 
 /**
  * Combines the queue's live resources — active + gone conversations (gone read
@@ -304,17 +308,39 @@ export function useQueueRows(): {
     return { rows: out, dispatchReorder: ranksResult.dispatch };
   }, [activeResult, goneResult, ranksResult, tasksResult]);
 
-  // Flash mitigation: the live-set changing re-baselines the ranks subscription
-  // (a new point tuple ⇒ a pending arm). Retain the last non-pending display so a
-  // re-subscription paints the previous rows instead of blanking to a skeleton.
-  // This is React's sanctioned "store info from previous renders" pattern — a
-  // guarded set-during-render; it terminates because `computed` is a stable
-  // memoized object while the inputs are unchanged (`computed === lastGood` ⇒ no
-  // set). On
-  // true first mount (no retained value) `display` stays null and the hook reports
-  // `pending`.
-  const [lastGood, setLastGood] = useState<QueueDisplay | null>(null);
-  if (computed && computed !== lastGood) setLastGood(computed);
+  // The display actually shown, derived from the last settled `computed`:
+  //
+  // - Row identity: each recompute rebuilds every row object, so the rows are
+  //   reconciled onto the previous display's (`reuseRows`) — an unchanged
+  //   conversation keeps its row object (and an unchanged queue its array), and
+  //   the list, which memoizes each row on its row object, re-renders only the
+  //   rows that changed.
+  // - Flash mitigation: the live-set changing re-baselines the ranks
+  //   subscription (a new point tuple ⇒ a pending arm). The last settled display
+  //   is retained so a re-subscription paints the previous rows instead of
+  //   blanking to a skeleton.
+  //
+  // Both need the previous display, so it is state, updated with React's
+  // sanctioned "store info from previous renders" pattern — a guarded
+  // set-during-render. That is not an extra render pass: React re-runs this
+  // hook's component immediately, before rendering any child or committing, so
+  // the children draw once, from the reconciled rows. It terminates because
+  // `computed` is a stable memoized object while the inputs are unchanged
+  // (`computed === held.from` ⇒ no set). On true first mount (no retained
+  // value) the display stays null and the hook reports `pending`.
+  const [held, setHeld] = useState<HeldDisplay | null>(null);
+  let current = held;
+  if (computed && computed !== held?.from) {
+    current = {
+      from: computed,
+      display: {
+        rows: reuseRows(held?.display.rows ?? null, computed.rows),
+        dispatchReorder: computed.dispatchReorder,
+      },
+    };
+    setHeld(current);
+  }
+  const lastGood = current?.display ?? null;
 
   // A FAILED read is never papered over by the retained display: the retention
   // exists for the brief loading re-baseline, and a failure shown as the old
@@ -337,7 +363,8 @@ export function useQueueRows(): {
       readiness = lastGood === null ? gate : { status: "ready" };
       break;
     case "ready":
-      display = computed;
+      // `computed` is settled here, so `lastGood` is its reconciled form.
+      display = lastGood;
       readiness = gate;
       break;
   }

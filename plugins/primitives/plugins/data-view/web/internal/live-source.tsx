@@ -5,7 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useDeferredLoadState } from "@plugins/framework/plugins/web-sdk/core";
+import { useDeferredLoadComplete } from "@plugins/framework/plugins/web-sdk/core";
 import {
   and,
   canonicalizeFilter,
@@ -181,7 +181,7 @@ export function useLiveSource<TRow>(args: {
     now,
     collapsedSections,
   } = args;
-  const { deferredComplete } = useDeferredLoadState();
+  const deferredComplete = useDeferredLoadComplete();
   const query = useDebounced(state.query, SEARCH_DEBOUNCE_MS);
 
   // The view's filter, lowered over FIELD ids (relative dates against the day

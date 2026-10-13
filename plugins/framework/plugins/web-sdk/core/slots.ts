@@ -1,5 +1,4 @@
-import { useContext, useMemo } from "react";
-import { contributionsOf, PluginRuntimeContext } from "./context";
+import { useRawContributions } from "./context";
 import {
   recordCreatedSlot,
   slotIdFor,
@@ -12,10 +11,22 @@ import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 export interface Slot<P> extends SlotHandle {
   (props: P): Contribution;
-  useContributions: Hook<() => SealContributions<P>[]>;
+  useContributions: Hook<() => readonly SealContributions<P>[]>;
 }
 
-const EMPTY: Contribution[] = [];
+// The sealed view of a slot's list, shared by every reader of that list: keyed
+// by the registry's array, which is stable while the slot is unchanged — so the
+// sealed array is stable too, across components and across plugin appends.
+const sealedByList = new WeakMap<readonly Contribution[], readonly unknown[]>();
+
+function sealed(list: readonly Contribution[]): readonly unknown[] {
+  let out = sealedByList.get(list);
+  if (!out) {
+    out = Object.freeze(list.map(({ _slot: _, ...rest }) => rest));
+    sealedByList.set(list, out);
+  }
+  return out;
+}
 
 /**
  * The one constructor every slot funnels through — `defineRenderSlot`,
@@ -55,22 +66,9 @@ export function defineSlot<P>(opts?: {
   });
   recordCreatedSlot(slot);
 
-  slot.useContributions = () => {
+  slot.useContributions = () =>
     // eslint-disable-next-line react-hooks/rules-of-hooks -- method named useContributions; ESLint doesn't recognize object.useX as a hook
-    const ctx = useContext(PluginRuntimeContext);
-    if (!ctx) {
-      throw new Error("useContributions must be used within PluginProvider");
-    }
-    const raw = contributionsOf(ctx, slot) ?? EMPTY;
-    // eslint-disable-next-line react-hooks/rules-of-hooks -- same as above
-    return useMemo(
-      () =>
-        raw.map(
-          ({ _slot: _, ...rest }: Contribution) => rest as SealContributions<P>,
-        ),
-      [raw],
-    );
-  };
+    sealed(useRawContributions(slot)) as readonly SealContributions<P>[];
 
   return slot;
 }

@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from "react";
+import { useMemo, type ReactElement, type ReactNode } from "react";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -97,19 +97,23 @@ type FieldOptions = FieldDef<ConversationListRow>["options"];
  */
 export function useConversationFieldDefs(): FieldDef<ConversationListRow>[] {
   const catalog = useModelCatalog();
-  const modelOptions: FieldOptions =
-    catalog.status === "ready"
-      ? conversationModelOptions(catalog.data)
-      : undefined;
-  const specs: readonly ConversationFieldSpec[] = CONVERSATION_FIELDS;
-  return specs.map((spec) => ({
-    id: spec.id,
-    label: spec.label,
-    type: spec.type,
-    primary: spec.primary,
-    sortable: spec.sortable,
-    options: spec.id === "model" ? modelOptions : spec.options,
-    value: (c: ConversationListRow) => fieldValue(c, spec.id),
-    cell: cellFor(spec.id, spec.type),
-  }));
+  // Memoized on the catalog read: a list memoizes its rows on the schema, so
+  // a fresh one per render would re-render every row of every list over it.
+  return useMemo(() => {
+    const modelOptions: FieldOptions =
+      catalog.status === "ready"
+        ? conversationModelOptions(catalog.data)
+        : undefined;
+    const specs: readonly ConversationFieldSpec[] = CONVERSATION_FIELDS;
+    return specs.map((spec) => ({
+      id: spec.id,
+      label: spec.label,
+      type: spec.type,
+      primary: spec.primary,
+      sortable: spec.sortable,
+      options: spec.id === "model" ? modelOptions : spec.options,
+      value: (c: ConversationListRow) => fieldValue(c, spec.id),
+      cell: cellFor(spec.id, spec.type),
+    }));
+  }, [catalog]);
 }

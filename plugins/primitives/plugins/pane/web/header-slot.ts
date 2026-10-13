@@ -67,14 +67,18 @@ export function definePaneHeaderSlot(
  * config-registrations.ts`), and for the same two reasons: the set is not
  * knowable at module eval (`Pane.define` runs at the module scope of each pane's
  * own plugin, and web plugins load in deferred tiers), and a slot is only NAMED
- * by a declaration pass — which runs inside `PluginProvider` immediately before
- * it reads every plugin's `contributions`, so re-deriving there is exactly in
- * time, every time.
+ * by a declaration pass — which runs inside the plugin registry immediately
+ * before it reads every plugin's `contributions`, so re-deriving there is
+ * exactly in time, every time.
+ *
+ * Each header's title item is minted ONCE and reused by every later pass: the
+ * registry keeps a slot's list (and spares its readers a re-render) only when
+ * its contributions are the same objects as before.
  *
  * De-duped by slot identity, so a header borrowed by five panes gets exactly one
  * title item rather than five.
  *
- * Order: `bySlot` preserves the topo-sorted plugin order, and a plugin can only
+ * Order: the registry keeps each slot's list in topo-sorted plugin order, and a plugin can only
  * contribute to a pane's header by importing the plugin that owns the pane,
  * which imports this one — so `pane` is always visited first and the title lands
  * FIRST in every header's natural (unconfigured) order, which is where a pane
@@ -85,6 +89,8 @@ export function definePaneHeaderSlot(
  */
 export const paneHeaderContributions: Contribution[] = [];
 
+const titleItems = new Map<PaneHeaderSlot, Contribution>();
+
 subscribeSlotsDeclared((naming) => {
   paneHeaderContributions.length = 0;
   const seen = new Set<PaneHeaderSlot>();
@@ -92,8 +98,11 @@ subscribeSlotsDeclared((naming) => {
     const header = headerSlots.get(entry.slot);
     if (header === undefined || seen.has(header)) continue;
     seen.add(header);
-    paneHeaderContributions.push(
-      header({ id: "title", component: PaneTitleItem, cell: "yield" }),
-    );
+    let title = titleItems.get(header);
+    if (!title) {
+      title = header({ id: "title", component: PaneTitleItem, cell: "yield" });
+      titleItems.set(header, title);
+    }
+    paneHeaderContributions.push(title);
   }
 });

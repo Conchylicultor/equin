@@ -51,7 +51,7 @@ export interface ReorderDescriptorEntry {
  * All [slotId, descriptor, owner] triples, for registration in the web barrel.
  *
  * A STABLE array object rewritten in place by {@link syncReorderDescriptors} —
- * `PluginProvider` re-reads each plugin's `contributions` on every pass, so the
+ * the plugin registry re-reads each plugin's `contributions` on every pass, so the
  * set grows as deferred plugins arrive, while the array identity every consumer
  * holds never changes.
  */

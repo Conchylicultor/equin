@@ -282,7 +282,7 @@ export interface FieldExtensionProps<TRow> {
 export interface FieldExtensionsDescriptor<TRow> extends SlotHandle {
   /** All contributed field-extension components (sealed, like any slot). */
   useContributions: Hook<
-    () => SealContributions<{
+    () => readonly SealContributions<{
       id: string;
       /** The heading this contributor's fields are listed under (`null` = they are
        *  ordinary fields of the host's own schema). The host STAMPS it onto every

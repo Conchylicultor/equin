@@ -16,10 +16,9 @@ import {
   SurfaceChromeContext,
   type PaneObject,
 } from "@plugins/primitives/plugins/pane/web";
-import { useContext, useMemo, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import {
-  contributionsOf,
-  PluginRuntimeContext,
+  useRawContributions,
   type Contribution,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
@@ -161,16 +160,15 @@ function ToolbarItem(item: AppShellToolbarItem) {
 /**
  * Whether a (possibly absent) render slot has at least one contribution.
  *
- * Reads the plugin runtime directly (the same `bySlot` map `.Render` paints
- * from) rather than the slot's own `useContributions()` hook, so it can be
- * called unconditionally: `slot` may be `undefined`, and a hook can't be
- * called conditionally. This is what lets the chrome toolbar bar be driven by
+ * Reads the registry directly (the same per-slot list `.Render` paints from)
+ * rather than the slot's own `useContributions()` hook, so it can be called
+ * unconditionally: `slot` may be `undefined`, and a hook can't be called
+ * conditionally. This is what lets the chrome toolbar bar be driven by
  * *real* contributions instead of merely whether a slot object was passed —
  * an app that wires a toolbar slot with zero contributors gets no empty bar.
  */
 function useSlotHasContributions(slot: SlotHandle | undefined): boolean {
-  const ctx = useContext(PluginRuntimeContext);
-  return !!slot && !!ctx && (contributionsOf(ctx, slot)?.length ?? 0) > 0;
+  return useRawContributions(slot).length > 0;
 }
 
 /**

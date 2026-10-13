@@ -7,7 +7,6 @@ import {
   createElement,
   Fragment,
   useCallback,
-  useContext,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -16,9 +15,8 @@ import {
   type ReactNode,
 } from "react";
 import {
-  contributionsOf,
   defineSlot,
-  PluginRuntimeContext,
+  useRawContributions,
   UNSAFE_unsealSlotComponent,
   type Slot,
   type SealedComponent,
@@ -276,12 +274,7 @@ export function defineRenderSlot<P>(
   }: RenderProps<P & { id: string }>) {
     // The host's density wins over the slot's declared default.
     const controlSize = hostControlSize ?? declaredControlSize;
-    const ctx = useContext(PluginRuntimeContext);
-    if (!ctx) {
-      throw new Error("SlotRender must be used within PluginProvider");
-    }
-
-    const rawContributions = contributionsOf(ctx, slot) ?? [];
+    const rawContributions = useRawContributions(slot);
     const cleanItems = slot.useContributions();
 
     const cleanById = useMemo(
@@ -441,12 +434,7 @@ export function defineMountSlot<P = {}>(
   mountSlot.meta = { kind: "mount", reorderable: false };
 
   mountSlot.Mount = function SlotMount() {
-    const ctx = useContext(PluginRuntimeContext);
-    if (!ctx) {
-      throw new Error("SlotMount must be used within PluginProvider");
-    }
-
-    const rawContributions = contributionsOf(ctx, slot) ?? [];
+    const rawContributions = useRawContributions(slot);
     const cleanItems = slot.useContributions();
 
     const cleanById = useMemo(
@@ -531,11 +519,6 @@ export function defineWrapperSlot<P extends object = {}>(
   wrapperSlot.meta = { kind: "wrap", reorderable: false };
 
   wrapperSlot.Wrap = function SlotWrap({ children }: { children: ReactNode }) {
-    const ctx = useContext(PluginRuntimeContext);
-    if (!ctx) {
-      throw new Error("SlotWrap must be used within PluginProvider");
-    }
-
     const cleanItems = slot.useContributions();
 
     return cleanItems.reduceRight<ReactNode>((acc, clean) => {
@@ -600,12 +583,7 @@ export function defineDispatchSlot<
   dispatchSlot.meta = { kind: "dispatch", reorderable: false };
 
   dispatchSlot.Dispatch = function SlotDispatch(props: Props) {
-    const ctx = useContext(PluginRuntimeContext);
-    if (!ctx) {
-      throw new Error("SlotDispatch must be used within PluginProvider");
-    }
-
-    const rawContributions = contributionsOf(ctx, slot) ?? [];
+    const rawContributions = useRawContributions(slot);
     const cleanItems = slot.useContributions();
 
     const key = config.key(props);
@@ -633,7 +611,8 @@ export function defineDispatchSlot<
         )
       : config.fallback;
     // Index correspondence: both `cleanItems` and `rawContributions` come from
-    // `ctx.bySlot.get(slot)` (clean is a positional `.map` of raw — slots.ts:33-36),
+    // the registry's one list for this slot (clean is a positional `.map` of raw,
+    // memoized on that list — slots.ts `sealed`),
     // so `rawContributions[matchedIndex]` is the stamped Contribution carrying
     // `_pluginId` for the error-boundary middleware. The fallback path has no
     // contribution, so synthesize a minimal one with a generic boundary label.

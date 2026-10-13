@@ -35,6 +35,7 @@ import { createTxAckRegistry } from "./tx-ack-registry";
 import { slowResourceReportSink } from "./slow-resource-reporter";
 import { notePendingMount } from "./pending-mount-tracker";
 import { dateAwareReplaceEqualDeep } from "./internal/structural-sharing";
+import { installCoalescedNotify } from "./internal/coalesced-notify";
 import { toResourceError } from "./resource-error";
 import { queryResult } from "./query-result";
 import type {
@@ -52,6 +53,12 @@ import {
 } from "@plugins/primitives/plugins/networking/web";
 
 type ResourceParams = Record<string, string>;
+
+// Every live read delivers through React Query's notify manager: coalesce its
+// flushes so a burst of frames (one cache write each) renders in one commit,
+// not one commit per frame (`internal/coalesced-notify.ts`). Installed on
+// import, before any read can schedule a notification.
+installCoalescedNotify();
 
 const NotificationsContext = createContext<NotificationsClient | null>(null);
 

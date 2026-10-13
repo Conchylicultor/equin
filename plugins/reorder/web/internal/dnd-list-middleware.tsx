@@ -159,7 +159,7 @@ export function ReorderListMiddleware({
   renderItem,
 }: {
   slotId: string;
-  contributions: Contribution[];
+  contributions: readonly Contribution[];
   renderItem: (contribution: Contribution) => ReactNode;
   children: ReactNode;
 }) {
@@ -198,7 +198,7 @@ function ReorderListMiddlewareInner({
   renderItem,
 }: {
   descriptor: ConfigDescriptor;
-  contributions: Contribution[];
+  contributions: readonly Contribution[];
   renderItem: (contribution: Contribution) => ReactNode;
 }) {
   const { items, setConfig } = useReorderConfig(descriptor);
@@ -227,7 +227,7 @@ function ReorderInner({
 }: {
   items: ReorderTree;
   setConfig: (key: string, value: unknown) => void;
-  contributions: Contribution[];
+  contributions: readonly Contribution[];
   renderItem: (contribution: Contribution) => ReactNode;
 }) {
   const editMode = useEditMode();

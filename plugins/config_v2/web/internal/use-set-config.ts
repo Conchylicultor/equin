@@ -1,5 +1,5 @@
-import { useContext, useCallback } from "react";
-import { PluginRuntimeContext } from "@plugins/framework/plugins/web-sdk/core";
+import { useCallback } from "react";
+import { useRawContributions } from "@plugins/framework/plugins/web-sdk/core";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { setConfigField } from "../../core";
 import type { ConfigDescriptor } from "../../core";
@@ -11,14 +11,11 @@ export function useSetConfig<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F>,
   opts?: { scopeId?: string },
 ): (key: keyof F & string, value: unknown) => void {
-  const ctx = useContext(PluginRuntimeContext);
+  const registrations = useRawContributions(ConfigV2.WebRegister);
   // useEndpointMutation (not void fetchEndpoint) so a failed save surfaces via
   // the global error toast instead of escaping as an unhandled rejection.
-  // Called before the throws below to keep hook order unconditional.
+  // Called before the throw below to keep hook order unconditional.
   const { mutate } = useEndpointMutation(setConfigField);
-  if (!ctx) throw new Error("useSetConfig must be inside PluginProvider");
-
-  const registrations = ctx.bySlot.get(ConfigV2.WebRegister) ?? [];
   const reg = registrations.find((c) => c.descriptor === descriptor);
   const storePath = reg ? storePathOf(reg) : null;
 

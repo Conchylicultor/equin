@@ -138,8 +138,16 @@ useLive(graphNodes, { select: countNodes });                          // a slice
   hydrates the default window (`defaultParams`). An `all` collection forwards it
   to `key`, which has no `defaultParams`: the boot snapshot hydrates its one
   param-less tuple `{}`. `"boot-and-keep"` also keeps that preloaded tuple's
-  cache resident. `:rows` and `:groups` are never preloaded — the server cannot know a tab's id sets or
-  grouping queries at boot. A declared `:count` preloads with the window, at
+  cache resident. `:groups` is never preloaded — the server cannot know a
+  tab's grouping queries at boot — and neither is `:rows`, with one exception:
+  `serveCollection(c, { preloadRows: { idsOf: other } })` preloads it at ONE
+  tuple, the id set of `other`'s boot value (`other` declared `all` and
+  preloaded — a serve-time throw otherwise), for a reader whose id set IS that
+  set (the queue reads the ranks of the live conversations). The tuple is
+  derived server-side from `other` as the boot snapshot ships it (its kept
+  in-memory snapshot in the same tick, else its loader) and encoded by the
+  point codec, so the reader's tuple is canonically the preloaded one; an
+  enumerated preload (`tuples[key]`), never L2-persisted. A declared `:count` preloads with the window, at
   its param-less `{}` tuple (the whole collection's total). Default `"none"`. The scanners read the flag through the resource
   vocabulary (`tooling/resource-vocabulary`: each factory names the field it
   spells its preload with, and each mint whether the flag reaches it).

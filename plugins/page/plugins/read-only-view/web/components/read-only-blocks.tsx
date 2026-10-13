@@ -422,7 +422,7 @@ function NodeView({
    * to handles, because a text-bearing type's presentation (`chrome`) rides on
    * the contribution, not the handle.
    */
-  contributions: BlockEntry[];
+  contributions: readonly BlockEntry[];
   /** Whether a block is a container, from the live `Editor.BlockFrame` registry. */
   isFramed: (block: FrameCandidate) => boolean;
   /**
@@ -696,7 +696,7 @@ function ForestView({
   diff,
 }: {
   forest: ReadOnlyNode[];
-  contributions: BlockEntry[];
+  contributions: readonly BlockEntry[];
   isFramed: (block: FrameCandidate) => boolean;
   frameGeometry: ReadonlyMap<string, FrameGeometry>;
   decorations: ReadonlyMap<string, BlockDecoration>;

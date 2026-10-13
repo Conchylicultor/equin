@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useDeferredLoadState } from "@plugins/framework/plugins/web-sdk/core";
+import { useDeferredLoadComplete } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps, resolveAppForPath } from "@plugins/apps-core/web";
 import { parseUrl } from "@plugins/primitives/plugins/pane/web";
 import {
@@ -47,7 +47,7 @@ function AppCounterpartOf({
   embed,
 }: CounterpartKindProps & { embed: EmbedMode }): ReactElement {
   const apps = Apps.App.useContributions();
-  const { deferredComplete } = useDeferredLoadState();
+  const deferredComplete = useDeferredLoadComplete();
   return <>{children(resolve(target, apps, deferredComplete, embed))}</>;
 }
 

@@ -142,7 +142,7 @@ function AddScopeButton({
   onSelect,
 }: {
   storePath: string;
-  apps: AppContribution[];
+  apps: readonly AppContribution[];
   scopes: string[];
   onSelect: (scopeId: string | undefined) => void;
 }) {

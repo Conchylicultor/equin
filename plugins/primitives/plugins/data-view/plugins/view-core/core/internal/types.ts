@@ -90,7 +90,7 @@ export interface ViewSourceEntry<T extends ViewTypeMeta = ViewTypeMeta> {
   /** Add-menu group label; omitted for the implicit source (flat menu). */
   title?: string;
   icon?: IconRef;
-  contributions: SealContributions<T>[];
+  contributions: readonly SealContributions<T>[];
   hasHierarchy: boolean;
   /** Type whitelist for the add menu (gates addability, NOT authored rows —
    *  mirroring the single-source `views` prop semantics). */

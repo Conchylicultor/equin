@@ -53,7 +53,11 @@ export function contributionLabel(c: Contribution): string {
   // `_pluginId` path (`conversations.conversation-view.allow-monitor`) — the
   // empty-item placeholder is a compact drag affordance, not a debug label, so
   // the long path overflows narrow horizontal bands.
-  return (c.id as string | undefined) ?? (c._pluginId as string | undefined) ?? "Item";
+  return (
+    (c.id as string | undefined) ??
+    (c._pluginId as string | undefined) ??
+    "Item"
+  );
 }
 
 function isExcluded(c: Contribution): boolean {
@@ -82,7 +86,7 @@ function isExcluded(c: Contribution): boolean {
  * dropped). `excludeFromReorder` items stay pinned last, never hidden.
  */
 export function applyTree(
-  contributions: Contribution[],
+  contributions: readonly Contribution[],
   tree: ReorderTree,
 ): ReorderState {
   // First pass: collect the entryKeys explicitly marked hidden (top level OR

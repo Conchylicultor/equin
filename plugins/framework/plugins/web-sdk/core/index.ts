@@ -9,11 +9,12 @@ export type {
 } from "./sealed-component";
 export {
   PluginProvider,
-  PluginRuntimeContext,
-  contributionsOf,
+  useRawContributions,
   SLOT_READ_TIMING_PREFIX,
 } from "./context";
 export type { SlotReadDetail } from "./context";
+export { createPluginRegistry } from "./registry";
+export type { PluginRegistry } from "./registry";
 export type {
   PluginDefinition,
   LoadedPlugin,
@@ -24,7 +25,8 @@ export { loadPlugins } from "./loader";
 export type { PluginEntry, PluginLoadError } from "./loader";
 export { partitionWebEntries, isDeferredPluginPath } from "./load-tiers";
 export {
-  useDeferredLoadState,
+  useDeferredLoadComplete,
+  useFailedPluginPaths,
   getDeferredLoadState,
   subscribeDeferredLoadState,
   markDeferredPluginsLoaded,

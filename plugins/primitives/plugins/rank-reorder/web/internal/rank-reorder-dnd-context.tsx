@@ -8,6 +8,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type PointerSensorOptions,
 } from "@dnd-kit/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
@@ -45,9 +46,9 @@ export function RankReorderDndContext({
   measuringAlways,
   children,
 }: RankReorderDndContextProps) {
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-  );
+  // Module-level options: `useSensor` memoizes on the object, so an inline
+  // literal would mint new sensors (and row listeners) on every render.
+  const sensors = useSensors(useSensor(PointerSensor, POINTER_SENSOR_OPTIONS));
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const overlayNode = activeId && dragOverlay ? dragOverlay(activeId) : null;
@@ -92,3 +93,8 @@ export function RankReorderDndContext({
     </DndContext>
   );
 }
+
+/** 4px before a press becomes a drag, so a click on a row still selects it. */
+const POINTER_SENSOR_OPTIONS: PointerSensorOptions = {
+  activationConstraint: { distance: 4 },
+};

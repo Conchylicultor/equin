@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   PluginProvider,
+  createPluginRegistry,
   Core,
   loadPlugins,
   partitionWebEntries,
@@ -192,7 +193,6 @@ type BootState =
     }
   | {
       phase: "ready";
-      plugins: LoadedPlugin[];
       // Core-stage (eager) load errors ONLY — set once from the eager result and
       // never appended. Those broke something that painted before the user could
       // do anything, so they get the explicit banner. A deferred failure never
@@ -203,30 +203,29 @@ type BootState =
 
 export default function App() {
   const [state, setState] = useState<BootState>({ phase: "loading-code" });
+  // The plugin set lives in the registry, NOT in React state: appending a batch
+  // re-renders only the readers of the slots it changed, never App and never
+  // the whole tree. Created once per App mount.
+  const [registry] = useState(createPluginRegistry);
 
   useEffect(() => {
     let cancelled = false;
 
-    // Append a freshly-loaded batch to the live state with a NEW array reference
-    // so PluginProvider's useMemo re-derives and registers only the newcomers
-    // (runRegisterPhase is idempotent via its `registered` WeakSet), then publish
-    // the loaded ids on the deferred-load signal for the layout host. Takes no
-    // errors on purpose: a deferred batch's failures have no way into the
-    // banner's state.
+    // Append a freshly-loaded batch to the registry (it registers only the
+    // newcomers and notifies only the readers of slots whose list changed), then
+    // publish the loaded ids on the deferred-load signal for the layout host.
+    // Takes no errors on purpose: a deferred batch's failures have no way into
+    // the banner's state.
     const appendPlugins = (plugins: LoadedPlugin[]) => {
-      setState((prev) => {
-        if (prev.phase !== "ready") {
-          throw new Error(
-            `[boot] deferred plugins appended in phase "${prev.phase}" — the deferred tier runs only after ready`,
-          );
-        }
-        return { ...prev, plugins: [...prev.plugins, ...plugins] };
-      });
+      registry.append(plugins);
       markDeferredPluginsLoaded(plugins.map((p) => p.id));
     };
 
     // The active app's content is on screen at the commit that appends its
-    // priority batch — or at the first render, when it has none.
+    // priority batch — or at the first render, when it has none. That commit is
+    // the re-render of the readers of the slots the batch changed (the pane
+    // router's `Pane.Register`, …); a batch that changed no rendered slot shows
+    // nothing new, and the mark lands on whatever commits next.
     const markRouteContentAtNextCommit = () =>
       markBootInstantAtNextCommit(
         ROUTE_CONTENT_COMMIT_ID,
@@ -339,11 +338,10 @@ export default function App() {
       }
 
       if (priority.length === 0) markRouteContentAtNextCommit();
-      setState({
-        phase: "ready",
-        plugins: eagerResult.plugins,
-        coreErrors: eagerResult.errors,
-      });
+      // Nothing reads the registry before the first render below (the boot
+      // screen mounts no PluginProvider), so this append notifies no one.
+      registry.append(eagerResult.plugins);
+      setState({ phase: "ready", coreErrors: eagerResult.errors });
       recordErrors(eagerResult.errors);
 
       await loadDeferredBatch(priority, { routeContent: true });
@@ -365,7 +363,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [registry]);
 
   if (state.phase === "loading-code")
     return <BootScreen phase="loading-code" />;
@@ -385,7 +383,7 @@ export default function App() {
         <PluginLoadErrors errors={state.coreErrors} />
       )}
       <NotificationsProvider>
-        <PluginProvider plugins={state.plugins}>
+        <PluginProvider registry={registry}>
           <RootRenderer />
         </PluginProvider>
       </NotificationsProvider>

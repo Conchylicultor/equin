@@ -23,6 +23,12 @@ export function getFocusedAppId(): string | undefined {
   return focusedAppId;
 }
 
+/** Subscribe to focused-app publishes; returns the unsubscribe. */
+export function subscribeFocusedApp(cb: () => void): () => void {
+  listeners.add(cb);
+  return () => listeners.delete(cb);
+}
+
 /**
  * Reactive read of the focused app id, for chrome that must re-render when focus
  * moves between mounted surfaces (rail, tab bar, theme scope). Undefined until
@@ -30,10 +36,7 @@ export function getFocusedAppId(): string | undefined {
  */
 export function useFocusedAppId(): string | undefined {
   return useSyncExternalStore(
-    (cb) => {
-      listeners.add(cb);
-      return () => listeners.delete(cb);
-    },
+    subscribeFocusedApp,
     getFocusedAppId,
     () => undefined,
   );

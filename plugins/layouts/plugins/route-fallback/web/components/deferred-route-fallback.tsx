@@ -1,6 +1,6 @@
 import { useContext } from "react";
 import {
-  useDeferredLoadState,
+  useDeferredLoadComplete,
   useHasLoadErrorUnder,
 } from "@plugins/framework/plugins/web-sdk/core";
 import {
@@ -43,7 +43,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
  * deferred load unmounts this before it ever paints — no flash on the warm path.
  */
 export function DeferredRouteFallback() {
-  const { deferredComplete } = useDeferredLoadState();
+  const deferredComplete = useDeferredLoadComplete();
   const state = useRouteState();
   const scope = useContext(PaneLoadScopeContext);
   const hasLoadError = useHasLoadErrorUnder(scope);

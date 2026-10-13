@@ -1,6 +1,6 @@
 import { Fragment, useEffect } from "react";
 import {
-  useDeferredLoadState,
+  useDeferredLoadComplete,
   useHasLoadErrorUnder,
   type Contribution,
 } from "@plugins/framework/plugins/web-sdk/core";
@@ -100,7 +100,7 @@ export function AppsLayout() {
   const activeApp = useActiveApp();
   const pathname = usePathname();
   const apps = Apps.App.useContributions();
-  const { deferredComplete } = useDeferredLoadState();
+  const deferredComplete = useDeferredLoadComplete();
   // Coarse by design: when ANY app shell's subtree failed to load, the URL→app
   // mapping is unknowable (a failed shell never registered its path), so a load
   // error anywhere under the apps tier suppresses the destructive redirect. The

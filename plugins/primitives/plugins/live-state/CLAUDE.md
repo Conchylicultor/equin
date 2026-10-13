@@ -76,6 +76,18 @@ params, opts, data)` is the canonical one, seeding a GET endpoint with the exact
 key `useEndpoint` reads (endpoints' `endpointQueryKey`); it lives here because
 live-state already sits downstream of endpoints (via log-channels).
 
+## A burst of landings is one commit (`internal/coalesced-notify.ts`)
+
+Each cache write (one per WS frame) is its own React Query batch, and the
+default scheduler gives each flush its own `setTimeout(0)` task — N frames
+back to back (a cold list's per-row sub-acks) were N React commits.
+`use-resource.ts` installs a coalescing scheduler on import
+(`notifyManager.setScheduler`, page-global): every flush queued before the
+pending timer fires runs in that one task, so the burst is one commit. Order
+and asynchrony are unchanged. Do not remove it as "redundant with React
+batching": React batches per task, and the default scheduler makes one task
+per frame. Pinned by `web/__tests__/landing-commits.test.tsx`.
+
 ## A varying list of tuples — `useResources`
 
 `useResources(resource, paramsList, options?)` reads a list of tuples of ONE

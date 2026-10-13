@@ -111,7 +111,10 @@ The queue's live state is one bounded resource, not a push struct:
   asks for standalone `ack` frames on its tuple (nothing is declared), and the
   reorder endpoint's returned `{ watermark }` is matched against the frame's
   `ackTx` (point deltas carry no snapshot watermark, so this is what replaces
-  the watermark compare). Not preloaded (an id set has no default tuple).
+  the watermark compare). Preloaded at ONE tuple, the boot id set of
+  `conversations-active` (`serveCollection(…, { preloadRows: { idsOf:
+  conversationsActive } })`): the sidebar's tuple is exactly that set, so its
+  ranks ship in the boot snapshot and the queue settles on its first render.
   Each row carries `{ conversationId, rank, pinned }`. The pin rides the rank row
   rather than a resource of its own because it is plain user-set state: nothing
   recomputes it as conversations change status. `queue-ranks` deliberately has NO

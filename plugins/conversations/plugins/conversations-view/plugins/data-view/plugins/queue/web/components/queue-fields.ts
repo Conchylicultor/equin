@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { useConversationFieldDefs } from "@plugins/conversations/plugins/all-conversations/web";
 import type { QueueRow } from "./use-queue-rows";
@@ -30,11 +31,15 @@ const SECTION_FIELD: FieldDef<QueueRow> = {
  */
 export function useQueueFields(): FieldDef<QueueRow>[] {
   const conversationFields = useConversationFieldDefs();
-  return [
-    ...(conversationFields as FieldDef<QueueRow>[]).map((f) => ({
-      ...f,
-      groupable: false,
-    })),
-    SECTION_FIELD,
-  ];
+  // Memoized: the schema's identity is part of every list row's memo key.
+  return useMemo(
+    () => [
+      ...(conversationFields as FieldDef<QueueRow>[]).map((f) => ({
+        ...f,
+        groupable: false,
+      })),
+      SECTION_FIELD,
+    ],
+    [conversationFields],
+  );
 }

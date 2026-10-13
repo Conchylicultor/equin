@@ -1,12 +1,7 @@
-import {
-  useCallback,
-  useContext,
-  type ComponentType,
-  type ReactNode,
-} from "react";
+import { useCallback, type ComponentType, type ReactNode } from "react";
 import {
   defineSlot,
-  PluginRuntimeContext,
+  useRawContributions,
   type Contribution,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
@@ -42,14 +37,13 @@ export function useResolveColumnConfig(): (
   typeId: string,
   props: ColumnConfigProps,
 ) => ReactNode | null {
-  const ctx = useContext(PluginRuntimeContext);
   const identities = useFieldIdentities();
-  const raw0 = ctx?.bySlot.get(ColumnConfig);
+  const raw0 = useRawContributions(ColumnConfig);
   return useCallback(
     (typeId, props) => {
       const chain = resolveTypeChain(typeId, identities);
       for (const type of chain) {
-        const contribution = (raw0 ?? []).find(
+        const contribution = raw0.find(
           (c) => (c as { match?: unknown }).match === type,
         ) as Contribution | undefined;
         if (contribution)

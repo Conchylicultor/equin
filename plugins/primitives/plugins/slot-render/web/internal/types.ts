@@ -14,7 +14,7 @@ export interface SlotListMiddleware {
   priority: number;
   Component: ComponentType<{
     slotId: string;
-    contributions: Contribution[];
+    contributions: readonly Contribution[];
     renderItem: (contribution: Contribution) => ReactNode;
     children: ReactNode;
   }>;

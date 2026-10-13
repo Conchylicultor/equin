@@ -20406,14 +20406,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PluginEntry`
           - `PluginLoadError`
           - `PluginLoadReport`
+          - `PluginRegistry`
           - `SealContributions`
           - `SealedComponent`
           - `SealedMeta`
           - `Slot`
           - `SlotReadDetail`
         - Exports (values):
-          - `contributionsOf`
           - `Core`
+          - `createPluginRegistry`
           - `defineSlot`
           - `defineSlotFacade`
           - `getDeferredLoadState`
@@ -20426,13 +20427,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `partitionWebEntries`
           - `pluginLoadReportSink`
           - `PluginProvider`
-          - `PluginRuntimeContext`
           - `SLOT_READ_TIMING_PREFIX`
           - `slots`
           - `subscribeDeferredLoadState`
           - `UNSAFE_unsealSlotComponent`
-          - `useDeferredLoadState`
+          - `useDeferredLoadComplete`
+          - `useFailedPluginPaths`
           - `useHasLoadErrorUnder`
+          - `useRawContributions`
           - `webCollectedDir`
       - Test helpers:
         - Core: `@plugins/framework/plugins/web-sdk/core/testing`
@@ -30851,10 +30853,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
           - Web:
             - Contributes: `DataViewSlots.View` "List" → `ListView`
-            - Uses: 39 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
-              - `primitives/data-view` ×22
+            - Uses: 43 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
+              - `primitives/data-view` ×24
+              - `primitives/rank-reorder` ×3
               - `primitives/css/spacing` ×2
-              - `primitives/rank-reorder` ×2
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
               - `primitives/css/clip.clipClasses`
@@ -30865,6 +30867,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/icon-button.IconButton`
+              - `primitives/latest-ref.useEventCallback`
               - `primitives/link-gesture.activationProps`
               - `primitives/tree.TreeRowChrome`
               - `primitives/virtual-rows.VirtualRows`
@@ -31865,8 +31868,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SortDirection`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
-          - `primitives` ×31
+        - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+          - `primitives` ×32
           - `apps` ×20
           - `page` ×3
           - `apps-core` ×2

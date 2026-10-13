@@ -20,7 +20,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 interface CommandPaletteDialogProps {
   open: boolean;
   onClose: () => void;
-  items: CommandPaletteItem[];
+  items: readonly CommandPaletteItem[];
 }
 
 type ScoredItem = CommandPaletteItem & { _match: FuzzyMatch | null };
@@ -111,7 +111,7 @@ function CommandPaletteBody({
   items,
 }: {
   onClose: () => void;
-  items: CommandPaletteItem[];
+  items: readonly CommandPaletteItem[];
 }) {
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);

@@ -1,4 +1,4 @@
-import { useDeferredLoadState } from "@plugins/framework/plugins/web-sdk/core";
+import { useFailedPluginPaths } from "@plugins/framework/plugins/web-sdk/core";
 import { useResourceContractMismatches } from "@plugins/primitives/plugins/live-state/web";
 import { useStaleFrontend } from "./use-stale-frontend";
 
@@ -33,7 +33,7 @@ export function useReloadAdvice(): ReloadAdvice {
   // `stale` is false while the deployment is still loading — correct, not a
   // collapse (see useStaleFrontend): staleness is unknowable until then.
   const { stale } = useStaleFrontend();
-  const { failedPluginPaths } = useDeferredLoadState();
+  const failedPluginPaths = useFailedPluginPaths();
   // Only `skew`: a same-build or unknown mismatch is a bug a reload does not
   // fix, and the server reports it.
   const outdated = useResourceContractMismatches().filter(

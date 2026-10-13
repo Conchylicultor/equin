@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
-import { useDeferredLoadState } from "@plugins/framework/plugins/web-sdk/core";
+import { useDeferredLoadComplete } from "@plugins/framework/plugins/web-sdk/core";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 
 /**
@@ -26,7 +26,7 @@ export function UnknownFrameSource({
       | { status: "unresolved"; title: ReactNode; detail: ReactNode },
   ) => ReactNode;
 }): ReactElement {
-  const { deferredComplete } = useDeferredLoadState();
+  const deferredComplete = useDeferredLoadComplete();
   if (!deferredComplete) return <>{children({ status: "loading" })}</>;
   return (
     <>

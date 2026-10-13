@@ -158,7 +158,7 @@ function EmptyPlaceBlock({
   session,
   onPick,
 }: {
-  providers: PlaceProviderContribution[];
+  providers: readonly PlaceProviderContribution[];
   session: string;
   onPick: (providerId: string, suggestion: PlaceSuggestion) => void;
 }) {

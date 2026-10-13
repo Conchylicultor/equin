@@ -1,5 +1,9 @@
-import { type ReactElement } from "react";
-import type { DataViewSourceProps } from "@plugins/primitives/plugins/data-view/web";
+import { useCallback, useMemo, type ReactElement } from "react";
+import type {
+  DataViewAggregateConfig,
+  DataViewSourceProps,
+  ManualOrderConfig,
+} from "@plugins/primitives/plugins/data-view/web";
 import { conversationsActive } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   SidebarConversationItem,
@@ -30,6 +34,33 @@ export function QueueSource({
   const { activeId, linkTo, onCloseConversation } = hostProps;
   const { rows, dispatchReorder, readiness, paging } = useQueueRows();
   const fields = useQueueFields();
+  // Every accessor below keeps its identity across renders (module constants,
+  // or memoized on what they close over): the list view memoizes each row on
+  // them, so a fresh closure here would re-render every row of the queue.
+  const rowActivation = useCallback((r: QueueRow) => linkTo(r.id), [linkTo]);
+  const manualOrder = useMemo(
+    (): ManualOrderConfig<QueueRow> => ({
+      getRank: queueRank,
+      onMove: (id, dest) => {
+        if (!dest.targetId || !dest.zone) return;
+        if (dest.targetId === id) return;
+        dispatchReorder({
+          conversationId: id,
+          targetId: dest.targetId,
+          zone: dest.zone,
+        });
+      },
+      // No `onReseat` on purpose. `pinned` and `queued` are the two
+      // draggable sections and they share one rank space, but which of the
+      // two a row sits in is now the user's own pin flag, not something a
+      // rank can express — so a drop into the OTHER section has no meaning a
+      // reorder could carry out, and withholding `onReseat` makes the
+      // primitive refuse it. Pinning is the explicit action instead. Every
+      // other section has `rank: null`, so it is neither a drag source nor a
+      // drop target and can never reach here.
+    }),
+    [dispatchReorder],
+  );
 
   return (
     <CloseConversationContext.Provider value={onCloseConversation}>
@@ -41,54 +72,42 @@ export function QueueSource({
         // and grouped in memory.
         collection: conversationsActive,
         fields,
-        rowKey: (c) => c.id,
+        rowKey: queueRowKey,
         readiness,
         ...(paging ? { paging } : {}),
         selectedRowId: activeId ?? undefined,
-        rowActivation: (r) => linkTo(r.id),
-        viewOptions: {
-          list: {
-            // A blocked task's row is muted: it is waiting on another task,
-            // not on the user.
-            renderRow: (c: QueueRow) => (
-              <SidebarConversationItem conv={c} muted={c.isBlocked} />
-            ),
-            size: "sm",
-          },
-        },
+        rowActivation,
+        viewOptions: QUEUE_VIEW_OPTIONS,
         itemActions: QueueItemActions,
-        aggregate: {
-          getKey: (r) =>
-            r.section === "pinned" ||
-            r.section === "queued" ||
-            r.section === "working"
-              ? r.taskId
-              : null,
-          pickRepresentative: (m) =>
-            m.find((x) => x.status === "working" || x.status === "starting") ??
-            m.reduce((a, b) => (b.createdAt > a.createdAt ? b : a)),
-        },
-        manualOrder: {
-          getRank: (r) => r.rank,
-          onMove: (id, dest) => {
-            if (!dest.targetId || !dest.zone) return;
-            if (dest.targetId === id) return;
-            dispatchReorder({
-              conversationId: id,
-              targetId: dest.targetId,
-              zone: dest.zone,
-            });
-          },
-          // No `onReseat` on purpose. `pinned` and `queued` are the two
-          // draggable sections and they share one rank space, but which of the
-          // two a row sits in is now the user's own pin flag, not something a
-          // rank can express — so a drop into the OTHER section has no meaning a
-          // reorder could carry out, and withholding `onReseat` makes the
-          // primitive refuse it. Pinning is the explicit action instead. Every
-          // other section has `rank: null`, so it is neither a drag source nor a
-          // drop target and can never reach here.
-        },
+        aggregate: QUEUE_AGGREGATE,
+        manualOrder,
       })}
     </CloseConversationContext.Provider>
   );
 }
+
+const queueRowKey = (c: QueueRow): string => c.id;
+
+const queueRank = (r: QueueRow) => r.rank;
+
+const QUEUE_VIEW_OPTIONS = {
+  list: {
+    // A blocked task's row is muted: it is waiting on another task, not on
+    // the user.
+    renderRow: (c: QueueRow) => (
+      <SidebarConversationItem conv={c} muted={c.isBlocked} />
+    ),
+    size: "sm",
+  },
+};
+
+/** Task-groups collapse to one representative in the ranked/working sections. */
+const QUEUE_AGGREGATE: DataViewAggregateConfig<QueueRow> = {
+  getKey: (r) =>
+    r.section === "pinned" || r.section === "queued" || r.section === "working"
+      ? r.taskId
+      : null,
+  pickRepresentative: (m) =>
+    m.find((x) => x.status === "working" || x.status === "starting") ??
+    m.reduce((a, b) => (b.createdAt > a.createdAt ? b : a)),
+};

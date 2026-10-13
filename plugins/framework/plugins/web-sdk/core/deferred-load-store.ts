@@ -99,14 +99,14 @@ export interface DeferredLoadState {
   failedPluginPaths: ReadonlySet<string>;
 }
 
+// A fresh snapshot object is minted on every change so `useSyncExternalStore`'s
+// referential comparison detects it; between changes the SAME reference is
+// returned (required — a new object each getSnapshot would loop forever). The
+// field selectors below read single fields, each also stable between changes.
+/* eslint-disable scoped-store/no-module-mutable-store -- page-global by design: the plugin registry loads ONCE per page at the App root (the single writer), so which deferred plugins have loaded is a page-wide fact shared identically by every keep-alive/desktop surface mount — a per-surface scoped store would be semantically wrong (each surface would track its own load state for the one shared registry). */
 let loadedPluginIds: Set<string> = new Set();
 let deferredComplete = false;
 let failedPluginPaths: Set<string> = new Set();
-
-// A fresh snapshot object is minted on every change so `useSyncExternalStore`'s
-// referential comparison detects it; between changes the SAME reference is
-// returned (required — a new object each getSnapshot would loop forever).
-/* eslint-disable scoped-store/no-module-mutable-store -- page-global by design: the plugin registry loads ONCE per page at the App root (the single writer), so which deferred plugins have loaded is a page-wide fact shared identically by every keep-alive/desktop surface mount — a per-surface scoped store would be semantically wrong (each surface would track its own load state for the one shared registry). */
 let snapshot: DeferredLoadState = {
   loadedPluginIds,
   deferredComplete,
@@ -197,11 +197,23 @@ export function subscribeDeferredLoadState(listener: () => void): () => void {
   };
 }
 
-/** Reactive read of the deferred-load state (re-renders on each batch / completion). */
-export function useDeferredLoadState(): DeferredLoadState {
+/**
+ * Reactive: has the deferred tier settled? Re-renders once, at completion —
+ * not on every loaded batch, as a whole-state read would.
+ */
+export function useDeferredLoadComplete(): boolean {
   return useSyncExternalStore(
     subscribeDeferredLoadState,
-    getDeferredLoadState,
-    getDeferredLoadState,
+    () => deferredComplete,
+    () => deferredComplete,
+  );
+}
+
+/** Reactive: the plugin paths that failed to load (re-renders on new failures only). */
+export function useFailedPluginPaths(): ReadonlySet<string> {
+  return useSyncExternalStore(
+    subscribeDeferredLoadState,
+    () => failedPluginPaths,
+    () => failedPluginPaths,
   );
 }

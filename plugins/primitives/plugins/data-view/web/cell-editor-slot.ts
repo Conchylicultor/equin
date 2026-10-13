@@ -1,6 +1,6 @@
-import { useCallback, useContext, type ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 import {
-  PluginRuntimeContext,
+  useRawContributions,
   type Contribution,
 } from "@plugins/framework/plugins/web-sdk/core";
 import {
@@ -35,14 +35,13 @@ interface ResolveCellEditorArgs {
 export function useResolveCellEditor(): (
   args: ResolveCellEditorArgs,
 ) => ReactNode | undefined {
-  const ctx = useContext(PluginRuntimeContext);
   const identities = useFieldIdentities();
-  const raw0 = ctx?.bySlot.get(CellEditor);
+  const raw0 = useRawContributions(CellEditor);
   return useCallback(
     ({ field, value, values, raw, onCommit, onCommitValues, onCancel }) => {
       const chain = resolveTypeChain(field.type ?? "text", identities);
       for (const typeId of chain) {
-        const contribution = (raw0 ?? []).find(
+        const contribution = raw0.find(
           (c) => (c as { match?: unknown }).match === typeId,
         ) as Contribution | undefined;
         if (contribution) {

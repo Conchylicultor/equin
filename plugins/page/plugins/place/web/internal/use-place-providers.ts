@@ -5,6 +5,6 @@ import { Place, type PlaceProviderContribution } from "../slots";
  * whole set and never names one — with a single provider it is used silently,
  * with several the empty state grows a picker.
  */
-export function usePlaceProviders(): PlaceProviderContribution[] {
+export function usePlaceProviders(): readonly PlaceProviderContribution[] {
   return Place.Provider.useContributions();
 }

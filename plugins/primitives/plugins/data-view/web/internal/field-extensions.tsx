@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from "react";
+import { useMemo, type ComponentType, type ReactNode } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import {
   defineRenderSlot,
@@ -185,7 +185,7 @@ function FieldExtensionFold(props: {
       slot={descriptor}
       contributions={contributions}
       index={0}
-      acc={base}
+      base={base}
       surface={surface}
       validate={validate}
       emit={emit}
@@ -201,12 +201,47 @@ function FieldExtensionStep(props: {
     FieldExtensionsDescriptor<unknown>["useContributions"]
   >;
   index: number;
-  acc: FieldDef<unknown>[];
+  /** The fields folded before the previous contributor. */
+  base: FieldDef<unknown>[];
+  /** The previous contributor's own fields (absent on the first step:
+   *  nothing to append yet) and the section they are stamped with. */
+  added?: FieldDef<unknown>[];
+  addedSection?: string | null;
   surface: Surface;
   validate: Validate;
   emit: (fields: FieldDef<unknown>[]) => ReactNode;
 }): ReactNode {
-  const { slot, contributions, index, acc, surface, validate, emit } = props;
+  const {
+    slot,
+    contributions,
+    index,
+    base,
+    added,
+    addedSection,
+    surface,
+    validate,
+    emit,
+  } = props;
+  // The previous contributor's fields, appended to the accumulator HERE (in a
+  // memo) rather than in its `render` callback: an inline spread there minted a
+  // new schema array on every render of the surface, so every reader of the
+  // merged fields — each list row, through the view's per-row config — saw a
+  // changed schema whenever anything above re-rendered. Memoized, the schema
+  // keeps its identity while the base and every contributor's fields do.
+  //
+  // The section is STAMPED here, never read off the returned field: it is a
+  // fact about who contributed, so the contributor declares it once on its
+  // registration and cannot spell it differently (or forget it) on the
+  // fortieth column. `null` → the fields stay un-sectioned, i.e. part of the
+  // host's own set.
+  const acc = useMemo(
+    () =>
+      // A contributor adding nothing (often a fresh `[]`) keeps the schema.
+      added === undefined || added.length === 0
+        ? base
+        : [...base, ...sectioned(added, addedSection ?? null)],
+    [base, added, addedSection],
+  );
   // Every contributor has mounted and folded its fields into `acc` → emit.
   if (index >= contributions.length) return <>{emit(acc)}</>;
 
@@ -218,12 +253,9 @@ function FieldExtensionStep(props: {
       slot={slot}
       contributions={contributions}
       index={index + 1}
-      // The section is STAMPED here, never read off the returned field: it is
-      // a fact about who contributed, so the contributor declares it once on
-      // its registration and cannot spell it differently (or forget it) on the
-      // fortieth column. `null` → the fields stay un-sectioned, i.e. part of
-      // the host's own set.
-      acc={[...acc, ...sectioned(fields, contribution.section)]}
+      base={acc}
+      added={fields}
+      addedSection={contribution.section}
       surface={surface}
       validate={validate}
       emit={emit}

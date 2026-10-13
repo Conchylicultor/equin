@@ -326,14 +326,15 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `PluginEntry`
     - `PluginLoadError`
     - `PluginLoadReport`
+    - `PluginRegistry`
     - `SealContributions`
     - `SealedComponent`
     - `SealedMeta`
     - `Slot`
     - `SlotReadDetail`
   - Exports (values):
-    - `contributionsOf`
     - `Core`
+    - `createPluginRegistry`
     - `defineSlot`
     - `defineSlotFacade`
     - `getDeferredLoadState`
@@ -346,13 +347,14 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `partitionWebEntries`
     - `pluginLoadReportSink`
     - `PluginProvider`
-    - `PluginRuntimeContext`
     - `SLOT_READ_TIMING_PREFIX`
     - `slots`
     - `subscribeDeferredLoadState`
     - `UNSAFE_unsealSlotComponent`
-    - `useDeferredLoadState`
+    - `useDeferredLoadComplete`
+    - `useFailedPluginPaths`
     - `useHasLoadErrorUnder`
+    - `useRawContributions`
     - `webCollectedDir`
 - Test helpers:
   - Core: `@plugins/framework/plugins/web-sdk/core/testing`

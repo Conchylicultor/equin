@@ -38,8 +38,9 @@ export type QueueData = z.infer<typeof QueueDataSchema>;
 // so ranks cost O(live), ~26 rows, not O(2726). Rows key on `conversationId`
 // (the extension's key, whose column is the side-table's `parent_id` PK).
 // The window (rank order) has no reader yet; it is bounded like any window.
-// Not preloaded: an id set has no default tuple — the existing all-or-nothing
-// gate shows the loading skeleton for the one round-trip.
+// The `:rows` read is preloaded at boot, at the boot id set of
+// `conversations-active` (the server half's `preloadRows`), so the queue's
+// all-or-nothing gate settles on the first render.
 export const queueRanks = liveCollection("queue-ranks", {
   row: QueueRankRowSchema,
   id: "conversationId",

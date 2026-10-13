@@ -5,23 +5,30 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { Apps } from "../slots";
 import { matchAppForPath } from "./resolve-app";
-import { useFocusedAppId } from "./focused-app-store";
+import { getFocusedAppId, subscribeFocusedApp } from "./focused-app-store";
 
 export type ActiveApp = ReturnType<typeof Apps.App.useContributions>[number];
 
+function subscribePathname(cb: () => void): () => void {
+  window.addEventListener("popstate", cb);
+  window.addEventListener("shell:navigate", cb);
+  return () => {
+    window.removeEventListener("popstate", cb);
+    window.removeEventListener("shell:navigate", cb);
+  };
+}
+
+function subscribeActiveApp(cb: () => void): () => void {
+  const unsubFocus = subscribeFocusedApp(cb);
+  const unsubPath = subscribePathname(cb);
+  return () => {
+    unsubFocus();
+    unsubPath();
+  };
+}
+
 export function usePathname(): string {
-  return useSyncExternalStore(
-    (cb) => {
-      window.addEventListener("popstate", cb);
-      window.addEventListener("shell:navigate", cb);
-      return () => {
-        window.removeEventListener("popstate", cb);
-        window.removeEventListener("shell:navigate", cb);
-      };
-    },
-    currentRoutePath,
-    () => "/",
-  );
+  return useSyncExternalStore(subscribePathname, currentRoutePath, () => "/");
 }
 
 /**
@@ -42,6 +49,13 @@ export function usePathname(): string {
  *   it falls back to the registered app whose `path` best matches the current
  *   pathname (longest path wins, so `/studio` beats `/` for `/studio/foo`).
  *
+ * The three are read as ONE derived snapshot — the resolved app id — so a
+ * consumer re-renders only when the answer changes, never because an input it
+ * does not depend on moved: the boot publish of the focused app (undefined →
+ * the app the URL already resolved to) and every in-app navigation (a new
+ * pathname, same app) leave it untouched, and inside a surface neither is
+ * consulted at all.
+ *
  * The URL-driven canonicalization redirect must NOT use this — it needs the app
  * the URL resolves to, which is exactly `matchAppForPath(pathname)` (see
  * apps-layout).
@@ -49,13 +63,13 @@ export function usePathname(): string {
 export function useActiveApp(): ActiveApp | undefined {
   const allApps = Apps.App.useContributions();
   const surfaceAppId = useSurfaceAppId();
-  const focusedAppId = useFocusedAppId();
-  const pathname = usePathname();
-  if (surfaceAppId !== undefined) {
-    return allApps.find((a) => a.id === surfaceAppId);
-  }
-  if (focusedAppId !== undefined) {
-    return allApps.find((a) => a.id === focusedAppId);
-  }
-  return matchAppForPath(pathname, allApps);
+  const appId = useSyncExternalStore(
+    subscribeActiveApp,
+    () =>
+      surfaceAppId ??
+      getFocusedAppId() ??
+      matchAppForPath(currentRoutePath(), allApps)?.id,
+    () => surfaceAppId,
+  );
+  return allApps.find((a) => a.id === appId);
 }

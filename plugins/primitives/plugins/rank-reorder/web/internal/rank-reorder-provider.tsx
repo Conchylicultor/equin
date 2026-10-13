@@ -8,6 +8,9 @@ import {
   useSensors,
   type CollisionDetection,
   type DragEndEvent,
+  type DragStartEvent,
+  type MeasuringConfiguration,
+  type PointerSensorOptions,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -95,12 +98,19 @@ export function RankReorderProvider({
   measuringAlways,
   children,
 }: RankReorderProviderProps) {
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-  );
+  // Module-level sensor options: `useSensor` memoizes on the options object, so
+  // an inline literal would mint new sensors — and so new activator listeners
+  // on every sortable row — on every render.
+  const sensors = useSensors(useSensor(PointerSensor, POINTER_SENSOR_OPTIONS));
   const [activeId, setActiveId] = useState<string | null>(null);
   const ordered = useMemo(() => sortableOrder(items), [items]);
-  const ids = useMemo(() => ordered.map((i) => i.id), [ordered]);
+  // The sortable context and the slide strategy are keyed on what they read —
+  // the ids in display order, and each one's group — not on the `items`
+  // array, which a host rebuilds whenever any row changes. A new context value
+  // re-renders EVERY sortable row, so an unchanged order must keep it.
+  const idsKey = JSON.stringify(ordered.map((i) => i.id));
+  const ids = useMemo(() => JSON.parse(idsKey) as string[], [idsKey]);
+  const groupsKey = JSON.stringify(ordered.map((i) => i.group ?? null));
   const crossGroup = onReseat != null;
 
   const collisionDetection = useCallback<CollisionDetection>(
@@ -123,10 +133,16 @@ export function RankReorderProvider({
     const base =
       layout === "grid" ? rectSortingStrategy : verticalListSortingStrategy;
     if (!crossGroup) return base;
-    const groups = ordered.map((i) => i.group ?? null);
+    const groups = JSON.parse(groupsKey) as (string | null)[];
     return (args) =>
       groups[args.activeIndex] === groups[args.overIndex] ? base(args) : null;
-  }, [layout, crossGroup, ordered]);
+  }, [layout, crossGroup, groupsKey]);
+
+  const onDragStart = useCallback(
+    (event: DragStartEvent) => setActiveId(String(event.active.id)),
+    [],
+  );
+  const onDragCancel = useCallback(() => setActiveId(null), []);
 
   const onDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -164,14 +180,10 @@ export function RankReorderProvider({
     <DndContext
       sensors={sensors}
       collisionDetection={collisionDetection}
-      measuring={
-        measuringAlways
-          ? { droppable: { strategy: MeasuringStrategy.Always } }
-          : undefined
-      }
-      onDragStart={(event) => setActiveId(String(event.active.id))}
+      measuring={measuringAlways ? MEASURE_ALWAYS : undefined}
+      onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      onDragCancel={() => setActiveId(null)}
+      onDragCancel={onDragCancel}
     >
       <SortableContext items={ids} strategy={strategy}>
         {typeof children === "function" ? children(activeId) : children}
@@ -179,3 +191,13 @@ export function RankReorderProvider({
     </DndContext>
   );
 }
+
+/** 4px before a press becomes a drag, so a click on a row still activates it. */
+const POINTER_SENSOR_OPTIONS: PointerSensorOptions = {
+  activationConstraint: { distance: 4 },
+};
+
+/** Re-measure droppables every frame (windowed lists). */
+const MEASURE_ALWAYS: MeasuringConfiguration = {
+  droppable: { strategy: MeasuringStrategy.Always },
+};

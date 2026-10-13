@@ -74,8 +74,18 @@ export function OverflowPanel({
     // `autoUpdate` keeps the panel on its trigger through scroll and resize.
     // A resize NEVER closes the panel — the user opened it, and the bar
     // re-fitting underneath is not a reason to take it away.
-    whileElementsMounted: autoUpdate,
-    elements: { reference: anchor, floating: floatingEl },
+    //
+    // Only while OPEN: the panel is always mounted (above), so an unconditional
+    // `autoUpdate` would watch the anchor and reposition a `display: none`
+    // panel on every layout shift of the page for as long as the bar lives.
+    // Opening flips this on, which re-runs Floating UI's mount effect and
+    // `autoUpdate` positions the panel at once.
+    whileElementsMounted: open ? autoUpdate : undefined,
+    // The anchor is handed over only while open, for the same reason: with
+    // both elements set and no `whileElementsMounted`, Floating UI still
+    // positions once on mount — one async state update, so one commit, per
+    // closed panel. A sidebar of collapsed rows is one panel per row.
+    elements: { reference: open ? anchor : null, floating: floatingEl },
     middleware: [offset(4), flip({ padding: 9 }), shift({ padding: 8 })],
   });
 

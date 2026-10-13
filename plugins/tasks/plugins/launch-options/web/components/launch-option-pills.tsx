@@ -84,7 +84,7 @@ export function LaunchOptionPills({
  * group of one — including an option with no pill at all, which then renders as
  * its own control.
  */
-function groupOptions(options: OptionItem[]): PillGroup[] {
+function groupOptions(options: readonly OptionItem[]): PillGroup[] {
   const groups: PillGroup[] = [];
   const byCluster = new Map<string, PillGroup>();
   for (const option of options) {

@@ -22,7 +22,7 @@ export type SourceTypeLookup =
   | { status: "unregistered" };
 
 /** Every installed source type, in contributed order. */
-export function useEventSourceTypes(): EventSourceTypeContribution[] {
+export function useEventSourceTypes(): readonly EventSourceTypeContribution[] {
   return EventSources.Type.useContributions();
 }
 
