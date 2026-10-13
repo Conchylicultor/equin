@@ -14,6 +14,7 @@ import { InsidePaneTitleContext } from "./pane-title-guard";
 import { usePaneEntry, type AnyPane } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
 import { SurfaceChromeContext } from "../surface-chrome-context";
+import { useReservesFloatingBar } from "../reserves-floating-bar";
 import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 
 const closeIcon = symbol("close");
@@ -103,7 +104,7 @@ export function PaneChrome({
   // last reserves the floating-action-bar safe area on its right.
   const showLeading =
     contentOwnsTopChrome && layoutCtx?.atSurfaceStart && leadingControl != null;
-  const reserveEnd = contentOwnsTopChrome && layoutCtx?.atSurfaceEnd;
+  const reserveEnd = useReservesFloatingBar();
   // Painted alone (full-pane), a child pane's way out is BACK to its parent —
   // leading, like a browser's — not a × closing a column beside it. And a
   // same-app promote has nothing on screen to detach from.

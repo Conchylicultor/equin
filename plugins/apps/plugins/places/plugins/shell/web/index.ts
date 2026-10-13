@@ -6,6 +6,7 @@ import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { placesApp } from "../core";
 import { PlacesLayout } from "./components/places-layout";
 import { placesTheme } from "./internal/theme";
+import { BrandMark } from "./components/brand-mark";
 
 export default {
   description:
@@ -14,6 +15,7 @@ export default {
     Apps.App({
       app: placesApp,
       icon: appIcon(symbol("location-on")),
+      mark: BrandMark,
       component: PlacesLayout,
     }),
     // Selected for the places app in `config/ui/theme-engine/@app/places/theme.jsonc`.

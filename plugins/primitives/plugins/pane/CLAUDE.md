@@ -1027,12 +1027,13 @@ See "Open questions" in the design doc.
     - `usePaneTitle`
     - `usePathname`
     - `useRenderSync`
+    - `useReservesFloatingBar`
     - `useRoute`
     - `useRouteState`
     - `useSurfaceAppId`
     - `useSyncPaneRegistry`
 - Cross-plugin:
-  - Imported by: 166 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 167 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×59
     - `conversations` ×29
     - `debug` ×23
@@ -1043,7 +1044,7 @@ See "Open questions" in the design doc.
     - `auth` ×4
     - `layouts` ×4
     - `infra` ×3
-    - `primitives` ×2
+    - `primitives` ×3
     - `stats` ×2
     - `backup`
     - `build`

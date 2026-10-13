@@ -85,8 +85,8 @@ reads what is on screen rather than a per-app flag.
     - `SidebarPaneSection`
     - `useBrandDrawnOn`
 - Cross-plugin:
-  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×15
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×16
     - `conversations` ×2
     - `tasks` ×2
     - `apps-core/app-launcher`

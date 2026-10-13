@@ -8,6 +8,8 @@ import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { spaceLength } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
+import { useReservesFloatingBar } from "@plugins/primitives/plugins/pane/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type {
   ToolbarArrangement,
   ToolbarParts,
@@ -47,10 +49,20 @@ function FloatingToolbar({
   );
   useSurfaceShortcuts(shortcuts);
 
+  // At the surface's top-right corner the band stands in for the pane header
+  // the global floating bar would otherwise sit in: it reserves the bar's safe
+  // area on the right and is the bar's anchor, so the bar is centred on this
+  // band's line, level with the cards — the pane header's own rule.
+  const reservesFloatingBar = useReservesFloatingBar();
   const gutter = spaceLength(GUTTER);
   return (
     <Line
-      className="gap-sm p-md"
+      className={cn(
+        "gap-sm py-md",
+        reservesFloatingBar
+          ? "pr-floating-bar-pane anchor-floating-bar-band"
+          : "pr-md",
+      )}
       // The left card starts one gutter past the aside's floating card.
       style={{ paddingLeft: `calc(${asideInset} + ${gutter})` }}
     >

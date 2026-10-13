@@ -99,6 +99,7 @@ export { PaneBox, paneThemeScope } from "./components/pane-box";
 export { useRenderSync } from "./use-render-sync";
 export { PaneLayoutContext } from "./maximize-context";
 export { SurfaceChromeContext } from "./surface-chrome-context";
+export { useReservesFloatingBar } from "./reserves-floating-bar";
 export type { SurfaceChrome } from "./surface-chrome-context";
 
 export default {

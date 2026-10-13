@@ -48,7 +48,7 @@ import {
   type SidebarState,
   type TagFilterState,
 } from "../internal/sidebar-filter";
-import { BrandMark } from "./brand-mark";
+import { AppShellBrand } from "@plugins/primitives/plugins/app-shell/web";
 import { TagChip } from "./tag-chip";
 
 const checkIcon = symbol("check");
@@ -85,7 +85,8 @@ export interface TagSidebarProps {
  * `useDataViewControls()` — the filter is the one source of truth, and the
  * sidebar owns only its top-level nested-tags rules (`sidebar-filter.ts`).
  *
- * Header: "Places" and the total — a click folds the sidebar to its header
+ * Header: the app launcher (the app's mark), then "Places" and the total —
+ * a click on those folds the sidebar to its header
  * (remembered per device) — then the "Tagged / Not tagged" summary with the
  * any / all switch and Clear (once anything is picked), shown folded too, so
  * an active tag filter never hides. Body: a tag search and the tree, each
@@ -132,19 +133,25 @@ export function TagSidebar({
         className="w-72"
         header={
           <Stack gap="sm" className="p-sm">
-            <CollapsibleTrigger
-              aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
-              className="gap-sm rounded-md p-xs hover:bg-hover-fill"
-            >
-              <BrandMark />
+            {/* The launcher is a button of its own, so it sits beside the
+                fold trigger rather than inside it. */}
+            <Line className="gap-2xs">
+              <AppShellBrand form="icon" />
               <Fill>
-                <Text variant="heading">Places</Text>
+                <CollapsibleTrigger
+                  aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
+                  className="gap-sm rounded-md p-xs hover:bg-hover-fill"
+                >
+                  <Fill>
+                    <Text variant="heading">Places</Text>
+                  </Fill>
+                  <Text variant="count" tone="muted">
+                    {places.length}
+                  </Text>
+                  <CollapsibleChevron className="size-4 text-muted-foreground" />
+                </CollapsibleTrigger>
               </Fill>
-              <Text variant="count" tone="muted">
-                {places.length}
-              </Text>
-              <CollapsibleChevron className="size-4 text-muted-foreground" />
-            </CollapsibleTrigger>
+            </Line>
             {state.include.length + state.exclude.length > 0 ? (
               <FilterSummary
                 include={picked(state.include)}

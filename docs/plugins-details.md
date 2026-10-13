@@ -4386,12 +4386,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view` ×4
               - `map` ×3
               - `primitives/live-state` ×3
-              - `primitives/pane` ×3
               - `apps/places/tag-manager` ×2
               - `integrations/google-maps` ×2
               - `primitives/css/control-panel` ×2
               - `primitives/css/text` ×2
               - `primitives/hover-reveal` ×2
+              - `primitives/pane` ×2
+              - `primitives/app-shell.AppShellBrand`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
               - `primitives/css/cluster.Cluster`
@@ -4425,6 +4426,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core.Apps`
               - `layouts/full-pane.FullPane`
               - `primitives/app-shell.AppShellLayout`
+              - `primitives/css/ui-kit.cn`
               - `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -28612,8 +28614,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SidebarPaneSection`
           - `useBrandDrawnOn`
       - Cross-plugin:
-        - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
-          - `apps` ×15
+        - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
+          - `apps` ×16
           - `conversations` ×2
           - `tasks` ×2
           - `apps-core/app-launcher`
@@ -30162,9 +30164,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 397 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `primitives` ×101
-              - `apps` ×77
+            - Imported by: 399 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `primitives` ×102
+              - `apps` ×78
               - `conversations` ×52
               - `page` ×25
               - `debug` ×23
@@ -30795,7 +30797,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/surface.Surface`
+              - `primitives/css/ui-kit.cn`
               - `primitives/css/yield.yieldClass`
+              - `primitives/pane.useReservesFloatingBar`
               - `primitives/shortcuts.useSurfaceShortcuts`
             - Exports (values): `floatingToolbar`
           - Cross-plugin:
@@ -33327,12 +33331,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `usePaneTitle`
           - `usePathname`
           - `useRenderSync`
+          - `useReservesFloatingBar`
           - `useRoute`
           - `useRouteState`
           - `useSurfaceAppId`
           - `useSyncPaneRegistry`
       - Cross-plugin:
-        - Imported by: 166 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 167 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×59
           - `conversations` ×29
           - `debug` ×23
@@ -33343,7 +33348,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `auth` ×4
           - `layouts` ×4
           - `infra` ×3
-          - `primitives` ×2
+          - `primitives` ×3
           - `stats` ×2
           - `backup`
           - `build`

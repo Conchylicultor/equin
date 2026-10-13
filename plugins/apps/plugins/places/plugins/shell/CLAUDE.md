@@ -13,6 +13,7 @@
     - `apps-core.Apps`
     - `layouts/full-pane.FullPane`
     - `primitives/app-shell.AppShellLayout`
+    - `primitives/css/ui-kit.cn`
     - `ui/theme-engine.ThemeEngine`
 - Core:
   - Uses: `primitives/pane.defineApp`

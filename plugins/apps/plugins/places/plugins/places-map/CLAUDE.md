@@ -116,12 +116,13 @@ Picking saves (`savePlace`) and selects the place; `maps-not-configured`
     - `primitives/data-view` ×4
     - `map` ×3
     - `primitives/live-state` ×3
-    - `primitives/pane` ×3
     - `apps/places/tag-manager` ×2
     - `integrations/google-maps` ×2
     - `primitives/css/control-panel` ×2
     - `primitives/css/text` ×2
     - `primitives/hover-reveal` ×2
+    - `primitives/pane` ×2
+    - `primitives/app-shell.AppShellBrand`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`

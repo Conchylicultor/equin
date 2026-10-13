@@ -42,7 +42,9 @@ bar on a floating card of its own, past the aside.
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/surface.Surface`
+    - `primitives/css/ui-kit.cn`
     - `primitives/css/yield.yieldClass`
+    - `primitives/pane.useReservesFloatingBar`
     - `primitives/shortcuts.useSurfaceShortcuts`
   - Exports (values): `floatingToolbar`
 - Cross-plugin:
