@@ -192,7 +192,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `reportsRootRoute`
     - `SERVER_REPORT_SOURCES`
 - Cross-plugin:
-  - Imported by: 55 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 56 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×20
     - `debug` ×17
     - `conversations` ×7
@@ -200,6 +200,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `infra` ×2
     - `active-data/report`
     - `backup`
+    - `framework/web-core`
     - `page/place/google`
     - `stats/cost`
     - `tasks/reports-investigation`

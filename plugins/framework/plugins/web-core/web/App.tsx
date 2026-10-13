@@ -29,11 +29,20 @@ import {
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import {
   DEFERRED_LOAD_COMPLETE_ID,
+  FIRST_DATA_COMMIT_ID,
   ROUTE_CONTENT_COMMIT_ID,
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 import type { BootPluginLoadDetail } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
+import { report } from "@plugins/reports/web";
 import { webEntries } from "@composition-web-registry";
 import { PluginLoadErrors } from "./components/plugin-load-errors";
+import { BootScreen } from "./components/boot-screen";
+import {
+  runBootTasks,
+  type BootTask,
+  type BootTaskProblem,
+  type BootTaskStatus,
+} from "./boot-tasks";
 
 // The concrete registry-entry type (`{ pluginPath, id, loader, dependsOn }`) —
 // carries the non-optional `id` we need to map a loaded plugin back to its path.
@@ -45,25 +54,43 @@ type WebEntry = (typeof webEntries)[number];
 // whole deferred tier still drains quickly.
 const DEFERRED_BATCH_SIZE = 24;
 
-// Run every Core.Boot readiness task once, before the plugins register, so they
-// can hydrate caches the initial render depends on (e.g. config — replacing
-// per-component Suspense). Enumerated from the raw contributions because
-// PluginProvider (and useContributions) isn't mounted yet. A failing or hung
-// task must never brick boot: allSettled + log, then proceed regardless — reads
-// degrade to their own fallbacks and self-heal via the WS shortly after.
-async function runBootTasks(plugins: LoadedPlugin[]): Promise<void> {
-  const tasks = plugins.flatMap((p) =>
-    (p.contributions ?? []).filter((c) => c._slot === Core.Boot),
+// Every Core.Boot readiness task the plugins contribute, run before they
+// register so they can hydrate caches the initial render depends on (e.g.
+// config — replacing per-component Suspense). Enumerated from the raw
+// contributions because PluginProvider (and useContributions) isn't mounted yet.
+// `runBootTasks` bounds them by a deadline and tracks each one's status, which
+// the boot screen renders.
+function bootTasksOf(plugins: LoadedPlugin[]): BootTask[] {
+  return plugins.flatMap((p) =>
+    (p.contributions ?? [])
+      .filter((c) => c._slot === Core.Boot)
+      .map((c) => c as unknown as BootTask),
   );
-  if (tasks.length === 0) return;
-  const results = await Promise.allSettled(
-    tasks.map((t) => (t as unknown as { run: () => Promise<void> }).run()),
-  );
-  for (const r of results) {
-    if (r.status === "rejected") {
-      console.error("[boot] Core.Boot task failed", r.reason);
-    }
-  }
+}
+
+// A failed or overdue boot task, into the alert funnel. `report()` is a direct
+// keepalive POST: the crash collector's window listeners are not mounted during
+// boot. In a fully wedged backend this POST may stall too — the server's own
+// span-stuck traces cover that side, and this lands once the backend answers.
+function reportBootProblem({ task, elapsedMs }: BootTaskProblem): void {
+  const failed = task.outcome.kind === "failed" ? task.outcome : null;
+  const message = failed
+    ? `boot: "${task.label}" failed: ${failed.message}`
+    : `boot: "${task.label}" still pending after ${Math.round(elapsedMs / 1000)}s`;
+  console.error(`[boot] ${message}`);
+  void report({
+    kind: "crash",
+    source: "client-boot-task",
+    message,
+    url: window.location.href,
+    userAgent: navigator.userAgent,
+    data: {
+      errorType: failed ? "BootTaskFailed" : "BootTaskOverdue",
+      label: task.label,
+      // No Error is thrown for an overdue task; a minimal stack fingerprints it.
+      stack: new Error(message).stack ?? null,
+    },
+  });
 }
 
 // Derive the deep-linked app's root prefix (`apps/plugins/<app>/`) from the
@@ -153,18 +180,29 @@ function RootRenderer() {
   );
 }
 
-interface LoadedState {
-  plugins: LoadedPlugin[];
-  // Core-stage (eager) load errors ONLY — set once from the eager result and
-  // never appended. Those broke something that painted before the user could do
-  // anything, so they get the explicit banner. A deferred failure never lands
-  // here: it is published by `recordErrors` alone, where the Build button's
-  // Reload chip and the app's own "Couldn't load" pane pick it up.
-  coreErrors: PluginLoadError[];
-}
+// Where boot is. There is no "nothing to show" state: until `ready`, App
+// renders the boot screen — loading the code, then waiting on the boot tasks
+// (and, when a blocking one fails or runs late, saying so loudly).
+type BootState =
+  | { phase: "loading-code" }
+  | {
+      phase: "boot-tasks";
+      tasks: readonly BootTaskStatus[];
+      continueAnyway: () => void;
+    }
+  | {
+      phase: "ready";
+      plugins: LoadedPlugin[];
+      // Core-stage (eager) load errors ONLY — set once from the eager result and
+      // never appended. Those broke something that painted before the user could
+      // do anything, so they get the explicit banner. A deferred failure never
+      // lands here: it is published by `recordErrors` alone, where the Build
+      // button's Reload chip and the app's own "Couldn't load" pane pick it up.
+      coreErrors: PluginLoadError[];
+    };
 
 export default function App() {
-  const [state, setState] = useState<LoadedState | null>(null);
+  const [state, setState] = useState<BootState>({ phase: "loading-code" });
 
   useEffect(() => {
     let cancelled = false;
@@ -176,11 +214,14 @@ export default function App() {
     // errors on purpose: a deferred batch's failures have no way into the
     // banner's state.
     const appendPlugins = (plugins: LoadedPlugin[]) => {
-      setState((prev) =>
-        prev
-          ? { ...prev, plugins: [...prev.plugins, ...plugins] }
-          : { plugins, coreErrors: [] },
-      );
+      setState((prev) => {
+        if (prev.phase !== "ready") {
+          throw new Error(
+            `[boot] deferred plugins appended in phase "${prev.phase}" — the deferred tier runs only after ready`,
+          );
+        }
+        return { ...prev, plugins: [...prev.plugins, ...plugins] };
+      });
       markDeferredPluginsLoaded(plugins.map((p) => p.id));
     };
 
@@ -217,8 +258,12 @@ export default function App() {
       if (cancelled) return;
       // Run any Core.Boot tasks these plugins contribute (none under apps/ today,
       // but correct + future-proof) before they register, mirroring the eager
-      // path so hydration lands before the slot re-render.
-      await runBootTasks(plugins);
+      // path so hydration lands before the slot re-render. The app is already
+      // on screen, so nothing holds here: a failed / overdue task is reported.
+      await runBootTasks(bootTasksOf(plugins), {
+        holdOnBlocking: false,
+        onProblem: reportBootProblem,
+      }).settled;
       if (cancelled) return;
       if (routeContent) markRouteContentAtNextCommit();
       appendPlugins(plugins);
@@ -250,10 +295,36 @@ export default function App() {
         "boot-tasks",
         "runBootTasks (eager)",
       );
-      await runBootTasks(eagerResult.plugins);
+      const bootRun = runBootTasks(bootTasksOf(eagerResult.plugins), {
+        holdOnBlocking: true,
+        onProblem: reportBootProblem,
+        onChange: (tasks) => {
+          if (cancelled) return;
+          setState((prev) =>
+            prev.phase === "boot-tasks" ? { ...prev, tasks } : prev,
+          );
+        },
+      });
+      if (!cancelled) {
+        setState({
+          phase: "boot-tasks",
+          tasks: bootRun.initial,
+          continueAnyway: bootRun.continueAnyway,
+        });
+      }
+      await bootRun.settled;
       endBoot();
       markBootInstant("set-state", "paint", "App setState (first render)");
       if (cancelled) return;
+      // The first render that can show data: the commit that swaps the boot
+      // screen for the app, chrome and eager panes reading the hydrated cache.
+      // Armed here, not by the snapshot task: the boot screen commits too (its
+      // elapsed clock), so "the next commit after hydrate" could be one of its.
+      markBootInstantAtNextCommit(
+        FIRST_DATA_COMMIT_ID,
+        "paint",
+        "First commit after boot snapshot",
+      );
 
       // Layer 3 — deferred tier, AFTER first paint (never blocks chrome).
       // Active-app-first: front-load the deep-linked app's content as one awaited
@@ -269,6 +340,7 @@ export default function App() {
 
       if (priority.length === 0) markRouteContentAtNextCommit();
       setState({
+        phase: "ready",
         plugins: eagerResult.plugins,
         coreErrors: eagerResult.errors,
       });
@@ -295,7 +367,17 @@ export default function App() {
     };
   }, []);
 
-  if (!state) return null;
+  if (state.phase === "loading-code")
+    return <BootScreen phase="loading-code" />;
+  if (state.phase === "boot-tasks") {
+    return (
+      <BootScreen
+        phase="boot-tasks"
+        tasks={state.tasks}
+        onContinue={state.continueAnyway}
+      />
+    );
+  }
 
   return (
     <>

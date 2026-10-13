@@ -27,6 +27,15 @@ deleted, so a stray `@/` import is now an unresolved-module error at build time.
 - `web/` — SPA bootstrap only
   - `App.tsx` / `main.tsx` / `index.html` — the React entry + plugin loader
   - `components/plugin-load-errors.tsx` — boot-error surface
+  - `boot-tasks.ts` — runs the `Core.Boot` tasks under one deadline
+    (`BOOT_TASK_DEADLINE_MS`), tracking each task's status; never aborts one, so
+    a late answer still boots the app
+  - `components/boot-screen.tsx` — what `App` renders until boot is done (it
+    has no `null` state): `waiting` (pending task labels + elapsed, faded in
+    after a 1s grace so a normal boot never shows it), `stuck` (a `block` task
+    past the deadline) or `failed` (one rejected), with Retry / Continue anyway.
+    A failed / overdue task also files a `client-boot-task` report.
+    `data-boot-state` is the e2e hook (`infra/boot-snapshot/e2e/boot-stall.ts`).
   - `__tests__/` — render smoke tests
   - `public/` — static assets
 
@@ -116,8 +125,11 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
 
 - Web:
   - Uses:
+    - `primitives/css/center.Center`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit`
+    - `primitives/css/ui-kit.Button`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/live-state.ensureNotificationsClient`
     - `primitives/live-state.NotificationsProvider`
@@ -126,6 +138,8 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
     - `primitives/perfs/boot-trace.startBootSpan`
     - `primitives/perfs/boot-trace.traceBootPluginLoad`
     - `primitives/perfs/scheduler.yieldToMain`
+    - `primitives/relative-time.ElapsedTime`
+    - `reports.report`
 - Cross-plugin:
   - Imported by: `framework/tooling/web-artifacts`
 - Exemptions:

@@ -1,0 +1,21 @@
+/* Grace before the waiting state shows. The boot screen is in the DOM from the
+   first commit (so the page is never "nothing"), but its waiting contents fade
+   in only after 1s: a normal boot (~0.3–0.6s) swaps it for the app first, so
+   the common path looks exactly as before. Pure CSS — no JS timer. The error
+   states (stuck / failed) are not delayed. */
+@keyframes boot-screen-fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
+.boot-screen-delayed {
+  opacity: 0;
+  animation: boot-screen-fade-in 200ms ease-out 1s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-screen-delayed {
+    animation-duration: 0ms;
+  }
+}

@@ -127,10 +127,22 @@ export const Core = {
   // initial paint depends on — replacing per-component Suspense fallbacks.
   //
   // This is a sibling to `register` (one-shot, pre-render), NOT a general
-  // lifecycle hook: readiness/hydration only, run once, and a failing or hung
-  // task must never brick boot (App uses allSettled + log-and-skip). For
-  // per-phase behavior, use React's own lifecycle inside a contributed component.
-  Boot: defineSlot<{ run: () => Promise<void> }>(),
+  // lifecycle hook: readiness/hydration only, run once. While tasks run, App
+  // renders its boot screen naming each pending task by `label` and the time
+  // waited; a task is bounded by App's deadline. `ifUnavailable` says what a
+  // failed or overdue task means: `"block"` — the app cannot meaningfully
+  // paint without it, so the boot screen turns into a loud error state (Retry /
+  // Continue anyway) and files a report; `"continue"` — it degrades on its own,
+  // so it is reported and boot proceeds without it. A task is never aborted: an
+  // overdue one that later resolves lets boot continue by itself. For per-phase
+  // behavior, use React's own lifecycle inside a contributed component.
+  Boot: defineSlot<{
+    /** What the user is waiting for, shown on the boot screen ("Boot snapshot"). */
+    label: string;
+    /** Whether the app may paint without this task when it fails or is overdue. */
+    ifUnavailable: "block" | "continue";
+    run: () => Promise<void>;
+  }>(),
 };
 
 /**

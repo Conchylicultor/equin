@@ -19982,7 +19982,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 149 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 150 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×46
               - `primitives` ×24
               - `page` ×23
@@ -19992,9 +19992,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×4
               - `active-data` ×3
               - `config_v2` ×3
+              - `infra` ×3
               - `shell` ×3
               - `ui` ×3
-              - `infra` ×2
               - `reorder` ×2
               - `build`
               - `database/admin`
@@ -20370,8 +20370,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`web-core`**
       - Web:
         - Uses:
+          - `primitives/css/center.Center`
+          - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit`
+          - `primitives/css/ui-kit.Button`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/live-state.ensureNotificationsClient`
           - `primitives/live-state.NotificationsProvider`
@@ -20380,6 +20383,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/perfs/boot-trace.startBootSpan`
           - `primitives/perfs/boot-trace.traceBootPluginLoad`
           - `primitives/perfs/scheduler.yieldToMain`
+          - `primitives/relative-time.ElapsedTime`
+          - `reports.report`
       - Cross-plugin:
         - Imported by: `framework/tooling/web-artifacts`
       - Exemptions:
@@ -20961,7 +20966,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.fetchEndpoint`
           - `primitives/live-state.hydrateResource`
           - `primitives/live-state.resourceDescriptorByKey`
-          - `primitives/perfs/boot-trace.markBootInstantAtNextCommit`
           - `primitives/perfs/boot-trace.recordBootSpan`
           - `reports.report`
       - Server:
@@ -29001,7 +29005,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 112 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×28
               - `primitives` ×25
               - `page` ×18
@@ -29017,6 +29021,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×2
               - `active-data/go`
               - `config_v2/settings`
+              - `framework/web-core`
               - `layouts/route-fallback`
               - `reorder/node-types/header`
               - `screenshot`
@@ -29707,7 +29712,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 388 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 389 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×98
               - `conversations` ×61
               - `primitives` ×50
@@ -29732,6 +29737,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations` ×2
               - `layouts` ×2
               - `screenshot` ×2
+              - `framework/web-core`
               - `history/dialog`
               - `map/google`
               - `music/chord-box`
@@ -33578,7 +33584,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 63 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 64 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×23
           - `debug` ×12
           - `conversations` ×9
@@ -33587,6 +33593,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra` ×3
           - `active-data/commit-link`
           - `fields/date/table`
+          - `framework/web-core`
           - `history/dialog`
           - `page/annotations/agent-notes/authorship`
           - `plugin-meta/plugin-health`
@@ -35152,7 +35159,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reportsRootRoute`
       - `SERVER_REPORT_SOURCES`
   - Cross-plugin:
-    - Imported by: 55 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 56 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×20
       - `debug` ×17
       - `conversations` ×7
@@ -35160,6 +35167,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra` ×2
       - `active-data/report`
       - `backup`
+      - `framework/web-core`
       - `page/place/google`
       - `stats/cost`
       - `tasks/reports-investigation`

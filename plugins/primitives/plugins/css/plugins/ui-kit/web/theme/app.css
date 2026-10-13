@@ -1922,7 +1922,12 @@
   [data-theme-scope] {
     font-family: var(--font-sans);
     -webkit-font-smoothing: var(--font-smoothing);
-    color: var(--foreground);
+    /* `CanvasText` is the text half of the `html { background: Canvas }`
+       loading floor below: before ThemeInjector (or the pre-paint replay)
+       supplies `--foreground` — a cold-cache boot — text must still read on the
+       floor (App's boot screen renders exactly then). Every token-coloured text
+       whose token is not defined yet inherits it. Dead once a theme paints. */
+    color: var(--foreground, CanvasText);
     /* The scrollbar token group's colour pair (`auto` by default = the
        platform's). Only the COLOUR is themed, never the bar itself: Chromium
        keeps its native overlay scrollbar (no reserved space, shown only while

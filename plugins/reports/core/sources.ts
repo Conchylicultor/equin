@@ -78,6 +78,9 @@ export const CLIENT_REPORT_SOURCES = [
   "client-page-undo-conflict",
   "client-theme-resolution",
   "boot-snapshot",
+  // A Core.Boot task failed or ran past App's boot deadline (web-core's
+  // boot-tasks): the page is showing its boot waiting / error screen.
+  "client-boot-task",
   "plugin-load",
   "client-storage",
 ] as const;

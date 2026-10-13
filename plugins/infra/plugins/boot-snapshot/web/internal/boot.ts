@@ -4,11 +4,7 @@ import {
   hydrateResource,
   resourceDescriptorByKey,
 } from "@plugins/primitives/plugins/live-state/web";
-import {
-  markBootInstantAtNextCommit,
-  recordBootSpan,
-} from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
-import { FIRST_DATA_COMMIT_ID } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
+import { recordBootSpan } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import { report } from "@plugins/reports/web";
 import { bootSnapshot } from "../../core";
 
@@ -84,16 +80,10 @@ export async function runBootSnapshot(): Promise<void> {
     }
     for (const e of entries) hydrate(d, e.params, e.value);
   }
-  // The first render that can show data: the next React commit after the
-  // snapshot is in the cache. The tree is still empty here (App renders null
-  // until every boot task resolves), so that commit is App's first real render
-  // — chrome and eager panes reading the hydrated cache. Deferred-tier route
-  // content may still be loading at that instant.
-  markBootInstantAtNextCommit(
-    FIRST_DATA_COMMIT_ID,
-    "paint",
-    "First commit after boot snapshot",
-  );
+  // The "first commit after boot snapshot" instant (FIRST_DATA_COMMIT_ID) is
+  // armed by App itself, right before it swaps the boot screen for the app: the
+  // boot screen commits too (its elapsed clock), so "the next commit after this
+  // hydrate" would no longer be App's first real render.
   if (failed.length) {
     const more = failed.length > 5 ? ` (+${failed.length - 5} more)` : "";
     const summary = `boot-snapshot: hydrate failed for ${failed.slice(0, 5).join("; ")}${more}`;
@@ -112,7 +102,7 @@ export async function runBootSnapshot(): Promise<void> {
   }
   if (missing.length) {
     // The crash collector's window error listener is NOT mounted yet during the boot
-    // window (RootRenderer mounts after runBootTasks resolves), so a queueMicrotask
+    // window (RootRenderer mounts after the boot tasks settle), so a queueMicrotask
     // throw would only reach the console. report() is a direct keepalive POST that
     // files a deduped crash task regardless of mount state.
     const summary = `boot-snapshot: unresolved descriptor key(s): ${missing.join(", ")}`;
@@ -135,4 +125,11 @@ export async function runBootSnapshot(): Promise<void> {
   }
 }
 
-export const bootSnapshotTask = Core.Boot({ run: runBootSnapshot });
+// `block`: without the snapshot the app has no boot-critical data. A stalled or
+// failing snapshot shows App's boot error state (and files a client report)
+// rather than painting an app whose every read is a stand-in.
+export const bootSnapshotTask = Core.Boot({
+  label: "Boot snapshot",
+  ifUnavailable: "block",
+  run: runBootSnapshot,
+});
