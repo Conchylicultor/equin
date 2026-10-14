@@ -57,7 +57,6 @@ Three pure pieces every loop consumer shares, so nobody re-derives the maths:
     - `KeySignature`
     - `KeySpeller`
     - `LoopCycle`
-    - `LoopWindowSec`
     - `LyricAnnotation`
     - `LyricChord`
     - `LyricData`
@@ -70,6 +69,8 @@ Three pure pieces every loop consumer shares, so nobody re-derives the maths:
     - `PitchLayoutId`
     - `PitchPlane`
     - `PitchSpelling`
+    - `PlaybackPath`
+    - `PlaybackTimeline`
     - `PlayPosition`
     - `Projection`
     - `Score`
@@ -101,7 +102,6 @@ Three pure pieces every loop consumer shares, so nobody re-derives the maths:
     - `effectiveKeyAt`
     - `emptyScore`
     - `fifthsToTonic`
-    - `foldLoopTime`
     - `isAccidental`
     - `isPedalDownAt`
     - `leadInBeats`
@@ -111,9 +111,11 @@ Three pure pieces every loop consumer shares, so nobody re-derives the maths:
     - `mergeScores`
     - `nextLine`
     - `pedalSpans`
-    - `positionAtTime`
     - `prevLine`
+    - `rebaseTimeline`
     - `resolvePedalSustain`
+    - `resyncTimeline`
+    - `retempoTimeline`
     - `samePosition`
     - `scaleTempo`
     - `scoreEndBeat`
@@ -122,8 +124,8 @@ Three pure pieces every loop consumer shares, so nobody re-derives the maths:
     - `songKey`
     - `songPosition`
     - `spellScore`
+    - `startTimeline`
     - `subdivideBars`
-    - `timeOfPosition`
     - `tonicFifths`
     - `unrollLoop`
 

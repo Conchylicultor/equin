@@ -5058,9 +5058,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/library.sonataPlayerPane`
                   - `apps/sonata/primitives/toolbar-control.hoverExpandHost`
                   - `apps/sonata/primitives/toolbar-control.HoverExpandPanel`
-                  - `apps/sonata/session.DriverReading`
                   - `apps/sonata/session.SonataSession`
-                  - `apps/sonata/session.useCursorApi`
                   - `apps/sonata/session.useSession`
                   - `apps/sonata/track-mixer.useMutedTrackIds`
                   - `apps/sonata/track-mixer.useTrackInstrumentMap`
@@ -5074,12 +5072,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (types):
                   - `AudioGraph`
                   - `ScheduleHandle`
-                  - `ScheduleOrigin`
                 - Exports (values):
-                  - `scheduleOrigin`
                   - `startScheduling`
                   - `useAudioGraph`
-                  - `useDriftCorrection`
               - Cross-plugin:
                 - Imported by:
                   - `apps/sonata/audio/live-play`
@@ -5130,10 +5125,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `sonataPlayerPane.Actions` "metronome" → `MetronomeButton`
                   - `Sonata.Hud` "count-in" → `CountInOverlay`
                   - `ConfigV2.WebRegister` "sonata.metronome"
-                - Uses: 24 symbols — full list in [`plugins/apps/plugins/sonata/plugins/audio/plugins/metronome/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/audio/plugins/metronome/REFERENCE.md)
-                  - `apps/sonata/audio/engine` ×5
+                - Uses: 21 symbols — full list in [`plugins/apps/plugins/sonata/plugins/audio/plugins/metronome/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/audio/plugins/metronome/REFERENCE.md)
                   - `apps/sonata/session` ×4
                   - `config_v2` ×3
+                  - `apps/sonata/audio/engine` ×2
                   - `primitives/css/control-panel` ×2
                   - `apps/sonata/library.sonataPlayerPane`
                   - `apps/sonata/shell.Sonata`
@@ -6435,7 +6430,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `KeySignature`
               - `KeySpeller`
               - `LoopCycle`
-              - `LoopWindowSec`
               - `LyricAnnotation`
               - `LyricChord`
               - `LyricData`
@@ -6448,6 +6442,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PitchLayoutId`
               - `PitchPlane`
               - `PitchSpelling`
+              - `PlaybackPath`
+              - `PlaybackTimeline`
               - `PlayPosition`
               - `Projection`
               - `Score`
@@ -6479,7 +6475,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `effectiveKeyAt`
               - `emptyScore`
               - `fifthsToTonic`
-              - `foldLoopTime`
               - `isAccidental`
               - `isPedalDownAt`
               - `leadInBeats`
@@ -6489,9 +6484,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mergeScores`
               - `nextLine`
               - `pedalSpans`
-              - `positionAtTime`
               - `prevLine`
+              - `rebaseTimeline`
               - `resolvePedalSustain`
+              - `resyncTimeline`
+              - `retempoTimeline`
               - `samePosition`
               - `scaleTempo`
               - `scoreEndBeat`
@@ -6500,8 +6497,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `songKey`
               - `songPosition`
               - `spellScore`
+              - `startTimeline`
               - `subdivideBars`
-              - `timeOfPosition`
               - `tonicFifths`
               - `unrollLoop`
         - **`session`** — Sonata playback session: plays a song's composed content — the tempo-scaled score, the rAF transport over a per-surface cursor store, the A–B loop, the count-in, seek / scrub verbs, the play- and seek-on-load intents, a stack of clocks, and a stack of transport drivers (an external medium — a recording — that owns the position while registered). Mountable by any host (useSession); defines the per-session SonataSession.{Provider,Effect} slots the audio plugins contribute to.
@@ -6526,12 +6523,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CountInState`
               - `CursorApi`
               - `CursorStore`
-              - `DriverReading`
               - `DriverState`
               - `LoopOptions`
               - `LoopRange`
               - `SessionContent`
               - `SessionValue`
+              - `TimelineState`
+              - `TimelineStore`
               - `TransportClock`
               - `TransportDriver`
             - Exports (values):

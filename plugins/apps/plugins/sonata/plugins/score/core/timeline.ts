@@ -152,7 +152,10 @@ function makeTimeline(
     const full = Math.floor(r / loopBeats);
     const rem = r - full * loopBeats;
     return (
-      headSec + full * loopSec + tempo.beatToSeconds(loopFrom + rem) - loopFromSec
+      headSec +
+      full * loopSec +
+      tempo.beatToSeconds(loopFrom + rem) -
+      loopFromSec
     );
   };
 
@@ -200,7 +203,8 @@ function makeTimeline(
     positionOf,
     positionAt: (t) => positionOf(cAt(t)),
     iterationOf,
-    loopC: (iter, beat) => headBeats + (iter - 1) * loopBeats + (beat - loopFrom),
+    loopC: (iter, beat) =>
+      headBeats + (iter - 1) * loopBeats + (beat - loopFrom),
   };
 }
 

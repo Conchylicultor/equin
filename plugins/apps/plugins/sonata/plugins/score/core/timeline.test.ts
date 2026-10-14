@@ -34,10 +34,7 @@ describe("startTimeline", () => {
 
   it("runs the head into the loop, then folds every iteration back to A", () => {
     // Head [1, 4) = 1.5 s, loop [2, 4) = 1 s an iteration.
-    const tl = startTimeline(songPosition(1), loop(2, 4),
-      t120,
-      0,
-    );
+    const tl = startTimeline(songPosition(1), loop(2, 4), t120, 0);
     expect(tl.positionAt(1).beat).toBeCloseTo(3, 9);
     expect(tl.iterationOf(tl.cAt(1))).toBe(0);
     expect(tl.positionAt(1.5).beat).toBeCloseTo(2, 9);
@@ -56,10 +53,7 @@ describe("startTimeline", () => {
       { beat: 3, bpm: 60 },
     ]);
     // Loop [2, 4): beat 2→3 is 0.5 s, 3→4 is 1 s.
-    const tl = startTimeline(songPosition(2), loop(2, 4),
-      varying,
-      0,
-    );
+    const tl = startTimeline(songPosition(2), loop(2, 4), varying, 0);
     for (const t of [0.25, 0.5, 1, 1.4, 1.5, 2, 2.9, 4.6]) {
       expect(tl.timeAt(tl.cAt(t))).toBeCloseTo(t, 9);
     }
@@ -76,10 +70,7 @@ describe("startTimeline", () => {
 
 describe("retempoTimeline", () => {
   it("keeps what sounds at the change instant, and re-times what follows", () => {
-    const tl = startTimeline(songPosition(0), loop(0, 4),
-      t120,
-      0,
-    );
+    const tl = startTimeline(songPosition(0), loop(0, 4), t120, 0);
     const at = 2.7; // beat 1.4 of iteration 2
     const slow = retempoTimeline(tl, t60, at);
     expect(slow.positionAt(at).beat).toBeCloseTo(tl.positionAt(at).beat, 9);
@@ -89,10 +80,7 @@ describe("retempoTimeline", () => {
   });
 
   it("never loses time over many changes (the drift a sampled cursor had)", () => {
-    let tl = startTimeline(songPosition(0), loop(0, 8),
-      t120,
-      0,
-    );
+    let tl = startTimeline(songPosition(0), loop(0, 8), t120, 0);
     let expected = 0; // beats walked, integrated by hand
     let t = 0;
     let bpm = 120;
@@ -117,10 +105,7 @@ describe("resyncTimeline", () => {
   });
 
   it("lands inside the loop iteration nearest the current one", () => {
-    const tl = startTimeline(songPosition(0), loop(0, 4),
-      t120,
-      0,
-    );
+    const tl = startTimeline(songPosition(0), loop(0, 4), t120, 0);
     // At t = 5.9 s: loop iteration 2, beat 3.8. The medium says beat 0.1 — the next
     // iteration's start, just ahead.
     const moved = resyncTimeline(tl, 0.1, 5.9);
@@ -185,14 +170,29 @@ describe("a loop's rest", () => {
   });
 
   it("resumes a repeat pass as a repeat", () => {
-    const tl = startTimeline({ beat: 10, rest: 0, repeat: true }, cycle, t60, 0);
+    const tl = startTimeline(
+      { beat: 10, rest: 0, repeat: true },
+      cycle,
+      t60,
+      0,
+    );
     expect(tl.positionAt(1)).toEqual({ beat: 11, rest: 0, repeat: true });
   });
 
   it("reads a position the cycle cannot hold as its song beat", () => {
-    const off = startTimeline({ beat: 2, rest: 0, repeat: true }, cycle, t60, 0);
+    const off = startTimeline(
+      { beat: 2, rest: 0, repeat: true },
+      cycle,
+      t60,
+      0,
+    );
     expect(off.positionAt(0)).toEqual(songPosition(2));
-    const none = startTimeline({ beat: 8, rest: 2, repeat: true }, null, t60, 0);
+    const none = startTimeline(
+      { beat: 8, rest: 2, repeat: true },
+      null,
+      t60,
+      0,
+    );
     expect(none.positionAt(0)).toEqual(songPosition(8));
   });
 });

@@ -69,10 +69,7 @@ export { buildTempoIndex } from "./tempo-index";
 export { resolvePedalSustain, pedalSpans, isPedalDownAt } from "./pedal";
 export type { PedalSpan } from "./pedal";
 
-export type {
-  PlaybackPath,
-  PlaybackTimeline,
-} from "./timeline";
+export type { PlaybackPath, PlaybackTimeline } from "./timeline";
 export {
   rebaseTimeline,
   resyncTimeline,

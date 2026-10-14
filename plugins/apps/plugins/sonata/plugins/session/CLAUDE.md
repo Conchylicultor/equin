@@ -141,12 +141,13 @@ clock, without stopping.
     - `CountInState`
     - `CursorApi`
     - `CursorStore`
-    - `DriverReading`
     - `DriverState`
     - `LoopOptions`
     - `LoopRange`
     - `SessionContent`
     - `SessionValue`
+    - `TimelineState`
+    - `TimelineStore`
     - `TransportClock`
     - `TransportDriver`
   - Exports (values):
