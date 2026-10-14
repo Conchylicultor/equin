@@ -4,7 +4,7 @@
  * Incident 2026-10-12: a wedged backend never answered
  * `GET /api/resources/boot-snapshot`, and every tab sat on an empty black
  * `#root` for half an hour. App now renders a boot screen from its first commit
- * (`[data-boot-state]`): `waiting` (faded in after a 1s grace), `stuck` once a
+ * (`[data-boot-state]`): `waiting` (faded in after a 3s grace), `stuck` once a
  * blocking boot task is past the deadline, `failed` when one rejects.
  *
  *   A. stalled snapshot (returning user) → `waiting` in the first paint,
@@ -13,7 +13,7 @@
  *   B. failing snapshot (503) → `failed` at once, the status in the text;
  *      Continue anyway boots the app.
  *   C. normal (warm) reload → the waiting state fades in only if the boot
- *      outlives its 1s grace; a boot inside the grace never shows it.
+ *      outlives its grace; a boot inside the grace never shows it.
  *
  *   ./singularity run plugins/infra/plugins/boot-snapshot/e2e/boot-stall.ts [--out /tmp/boot-stall]
  */
@@ -33,8 +33,9 @@ const SNAPSHOT = "**/api/resources/boot-snapshot*";
 const BOOT = "[data-boot-state]";
 /** App's BOOT_TASK_DEADLINE_MS (15s) plus slack. */
 const DEADLINE_WAIT_MS = 25_000;
-/** The boot screen's waiting grace (boot-screen.css). */
-const GRACE_MS = 1000;
+/** The boot screen's waiting grace, read off the rendered page in A (its
+ *  fade-in's animation-delay), so this script cannot drift from the app. */
+let GRACE_MS = 0;
 
 await withBrowser(async (h) => {
   // ── A. stalled ──────────────────────────────────────────────────────────
@@ -61,6 +62,10 @@ await withBrowser(async (h) => {
       .locator(BOOT)
       .filter({ hasText: "Boot snapshot" })
       .waitFor({ state: "visible", timeout: 30_000 });
+    GRACE_MS = await page
+      .locator(`${BOOT} [style*="animation-delay"]`)
+      .evaluate((el) => parseFloat(getComputedStyle(el).animationDelay) * 1000);
+    r.note(`waiting grace: ${GRACE_MS}ms`);
     await page.waitForTimeout(GRACE_MS + 500);
     r.eq(
       "A: still waiting (not yet past the deadline)",

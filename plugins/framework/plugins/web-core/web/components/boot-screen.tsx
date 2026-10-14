@@ -6,6 +6,14 @@ import { ElapsedTime } from "@plugins/primitives/plugins/relative-time/web";
 import type { BootTaskStatus } from "../boot-tasks";
 import "./boot-screen.css";
 
+/**
+ * How long the waiting state stays invisible. A normal boot (~0.3–0.6s, more on
+ * a busy host) swaps the boot screen for the app inside it, so the waiting text
+ * only shows on a boot that is really slow. The error states (stuck / failed)
+ * are never delayed.
+ */
+const BOOT_SCREEN_GRACE_MS = 3000;
+
 export type BootScreenProps =
   | { phase: "loading-code" }
   | {
@@ -48,7 +56,7 @@ function viewOf(props: BootScreenProps): View {
 
 /**
  * What the page shows while boot is not done: never nothing. Waiting fades in
- * after a 1s grace (see boot-screen.css), naming what it waits for and for how
+ * after BOOT_SCREEN_GRACE_MS (see boot-screen.css), naming what it waits for and for how
  * long; a failed or overdue `block` task is a loud error state at once, with
  * Retry and Continue anyway. `data-boot-state` is the e2e hook.
  */
@@ -64,7 +72,12 @@ export function BootScreen(props: BootScreenProps) {
       className="h-dvh p-lg"
     >
       {view.kind === "waiting" ? (
-        <Stack gap="xs" align="center" className="boot-screen-delayed">
+        <Stack
+          gap="xs"
+          align="center"
+          className="boot-screen-delayed"
+          style={{ animationDelay: `${BOOT_SCREEN_GRACE_MS}ms` }}
+        >
           <Text variant="body" tone="muted">
             {view.title}
           </Text>

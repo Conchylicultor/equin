@@ -100,7 +100,7 @@ How it works:
   unresolved key is reported loudly (see the invariant above).
 - **When the snapshot does not come** — the task is `Core.Boot({ label: "Boot
   snapshot", ifUnavailable: "block" })`, so App's boot screen (web-core) names it
-  while it is pending (after a 1s grace), turns into a loud `stuck` state past the
+  while it is pending (after a 3s grace), turns into a loud `stuck` state past the
   boot deadline and a `failed` state when it rejects (Retry / Continue anyway),
   and files a `client-boot-task` report. Verified by `e2e/boot-stall.ts`.
 

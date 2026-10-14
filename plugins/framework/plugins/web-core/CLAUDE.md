@@ -32,7 +32,7 @@ deleted, so a stray `@/` import is now an unresolved-module error at build time.
     a late answer still boots the app
   - `components/boot-screen.tsx` — what `App` renders until boot is done (it
     has no `null` state): `waiting` (pending task labels + elapsed, faded in
-    after a 1s grace so a normal boot never shows it), `stuck` (a `block` task
+    after a 3s grace, `BOOT_SCREEN_GRACE_MS`, so a normal boot never shows it), `stuck` (a `block` task
     past the deadline) or `failed` (one rejected), with Retry / Continue anyway.
     A failed / overdue task also files a `client-boot-task` report.
     `data-boot-state` is the e2e hook (`infra/boot-snapshot/e2e/boot-stall.ts`).
