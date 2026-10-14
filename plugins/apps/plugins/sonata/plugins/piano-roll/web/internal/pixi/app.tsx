@@ -180,6 +180,11 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
         antialias: true,
         autoDensity: true,
         resolution: window.devicePixelRatio,
+        // Round every sprite/text quad to the device-pixel grid in the vertex
+        // shader, so a label at a fractional authored offset is drawn 1:1 from
+        // its glyph atlas instead of bilinear-resampled (blurry). The note mesh
+        // is an analytic SDF and is unaffected.
+        roundPixels: true,
         // Accept a software WebGL context as a last resort: on a machine with no
         // WebGPU and no hardware WebGL, a slow canvas WITH notes beats Pixi's
         // default of bailing out (failIfMajorPerformanceCaveat = true) and

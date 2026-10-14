@@ -42,7 +42,11 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/look/core";
 import type { PitchGuide } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import type { FxNoteEvent } from "../../slots";
-import { PX_PER_SECOND, type NoteVisual } from "../../components/geometry";
+import {
+  PX_PER_SECOND,
+  snapToDevicePixel,
+  type NoteVisual,
+} from "../../components/geometry";
 import { createOnsetTracker, type OnsetTracker } from "../fx/onset-tracker";
 import { resolveCssColor } from "./css-color";
 import { createGrid, type BarMarker } from "./grid";
@@ -149,8 +153,15 @@ export function createPianoRollScene(app: Application): PianoRollScene {
 
   const applyScroll = (): void => {
     // The DOM ScrollLayer formula, verbatim: the cursor maps to the lane
-    // bottom (the keyboard), content above it is the future.
-    scrollRoot.y = laneHeight + scrollSec * pxPerSec();
+    // bottom (the keyboard), content above it is the future. Snapped to the
+    // device-pixel grid: a fractional offset lands every note edge and glyph
+    // between two physical pixels, so mid-scroll the anti-aliased edges and
+    // the bitmap labels resample soft — the roll reads blurry while it plays
+    // and sharp once it stops.
+    scrollRoot.y = snapToDevicePixel(
+      laneHeight + scrollSec * pxPerSec(),
+      lastDpr,
+    );
   };
 
   return {

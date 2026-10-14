@@ -1,22 +1,23 @@
-// ── A smooth media clock over a jittery playhead ─────────────────────────────
+// ── A smooth clock over a stepping time source ──────────────────────────────
 //
-// An embedded player reports its time in steps: the IFrame API posts the
-// current time a few times a second, and a reader extrapolating between posts
-// jumps by tens of milliseconds whenever a post lands. Something slaved to that
-// playhead — a synth playing along — hears every jump as a slip. The model
-// below turns the readings into a continuous clock: a line (when, where, rate)
-// that is refitted on every new reading and SLEWED toward it, at most 5 % faster
-// or slower than the rate, so a small disagreement is absorbed over time
-// instead of jumped. A large one (a seek) snaps.
+// Some clocks report time in steps: an embedded player's IFrame API posts the
+// current time a few times a second; an AudioContext's `currentTime` advances
+// once per rendered audio buffer, so two frames read the same time and the
+// next one jumps by two. Anything slaved to such a clock — a synth playing
+// along, a playhead scrolled every frame — hears or sees every step as a slip.
+// The model below turns the readings into a continuous clock: a line (when,
+// where, rate) that is refitted on every new reading and SLEWED toward it, at
+// most 5 % faster or slower than the rate, so a small disagreement is absorbed
+// over time instead of jumped. A large one (a seek) snaps.
 
 /** Disagreements past this many seconds are jumps (a seek), not jitter: snap. */
-export const MEDIA_CLOCK_SNAP_SEC = 0.15;
+export const SMOOTH_CLOCK_SNAP_SEC = 0.15;
 /** The most the clock speeds up or slows down to absorb a disagreement, as a fraction of the rate. */
-export const MEDIA_CLOCK_MAX_SLEW = 0.05;
+export const SMOOTH_CLOCK_MAX_SLEW = 0.05;
 
-export interface MediaClockModel {
+export interface SmoothClockModel {
   /**
-   * Feed one reading: the player said `media` seconds at wall time `perfMs`
+   * Feed one reading: the source said `media` seconds at wall time `perfMs`
    * (`performance.now()` milliseconds), playing at `rate`. A reading equal to
    * the last one carries no news and is ignored.
    */
@@ -35,14 +36,14 @@ interface Fit {
   error: number;
 }
 
-export function createMediaClockModel(): MediaClockModel {
+export function createSmoothClockModel(): SmoothClockModel {
   let fit: Fit | null = null;
   let lastReading: number | null = null;
 
   const at = (perfMs: number): number | null => {
     if (fit === null) return null;
     const dt = Math.max(0, (perfMs - fit.perfMs) / 1000);
-    const budget = MEDIA_CLOCK_MAX_SLEW * fit.rate * dt;
+    const budget = SMOOTH_CLOCK_MAX_SLEW * fit.rate * dt;
     const absorbed =
       Math.sign(fit.error) * Math.min(Math.abs(fit.error), budget);
     return fit.media + dt * fit.rate + absorbed;
@@ -57,7 +58,7 @@ export function createMediaClockModel(): MediaClockModel {
         fit === null ||
         predicted === null ||
         rate !== fit.rate ||
-        Math.abs(media - predicted) > MEDIA_CLOCK_SNAP_SEC
+        Math.abs(media - predicted) > SMOOTH_CLOCK_SNAP_SEC
       ) {
         fit = { perfMs, media, rate, error: 0 };
         return;

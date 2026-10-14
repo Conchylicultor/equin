@@ -3854,6 +3854,10 @@
       "name": "@singularity/plugin-packages-sleep-clock",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/smooth-clock": {
+      "name": "@singularity/plugin-packages-smooth-clock",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/spawn-priority": {
       "name": "@singularity/plugin-packages-spawn-priority",
       "version": "0.0.1",
@@ -8370,6 +8374,8 @@
     "@singularity/plugin-packages-single-flight": ["@singularity/plugin-packages-single-flight@workspace:plugins/packages/plugins/single-flight"],
 
     "@singularity/plugin-packages-sleep-clock": ["@singularity/plugin-packages-sleep-clock@workspace:plugins/packages/plugins/sleep-clock"],
+
+    "@singularity/plugin-packages-smooth-clock": ["@singularity/plugin-packages-smooth-clock@workspace:plugins/packages/plugins/smooth-clock"],
 
     "@singularity/plugin-packages-spawn-priority": ["@singularity/plugin-packages-spawn-priority@workspace:plugins/packages/plugins/spawn-priority"],
 

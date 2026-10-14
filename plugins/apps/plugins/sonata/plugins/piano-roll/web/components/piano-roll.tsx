@@ -62,6 +62,7 @@ import {
   KEYBOARD_HIGH,
   KEYBOARD_LOW,
   PX_PER_SECOND,
+  snapToDevicePixel,
   SPREAD_MIN,
 } from "./geometry";
 import type { Application } from "pixi.js";
@@ -428,7 +429,8 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
       const offset =
         laneSizeRef.current.height +
         tempo.beatToSeconds(beat) * PX_PER_SECOND * ts * spreadRef.current;
-      el.style.transform = `translateY(${offset}px)`;
+      // Snapped exactly as the scene snaps its scroll root, so the two stay glued.
+      el.style.transform = `translateY(${snapToDevicePixel(offset, window.devicePixelRatio)}px)`;
     }
   }, []);
 

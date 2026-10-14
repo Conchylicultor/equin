@@ -60,6 +60,16 @@ import {
 export const PX_PER_SECOND = 270;
 
 /**
+ * Round a CSS-pixel offset to the nearest PHYSICAL pixel (`1 / dpr` CSS px).
+ * The canvas scroll root and the DOM overlay layer both scroll through this, so
+ * content lands on whole device pixels (crisp mid-scroll) and the two layers
+ * round identically (stay glued).
+ */
+export function snapToDevicePixel(cssPx: number, dpr: number): number {
+  return Math.round(cssPx * dpr) / dpr;
+}
+
+/**
  * Vertical zoom of the falling notes ("spread"), Synthesia-style — a pure
  * multiplier on {@link PX_PER_SECOND}, read by the toolbar wheel as a zoom level
  * (`1×` = the baseline above). Higher values make notes taller and the look-ahead

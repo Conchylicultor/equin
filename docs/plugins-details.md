@@ -24062,12 +24062,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `CodeVerdict`
           - `EmbedStatus`
-          - `MediaClockModel`
         - Exports (values):
-          - `createMediaClockModel`
           - `EmbedStatusSchema`
-          - `MEDIA_CLOCK_MAX_SLEW`
-          - `MEDIA_CLOCK_SNAP_SEC`
           - `snapPlaybackRate`
           - `statusFromOembedCode`
           - `statusFromPlayerCode`
@@ -24944,6 +24940,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `createSleepMeter`
           - `readSleepClock`
+    - **`smooth-clock`** — Smooth clock over a stepping time source: createSmoothClockModel turns readings that advance in steps (an embedded player's posted playhead, an AudioContext's buffer-quantized currentTime) into a continuous line slewed toward each new reading (at most 5 % off the rate) and snapped only on a jump — so whatever renders or plays against it advances every frame instead of stuttering.
+      - Core:
+        - Exports (types): `SmoothClockModel`
+        - Exports (values):
+          - `createSmoothClockModel`
+          - `SMOOTH_CLOCK_MAX_SLEW`
+          - `SMOOTH_CLOCK_SNAP_SEC`
     - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts, type-check workers) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
       - Cross-plugin:
         - Imported by:

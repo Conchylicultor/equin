@@ -72,8 +72,8 @@ playing), `playRange(start, end)`, `seek(seconds)`, `getCurrentTime()`,
 ## The media clock
 
 `createMediaClock(controller).position()` — for something slaved to the video
-(Sonata's synth): the playhead through a linear model (`createMediaClockModel`,
-core, pure) refitted on each reading and slewed toward it at ≤ 5 % of the rate,
+(Sonata's synth): the playhead through a linear model (`createSmoothClockModel` from
+`packages/smooth-clock`, pure) refitted on each reading and slewed toward it at ≤ 5 % of the rate,
 snapping past 150 ms (a seek) or on a rate change; `null` unless strictly
 playing, and every stop forgets the fit. Pull-based: one read per call.
 `loadYouTubeIframeApi()` is exported for a caller that wants the raw `YT`
@@ -222,12 +222,8 @@ calls the controller makes; `@types/youtube` is not a dependency.
   - Exports (types):
     - `CodeVerdict`
     - `EmbedStatus`
-    - `MediaClockModel`
   - Exports (values):
-    - `createMediaClockModel`
     - `EmbedStatusSchema`
-    - `MEDIA_CLOCK_MAX_SLEW`
-    - `MEDIA_CLOCK_SNAP_SEC`
     - `snapPlaybackRate`
     - `statusFromOembedCode`
     - `statusFromPlayerCode`

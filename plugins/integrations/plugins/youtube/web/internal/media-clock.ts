@@ -1,10 +1,10 @@
-import { createMediaClockModel } from "../../core";
+import { createSmoothClockModel } from "@plugins/packages/plugins/smooth-clock/core";
 import type { YouTubePlayerController } from "./controller";
 
 /** A smooth reading of a player's media time, for something slaved to it. */
 export interface MediaClock {
   /**
-   * The media time in seconds, smoothed (see `createMediaClockModel`), or
+   * The media time in seconds, smoothed (see `createSmoothClockModel`), or
    * `null` while the video is not advancing (paused, cued, buffering, seeking,
    * not ready). Pull-based: each call reads the player once, so call it at the
    * cadence you render or schedule at — no timer runs behind it.
@@ -22,7 +22,7 @@ export interface MediaClock {
 export function createMediaClock(
   controller: YouTubePlayerController,
 ): MediaClock {
-  const model = createMediaClockModel();
+  const model = createSmoothClockModel();
   return {
     position() {
       if (!controller.isAdvancing) {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { createSmoothClockModel } from "@plugins/packages/plugins/smooth-clock/core";
 import {
   useCursorApi,
   useSession,
@@ -315,7 +316,26 @@ export function AudioEngine() {
     // scheduled against (no drift, correct across tab backgrounding). Stable for
     // the whole session: `ctx.currentTime` is frozen while suspended and only
     // advances after `ctx.resume()` on play — exactly when the cursor reads it.
-    const unregisterClock = registerClock({ now: () => ctx.currentTime });
+    //
+    // Read SMOOTHED: `currentTime` advances once per rendered audio buffer, not
+    // continuously, so successive animation frames read it 0 or 2 steps apart
+    // and the cursor scrolls in jerks. The smooth clock extrapolates on the
+    // wall clock between readings and slews (never jumps) toward each one, so
+    // it stays within a buffer of the audio. While the context is not running
+    // its time is frozen: hand that back raw and forget the fit, so a resume
+    // snaps to the context instead of to a line that ran on without it.
+    const smooth = createSmoothClockModel();
+    const unregisterClock = registerClock({
+      now: () => {
+        if (ctx.state !== "running") {
+          smooth.reset();
+          return ctx.currentTime;
+        }
+        const perfMs = performance.now();
+        smooth.observe(ctx.currentTime, perfMs, 1);
+        return smooth.at(perfMs) ?? ctx.currentTime;
+      },
+    });
 
     // Belt-and-suspenders autoplay-gate unlock: the play button is itself a
     // gesture, but a one-time pointerdown resume covers any other entry point.
