@@ -18974,6 +18974,34 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
   - Plugins:
+    - **`browser-server`** — A server that runs in the page — a third host of the unified live API (core: createBrowserServer serves liveValue / liveCollection declarations on a real resource runtime through serveValueOn / serveCollectionOn, routes requests through the shared http-router, and fails every other known resource key as loader-failed). Web: browserServerTransport(server), the Transport a <TransportProvider> points a subtree at — in-memory sockets to its runtime, requests through its router, an inert central socket.
+      - Web:
+        - Uses:
+          - `primitives/networking.publishWsStatus`
+          - `primitives/networking.Transport`
+          - `primitives/networking.TransportSocket`
+        - Exports (values): `browserServerTransport`
+      - Core:
+        - Uses:
+          - `framework/http-router.createRequestHandler`
+          - `framework/http-router.RouteHandler`
+          - `framework/resource-runtime.createResourceRuntime`
+          - `framework/resource-runtime.KeyedResourceContract`
+          - `framework/resource-runtime.RuntimeSocket`
+          - `network/live.bindExternalServe`
+          - `network/live.LiveExternalServe`
+          - `packages/resource-protocol.RESOURCE_HTTP_ROUTE`
+          - `primitives/live-state.allResourceDescriptors`
+          - `primitives/live-state.onResourceDescriptorRegistered`
+          - `primitives/live-state.ResourceDescriptor`
+        - Exports (types):
+          - `BrowserServe`
+          - `BrowserServed`
+          - `BrowserServer`
+          - `BrowserServerOptions`
+          - `BrowserServerPeer`
+          - `BrowserServerSocket`
+        - Exports (values): `createBrowserServer`
     - **`central-core`**
       - Core:
         - Uses:
@@ -19289,6 +19317,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`hook-value`** — A React hook carried as a value: the Hook<F> brand, and the two lint rules that keep every binding holding one named use* (the React Compiler recognises hooks by name only and memoizes any other call).
       - Core:
         - Exports (types): `Hook`
+    - **`http-router`** — The one HTTP request router every host mounts: createRequestHandler turns "METHOD /path/:param" route pairs into a (req) => Promise<Response> — literal fast path, then :param matching in registration order, a default cache-control: no-store, and a logged generic 500 on a throw. A duplicate route key throws at construction.
+      - Cross-plugin:
+        - Imported by: `framework/browser-server`
+      - Core:
+        - Exports (types):
+          - `RequestHandlerOptions`
+          - `RouteHandler`
+        - Exports (values): `createRequestHandler`
     - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
       - Cross-plugin:
         - Imported by:
@@ -19353,12 +19389,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/resource-protocol.ResourceRefusal`
           - `packages/resource-protocol.ServerFrame`
           - `packages/semaphore.createSemaphore`
+          - `packages/string-hash.hash64`
+          - `packages/string-hash.hashHex`
         - Exports (types):
           - `AliasMembership`
           - `ChangeSource`
           - `DefineResourceInput`
           - `DependsOnEntry`
           - `DerivedRead`
+          - `ExternalKeyedPolicy`
+          - `ExternalPointMembership`
+          - `ExternalPointPolicy`
           - `ExternalResource`
           - `ExternalWindowMembership`
           - `ExternalWindowPolicy`
@@ -19384,6 +19425,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Route`
           - `RoutedRecomputeOn`
           - `RoutePlan`
+          - `RuntimeSocket`
           - `ScopedResourceTable`
           - `ScopePolicy`
           - `SeedOutcome`
@@ -19404,6 +19446,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tableLayoutRequirements`
       - Cross-plugin:
         - Imported by:
+          - `framework/browser-server`
           - `framework/central-core`
           - `framework/server-core`
       - Exemptions:
@@ -19418,7 +19461,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `diffKeyedFull` — Full diff: compare the new array `value` against `prev` (the prior snapshot, or `undefined` on first notify).
           - `diffKeyedScoped` — Scoped diff (Layer 2): `scopedRows` is a PARTIAL array — only the recomputed affected rows.
           - `feedChange` — One base-table change as the change feed delivers it (`routeChange`): to the routed router, then the legacy one.
-          - `hashSnapEncoder`
+          - `hashSnapEncoder` — The portable 64-bit hash encoder: the runtime's default `snapHash`.
           - `identityPlan` — The plan `compileWindowQuery` emits for a single-table window / point set / alias: one identity route `base` on `table`, gating on `cols`, read by every tuple in the membership role.
           - `legacyFull` — The legacy router alone: every non-routed reader of `table` recomputes FULL.
           - `makeClientView`
@@ -20273,6 +20316,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RegisterMarker`
               - `RegisterMarkerName`
               - `ResourceMembership`
+              - `ServedCollection`
+              - `ServedCollectionFnNames`
+              - `ServedResource`
+              - `ServedResourceFnNames`
+              - `ServingPrimitive`
             - Exports (values):
               - `isResourceVocabularyOwner`
               - `LIVE_CORE`
@@ -20282,6 +20330,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `QUERY_RESOURCE_SERVER`
               - `resourceDescriptorFactories`
               - `resourceRegisterMarkers`
+              - `resourceServingPrimitives`
               - `resourceVocabularyOwnerPaths`
               - `SERVER_CORE`
           - Cross-plugin:
@@ -24344,7 +24393,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
-    - **`live`** — Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; LiveExposures.Register registers an entity extension's exposed fields (with their cells) for every list whose collection reaches its entity, read by useExposures. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+    - **`live`** — Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; LiveExposures.Register registers an entity extension's exposed fields (with their cells) for every list whose collection reaches its entity, read by useExposures. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
       - Web:
         - Slots: `LiveExposures.Register`
         - Slot contributors:
@@ -24395,6 +24444,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ColumnOverride`
           - `CompiledPagedValue`
           - `CompiledValue`
+          - `DeclaredCollection`
           - `DefaultScope`
           - `LiveValueSource`
           - `LookupCollectionSpecs`
@@ -24450,6 +24500,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/live-state.WindowSelector`
         - Exports (types):
           - `ContributedColumns`
+          - `ExternalAllCollection`
+          - `ExternalLookupCollection`
+          - `ExternalNotifiedPagedValue`
+          - `ExternalNotifiedQueryValue`
+          - `ExternalNotifiedValue`
+          - `ExternalSilentPagedValue`
+          - `ExternalSilentValue`
+          - `ExternalWindowCollection`
           - `LiveAllCollection`
           - `LiveAllOrder`
           - `LiveAllSpec`
@@ -24464,6 +24522,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveBytesTypedParamValueSpec`
           - `LiveCentralValueSpec`
           - `LiveCollection`
+          - `LiveCollectionChange`
+          - `LiveCollectionChanges`
           - `LiveCollectionOf`
           - `LiveCollectionSpec`
           - `LiveColumnFilter`
@@ -24484,6 +24544,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveDecodedQuery`
           - `LiveExposedColumns`
           - `LiveExposes`
+          - `LiveExternalServe`
           - `LiveFilterable`
           - `LiveFilterableOf`
           - `LiveGroup`
@@ -24494,6 +24555,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveGroupQuery`
           - `LiveGroupsDescriptor`
           - `LiveGroupValue`
+          - `LiveHost`
+          - `LiveHostSource`
+          - `LiveHostSources`
           - `LiveKeyCut`
           - `LiveKeyDirection`
           - `LiveKeyRange`
@@ -24526,6 +24590,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveReservedColumn`
           - `LiveRowSchema`
           - `LiveRowsCollection`
+          - `LiveRuntime`
           - `LiveScopedColumns`
           - `LiveSnapshotBrand`
           - `LiveSortDirection`
@@ -24544,8 +24609,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveWindowDescriptor`
           - `LiveWindowParams`
           - `ScopedColumnMember`
+          - `ServedExternalAll`
+          - `ServedExternalLookup`
+          - `ServedExternalResource`
+          - `ServedExternalWindow`
+          - `ServedPagedOn`
+          - `ServedValueOn`
+          - `ServeExternalAllOptions`
+          - `ServeExternalLookupOptions`
+          - `ServeExternalWindowOptions`
+          - `ServeValueOnOptions`
           - `WithContributedColumns`
         - Exports (values):
+          - `bindExternalServe`
           - `exposedColumns`
           - `isPointId`
           - `LIVE_COLUMNS_KEY`
@@ -24558,8 +24634,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveColumns`
           - `liveValue`
           - `scopedLiveColumns`
+          - `serveCollectionOn`
+          - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 220 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 221 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×61
           - `conversations` ×35
           - `tasks` ×26
@@ -24581,6 +24659,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup/runs-arm`
           - `database/query-deadline`
           - `fields/secret/config`
+          - `framework/browser-server`
           - `integrations/google-maps`
           - `reports`
           - `runs`
@@ -24824,11 +24903,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RefcountHub`
         - Exports (values): `createRefcountHub`
     - **`resource-protocol`** — The live-resource wire protocol, shared by the resource runtime (server, central) and the live-state client: the socket's frame vocabulary declared once as data — ServerFrame / ClientFrame / Derivation types derived from it, and PROTOCOL, a pure-JS hash of its canonical JSON that splits the shared socket and gates seeded derivations exactly when the vocabulary changes — plus the failure vocabulary: the sub-error reasons (contract-mismatch included), the contract verdict (skew / same-build / unknown), the HTTP error body, the client build-graph header, ResourceContractError — the typed throw a params decode raises when a subscription does not match the declaration — and ResourceRefusal, the expected caller-caused refusal a loader throws, whose message reaches the reader and is never reported as a server failure.
-      - Cross-plugin:
-        - Imported by:
-          - `framework/resource-runtime`
-          - `network/live`
       - Core:
+        - Uses: `packages/string-hash.hash53`
         - Exports (types):
           - `ClientFrame`
           - `ContractVerdict`
@@ -24853,9 +24929,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PROTOCOL`
           - `RESOURCE_BYTES_CONTENT_TYPE`
           - `RESOURCE_BYTES_HEADERS`
+          - `RESOURCE_HTTP_ROUTE`
           - `resourceBytesHeaders`
           - `ResourceContractError`
           - `ResourceRefusal`
+      - Cross-plugin:
+        - Imported by:
+          - `framework/browser-server`
+          - `framework/resource-runtime`
+          - `network/live`
     - **`retry`**
       - Core:
         - Exports (types): `DelayStrategy`
@@ -24961,6 +25043,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `backgroundArgv`
           - `backgroundPrefix`
+    - **`string-hash`** — Portable, non-cryptographic string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex) and hash64 (a 64-bit bigint).
+      - Cross-plugin:
+        - Imported by:
+          - `framework/resource-runtime`
+          - `packages/resource-protocol`
+      - Core:
+        - Exports (values):
+          - `hash53`
+          - `hash64`
+          - `hashHex`
     - **`wall-clock`** — Wall clock ↔ UTC instant for an IANA zone, without a timezone database: a wall time's candidate instants are enumerated from the offsets either side of it and each verified against Intl, so a clock change resolves the same way in every zone rather than by the sign of its offset. Also reads a clock face back out of an instant, and answers when the local day began.
       - Cross-plugin:
         - Imported by: `primitives/metrics`
@@ -32107,7 +32199,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 228 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 229 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×65
           - `conversations` ×38
           - `ui` ×22
@@ -32122,11 +32214,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build` ×4
           - `review` ×3
           - `config_v2` ×2
+          - `framework` ×2
           - `integrations` ×2
           - `reports` ×2
           - `code-explorer/commit-detail`
           - `fields/secret/config`
-          - `framework/web-core`
           - `history/dialog`
           - `network/live`
           - `search/quick-find`
@@ -32152,7 +32244,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WindowResourceDescriptor`
           - `WindowSelector`
         - Exports (values):
+          - `allResourceDescriptors`
           - `compareTxWatermark`
+          - `onResourceDescriptorRegistered`
           - `registerResourceDescriptor`
           - `resolvableSchema`
           - `resolved`
@@ -32665,6 +32759,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversations-view/data-view`
           - `conversations/conversations-view/data-view/history`
           - `debug/logs`
+          - `framework/browser-server`
           - `infra/endpoints`
           - `infra/health`
           - `network/live`

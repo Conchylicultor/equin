@@ -83,7 +83,10 @@ const windowCollection = (k: string) =>
 const keyText = { rank: (n: number) => String(n).padStart(4, "0") };
 
 /** A row as a rank-ordered window ships it: with its minted `$key`. */
-const keyed = (r: Row) => ({ ...r, $key: JSON.stringify([keyText.rank(r.rank), r.id]) });
+const keyed = (r: Row) => ({
+  ...r,
+  $key: JSON.stringify([keyText.rank(r.rank), r.id]),
+});
 
 const initial: Row[] = [
   { id: "a", title: "A", rank: 1 },

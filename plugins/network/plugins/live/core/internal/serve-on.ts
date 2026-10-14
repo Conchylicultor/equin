@@ -1193,7 +1193,7 @@ export interface LiveExternalServe<O extends LiveValueOrigin> {
         NoInfer<Row>,
         NoInfer<F>,
         NoInfer<S>,
-            NoInfer<Cn>,
+        NoInfer<Cn>,
         C
       >,
     ): ServedExternalWindow<Row, C>;
