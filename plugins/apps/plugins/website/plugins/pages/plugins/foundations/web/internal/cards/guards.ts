@@ -13,21 +13,37 @@ const LANES: readonly (readonly [
   ["layers", "Codebase", "as a whole", "Checks", "on every build"],
 ];
 const AW = 56;
-const WX = 80;
-const WW = 98;
-const GX = 202;
+const GX = 80;
 const GW = 100;
+const WX = 204;
+const WW = 98;
 const H = 36;
 const Y0 = 6;
 const STEP = 50;
+// states: lane i plays 3i (sent) · 3i+1 (approved, and passed on) · 3i+2 (arrived); REST: nothing lit, a breath
+// before the loop starts again. The two moving beats are held exactly as long as a link draws (--k-draw), so each
+// arrow starts as the one before it lands.
+const REST = 9;
+const beats = (i: number, from: number) =>
+  [0, 1, 2]
+    .filter((b) => b >= from)
+    .map((b) => 3 * i + b)
+    .join(" ");
 
 /**
  * Checks, lint & guards: three complementary guards, each watching a different part of an agent's work — the
- * commands it runs, the code it writes, the codebase as a whole. Each lane lights in turn, then all three together.
+ * commands it runs, the code it writes, the codebase as a whole. Each guard sits between the agent and what it
+ * guards. A lane tells one story in one motion: the agent sends its work to the guard; as it lands the guard approves
+ * it and it goes straight on to what it guards. The lanes play one after another.
  */
 export const guardsCard = defineCard({
-  states: 4, // lane i lit · 3: all three together
-  autoplay: { seq: [0, 1, 2, 3], every: [1700, 1700, 1700, 2600], lead: 900 },
+  states: 10,
+  start: REST,
+  autoplay: {
+    seq: [REST, 0, 1, 2, 3, 4, 5, 6, 7, 8],
+    every: [400, 550, 550, 500, 550, 550, 500, 550, 550, 1400],
+    lead: 900,
+  },
   render: (k) => {
     const bh = Y0 + 2 * STEP + H - Y0;
     let s =
@@ -49,13 +65,32 @@ export const guardsCard = defineCard({
     LANES.forEach(([icon, what, whatSub, gate, gateSub], i) => {
       const y = Y0 + i * STEP;
       const cy = y + H / 2;
-      // one lane, drawn once: it lights (and its links redraw) in its own state and in "all three"
+      const bx = GX + GW - 3;
+      const by = y + 3;
+      // sent: the work leaves the agent for the guard
+      s += k.link(AW, cy, GX, cy, {
+        dir: "h",
+        on: beats(i, 0),
+        fade: "dim",
+        send: true,
+      });
+      // approved: the guard lights and stamps its check
       s +=
-        `<g data-on="${i} 3" class="k-sw k-sw-dim">` +
-        k.link(AW, cy, WX, cy, { dir: "h" }) +
-        box(WX, WW, y, icon, what, whatSub) +
-        k.link(WX + WW, cy, GX, cy, { dir: "h", delay: 0.25 }) +
+        `<g data-on="${beats(i, 1)}" class="k-sw k-sw-dim">` +
         box(GX, GW, y, "shield", gate, gateSub) +
+        `</g>` +
+        `<g data-in="${beats(i, 1)}"><circle cx="${bx}" cy="${by}" r="7" class="k-accf"/>` +
+        `<path d="M${bx - 3.2} ${by} l2.2 2.2 l4.2 -4.6" class="k-inv"/></g>`;
+      // passed on: the work leaves the guard as soon as it is approved, and lights what it reaches
+      s +=
+        k.link(GX + GW, cy, WX, cy, {
+          dir: "h",
+          on: beats(i, 1),
+          fade: "dim",
+          send: true,
+        }) +
+        `<g data-on="${beats(i, 2)}" class="k-sw k-sw-dim">` +
+        box(WX, WW, y, icon, what, whatSub) +
         `</g>`;
     });
     return k.svg(Y0 + 2 * STEP + H + 2, s);
