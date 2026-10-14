@@ -38,6 +38,10 @@ function ensureFamilyBound(): void {
       "browser-supplied ids). Every <channel>.jsonl written by POST /api/logs/emit " +
       "shares this 128 MB × 3 rotation via openDynamicSink; this representative " +
       "entry makes the family enumerable/bounded in getFileSinks().",
+    consumer: {
+      kind: "internal",
+      note: "Representative family bound (defineFileSink, log-channels client-ingress) for the browser clientLog channels written through openDynamicSink. Makes the open-ended family enumerable in getFileSinks(); the file itself is written only if a browser names a channel `client-log`. The per-channel files are debug logs read by humans (tail) and the Debug → Logs viewer; no failure funnel.",
+    },
     path: join(logsDir(), "client-log.jsonl"),
   });
 }

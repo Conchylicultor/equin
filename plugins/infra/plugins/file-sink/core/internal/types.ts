@@ -5,12 +5,38 @@
 
 import type { JsonlTailResult, TailOptions, TailResult } from "./read";
 
+/**
+ * Who reads a durable sink — a required, REVIEWED classification on every
+ * declaration, so a durable signal can never again be persisted and consumed by
+ * nothing (the 2026-07-17 never-ready boot). `reportKind` / `timelineSource` are
+ * opaque strings here (this primitive names neither reports nor the timeline);
+ * `durable-signals-accounted` validates them against the live `ReportKind`s and
+ * `TIMELINE_SOURCES`. `note` says honestly what reads the file — or that
+ * nothing durable does.
+ */
+export type SinkConsumer =
+  /** A failure signal filed as a report (and, optionally, also drawn on the timeline). */
+  | {
+      kind: "report";
+      reportKind: string;
+      timelineSource?: string;
+      note: string;
+    }
+  /** A continuous series drawn on the debug timeline — never a report. */
+  | { kind: "timeline"; timelineSource: string; note: string }
+  /** Read by a specific pane or surface; no failure funnel. */
+  | { kind: "rendering-only"; note: string }
+  /** Diagnostic prose with no durable consumer. */
+  | { kind: "internal"; note: string };
+
 /** Declaration of a file sink. `path` is an ABSOLUTE live-file path the caller owns. */
 export interface FileSinkSpec {
   /** Stable, unique id — the registry key and the `file:${id}` growth-bound key. */
   id: string;
   /** Human-readable purpose of the sink (for the undeclared-growth monitor). */
   description: string;
+  /** Who reads this file — validated by `durable-signals-accounted`. */
+  consumer: SinkConsumer;
   /** Absolute path of the live file. Rotations are `path.1` … `path.N`. */
   path: string;
   /** Rotate once the live file would exceed this. Defaults to 128 MB. */

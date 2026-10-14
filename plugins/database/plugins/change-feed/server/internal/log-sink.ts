@@ -8,4 +8,8 @@ export const changeFeedLog = defineLogSink({
   id: "change-feed",
   description:
     "DB change-feed ops log: STATEMENT-trigger install and the LISTEN consumer's recompute cascade.",
+  consumer: {
+    kind: "internal",
+    note: "DB change-feed trigger/listener diagnostics (database/change-feed).",
+  },
 });

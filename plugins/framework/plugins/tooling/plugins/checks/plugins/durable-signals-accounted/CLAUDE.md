@@ -20,42 +20,54 @@ fails the build.
 
 ## What it enforces
 
-`check/accounting.ts` is a LOCAL allowlist `Record<sinkId, { consumer, note,
-reportKind?, timelineSource? }>`, one namespace across both primitives. Local on
-purpose — a low-level sink primitive must never name reports/timeline
-(dependency inversion), and a registry refactor onto the primitives was rejected
-as disproportionate. The check:
+The classification lives **at the declaration**: both primitives take a
+required `consumer: SinkConsumer` (`infra/file-sink/core`), a discriminated
+union, so tsc forces the decision on every new sink — there is no central list
+to forget, and no framework file to edit when a feature adds a sink:
 
-1. **Every durable sink is classified.** `findMarkerCalls` finds every
+```ts
+defineLogSink({
+  id: "boot",
+  description: "…",
+  consumer: {
+    kind: "report",              // report | timeline | rendering-only | internal
+    reportKind: "boot-wedge",    // required for report
+    timelineSource: "boot",      // required for timeline; optional on report
+    note: "What reads this file — or that nothing durable does.",
+  },
+});
+```
+
+The primitive keeps `reportKind` / `timelineSource` as opaque strings (a
+low-level sink must never name reports or the timeline — dependency inversion),
+so this check validates what tsc cannot see:
+
+1. **Every durable sink is nameable.** `findMarkerCalls` finds every
    `defineLogSink({ … })` and `defineFileSink({ … })` call site (string- and
    comment-safe via full masking, scan-tree + untracked aware via
    `listCandidateSources`, `*.test.ts(x)` excluded — a test's sink is a tmp-dir
-   throwaway); `parseStringField` reads the `id` field back from the original — a
-   string literal resolves directly, an `export const NAME = "…"` reference is
-   resolved by grep. An unresolvable id (a computed expression, or a const with
-   no live declaration) is a LOUD failure — the check cannot classify what it
-   cannot name. A found id missing from the allowlist fails with the
-   classification obligation.
-2. **Computed ids are named exemptions, and they cannot go stale.**
-   The owning plugin lists each deliberate computed id in its `exempt/index.ts`
-   (rule `durable-signals-accounted`, a file + reason). Today there is one: `defineLogSink`'s own
-   body (`log-channels/server/internal/log.ts`) calls `defineFileSink({ id:
-   spec.id })`, and those ids are the `defineLogSink` call sites already scanned.
-   An exemption that no longer meets a computed-id call fails (the runner's unused-exemption verdict), so it can never
-   silently excuse the next computed id written in that file.
-3. **No id through both primitives.** The two share one accounting entry, so an
-   id declared by a `defineLogSink` in one file and a `defineFileSink` in another
-   fails loudly.
-4. **Report/timeline classifications are coherent.** A `report` entry's
-   `reportKind` must resolve to a live `ReportKind({ kind })` call site; a
-   `timeline` entry's `timelineSource` must be in `TIMELINE_SOURCES` (imported
-   from the timeline plugin — its single source of truth). A sink that feeds
-   BOTH (boot, duress-episodes) carries both fields and both are validated.
-5. **No stale entries.** Every allowlist key must still have a live call site.
+   throwaway); `parseStringField` reads the `id` back — a string literal
+   directly, an `export const NAME = "…"` reference by grep. An unresolvable id
+   is a LOUD failure.
+2. **Computed ids are named exemptions, and they cannot go stale.** The owning
+   plugin lists each deliberate computed id in its `exempt/index.ts` (rule
+   `durable-signals-accounted`). Today there is one: `defineLogSink`'s own body
+   (`log-channels/server/internal/log.ts`) calls `defineFileSink({ id: spec.id,
+   consumer: spec.consumer })`, forwarding the classification of a
+   `defineLogSink` call site that is scanned. An exemption that no longer meets
+   a computed-id call fails (the runner's unused-exemption verdict).
+3. **No id through both primitives.** A log channel owns a file sink under its
+   own id, so one id declared by a `defineLogSink` and a `defineFileSink` fails.
+4. **The classification is readable and coherent.** `consumer` must be an
+   inline object literal (`consumer: SHARED` would dodge validation, so it
+   fails); a `reportKind` must resolve to a live `ReportKind({ kind })` call
+   site; a `timelineSource` must be in `TIMELINE_SOURCES` (imported from the
+   timeline plugin — its single source of truth). Both may be a literal or an
+   `export const`.
 
 It does NOT force every sink to be a report — `health` is continuous, so it is
 a timeline heat strip; most sinks are `internal` diagnostics. It forces every
-durable sink to be a **reviewed decision**.
+durable sink to be a **reviewed decision**, reviewed where the sink is written.
 
 ## Detection is AST-shaped, not line-based
 
@@ -63,7 +75,7 @@ A sink declaration spans multiple lines (the `id:` field sits on its own line),
 so detection cannot be a line-based grep. The pure helpers in `check/scan.ts`
 (`scanSinkCalls`, `inventorySinks`, unit-tested in `scan.test.ts`) run
 `findMarkerCalls(src, marker)` over fully-masked source, slicing each call's args
-from the original and reading the `id` field with `parseStringField` — so the
+from the original and reading the `id` and `consumer` fields (`readConsumer`) — so the
 whole call is matched regardless of line layout, and a declaration written inside
 a comment or string literal never matches. A call whose args do not start with
 an object literal (the primitive's own function signature) is skipped. There is

@@ -1098,6 +1098,10 @@ const instructionsLog = defineLogSink({
   id: "mcp-page-instructions",
   description:
     "One line per MCP initialize: the conversation and the length of the page-instructions section of the server instructions (page/annotations/agent-access).",
+  consumer: {
+    kind: "internal",
+    note: "One line per MCP initialize with the length of the page-instructions section (page/annotations/agent-access), read by hand when checking whether a client truncates the global instructions. Not a failure signal.",
+  },
 });
 
 /**

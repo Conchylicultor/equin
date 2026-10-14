@@ -22,6 +22,10 @@ const sink = defineFileSink({
     "the ancestry captured inside the signal handler before the sender was " +
     "reaped — plus one line when the native tap could not be armed, so an " +
     "unattributed death is explainable rather than mysterious. Host-global.",
+  consumer: {
+    kind: "rendering-only",
+    note: "Who killed an op (defineFileSink, cli/op-runtime signal-origin-log; CLI-only, host-global): one line per catchable fatal signal reaching build/check/push, plus arm failures. Read by build/build-termination's endpoint and shown as the termination detail on a build run (build-info). The durable 'this build died' fact is the build run's own outcome; this names the sender.",
+  },
   path: SIGNAL_ORIGIN_FILE,
   maxBytes: 2 * 1024 * 1024,
   keep: 2,

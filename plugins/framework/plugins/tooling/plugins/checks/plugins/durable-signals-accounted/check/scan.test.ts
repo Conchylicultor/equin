@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
   inventorySinks,
+  readConsumer,
   scanSinkCalls,
   type RawSinkCall,
   type ResolvedSinkCall,
 } from "./scan";
-import { ACCOUNTING } from "./accounting";
 
 const resolveLiterals = (calls: RawSinkCall[]): ResolvedSinkCall[] =>
   calls.map((c) => ({
@@ -27,6 +27,7 @@ describe("scanSinkCalls", () => {
       "const sink = defineFileSink({",
       '  id: "my-sink",',
       '  description: "d",',
+      '  consumer: { kind: "internal", note: "n" },',
       "  path: P,",
       "});",
     ].join("\n");
@@ -37,6 +38,7 @@ describe("scanSinkCalls", () => {
         path: "a.ts",
         line: 4,
         id: { kind: "literal", value: "my-sink" },
+        consumer: { kind: "inline", reportKind: null, timelineSource: null },
       },
     ]);
   });
@@ -74,7 +76,7 @@ describe("inventorySinks", () => {
     const asked: string[] = [];
     const inv = inventorySinks(calls, (p) => (asked.push(p), true));
     expect(asked).toEqual([]);
-    expect(inv.found.has("fixed")).toBe(true);
+    expect(inv.unresolvable).toEqual([]);
   });
 
   test("one id through both primitives is a collision", () => {
@@ -96,22 +98,41 @@ describe("inventorySinks", () => {
     const inv = inventorySinks(calls, () => false);
     expect(inv.collisions.map((c) => c.id)).toEqual(["dup"]);
   });
+});
 
-  test("a found file sink id with no accounting entry is unclassified", () => {
-    const calls = resolveLiterals(
-      scanSinkCalls(
-        [
-          {
-            rel: "c.ts",
-            src: 'defineFileSink({ id: "never-accounted-sink", path: P });',
-          },
-        ],
-        "defineFileSink",
+describe("readConsumer", () => {
+  test("reads report and timeline references from an inline object", () => {
+    expect(
+      readConsumer(
+        '{ id: "boot", consumer: { kind: "report", reportKind: "boot-wedge", timelineSource: BOOT_SOURCE, note: "x" } }',
       ),
-    );
-    const { found } = inventorySinks(calls, () => false);
-    expect([...found.keys()].filter((id) => !(id in ACCOUNTING))).toEqual([
-      "never-accounted-sink",
-    ]);
+    ).toEqual({
+      kind: "inline",
+      reportKind: { kind: "literal", value: "boot-wedge" },
+      timelineSource: { kind: "const", name: "BOOT_SOURCE" },
+    });
+  });
+
+  test("a consumer: inside a string or comment never matches", () => {
+    expect(
+      readConsumer(
+        '{ id: "a", description: "consumer: { x }" /* consumer: {} */ }',
+      ),
+    ).toEqual({ kind: "opaque", expr: null });
+  });
+
+  test("a non-literal consumer is opaque, so it cannot dodge validation", () => {
+    expect(readConsumer('{ id: "a", consumer: SHARED, path: P }')).toEqual({
+      kind: "opaque",
+      expr: "SHARED",
+    });
+  });
+
+  test("a note mentioning reportKind does not read as one", () => {
+    expect(
+      readConsumer(
+        '{ consumer: { kind: "internal", note: "no reportKind: here" } }',
+      ),
+    ).toEqual({ kind: "inline", reportKind: null, timelineSource: null });
   });
 });

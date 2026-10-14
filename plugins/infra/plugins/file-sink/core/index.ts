@@ -4,7 +4,12 @@
 // bounded-append chokepoint instead of hand-rolling one. This plugin must NEVER
 // be imported from `web/`.
 
-export type { FileSink, FileSinkSpec, RotateBound } from "./internal/types";
+export type {
+  FileSink,
+  FileSinkSpec,
+  RotateBound,
+  SinkConsumer,
+} from "./internal/types";
 export {
   defineFileSink,
   getFileSinks,

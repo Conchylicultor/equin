@@ -89,6 +89,11 @@ const channel = defineLogSink({
   id: "health",
   description:
     "PERF sink: per-backend health samples (event-loop lag, GC/heap pressure, phys_footprint), read from disk to draw the Debug → Health charts.",
+  consumer: {
+    kind: "timeline",
+    timelineSource: "health",
+    note: "Per-backend health samples (health-monitor). Downsampled into the timeline per-lane health heat strip; also the Debug → Health pane. Continuous, so never a report.",
+  },
 });
 let gcObserver: PerformanceObserver | null = null;
 let gcCount = 0;

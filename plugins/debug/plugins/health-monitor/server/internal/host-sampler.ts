@@ -31,6 +31,11 @@ const channel = defineLogSink({
   id: "health-host",
   description:
     "PERF sink: host-level health samples (load average, memory, swap) for the Debug → Health charts.",
+  consumer: {
+    kind: "timeline",
+    timelineSource: "health",
+    note: "Host vitals — loadavg / compressor / memory (health-monitor host sampler). Feeds the timeline host-lane pressure heat; also read by the sentinel for the compressor signal and the Health pane. Continuous, so never a report.",
+  },
 });
 // Wall-time of the previous tick: the true denominator for the vm_stat rate
 // deltas (a late tick divided by the nominal cadence would inflate the rates —

@@ -21969,6 +21969,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FileSinkSpec`
           - `JsonlTailResult`
           - `RotateBound`
+          - `SinkConsumer`
           - `TailOptions`
           - `TailResult`
         - Exports (values):

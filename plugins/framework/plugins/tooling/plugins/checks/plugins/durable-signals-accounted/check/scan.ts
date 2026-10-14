@@ -5,14 +5,18 @@ import {
 import {
   findMarkerCalls,
   lineAt,
+  maskSource,
+  matchBracket,
   parseStringField,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 // The pure half of durable-signals-accounted: find every durable-sink
 // declaration in a set of sources, and fold the resolved call sites into the
-// sink-id map the check classifies. No git, no fs — the check feeds it sources
-// from listCandidateSources and resolves `const` ids itself — so every rule
-// here (which calls count, what a computed id means, when when two primitives claim one id) is unit-testable on literal strings.
+// sink-id map the check validates. No git, no fs — the check feeds it sources
+// from listCandidateSources and resolves `const` names itself — so every rule
+// here (which calls count, what a computed id means, when two primitives claim
+// one id, how a call's `consumer` classification reads) is unit-testable on
+// literal strings.
 
 /**
  * The two ways a durable sink comes into existence. `defineLogSink` is the
@@ -41,19 +45,34 @@ export const SINK_PATHSPECS = [
 // elsewhere) is exempted in the owning plugin's `exempt/index.ts`, rule
 // `durable-signals-accounted`; the runner fails a stale one.
 
-/** How a call's `id` field reads before const resolution. */
-export type RawSinkId =
+/** How a string field (`id`, `reportKind`, `timelineSource`) reads before const resolution. */
+export type RawStringRef =
   | { kind: "literal"; value: string }
   /** A bare identifier (`id: DURESS_EPISODES_CHANNEL`) — resolvable to its `export const`. */
   | { kind: "const"; name: string }
-  /** Anything else: a member access, a call, a template, a shorthand, or no `id` at all. */
+  /** Anything else: a member access, a call, a template, a shorthand, or no field at all. */
   | { kind: "computed"; expr: string | null };
+
+/**
+ * How a call's `consumer` classification reads. Its kind/note shape is tsc's
+ * job (`SinkConsumer`); the check only needs the two cross-plugin references,
+ * and it can only read them from an INLINE object literal — `consumer: X`
+ * would let a classification dodge validation, so it is `opaque` and fails.
+ */
+export type RawConsumer =
+  | {
+      kind: "inline";
+      reportKind: RawStringRef | null;
+      timelineSource: RawStringRef | null;
+    }
+  | { kind: "opaque"; expr: string | null };
 
 export interface RawSinkCall {
   marker: SinkMarker;
   path: string;
   line: number;
-  id: RawSinkId;
+  id: RawStringRef;
+  consumer: RawConsumer;
 }
 
 export interface ResolvedSinkCall {
@@ -72,6 +91,43 @@ export interface CallSite {
 
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
 
+function readStringRef(src: string, field: string): RawStringRef {
+  const res = parseStringField(src, field);
+  if (res.kind === "value") return { kind: "literal", value: res.value };
+  if (res.kind === "dynamic" && IDENTIFIER.test(res.expr.trim())) {
+    return { kind: "const", name: res.expr.trim() };
+  }
+  return { kind: "computed", expr: res.kind === "dynamic" ? res.expr : null };
+}
+
+/**
+ * Read the `consumer` field of a call's args. Masked first, so a `consumer:`
+ * inside a note string or comment never matches; the object is sliced from the
+ * ORIGINAL by bracket match, so its fields read back intact.
+ */
+export function readConsumer(argsText: string): RawConsumer {
+  const masked = maskSource(argsText);
+  const m = /\bconsumer\s*:\s*/.exec(masked);
+  if (!m) return { kind: "opaque", expr: null };
+  const at = m.index + m[0].length;
+  if (masked[at] !== "{") {
+    const expr = /^[^,}]*/.exec(masked.slice(at))?.[0].trim() ?? "";
+    return { kind: "opaque", expr };
+  }
+  const close = matchBracket(masked, at, "{", "}");
+  if (close < 0) return { kind: "opaque", expr: null };
+  const body = argsText.slice(at, close + 1);
+  const field = (name: string): RawStringRef | null =>
+    parseStringField(body, name).kind === "absent"
+      ? null
+      : readStringRef(body, name);
+  return {
+    kind: "inline",
+    reportKind: field("reportKind"),
+    timelineSource: field("timelineSource"),
+  };
+}
+
 /**
  * Every declaration of `marker` in `sources`. Detection is AST-shaped, not
  * line-based: `findMarkerCalls` full-masks (a call written in a comment or a
@@ -89,25 +145,19 @@ export function scanSinkCalls(
       // FileSinkSpec)`): a real declaration passes an inline object literal, so
       // its args begin with `{`; a signature's begin with a parameter name.
       if (!/^\s*\{/.test(call.argsText)) continue;
-      const res = parseStringField(call.argsText, "id");
-      const id: RawSinkId =
-        res.kind === "value"
-          ? { kind: "literal", value: res.value }
-          : res.kind === "dynamic" && IDENTIFIER.test(res.expr.trim())
-            ? { kind: "const", name: res.expr.trim() }
-            : {
-                kind: "computed",
-                expr: res.kind === "dynamic" ? res.expr : null,
-              };
-      calls.push({ marker, path: rel, line: lineAt(src, call.index), id });
+      calls.push({
+        marker,
+        path: rel,
+        line: lineAt(src, call.index),
+        id: readStringRef(call.argsText, "id"),
+        consumer: readConsumer(call.argsText),
+      });
     }
   }
   return calls;
 }
 
 export interface SinkInventory {
-  /** Sink id → its first call site. */
-  found: Map<string, CallSite>;
   /** Computed / unresolvable ids NOT excused by `skips`. */
   unresolvable: CallSite[];
   /** One id declared through BOTH primitives. */
@@ -115,16 +165,15 @@ export interface SinkInventory {
 }
 
 /**
- * Fold resolved call sites into the sink-id map. The same id declared twice
- * through ONE primitive keeps its first site (the runtime registry is what
- * rejects a real duplicate); the same id through BOTH primitives is a collision
- * — two different files claiming one accounting entry — and is reported.
+ * Fold resolved call sites into the inventory. The same id declared twice
+ * through ONE primitive is left to the runtime registry (which rejects a real
+ * duplicate); the same id through BOTH primitives is a collision
+ * — two different sinks claiming one file-sink id — and is reported.
  */
 export function inventorySinks(
   calls: readonly ResolvedSinkCall[],
   skips: (path: string) => boolean,
 ): SinkInventory {
-  const found = new Map<string, CallSite>();
   const byMarker = new Map<string, Map<SinkMarker, CallSite>>();
   const unresolvable: CallSite[] = [];
 
@@ -140,7 +189,6 @@ export function inventorySinks(
       if (!skips(call.path)) unresolvable.push(site);
       continue;
     }
-    if (!found.has(call.id)) found.set(call.id, site);
     let markers = byMarker.get(call.id);
     if (!markers) byMarker.set(call.id, (markers = new Map()));
     if (!markers.has(call.marker)) markers.set(call.marker, site);
@@ -149,5 +197,5 @@ export function inventorySinks(
   const collisions = [...byMarker]
     .filter(([, markers]) => markers.size > 1)
     .map(([id, markers]) => ({ id, sites: [...markers.values()] }));
-  return { found, unresolvable, collisions };
+  return { unresolvable, collisions };
 }

@@ -20,6 +20,10 @@ const audioAnalysisLog = defineLogSink({
   id: "audio-analysis",
   description:
     "Beat-feature analyses requested from the app: each one's download, dependency install and extractor output.",
+  consumer: {
+    kind: "internal",
+    note: "Detached audio-analysis.beat-features child transcript (infra/audio-analysis): one video's audio download, dependency install and extractor output. Failures surface as the video's `failed` beat-features state (its failed.json, read by GET /api/audio-analysis/beat-features/:videoId) and the job dead-letter.",
+  },
 });
 
 /**

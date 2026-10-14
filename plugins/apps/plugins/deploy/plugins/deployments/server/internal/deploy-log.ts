@@ -15,4 +15,8 @@ export const deployLog = defineLogSink({
   id: DEPLOY_LOG_CHANNEL,
   description:
     "Deploy run log: stdout/stderr streamed from `./singularity deploy converge|ship`, surfaced live in the Deploy app's Deployments section.",
+  consumer: {
+    kind: "rendering-only",
+    note: "`singularity deploy converge|ship` output, streamed into the Deploy app's Deployments section. A deploy progress log, not a failure funnel: a failed run's own verdict is the CLI's message, surfaced on the deployment row via the `deploy.runs` live resource — the human is watching the run they just started, so it needs no alert funnel.",
+  },
 });

@@ -2,6 +2,7 @@ import { join } from "node:path";
 import {
   defineFileSink,
   sanitizeChannel,
+  type SinkConsumer,
 } from "@plugins/infra/plugins/file-sink/core";
 import { createChannel } from "./registry";
 import type { LogChannel, LogStream } from "./registry";
@@ -26,11 +27,14 @@ export type { LogChannel, LogStream };
 export function defineLogSink(spec: {
   id: string;
   description: string;
+  /** Who reads the channel's file — validated by `durable-signals-accounted`. */
+  consumer: SinkConsumer;
 }): LogChannel {
   return createChannel(spec.id, () =>
     defineFileSink({
       id: spec.id,
       description: spec.description,
+      consumer: spec.consumer,
       path: join(logsDir(), sanitizeChannel(spec.id) + ".jsonl"),
     }),
   );

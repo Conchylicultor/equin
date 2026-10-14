@@ -12,6 +12,10 @@ const dropChannel = defineLogSink({
   id: "slow-ops",
   description:
     "PERF sink: one line per client slow-op batch that arrived with a non-zero browser-side drop count.",
+  consumer: {
+    kind: "internal",
+    note: "One line per client slow-op batch that arrived with a non-zero browser-side drop count (the beacon queue hit its 1000-item cap). Accounting for signals that never reached the recorder, so the loss is not silent; the durable slow-op SIGNAL itself is the slow-op report filed by the recorder.",
+  },
 });
 
 // Client slow-op signals (page-load, element-settle) funnel into the same store

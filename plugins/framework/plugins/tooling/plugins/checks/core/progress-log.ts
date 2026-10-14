@@ -53,6 +53,11 @@ const progressSink = defineFileSink({
     "open, bootstrap phase, check start/end, heartbeat, thread stall, and " +
     "completion — so a wedged run names the unit it is stuck in, and a stalled " +
     "one the code that stalled it. Host-global across worktrees.",
+  consumer: {
+    kind: "report",
+    reportKind: "check-thread-stall",
+    note: "Per-check-run progress log (defineFileSink, checks/core/progress-log.ts; CLI-only, host-global). Thread-stall records of 2 s or more and run totals of 20 s or more are filed as check-thread-stall reports through the report outbox at write time. Also read back by `./singularity check --status` (runs that never finished) and by the build/push parent to place a check subprocess's spans on its op lane.",
+  },
   path: PROGRESS_FILE,
   maxBytes: 2 * 1024 * 1024,
   keep: 2,

@@ -204,6 +204,10 @@ const channel = defineLogSink({
   id: "duress",
   description:
     "Shed-buffer accounting prose (infra/host/duress). The durable shed record is the duress-shed report; this is the buffer's own log.",
+  consumer: {
+    kind: "internal",
+    note: "Shed-buffer accounting prose (infra/host/duress). The durable shed record is the duress-shed report; this is the buffer's own log.",
+  },
 });
 function log(line: string): void {
   channel.publish(line);

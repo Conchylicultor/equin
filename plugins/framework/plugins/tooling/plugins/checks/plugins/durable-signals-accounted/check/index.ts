@@ -9,28 +9,30 @@ import {
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { TIMELINE_SOURCES } from "@plugins/debug/plugins/timeline/core";
-import { ACCOUNTING } from "./accounting";
 import {
   SINK_MARKERS,
   SINK_PATHSPECS,
   inventorySinks,
   scanSinkCalls,
   type CallSite,
+  type RawConsumer,
+  type RawStringRef,
   type ResolvedSinkCall,
   type SinkInventory,
 } from "./scan";
 
 // Every DURABLE sink — a `defineLogSink` log channel or a bare `defineFileSink`
-// file — must be a conscious, reviewed classification in `accounting.ts`. The
-// 2026-07-17 incident's root cause was a durable failure signal (an 11.5-minute
+// file — carries a required `consumer` classification at its declaration
+// (`SinkConsumer`, file-sink/core: tsc forces the decision). The 2026-07-17
+// incident's root cause was a durable failure signal (an 11.5-minute
 // never-ready boot on the `boot` channel) that reached NO alert funnel — it was
-// persisted and then consumed by nothing. This check makes that structurally
-// impossible to reintroduce silently: adding a new durable sink, or regressing
-// a report/timeline wiring, fails the build.
+// persisted and then consumed by nothing.
 //
-// It does NOT force every sink to be a report (health is continuous). It forces
-// every durable sink to be CLASSIFIED, and every report/timeline classification
-// to point at something that actually exists.
+// The primitive keeps `reportKind` / `timelineSource` as opaque strings (it
+// must never name reports or the timeline), so this check validates what tsc
+// cannot see: every report classification names a live ReportKind, every
+// timeline classification a TIMELINE_SOURCES member, and the classification is
+// an inline object literal it can actually read.
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -94,11 +96,27 @@ async function registeredReportKinds(root: string): Promise<Set<string>> {
 // (defineLogSink and defineFileSink). The scan and the fold are the pure
 // helpers in ./scan; this only feeds them sources and resolves `const` ids
 // (`id: DURESS_EPISODES_CHANNEL`) to their declared string values.
+interface ClassifiedSite {
+  id: string;
+  site: CallSite;
+  consumer: RawConsumer;
+}
+
+async function resolveRef(
+  root: string,
+  ref: RawStringRef,
+): Promise<string | null> {
+  if (ref.kind === "literal") return ref.value;
+  if (ref.kind === "const") return await resolveConst(root, ref.name);
+  return null;
+}
+
 async function findDurableSinks(
   root: string,
   skips: (path: string) => boolean,
-): Promise<SinkInventory> {
+): Promise<SinkInventory & { classified: ClassifiedSite[] }> {
   const resolved: ResolvedSinkCall[] = [];
+  const classified: ClassifiedSite[] = [];
   for (const marker of SINK_MARKERS) {
     const sources = await listCandidateSources({
       root,
@@ -107,21 +125,15 @@ async function findDurableSinks(
       pathspecs: SINK_PATHSPECS,
     });
     for (const call of scanSinkCalls(sources, marker)) {
-      const id =
-        call.id.kind === "literal"
-          ? call.id.value
-          : call.id.kind === "const"
-            ? await resolveConst(root, call.id.name)
-            : null;
-      resolved.push({
-        marker: call.marker,
-        path: call.path,
-        line: call.line,
-        id,
-      });
+      const id = await resolveRef(root, call.id);
+      const site = { marker: call.marker, path: call.path, line: call.line };
+      resolved.push({ ...site, id });
+      // A computed id is exempted wholesale (its classification is forwarded
+      // from a call site scanned here) or already fails as unresolvable.
+      if (id !== null) classified.push({ id, site, consumer: call.consumer });
     }
   }
-  return inventorySinks(resolved, skips);
+  return { ...inventorySinks(resolved, skips), classified };
 }
 
 const fmtSite = (s: CallSite): string => `${s.path}:${s.line} (${s.marker})`;
@@ -129,7 +141,7 @@ const fmtSite = (s: CallSite): string => `${s.path}:${s.line} (${s.marker})`;
 const check: Check = {
   id: "durable-signals-accounted",
   description:
-    "Every durable sink (defineLogSink channel or defineFileSink file) is a reviewed classification in accounting.ts, and every report/timeline classification points at a live ReportKind / TimelineSource",
+    "Every durable sink (defineLogSink channel or defineFileSink file) declares its consumer as an inline object, and every report/timeline classification points at a live ReportKind / TimelineSource",
   exemptable: {
     "durable-signals-accounted":
       "computes a durable sink's id on purpose (its ids are accounted elsewhere), so the check cannot name it",
@@ -137,7 +149,7 @@ const check: Check = {
   async run(ctx) {
     const root = await getWorktreeRoot();
     const exempt = await ctx.exempt("durable-signals-accounted");
-    const { found, unresolvable, collisions } = await findDurableSinks(
+    const { unresolvable, collisions, classified } = await findDurableSinks(
       root,
       exempt.skips,
     );
@@ -151,13 +163,13 @@ const check: Check = {
           `Durable sink call site(s) with an unresolvable id ` +
           `in ${unresolvable.length} place(s):\n    ` +
           unresolvable.map(fmtSite).join("\n    "),
-        hint: 'Use a string literal or an `export const NAME = "…"` for the sink id so durable-signals-accounted can classify it in accounting.ts. A computed id whose ids are genuinely accounted elsewhere declares an exemption (rule `durable-signals-accounted`) in the owning plugin\'s `exempt/index.ts`.',
+        hint: 'Use a string literal or an `export const NAME = "…"` for the sink id so durable-signals-accounted can name it. A computed id whose ids are genuinely accounted elsewhere declares an exemption (rule `durable-signals-accounted`) in the owning plugin\'s `exempt/index.ts`.',
       };
     }
 
     // Loud failure: one id declared through both primitives. They share one
-    // accounting entry, so two files claiming it would be one reviewed decision
-    // covering two different sinks.
+    // file-sink id namespace (a log channel owns a file sink under its own id), so
+    // two declarations of one id are two sinks fighting over one file.
     if (collisions.length > 0) {
       return {
         ok: false,
@@ -170,69 +182,51 @@ const check: Check = {
       };
     }
 
-    // (1) Every found durable sink is classified.
-    const unclassified = [...found].filter(([id]) => !(id in ACCOUNTING));
-    if (unclassified.length > 0) {
-      return {
-        ok: false,
-        message:
-          `Durable sink(s) missing from the accounting allowlist:\n    ` +
-          unclassified
-            .map(([id, s]) => `"${id}" (${fmtSite(s)})`)
-            .join("\n    "),
-        hint:
-          "A NEW durable sink must be a conscious, reviewed classification. Add it to " +
-          "plugins/framework/plugins/tooling/plugins/checks/plugins/durable-signals-accounted/check/accounting.ts " +
-          "as consumer report (with a reportKind that has a ReportKind), timeline (with a timelineSource in TIMELINE_SOURCES), rendering-only, or internal — with an honest note. A never-consumed durable signal is exactly the 2026-07-17 gap this check exists to prevent.",
-      };
-    }
-
-    // (3) Every allowlist key still has a live call site (no stale entries).
-    const stale = Object.keys(ACCOUNTING).filter((id) => !found.has(id));
-    if (stale.length > 0) {
-      return {
-        ok: false,
-        message: `accounting.ts entr(y/ies) with no live defineLogSink / defineFileSink call site: ${stale.map((id) => `"${id}"`).join(", ")}`,
-        hint: "The sink was removed or renamed. Delete (or update) the stale accounting.ts entry.",
-      };
-    }
-
-    // (2) Coherence: report classifications resolve to a live ReportKind;
-    // timeline classifications name a real TimelineSource. A report/timeline
-    // entry MUST carry the corresponding field; any present field is validated.
+    // Coherence: the classification is readable, and every cross-plugin
+    // reference in it resolves. tsc already forced a report to carry a
+    // reportKind and a timeline a timelineSource.
     const reportKinds = await registeredReportKinds(root);
     const timelineSources = new Set<string>(TIMELINE_SOURCES);
-    const coherence: string[] = [];
-    for (const [id, spec] of Object.entries(ACCOUNTING)) {
-      if (spec.consumer === "report" && spec.reportKind === undefined) {
-        coherence.push(`"${id}" is classified report but has no reportKind`);
-      }
-      if (spec.consumer === "timeline" && spec.timelineSource === undefined) {
-        coherence.push(
-          `"${id}" is classified timeline but has no timelineSource`,
+    const problems: string[] = [];
+    for (const { id, site, consumer } of classified) {
+      const at = `"${id}" (${fmtSite(site)})`;
+      if (consumer.kind === "opaque") {
+        const what = consumer.expr ?? "(missing)";
+        problems.push(
+          `${at}: consumer ${what} is not an inline object literal`,
         );
+        continue;
       }
-      if (spec.reportKind !== undefined && !reportKinds.has(spec.reportKind)) {
-        coherence.push(
-          `"${id}" → reportKind "${spec.reportKind}" has no ReportKind({ kind: "${spec.reportKind}" }) call site`,
-        );
+      if (consumer.reportKind !== null) {
+        const kind = await resolveRef(root, consumer.reportKind);
+        if (kind === null) {
+          problems.push(`${at}: reportKind is not a literal or export const`);
+        } else if (!reportKinds.has(kind)) {
+          problems.push(
+            `${at}: reportKind "${kind}" has no ReportKind({ kind: "${kind}" }) call site`,
+          );
+        }
       }
-      if (
-        spec.timelineSource !== undefined &&
-        !timelineSources.has(spec.timelineSource)
-      ) {
-        coherence.push(
-          `"${id}" → timelineSource "${spec.timelineSource}" is not in TIMELINE_SOURCES`,
-        );
+      if (consumer.timelineSource !== null) {
+        const source = await resolveRef(root, consumer.timelineSource);
+        if (source === null) {
+          problems.push(
+            `${at}: timelineSource is not a literal or export const`,
+          );
+        } else if (!timelineSources.has(source)) {
+          problems.push(
+            `${at}: timelineSource "${source}" is not in TIMELINE_SOURCES`,
+          );
+        }
       }
     }
-    if (coherence.length > 0) {
+    if (problems.length > 0) {
       return {
         ok: false,
         message:
-          `accounting.ts classification incoherent:\n    ` +
-          coherence.join("\n    "),
-        hint: "A report entry must name a registered ReportKind; a timeline entry must name a TIMELINE_SOURCES member. Fix the accounting.ts entry, or add the missing ReportKind.",
+          `Durable sink classification(s) incoherent:\n    ` +
+          problems.join("\n    "),
+        hint: "Write `consumer: { kind, …, note }` inline at the defineLogSink / defineFileSink call. A report names a registered ReportKind; a timeline names a TIMELINE_SOURCES member. A never-consumed durable signal is exactly the 2026-07-17 gap this check exists to prevent.",
       };
     }
 

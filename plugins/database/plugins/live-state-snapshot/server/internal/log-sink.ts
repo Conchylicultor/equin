@@ -8,4 +8,8 @@ export const snapshotLog = defineLogSink({
   id: "live-state-snapshot",
   description:
     "Live-state snapshot ops log: durable snapshot init and the bounded changelog catch-up on boot.",
+  consumer: {
+    kind: "internal",
+    note: "Live-state snapshot boot-init + changelog catch-up diagnostics (database/live-state-snapshot).",
+  },
 });

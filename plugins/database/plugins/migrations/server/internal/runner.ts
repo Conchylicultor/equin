@@ -29,6 +29,10 @@ const log = defineLogSink({
   id: "migrations",
   description:
     "DB migration runner ops log: DDL/data migrations applied on boot — timestamp order, each phased schema migration as one expand → claimed data → contract group.",
+  consumer: {
+    kind: "internal",
+    note: "Migration runner diagnostics (database/migrations).",
+  },
 });
 
 const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;

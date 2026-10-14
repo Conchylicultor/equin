@@ -23,6 +23,10 @@ const forkLog = defineLogSink({
   id: "database-fork",
   description:
     "Worktree DB fork transcript: pg_dump | pg_restore of main's DB into a new worktree's database, and its outcome.",
+  consumer: {
+    kind: "internal",
+    note: "Detached database.fork child transcript (database/fork); failures surface via the DB-fork-failed notification and the job dead-letter.",
+  },
 });
 
 // Durable, self-healing worktree DB fork, run in a detached child

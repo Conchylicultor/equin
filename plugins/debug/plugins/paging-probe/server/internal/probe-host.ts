@@ -19,6 +19,10 @@ const channel = defineLogSink({
   id: "paging-probe",
   description:
     "Config-gated (OFF by default) twin-probe child stderr drain (paging-probe). The probe measurements go to paging-probe-<variant>.jsonl, not this channel.",
+  consumer: {
+    kind: "internal",
+    note: "Config-gated (OFF by default) twin-probe child stderr drain. The probe MEASUREMENTS go to paging-probe-<variant>.jsonl (read offline), not this channel.",
+  },
 });
 
 // The twin probes: one child process per variant, started and supervised by
