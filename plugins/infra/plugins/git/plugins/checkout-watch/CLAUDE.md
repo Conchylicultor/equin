@@ -11,8 +11,15 @@ that moves a merge-base.
   `acquireDirWatch`, so a linked worktree's git dirs ride the main checkout's
   watch when that one is open.
 - Each change is tagged `area: "worktree" | "git"`. Dropped as noise for every
-  reader: `objects/`, `logs/`, `worktrees/` inside a git dir, and anything in a
-  `node_modules`. A reader drops more itself (edited-files skips build output).
+  reader: `objects/`, `logs/`, `worktrees/` inside a git dir, anything in a
+  `node_modules`, and **every working-tree path git ignores** — a build's `dist/`,
+  the main checkout's `.claude/worktrees/**`. An ignored, untracked path cannot
+  move a checkout's state, so no reader recomputes on it. The answer is git's own:
+  one `git check-ignore --stdin` per batch, shared by every reader (no second
+  matcher to drift from `.gitignore` / `info/exclude` / `core.excludesFile`). A
+  tracked file matching a pattern is kept, as `git status` shows it. When the
+  check fails, the batch is delivered unfiltered and the failure is thrown. A
+  reader that wants raw tree churn uses `acquireDirWatch`.
 - **Refs are declared, not all heard.** The refs dir is shared by every worktree
   of the repo, so hearing all of it means recomputing on every other worktree's
   commit, rebase or push. A reader hears its checkout's **own branch** (HEAD's
@@ -36,6 +43,7 @@ that moves a merge-base.
 - Server:
   - Uses:
     - `infra/file-watcher.acquireDirWatch`
+    - `primitives/commit-list.GitError`
     - `primitives/commit-list.runGit`
     - `primitives/commit-list.tryRunGit`
     - `primitives/commit-list.WorktreeGoneError`

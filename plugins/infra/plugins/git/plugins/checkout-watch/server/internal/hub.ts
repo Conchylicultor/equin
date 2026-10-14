@@ -70,6 +70,14 @@ export interface CheckoutWatchDeps {
   locate: (root: string) => Promise<CheckoutLocation>;
   /** HEAD's target and its upstream, read now. */
   readBranch: (root: string) => Promise<CheckoutBranch>;
+  /**
+   * Which of `relPaths` (relative to the root) git ignores, read now — the
+   * untracked ones its exclude rules match. A tracked path is never ignored.
+   */
+  ignored: (
+    root: string,
+    relPaths: readonly string[],
+  ) => Promise<ReadonlySet<string>>;
   acquireDirWatch: (request: DirWatchRequest) => Promise<DirWatchRelease>;
 }
 
@@ -166,32 +174,73 @@ export function createCheckoutWatchHub(deps: CheckoutWatchDeps) {
     let branch = await deps.readBranch(root);
     const headFiles = new Set([`${gitDir}/HEAD`, `${gitDir}/HEAD.lock`]);
 
-    // Batches in order, one delivery at a time: a batch that moves HEAD
-    // re-reads the branch BEFORE it (and anything queued behind it) is
-    // filtered, so `git checkout b` plus the write to `refs/heads/b` is judged
-    // against the new branch.
+    // Batches in order, one delivery at a time. A batch touching the working
+    // tree first drops the paths git ignores (one `check-ignore` per batch,
+    // shared by every reader): an ignored, untracked path cannot move the
+    // checkout, so no reader recomputes on it — a build's `dist/`, another
+    // worktree under the main checkout's `.claude/worktrees/`. A batch that
+    // moves HEAD re-reads the branch BEFORE it (and anything queued behind
+    // it) is filtered, so `git checkout b` plus the write to `refs/heads/b` is
+    // judged against the new branch.
     const deliver = createCoalescer<CheckoutChange>({
       run: (changes) => {
-        // Synchronous unless HEAD moved: a plain batch reaches the readers in
-        // the same turn, and never waits behind a microtask.
-        if (!changes.some((c) => headFiles.has(c.path))) {
+        const treePaths = new Set<string>();
+        for (const c of changes) {
+          if (c.area === "worktree") treePaths.add(relativeTo(root, c.path)!);
+        }
+        const movesHead = changes.some((c) => headFiles.has(c.path));
+        // Synchronous when there is nothing to read: a git-dir-only batch
+        // reaches the readers in the same turn, and never waits behind a
+        // microtask.
+        if (treePaths.size === 0 && !movesHead) {
           emit({ changes, branch });
           return undefined;
         }
-        return rereadThenEmit(changes);
+        return settleThenEmit(changes, [...treePaths], movesHead);
       },
     });
-    async function rereadThenEmit(changes: CheckoutChange[]): Promise<void> {
-      try {
-        branch = await deps.readBranch(root);
-      } catch (err) {
-        // Unknown branch: every reader hears every ref until a later HEAD
-        // change reads it again — then fail loudly.
-        branch = ALL_REFS;
-        emit({ changes, branch });
-        throw err;
+    async function settleThenEmit(
+      changes: CheckoutChange[],
+      treePaths: string[],
+      movesHead: boolean,
+    ): Promise<void> {
+      // A read that fails delivers the batch as if it had not been asked —
+      // unfiltered, every ref heard — so readers over-react rather than miss a
+      // change; then the failure is thrown, loudly.
+      const failures: unknown[] = [];
+      let kept = changes;
+      if (treePaths.length > 0) {
+        try {
+          const ignored = await deps.ignored(root, treePaths);
+          if (ignored.size > 0) {
+            kept = changes.filter(
+              (c) =>
+                c.area !== "worktree" ||
+                !ignored.has(relativeTo(root, c.path)!),
+            );
+          }
+        } catch (err) {
+          failures.push(err);
+        }
       }
-      emit({ changes, branch });
+      if (movesHead) {
+        try {
+          branch = await deps.readBranch(root);
+        } catch (err) {
+          // Unknown branch: every reader hears every ref until a later HEAD
+          // change reads it again.
+          branch = ALL_REFS;
+          failures.push(err);
+        }
+      }
+      if (kept.length > 0) emit({ changes: kept, branch });
+      if (failures.length === 1) throw failures[0];
+      if (failures.length > 1) {
+        throw new AggregateError(
+          failures,
+          `[checkout-watch] ${root}: reading the batch's state failed`,
+        );
+      }
     }
     const forward = (changes: (CheckoutChange | null)[]): void => {
       const kept: CheckoutChange[] = [];

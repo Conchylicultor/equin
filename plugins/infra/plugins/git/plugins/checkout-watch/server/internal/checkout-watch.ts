@@ -12,6 +12,7 @@ import {
   type CheckoutWatchRelease,
   type CheckoutWatchRequest,
 } from "./hub";
+import { ignoredPaths } from "./ignored-paths";
 
 export type {
   CheckoutChange,
@@ -57,13 +58,18 @@ async function readBranch(root: string): Promise<CheckoutBranch> {
   }
 }
 
-const hub = createCheckoutWatchHub({ locate, readBranch, acquireDirWatch });
+const hub = createCheckoutWatchHub({
+  locate,
+  readBranch,
+  ignored: ignoredPaths,
+  acquireDirWatch,
+});
 
 /**
  * Hear every change that can move the git checkout at `root` (its toplevel):
  * its working tree, and its git dir — HEAD, the index, and the refs `refs`
- * names (its own branch always) — wherever they live. Each change is tagged
- * `worktree` or `git`. Readers of one checkout share one watch; the last
+ * names (its own branch always) — wherever they live; working-tree paths git
+ * ignores are dropped. Each change is tagged `worktree` or `git`. Readers of one checkout share one watch; the last
  * release stops it. Return the reaction's promise from `onChange`: one runs at
  * a time per reader, and batches landing meanwhile fold into one trailing
  * call. Resolves once the watch is live; rejects when `root` is not a

@@ -96,6 +96,12 @@ export type GitResult =
   | { ok: true; stdout: string }
   | { ok: false; exitCode: number; stdout: string; stderr: string };
 
+/** What a git invocation is fed besides its args. */
+export interface GitRunOptions {
+  /** Written to git's stdin whole (a `--stdin` command's input). */
+  stdin?: string;
+}
+
 /**
  * Probe variant: runs git and returns a discriminated result, never throwing
  * on a non-zero exit. The caller inspects `.ok` and branches.
@@ -109,10 +115,11 @@ export type GitResult =
 export async function tryRunGit(
   args: string[],
   cwd: string,
+  opts: GitRunOptions = {},
 ): Promise<GitResult> {
   const result = await spawnCaptured(
     [GIT, "--no-optional-locks", "-C", cwd, ...args],
-    { timeoutMs: GIT_TIMEOUT_MS },
+    { timeoutMs: GIT_TIMEOUT_MS, stdin: opts.stdin },
   );
   const { exitCode, stdout, stderr } = result;
   if (exitCode === 0) return { ok: true, stdout };
@@ -140,8 +147,12 @@ export async function tryRunGit(
  * This is the default: a git failure is never conflated with an empty/absent
  * result. Reach for {@link tryRunGit} only for genuine probe semantics.
  */
-export async function runGit(args: string[], cwd: string): Promise<string> {
-  const result = await tryRunGit(args, cwd);
+export async function runGit(
+  args: string[],
+  cwd: string,
+  opts: GitRunOptions = {},
+): Promise<string> {
+  const result = await tryRunGit(args, cwd, opts);
   if (!result.ok) {
     throw new GitError({
       args,

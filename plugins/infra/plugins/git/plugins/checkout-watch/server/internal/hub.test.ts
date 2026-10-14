@@ -101,9 +101,19 @@ const LINKED = {
 const ALSO_NONE: CheckoutRefs = { also: [] };
 const tick = () => new Promise<void>((r) => setTimeout(r, 0));
 
-function linkedHub(branch: () => CheckoutBranch = () => OWN) {
+/** No path is ignored. */
+const IGNORES_NONE = async () => new Set<string>();
+
+function linkedHub(
+  branch: () => CheckoutBranch = () => OWN,
+  ignored: (
+    root: string,
+    relPaths: readonly string[],
+  ) => Promise<ReadonlySet<string>> = IGNORES_NONE,
+) {
   const dirs = fakeDirs();
   let probes = 0;
+  const ignoreCalls: string[][] = [];
   const hub = createCheckoutWatchHub({
     acquireDirWatch: dirs.acquireDirWatch,
     locate: async () => {
@@ -111,8 +121,12 @@ function linkedHub(branch: () => CheckoutBranch = () => OWN) {
       return LINKED;
     },
     readBranch: async () => branch(),
+    ignored: (root, relPaths) => {
+      ignoreCalls.push([...relPaths]);
+      return ignored(root, relPaths);
+    },
   });
-  return { dirs, hub, probes: () => probes };
+  return { dirs, hub, probes: () => probes, ignoreCalls };
 }
 
 const OWN: CheckoutBranch = {
@@ -143,6 +157,7 @@ describe("createCheckoutWatchHub", () => {
 
     dirs.emit("/wt", "/wt/src/a.ts", "/wt/node_modules/x");
     dirs.emit("/main/.git/refs", "/main/.git/refs/heads/main");
+    await tick();
     expect(a.map((c) => [c.path, c.area, c.ref])).toEqual([
       ["/wt/src/a.ts", "worktree", undefined],
       ["/main/.git/refs/heads/main", "git", "refs/heads/main"],
@@ -237,6 +252,7 @@ describe("createCheckoutWatchHub", () => {
       },
     });
     for (let i = 0; i < 500; i++) dirs.emit("/wt", `/wt/f${i}.ts`);
+    await tick();
     expect(runs).toEqual([1]);
     gates.shift()!();
     await tick();
@@ -264,7 +280,9 @@ describe("createCheckoutWatchHub", () => {
       },
     });
     dirs.emit("/wt", "/wt/a.ts");
+    await tick();
     dirs.emit("/wt", "/wt/b.ts");
+    await tick();
     release();
     open();
     await tick();
@@ -280,6 +298,7 @@ describe("createCheckoutWatchHub", () => {
         commonDir: "/missing/.git",
       }),
       readBranch: async () => OWN,
+      ignored: IGNORES_NONE,
     });
     const err = await rejection(
       hub.acquire("/wt", { refs: ALSO_NONE, onChange: () => {} }),
@@ -287,5 +306,59 @@ describe("createCheckoutWatchHub", () => {
     expect(err.message).toContain("ENOENT");
     expect(dirs.released).toEqual(["/wt"]);
     expect(hub.roots()).toEqual([]);
+  });
+
+  test("working-tree paths git ignores reach nobody; a mixed batch keeps the rest", async () => {
+    const { dirs, hub, ignoreCalls } = linkedHub(
+      () => OWN,
+      async (_root, relPaths) =>
+        new Set(relPaths.filter((p) => p.startsWith("dist/"))),
+    );
+    const heard: string[] = [];
+    await hub.acquire("/wt", {
+      refs: ALSO_NONE,
+      onChange: (c) => void heard.push(...c.map((x) => x.path)),
+    });
+
+    dirs.emit("/wt", "/wt/dist/a.js", "/wt/dist/b.js", "/wt/dist/a.js");
+    await tick();
+    expect(heard).toEqual([]);
+    // One question per batch, each path asked once, relative to the root.
+    expect(ignoreCalls).toEqual([["dist/a.js", "dist/b.js"]]);
+
+    dirs.emit("/wt", "/wt/dist/c.js", "/wt/src/a.ts");
+    await tick();
+    expect(heard).toEqual(["/wt/src/a.ts"]);
+  });
+
+  test("a git-dir-only batch asks nothing and is delivered in the same turn", async () => {
+    const { dirs, hub, ignoreCalls } = linkedHub();
+    const heard: string[] = [];
+    await hub.acquire("/wt", {
+      refs: ALSO_NONE,
+      onChange: (c) => void heard.push(...c.map((x) => x.path)),
+    });
+    dirs.emit("/main/.git/worktrees/wt", "/main/.git/worktrees/wt/index");
+    expect(heard).toEqual(["/main/.git/worktrees/wt/index"]);
+    expect(ignoreCalls).toEqual([]);
+  });
+
+  test("readers share one ignore check per batch", async () => {
+    const { dirs, hub, ignoreCalls } = linkedHub();
+    const a: string[] = [];
+    const b: string[] = [];
+    await hub.acquire("/wt", {
+      refs: ALSO_NONE,
+      onChange: (c) => void a.push(...c.map((x) => x.path)),
+    });
+    await hub.acquire("/wt", {
+      refs: { also: ["refs/heads/main"] },
+      onChange: (c) => void b.push(...c.map((x) => x.path)),
+    });
+    dirs.emit("/wt", "/wt/src/a.ts");
+    await tick();
+    expect(ignoreCalls.length).toBe(1);
+    expect(a).toEqual(["/wt/src/a.ts"]);
+    expect(b).toEqual(["/wt/src/a.ts"]);
   });
 });

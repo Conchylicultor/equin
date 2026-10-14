@@ -11315,7 +11315,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `resource.declare` "edited-files"
             - Uses:
               - `infra/git/checkout-watch.acquireCheckoutWatch`
-              - `infra/git/checkout-watch.CheckoutChange`
               - `infra/git/git-read-cache.createSignedMemo`
               - `infra/host/host-read-pool.withHeavyReadSlot`
               - `network/live.serveValue`
@@ -21999,6 +21998,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Uses:
               - `infra/file-watcher.acquireDirWatch`
+              - `primitives/commit-list.GitError`
               - `primitives/commit-list.runGit`
               - `primitives/commit-list.tryRunGit`
               - `primitives/commit-list.WorktreeGoneError`

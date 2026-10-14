@@ -31,7 +31,6 @@ that settles would stop retrying and would render as a permanent answer.
   - Contributes: `resource.declare` "edited-files"
   - Uses:
     - `infra/git/checkout-watch.acquireCheckoutWatch`
-    - `infra/git/checkout-watch.CheckoutChange`
     - `infra/git/git-read-cache.createSignedMemo`
     - `infra/host/host-read-pool.withHeavyReadSlot`
     - `network/live.serveValue`

@@ -1,8 +1,5 @@
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import {
-  acquireCheckoutWatch,
-  type CheckoutChange,
-} from "@plugins/infra/plugins/git/plugins/checkout-watch/server";
+import { acquireCheckoutWatch } from "@plugins/infra/plugins/git/plugins/checkout-watch/server";
 import { createRefcountHub } from "@plugins/packages/plugins/refcount-hub/core";
 import { WorktreeGoneError } from "@plugins/primitives/plugins/commit-list/server";
 import { computeEditedFiles } from "./compute-edited-files";
@@ -17,26 +14,12 @@ import { evictEditedFiles, primeEditedFiles } from "./edited-files-cache";
 // tree and `main` — so of the refs every worktree shares it hears only its own
 // branch and `refs/heads/main`: another worktree's commit costs nothing.
 //
-// Any batch outside build output triggers a recompute. The recompute is
-// RETURNED to the checkout watch, which runs one at a time per room and folds
-// the batches landing mid-run into one trailing recompute — a recompute reads
-// the worktree's current state, so N pending ones would be N−1 wasted runs.
-
-/** Folders a build writes: their churn never moves the edited-files list. */
-const BUILD_OUTPUT = new Set([
-  "dist",
-  "build",
-  ".next",
-  ".turbo",
-  ".cache",
-  "coverage",
-]);
-
-function isBuildOutput(worktreePath: string, change: CheckoutChange): boolean {
-  if (change.area === "git") return false;
-  const rel = change.path.slice(worktreePath.length + 1);
-  return rel.split("/").some((segment) => BUILD_OUTPUT.has(segment));
-}
+// The checkout watch drops what git ignores (a build's `dist/`, the main
+// checkout's `.claude/worktrees/`), so every batch it delivers can move the
+// list, and triggers a recompute. The recompute is RETURNED to the checkout
+// watch, which runs one at a time per room and folds the batches landing
+// mid-run into one trailing recompute — a recompute reads the worktree's
+// current state, so N pending ones would be N−1 wasted runs.
 
 interface Room {
   worktreePath: string;
@@ -50,12 +33,8 @@ const rooms = createRefcountHub<void>(async (worktreePath, emit) => {
   const room: Room = { worktreePath, serialized: null, closed: false };
   const release = await acquireCheckoutWatch(worktreePath, {
     refs: { also: ["refs/heads/main"] },
-    onChange: async (changes) => {
-      if (changes.every((c) => isBuildOutput(worktreePath, c))) return;
-      await runTracked("watch-edited-files:recompute", () =>
-        recompute(room, emit),
-      );
-    },
+    onChange: () =>
+      runTracked("watch-edited-files:recompute", () => recompute(room, emit)),
   });
   void runTracked("watch-edited-files:baseline", () => baseline(room));
   return () => {
