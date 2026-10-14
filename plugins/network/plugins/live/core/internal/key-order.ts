@@ -31,7 +31,7 @@ export function compareRowKeys(
 
 /**
  * `a` vs `b`, part by part, each in its own direction (`dirs` — one per part,
- * so a key whose order already names the id, a scroll collection's, compares
+ * so a key whose order already names the id compares
  * as given): code point order, a NULL last either way.
  */
 export function compareKeyParts(

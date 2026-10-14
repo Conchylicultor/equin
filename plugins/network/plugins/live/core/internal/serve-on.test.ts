@@ -3,7 +3,7 @@
  * through the resource runtime's harness (a fake socket recording every
  * frame): an external collection's window, `:rows` and `all` subscribe and
  * ship keyed deltas on `notify`; every answer is checked against the row
- * schema; a silent collection has no `notify`; a scroll window's rows carry a
+ * schema; a silent collection has no `notify`; every window's rows carry a
  * minted `$key`. And `serveValueOn` per host mode: a `"db+external"` host
  * serves a db value, an `"external"` one refuses it (a cast past the types).
  */
@@ -79,6 +79,12 @@ const windowCollection = (k: string) =>
     maxLimit: 50,
   });
 
+/** `rank` is a number: its `$key` text, zero-padded so text order is its order. */
+const keyText = { rank: (n: number) => String(n).padStart(4, "0") };
+
+/** A row as a rank-ordered window ships it: with its minted `$key`. */
+const keyed = (r: Row) => ({ ...r, $key: JSON.stringify([keyText.rank(r.rank), r.id]) });
+
 const initial: Row[] = [
   { id: "a", title: "A", rank: 1 },
   { id: "b", title: "B", rank: 2 },
@@ -93,6 +99,7 @@ describe("serveCollectionOn — a window collection", () => {
     const served = serveCollectionOn(h.runtime, c, {
       source: "external",
       changes: "notified",
+      keyText,
       window: (q) => src.window(q.limit),
       rows: (ids) => src.byIds(ids),
     });
@@ -102,7 +109,7 @@ describe("serveCollectionOn — a window collection", () => {
 
     await h.subscribe(c.key, c.window.defaultParams);
     const ack = h.frames.find((f) => f.kind === "sub-ack" && f.key === c.key);
-    expect(ack?.value).toEqual(initial);
+    expect(ack?.value).toEqual(initial.map(keyed));
 
     src.rows.set("b", { id: "b", title: "B2", rank: 2 });
     served.notify();
@@ -110,7 +117,7 @@ describe("serveCollectionOn — a window collection", () => {
     const pushes = h.pushesFor(c.key);
     expect(pushes.map((f) => f.kind)).toEqual(["delta"]);
     expect(pushes[0]!.upserts).toEqual([
-      ["b", { id: "b", title: "B2", rank: 2 }],
+      ["b", keyed({ id: "b", title: "B2", rank: 2 })],
     ]);
   });
 
@@ -121,6 +128,7 @@ describe("serveCollectionOn — a window collection", () => {
     const served = serveCollectionOn(h.runtime, c, {
       source: "external",
       changes: "notified",
+      keyText,
       window: (q) => src.window(q.limit),
       rows: (ids) => src.byIds(ids),
     });
@@ -151,6 +159,7 @@ describe("serveCollectionOn — a window collection", () => {
       {
         source: "external",
         changes: "notified",
+        keyText,
         window: () => [],
         rows: () => [initial[2]!],
       },
@@ -175,6 +184,7 @@ describe("serveCollectionOn — a window collection", () => {
     const served = serveCollectionOn(h.runtime, c, {
       source: "external",
       changes: { fixed: { reason: "a test fixture" } },
+      keyText,
       window: () => initial,
       rows: () => [],
       groups: () => [
@@ -201,6 +211,7 @@ describe("serveCollectionOn — a window collection", () => {
       serveCollectionOn(h.runtime, c, {
         source: "external",
         changes: "notified",
+        keyText,
         window: () => initial,
         rows: () => [],
       });
@@ -208,6 +219,7 @@ describe("serveCollectionOn — a window collection", () => {
       serveCollectionOn(h.runtime, windowCollection(key("t")), {
         source: "external",
         changes: "notified",
+        keyText,
         window: () => initial,
         rows: () => [],
         count: () => 0,
@@ -223,6 +235,7 @@ describe("serveCollectionOn — a window collection", () => {
     const served = serveCollectionOn(h.runtime, c, {
       source: "external",
       changes: "notified",
+      keyText,
       window: () => [{ id: "a", title: 5, rank: 1 } as unknown as Row],
       rows: () => [],
     });
@@ -233,6 +246,7 @@ describe("serveCollectionOn — a window collection", () => {
     const over = serveCollectionOn(h.runtime, windowCollection(key("over")), {
       source: "external",
       changes: "notified",
+      keyText,
       window: () => initial,
       rows: () => [],
     });
@@ -242,6 +256,7 @@ describe("serveCollectionOn — a window collection", () => {
     const twice = serveCollectionOn(h.runtime, windowCollection(key("twice")), {
       source: "external",
       changes: "notified",
+      keyText,
       window: () => [initial[0]!, initial[0]!],
       rows: () => [],
     });
@@ -255,6 +270,7 @@ describe("serveCollectionOn — a window collection", () => {
     const fixed = serveCollectionOn(h.runtime, windowCollection(key("fixed")), {
       source: "external",
       changes: { fixed: { reason: "a demo pack" } },
+      keyText,
       window: () => initial,
       rows: () => [],
     });
@@ -280,6 +296,7 @@ describe("serveCollectionOn — a window collection", () => {
       serveCollectionOn(h.runtime, windowCollection(key("empty")), {
         source: "external",
         changes: { fixed: { reason: " " } },
+        keyText,
         window: () => [],
         rows: () => [],
       }),
@@ -288,6 +305,7 @@ describe("serveCollectionOn — a window collection", () => {
       serveCollectionOn(h.runtime, windowCollection(key("snap")), {
         source: "external",
         changes: { snapshot: { reason: "x" } } as never,
+        keyText,
         window: () => [],
         rows: () => [],
       }),
@@ -321,23 +339,22 @@ describe("serveCollectionOn — a window collection", () => {
   });
 });
 
-describe("serveCollectionOn — a scroll window", () => {
+describe("serveCollectionOn — every window's $key", () => {
   test("rows carry a minted $key; a non-text order field needs keyText", async () => {
     const h = createHarness();
-    const c = liveCollection(key("scroll"), {
+    const c = liveCollection(key("keyed"), {
       row: RowSchema,
       id: "id",
       filterable: {},
       sortable: ["rank", "title"],
       default: { orderBy: [["rank", "desc"]], limit: 10 },
       maxLimit: 50,
-      scroll: true,
     });
     const desc = [...initial].reverse();
     const served = serveCollectionOn(h.runtime, c, {
       source: "external",
       changes: "notified",
-      keyText: { rank: (n) => String(n).padStart(4, "0") },
+      keyText,
       window: () => desc,
       rows: () => [],
     });
@@ -370,14 +387,13 @@ describe("serveCollectionOn — a scroll window", () => {
 
   test("rows answered out of the order asked are refused", async () => {
     const h = createHarness();
-    const c = liveCollection(key("scroll-order"), {
+    const c = liveCollection(key("key-order"), {
       row: RowSchema,
       id: "id",
       filterable: {},
       sortable: ["title"],
       default: { orderBy: [["title", "asc"]], limit: 10 },
       maxLimit: 50,
-      scroll: true,
     });
     const served = serveCollectionOn(h.runtime, c, {
       source: "external",

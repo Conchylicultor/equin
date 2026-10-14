@@ -1138,16 +1138,14 @@ export function serveCollection<
   Row,
   F,
   S extends string,
-  Sc extends boolean,
   Cn,
   const C extends LiveCollectionChanges = "notified",
 >(
-  collection: ExternalWindowCollection<Row, F, S, Sc, Cn>,
+  collection: ExternalWindowCollection<Row, F, S, Cn>,
   opts: ServeExternalWindowOptions<
     NoInfer<Row>,
     NoInfer<F>,
     NoInfer<S>,
-    NoInfer<Sc>,
     NoInfer<Cn>,
     C
   >,
@@ -1194,10 +1192,9 @@ export function serveCollection<
     | ServeAllCollectionOptions<T, Row, readonly AllJoinSpec[]>
     | ServeExternalAllOptions<Row, LiveCollectionChanges>
     | ServeExternalLookupOptions<Row, LiveCollectionChanges>
-    // The window arm, its scroll / count flags spelled out (the overload's
-    // are inferred per call); the body hands every external form on erased.
-    | ServeExternalWindowOptions<Row, F, S, true, null, LiveCollectionChanges>
-    | ServeExternalWindowOptions<Row, F, S, false, null, LiveCollectionChanges>,
+    // The window arm, its count flag spelled out (the overload's is
+    // inferred per call); the body hands every external form on erased.
+    | ServeExternalWindowOptions<Row, F, S, null, LiveCollectionChanges>,
 ):
   | ServedCollection<Row>
   | ServedLookupCollection<Row>

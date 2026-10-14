@@ -119,6 +119,8 @@ function setup() {
       const tasksServed = s.serveCollection(tasks, {
         source: "external",
         changes: "notified",
+        // `rank` is a number: its `$key` text, zero-padded so text order is its order.
+        keyText: { rank: (n) => String(n).padStart(4, "0") },
         window: (q) => ordered().slice(0, q.limit),
         rows: (ids) =>
           ids.flatMap((id) => {

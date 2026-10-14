@@ -284,7 +284,7 @@ function servePagedOn(
 // (its ids from the point codec), `key` of an `all` collection to an external
 // window holding the whole set, and `:groups` / `:count` to plain external
 // push values. Every answer is checked against the declaration (the row
-// schema, field by field; the ids; the size asked), and a scroll window's rows
+// schema, field by field; the ids; the size asked), and every window's rows
 // are minted their `$key` — the one check a paged value's page runs
 // (`mintRowKeys`). Nothing is routed: a change arrives as `notify` (D31).
 
@@ -314,11 +314,9 @@ export type ExternalWindowCollection<
   Row,
   F,
   S extends string,
-  Sc extends boolean,
   Cn,
 > = LiveCollection<Row, F, S> & {
   arms: null;
-  scroll: Sc;
   count: Cn;
 } & Unfolded<Row>;
 
@@ -334,30 +332,28 @@ type NonTextSortable<Row, S extends string> = {
   [K in S & keyof Row]: [Row[K]] extends [string | null] ? never : K;
 }[S & keyof Row];
 
-/** Per sortable field, the exact text a scroll window's `$key` holds for its value. */
+/** Per sortable field, the exact text a window's `$key` holds for its value. */
 type KeyTextMap<Row, S extends string> = {
   [K in S & keyof Row]?: (value: Row[K]) => string | null;
 };
 
 /**
- * A scroll window mints each row's `$key` from its order fields' TEXT, whose
+ * Every window mints each row's `$key` from its order fields' TEXT, whose
  * code-point order must be the source's order (a page is cut there, and the
  * served half checks every answer is in it). A text field is its own text; any
  * other sortable field needs `keyText.<field>` (tsc) — the source supplies the
  * precision, as Postgres `::text` does for a table (an instant at a fixed
- * precision, a zero-padded number). A non-scroll window mints no key.
+ * precision, a zero-padded number).
  */
-type KeyTextOption<Row, S extends string, Sc extends boolean> = [Sc] extends [
-  true,
+type KeyTextOption<Row, S extends string> = [NonTextSortable<Row, S>] extends [
+  never,
 ]
-  ? [NonTextSortable<Row, S>] extends [never]
-    ? { keyText?: KeyTextMap<Row, S> }
-    : {
-        keyText: KeyTextMap<Row, S> & {
-          [K in NonTextSortable<Row, S>]-?: (value: Row[K]) => string | null;
-        };
-      }
-  : { keyText?: never };
+  ? { keyText?: KeyTextMap<Row, S> }
+  : {
+      keyText: KeyTextMap<Row, S> & {
+        [K in NonTextSortable<Row, S>]-?: (value: Row[K]) => string | null;
+      };
+    };
 
 /** `count(q)` exactly when the collection is declared `count: true`. */
 type CountOption<Cn> = [Cn] extends [null]
@@ -385,7 +381,6 @@ export type ServeExternalWindowOptions<
   Row,
   F,
   S extends string,
-  Sc extends boolean,
   Cn,
   C extends LiveCollectionChanges,
 > = ExternalCollectionBase<Row, C> & {
@@ -397,7 +392,7 @@ export type ServeExternalWindowOptions<
   ) => Answer<readonly LiveGroup<FilterScalar>[]>;
   all?: never;
 } & CountOption<Cn> &
-  KeyTextOption<Row, S, Sc>;
+  KeyTextOption<Row, S>;
 
 /** An external `all` collection's answers: every row, in the declared order. */
 export type ServeExternalAllOptions<
@@ -531,17 +526,15 @@ export function serveCollectionOn<
   Row,
   F,
   S extends string,
-  Sc extends boolean,
   Cn,
   const C extends LiveCollectionChanges = "notified",
 >(
   rt: LiveRuntime,
-  collection: ExternalWindowCollection<Row, F, S, Sc, Cn>,
+  collection: ExternalWindowCollection<Row, F, S, Cn>,
   opts: ServeExternalWindowOptions<
     NoInfer<Row>,
     NoInfer<F>,
     NoInfer<S>,
-    NoInfer<Sc>,
     NoInfer<Cn>,
     C
   >,
@@ -590,7 +583,6 @@ export type AnyCollection = {
   };
   count?: LiveCountDescriptor<Filterable> | null;
   filterable?: unknown;
-  scroll?: boolean;
   contributed?: boolean;
   columnScope?: string | null;
   arms?: unknown;
@@ -875,7 +867,6 @@ export function compileExternalCollection(
     if (typeof windowAnswer !== "function") fail("`window(q)` is required.");
     const descriptor = collection.window!;
     const codec = descriptor.window;
-    const scroll = collection.scroll === true;
     const keyText = opts.keyText ?? {};
     /** One order field's `$key` part: its text, or NULL. */
     const partOf = (row: Record<string, unknown>, field: string) => {
@@ -910,7 +901,6 @@ export function compileExternalCollection(
         loader: async (params: LiveWindowParams) => {
           const q = codec.decode(params);
           const out = checkedRows("window(q)", await windowAnswer!(q), q.limit);
-          if (!scroll) return out;
           // The key: the order's parts, then the id unless the order names it.
           const named = q.orderBy.some(([c]) => c === collection.id);
           const dirs: LiveKeyDirection[] = [
@@ -1195,17 +1185,15 @@ export interface LiveExternalServe<O extends LiveValueOrigin> {
       Row,
       F,
       S extends string,
-      Sc extends boolean,
       Cn,
       const C extends LiveCollectionChanges = "notified",
     >(
-      collection: ExternalWindowCollection<Row, F, S, Sc, Cn>,
+      collection: ExternalWindowCollection<Row, F, S, Cn>,
       opts: ServeExternalWindowOptions<
         NoInfer<Row>,
         NoInfer<F>,
         NoInfer<S>,
-        NoInfer<Sc>,
-        NoInfer<Cn>,
+            NoInfer<Cn>,
         C
       >,
     ): ServedExternalWindow<Row, C>;

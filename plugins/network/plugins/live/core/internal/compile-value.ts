@@ -583,7 +583,7 @@ export function pageRowsOf(
 
 /**
  * Rows in key order, checked and minted their `$key` — the one check behind a
- * paged value's page ({@link pageRowsOf}) and an external scroll collection's
+ * paged value's page ({@link pageRowsOf}) and an external collection's
  * window (`serve-on.ts`). `keyOf` reads (and checks) a row's full key — its
  * order parts, the id among them — and `dirs` is one direction per part. The
  * rows must be in strictly ascending key order (so no key twice) and inside
