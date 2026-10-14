@@ -18,22 +18,13 @@ export const TaskTrackSchema = z.enum(TASK_TRACKS);
 export type TaskTrack = z.infer<typeof TaskTrackSchema>;
 
 /**
- * A task with no track row is on this track. The default is a real value, not
- * a stand-in for "unknown": every task filed before tracks existed, and every
- * filing path that does not choose (the draft form, Improve, the chain
- * endpoint), is main-track.
+ * The track field's declared default — what a task with no track row is on.
+ * The default is a real value, not a stand-in for "unknown": every task filed
+ * before tracks existed, and every filing path that does not choose (the
+ * draft form, Improve, the chain endpoint), is main-track. Only a non-default
+ * track is stored (`setTaskTrack` deletes the row on main).
  */
 export const DEFAULT_TASK_TRACK = "main" satisfies TaskTrack;
-
-/**
- * The tracks that are STORED — every track but the default, whose absence of a
- * row is how it is spelled. The side-table's column is restricted to these, so
- * a `main` row cannot be written.
- */
-export const STORED_TASK_TRACKS = [
-  "sidequest",
-] as const satisfies readonly Exclude<TaskTrack, typeof DEFAULT_TASK_TRACK>[];
-export type StoredTaskTrack = (typeof STORED_TASK_TRACKS)[number];
 
 /**
  * How each track presents — the one source every badge reads, so the task

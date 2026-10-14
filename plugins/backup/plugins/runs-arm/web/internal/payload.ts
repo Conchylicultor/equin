@@ -4,18 +4,18 @@ import {
   type BackupTargetResult,
 } from "@plugins/backup/core";
 import type { RunRow } from "@plugins/runs/core";
-import { backupRunColumns } from "../../core";
+import { backupRunArm } from "../../core";
 
 /**
  * The backup arm's slice of a merged row, decoded by its own column set
- * (`backupRunColumns.read` — the jsonb columns parsed by the arm's schemas).
+ * (`backupRunArm.read` — the jsonb columns parsed by the arm's schemas).
  *
  * A null value is an answer, not an error: the slice is null on every row of
  * every other kind, and a column is null on a backup that has not got that far
  * yet. The decoders read it as an empty list / no size, which is what "this run
  * has none" looks like too.
  */
-const own = (run: RunRow) => backupRunColumns.read(run);
+const own = (run: RunRow) => backupRunArm.read(run);
 
 /**
  * How many bytes the archive came out to — the one accessor the detail pane's

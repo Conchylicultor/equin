@@ -27,8 +27,9 @@ Sonata transcription (design: `research/2026-10-13-global-agent-workspaces-and-s
    task and song.
 
 Every status write stamps the song row (`updateSongMeta`), which is what re-hydrates an open player.
-The browser reads the run state as the library's `transcription` columns (`core/columns.ts`): the
-card badge (`Library.Fields`) and the player's pending body (`Library.Source` `hydrate` →
+The extension EXPOSES the run state (`status`, `conversationId`, `error`) on the songs entity
+(`shared/shape.ts`, served by `LiveColumns.Expose`), so every list of songs carries it: the card badge
+(the status options, `web/internal/presentation.tsx`) and the player's pending body (`Library.Source` `hydrate` →
 `pending` with `TranscriptionBody`, which reads the song row live) — Open conversation, error, Retry.
 
 The task derives `done` from the delivery fact once the conversation closes (`exit_clean`): a

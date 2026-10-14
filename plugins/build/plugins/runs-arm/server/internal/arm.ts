@@ -6,7 +6,7 @@ import { parsed } from "@plugins/database/plugins/sql-projection/server";
 import { defineRunKind } from "@plugins/runs/server";
 import { RunOutcomeSchema } from "@plugins/runs/plugins/run-outcome/core";
 import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
-import { buildRunColumns, BuildStatusSchema } from "../../core";
+import { buildRunArm, BuildStatusSchema } from "../../core";
 import { buildOutcomeExpr, buildStatusExpr } from "./status-sql";
 
 /**
@@ -24,7 +24,7 @@ import { buildOutcomeExpr, buildStatusExpr } from "./status-sql";
  *   never be `canceled` on one column and `failed` on the other.
  */
 export const buildRunKind = defineRunKind({
-  columns: buildRunColumns,
+  columns: buildRunArm,
   from: _buildRuns,
   id: _buildRuns.id,
   base: (j) => {

@@ -3,9 +3,9 @@ import { deadJobs, type DeadJobRow } from "@plugins/infra/plugins/jobs/core";
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
   liveDataSource,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { firstLine } from "../internal/format";
 import { JobBadge, WhenText } from "./cells";
@@ -36,7 +36,7 @@ export function DeadView({
   return (
     <DataView<DeadJobRow>
       storageKey={DEAD_VIEW}
-      fields={fields}
+      overrides={overrides}
       views={["table", "list"]}
       defaultView="table"
       source={deadSource}
@@ -48,39 +48,23 @@ export function DeadView({
   );
 }
 
-// Static: every sortable / filterable field's id IS its collection column.
-const fields: FieldDef<DeadJobRow>[] = [
-  {
-    id: "jobName",
-    label: "Job",
-    type: "enum",
-    value: (r) => r.jobName,
+// How the derived fields present here (the collection declares their labels,
+// types and filters).
+const overrides = fieldOverrides(deadJobs, {
+  jobName: {
     cell: (r) => <JobBadge name={r.jobName} />,
-    primary: true,
-    sortable: true,
-    filterable: true,
     width: "minmax(8rem,16rem)",
   },
-  {
-    id: "attempts",
-    label: "Attempts",
-    type: "int",
-    value: (r) => r.attempts,
+  attempts: {
     cell: (r) => (
       <Text tone="muted" className="tabular-nums">
         {r.attempts}/{r.maxAttempts}
       </Text>
     ),
-    sortable: true,
-    filterable: true,
     align: "end",
     width: "5rem",
   },
-  {
-    id: "diedAt",
-    label: "Died",
-    type: "date",
-    value: (r) => r.diedAt,
+  diedAt: {
     // An archive row from before `diedAt` was recorded reads its archive time.
     cell: (r) =>
       r.diedAt !== null ? (
@@ -88,36 +72,22 @@ const fields: FieldDef<DeadJobRow>[] = [
       ) : (
         <WhenText date={r.archivedAt} prefix="Archived" />
       ),
-    sortable: true,
-    filterable: true,
     align: "end",
     width: "6rem",
   },
-  {
-    id: "lastError",
-    label: "Last error",
-    type: "text",
-    value: (r) => r.lastError,
+  lastError: {
     cell: (r) =>
       r.lastError === null ? null : (
         <Text variant="code" tone="destructive" title={r.lastError}>
           {firstLine(r.lastError)}
         </Text>
       ),
-    sortable: false,
-    filterable: true,
     width: "minmax(0,1fr)",
   },
-  {
-    id: "archivedAt",
-    label: "Archived",
-    type: "date",
-    value: (r) => r.archivedAt,
+  archivedAt: {
     cell: (r) => <WhenText date={r.archivedAt} prefix="Archived" />,
-    sortable: true,
-    filterable: true,
     align: "end",
     width: "6rem",
     visible: false,
   },
-];
+});

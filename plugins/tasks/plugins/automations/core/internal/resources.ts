@@ -9,6 +9,7 @@ import {
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { nullable } from "@plugins/fields/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
+import { tasksEntityRef } from "@plugins/tasks/plugins/tasks-core/core";
 import { AutomationEntrySchema } from "./entry";
 import { LAUNCH_DECISIONS, ORIGIN_ROLES } from "./settings";
 
@@ -32,14 +33,26 @@ export const automationsCatalog = liveValue("automations.catalog", {
 // before origins were recorded, the task's own creation time. `releasedAt`
 // (launched rows only) is when the task gave its slot back
 // (`releaseLaunchedTask`, e.g. its agent reported); `null` while it holds one.
+//
+// It EXPOSES the automation to every list whose rows reach a task (`exposes` —
+// the task list), under the id `origin` (`as`: what saved views name): the
+// automation that filed or launched it, NULL for a task with no row (the
+// field declares no default) — by hand, the "None" bucket. Its options are
+// the live catalog's (presented by this plugin's web half). No list is named
+// here.
 export const taskOriginShape = defineExtensionShape({
   key: "taskId",
   fields: {
-    automationId: textField(),
+    automationId: textField({ label: "Automation" }),
     sourceKeys: jsonField({ schema: z.array(z.string()), default: [] }),
     filedAt: dateField(),
     role: enumTextField(ORIGIN_ROLES, { default: "filed" }),
     releasedAt: nullable(dateField()),
+  },
+  exposes: {
+    parent: tasksEntityRef,
+    name: "origin",
+    fields: { automationId: { as: "origin" } },
   },
 });
 export const AutomationTaskRowSchema = taskOriginShape.schema;
@@ -49,8 +62,8 @@ export type AutomationTaskRow = z.infer<typeof AutomationTaskRowSchema>;
  * The tasks automations filed, newest first — an automation's HISTORY:
  * `useLive(automationTasks, { where: { automationId } })`; one task's origin is
  * `useLiveRow(automationTasks, taskId)` (`found: false` ⇒ not an automation's).
- * A surface that needs an origin for EVERY task reads `automationOrigins`
- * instead, never this window as a set.
+ * A list of tasks reads the exposed `origin` field instead (see
+ * `taskOriginShape`), never this window as a set.
  */
 export const automationTasks = liveCollection("automations.tasks", {
   row: AutomationTaskRowSchema,
@@ -59,33 +72,6 @@ export const automationTasks = liveCollection("automations.tasks", {
   sortable: ["filedAt"],
   default: { orderBy: [["filedAt", "desc"]], limit: 50 },
   maxLimit: 2000,
-});
-
-export const AutomationOriginRowSchema = AutomationTaskRowSchema.pick({
-  taskId: true,
-  automationId: true,
-});
-export type AutomationOriginRow = z.infer<typeof AutomationOriginRowSchema>;
-
-/**
- * Which automation filed or launched each task, as the WHOLE ordered set
- * (`all`) of the same `tasks_ext_origin` rows, projected to `{ taskId,
- * automationId }`: the task list's Automation field needs an origin for EVERY
- * task row, so its reader holds the set entire — an automated task never reads
- * as filed by hand past a window's edge. The narrow projection keeps the set
- * small (an id pair per automated task) and its refills off the columns the
- * history shows (`releasedAt`, `sourceKeys`).
- */
-export const automationOrigins = liveCollection("automations.origins", {
-  row: AutomationOriginRowSchema,
-  id: "taskId",
-  all: {
-    orderBy: [["taskId", "asc"]],
-    unbounded: {
-      reason:
-        "at most one row per task, and the task list projects an origin for every task",
-    },
-  },
 });
 
 // What a person decided about launching a task with a launch-kind automation:

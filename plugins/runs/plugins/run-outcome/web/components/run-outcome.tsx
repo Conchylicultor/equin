@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import {
+  RUN_OUTCOME_OPTIONS_META,
   RUN_OUTCOMES,
   type RunOutcome,
 } from "@plugins/runs/plugins/run-outcome/core";
@@ -11,44 +12,34 @@ import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/we
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 
 /**
- * Single source of truth for run-outcome display metadata — the shape
- * `BUILD_STATUS_META` established, for the vocabulary every kind shares.
- *
- * Colour carries one distinction and one only: `failed` is destructive because
- * it is the one outcome someone must act on. `partial` is a warning — it needs
- * a look, not a fix. `canceled` is muted: nothing went wrong, the run simply
- * stopped being the answer.
+ * Run-outcome display metadata — the shape `BUILD_STATUS_META` established, for
+ * the vocabulary every kind shares. The label and tint are the vocabulary's own
+ * (`RUN_OUTCOME_OPTIONS_META`, core); the dot colour is the browser's.
  */
+const DOT_COLOR_CLASS: Record<RunOutcome, string> = {
+  running: "bg-warning animate-pulse",
+  succeeded: "bg-success",
+  partial: "bg-warning",
+  failed: "bg-destructive",
+  canceled: "bg-muted-foreground/60",
+};
+
 export const RUN_OUTCOME_META: Record<
   RunOutcome,
   { label: string; badgeVariant: BadgeVariant; dotColorClass: string }
-> = {
-  running: {
-    label: "Running",
-    badgeVariant: "warning",
-    dotColorClass: "bg-warning animate-pulse",
-  },
-  succeeded: {
-    label: "Succeeded",
-    badgeVariant: "success",
-    dotColorClass: "bg-success",
-  },
-  partial: {
-    label: "Partial",
-    badgeVariant: "warning",
-    dotColorClass: "bg-warning",
-  },
-  failed: {
-    label: "Failed",
-    badgeVariant: "destructive",
-    dotColorClass: "bg-destructive",
-  },
-  canceled: {
-    label: "Canceled",
-    badgeVariant: "muted",
-    dotColorClass: "bg-muted-foreground/60",
-  },
-};
+> = Object.fromEntries(
+  RUN_OUTCOMES.map((o) => [
+    o,
+    {
+      label: RUN_OUTCOME_OPTIONS_META[o].label,
+      badgeVariant: RUN_OUTCOME_OPTIONS_META[o].variant,
+      dotColorClass: DOT_COLOR_CLASS[o],
+    },
+  ]),
+) as Record<
+  RunOutcome,
+  { label: string; badgeVariant: BadgeVariant; dotColorClass: string }
+>;
 
 /**
  * The filter / group-by option list. Derived from the vocabulary rather than

@@ -28,6 +28,7 @@ sub-plugin.
   - Uses:
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
+    - `fields/tags.tagsFieldType`
     - `ui/icons.symbol`
   - Exports (values):
     - `stringListFieldType`

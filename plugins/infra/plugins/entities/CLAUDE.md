@@ -52,6 +52,17 @@ export const _slowOpsTable = slowOps.table;
 type SlowOpRow = EntityRow<typeof slowOps>;   // = z.infer<typeof slowOps.schema>
 ```
 
+### From an entity ref — `defineEntity(ref, meta)`
+
+An entity browser code must name (a collection's `exposes`, an extension's
+`exposes.parent`, a list deriving its fields) is declared as a ref in the
+owning plugin's `core/`: `entityRef(name, fields)` (`entities/core`) — the
+table name plus the browser-safe field record. The server builds the table
+FROM it, `defineEntity(ref, meta)` (or `defineEntity(ref)` with no `meta`),
+so the fields a browser list reads off `ref.fields` and the table a server
+reads are one declaration. tasks-core's `tasksEntityRef` /
+`attemptsEntityRef` / `conversationsEntityRef` are the reference.
+
 ## How it derives the two artifacts from one field record
 
 - **Columns** — `resolveFieldStorage(field.type.id)` gives the storage

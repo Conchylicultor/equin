@@ -46,7 +46,9 @@ export const taskFields = {
   // min(id) over the cluster). NULL ⇒ never unioned ⇒ its own singleton cluster.
   // Grows on edge creation, NEVER shrinks on edge removal — that is the point.
   clusterId: nullable(textField()),
-  title: textField(),
+  // Labels and the title flag are what every task list shows (the fields
+  // spelling: `liveCollection({ from: tasksEntityRef, pick })`).
+  title: textField({ label: "Title", primary: true }),
   // Whether `title` is a machine-generated label rather than human-authored.
   titleAuto: boolField(),
   description: nullable(textField()),
@@ -56,7 +58,7 @@ export const taskFields = {
   heldAt: nullable(dateField()),
   rank: rankField(),
   createdAt: dateField(),
-  updatedAt: dateField(),
+  updatedAt: dateField({ label: "Updated" }),
 } satisfies FieldsRecord;
 
 export const attemptFields = {
@@ -108,12 +110,23 @@ export const attemptDeliveryFields = {
 export const conversationFields = {
   id: textField(),
   attemptId: textField(),
-  title: nullable(textField()),
+  // Labels, the title flag and each enum's options are what every list of
+  // conversations shows (the fields spelling: `liveCollection({ from, pick })`).
+  title: nullable(textField({ label: "Title", primary: true })),
   // Narrowed text columns: the DDL stays plain `text`, and the field's own
   // schema is what decodes it (the `text` storage arm), so the union in the
   // value type is derived rather than asserted.
-  status: enumTextField(ConversationStatusSchema.options),
-  runtime: textField(),
+  status: enumTextField(ConversationStatusSchema.options, {
+    label: "Status",
+    options: {
+      starting: { label: "Starting" },
+      working: { label: "Working" },
+      waiting: { label: "Waiting" },
+      gone: { label: "Gone" },
+      done: { label: "Done" },
+    },
+  }),
+  runtime: textField({ label: "Runtime" }),
   // The concrete version the conversation RAN — never a family: a model choice
   // ("opus") is resolved at spawn, before this row is written.
   //
@@ -130,16 +143,32 @@ export const conversationFields = {
   // notNull with no DB default (every insert passes the resolved version), so
   // every row carries a model and the wire schema's `.default()` never fires. The general factory just makes the value
   // something someone had to choose.
+  //
+  // Its options are the live model catalog's (a list reads them through the
+  // conversations entity's presentation), never a static set.
   model: parsedTextField(StoredModelSchema, {
+    label: "Model",
     default: FALLBACK_MODEL,
   }),
-  kind: enumTextField(["user", "agent", "system"] as const),
+  kind: enumTextField(["user", "agent", "system"] as const, {
+    label: "Kind",
+    options: {
+      user: { label: "User" },
+      agent: { label: "Agent" },
+      system: { label: "System" },
+    },
+  }),
   claudeSessionId: nullable(textField()),
   waitingFor: nullable(textField()),
   spawnedBy: nullable(textField()),
-  createdAt: dateField(),
-  updatedAt: dateField(),
-  endedAt: nullable(dateField()),
+  createdAt: dateField({ label: "Created" }),
+  // Last activity. Sortable in the lists: it is DERIVED (a DB trigger) and
+  // moves only on a title / model edit and the working ⇄ reply status
+  // transitions — never on the status reconciler's `waitingFor` /
+  // `lastViewedAt` writes — so a live window ordered by it re-sorts on real
+  // activity only.
+  updatedAt: dateField({ label: "Updated" }),
+  endedAt: nullable(dateField({ label: "Ended" })),
   closeRequested: boolField(),
   // Hibernation lifecycle (orthogonal to `status`).
   hibernatedAt: nullable(dateField()),

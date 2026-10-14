@@ -6,7 +6,10 @@ import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { enumTextField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
-import { compileJoins } from "@plugins/infra/plugins/query-resource/server";
+import {
+  compileJoins,
+  presenceExpr,
+} from "@plugins/infra/plugins/query-resource/server";
 import { defineExtension } from "./define-extension";
 
 // `ext.join(alias)`: an extension handle as a join of its parent's collection
@@ -103,7 +106,8 @@ describe("defineExtension join — a missing side row reads its defaults", () =>
 });
 
 // ── An exposing extension: its exposure, asserted against its table; its
-// join reads each exposed field's `absent`, and reaches a RELATED host by `on`.
+// join reads each exposed field's DERIVED missing-row value (its declared
+// default, else NULL) and its presence, and reaches a RELATED host by `on`.
 describe("defineExtension — exposes", () => {
   const tasks = pgTable("tasks", { id: text("id").primaryKey() });
   const attempts = pgTable("expose_attempts", {
@@ -114,21 +118,26 @@ describe("defineExtension — exposes", () => {
     id: text("id").primaryKey(),
     attemptId: text("attempt_id").notNull(),
   });
+  const tasksRef = entityRef("tasks", {});
   const trackShape = defineExtensionShape({
     key: "taskId",
-    fields: { track: enumTextField(["sidequest"] as const) },
-    exposes: {
-      parent: entityRef("tasks"),
-      name: "track",
-      fields: { track: { label: "Track", absent: "main" } },
+    fields: {
+      track: enumTextField(["main", "sidequest"] as const, {
+        label: "Track",
+        default: "main",
+      }),
     },
+    exposes: { parent: tasksRef, name: "track", fields: { track: {} } },
   });
-  const track = defineExtension(tasks, "track", trackShape);
+  const track = defineExtension(tasks, "track", trackShape, {
+    columns: { track: { default: "main" } },
+  });
   const dialect = new PgDialect();
 
-  test("the handle carries the shape's exposure, and its join the absents", () => {
+  test("the handle carries the shape's exposure, and its join the derived absents", () => {
     expect(track.exposure).toBe(trackShape.exposure);
     expect(track.join("t").absent).toEqual({ track: "main" });
+    expect(track.join("t").presence).toBeUndefined();
   });
 
   test("an exposure that names another parent, name or a disagreeing default throws", () => {
@@ -141,28 +150,36 @@ describe("defineExtension — exposes", () => {
     );
     const counted = defineExtensionShape({
       key: "taskId",
-      fields: { n: intField() },
-      exposes: {
-        parent: entityRef("tasks"),
-        name: "counted",
-        fields: { n: { label: "N", absent: 0 } },
-      },
+      fields: { n: intField({ label: "N", default: 0 }) },
+      exposes: { parent: tasksRef, name: "counted", fields: { n: {} } },
     });
     expect(() =>
       defineExtension(tasks, "counted", counted, {
         columns: { n: { default: 1 } },
       }),
     ).toThrow(
-      /reads 0 where the side row is missing, but its column defaults to 1/,
+      /reads its default 0 where the side row is missing, but its column defaults to 1/,
     );
     expect(() =>
       defineExtension(tasks, "counted", counted, {
         columns: { n: { default: 0 } },
       }),
     ).not.toThrow();
+    // No declared default: a missing row reads NULL, which a DB default
+    // would contradict — the default belongs on the field.
+    const undeclared = defineExtensionShape({
+      key: "taskId",
+      fields: { n: intField({ label: "N" }) },
+      exposes: { parent: tasksRef, name: "undeclared", fields: { n: {} } },
+    });
+    expect(() =>
+      defineExtension(tasks, "undeclared", undeclared, {
+        columns: { n: { default: 0 } },
+      }),
+    ).toThrow(/declares no default, so a missing side row reads NULL/);
   });
 
-  test("absent is a plain param, decoded through the column's schema widened by it", () => {
+  test("a declared default is COALESCEd as a plain param; no default reads the raw column", () => {
     const plan = compileJoins(
       { table: tasks, name: "tasks" },
       [track.join("tasks_ext_track")],
@@ -177,13 +194,91 @@ describe("defineExtension — exposes", () => {
     expect(q.sql).toBe(`COALESCE("tasks_ext_track"."track", $1)`);
     expect(q.params).toEqual(["main"]);
     expect(plan.canBeNull(read)).toBe(false);
-    // The read decodes "main", which the stored column itself refuses.
-    const { decoder } = read as unknown as {
-      decoder: { mapFromDriverValue: (v: unknown) => unknown };
-    };
-    expect(decoder.mapFromDriverValue("main")).toBe("main");
-    expect(decoder.mapFromDriverValue("sidequest")).toBe("sidequest");
-    expect(() => decoder.mapFromDriverValue("other")).toThrow();
+
+    const countsShape = defineExtensionShape({
+      key: "taskId",
+      fields: { n: intField({ label: "N" }) },
+      exposes: { parent: tasksRef, name: "counts", fields: { n: {} } },
+    });
+    const counts = defineExtension(tasks, "counts", countsShape);
+    expect(counts.join("c").absent).toEqual({ n: null });
+    const raw = compileJoins(
+      { table: tasks, name: "tasks" },
+      [counts.join("c")],
+      tasks.id,
+      "test",
+    ).render({ from: "c", col: counts.table.n });
+    expect(is(raw, SQL)).toBe(false);
+  });
+
+  test("a presence field rides the join and renders IS NOT NULL, or a CASE to its literals", () => {
+    const starred = defineExtension(
+      tasks,
+      "starred",
+      defineExtensionShape({
+        key: "taskId",
+        fields: {},
+        exposes: {
+          parent: tasksRef,
+          name: "starred",
+          presence: { id: "starred", label: "Starred" },
+        },
+      }),
+    );
+    const origin = defineExtension(
+      tasks,
+      "origin",
+      defineExtensionShape({
+        key: "taskId",
+        fields: {},
+        exposes: {
+          parent: tasksRef,
+          name: "origin",
+          presence: {
+            id: "origin",
+            label: "Origin",
+            values: { present: "agent", absent: "user" },
+          },
+        },
+      }),
+    );
+    const s = starred.join("s");
+    const o = origin.join("o");
+    expect(s.presence).toEqual({ starred: { values: null } });
+    expect(s.absent).toEqual({});
+    expect(o.presence).toEqual({
+      origin: { values: { present: "agent", absent: "user" } },
+    });
+    const plan = compileJoins(
+      { table: tasks, name: "tasks" },
+      [s, o],
+      tasks.id,
+      "test",
+    );
+    const bool = presenceExpr(
+      s,
+      "starred",
+      plan.render({ from: "s", col: s.key }),
+    );
+    expect(bool.sqlType).toBe("boolean");
+    expect(bool.notNull).toBe(true);
+    expect(dialect.sqlToQuery(bool.sql).sql).toBe(
+      `"s"."parent_id" IS NOT NULL`,
+    );
+    const lit = presenceExpr(
+      o,
+      "origin",
+      plan.render({ from: "o", col: o.key }),
+    );
+    expect(lit.sqlType).toBe("text");
+    const q = dialect.sqlToQuery(lit.sql);
+    expect(q.sql).toBe(
+      `CASE WHEN "o"."parent_id" IS NOT NULL THEN $1::text ELSE $2::text END`,
+    );
+    expect(q.params).toEqual(["agent", "user"]);
+    expect(() => presenceExpr(s, "origin", s.key)).toThrow(
+      /declares no presence field "origin"/,
+    );
   });
 
   test("`on` joins a related host's extension: LEFT on that column, routed through its chain", () => {

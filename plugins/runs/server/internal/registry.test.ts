@@ -9,9 +9,11 @@
 import { describe, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
 import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { z } from "zod";
+import { nullable } from "@plugins/fields/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { expr } from "@plugins/infra/plugins/query-resource/core";
-import { liveArmColumns } from "@plugins/network/plugins/live/core";
+import { liveArm } from "@plugins/network/plugins/live/core";
 import { runs } from "../../core";
 import { defineRunKind } from "./registry";
 
@@ -24,10 +26,12 @@ const ledger = pgTable("rt_type_runs", {
   finishedAt: timestamp("finished_at", { withTimezone: true }),
 });
 
-const columns = liveArmColumns(runs, "typecheck", {
-  row: z.object({ code: z.number().nullable(), note: z.string().nullable() }),
-  filterable: {},
-  sortable: [],
+const columns = liveArm(runs, "typecheck", {
+  label: "Typecheck",
+  fields: {
+    code: nullable(intField({ label: "Code" })),
+    note: nullable(textField({ label: "Note" })),
+  },
 });
 
 const outcome = expr(sql`'succeeded'`, {

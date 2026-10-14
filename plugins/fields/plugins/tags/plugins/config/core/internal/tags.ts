@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { type FieldDef, type FieldMeta } from "@plugins/fields/core";
+import {
+  declaredDefault,
+  type ExactOptions,
+  type FieldDef,
+  type FieldMarks,
+  type FieldMeta,
+} from "@plugins/fields/core";
 import { tagsFieldType } from "@plugins/fields/plugins/tags/core";
 
 /** Accepted the same two ways `enumField` accepts an option: bare value, or value + label. */
@@ -15,6 +21,12 @@ export interface TagsFieldDef extends FieldDef<string[]> {
   /** What the user can PICK. Not what the stored value must be — see below. */
   readonly options: readonly TagsOption[];
 }
+
+/** `tagsField`'s options: the meta, the suggested set (absent ⇒ open), a default. */
+export type TagsFieldOptions = FieldMeta & {
+  options?: readonly TagsOptionInput[];
+  default?: readonly string[];
+};
 
 function normalizeOption(input: TagsOptionInput): TagsOption {
   return typeof input === "string"
@@ -44,26 +56,43 @@ function normalizeOption(input: TagsOptionInput): TagsOption {
  *
  * What "empty" MEANS is likewise the consumer's, not the field's: pass it in
  * `description`.
+ *
+ * `options` absent is an OPEN vocabulary — a free tag set (an event's scraped
+ * tags), or one a list reads live (`network/live`'s `FieldPresentation`
+ * `useOptions`: the page-tag vocabulary). Given, it must name at least one.
+ *
+ * The options mark the field (`FieldMarks`: a declared `default`, a `label`,
+ * `filterable: false`).
  */
-export function tagsField(
-  opts: FieldMeta & { options: TagsOptionInput[]; default?: string[] },
-): TagsFieldDef {
-  if (opts.options.length === 0) {
-    throw new Error("tagsField requires at least one option");
+export function tagsField<
+  const O extends TagsFieldOptions = Record<never, never>,
+>(opts?: ExactOptions<O, TagsFieldOptions>): TagsFieldDef & FieldMarks<O> {
+  if (opts?.options !== undefined && opts.options.length === 0) {
+    throw new Error(
+      "tagsField: `options` names at least one — leave it out for an open vocabulary",
+    );
   }
-  const options = opts.options.map(normalizeOption);
+  const options = (opts?.options ?? []).map(normalizeOption);
   return Object.freeze({
     type: tagsFieldType,
     schema: z.array(z.string()),
-    defaultValue: opts.default ?? [],
+    defaultValue: [...(opts?.default ?? [])],
+    ...declaredDefault(opts),
     meta: {
-      label: opts.label,
-      description: opts.description,
-      placeholder: opts.placeholder,
+      label: opts?.label,
+      description: opts?.description,
+      placeholder: opts?.placeholder,
+      ...(opts?.filterable !== undefined
+        ? { filterable: opts.filterable }
+        : {}),
       // "Suggested", not "Allowed": the schema accepts any string, and saying
       // "allowed" here would describe a constraint that does not exist.
-      typeHint: `Suggested values: ${options.map((o) => JSON.stringify(o.value)).join(", ")}`,
+      ...(options.length > 0
+        ? {
+            typeHint: `Suggested values: ${options.map((o) => JSON.stringify(o.value)).join(", ")}`,
+          }
+        : {}),
     },
     options,
-  });
+  }) as TagsFieldDef & FieldMarks<O>;
 }

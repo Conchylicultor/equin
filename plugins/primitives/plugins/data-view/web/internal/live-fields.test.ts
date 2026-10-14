@@ -8,16 +8,18 @@
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
+import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import {
+  exposedColumns,
   liveCollection,
-  liveColumns,
   scopedLiveColumns,
   type WithContributedColumns,
 } from "@plugins/network/plugins/live/core";
 import {
   liveBoolean,
   liveInstant,
-  liveNumber,
   liveStringArray,
   liveText,
 } from "@plugins/network/plugins/live/plugins/filter/core";
@@ -308,21 +310,24 @@ describe("liveDataSource", () => {
   });
 });
 
-describe("resolveLiveFields — contributed columns", () => {
-  test("a field bound through a contributor's handle lowers to its wire name, and names the handle", () => {
-    const c = liveCollection(`test.data-view.live-source-contrib-${n++}`, {
+describe("resolveLiveFields — exposed columns", () => {
+  test("a field bound through an exposure lowers to its wire name, and names the set", () => {
+    const threadsRef = entityRef("test_dv_threads", {});
+    const stats = exposedColumns(
+      defineExtensionShape({
+        key: "threadId",
+        fields: { opens: intField({ label: "Opens", default: 0 }) },
+        exposes: { parent: threadsRef, name: "stats", fields: { opens: {} } },
+      }).exposure,
+    );
+    const c = liveCollection(`test.data-view.live-source-exposed-${n++}`, {
       row: Thread,
       id: "id",
       filterable: { subject: liveText() },
       sortable: ["subject"],
       default: { orderBy: [["subject", "asc"]], limit: 10 },
       maxLimit: 30,
-      contributed: true,
-    });
-    const stats = liveColumns(c, "stats", {
-      row: z.object({ opens: z.number() }),
-      filterable: { opens: liveNumber() },
-      sortable: ["opens"],
+      exposes: { base: threadsRef },
     });
     const source = liveDataSource(c, { searchable: ["subject"] });
     const fields: FieldDef<WithContributedColumns<Thread>>[] = [
@@ -335,10 +340,14 @@ describe("resolveLiveFields — contributed columns", () => {
       },
     ];
     const plan = resolveLiveFields(fields, source, resolveOperatorSet, "host");
-    expect(plan.columnOf.get("opens")).toBe("stats.opens");
+    expect(plan.columnOf.get("opens")).toBe("test_dv_threads_ext_stats.opens");
     expect(plan.sortFields.map((f) => f.id)).toEqual(["opens"]);
     expect(plan.filterable).toEqual({ opens: { domain: "number" } });
     expect([...plan.handles.values()]).toEqual([stats]);
+    // An exposed column groups on the server too.
+    expect(plan.groupColumns.get("opens")?.name).toBe(
+      "test_dv_threads_ext_stats.opens",
+    );
   });
 });
 

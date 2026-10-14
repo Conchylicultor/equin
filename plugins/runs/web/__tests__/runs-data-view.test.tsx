@@ -28,11 +28,15 @@ import {
   liveDataSource,
   type FilterOperatorSet,
 } from "@plugins/primitives/plugins/data-view/web";
-import { resolveLiveFields } from "@plugins/primitives/plugins/data-view/web/testing";
+import {
+  deriveFields,
+  resolveLiveFields,
+} from "@plugins/primitives/plugins/data-view/web/testing";
+import { liveArm } from "@plugins/network/plugins/live/core";
 import { runRowKey, runs, type RunRow } from "../../core";
 import { RunDuration } from "../components/run-duration";
 import { RunsDataView } from "../components/runs-data-view";
-import { useRunFields } from "../internal/fields";
+import { useRunKindOptions } from "../internal/presentation";
 import type { RunKindContribution } from "../internal/slots";
 import {
   activationHref,
@@ -83,6 +87,10 @@ afterEach(() => {
 
 const NOW = new Date("2026-10-02T12:00:00Z");
 
+/** Two arms as their cores declare them — a kind and its label, no fields of their own. */
+const buildArm = liveArm(runs, "build", { label: "Build", fields: {} });
+const releaseArm = liveArm(runs, "release", { label: "Release", fields: {} });
+
 describe("<RunDuration>", () => {
   it("a finished run reads its duration", () => {
     render(
@@ -122,6 +130,7 @@ const DOMAINS: Record<string, FilterOperatorSet["domain"]> = {
   text: "text",
   enum: "text",
   number: "number",
+  float: "number",
   date: "instant",
 };
 const resolveOperatorSet = (type: string): FilterOperatorSet | undefined =>
@@ -130,15 +139,25 @@ const resolveOperatorSet = (type: string): FilterOperatorSet | undefined =>
     : { match: type, domain: DOMAINS[type]!, operators: [] };
 
 describe("the base field schema over the runs source", () => {
-  it("resolves at mount: every field binds a union column, sorts and filters as declared", () => {
+  it("resolves at mount: every derived field binds a union column, sorts and filters as declared", () => {
     const source = liveDataSource(runs, {
       searchable: ["label", "message", "namespace", "trigger"],
     });
-    const { result } = renderHook(() =>
-      useRunFields([{ kind: "build", label: "Build" }]),
-    );
+    const { fields } = deriveFields(runs, true, []);
+    // The persisted vocabulary: saved views and presets name these ids.
+    expect(fields.map((f) => f.id)).toEqual([
+      "label",
+      "kind",
+      "outcome",
+      "trigger",
+      "namespace",
+      "duration",
+      "startedAt",
+      "finishedAt",
+      "message",
+    ]);
     const plan = resolveLiveFields<RunRow>(
-      result.current,
+      fields as never,
       source,
       resolveOperatorSet,
       "runs",
@@ -158,9 +177,17 @@ describe("the base field schema over the runs source", () => {
     );
     expect(plan.sortFields.map((f) => f.id)).toContain("duration");
     expect(plan.filterFields.map((f) => f.id)).toContain("kind");
-    // The kind chip offers the registered kinds, not the loaded page's.
-    const kind = result.current.find((f) => f.id === "kind")!;
-    expect(kind.options).toEqual([{ value: "build", label: "Build" }]);
+    expect(fields.find((f) => f.id === "outcome")?.options?.[0]).toEqual({
+      value: "running",
+      label: "Running",
+      variant: "warning",
+    });
+  });
+
+  it("the kind chip offers the registered kinds, not the loaded page's", () => {
+    stub.kinds = [{ arm: buildArm }] satisfies RunKindContribution[];
+    const { result } = renderHook(() => useRunKindOptions());
+    expect(result.current).toEqual([{ value: "build", label: "Build" }]);
   });
 });
 
@@ -189,8 +216,8 @@ describe("<RunsDataView>", () => {
       href: () => "/build/run/1",
     }));
     stub.kinds = [
-      { kind: "build", label: "Build", link: linkBuild },
-      { kind: "release", label: "Release" },
+      { arm: buildArm, link: linkBuild },
+      { arm: releaseArm },
     ] satisfies RunKindContribution[];
   });
 

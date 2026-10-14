@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { z } from "zod";
+import { nullable } from "@plugins/fields/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import {
   enumTextField,
@@ -142,62 +145,131 @@ export type _Key = Expect<Equal<typeof typedShape.key, "songId">>;
 
 // ── exposes: the fields an extension shows in every list of its parent ───────
 describe("defineExtensionShape — exposes", () => {
-  const tasks = entityRef("tasks");
-  const STORED = ["sidequest"] as const;
+  const tasks = entityRef("tasks", {});
+  const TRACKS = ["main", "sidequest"] as const;
 
-  test("an absent outside the stored schema widens the wire schema", () => {
+  test("a declared default is what a missing row reads; the wire schema is the field's", () => {
     const shape = defineExtensionShape({
       key: "taskId",
-      fields: { track: enumTextField(STORED) },
-      exposes: {
-        parent: tasks,
-        name: "track",
-        fields: {
-          track: {
-            label: "Track",
-            absent: "main",
-            options: {
-              main: { label: "Main", variant: "primary" },
-              sidequest: { label: "Sidequest", variant: "info" },
-            },
+      fields: {
+        track: enumTextField(TRACKS, {
+          label: "Track",
+          default: "main",
+          options: {
+            main: { label: "Main", variant: "primary" },
+            sidequest: { label: "Sidequest", variant: "info" },
           },
-        },
+        }),
       },
+      exposes: { parent: tasks, name: "track", fields: { track: {} } },
     });
     const exposure = shape.exposure;
     expect(exposure.slice).toBe("tasks_ext_track");
     expect(exposure.parent).toBe(tasks);
-    expect(exposure.fields.track.typeId).toBe("text");
-    expect(exposure.fields.track.absent).toBe("main");
-    expect(exposure.fields.track.options).toEqual({
+    const track = exposure.fields.track;
+    expect(track.id).toBe("track");
+    expect(track.label).toBe("Track");
+    expect(track.typeId).toBe("text");
+    expect(track.absent).toBe("main");
+    expect(track.presence).toBeNull();
+    // The options come from the field's own meta.
+    expect(track.options).toEqual({
       main: { label: "Main", variant: "primary" },
       sidequest: { label: "Sidequest", variant: "info" },
     });
-    // The stored schema refuses "main"; the wire schema takes both.
-    expect(shape.fields.track.schema.safeParse("main").success).toBe(false);
-    expect(exposure.fields.track.wire.parse("main")).toBe("main");
-    expect(exposure.fields.track.wire.parse("sidequest")).toBe("sidequest");
-    expect(exposure.fields.track.wire.safeParse("other").success).toBe(false);
+    expect(track.wire).toBe(shape.fields.track.schema);
+    expect(track.wire.safeParse(null).success).toBe(false);
     expect(exposure.row.parse({ track: "main" })).toEqual({ track: "main" });
   });
 
-  test("an absent the field already holds keeps its schema; null makes it nullable", () => {
+  test("no declared default reads NULL: the wire schema becomes nullable", () => {
     const shape = defineExtensionShape({
       key: "conversationId",
-      fields: { cost: intField(), note: textField() },
+      fields: {
+        cost: intField({ label: "Cost", default: 0 }),
+        count: intField(),
+        note: textField(),
+      },
       exposes: {
-        parent: entityRef("conversations"),
+        parent: entityRef("conversations", {}),
         name: "usage",
         fields: {
-          cost: { label: "Cost", absent: 0 },
-          note: { label: "Note", absent: null },
+          cost: {},
+          count: { label: "Count" },
+          note: { label: "Note" },
         },
       },
     });
     const { fields } = shape.exposure;
+    expect(fields.cost.absent).toBe(0);
     expect(fields.cost.wire).toBe(shape.fields.cost.schema);
+    // `intField()`'s implicit 0 is a backfill, not a declaration.
+    expect(fields.count.absent).toBeNull();
+    expect(fields.count.wire.parse(null)).toBeNull();
+    expect(fields.count.wire.parse(3)).toBe(3);
+    expect(fields.note.absent).toBeNull();
     expect(fields.note.wire.parse(null)).toBeNull();
     expect(fields.cost.options).toBeNull();
+  });
+
+  test("`as` names the field in lists; the exposure keeps it under its key", () => {
+    const shape = defineExtensionShape({
+      key: "serverId",
+      fields: { ok: nullable(boolField()) },
+      exposes: {
+        parent: entityRef("servers", {}),
+        name: "health",
+        fields: { ok: { label: "Status", as: "status" } },
+      },
+    });
+    const ok = shape.exposure.fields.ok;
+    expect(ok.id).toBe("status");
+    expect(ok.label).toBe("Status");
+    expect(Object.keys(shape.exposure.fields)).toEqual(["ok"]);
+    expect(shape.exposure.row.parse({ ok: null })).toEqual({ ok: null });
+  });
+
+  test("presence: a boolean, or one of two literals", () => {
+    const starred = defineExtensionShape({
+      key: "blockId",
+      fields: {},
+      exposes: {
+        parent: entityRef("blocks", {}),
+        name: "starred",
+        presence: { id: "starred", label: "Starred" },
+      },
+    }).exposure.fields.starred;
+    expect(starred.typeId).toBe("bool");
+    expect(starred.absent).toBe(false);
+    expect(starred.presence).toEqual({ values: null });
+    expect(starred.wire.parse(true)).toBe(true);
+    expect(starred.wire.safeParse(null).success).toBe(false);
+
+    const origin = defineExtensionShape({
+      key: "blockId",
+      fields: { automationId: textField() },
+      exposes: {
+        parent: entityRef("blocks", {}),
+        name: "origin",
+        presence: {
+          id: "origin",
+          label: "Origin",
+          values: { present: "agent", absent: "user" },
+          options: { agent: { label: "Agent" }, user: { label: "You" } },
+        },
+      },
+    }).exposure.fields.origin;
+    expect(origin.typeId).toBe("text");
+    expect(origin.absent).toBe("user");
+    expect(origin.presence).toEqual({
+      values: { present: "agent", absent: "user" },
+    });
+    expect(origin.options).toEqual({
+      agent: { label: "Agent" },
+      user: { label: "You" },
+    });
+    expect(origin.wire.parse("agent")).toBe("agent");
+    expect(origin.wire.safeParse("other").success).toBe(false);
   });
 
   test("a shape without exposes has a null exposure", () => {
@@ -206,53 +278,150 @@ describe("defineExtensionShape — exposes", () => {
     ).toBeNull();
   });
 
-  test("an untyped caller exposing a server-only field throws", () => {
+  test("an untyped caller authoring `absent` throws", () => {
+    expect(() =>
+      defineExtensionShape({
+        key: "taskId",
+        fields: { track: enumTextField(TRACKS, { label: "Track" }) },
+        exposes: {
+          parent: tasks,
+          name: "track",
+          fields: { track: { absent: "main" } },
+        } as never,
+      }),
+    ).toThrow(/"track" declares `absent`/);
+  });
+
+  test("an untyped caller exposing a server-only, unknown or unlabelled field throws", () => {
     expect(() =>
       defineExtensionShape({
         key: "songId",
         fields: { hash: textField() },
         serverOnly: ["hash"],
         exposes: {
-          parent: entityRef("songs"),
+          parent: entityRef("songs", {}),
           name: "x",
-          fields: { hash: { label: "Hash", absent: null } },
+          fields: { hash: { label: "Hash" } },
         } as never,
       }),
     ).toThrow(/"hash" is server-only/);
-  });
-
-  test("an untyped caller exposing an unknown field throws", () => {
     expect(() =>
       defineExtensionShape({
         key: "songId",
         fields: {},
         exposes: {
-          parent: entityRef("songs"),
+          parent: entityRef("songs", {}),
           name: "x",
-          fields: { nope: { label: "Nope", absent: null } },
+          fields: { nope: { label: "Nope" } },
         } as never,
       }),
     ).toThrow(/"nope" is not one of the extension's own fields/);
+    expect(() =>
+      defineExtensionShape({
+        key: "songId",
+        fields: { plays: intField() },
+        exposes: {
+          parent: entityRef("songs", {}),
+          name: "x",
+          fields: { plays: {} },
+        },
+      }),
+    ).toThrow(/"plays" has no label/);
+  });
+
+  test("two fields of one id, or a presence named like a field, throw", () => {
+    expect(() =>
+      defineExtensionShape({
+        key: "songId",
+        fields: { a: intField({ label: "A" }), b: intField({ label: "B" }) },
+        exposes: {
+          parent: entityRef("songs", {}),
+          name: "x",
+          fields: { a: { as: "b" }, b: {} },
+        },
+      }),
+    ).toThrow(/share the id "b"/);
+    expect(() =>
+      defineExtensionShape({
+        key: "songId",
+        fields: { starred: intField() },
+        exposes: {
+          parent: entityRef("songs", {}),
+          name: "x",
+          presence: { id: "starred", label: "Starred" },
+        },
+      }),
+    ).toThrow(/is named like one of the extension's fields/);
+    expect(() =>
+      defineExtensionShape({
+        key: "songId",
+        fields: {},
+        exposes: { parent: entityRef("songs", {}), name: "x" },
+      }),
+    ).toThrow(/it exposes nothing/);
+  });
+
+  test("a declared default no missing row can read (a date) throws", () => {
+    expect(() =>
+      defineExtensionShape({
+        key: "songId",
+        fields: { at: dateField({ label: "At", default: new Date(0) }) },
+        exposes: {
+          parent: entityRef("songs", {}),
+          name: "x",
+          fields: { at: {} },
+        },
+      }),
+    ).toThrow(/which a missing side row cannot read/);
   });
 });
 
 // ── Compile-time: what `exposes` may name ──────────────────────────────────
 const exposedShape = defineExtensionShape({
   key: "taskId",
-  fields: { track: enumTextField(["sidequest"] as const), hash: textField() },
+  fields: {
+    track: enumTextField(["main", "sidequest"] as const, {
+      label: "Track",
+      default: "main",
+    }),
+    plays: intField({ label: "Plays" }),
+    hash: textField(),
+  },
   serverOnly: ["hash"],
   exposes: {
-    parent: entityRef("tasks"),
+    parent: entityRef("tasks", {}),
     name: "track",
-    fields: { track: { label: "Track", absent: "main" } },
+    fields: { track: {}, plays: {} },
+    presence: {
+      id: "origin",
+      label: "Origin",
+      values: { present: "agent", absent: "user" },
+    },
   },
 });
-// The exposed row is the stored value widened by `absent`.
+// A declared default keeps the value; none adds `| null`; the presence reads
+// one of its literals.
 export type _ExposedRow = Expect<
   Equal<
     z.infer<typeof exposedShape.exposure.row>,
-    { track: "sidequest" | "main" }
+    {
+      track: "main" | "sidequest";
+      plays: number | null;
+      origin: "agent" | "user";
+    }
   >
+>;
+const boolPresence = defineExtensionShape({
+  key: "taskId",
+  fields: {},
+  exposes: {
+    parent: entityRef("tasks", {}),
+    name: "starred",
+    presence: { id: "starred", label: "Starred" },
+  },
+});
+export type _PresenceRow = Expect<
+  Equal<z.infer<typeof boolPresence.exposure.row>, { starred: boolean }>
 >;
 // Type-only: refused declarations, never called (each would throw at runtime).
 export const _refusedExposes = (): void => {
@@ -263,26 +432,107 @@ export const _refusedExposes = (): void => {
     fields: { track: enumTextField(["sidequest"] as const), hash: textField() },
     serverOnly: ["hash"],
     exposes: {
-      parent: entityRef("tasks"),
+      parent: entityRef("tasks", {}),
       name: "track",
-      fields: { hash: { label: "Hash", absent: null } },
+      fields: { hash: { label: "Hash" } },
     },
   });
-  // Options name every wire value.
-  // @ts-expect-error — "main" (the absent value) has no option.
+  // What a missing row reads is derived — `absent` no longer exists.
   defineExtensionShape({
     key: "taskId",
-    fields: { track: enumTextField(["sidequest"] as const) },
+    fields: { track: enumTextField(["main", "sidequest"] as const) },
+    // @ts-expect-error — `absent` is not authored.
     exposes: {
-      parent: entityRef("tasks"),
+      parent: entityRef("tasks", {}),
+      name: "track",
+      fields: { track: { label: "Track", absent: "main" } },
+    },
+  });
+  // Options name every value of the field.
+  // @ts-expect-error — "main" has no option.
+  defineExtensionShape({
+    key: "taskId",
+    fields: { track: enumTextField(["main", "sidequest"] as const) },
+    exposes: {
+      parent: entityRef("tasks", {}),
       name: "track",
       fields: {
         track: {
           label: "Track",
-          absent: "main",
           options: { sidequest: { label: "Sidequest" } },
         },
       },
     },
   });
+  // A boolean presence's options name "true" and "false".
+  // @ts-expect-error — "false" has no option.
+  defineExtensionShape({
+    key: "taskId",
+    fields: {},
+    exposes: {
+      parent: entityRef("tasks", {}),
+      name: "starred",
+      presence: {
+        id: "starred",
+        label: "Starred",
+        options: { true: { label: "Starred" } },
+      },
+    },
+  });
+  // A field a missing row reads as NULL labels "null" too.
+  // @ts-expect-error — "null" has no option.
+  defineExtensionShape({
+    key: "taskId",
+    fields: { ok: boolField({ label: "Status" }) },
+    exposes: {
+      parent: entityRef("tasks", {}),
+      name: "health",
+      fields: {
+        ok: {
+          options: { true: { label: "Online" }, false: { label: "Offline" } },
+        },
+      },
+    },
+  });
 };
+// Options over a nullable boolean: every value by its canonical spelling.
+const labelledVerdict = defineExtensionShape({
+  key: "taskId",
+  fields: { ok: boolField({ label: "Status" }) },
+  exposes: {
+    parent: entityRef("tasks", {}),
+    name: "health",
+    fields: {
+      ok: {
+        as: "status",
+        options: {
+          true: { label: "Online" },
+          false: { label: "Offline" },
+          null: { label: "Unknown" },
+        },
+      },
+    },
+  },
+});
+test("an exposed field's options label its non-string values by their spelling", () => {
+  expect(
+    Object.keys(labelledVerdict.exposure!.fields.ok.options ?? {}),
+  ).toEqual(["true", "false", "null"]);
+});
+test("a boolean presence's options name only true / false", () => {
+  expect(() =>
+    defineExtensionShape({
+      key: "taskId",
+      fields: {},
+      exposes: {
+        parent: entityRef("tasks", {}),
+        name: "starred",
+        presence: {
+          id: "starred",
+          label: "Starred",
+          options: { yes: { label: "Starred" } } as never,
+        },
+      },
+    }),
+  ).toThrow(/name yes — it reads only true \/ false/);
+});

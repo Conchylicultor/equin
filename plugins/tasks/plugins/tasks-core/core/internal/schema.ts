@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { fieldsToZodObject } from "@plugins/fields/core";
+import { fieldsToZodObject, type FieldOptionMeta } from "@plugins/fields/core";
 import { StoredModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 import { ConversationStatusSchema } from "../conversation-status";
@@ -44,6 +44,23 @@ export const TaskStatusSchema = z.enum([
   "in_progress_blocked",
 ]);
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
+
+/**
+ * How each task status is named — the `status` field's options in every task
+ * list (`taskRows`), and the label every status chip / icon reads
+ * (`task-status`'s `STATUS_META`), so the two cannot disagree.
+ */
+export const TASK_STATUS_OPTIONS = {
+  new: { label: "New" },
+  in_progress: { label: "In progress" },
+  need_action: { label: "Need action" },
+  attempted: { label: "Attempted" },
+  done: { label: "Done" },
+  held: { label: "Held" },
+  dropped: { label: "Dropped" },
+  blocked: { label: "Blocked" },
+  in_progress_blocked: { label: "In progress (blocked)" },
+} as const satisfies Record<TaskStatus, FieldOptionMeta>;
 
 // Every value names a fact the attempt's row PROVES (invariant I6, see the
 // status CASE in server/internal/views.ts). `pushed` / `completed` are the only

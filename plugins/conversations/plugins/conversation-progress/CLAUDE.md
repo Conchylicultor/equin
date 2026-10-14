@@ -35,7 +35,7 @@
     - `tasks/tasks-core.getConversation`
     - `tasks/tasks-core.pushLanded`
   - DB schema: `plugins/conversations/plugins/conversation-progress/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `conversations_ext_progress`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_progress`)
   - Exports (values):
     - `classifyProgressJob`
     - `conversationProgress`

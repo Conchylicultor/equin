@@ -80,8 +80,8 @@ export interface RunArmBase<T extends PgTable, J extends readonly JoinSpec[]> {
 /**
  * What a domain hands `defineRunKind` (T9).
  *
- * - `columns` is the arm's own column set (`liveArmColumns(runs, kind, …)`, in
- *   the arm's core): the kind is ITS arm, so the discriminator, the row key's
+ * - `columns` is the arm (`liveArm(runs, kind, { label, fields })`, in the
+ *   arm's core): the kind is ITS arm, so the discriminator, the row key's
  *   prefix and the web field ids cannot drift apart.
  * - `extra` binds exactly that set's fields, each to a value of the field's
  *   type — a declared field with no column, or a column with no field, is a
@@ -112,9 +112,10 @@ export interface RunKindSpec<
  * A registered arm: its kind, and its binding into the union
  * (network/live's `serveUnionCollection`).
  *
- * There is deliberately **no `label`** here. The kind's human name is a web
- * concern — the filter chip's options must list every registered kind, not
- * the ones on the loaded page — so it is declared once, on `Runs.Kind`.
+ * There is deliberately **no `label`** here. The kind's human name is the
+ * arm's (`liveArm`, core), and the filter chip's options must list every
+ * registered kind, not the ones on the loaded page — so the web reads it off
+ * the arms registered on `Runs.Kind`.
  */
 export interface RunKind {
   kind: string;

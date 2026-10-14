@@ -39,11 +39,13 @@ import type { ResourceParams } from "@plugins/framework/plugins/resource-runtime
 import {
   clause,
   liveInstant,
-  liveNumber,
   liveText,
   or,
 } from "@plugins/network/plugins/live/plugins/filter/core";
-import { liveArmColumns, liveCollection } from "../../core";
+import { nullable } from "@plugins/fields/core";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { liveArm, liveCollection } from "../../core";
 import { compileUnion, type UnionArmBinding } from "../internal/serve-union";
 import {
   groupsRecord,
@@ -132,25 +134,27 @@ const runs = liveCollection("golden-union.runs", {
   default: { orderBy: [["startedAt", "desc"]], limit: 4 },
   maxLimit: 12,
 });
-const aColumns = liveArmColumns(runs, "a", {
-  row: z.object({ code: z.number().nullable() }),
-  filterable: { code: liveNumber() },
+// Each arm's own fields, declared as an arm's core would (`liveArm`): every
+// field filters in the domain its value reads in.
+const aColumns = liveArm(runs, "a", {
+  label: "A",
+  fields: { code: nullable(floatField({ label: "Code" })) },
   sortable: ["code"],
 });
-const bColumns = liveArmColumns(runs, "b", {
-  row: z.object({ server: z.string() }),
-  filterable: { server: liveText() },
+const bColumns = liveArm(runs, "b", {
+  label: "B",
+  fields: { server: textField({ label: "Server" }) },
   sortable: ["server"],
 });
-const nColumns = liveArmColumns(runs, "n", {
-  row: z.object({ size: z.number() }),
-  filterable: { size: liveNumber() },
+const nColumns = liveArm(runs, "n", {
+  label: "N",
+  fields: { size: floatField({ label: "Size" }) },
   sortable: ["size"],
 });
 
-const uColumns = liveArmColumns(runs, "u", {
-  row: z.object({ owner: z.string() }),
-  filterable: { owner: liveText() },
+const uColumns = liveArm(runs, "u", {
+  label: "U",
+  fields: { owner: textField({ label: "Owner" }) },
   sortable: ["owner"],
 });
 

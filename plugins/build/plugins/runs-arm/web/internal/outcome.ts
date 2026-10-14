@@ -1,6 +1,6 @@
 import type { RunRow } from "@plugins/runs/core";
 import type { BuildRunOutcome } from "@plugins/build/plugins/build-status/core";
-import { buildRunColumns } from "../../core";
+import { buildRunArm } from "../../core";
 
 /**
  * The two fields `BuildStatusDot` / `BuildStatusChip` decide a status from,
@@ -14,6 +14,6 @@ import { buildRunColumns } from "../../core";
 export function buildOutcomeOf(run: RunRow): BuildRunOutcome {
   return {
     finishedAt: run.finishedAt,
-    exitCode: buildRunColumns.read(run)?.exitCode ?? null,
+    exitCode: buildRunArm.read(run)?.exitCode ?? null,
   };
 }

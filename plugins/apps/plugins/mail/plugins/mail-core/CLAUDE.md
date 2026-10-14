@@ -186,6 +186,7 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
     - `ids.externalIdField`
     - `ids.idKindField`
     - `ids.IdOf`
+    - `infra/entities.entityRef`
     - `network/live.liveValue`
     - `primitives/live-state.tolerantEnum`
   - Exports (types):
@@ -246,6 +247,7 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
     - `MailSyncStateSchema`
     - `mailThreadFields`
     - `MailThreadSchema`
+    - `mailThreadsEntityRef`
     - `MAX_CONSECUTIVE_RESYNCS`
 - Cross-plugin:
   - Imported by:

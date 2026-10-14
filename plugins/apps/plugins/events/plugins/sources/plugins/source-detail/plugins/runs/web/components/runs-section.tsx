@@ -2,6 +2,7 @@ import { useMemo, type ReactNode } from "react";
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
   liveDataSource,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
@@ -10,11 +11,8 @@ import {
   eventRunIdKind,
   eventSourceRuns,
   type EventSourceRun,
+  type EventSourceRunRow,
 } from "@plugins/apps/plugins/events/plugins/events-core/core";
-import {
-  RUN_OUTCOME_OPTIONS,
-  formatDuration,
-} from "@plugins/apps/plugins/events/plugins/sources/web";
 import { eventSourceRunPane } from "../panes";
 import { RunActions } from "../slots";
 import { RunRow } from "./run-row";
@@ -37,6 +35,31 @@ const runsSource = liveDataSource(eventSourceRuns, {
   searchable: ["error", "outcome"],
 });
 
+/**
+ * Every field is `eventSourceRuns`' — the run entity's, derived — but the
+ * source: the ledger is scoped to one source, so a source column would say the
+ * same thing on every row.
+ */
+const RUN_OVERRIDES = fieldOverrides(eventSourceRuns, {
+  sourceId: { visible: false },
+});
+
+/**
+ * The one field the ledger computes itself: the caveats COUNT, not the text.
+ * Display-only: `flags` is a jsonb list with no column the server could sort
+ * or filter on, and no saved view asks for it. An `unchanged` or `failed` run
+ * never extracted anything, so it reads 0 — truthfully.
+ */
+const RUN_EXTRA_FIELDS: FieldDef<EventSourceRunRow>[] = [
+  {
+    id: "flags",
+    label: "Caveats",
+    type: "number",
+    value: (r) => r.flags.length,
+    align: "end",
+  },
+];
+
 export function SourceRunsSection({
   sourceId,
 }: {
@@ -56,82 +79,15 @@ export function SourceRunsSection({
   const openRunId =
     openRunParam === undefined ? undefined : eventRunIdKind.key(openRunParam);
 
-  // Every column is a typed field, so "show me only the failures" is a filter on
-  // `outcome` rather than a bespoke chip — including the `unchanged` runs, which
-  // are the whole reason a cheap run is recorded at all.
-  const fields = useMemo<FieldDef<EventSourceRun>[]>(
-    () => [
-      {
-        id: "startedAt",
-        label: "Started",
-        type: "date",
-        primary: true,
-        value: (r) => r.startedAt,
-      },
-      {
-        id: "outcome",
-        label: "Outcome",
-        type: "enum",
-        options: RUN_OUTCOME_OPTIONS,
-        value: (r) => r.outcome,
-      },
-      {
-        id: "eventsFound",
-        label: "Found",
-        type: "number",
-        value: (r) => r.eventsFound,
-        align: "end",
-      },
-      {
-        id: "eventsCreated",
-        label: "New",
-        type: "number",
-        value: (r) => r.eventsCreated,
-        align: "end",
-      },
-      {
-        id: "eventsUpdated",
-        label: "Updated",
-        type: "number",
-        value: (r) => r.eventsUpdated,
-        align: "end",
-      },
-      {
-        id: "eventsDisappeared",
-        label: "Gone",
-        type: "number",
-        value: (r) => r.eventsDisappeared,
-        align: "end",
-      },
-      // The count, not the text. Display-only: `flags` is a jsonb list with no
-      // column the server could sort or filter on, and no saved view asks for
-      // it. An `unchanged` or `failed` run never extracted anything, so it
-      // reads 0 — truthfully.
-      {
-        id: "flags",
-        label: "Caveats",
-        type: "number",
-        value: (r) => r.flags.length,
-        align: "end",
-      },
-      {
-        id: "durationMs",
-        label: "Duration",
-        type: "number",
-        value: (r) => r.durationMs,
-        cell: (r) => formatDuration(r.durationMs) ?? "—",
-        align: "end",
-      },
-      { id: "error", label: "Error", type: "text", value: (r) => r.error },
-    ],
-    [],
-  );
-
   return (
-    <DataView<EventSourceRun>
+    // Every column is a typed field, so "show me only the failures" is a filter
+    // on `outcome` rather than a bespoke chip — including the `unchanged` runs,
+    // which are the whole reason a cheap run is recorded at all.
+    <DataView<EventSourceRunRow>
       storageKey={RUNS_VIEW}
       source={source}
-      fields={fields}
+      overrides={RUN_OVERRIDES}
+      extraFields={RUN_EXTRA_FIELDS}
       itemActions={RunActions}
       selectedRowId={openRunId}
       // Clicking the row IS opening the run — the same call the sources list

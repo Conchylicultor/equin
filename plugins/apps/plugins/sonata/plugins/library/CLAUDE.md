@@ -63,7 +63,7 @@ inside a component where the caller-aware context store is correct.
 ## One surface, no bespoke card
 
 The library has NO custom card component. The gallery builds the shared
-`DataCard` from the same `FieldDef` schema the table uses, plus a `leading`
+`DataCard` from the same derived field schema the table uses, plus a `leading`
 music-note block (`viewOptions.gallery.leading`). Everything a card wants is
 declared once on the `<DataView>` and honoured by both views:
 
@@ -72,11 +72,11 @@ declared once on the `<DataView>` and honoured by both views:
 | Play / Pause, Delete | `Library.SongActions` contributions (Play carries `zone: "persistent"`, so it is painted at rest) |
 | Ring on the loaded song | `selectedRowId={currentSongId}` |
 | Opening a song | `onRowActivate` |
-| Anything per-song another plugin knows | a `Library.Fields` field extension |
+| Anything per-song another plugin knows | a field its entity extension exposes on the songs entity (`defineExtensionShape({ exposes })`) |
 
 Which fields the CARD shows is authored config, not code — `visibleFields` on
 the `cards` row of `config/apps/sonata/library/sonata.library.jsonc`. Leave it
-unauthored and every contributed field stacks another caption row.
+unauthored and every exposed field stacks another caption row.
 
 ## The section column (`SectionPane`)
 
@@ -98,27 +98,32 @@ state, and the `useAvailable` gate. Sonata-specific on top of it:
 ## The song list (`songLibrary`)
 
 `songLibrary` (`core/resources.ts`, key `"sonata.songs"`) is a `liveCollection`
-over `sonata_songs` — H 100, M 500, default order `createdAt desc` — read by
-the library DataView as live key-range pages through `songLibrarySource`
-(`web/source.ts`, searching title and composer), and declared
-`contributed: true`. Served by `songLibraryServed` (`serveCollection(songLibrary,
-{ from: _songs })`), which compiles at boot once the contributions are collected.
+over the songs entity (`from: songsEntityRef` — `entityRef("sonata_songs",
+songFields)`, which the server table is built from), declared by FIELDS — H
+100, M 500, default order `added desc` — read by the library DataView as live
+key-range pages through `songLibrarySource` (`web/source.ts`, searching title
+and composer). Served by `songLibraryServed`, which compiles at boot once the
+`LiveColumns.Expose` contributions are collected.
 
-- **Contributed columns.** Other plugins add columns to every row — the library
-  names none of them. Each declares a `liveColumns` handle in its core and serves
-  it over its entity extension (`LiveColumns.Serve(serveColumns(handle, { join:
-  ext.join(alias) }))`): playback-history's `playback.playCount` /
-  `playback.lastPlayedAt`, the MIDI source's `midi.trackCount` /
-  `midi.sourceMissing`. A row carries them under `$columns` (`Song` is
-  `WithContributedColumns<SongRow>`), each contributor's `Library.Fields` field
-  reads its slice with `handle.read(song)` and binds `handle.column(…)`, so the
-  list sorts and filters by them on the server — "Most played", "Recently
-  played" and "Unplayed" keep their meaning (a never-played song reads its
-  extension default, `playCount = 0`). A play refills exactly that song in the
-  tuples that read the join.
-- **Field → column.** A library field whose id is not its column binds it:
-  `duration` → `durationSec`, `added` → `createdAt`. Field ids stay the persisted
-  vocabulary (saved views, presets).
+- **Fields.** `title`, `composer`, `source` are the entity's (`pick`; labels on
+  `songFields`, title `primary`); `duration` and `added` are the list's own
+  fields over `durationSec` / `createdAt` (bound by the server's `columns`) —
+  their ids are the persisted vocabulary (saved views, presets). The row
+  carries `id` beside them (`carry`). How the entity's fields present (widths,
+  the `source` options read live from the `SonataDocument.Source` registry) is
+  `songPresentation` (`web/internal/presentation.tsx`); the list's own
+  inline-edit write-backs and the two cells are `fieldOverrides` in
+  `SongLibrary`. A test pins the derived ids (`core/resources.test.ts`).
+- **Exposed fields.** Other plugins add fields to every row — the library
+  names none of them. Each exposes them from its extension of the songs entity
+  (`defineExtensionShape({ exposes })` + `LiveColumns.Expose(ext)`):
+  playback-history's `playCount` / `lastPlayedAt`, the MIDI source's
+  `trackCount` / `sourceMissing`. A row carries them under
+  `$columns[<extension table>]` (`Song` is the collection's row type), and the
+  list derives them, so it sorts and filters by them on the server — "Most
+  played", "Recently played" and "Unplayed" keep their meaning (a never-played
+  song reads the field's declared default, `playCount = 0`). A play refills
+  exactly that song in the tuples that read the join.
 - **Readers.** `SongLibrary` (the DataView; a `useLive(songLibrary, { limit: 1
   })` probe decides the first-run onboarding — settled with no row — and
   otherwise the DataView owns its skeleton and errors); `useCurrentSong`, the
@@ -127,7 +132,7 @@ the library DataView as live key-range pages through `songLibrarySource`
   `$columns` too.
 - **Behaviour under a live source.** Nulls sort last in both directions (the
   keyset rule; the nullable sortable columns are `composer`,
-  `playback.lastPlayedAt` and `midi.trackCount`), an enum sort or group
+  `lastPlayedAt` and `trackCount`), an enum sort or group
   (`source`, the cards view's sections) reads in stored-value order, a section's
   count is exact only once a later section has started in the loaded rows or
   the scroll has read to the end (a library past one window, 100 songs, shows

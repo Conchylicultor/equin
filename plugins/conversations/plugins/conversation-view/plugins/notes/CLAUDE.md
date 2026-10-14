@@ -27,7 +27,7 @@
     - `network/live.serveCollection`
     - `tasks/tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/notes/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `conversations_ext_notes`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_notes`)
   - Exports (values): `conversationNotes`
   - Resources: `conversation-notes:rows` (keyed, point)
   - Routes:

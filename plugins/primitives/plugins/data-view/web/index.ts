@@ -28,11 +28,14 @@ export type { LivePagesPaging } from "./internal/use-live-pages-paging";
 export {
   defineDataView,
   DATA_VIEW_HEADER_OFFSET_VAR,
+  fieldOverrides,
   IDENTITY_CODEC,
   UNGROUPED_FOLD_KEY,
 } from "../core";
 export type {
   DataViewId,
+  FieldOverride,
+  FieldOverrides,
   DataViewPaging,
   DataViewPagingTotal,
   DataViewPageNotice,

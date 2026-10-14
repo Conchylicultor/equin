@@ -9,6 +9,7 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
   liveDataSource,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
@@ -31,24 +32,6 @@ const DEPLOY_HISTORY_VIEW = defineDataView("deploy.deployment.history");
 const deployHistorySource = liveDataSource(deployRunHistory, {
   searchable: ["releaseRunId", "commitSha", "message"],
 });
-
-// The closed `deploy_runs.status` set, labelled for the enum filter chip and
-// group-by. `running` is a real, readable state here — a row whose backend went
-// away mid-run keeps it forever, which is the honest record of what happened.
-const STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: "running", label: "Running" },
-  { value: "succeeded", label: "Succeeded" },
-  { value: "failed", label: "Failed" },
-];
-
-// The closed `DeployVerb` set. Spelled as options rather than derived from the
-// loaded rows, because the rows are a server-paginated window: deriving would
-// give a filter that offers only the verbs on the current page.
-const VERB_OPTIONS: { value: string; label: string }[] = [
-  { value: "update", label: "Update" },
-  { value: "converge", label: "Converge" },
-  { value: "ship", label: "Ship" },
-];
 
 function outcomeBadge(run: DeployRunRecord): ReactNode {
   if (run.status === "running") {
@@ -100,63 +83,60 @@ function shortSha(sha: string): string {
   return sha.slice(0, 7);
 }
 
-// Static by construction: the rows are a live window, so nothing here may be
-// derived from what happens to be loaded. `duration` is the one derived field
-// and is deliberately neither sortable nor filterable — there is no `duration`
-// column for the server to compile those onto (a live source offers a field only
-// where its id or `column` names one).
-const fields: FieldDef<DeployRunRecord>[] = [
-  {
-    id: "status",
-    label: "Outcome",
-    type: "enum",
-    value: (r) => r.status,
-    options: STATUS_OPTIONS,
-    cell: (r) => outcomeBadge(r),
-    primary: true,
-    sortable: true,
-    filterable: true,
-    width: "12rem",
-  },
-  {
-    id: "verb",
-    label: "Verb",
-    type: "enum",
-    value: (r) => r.verb,
-    options: VERB_OPTIONS,
+// What the list says of the fields it DERIVES from `deployRunHistory` (the
+// run record's own: label, type, options, filter domain — a live window, so
+// nothing here may be derived from what happens to be loaded): how each cell
+// reads and how wide it is. `deploymentId` is the scope every window states,
+// `finishedAt` only sorts and filters — neither is a column.
+const overrides = fieldOverrides(deployRunHistory, {
+  status: { cell: (r) => outcomeBadge(r), width: "12rem" },
+  verb: {
     cell: (r) => <Badge variant="muted">{r.verb}</Badge>,
-    sortable: true,
-    filterable: true,
     width: "8rem",
   },
-  {
-    id: "commitSha",
-    label: "Commit",
-    type: "text",
-    value: (r) => r.commitSha,
+  commitSha: {
     cell: (r) =>
       r.commitSha ? (
         <span className="font-mono text-muted-foreground" title={r.commitSha}>
           {shortSha(r.commitSha)}
         </span>
       ) : null,
-    sortable: true,
     width: "8rem",
   },
-  {
-    id: "releaseRunId",
-    label: "Release",
-    type: "text",
-    value: (r) => r.releaseRunId,
+  releaseRunId: {
     cell: (r) =>
       r.releaseRunId ? (
         <span className="font-mono text-muted-foreground">
           {r.releaseRunId}
         </span>
       ) : null,
-    sortable: true,
     width: "16rem",
   },
+  startedAt: {
+    cell: (r) => (
+      <span className="text-muted-foreground">
+        <RelativeTime date={r.startedAt} />
+      </span>
+    ),
+    width: "8rem",
+  },
+  message: {
+    cell: (r) =>
+      r.message ? (
+        <span className="whitespace-pre-wrap" title={r.message}>
+          {r.message}
+        </span>
+      ) : null,
+    width: "24rem",
+  },
+  deploymentId: { visible: false, filterable: false, groupable: false },
+  finishedAt: { visible: false },
+});
+
+// The one field the list computes itself: `duration` has no column for the
+// server to sort or filter, so it is neither (a live source offers a field
+// only where its id or `column` names one).
+const extraFields: FieldDef<DeployRunRecord>[] = [
   {
     id: "duration",
     label: "Took",
@@ -166,33 +146,6 @@ const fields: FieldDef<DeployRunRecord>[] = [
       <span className="text-muted-foreground">{durationLabel(r)}</span>
     ),
     width: "6rem",
-  },
-  {
-    id: "startedAt",
-    label: "Started",
-    type: "date",
-    value: (r) => r.startedAt,
-    cell: (r) => (
-      <span className="text-muted-foreground">
-        <RelativeTime date={r.startedAt} />
-      </span>
-    ),
-    sortable: true,
-    width: "8rem",
-  },
-  {
-    id: "message",
-    label: "Message",
-    type: "text",
-    value: (r) => r.message,
-    cell: (r) =>
-      r.message ? (
-        <span className="whitespace-pre-wrap" title={r.message}>
-          {r.message}
-        </span>
-      ) : null,
-    filterable: true,
-    width: "24rem",
   },
 ];
 
@@ -225,7 +178,8 @@ export function DeployHistorySection({
   return (
     <DataView<DeployRunRecord>
       storageKey={DEPLOY_HISTORY_VIEW}
-      fields={fields}
+      overrides={overrides}
+      extraFields={extraFields}
       views={["list", "table"]}
       defaultView="list"
       viewOptions={{

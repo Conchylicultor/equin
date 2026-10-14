@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Library } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { hydrate } from "./hydrate";
 import { transcribeCreateOption } from "./components/transcribe-create-option";
-import { TranscriptionFields } from "./components/transcription-fields";
+import { transcriptionPresentation } from "./internal/presentation";
 
 export default {
   description:
@@ -13,10 +13,6 @@ export default {
       hydrate,
       createOption: transcribeCreateOption,
     }),
-    Library.Fields({
-      id: "transcription",
-      section: null,
-      component: TranscriptionFields,
-    }),
+    transcriptionPresentation,
   ],
 } satisfies PluginDefinition;

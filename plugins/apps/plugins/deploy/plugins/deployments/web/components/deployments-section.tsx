@@ -3,6 +3,7 @@ import { useMemo, type ReactElement, type ReactNode } from "react";
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
   type CreateOption,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
@@ -41,6 +42,13 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 const addIcon = symbol("add");
 
 const DEPLOYMENTS_VIEW = defineDataView("deploy.deployments");
+
+// Every field the list shows is its own (the composition, the last run) or
+// contributed; the collection lists only `serverId`, the scope this section
+// reads by — not a column of it.
+const DEPLOYMENT_OVERRIDES = fieldOverrides(deployments, {
+  serverId: { visible: false, filterable: false, groupable: false },
+});
 
 /**
  * The Deployments section of a server's page: which compositions this server
@@ -168,8 +176,9 @@ function DeploymentsBody({
   // open column are then the same fact, and a deep link paints correctly.
   const selectedId = deploymentDetailPane.useRouteEntry()?.params.deploymentId;
 
-  const fields = useMemo<FieldDef<Deployment>[]>(
+  const extraFields = useMemo<FieldDef<Deployment>[]>(
     () => [
+      // Carried, not derived: the field id a saved view names is `composition`.
       {
         id: "composition",
         label: "Composition",
@@ -227,7 +236,9 @@ function DeploymentsBody({
       />
       <DataView<Deployment>
         rows={rows}
-        fields={fields}
+        collection={deployments}
+        overrides={DEPLOYMENT_OVERRIDES}
+        extraFields={extraFields}
         fieldExtensions={Deployments.Fields}
         rowKey={(d) => d.id}
         views={["list", "table"]}

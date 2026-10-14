@@ -2,7 +2,10 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
-import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  TASK_STATUS_OPTIONS,
+  type TaskStatus,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -40,56 +43,56 @@ export const STATUS_META: Record<
   new: {
     icon: radioButtonUncheckedIcon,
     iconClassName: cn("text-muted-foreground/60"),
-    label: "New",
+    label: TASK_STATUS_OPTIONS.new.label,
     badgeClassName: cn("bg-muted"),
     dotClass: "bg-muted-foreground/40",
   },
   in_progress: {
     icon: timelapseIcon,
     iconClassName: cn("text-info"),
-    label: "In progress",
+    label: TASK_STATUS_OPTIONS.in_progress.label,
     badgeClassName: cn("bg-muted"),
     dotClass: "bg-info",
   },
   need_action: {
     icon: inputIcon,
     iconClassName: cn("text-warning"),
-    label: "Need action",
+    label: TASK_STATUS_OPTIONS.need_action.label,
     badgeClassName: cn("bg-warning/15 text-warning"),
     dotClass: "bg-warning",
   },
   attempted: {
     icon: incompleteCircleIcon,
     iconClassName: cn("text-muted-foreground"),
-    label: "Attempted",
+    label: TASK_STATUS_OPTIONS.attempted.label,
     badgeClassName: cn("bg-muted"),
     dotClass: "bg-muted-foreground/60",
   },
   done: {
     icon: checkCircleIcon,
     iconClassName: cn("text-success"),
-    label: "Done",
+    label: TASK_STATUS_OPTIONS.done.label,
     badgeClassName: cn("bg-muted"),
     dotClass: "bg-success",
   },
   held: {
     icon: pauseCircleIcon,
     iconClassName: cn("text-warning"),
-    label: "Held",
+    label: TASK_STATUS_OPTIONS.held.label,
     badgeClassName: cn("bg-warning/15 text-warning"),
     dotClass: "bg-warning",
   },
   dropped: {
     icon: cancelIcon,
     iconClassName: cn("text-muted-foreground/50"),
-    label: "Dropped",
+    label: TASK_STATUS_OPTIONS.dropped.label,
     badgeClassName: cn("bg-muted text-muted-foreground/60 italic"),
     dotClass: "bg-muted-foreground/40",
   },
   blocked: {
     icon: pauseCircleIcon,
     iconClassName: cn("text-muted-foreground"),
-    label: "Blocked",
+    label: TASK_STATUS_OPTIONS.blocked.label,
     badgeClassName: cn("bg-muted text-muted-foreground"),
     dotClass: "bg-muted-foreground/60",
   },
@@ -99,7 +102,7 @@ export const STATUS_META: Record<
   in_progress_blocked: {
     icon: timelapseIcon,
     iconClassName: cn("text-info"),
-    label: "In progress (blocked)",
+    label: TASK_STATUS_OPTIONS.in_progress_blocked.label,
     badgeClassName: cn("bg-muted"),
     dotClass: "bg-info",
   },

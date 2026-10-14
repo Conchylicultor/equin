@@ -8,6 +8,10 @@
 // is additionally handed verbatim to the extraction prompt, which is why it must
 // be one array both sides read.
 
+import type { FieldOptionMeta } from "@plugins/fields/core";
+
+const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+
 /** Event categories. Promote to a registry only when a source type must add one. */
 export const EVENT_CATEGORIES = [
   "music",
@@ -21,6 +25,11 @@ export const EVENT_CATEGORIES = [
   "other",
 ] as const;
 export type EventCategory = (typeof EVENT_CATEGORIES)[number];
+
+/** How each category presents (the `category` field's options): its name, capitalised. */
+export const EVENT_CATEGORY_META = Object.fromEntries(
+  EVENT_CATEGORIES.map((c) => [c, { label: cap(c) }]),
+) as { readonly [C in EventCategory]: FieldOptionMeta };
 
 /** How often a source is re-probed. `manual` is never picked up by the scheduler. */
 export const REFRESH_CADENCES = [
@@ -44,6 +53,18 @@ export type SourceStatus = (typeof SOURCE_STATUSES)[number];
  */
 export const RUN_OUTCOMES = ["unchanged", "extracted", "failed"] as const;
 export type RunOutcome = (typeof RUN_OUTCOMES)[number];
+
+/** How each run outcome presents (the `outcome` field's options): its label and chip tint. */
+export const RUN_OUTCOME_META: { readonly [O in RunOutcome]: FieldOptionMeta } =
+  {
+    // Named for what it MEANS, not for the enum value: "Unchanged" alone reads
+    // as "nothing happened / something is broken", which is exactly the
+    // question the run ledger exists to answer. The saved model call is the
+    // headline.
+    unchanged: { label: "Unchanged", variant: "muted" },
+    extracted: { label: "Extracted", variant: "success" },
+    failed: { label: "Failed", variant: "destructive" },
+  };
 
 /**
  * What the sources list answers when the user asks "is this source working?".

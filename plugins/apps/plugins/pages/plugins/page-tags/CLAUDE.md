@@ -4,12 +4,11 @@
 
 ## Plugin reference
 
-- Description: Page tags in the Pages app: the chips under a page's title with their picker (an Add tag tool in the header's hover row while the page has none), a tags field in the sidebar DataView (filter and group by tag), and colored dots marking each tagged page's sidebar row.
+- Description: Page tags in the Pages app: the chips under a page's title with their picker (an Add tag tool in the header's hover row while the page has none), and colored dots marking each tagged page's sidebar row.
 - Web:
   - Contributes:
     - `PageDetail.UnderTitle` "tags" → `UnderTitleTags`
     - `PageDetail.HeaderTool` "add-tag" → `AddTagTool`
-    - `PageTree.Fields` "tags" → `TagsField`
     - `PageTree.RowMarker` "tags" → `TagDotsMarker`
   - Uses:
     - `apps/pages/page-tree.PageDetail`

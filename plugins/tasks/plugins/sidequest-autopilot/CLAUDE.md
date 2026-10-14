@@ -177,7 +177,7 @@ finish and report.
     - `primitives/commit-list.runGit`
     - `primitives/log-channels.Log`
   - DB schema: `plugins/tasks/plugins/sidequest-autopilot/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_sidequest_triage`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_sidequest_triage`)
   - Register:
     - `defineAutomation('sidequest-autopilot')`
     - `defineJob('sidequest-autopilot.task-ready')`

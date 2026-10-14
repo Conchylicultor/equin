@@ -90,6 +90,17 @@ the Welcome page's Recent pages and the header's "Edited" label read)
 and **Scratch** (the tree, `origin is agent`). Private and Scratch split the
 tree with `filterScope: "roots"`, so a subtree stays whole in one of them;
 Favorites, Recent and Scratch are `hideWhenEmpty`.
+
+The sidebar's fields are `pagesTree`'s, DERIVED (`collection={pagesTree}`):
+its own `editedAt`, and every field an extension of a block exposes —
+`starred` (starred's presence), `origin` (agent-origin's presence, `agent` |
+`user`) and `tags` (page tags, its options the live vocabulary) — each served
+by its plugin's `LiveColumns.Expose` and presented by its plugin's
+`FieldPresentation`. The sidebar names none of them: its code is `overrides`
+(starred and origin out of the full-text search) and `extraFields` (the title,
+the one field it computes itself from the page payload, renamed in place).
+There is no field-extension seam; a new per-page dimension is an exposure on a
+`page_blocks` extension.
 The main tree keeps the view id `pages` (its saved row order is keyed by it).
 The one `new-page` creator names `views: ["pages"]`, so only Private's header
 offers `+`. The sidebar's footer rows are separate `Pages.Sidebar` items —
@@ -154,7 +165,6 @@ it, so an id means the same thing wherever it is clicked.
     - `PageDetail.Section`
     - `PageDetail.Overlay`
     - `PageTree.RowActions`
-    - `PageTree.Fields`
     - `PageTree.RowMarker`
     - `pageDetailPane.Actions`
     - `blockDetailPane.Actions`
@@ -167,9 +177,6 @@ it, so an id means the same thing wherever it is clicked.
     - `PageDetail.Overlay` ← `apps.pages.page-outline`
     - `PageTree.RowActions` ← `apps.pages.page-tree`
     - `PageTree.RowActions` ← `apps.pages.starred`
-    - `PageTree.Fields` ← `apps.pages.agent-origin`
-    - `PageTree.Fields` ← `apps.pages.page-tags`
-    - `PageTree.Fields` ← `apps.pages.starred`
     - `PageTree.RowMarker` ← `apps.pages.page-tags`
     - `pageDetailPane.Actions` ← `apps.pages.copy-id`
     - `pageDetailPane.Actions` ← `apps.pages.history`
@@ -260,7 +267,6 @@ it, so an id means the same thing wherever it is clicked.
   - Imported by:
     - `active-data/page-link`
     - `apps/agent-manager/pages-nav`
-    - `apps/pages/agent-origin`
     - `apps/pages/content-search`
     - `apps/pages/copy-id`
     - `apps/pages/history`

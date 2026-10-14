@@ -65,12 +65,14 @@ import {
 import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
 import {
   LIVE_ROW_KEY,
-  liveArmColumns,
+  liveArm,
   liveCollection,
 } from "@plugins/network/plugins/live/core";
+import { nullable } from "@plugins/fields/core";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import {
   liveInstant,
-  liveNumber,
   liveText,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import { compileUnion, type UnionArmBinding } from "./serve-union";
@@ -126,14 +128,14 @@ const runs = liveCollection("test.live.union-oracle", {
   default: { orderBy: [["startedAt", "desc"]], limit: 4 },
   maxLimit: 12,
 });
-const aColumns = liveArmColumns(runs, "a", {
-  row: z.object({ code: z.number().nullable() }),
-  filterable: { code: liveNumber() },
+const aColumns = liveArm(runs, "a", {
+  label: "A",
+  fields: { code: nullable(floatField({ label: "Code" })) },
   sortable: ["code"],
 });
-const bColumns = liveArmColumns(runs, "b", {
-  row: z.object({ server: z.string() }),
-  filterable: { server: liveText() },
+const bColumns = liveArm(runs, "b", {
+  label: "B",
+  fields: { server: textField({ label: "Server" }) },
   sortable: ["server"],
 });
 

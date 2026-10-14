@@ -1,18 +1,10 @@
-import { z } from "zod";
-import { liveCollection } from "@plugins/network/plugins/live/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import {
-  liveInstant,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
+  liveCollection,
+  type LiveRowsCollection,
+} from "@plugins/network/plugins/live/core";
 import { SavedBootTraceSchema } from "./fields";
-
-/** One saved snapshot's metadata — the list's row, with no snapshot blob. */
-const BootTraceItemSchema = z.object({
-  id: z.string(),
-  worktree: z.string(),
-  createdAt: z.coerce.date(),
-});
-export type BootTraceItem = z.infer<typeof BootTraceItemSchema>;
 
 /**
  * The saved boot traces (`boot_traces`), newest first, as the Boot Profiles
@@ -22,13 +14,20 @@ export type BootTraceItem = z.infer<typeof BootTraceItemSchema>;
  * sweep reaches it through the change feed.
  */
 export const bootTraces = liveCollection("debug.boot-traces", {
-  row: BootTraceItemSchema,
+  fields: {
+    worktree: textField({ label: "Worktree", primary: true }),
+    id: textField({ label: "Id", filterable: false }),
+    createdAt: dateField({ label: "When" }),
+  },
   id: "id",
-  filterable: { worktree: liveText(), createdAt: liveInstant() },
   sortable: ["createdAt", "worktree"],
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },
   maxLimit: 500,
 });
+
+/** One saved snapshot's metadata — the list's row, with no snapshot blob. */
+export type BootTraceItem =
+  typeof bootTraces extends LiveRowsCollection<infer R> ? R : never;
 
 /**
  * One saved boot trace with its full snapshot, read by id (`useLiveRow`) for

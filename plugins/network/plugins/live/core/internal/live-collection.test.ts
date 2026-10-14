@@ -208,7 +208,7 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
         /sortable, maxLimit beside `all`/,
       ],
       [{ ...base, filterable: {} }, /filterable beside `all`/],
-      [{ ...base, contributed: true }, /contributed beside `all`/],
+      [{ ...base, contributed: true }, /`contributed` no longer exists/],
       [{ ...base, columnScope: "s" }, /columnScope beside `all`/],
       [{ ...base, arms: { discriminator: "n" } }, /arms beside `all`/],
       [

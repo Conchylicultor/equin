@@ -1,5 +1,8 @@
 import { resolveFieldStorage } from "@plugins/fields/plugins/server-capabilities/server";
-import { wireSchema } from "@plugins/infra/plugins/entities/core";
+import {
+  wireSchema,
+  type EntityRef,
+} from "@plugins/infra/plugins/entities/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { pgTable, primaryKey, type PgTable } from "drizzle-orm/pg-core";
 import { z } from "zod";
@@ -90,8 +93,24 @@ function applyDefault(b: any, def: ColumnDefault<unknown>, key: string): any {
 // presence of `default` survives. (A non-enum default — bool / plain text — never
 // triggered the collapse, which is why slow_ops never caught it.)
 //
-// Two overloads: `meta` may be omitted only when the record has no `updatedAt`
-// field — one that has it must declare `meta.updatedAt` (see `EntityMeta`).
+// Two overloads per spelling: `meta` may be omitted only when the record has
+// no `updatedAt` field — one that has it must declare `meta.updatedAt` (see
+// `EntityMeta`).
+//
+// The ref spelling — `defineEntity(ref, meta)` — builds the table FROM the
+// entity's browser-safe ref (`entityRef(name, fields)`, entities/core): its
+// name is the table's, its record the columns, so the fields a browser list
+// reads off the ref and the table the server reads are one declaration.
+export function defineEntity<
+  F extends FieldsRecord,
+  const M extends EntityMeta<F> = EntityMeta<F>,
+>(
+  ref: EntityRef<string, F>,
+  meta: M,
+): Entity<F, DefaultedKeys<F, M>, ServerOnlyKeys<F, M>>;
+export function defineEntity<F extends FieldsRecord & { updatedAt?: never }>(
+  ref: EntityRef<string, F>,
+): Entity<F>;
 export function defineEntity<
   F extends FieldsRecord,
   const M extends EntityMeta<F> = EntityMeta<F>,
@@ -104,13 +123,24 @@ export function defineEntity<F extends FieldsRecord & { updatedAt?: never }>(
   name: string,
   fields: F,
 ): Entity<F>;
-// The implementation is typed loosely (`object` in, `unknown` out) so both
-// overloads are compatible with it; the overloads are the contract.
+// The implementation is typed loosely (`object` in, `unknown` out) so every
+// overload is compatible with it; the overloads are the contract.
 export function defineEntity(
-  name: string,
-  fields: FieldsRecord,
-  rawMeta: object = {},
+  nameOrRef: string | EntityRef,
+  fieldsOrMeta?: object,
+  maybeMeta?: object,
 ): unknown {
+  if (typeof nameOrRef !== "string" && nameOrRef?.kind !== "entity") {
+    throw new Error(
+      "defineEntity: the first argument is the table name or an EntityRef (`entityRef(name, fields)`).",
+    );
+  }
+  const name = typeof nameOrRef === "string" ? nameOrRef : nameOrRef.name;
+  const fields = (
+    typeof nameOrRef === "string" ? fieldsOrMeta : nameOrRef.fields
+  ) as FieldsRecord;
+  const rawMeta =
+    (typeof nameOrRef === "string" ? maybeMeta : fieldsOrMeta) ?? {};
   const meta = rawMeta as EntityMetaBase<FieldsRecord> & {
     updatedAt?: UpdatedAtMeta<FieldsRecord>;
   };

@@ -4,8 +4,10 @@
  * database: the recording `QueryDb` renders every statement.
  *
  * - a base exposure joins onto the host's id (alias route, COALESCE to its
- *   `absent`); a related one joins onto the lookup's `on` (LEFT, routed
- *   `reverse` through the lookup's chain);
+ *   field's declared default); a related one joins onto the lookup's `on`
+ *   (LEFT, routed `reverse` through the lookup's chain);
+ * - a presence field reads the side row's existence (`IS NOT NULL`, or a
+ *   `CASE` to its two literals), filtered and grouped on the server;
  * - the values fold into `$columns[<slice>]`; the window filters, sorts,
  *   groups and counts by them;
  * - an `all` set folds them too, and its definition moves with the fold;
@@ -59,35 +61,64 @@ const conversations = pgTable("xp_conversations", {
   title: text("title").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
 });
-const tasksRef = entityRef("xp_tasks");
-const conversationsRef = entityRef("xp_conversations");
+const tasksRef = entityRef("xp_tasks", {});
+const conversationsRef = entityRef("xp_conversations", {});
 
 const track = defineExtension(
   tasks,
   "track",
   defineExtensionShape({
     key: "taskId",
-    fields: { track: enumTextField(["sidequest"] as const) },
-    exposes: {
-      parent: tasksRef,
-      name: "track",
-      fields: { track: { label: "Track", absent: "main" } },
+    fields: {
+      track: enumTextField(["main", "sidequest"] as const, {
+        label: "Track",
+        default: "main",
+      }),
     },
+    exposes: { parent: tasksRef, name: "track", fields: { track: {} } },
   }),
+  { columns: { track: { default: "main" } } },
 );
 const usage = defineExtension(
   conversations,
   "usage",
   defineExtensionShape({
     key: "conversationId",
-    fields: { cost: intField() },
-    exposes: {
-      parent: conversationsRef,
-      name: "usage",
-      fields: { cost: { label: "Cost", absent: 0 } },
-    },
+    fields: { cost: intField({ label: "Cost", default: 0 }) },
+    exposes: { parent: conversationsRef, name: "usage", fields: { cost: {} } },
   }),
   { columns: { cost: { default: 0 } } },
+);
+// Presence: a boolean on the related task, two literals on the base.
+const starred = defineExtension(
+  tasks,
+  "starred",
+  defineExtensionShape({
+    key: "taskId",
+    fields: {},
+    exposes: {
+      parent: tasksRef,
+      name: "starred",
+      presence: { id: "starred", label: "Starred" },
+    },
+  }),
+);
+const origin = defineExtension(
+  conversations,
+  "origin",
+  defineExtensionShape({
+    key: "conversationId",
+    fields: {},
+    exposes: {
+      parent: conversationsRef,
+      name: "origin",
+      presence: {
+        id: "origin",
+        label: "Origin",
+        values: { present: "agent", absent: "user" },
+      },
+    },
+  }),
 );
 
 const ownerJoins = [
@@ -147,7 +178,6 @@ function compile(script?: (q: RecordedQuery) => unknown[]) {
   const specs = compileCollection(
     c,
     { from: conversations, joins: ownerJoins, db: recording.db },
-    [],
     [],
     [track, usage],
   );
@@ -258,7 +288,7 @@ describe("exposed columns — the window", () => {
     expect(() => window.validateParams!(filtered)).not.toThrow();
   });
 
-  test("a filter on the absent value reads the COALESCE", async () => {
+  test("a filter on the declared default reads the COALESCE", async () => {
     const { c, window, calls } = compile();
     await window.loader(
       c.window.window.encode({
@@ -282,7 +312,7 @@ describe("exposed columns — the window", () => {
     expect(await specs.groups.loader(params)).toEqual([
       { value: "main", count: 3 },
     ]);
-    // The COALESCE (its `absent` bound once) is selected and named by its
+    // The COALESCE (its default bound once) is selected and named by its
     // ordinal — a second rendering would bind a second `$n`.
     expect(calls[0]!.sql).toContain(
       'select COALESCE("xp_tasks_ext_track"."track", $1), count(*)',
@@ -295,6 +325,104 @@ describe("exposed columns — the window", () => {
       columns: [usageCols],
     });
     expect(() => specs.count!.validateParams!(count)).not.toThrow();
+  });
+
+  test("a presence field projects, filters and groups by the side row's existence", async () => {
+    const STARRED = "xp_tasks_ext_starred.starred";
+    const ORIGIN = "xp_conversations_ext_origin.origin";
+    const created = new Date("2026-10-12T10:00:00.000Z");
+    const c = listOf();
+    const recording = recordingQueryDb((q) =>
+      q.sql.includes("group by")
+        ? [{ value: "agent", count: 2 }]
+        : [
+            {
+              id: "c1",
+              title: "t",
+              createdAt: created,
+              [STARRED]: true,
+              [ORIGIN]: "user",
+            },
+          ],
+    );
+    const specs = compileCollection(
+      c,
+      { from: conversations, joins: ownerJoins, db: recording.db },
+      [],
+      [starred, origin],
+    );
+    const window = compileWindowQuery(c.window, specs.window).serverOpts;
+    const columns = [
+      exposedColumns(starred.exposure),
+      exposedColumns(origin.exposure),
+    ];
+    const [row] = (await window.loader(
+      c.window.window.encode({
+        where: { [STARRED]: true, [ORIGIN]: "agent" } as never,
+        columns,
+      }),
+    )) as Record<string, unknown>[];
+    const { sql } = recording.calls[0]!;
+    expect(sql).toContain('("xp_tasks_ext_starred"."parent_id" IS NOT NULL)');
+    expect(sql).toContain(
+      '(CASE WHEN "xp_conversations_ext_origin"."parent_id" IS NOT NULL THEN $',
+    );
+    expect(sql).toMatch(
+      /where .*\("xp_tasks_ext_starred"\."parent_id" IS NOT NULL\) = \$\d+/,
+    );
+    expect(row![LIVE_COLUMNS_KEY]).toEqual({
+      xp_tasks_ext_starred: { starred: true },
+      xp_conversations_ext_origin: { origin: "user" },
+    });
+    // The filter makes the join membership; the routes stay the side tables'.
+    expect(
+      roles(
+        window.routes!,
+        c.window.window.encode({
+          where: { [STARRED]: true } as never,
+          columns,
+        }),
+      ),
+    ).toMatchObject({
+      xp_tasks_ext_starred: "membership",
+      xp_conversations_ext_origin: "value",
+    });
+    const groups = c.groups.groups.encode({
+      groupBy: ORIGIN as never,
+      columns,
+    });
+    expect(await specs.groups.loader(groups)).toEqual([
+      { value: "agent", count: 2 },
+    ]);
+    expect(recording.calls.at(-1)!.sql).toContain(
+      'select (CASE WHEN "xp_conversations_ext_origin"."parent_id" IS NOT NULL THEN $1::text ELSE $2::text END), count(*)',
+    );
+  });
+
+  test("`as` names the field in lists, so it collides by that id", () => {
+    const renamed = defineExtension(
+      tasks,
+      "renamed",
+      defineExtensionShape({
+        key: "taskId",
+        fields: { n: intField({ label: "N" }) },
+        exposes: {
+          parent: tasksRef,
+          name: "renamed",
+          fields: { n: { as: "title" } },
+        },
+      }),
+    );
+    expect(() =>
+      compileCollection(
+        listOf(),
+        { from: conversations, joins: ownerJoins },
+        [],
+        [renamed],
+      ),
+    ).toThrow(
+      /exposed field "title" of "xp_tasks_ext_renamed" collides with the collection's row's/,
+    );
   });
 
   test("an exposure of an entity the collection does not reach is not folded", () => {
@@ -310,7 +438,6 @@ describe("exposed columns — the window", () => {
     const specs = compileCollection(
       c,
       { from: conversations, joins: ownerJoins },
-      [],
       [],
       [track, usage],
     );
@@ -336,7 +463,6 @@ describe("exposed columns — the bind's refusals", () => {
         exposes,
       }),
       { from: conversations, joins: ownerJoins },
-      [],
       [],
       [track],
     );
@@ -366,7 +492,7 @@ describe("exposed columns — the bind's refusals", () => {
         exposes: {
           parent: tasksRef,
           name: "clash",
-          fields: { title: { label: "Title", absent: null } },
+          fields: { title: { label: "Title" } },
         },
       }),
     );
@@ -374,7 +500,6 @@ describe("exposed columns — the bind's refusals", () => {
       compileCollection(
         listOf(),
         { from: conversations, joins: ownerJoins },
-        [],
         [],
         [clash],
       ),
@@ -406,7 +531,6 @@ describe("exposed columns — the `all` form", () => {
       c,
       { ...opts, db: recording.db },
       [],
-      [],
       [track],
     );
     expect(folded.definition).not.toBe(bare.definition);
@@ -434,7 +558,6 @@ describe("exposed columns — the `all` form", () => {
     const specs = compileCollection(
       c,
       { from: conversations, joins: ownerJoins, db: recording.db },
-      [],
       [],
       [usage],
     );
@@ -490,14 +613,27 @@ describe("exposed columns — the deferred bind", () => {
       joins: ownerJoins,
       db: recording.db,
     });
+    // Declared at module eval: every minted key, and its Declare.
+    expect(servedList.keys).toEqual([
+      list.key,
+      `${list.key}:rows`,
+      `${list.key}:groups`,
+    ]);
+    expect(servedList.declare).toHaveLength(3);
     expect(servedSet.keys).toEqual([set.key, `${set.key}:rows`]);
-    let early: unknown;
-    try {
-      await servedSet.all.load({});
-    } catch (err) {
-      early = err;
+    // `expect(p).rejects` is typed `void` by bun's matchers: capture instead.
+    for (const load of [
+      () => servedSet.all.load({}),
+      () => servedList.window.load(list.window.window.encode()),
+    ]) {
+      let early: unknown;
+      try {
+        await load();
+      } catch (err) {
+        early = err;
+      }
+      expect((early as Error).message).toMatch(/is deferred and not bound yet/);
     }
-    expect((early as Error).message).toMatch(/is deferred and not bound yet/);
 
     collectContributions([
       { id: "test.track", contributions: [LiveColumns.Expose(track)] },

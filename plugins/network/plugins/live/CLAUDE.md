@@ -273,8 +273,8 @@ useLive(graphNodes, { select: countNodes });                          // a slice
     `childrenJoin`, `closureJoin`); `where` is static, over the base's and the
     row-wise joins' raw columns (`AllWhereColumns`), never an aggregate;
     `throttleMs` is the set's flush throttle (the runtime's `debounceMs`, C18).
-    Refused at module eval: a cast that makes it `contributed`, `columnScope`d
-    or a union (and contributed / scoped sets handed to `compileCollection`),
+    Refused at module eval: a cast that makes it `columnScope`d or a union
+    (and scoped sets handed to `compileCollection`),
     a field that may read NULL on a non-null field, a ref `j` never offered,
     and a wire-encoded value (sql-column `withWire`, an `expr`'s `wire`) — an
     `all` set is L2-persisted and its definition cannot read an encoder's
@@ -341,7 +341,7 @@ useLive(graphNodes, { select: countNodes });                          // a slice
       runtime's 0→1 / N→0 hooks, so nothing is re-read for a tuple nobody
       holds.
     - **Refused** (tsc where a type tells it apart, and a throw): a
-      contributed, `exposes` or union collection (their rows fold Postgres
+      `exposes` or union collection (their rows fold Postgres
       columns), a `columnScope` collection (throw only), a stray answer for
       the form (`window` on a lookup, `count` without `count: true`), and an
       empty `changes` reason. Tests: `core/internal/serve-on.test.ts`.
@@ -844,76 +844,140 @@ step — a collection's `default.limit`, a value's `paged.limit` (or the read's
     range; seeded, `loadMore` loads only the new page and a merge loads
     nothing).
 
-## Contributed columns — `contributed: true` / `liveColumns` / `serveColumns`
+## Fields — `from` / `pick` / `related` / `fields` / `carry`
 
-A collection declared `contributed: true` can be sorted and filtered by columns
-OTHER plugins own (Sonata's library by a song's play count). The set is open, so
-the collection names none of them.
+The spelling every new collection uses (phase 2 of fields-declared-once,
+`research/2026-10-13-global-fields-declared-once-phase2.md` §2): a collection
+names the entity its rows are and the fields a list shows, and everything else
+is DERIVED from the field declarations — the row schema, the filter domains,
+each field's label, type, options and title flag. `row` / `filterable` /
+`exposes` are the old spelling's (still accepted; deleted in phase 2b).
 
 ```ts
-// the contributor's core — a handle, nothing registered
-export const playbackColumns = liveColumns(songLibrary, "playback", {
-  row: z.object({ playCount: z.number(), lastPlayedAt: z.coerce.date().nullable() }),
-  filterable: { playCount: liveNumber() },
-  sortable: ["playCount", "lastPlayedAt"],
+// core/ — the entity's fields carry their labels and options once
+export const conversationFields = {
+  id: textField(),
+  title: nullable(textField({ label: "Title", primary: true })),
+  status: enumTextField(STATUSES, { label: "Status", options: { working: { label: "Working" }, … } }),
+  …
+};
+export const conversationsEntityRef = entityRef("conversations", conversationFields);
+
+// core/ — a list's collection
+export const conversationHistory = liveCollection("conversations.history", {
+  from: conversationsEntityRef,                 // the entity the rows are: `pick` reads it, its exposures fold
+  pick: ["title", "status", "model", "createdAt"],  // the entity's fields a list shows, in list order
+  fields: { taskTitle: textField({ label: "Task" }) },  // fields it computes (bound by `serveCollection`'s `columns`)
+  carry: { pick: ["id"], fields: { taskId: textField() } },  // on the row, in no list, never filterable
+  related: { task: tasksEntityRef },            // a lookup join's alias → the entity it reads
+  id: "id",
+  sortable: ["title", "createdAt"],             // index-backed, so explicit — any row field
+  default: { orderBy: [["createdAt", "desc"]], limit: 100 },
+  maxLimit: 500,
 });
-// the contributor's server — a contribution, not a registry
-contributions: [LiveColumns.Serve(serveColumns(playbackColumns, { join: songPlayback.join("playback") }))]
-// web
-{ id: "plays", value: (s) => playbackColumns.read(s).playCount, column: playbackColumns.column("playCount") }
+conversationHistory.fields.status;   // { id, key, label, typeId, options, primary, domain, sortable }
 ```
 
-- **Rows.** The row type is `Row & { $columns }`: the row schema declares
-  `$columns` (a zod `extend`, so its keys stay readable); each contributed column
-  is projected flat under its wire name (`<contributor>.<field>`), wire-encoded
-  like any column (`withWire`), and folded into `$columns[contributor][field]`;
-  `:rows` points carry it too (one row shape per collection). `handle.read(row)`
-  parses a contributor's slice with its own schema, once per row object. A row
-  always carries every contributor's slice.
-- **Queries.** A query names a contributed column by wire name and hands the codec
-  the handles it names (`LiveQuery.columns`); the server decodes against every
-  handle it serves — its params gate too (the window spec's
-  `window.validateParams`, replacing the descriptor's, whose decode knows no
-  contributed or scoped column). There is no registry. A collection's own column cannot contain
-  `.`. Groupings stay over the collection's own columns.
-- **Serving.** `serveColumns(handle, { join, columns? })` — `join` is an
-  EXTENSION join (`ext.join(alias)`: LEFT, 1:1 on the host's id — typed, and
-  thrown on at compile for a cast), so a contributor can neither drop host rows
-  (a required lookup's INNER join) nor change routing roles; a field binds to its
-  join's wire column of the same name, or through `columns` (typed like
-  `serveCollection`'s overrides). A `contributed` collection's `serveCollection`
-  registers its three resources DEFERRED (`defineDeferredResource`: key, preload
-  and `Resource.Declare` at module eval) and compiles them at
-  `bindDeferredResources` — the boot step right after contributions are
-  collected — folding every `LiveColumns.Serve` naming it. Boot fails on two
-  contributions of one name and on a `Serve` for a collection nothing serves here;
-  `liveColumns` itself refuses a collection not declared `contributed`.
-- **The `live:contributed-columns-served` check**: every `const x =
-  liveColumns(` handle has a `serveColumns(x` in its own plugin's `server/` —
-  an unserved handle's columns reach no row. It reads whole files with comments
-  and strings masked (a call wrapped over lines still reads), resolves a serve
-  through the file's import aliases, ignores test code on both sides, and
-  reports a `liveColumns(` call no `const` binds.
-- **Defaults.** An extension column with a literal default reads it where the side
-  row is missing (query-resource's `ReadColumn`: `COALESCE`), so a never-played
-  song has `playCount = 0` in SQL — in a filter, a sort and the projection.
+- **Derived.** The row schema is `fieldsToZodObject` of every row field (pick,
+  own, carried — each field's wire schema with its default backfill), plus
+  `$columns` when the rows reach an entity. Every LISTED field (picked and own)
+  whose value has a filter domain is filterable in it — one derivation for every
+  owner (`core/internal/field-domain.ts`): at the type level from the field's
+  value type, at runtime from the schema that produces it (string / enum →
+  text, number → number, boolean → boolean, `Date` → instant, string array →
+  stringArray; a JSON value has none). `meta.filterable: false`
+  (`textField({ filterable: false })`) opts a field out; a carried field is
+  never filterable. `collection.fields` lists the listed fields' descriptors
+  (`LiveField`) by id, in declaration order — what data-view derives a list's
+  schema from, and what an MCP reads labels from; `collection.from` the entity.
+- **tsc.** A picked or own field must carry a label (`RequireLabel`: the
+  factories mark one — `FieldMarks` in `fields/core`), a picked key must be a
+  field of `from`, the id must be a row field. The same checks throw for an
+  untyped caller, beside a stray old-spelling key, a field named twice, `pick`
+  without `from`, an own field named like an entity field.
+- **Exposures.** `from` folds the entity's exposures (`exposes.base`) unless
+  `baseExposures: false` (a boot-preloaded set whose base exposure is
+  write-hot: the Queue's `conversations-active` leaves usage off); `related`
+  is the old `exposes`' other keys. A lookup-only collection reaches none.
+- **Forms.** `default` → a window (`sortable`, `maxLimit`,
+  `columnScope`, `count`, `preload`); `all` → the whole ordered set (its
+  order any row field); neither → lookup-only. The server half is unchanged:
+  `serveCollection` binds every row field by name, an own field through
+  `columns`, and folds the exposures as below.
+- **Overloads.** The fields spelling is two overloads (no-window first, window
+  LAST): a misdeclared spec — old spelling included — is reported against the
+  window one (`row` / `filterable` there are `never`). The window one is last
+  because the resource vocabulary infers a collection factory from the last
+  overload's return type (a top-level conditional return would hide it).
+- **Union arms — `liveArm(union, arm, { label, fields, carry?, sortable? })`.**
+  An arm's own fields, declared the same way (each labelled, domains derived,
+  `sortable` explicit; `carry` puts fields on the slice that no list shows —
+  a jsonb blob a detail pane decodes — never listed, filtered or sorted): an
+  arm column set (served by the union's binding, `runs`' `defineRunKind({
+  columns })`) plus `label` (the band its fields are listed under) and
+  `listed` (its descriptors, ids `<arm>.<field>`). See *Union collections*.
+- **Presentation — `FieldPresentation.Register({ owner, reads?, fields })`**
+  (web). What only the browser can say of a field — `cell(value, row)`,
+  `width`, `align`, `visible: false`, `groupable: true` (a text dimension
+  grouped by), `useOptions` (a `Hook` returning a
+  `ResourceResult` of options — a live catalog; the field is `pending` until
+  it lands — or, for a set that is always known such as a contribution
+  registry or a display-name lookup, the plain option array) — registered once per OWNER: an
+  entity (`EntityRef` — its fields in every list whose rows are it; `reads`
+  names the other entity fields its cells read, and a list carrying fewer
+  throws at mount), an exposure (`EntityExposure`), an arm (`LiveArm`) or a
+  collection declared by fields (its listed fields, in every list of it — a
+  union's base fields, an own field; a picked one's entity may present it
+  too, never the same property). Several plugins may present one owner (two
+  setting the same property of one field throws). `useFieldPresentations()`
+  reads them; data-view folds them.
+- **Options label every value, by its canonical spelling** (`fields/core`'s
+  `optionKey` / `OptionKey<V>`): a string is itself, a boolean or number its
+  `String` (`"true"`), and `"null"` is the no-value — an exposure's `options`
+  are typed against its wire (`{ true, false, null }` for health's nullable
+  `ok`, tsc), a live option read appends `{ value: "null", label: "By hand" }`.
+  Data-view keeps the raw values: an enum over a boolean / number column
+  carries `valueDomain`, the enum filter lowers a picked option back to the
+  value it spells (`"null"` → `isEmpty`), and the "None" section takes the
+  `"null"` option's label.
+- **The `live:exposures-registered` / `live:arms-registered` checks**: every
+  exposing shape and every `const x = liveArm(…)` is bound by its own plugin's
+  `server/` and registered (`FieldPresentation.Register`) by its own `web/`.
+
+## Other plugins' columns are exposures
+
+There is no "contributed column" seam: a collection never names another
+plugin's columns, and another plugin never declares columns on a collection.
+A plugin with per-row data of an entity stores it in an entity EXTENSION and
+EXPOSES its fields (below) — every collection whose rows reach the entity
+sorts, filters and groups by them (Sonata's library by a song's play count:
+`playback-history` exposes `playCount` on `sonata_songs`). The old
+`contributed: true` / `liveColumns` / `serveColumns` / `LiveColumns.Serve`
+are deleted (fields-declared-once phase 2): tsc rejects the names, and an
+untyped `contributed` throws.
+
+- **Defaults.** An exposed field with a declared default reads it where the
+  side row is missing (query-resource's `ReadColumn`: `COALESCE`), so a
+  never-played song has `playCount = 0` in SQL — in a filter, a sort and the
+  projection (`serve-collection-exposed-sort.test.ts`).
 - **Custom columns** (data-view's user-defined columns) are the open-vocabulary
-  twin of this seam: a *scoped* column set, below.
+  twin: a *scoped* column set, below.
 
 ## Exposed fields — `exposes` / `LiveColumns.Expose` / `exposedColumns`
 
 An entity extension declares, once, the fields it EXPOSES
-(`defineExtensionShape({ exposes: { parent, name, fields } })` —
-entity-extensions; each field's `label`, its `absent` value for a parent with
-no side row, its `options`). A collection declares the ENTITIES its rows reach
-— `liveCollection(key, { …, exposes: { base: conversationsEntityRef, task:
-tasksEntityRef } })`, `base` its own entity, any other key the alias of a
-LOOKUP join its server half declares — and every exposure of those entities
-folds in. Neither names the other (phase 1 of fields-declared-once,
+(`defineExtensionShape({ exposes: { parent, name, fields, presence? } })` —
+entity-extensions; each field's `label`, `as` and `options`, a missing side
+row reading the field's declared default, else NULL; `presence` a field read
+off the side row's existence). A collection declares the ENTITIES its rows reach
+— `from: conversationsEntityRef` (its own entity, the `base` relation) and
+`related: { task: tasksEntityRef }` (each key the alias of a LOOKUP join its
+server half declares) — and every exposure of those entities folds in
+(`collection.exposes` lists them: `base`, then the aliases). Neither names the other (phase 1 of fields-declared-once,
 `research/2026-10-12-global-fields-declared-once-phase1.md`).
 
 - **Serve.** The extension's plugin contributes `LiveColumns.Expose(ext)`
-  (its handle; one exposing nothing is a tsc error). An `exposes` collection —
+  (its handle; one exposing nothing is a tsc error). A collection reaching an entity —
   window or `all` — is DEFERRED and folds every reached exposure at
   `bindDeferredResources` (`./server/internal/exposure-folds.ts`): `base` →
   `ext.join(slice)` (alias route), a lookup `R` → `ext.join(slice, { on: R.on
@@ -923,31 +987,37 @@ folds in. Neither names the other (phase 1 of fields-declared-once,
   row field or another set). An exposure no collection reaches is not an
   error.
 - **Rows.** `$columns[<slice>][<field>]`, wire names `<slice>.<field>`
-  (`tasks_ext_track.track`); a missing side row reads `absent` (COALESCE). An
+  (`tasks_ext_track.track`); a missing side row reads the field's declared
+  default (COALESCE), else NULL. A presence field binds to query-resource's
+  `presenceExpr` over the join's key (`exposedBinding`,
+  `server/internal/exposure-folds.ts`), in the window and the `all` form
+  alike. A field's list id is its `as` (else its key): the collision check
+  and data-view's `FieldDef.id` read it. An
   `all` set folds through `wire: { encodeRow, ids: { $columns:
   "exposed:<sorted wire names>" } }`, so its L2 definition moves with the fold.
 - **Columns.** `exposedColumns(exposure)` (core, memoized per exposure) is the
   column set, owner `{ kind: "exposed", entity }`: every field filterable in
-  the domain its TYPE reads in (text / enum → text, int / float / number →
-  number, date → instant, bool → boolean, tags → stringArray; any other type
-  throws), every one but a string array sortable; `.column(f)` a ref,
-  `.read(row)` the parsed slice. A codec takes it only on a collection whose
-  `exposes` reaches its entity.
+  the domain its VALUE reads in (`./core/internal/field-domain`, *Fields* —
+  read off its wire schema), every one with a domain but a string array
+  sortable; a field with none (a JSON value) is carried and shown, never
+  filtered or sorted. `.column(f)` a ref, `.read(row)` the parsed slice. A
+  codec takes it only on a collection whose `exposes` reaches its entity.
 - **Groups and counts** read an exposed groupable column on the server:
   `c.groups.groups.encode({ groupBy: "<slice>.<field>", columns })`, `{ count:
   true, where, columns }`; the server decodes against the exposures it serves
   (its `validateParams` replaces the descriptor's, as the window's does).
 - **Web.** `c.exposes` lists the reached entities. The extension's web barrel
-  contributes `LiveExposures.Register({ exposure: shape.exposure, present? })`
-  (`present[f]`: `cell(value)`, `width`, `align`), read by `useExposures()`;
-  data-view's `useExposedFields` turns every registered exposure a list's
-  collection reaches into its fields (id the bare field key), bound to their
-  exposed columns under a live source — groupable ones group as server
-  sections — or read off `$columns` over in-memory rows (`collection` prop).
+  registers the exposure — `FieldPresentation.Register({ owner:
+  shape.exposure, fields? })` (*Fields* above) — and data-view derives every
+  registered exposure a list's collection reaches into its fields (id the
+  field's id), bound to their exposed columns under a live source — groupable
+  ones group as server sections — or read off `$columns` over in-memory rows
+  (`collection` prop).
 - **The `live:exposures-registered` check**: every exposing
   `defineExtensionShape` is folded by its own plugin's server
   (`LiveColumns.Expose(h)` of a `defineExtension` handle over it) and
-  registered by its own plugin's web (`LiveExposures.Register(…)` naming it).
+  registered by its own plugin's web (`FieldPresentation.Register(…)` naming
+  it).
 
 ## Scoped column sets — `columnScope` / `LiveColumns.Scoped` / `scopedLiveColumns`
 
@@ -962,7 +1032,7 @@ DataView surface (research/2026-09-29-global-scoped-change-routing.md P3).
   domain and, for a typed value, its cast and the SQL type it produces), and
   `recomputeOn(scope)` the external value tuple notified when they change.
   Collected at boot; every `columnScope` collection's `serveCollection` (deferred,
-  like a `contributed` one) folds every contribution as a query-resource join
+  like an exposing one) folds every contribution as a query-resource join
   FAMILY bound to its scope (`query-resource/CLAUDE.md`, *Join families*). The
   fold is the set's `bind(scope)`, which records the scope: `scopes()` is exactly
   the scopes served, which the owner watches to notify `recomputeOn(scope)`.
@@ -993,7 +1063,7 @@ DataView surface (research/2026-09-29-global-scoped-change-routing.md P3).
   asserted at mount), and hands the scope to its field extensions
   (`FieldExtensionProps.liveColumnScope`).
 
-## Union collections — `arms` / `liveArmColumns`
+## Union collections — `arms` / `liveArm`
 
 A collection declared with `arms: { discriminator }` lists rows of several
 KINDS — each served from its own table — in one window (the runs of every run
@@ -1002,30 +1072,37 @@ filterable, sortable, default, maxLimit })`. Its id is the union row key
 `kind:raw` (query-resource's `armKeyCodec`).
 
 - **The overload (T12).** A union is a window like any other (read as
-  key-range pages, listed as a live DataView); `contributed` and
-  `columnScope` are `never` — a union's
-  column vocabulary is its arms' static handles. The discriminator is a row
+  key-range pages, listed as a live DataView); `exposes` and `columnScope` are
+  `never` — a union's
+  column vocabulary is its arms' static declarations. Declared by fields, its
+  base fields are its own (`fields` / `carry.fields` — no `from` / `pick` /
+  `related`: a union's rows are no entity's), presented once by
+  `FieldPresentation.Register({ owner: union })`, so a list of it derives
+  every field (`runs`); the old `row` / `filterable` spelling still takes
+  `arms` until 2b. The discriminator is a row
   field (tsc) other than the id. An untyped caller's stray field throws. The
   collection is `LiveArmsCollection` (`arms` set); every single-table
   collection is `arms: null`, which is what `serveCollection` takes (a union
   is a tsc error there, and throws against a cast).
-- **Rows** carry `$columns` like a contributed collection's: each arm's OWN
-  columns under `$columns[<arm>]`.
-- **`liveArmColumns(collection, arm, { row, filterable, sortable })`** declares
-  one arm's own columns in the arm's core: wire names `<arm>.<field>`;
-  `read(row)` is `null` for another arm's row, parses its own slice once per
-  row object, and THROWS on its own arm's row with no slice (A16 — a server
-  that did not fold the arm is a bug, never "no values").
+- **Rows** carry `$columns` like an exposing collection's: each arm's OWN
+  fields under `$columns[<arm>]`.
+- **`liveArm(collection, arm, { label, fields, carry?, sortable? })`**
+  (*Fields*) declares one arm's own fields in the arm's core: wire names and
+  field ids `<arm>.<field>`, the slice's row schema and filter domains derived
+  from the labelled fields; `read(row)` is `null` for another arm's row,
+  parses its own slice once per row object, and THROWS on its own arm's row
+  with no slice (A16 — a server that did not fold the arm is a bug, never "no
+  values"). A collection without `arms` is a tsc error, and throws.
 - **Owners (T11).** Every column set's declaration carries an `owner` —
-  `contributed` (`liveColumns`), `scoped` (`scopedLiveColumns`) or `arm`
-  (`liveArmColumns`) — and a column ref's owner adds `own`. The codec, data-view's
-  field resolution and the server switch on it exhaustively, so a codec takes
-  an arm set only on its own union, a contributed set only on its
-  `contributed` collection, a scoped set only in its scope.
+  `scoped` (`scopedLiveColumns`), `arm` (`liveArm`) or `exposed`
+  (`exposedColumns`) — and a column ref's owner adds `own`. The codec,
+  data-view's field resolution and the server switch on it exhaustively, so a
+  codec takes an arm set only on its own union, an exposed set only on a
+  collection reaching its entity, a scoped set only in its scope.
 - **Serve — `serveUnionCollection(c, { arms: () => UnionArmBinding[] })`**
   (P6 of `research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md`). Each
-  binding is one arm: its column set (`columns`, a `liveArmColumns` handle —
-  its arm IS the kind), its table and single-column primary key (`from`, `id`),
+  binding is one arm: its column set (`columns`, a `liveArm` — its arm IS the
+  kind), its table and single-column primary key (`from`, `id`),
   its `joins`, `base(j)` (every base field but the id and the discriminator →
   a column ref, an `ExprField`, or `null` for "no such notion"), `extra(j)`
   (exactly its column set's fields) and an always-on `where(j)`. A domain

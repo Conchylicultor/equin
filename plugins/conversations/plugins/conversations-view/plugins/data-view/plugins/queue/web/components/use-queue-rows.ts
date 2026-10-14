@@ -1,8 +1,7 @@
 import { useLive } from "@plugins/network/plugins/live/web";
-import type { WithContributedColumns } from "@plugins/network/plugins/live/core";
+import type { LiveRowsCollection } from "@plugins/network/plugins/live/core";
 import { useMemo, useState } from "react";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
-import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   conversationsActive,
   conversationsGone,
@@ -43,15 +42,16 @@ export type QueueSection =
   | "done";
 
 /**
- * A conversation as both queue reads deliver it: its exposed fields (the
- * task's track) ride under `$columns` (`conversationsActive` /
- * `conversationsGone` declare `exposes`), which the Queue's DataView reads
- * through its `collection`.
+ * A conversation as both queue reads deliver it: its fields (derived from the
+ * conversations entity), and its exposed fields (the task's track) under
+ * `$columns` (`conversationsActive` / `conversationsGone` reach the task),
+ * which the Queue's DataView reads through its `collection`.
  */
-type QueueConversation = WithContributedColumns<Conversation>;
+type QueueConversation =
+  typeof conversationsActive extends LiveRowsCollection<infer R> ? R : never;
 
 /**
- * One flat DataView row per conversation. Extends {@link Conversation} with the
+ * One flat DataView row per conversation. Extends the conversation with the
  * section classification + the group-level queue flags (set identically on every
  * member of a task-group, so whichever member the aggregate picks as the
  * representative carries the right flags). `rank` is non-null ONLY in the

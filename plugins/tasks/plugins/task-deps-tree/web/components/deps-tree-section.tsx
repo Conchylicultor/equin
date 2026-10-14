@@ -9,10 +9,7 @@ import {
   MergedDataView,
   defineDataView,
 } from "@plugins/primitives/plugins/data-view/web";
-import {
-  taskRows,
-  type TaskListItem,
-} from "@plugins/tasks/plugins/tasks-core/core";
+import { taskRows, type TaskRow } from "@plugins/tasks/plugins/tasks-core/core";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { taskClusterIds } from "@plugins/tasks/plugins/task-deps-tree/core";
 import { DepsSources } from "../internal/deps-sources";
@@ -59,7 +56,7 @@ function DepsTreeSectionLoaded({
   allTasks,
 }: {
   taskId: string;
-  allTasks: readonly TaskListItem[];
+  allTasks: readonly TaskRow[];
 }) {
   // Selecting a task in the tree re-roots this pane in place, so the URL stays
   // truthful and the new root is shareable.

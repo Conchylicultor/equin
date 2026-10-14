@@ -56,6 +56,7 @@ disappearing.
     - `BUILD_EXIT_HARD_KILLED`
     - `BUILD_EXIT_SIGNAL_BASE`
     - `BUILD_EXIT_SUPERSEDED`
+    - `BUILD_STATUS_OPTIONS_META`
     - `buildStatusOf`
     - `killedSignalName`
 

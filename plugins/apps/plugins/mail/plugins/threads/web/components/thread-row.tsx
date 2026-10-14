@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import type { MailThread } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import type { MailThreadRow } from "../../core";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -23,7 +23,7 @@ const labelImportantIcon = symbol("label-important");
  * list's `viewOptions.list`. `data-thread-id` names the thread the row shows,
  * which the e2e scripts read to tell which threads a tab rendered.
  */
-export function ThreadRow({ thread }: { thread: MailThread }): ReactElement {
+export function ThreadRow({ thread }: { thread: MailThreadRow }): ReactElement {
   const bold = thread.unread ? "font-semibold" : undefined;
   const sortDate = thread.lastMessageAt ?? thread.createdAt;
 

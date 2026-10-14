@@ -6,13 +6,18 @@ import type { ServerHealthRow } from "../../shared";
 export type ServerStatus = "unknown" | "online" | "offline";
 
 /**
- * The one derivation of a server's status, from the one fact that decides it:
- * no probe row → never checked (`unknown`), a successful probe → `online`,
- * anything else → `offline`.
+ * The one derivation of a server's status, from the one fact that decides it —
+ * the last probe's `ok`: no probe row (`null`) → never checked (`unknown`), a
+ * successful probe → `online`, anything else → `offline`.
  */
+export function statusOfOk(ok: boolean | null): ServerStatus {
+  if (ok === null) return "unknown";
+  return ok ? "online" : "offline";
+}
+
+/** {@link statusOfOk} of a probe row (`undefined`: never probed). */
 export function serverStatus(row: ServerHealthRow | undefined): ServerStatus {
-  if (!row) return "unknown";
-  return row.ok ? "online" : "offline";
+  return statusOfOk(row ? row.ok : null);
 }
 
 const styles: Record<ServerStatus, { bg: string; label: string }> = {
@@ -26,7 +31,9 @@ export function ServerStatusBadge({ status }: { status: ServerStatus }) {
   return (
     <Stack as="span" direction="row" align="center" gap="xs">
       <StatusDot colorClass={bg} className="inline-block" />
-      <Text as="span" variant="caption">{label}</Text>
+      <Text as="span" variant="caption">
+        {label}
+      </Text>
     </Stack>
   );
 }

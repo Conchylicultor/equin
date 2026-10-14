@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -8,49 +7,39 @@ import {
   defineDataView,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
-import { servers, type Server } from "../../shared";
+import { servers, type ServerListRow } from "../../shared";
 import { serverDetailPane, NEW_SERVER_ID } from "../panes";
 import { ServerItemActions } from "./server-item-actions";
-import { Servers } from "../slots";
 
 const SERVERS_VIEW = defineDataView("deploy.servers");
+
+// The registry's address, from two carried columns — the one field the list
+// computes itself. Every other field is derived from the `servers` collection:
+// the name (the entity's), and `status` — the reachability verdict `health`
+// exposes on the entity, which this list never names.
+const SERVER_EXTRA_FIELDS: FieldDef<ServerListRow>[] = [
+  {
+    id: "address",
+    label: "Address",
+    type: "text",
+    value: (s) => `${s.host}:${s.port}`,
+  },
+];
 
 export function ServersList() {
   const result = useLive(servers);
   const openPane = useOpenPane();
   const selectedId = serverDetailPane.useRouteEntry()?.params.serverId;
 
-  // Registry facts only. `status` is contributed through `Servers.Fields` by
-  // whichever plugin owns reachability (deploy/health), so this list never
-  // names it — adding or removing that plugin changes nothing here.
-  const fields: FieldDef<Server>[] = useMemo(
-    () => [
-      {
-        id: "name",
-        label: "Name",
-        type: "text",
-        primary: true,
-        value: (s) => s.name,
-      },
-      {
-        id: "address",
-        label: "Address",
-        type: "text",
-        value: (s) => `${s.host}:${s.port}`,
-      },
-    ],
-    [],
-  );
-
   // One render path for every state: DataView renders its skeleton while
   // loading and the failure (with Retry) when the read failed (`readiness`), and
   // the chrome (search / + Add) stays stable — the "No servers registered" empty
   // state requires confirmed-empty.
-  const renderList = (rows: Server[]) => (
-    <DataView<Server>
+  const renderList = (rows: ServerListRow[]) => (
+    <DataView<ServerListRow>
       rows={rows}
-      fields={fields}
-      fieldExtensions={Servers.Fields}
+      collection={servers}
+      extraFields={SERVER_EXTRA_FIELDS}
       rowKey={(s) => s.id}
       views={["list"]}
       defaultView="list"

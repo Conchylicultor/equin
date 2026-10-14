@@ -1,4 +1,4 @@
-export { backupRunColumns } from "./internal/fields";
+export { backupRunArm } from "./internal/fields";
 export {
   BackupSourceReportSchema,
   BackupTargetResultSchema,

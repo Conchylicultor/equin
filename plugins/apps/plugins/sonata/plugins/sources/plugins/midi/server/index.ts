@@ -2,7 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { LiveColumns } from "@plugins/network/plugins/live/server";
 import { createMidiSong, getSongMidi } from "../shared/endpoints";
 import { handleCreateMidiSong, handleGetSongMidi } from "./internal/routes";
-import { midiColumnsServed } from "./internal/columns";
+import { songMidi } from "./internal/tables";
 import { seedMidiStarters, reconcileSeededStarters } from "./internal/seed";
 import { backfillContentHashes } from "./internal/import";
 
@@ -17,12 +17,12 @@ export type { ImportMidiSongInput } from "./internal/import";
 
 export default {
   description:
-    "Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves the song library's `midi` columns (track count, file-missing), and seeds the bundled public-domain MIDI starters at boot.",
+    "Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, exposes its track count and file-missing flag to every list of songs (LiveColumns.Expose), and seeds the bundled public-domain MIDI starters at boot.",
   httpRoutes: {
     [createMidiSong.route]: handleCreateMidiSong,
     [getSongMidi.route]: handleGetSongMidi,
   },
-  contributions: [LiveColumns.Serve(midiColumnsServed)],
+  contributions: [LiveColumns.Expose(songMidi)],
   onReady: async () => {
     await seedMidiStarters();
     // Drop managed seed songs no longer in STARTERS (renamed/removed starters).

@@ -1,16 +1,11 @@
 import { z } from "zod";
-import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import {
-  liveInstant,
-  liveNumber,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
-import {
-  EventSourceRunSchema,
-  EventSourceSchema,
-  RunEventSchema,
-} from "./schema";
-import { RUN_OUTCOMES } from "./vocab";
+  liveCollection,
+  liveValue,
+  type LiveRowsCollection,
+} from "@plugins/network/plugins/live/core";
+import { eventSourceRunsEntityRef } from "./entity-refs";
+import { EventSourceSchema, RunEventSchema } from "./schema";
 
 /**
  * The configured sources, as the WHOLE ordered set (`all`, newest first) plus
@@ -61,22 +56,28 @@ const SOURCE_RUNS_VIEW_ID = "events.source-runs";
  * Read as key-range pages: retention keeps 30 days, and a source on a short
  * cadence writes more than one window of that. `flags` (the caveats list) is on the
  * wire but display-only — no saved view sorts or filters by it.
+ *
+ * Declared by FIELDS: the rows ARE `event_source_runs` rows (`from`), the
+ * fields a list shows `pick`ed in list order — their labels, options and
+ * filter domains the entity's. `sourceId` is listed because the source pane
+ * SCOPES the window by it (a scope column must filter); the rest of the row is
+ * carried.
  */
 export const eventSourceRuns = liveCollection("events.source-runs", {
-  row: EventSourceRunSchema,
+  from: eventSourceRunsEntityRef,
+  pick: [
+    "startedAt",
+    "outcome",
+    "eventsFound",
+    "eventsCreated",
+    "eventsUpdated",
+    "eventsDisappeared",
+    "durationMs",
+    "error",
+    "sourceId",
+  ],
+  carry: { pick: ["id", "finishedAt", "fingerprint", "flags"] },
   id: "id",
-  filterable: {
-    sourceId: liveText(),
-    outcome: liveText(z.enum(RUN_OUTCOMES)),
-    error: liveText(),
-    startedAt: liveInstant(),
-    finishedAt: liveInstant(),
-    eventsFound: liveNumber(),
-    eventsCreated: liveNumber(),
-    eventsUpdated: liveNumber(),
-    eventsDisappeared: liveNumber(),
-    durationMs: liveNumber(),
-  },
   sortable: [
     "startedAt",
     "finishedAt",
@@ -91,6 +92,10 @@ export const eventSourceRuns = liveCollection("events.source-runs", {
   maxLimit: 500,
   columnScope: SOURCE_RUNS_VIEW_ID,
 });
+
+/** A run as the ledger's window delivers it: the run row plus every exposed field under `$columns`. */
+export type EventSourceRunRow =
+  typeof eventSourceRuns extends LiveRowsCollection<infer R> ? R : never;
 
 /**
  * How many of a run's events `runEvents` holds. One run is one extraction —

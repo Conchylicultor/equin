@@ -20,24 +20,20 @@ import { conversationsEntityRef } from "@plugins/tasks/plugins/tasks-core/core";
  *
  * Cost, tokens and agents are EXPOSED to every list whose rows are
  * conversations (`exposes`, `base`): each sorts and filters them server-side,
- * and a conversation not counted yet reads 0 (the table's defaults agree —
- * `defineExtension` asserts it).
+ * and a conversation not counted yet reads its declared default, 0 (the
+ * table's defaults agree — `defineExtension` asserts it).
  */
 export const conversationUsageShape = defineExtensionShape({
   key: "conversationId",
   fields: {
-    costUsd: floatField(),
-    tokens: floatField(),
-    cacheReadTokens: floatField(),
-    agentCount: intField(),
+    costUsd: floatField({ label: "Cost", default: 0 }),
+    tokens: floatField({ label: "Tokens", default: 0 }),
+    cacheReadTokens: floatField({ default: 0 }),
+    agentCount: intField({ label: "Agents", default: 0 }),
   },
   exposes: {
     parent: conversationsEntityRef,
     name: "usage",
-    fields: {
-      costUsd: { label: "Cost", absent: 0 },
-      tokens: { label: "Tokens", absent: 0 },
-      agentCount: { label: "Agents", absent: 0 },
-    },
+    fields: { costUsd: {}, tokens: {}, agentCount: {} },
   },
 });

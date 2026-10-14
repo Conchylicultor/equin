@@ -74,12 +74,16 @@ through the change feed — the restore mutation invalidates nothing. The plain
     - `POST /api/history/:sourceId/:entityId/versions/:versionId/restore`
 - Core:
   - Uses:
+    - `fields.fieldsToZodObject`
+    - `fields.nullable`
+    - `fields/bool/config.boolField`
+    - `fields/date/config.dateField`
+    - `fields/text/config.textField`
     - `ids.defineIdKind`
     - `ids.IdOf`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveCollection`
     - `network/live.liveValue`
-    - `network/live/filter.liveText`
   - Exports (types):
     - `Version`
     - `VersionId`

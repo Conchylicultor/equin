@@ -108,6 +108,19 @@ breadcrumb, delete-action ancestry, Recent pages), `useLiveRow(pagesTree, id)`
 for one page (header, cover, kind control, pane resolvers and titles, the
 link block, the inline node and the page chips).
 
+**Declared by fields, over the `page_blocks` entity.** `pagesTree` is
+`liveCollection({ from: pagesEntityRef, fields: { editedAt }, carry })`
+(`core/block-entity.ts`): `pagesEntityRef = entityRef("page_blocks",
+blockFields)`, the block WIRE fields (`BlockSchema`'s; `rank` / `docRank` as the
+`Rank` value object, `rankWireField`). The table itself stays the raw
+`pgTable` — its CHECK constraint (`page_blocks_trash_flags_agree`) has no
+spelling in an entity's meta and its `data` column is branded `BlockData` — so
+the ref names it for the browser and the server binds its fields by column
+name. Because the rows reach that entity, every extension EXPOSING fields of a
+block folds into them under `$columns` (starred, agent-origin's `origin`, page
+tags' `tags`), and the pages sidebar derives them with no field code. The
+derived row is pinned equal to `PageRow` (`_PinPagesTreeRow`).
+
 **`blockLocations`** (`page.block-locations`, lookup-only `:rows`) is the
 reverse lookup `pagesTree` cannot answer: any live block's `{ id, type, pageId }`,
 content blocks included, served over `page_blocks` with `deleted_at IS NULL` as
@@ -4634,24 +4647,18 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `POST /api/pages/:pageId/blocks/op`
     - `POST /api/pages/:pageId/blocks/patch`
 - Core:
-  - Uses:
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×3
+    - `primitives/collab-doc` ×3
+    - `primitives/text-editor/token-extension` ×3
+    - `primitives/tree` ×3
+    - `page/block-entity` ×2
+    - `primitives/rank` ×2
+    - `fields/date/config.dateField`
     - `ids.defineIdKind`
     - `infra/endpoints.defineEndpoint`
     - `infra/trash.TrashOutcomeSchema`
-    - `network/live.liveCollection`
-    - `network/live.liveValue`
-    - `primitives/collab-doc.readYDoc`
-    - `primitives/collab-doc.yDocContent`
-    - `primitives/collab-doc.yDocFromLexical`
-    - `primitives/rank.Rank`
-    - `primitives/rank.RankSchema`
-    - `primitives/text-editor/token-extension.InlineTokenExtension`
-    - `primitives/text-editor/token-extension.matchTokens`
-    - `primitives/text-editor/token-extension.tokenExtension`
     - `primitives/text-editor/token-extension/node.defineInlineTokenNode`
-    - `primitives/tree.isDescendant`
-    - `primitives/tree.selectionRoots`
-    - `primitives/tree.subtreeIds`
     - `ui/icons/emoji.EmojiSchema`
   - Exports (types):
     - `Block`
@@ -4695,6 +4702,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `PageKind`
     - `PageRow`
     - `PageSource`
+    - `PagesTreeRow`
     - `RichText`
     - `RowData`
     - `SerializedBlock`

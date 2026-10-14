@@ -7,7 +7,7 @@ import {
   mailAccountFields,
   mailSyncStateFields,
   mailLabelFields,
-  mailThreadFields,
+  mailThreadsEntityRef,
   mailMessageFields,
   mailMessageLabelFields,
   mailAttachmentFields,
@@ -125,7 +125,7 @@ const mailLabels = defineEntity("mail_labels", mailLabelFields, {
   indexes: (t) => [index("mail_labels_account_id_idx").on(t.accountId)],
 });
 
-const mailThreads = defineEntity("mail_threads", mailThreadFields, {
+const mailThreads = defineEntity(mailThreadsEntityRef, {
   primaryKey: "id",
   // Which columns move `updatedAt` (derived by a DB trigger; a write to it
   // raises). Every list-visible column counts — the threads revision tick

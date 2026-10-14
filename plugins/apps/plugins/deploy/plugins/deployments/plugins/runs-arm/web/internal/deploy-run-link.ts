@@ -2,7 +2,7 @@ import type { OpenPaneFn } from "@plugins/primitives/plugins/pane/web";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import type { RunRowProps } from "@plugins/runs/web";
 import { deploymentDetailPane } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
-import { deployRunColumns } from "../../core";
+import { deployRunArm } from "../../core";
 
 /**
  * Where a deploy row goes when it is clicked.
@@ -26,7 +26,7 @@ export function deployRunLink(
 ): LinkTarget {
   // A deploy row always carries its slice (the handle throws otherwise), and
   // both ids are NOT NULL there. Not a deploy row is a caller bug.
-  const own = deployRunColumns.read(run);
+  const own = deployRunArm.read(run);
   if (own === null) {
     throw new Error(`deployRunLink: run ${run.runKey} is not a deploy run.`);
   }

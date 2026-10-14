@@ -60,35 +60,19 @@ describe("liveCollection", () => {
   });
 
   it("rejects undeclared columns, reserved names and domain mismatches at the type level", () => {
-    liveCollection("live-test.bad-filter", {
-      row: RowSchema,
-      id: "id",
-      // @ts-expect-error — "bogus" is not a row field
-      filterable: { bogus: liveText() },
-      sortable: ["name"],
-      default: { orderBy: [["name", "asc"]], limit: 1 },
-      maxLimit: 2,
-    });
-    liveCollection("live-test.bad-domain", {
-      row: RowSchema,
-      id: "id",
-      // @ts-expect-error — `name` is a string field, not a boolean
-      filterable: { name: liveBoolean() },
-      sortable: ["name"],
-      default: { orderBy: [["name", "asc"]], limit: 1 },
-      maxLimit: 2,
-    });
+    // Each refused spec sits on one line: tsc reports it wherever the last
+    // overload tried (the fields spelling's) trips on it.
+    // prettier-ignore
+    // @ts-expect-error — "bogus" is not a row field
+    liveCollection("live-test.bad-filter", { row: RowSchema, id: "id", filterable: { bogus: liveText() }, sortable: ["name"], default: { orderBy: [["name", "asc"]], limit: 1 }, maxLimit: 2 });
+    // prettier-ignore
+    // @ts-expect-error — `name` is a string field, not a boolean
+    liveCollection("live-test.bad-domain", { row: RowSchema, id: "id", filterable: { name: liveBoolean() }, sortable: ["name"], default: { orderBy: [["name", "asc"]], limit: 1 }, maxLimit: 2 });
     const OrRow = z.object({ id: z.string(), or: z.string() });
     expect(() =>
-      liveCollection("live-test.reserved", {
-        row: OrRow,
-        id: "id",
-        // @ts-expect-error — "or" spells a filter tree, so it cannot be a filterable column
-        filterable: { or: liveText() },
-        sortable: [],
-        default: { orderBy: [["id", "asc"]], limit: 1 },
-        maxLimit: 2,
-      }),
+      // prettier-ignore
+      // @ts-expect-error — "or" spells a filter tree, so it cannot be a filterable column
+      liveCollection("live-test.reserved", { row: OrRow, id: "id", filterable: { or: liveText() }, sortable: [], default: { orderBy: [["id", "asc"]], limit: 1 }, maxLimit: 2 }),
     ).toThrow(/cannot be a filterable column/);
     expect(() =>
       // @ts-expect-error — "nope" is not sortable

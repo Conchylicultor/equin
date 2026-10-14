@@ -875,40 +875,41 @@ describe("tree oracle — the scripted workload over the real feed", () => {
 // What the legacy `tasks` descriptor (param-less, keyed on `id`) parsed its
 // payload with (`z.array(TaskListItemSchema)`), restated as a LITERAL frozen at step 19 —
 // never derived from the live `TaskListItemSchema`, which would change with
-// the row and so pass whatever the row becomes. `strict`, so a field added to
-// the row fails the parse; a field removed or renamed fails it as a missing
-// key. Either is the change C39 says must rename the key.
+// the row and so pass whatever the row becomes. Not `strict`: the old bundle's
+// schema was a plain `z.object`, which strips unknown keys, so a field ADDED to
+// the row is compatible with an old tab (and modelling a stricter client than
+// ever shipped would fail on every additive change). A field removed, renamed
+// or retyped fails the parse as a missing or invalid key — the change C39 says
+// must rename the key.
 const LegacyRowsSchema = z.array(
-  z
-    .object({
-      id: z.string(),
-      folderId: z.string().nullable(),
-      groupId: z.string().nullable(),
-      clusterId: z.string().nullable(),
-      title: z.string(),
-      titleAuto: z.boolean(),
-      author: z.string().nullable(),
-      droppedAt: z.coerce.date().nullable(),
-      heldAt: z.coerce.date().nullable(),
-      rank: RankSchema,
-      createdAt: z.coerce.date(),
-      updatedAt: z.coerce.date(),
-      status: z.enum([
-        "new",
-        "in_progress",
-        "need_action",
-        "attempted",
-        "done",
-        "held",
-        "dropped",
-        "blocked",
-        "in_progress_blocked",
-      ]),
-      active: z.boolean(),
-      finishedAt: z.coerce.date().nullable(),
-      dependencies: z.array(z.string()),
-    })
-    .strict(),
+  z.object({
+    id: z.string(),
+    folderId: z.string().nullable(),
+    groupId: z.string().nullable(),
+    clusterId: z.string().nullable(),
+    title: z.string(),
+    titleAuto: z.boolean(),
+    author: z.string().nullable(),
+    droppedAt: z.coerce.date().nullable(),
+    heldAt: z.coerce.date().nullable(),
+    rank: RankSchema,
+    createdAt: z.coerce.date(),
+    updatedAt: z.coerce.date(),
+    status: z.enum([
+      "new",
+      "in_progress",
+      "need_action",
+      "attempted",
+      "done",
+      "held",
+      "dropped",
+      "blocked",
+      "in_progress_blocked",
+    ]),
+    active: z.boolean(),
+    finishedAt: z.coerce.date().nullable(),
+    dependencies: z.array(z.string()),
+  }),
 );
 
 describe("C39 — a tab on the legacy `tasks` descriptor", () => {
@@ -930,41 +931,37 @@ describe("C39 — a tab on the legacy `tasks` descriptor", () => {
 
 // What the legacy `attempts` descriptor (param-less, keyed) parsed its payload
 // with (`z.array(AttemptWithConversationsSchema)`), restated as a LITERAL frozen at step 20 — never derived from the live
-// schema (see `LegacyRowsSchema` above). `strict` at both levels, so a field
-// added to the row or to a listed conversation fails the parse.
+// schema (see `LegacyRowsSchema` above). Not `strict` at either level (see
+// there): only a removed, renamed or retyped key fails the parse.
 const LegacyAttemptsSchema = z.array(
-  z
-    .object({
-      id: z.string(),
-      taskId: z.string(),
-      worktreePath: z.string(),
-      createdAt: z.coerce.date(),
-      updatedAt: z.coerce.date(),
-      status: z.enum([
-        "pending",
-        "in_progress",
-        "pushed",
-        "completed",
-        "dormant",
-        "closed",
-      ]),
-      active: z.boolean(),
-      retained: z.boolean(),
-      finishedAt: z.coerce.date().nullable(),
-      conversations: z.array(
-        z
-          .object({
-            id: z.string(),
-            title: z.string().nullable(),
-            status: z.enum(["starting", "working", "waiting", "gone", "done"]),
-            kind: z.enum(["user", "agent", "system"]),
-            createdAt: z.coerce.date(),
-            spawnedBy: z.string().nullable(),
-          })
-          .strict(),
-      ),
-    })
-    .strict(),
+  z.object({
+    id: z.string(),
+    taskId: z.string(),
+    worktreePath: z.string(),
+    createdAt: z.coerce.date(),
+    updatedAt: z.coerce.date(),
+    status: z.enum([
+      "pending",
+      "in_progress",
+      "pushed",
+      "completed",
+      "dormant",
+      "closed",
+    ]),
+    active: z.boolean(),
+    retained: z.boolean(),
+    finishedAt: z.coerce.date().nullable(),
+    conversations: z.array(
+      z.object({
+        id: z.string(),
+        title: z.string().nullable(),
+        status: z.enum(["starting", "working", "waiting", "gone", "done"]),
+        kind: z.enum(["user", "agent", "system"]),
+        createdAt: z.coerce.date(),
+        spawnedBy: z.string().nullable(),
+      }),
+    ),
+  }),
 );
 
 describe("C39 — a tab on the legacy `attempts` descriptor", () => {
@@ -996,33 +993,32 @@ describe("C39 — a tab on the legacy `attempts` descriptor", () => {
 // payload with (param-less, keyed on `id`: `z.array(ConversationSchema)`, the
 // `conversations_v` row), restated as a
 // LITERAL frozen at step 22 — never derived from the live schema (see
-// `LegacyRowsSchema` above). `strict`, so a field added to the row fails the
-// parse. `model` is the stored version as text.
+// `LegacyRowsSchema` above). Not `strict` (see there): an additive key such as
+// `waitingMenu` or `$columns` is stripped, as the old tab's schema did.
+// `model` is the stored version as text.
 const LegacyConversationsSchema = z.array(
-  z
-    .object({
-      id: z.string(),
-      attemptId: z.string(),
-      title: z.string().nullable(),
-      status: z.enum(["starting", "working", "waiting", "gone", "done"]),
-      runtime: z.string(),
-      model: z.string(),
-      kind: z.enum(["user", "agent", "system"]),
-      claudeSessionId: z.string().nullable(),
-      waitingFor: z.string().nullable(),
-      spawnedBy: z.string().nullable(),
-      createdAt: z.coerce.date(),
-      updatedAt: z.coerce.date(),
-      endedAt: z.coerce.date().nullable(),
-      closeRequested: z.boolean(),
-      hibernatedAt: z.coerce.date().nullable(),
-      lastViewedAt: z.coerce.date().nullable(),
-      worktreePath: z.string(),
-      taskId: z.string(),
-      taskTitle: z.string(),
-      active: z.boolean(),
-    })
-    .strict(),
+  z.object({
+    id: z.string(),
+    attemptId: z.string(),
+    title: z.string().nullable(),
+    status: z.enum(["starting", "working", "waiting", "gone", "done"]),
+    runtime: z.string(),
+    model: z.string(),
+    kind: z.enum(["user", "agent", "system"]),
+    claudeSessionId: z.string().nullable(),
+    waitingFor: z.string().nullable(),
+    spawnedBy: z.string().nullable(),
+    createdAt: z.coerce.date(),
+    updatedAt: z.coerce.date(),
+    endedAt: z.coerce.date().nullable(),
+    closeRequested: z.boolean(),
+    hibernatedAt: z.coerce.date().nullable(),
+    lastViewedAt: z.coerce.date().nullable(),
+    worktreePath: z.string(),
+    taskId: z.string(),
+    taskTitle: z.string(),
+    active: z.boolean(),
+  }),
 );
 
 describe("C39 — tabs on the legacy conversation-list descriptors", () => {

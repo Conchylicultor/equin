@@ -13,6 +13,7 @@ import {
   DataView,
   defineDataView,
   type CreateOption,
+  type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { SectionsToolbar } from "@plugins/primitives/plugins/data-view/core";
 import {
@@ -21,6 +22,7 @@ import {
   moveBlock,
   pageData,
   type PageRow,
+  type PagesTreeRow,
 } from "@plugins/page/plugins/editor/core";
 import { pageLinkSources } from "@plugins/page/plugins/links/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
@@ -64,9 +66,39 @@ const NO_LINK_PARENTS: readonly string[] = [];
  * order; across groups it means nothing, and the sort is stable. Module scope:
  * `useLive`'s `select` must be a stable function.
  */
-function inDocOrder(pages: readonly PageRow[]): PageRow[] {
+function inDocOrder(pages: readonly PagesTreeRow[]): PagesTreeRow[] {
   return [...pages].sort((a, b) => Rank.compare(a.docRank, b.docRank));
 }
+
+/**
+ * Every field but the title is `pagesTree`'s, derived — its own `editedAt`
+ * and every field an extension of a block exposes (`starred`, `origin`,
+ * `tags`), each presented by its owner; the sidebar names none of them.
+ *
+ * The title, the one field the sidebar computes itself: the page payload's
+ * `title`, renamed in place (the tree's inline editor).
+ */
+const TITLE_FIELD: FieldDef<PagesTreeRow> = {
+  id: "title",
+  label: "Title",
+  primary: true,
+  value: (b) => pageData(b).title,
+  onEdit: async (b, next) => {
+    await fetchEndpoint(
+      updateBlock,
+      { id: b.id },
+      {
+        body: {
+          data: {
+            ...pageData(b),
+            title: String(next ?? "").trim() || "Untitled",
+          },
+        },
+      },
+    );
+  },
+};
+const SIDEBAR_EXTRA_FIELDS = [TITLE_FIELD];
 
 export function PagesSidebar() {
   const result = useLive(pagesTree, { select: inDocOrder });
@@ -109,7 +141,7 @@ export function PagesSidebar() {
   // only their bodies show the skeleton — or the failure, with Retry. A
   // `hideWhenEmpty` section (Favorites, Scratch) stays absent until the rows
   // are known, rather than flashing in empty.
-  let rows: PageRow[] = [];
+  let rows: PagesTreeRow[] = [];
   if (result.status === "ready") {
     rows = result.data;
   }
@@ -119,7 +151,7 @@ export function PagesSidebar() {
   // intent — the display hierarchy below runs on `pageId`, a different relation.
   // Keyed on `result` (stable between pushes), not the per-render `rows` array.
   const pagesById = useMemo(() => {
-    const map = new Map<string, PageRow>();
+    const map = new Map<string, PagesTreeRow>();
     if (result.status === "loading" || result.status === "error") return map;
     for (const b of result.data) map.set(b.id, b);
     return map;
@@ -212,50 +244,16 @@ export function PagesSidebar() {
     // the scrolled rows show.
     <Scroll fill>
       <div className="pt-2xs pb-xs">
-        <DataView<PageRow>
+        <DataView<PagesTreeRow>
           rows={rows}
           readiness={result}
-          fields={[
-            {
-              id: "title",
-              label: "Title",
-              primary: true,
-              value: (b) => pageData(b).title,
-              onEdit: async (b, next) => {
-                await fetchEndpoint(
-                  updateBlock,
-                  { id: b.id },
-                  {
-                    body: {
-                      data: {
-                        ...pageData(b),
-                        title: String(next ?? "").trim() || "Untitled",
-                      },
-                    },
-                  },
-                );
-              },
-            },
-            {
-              // When the page was last edited — the row's `editedAt`: the
-              // newest `updatedAt` over the page row AND its content, the same
-              // field the Welcome page's Recent pages and the page header's
-              // "Edited" label read (derived timestamps that ignore icon
-              // changes, fold toggles and doc-rank re-mints). A sort/filter
-              // dimension only: the Recent section orders and windows on it,
-              // and `visibleFields` keeps it off every row.
-              id: "editedAt",
-              label: "Edited",
-              type: "date",
-              value: (b) => b.editedAt,
-            },
-          ]}
+          collection={pagesTree}
+          extraFields={SIDEBAR_EXTRA_FIELDS}
           rowKey={(b) => b.id}
           views={["tree", "list"]}
           storageKey={PAGES_SIDEBAR_VIEW}
           toolbar={SECTIONS}
           searchPlaceholder="Search pages…"
-          fieldExtensions={PageTree.Fields}
           creators={creators}
           selectedRowId={selectedId}
           rowActivation={(b) =>

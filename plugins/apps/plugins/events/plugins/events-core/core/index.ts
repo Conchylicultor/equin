@@ -1,11 +1,13 @@
 export {
   EVENT_CATEGORIES,
+  EVENT_CATEGORY_META,
   type EventCategory,
   REFRESH_CADENCES,
   type RefreshCadence,
   SOURCE_STATUSES,
   type SourceStatus,
   RUN_OUTCOMES,
+  RUN_OUTCOME_META,
   type RunOutcome,
   RUN_EVENT_ACTIONS,
   type RunEventAction,
@@ -66,11 +68,16 @@ export {
   type RefreshAllResult,
 } from "./internal/endpoints";
 export {
+  eventsEntityRef,
+  eventSourceRunsEntityRef,
+} from "./internal/entity-refs";
+export {
   eventSources,
   eventSourceRuns,
   runEvents,
   RUN_EVENTS_LIMIT,
 } from "./internal/resources";
+export type { EventSourceRunRow } from "./internal/resources";
 export { externalUrl } from "./internal/external-url";
 export {
   eventSourceIdKind,

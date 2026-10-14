@@ -82,6 +82,7 @@ with `releaseDetailRoute` and `{ runId }` would make this chip a cross-app link.
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineItemActions`
     - `primitives/data-view.FieldDef`
+    - `primitives/data-view.fieldOverrides`
     - `primitives/data-view.liveDataSource`
     - `primitives/relative-time.RelativeTime`
   - Exports (values): `DeployRunItemActions`

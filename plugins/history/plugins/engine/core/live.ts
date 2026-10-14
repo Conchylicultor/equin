@@ -1,6 +1,9 @@
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
-import { VersionSchema, VersionWithSnapshotSchema } from "./schemas";
+import {
+  VERSION_CARRIED,
+  VERSION_LISTED,
+  VersionWithSnapshotSchema,
+} from "./schemas";
 
 /**
  * Version metadata (no snapshot blobs — the timeline is cheap to list) as a
@@ -16,9 +19,9 @@ import { VersionSchema, VersionWithSnapshotSchema } from "./schemas";
  * dialog's DataView reads it as live key-range pages.
  */
 export const historyVersions = liveCollection("history.versions", {
-  row: VersionSchema,
+  fields: VERSION_LISTED,
+  carry: { fields: VERSION_CARRIED },
   id: "id",
-  filterable: { sourceId: liveText(), entityId: liveText() },
   sortable: ["createdAt"],
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },
   maxLimit: 500,

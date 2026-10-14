@@ -17,7 +17,6 @@ import {
   CONVERSATION_SEARCHABLE,
   type ConversationListLiveRow,
 } from "../core";
-import { useConversationFieldDefs } from "./internal/fields";
 
 /** The surface id — and `allConversations`' column scope (asserted at mount). */
 const ALL_CONVERSATIONS_VIEW = defineDataView("all-conversations");
@@ -44,13 +43,11 @@ export const allConversationsPane = Pane.define({
 
 function AllConversationsView(): ReactElement {
   const openPane = useOpenPane();
-  const fields = useConversationFieldDefs();
 
   return (
     <PaneChrome pane={allConversationsPane}>
       <DataView<ConversationListLiveRow>
         storageKey={ALL_CONVERSATIONS_VIEW}
-        fields={fields}
         views={["table", "list"]}
         source={allConversationsSource}
         rowActivation={(c) =>

@@ -3,7 +3,6 @@ import {
   serveValue,
 } from "@plugins/network/plugins/live/server";
 import {
-  automationOrigins,
   automationsCatalog,
   automationTasks,
   launchDecisions,
@@ -105,14 +104,6 @@ export const automationsCatalogServed = serveValue(automationsCatalog, {
 // projection is exactly the row schema. Filing a task is a window entry;
 // a task's deletion cascades its row away (an exit).
 export const automationTasksServed = serveCollection(automationTasks, {
-  from: tasksOrigin,
-});
-
-// The same rows as the whole set, projected to `{ taskId, automationId }`:
-// filing a task is an entrant (one refill + one `orderOf`), its deletion an
-// exit with no load, and a write to a column the set does not project
-// (`releasedAt`, `sourceKeys`) loads nothing.
-export const automationOriginsServed = serveCollection(automationOrigins, {
   from: tasksOrigin,
 });
 

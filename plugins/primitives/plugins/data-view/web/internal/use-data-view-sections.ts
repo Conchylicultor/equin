@@ -1,3 +1,4 @@
+import { NULL_OPTION_KEY } from "@plugins/fields/core";
 import { useMemo } from "react";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
@@ -30,6 +31,19 @@ export const NULL_GROUP_KEY = " __dataview_none__";
 
 /** The one label of the one "None" section. */
 export const NULL_GROUP_LABEL = "None";
+
+/**
+ * What the "None" section of `field` is called: the option labelling its
+ * no-value (keyed `"null"` — "By hand", "Unknown"), else "None". Still the one
+ * section, ordered last: a label never gives the no-value a place on the
+ * ordinal.
+ */
+export function nullGroupLabel(field: FieldDef<unknown>): string {
+  return (
+    field.options?.find((o) => o.value === NULL_OPTION_KEY)?.label ??
+    NULL_GROUP_LABEL
+  );
+}
 
 /**
  * Default groupable policy: a field with a `value` projection **whose type says
@@ -167,7 +181,7 @@ export function partitionIntoSections<TRow>(
   // read as "None" to the user, and giving them one section is what stops a
   // grouping from minting a rival "None" with an ordinal of its own.
   const nullBucket: Bucket = {
-    label: NULL_GROUP_LABEL,
+    label: nullGroupLabel(field as FieldDef<unknown>),
     order: 0,
     seq: -1,
     rows: [],

@@ -18,7 +18,7 @@ else:
 
 ```
 active view's `filter`  →  lowered in the browser (operator sets → the filter
-language, `labels` renamed to its column `labelIds`)  →  the `mail.threads`
+language)  →  the `mail.threads`
 window tuple's `where`  →  strict decode  →  filterSql  →  SQL
 ```
 
@@ -39,8 +39,8 @@ that test is the guard, keep it green.
 
 ## The live collection (`mail.threads`)
 
-`mailThreads` (`core/internal/collection.ts`) is a `liveCollection` over
-`MailThreadSchema` — H 100, M 500, default order
+`mailThreads` (`core/internal/collection.ts`) is a `liveCollection` over the
+`mail_threads` entity — H 100, M 500, default order
 `lastMessageAt desc` — served by `serveCollection(mailThreads, { from:
 _mailThreads })` (`server/internal/collection.ts`): one table, identity routes
 only. The DataView reads it as live key-range pages through `mailThreadsSource`
@@ -55,16 +55,19 @@ revision tick, no refetch of the loaded pages.
   not-connected state (the Gmail integration's `GmailAccessEmptyState`: the
   blocker copy + its fix, or "first sync has not run"), and an id mounts the
   list with `source={mailThreadsSource.scoped({ where: { accountId } })}`.
-  `accountId` is a filterable column routed like any other, but no field can
-  bind it (`MailThreadColumn` excludes it) and the DataView never offers a
-  scope column to the Filter control, so the user can neither name nor widen it
+  `accountId` is a filterable column routed like any other, but the DataView
+  never offers a scope column to the Filter control, so the user can neither
+  name nor widen it
   — under the single-instance ADR the client choosing its own scope is not a
   security boundary. The server never reads `mail_accounts` for the list (a subquery
   there would be a second table the routes cannot see).
-- **Field ids stay the persisted vocabulary.** `MAIL_THREAD_FIELDS` names each
-  field's column when it differs (`labels` → `labelIds`); the web fields bind it
-  with `mailThreads.column(…)`. `sender`/`snippet` are display-only, not fields —
-  the search box covers `snippet`.
+- **Declared by fields** (`from: mailThreadsEntityRef`, `pick`, `fields`):
+  the list DERIVES its fields — the thread entity's labelled fields, plus
+  `labels`, an own `tagsField` the server binds to the `label_ids` jsonb
+  column (`columns: { labels: (j) => j.base.labelIds }`). Field ids are the
+  persisted vocabulary the authored tabs name. `snippet` (searched) and
+  `accountId` (the scope) are listed but off the body
+  (`web/internal/presentation.tsx`); `sender` is display-only.
 - **Custom columns sort and filter server-side**: `mailThreads.columnScope` is
   this DataView's id (`mail-threads`), so a custom column defined on the list
   binds as `custom.<id>` (P3 of
@@ -77,14 +80,16 @@ revision tick, no refetch of the loaded pages.
   `threadPane`; `selectedRowId` comes off `threadPane`'s own route param, so the
   open thread's row is highlighted. A settled empty window says "No
   conversations" (never while it loads).
-- `MAIL_THREAD_FIELDS` drives the Sort pill (Subject / Date / Messages) and the
-  Filter pill, and is the contract the authored config rows are written against —
-  rename a field id and the matching config rules go with it. **`labels` (type
-  `tags`) is the axis every mailbox tab lives on**: not sortable (a jsonb array
-  has no order); its `options` map label id → friendly name (system ids locally,
-  user labels from `mail-core`'s `mailLabels` live value, read with `useLive`
-  and projected in a `useMemo` — the system ids alone while it is pending),
-  which is what keeps "Label_12" off the screen.
+- The derived fields drive the Sort pill (Subject / Date / Messages) and the
+  Filter pill, and are the contract the authored config rows are written
+  against — rename a field id and the matching config rules go with it.
+  **`labels` (type `tags`) is the axis every mailbox tab lives on**: not
+  sortable (a jsonb array has no order); its options (`useMailLabelOptions`,
+  `FieldPresentation.Register({ owner: mailThreads })`) map label id →
+  friendly name (system ids locally, user labels from `mail-core`'s
+  `mailLabels` — the system ids alone while it is pending, never a pending
+  field: every tab filters by `labels`), which keeps "Label_12" off the
+  screen.
 
 ## Boundaries
 
@@ -114,10 +119,14 @@ It must **never** be imported by the mail `shell` (that would cycle) — the
 - Web:
   - Slots: `mailThreadsPane.Actions`
   - Slot contributors: `mailThreadsPane.Actions` ← `primitives.pane`
-  - Contributes: `Pane.Register` "mail-threads"
+  - Contributes:
+    - `Pane.Register` "mail-threads"
+    - `FieldPresentation.Register` "collection:mail.threads"
   - Uses:
     - `apps/mail/reading-pane.threadPane`
     - `integrations/gmail.GmailAccessEmptyState`
+    - `network/live.FieldPresentation`
+    - `network/live.LiveFieldOption`
     - `network/live.useLive`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -149,19 +158,11 @@ It must **never** be imported by the mail `shell` (that would cycle) — the
     - `mail.threads:rows` (keyed, point)
 - Core:
   - Uses:
-    - `apps/mail/mail-core.MailThreadSchema`
+    - `apps/mail/mail-core.mailThreadsEntityRef`
+    - `fields/tags/config.tagsField`
     - `network/live.liveCollection`
-    - `network/live/filter.liveBoolean`
-    - `network/live/filter.liveInstant`
-    - `network/live/filter.liveNumber`
-    - `network/live/filter.liveStringArray`
-    - `network/live/filter.liveText`
-  - Exports (types):
-    - `MailThreadColumn`
-    - `MailThreadFieldSpec`
-    - `MailThreadFieldType`
-  - Exports (values):
-    - `MAIL_THREAD_FIELDS`
-    - `mailThreads`
+    - `network/live.LiveRowsCollection`
+  - Exports (types): `MailThreadRow`
+  - Exports (values): `mailThreads`
 
 <!-- AUTOGENERATED:END -->

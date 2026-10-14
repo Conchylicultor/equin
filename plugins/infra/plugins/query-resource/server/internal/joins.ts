@@ -25,15 +25,9 @@ import {
 } from "drizzle-orm/pg-core";
 import type { CompiledRollupSource } from "@plugins/database/plugins/derived-tables/core";
 import type { DerivedRead } from "@plugins/framework/plugins/resource-runtime/core";
-import { z } from "zod";
-import { columnSchema } from "@plugins/database/plugins/sql-column/server";
-import {
-  parsed,
-  type SqlDecoderLike,
-} from "@plugins/database/plugins/sql-projection/server";
-import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   BASE_RELATION,
+  expr as exprField,
   familyMember,
   type ColumnRef,
   type ExprField,
@@ -412,42 +406,63 @@ function literalDefault(col: PgColumn): string | number | boolean | undefined {
 
 /**
  * What an extension column reads where the side row is missing, as the
- * COALESCE's second operand and the decoder the read maps with — or
- * `undefined` (read the raw column: NULL for a missing row).
+ * COALESCE's second operand — or `undefined` (read the raw column: NULL for a
+ * missing row).
  *
- * - A declared `absent` (an exposing extension's) wins: `null` reads NULL; a
- *   literal is bound PLAIN (`sql.param(value)`), never through the column's
- *   write encoder — an `absent` is a value the side table never stores (track's
- *   `"main"`), which a decoding column (`parsedText` over the stored
- *   `["sidequest"]`) would refuse. For the same reason such a column decodes
- *   the read through its schema widened by the literal (`parsed`, so a
- *   persisted compile's definition still reads it as data).
+ * - A declared `absent` (an exposing extension's, derived from the field's
+ *   declared default) wins: `null` reads NULL; a literal is bound PLAIN
+ *   (`sql.param(value)`), the value the field itself declares.
  * - Else the column's literal DB default, bound through the column (unchanged).
  */
 function missingRowRead(
   spec: ExtensionJoin,
   key: string,
   col: PgColumn,
-): { param: SQL; decoder: SqlDecoderLike | undefined } | undefined {
+): SQL | undefined {
   if (spec.absent !== undefined && Object.hasOwn(spec.absent, key)) {
     const value = spec.absent[key]!;
-    if (value === null) return undefined;
-    const schema = columnSchema(col) as z.ZodTypeAny | undefined;
-    const widened =
-      schema === undefined || schema.safeParse(value).success
-        ? undefined
-        : parsed(
-            z.union([schema, z.literal(value)]) as ZodParser<
-              NonNullable<unknown>
-            >,
-            `${spec.alias}.${col.name} (absent ${JSON.stringify(value)})`,
-          );
-    return { param: sql`${sql.param(value)}`, decoder: widened };
+    return value === null ? undefined : sql`${sql.param(value)}`;
   }
   const fallback = literalDefault(col);
-  return fallback === undefined
-    ? undefined
-    : { param: sql`${sql.param(fallback, col)}`, decoder: undefined };
+  return fallback === undefined ? undefined : sql`${sql.param(fallback, col)}`;
+}
+
+/**
+ * A field read off an extension's side-row EXISTENCE (`spec.presence[id]`) as
+ * an expression over the join's key ref (`keyRef` — `j.<alias>.<key>`, which
+ * renders as the raw stored key): `<key> IS NOT NULL`, a never-NULL boolean,
+ * or `CASE WHEN <key> IS NOT NULL THEN <present> ELSE <absent> END`, a
+ * never-NULL text (the plan's `renderExpr` parenthesizes either). Bound like any expression field, so it projects, filters,
+ * sorts and groups on the server; its provenance is the key column (a side
+ * row's insert or delete moves it). Throws on an id the join declares no
+ * presence for.
+ */
+export function presenceExpr(
+  spec: ExtensionJoin,
+  id: string,
+  keyRef: SQLWrapper,
+): ExprField<boolean> | ExprField<string> {
+  const presence =
+    spec.presence !== undefined && Object.hasOwn(spec.presence, id)
+      ? spec.presence[id]!
+      : undefined;
+  if (presence === undefined) {
+    throw new Error(
+      `presenceExpr("${spec.alias}", "${id}"): the join declares no presence field "${id}".`,
+    );
+  }
+  if (presence.values === null) {
+    return exprField(sql`${keyRef} IS NOT NULL`, {
+      decoder: Boolean,
+      sqlType: "boolean",
+      notNull: true,
+    });
+  }
+  const { present, absent } = presence.values;
+  return exprField(
+    sql`CASE WHEN ${keyRef} IS NOT NULL THEN ${present}::text ELSE ${absent}::text END`,
+    { decoder: String, sqlType: "text", notNull: true },
+  );
 }
 
 /**
@@ -647,9 +662,7 @@ function compilePlan(
     const cacheKey = `${ref.from}\u0000${key}`;
     let expr = defaultedCache.get(cacheKey);
     if (expr === undefined) {
-      expr = sql`COALESCE(${col}, ${fallback.param})`.mapWith(
-        fallback.decoder ?? col,
-      );
+      expr = sql`COALESCE(${col}, ${fallback})`.mapWith(col);
       defaultedCache.set(cacheKey, expr);
       readExpressions.set(expr, {
         kind: "column",

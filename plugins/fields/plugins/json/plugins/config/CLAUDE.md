@@ -32,12 +32,15 @@
     - `apps/mail/mail-core`
     - `apps/places/places-core`
     - `apps/sonata/sources/ultimate-guitar/alignment`
+    - `backup/runs-arm`
     - `debug/boot-profile`
     - `debug/slow-ops`
     - `debug/trace/engine`
     - `infra/claude-cli`
     - `infra/events`
-    - `page/tags`
+    - `infra/jobs`
+    - `page/block-entity`
+    - `reports`
     - `tasks/automations`
     - `tasks/outcome-report`
     - `tasks/tasks-core`

@@ -1,112 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { unregisteredExposures, unservedHandles } from "./index";
+import { unregisteredArms, unregisteredExposures } from "./index";
 
 // Fixture files of made-up plugins `a` and `b` (spelled through a template, so
 // the plugin-refs scan does not read them as references to real plugins).
 const file = (plugin: string, path: string, src: string) => ({
   rel: `plugins/${plugin}/${path}`,
   src,
-});
-
-const DECL = 'export const playCols = liveColumns(lib, "p", {\n  row,\n});\n';
-
-describe("live:contributed-columns-served", () => {
-  test("a handle served by its own plugin's server passes", () => {
-    expect(
-      unservedHandles(
-        [file("a", "core/columns.ts", DECL)],
-        [
-          file(
-            "a",
-            "server/index.ts",
-            "LiveColumns.Serve(serveColumns(playCols, { join }))",
-          ),
-        ],
-      ),
-    ).toEqual([]);
-  });
-
-  test("a handle nothing serves — or only another plugin serves — is named", () => {
-    const declared = [file("a", "core/columns.ts", `\n\n${DECL}`)];
-    expect(unservedHandles(declared, [])).toEqual([
-      "plugins/a/core/columns.ts:3 — playCols",
-    ]);
-    expect(
-      unservedHandles(declared, [
-        file("b", "server/index.ts", "serveColumns(playCols, { join })"),
-      ]),
-    ).toHaveLength(1);
-    // A prefix of another name is not it.
-    expect(
-      unservedHandles(declared, [
-        file("a", "server/index.ts", "serveColumns(playColsOld, { join })"),
-      ]),
-    ).toHaveLength(1);
-    // A serve in a server test serves nothing.
-    expect(
-      unservedHandles(declared, [
-        file("a", "server/internal/x.test.ts", "serveColumns(playCols, {})"),
-      ]),
-    ).toHaveLength(1);
-    // A call in a comment serves nothing.
-    expect(
-      unservedHandles(declared, [
-        file("a", "server/index.ts", "// serveColumns(playCols, { join })"),
-      ]),
-    ).toHaveLength(1);
-  });
-
-  test("a declaration or a serve wrapped over lines, and an unexported handle, still read", () => {
-    const wrapped = [
-      file(
-        "a",
-        "core/columns.ts",
-        'const playCols =\n  liveColumns(lib, "p", { row });\n',
-      ),
-    ];
-    expect(
-      unservedHandles(wrapped, [
-        file(
-          "a",
-          "server/index.ts",
-          "LiveColumns.Serve(\n  serveColumns(\n    playCols,\n    { join },\n  ),\n)",
-        ),
-      ]),
-    ).toEqual([]);
-  });
-
-  test("a serve under an import alias serves the handle it aliases", () => {
-    const declared = [file("a", "core/columns.ts", DECL)];
-    const serving = (src: string) => [file("a", "server/index.ts", src)];
-    expect(
-      unservedHandles(
-        declared,
-        serving(
-          'import { playCols as pc } from "../core";\nserveColumns(pc, { join });',
-        ),
-      ),
-    ).toEqual([]);
-    // The alias's own name is not a handle.
-    expect(
-      unservedHandles(
-        [file("a", "core/columns.ts", DECL.replace("playCols", "pc"))],
-        serving(
-          'import { playCols as pc } from "../core";\nserveColumns(pc, { join });',
-        ),
-      ),
-    ).toHaveLength(1);
-  });
-
-  test("a liveColumns call no const binds is reported, not skipped", () => {
-    expect(
-      unservedHandles(
-        [file("a", "core/columns.ts", 'register(liveColumns(lib, "p", {}));')],
-        [],
-      ),
-    ).toEqual([
-      "plugins/a/core/columns.ts:1 — a liveColumns(…) call no `const` binds",
-    ]);
-  });
 });
 
 describe("live:exposures-registered", () => {
@@ -117,7 +16,7 @@ describe("live:exposures-registered", () => {
   const SERVER =
     'import { tasksTrack as ext } from "./internal/tables";\nconst x = [LiveColumns.Expose(ext)];\n';
   const WEB =
-    'import { trackShape } from "../shared/shape";\nconst c = LiveExposures.Register({\n  exposure: trackShape.exposure,\n});\n';
+    'import { trackShape } from "../shared/shape";\nconst c = FieldPresentation.Register({\n  owner: trackShape.exposure,\n});\n';
 
   test("a shape folded by its server and registered by its web passes", () => {
     expect(
@@ -139,7 +38,7 @@ describe("live:exposures-registered", () => {
       file("a", "server/index.ts", SERVER),
     ];
     expect(unregisteredExposures(declared, server, [])).toEqual([
-      "plugins/a/shared/shape.ts:1 — trackShape (web: LiveExposures.Register)",
+      "plugins/a/shared/shape.ts:1 — trackShape (web: FieldPresentation.Register)",
     ]);
     expect(
       unregisteredExposures(declared, [], [file("a", "web/index.ts", WEB)]),
@@ -173,6 +72,53 @@ describe("live:exposures-registered", () => {
     ).toHaveLength(1);
   });
 
+  test("a shape, a handle or a registration wrapped over lines still reads", () => {
+    expect(
+      unregisteredExposures(
+        [
+          file(
+            "a",
+            "shared/shape.ts",
+            'export const trackShape =\n  defineExtensionShape({\n    key: "taskId",\n    exposes: { parent },\n  });\n',
+          ),
+        ],
+        [
+          file(
+            "a",
+            "server/internal/tables.ts",
+            'const tasksTrack =\n  defineExtension(\n    _tasks,\n    "track",\n    trackShape,\n  );\n',
+          ),
+          file("a", "server/index.ts", "LiveColumns.Expose(\n  tasksTrack,\n)"),
+        ],
+        [
+          file(
+            "a",
+            "web/index.ts",
+            "FieldPresentation.Register(\n  {\n    owner: trackShape.exposure,\n  },\n)",
+          ),
+        ],
+      ),
+    ).toEqual([]);
+  });
+
+  test("an exposing shape no const binds is reported, not skipped", () => {
+    expect(
+      unregisteredExposures(
+        [
+          file(
+            "a",
+            "shared/shape.ts",
+            "register(defineExtensionShape({ exposes: { parent } }));",
+          ),
+        ],
+        [],
+        [],
+      ),
+    ).toEqual([
+      "plugins/a/shared/shape.ts:1 — an exposing defineExtensionShape(…) call no `const` binds",
+    ]);
+  });
+
   test("a shape without `exposes`, or in test code, is not checked", () => {
     expect(
       unregisteredExposures(
@@ -188,5 +134,54 @@ describe("live:exposures-registered", () => {
         [],
       ),
     ).toEqual([]);
+  });
+});
+
+describe("live:arms-registered", () => {
+  const ARM =
+    'import { runs } from "@plugins/runs/core";\nexport const buildArm = liveArm(runs, "build", {\n  label: "Build",\n  fields,\n});\n';
+  const SERVER =
+    'import { buildArm as arm } from "../../core";\nexport const kind = defineRunKind({ columns: arm });\n';
+  const WEB =
+    'import { buildArm } from "../core";\nconst c = FieldPresentation.Register({ owner: buildArm });\n';
+
+  test("an arm bound by its server and registered by its web passes", () => {
+    expect(
+      unregisteredArms(
+        [file("a", "core/arm.ts", ARM)],
+        [file("a", "server/internal/kind.ts", SERVER)],
+        [file("a", "web/index.ts", WEB)],
+      ),
+    ).toEqual([]);
+  });
+
+  test("a missing half — or one in another plugin, or test code — is named", () => {
+    const declared = [file("a", "core/arm.ts", ARM)];
+    expect(
+      unregisteredArms(
+        declared,
+        [file("a", "server/internal/kind.ts", SERVER)],
+        [],
+      ),
+    ).toEqual([
+      "plugins/a/core/arm.ts:2 — buildArm (web: FieldPresentation.Register)",
+    ]);
+    expect(
+      unregisteredArms(declared, [], [file("a", "web/index.ts", WEB)]),
+    ).toEqual(["plugins/a/core/arm.ts:2 — buildArm (server: binding)"]);
+    expect(
+      unregisteredArms(
+        declared,
+        [file("b", "server/internal/kind.ts", SERVER)],
+        [file("b", "web/index.ts", WEB)],
+      ),
+    ).toHaveLength(1);
+    expect(
+      unregisteredArms(
+        declared,
+        [file("a", "server/internal/kind.test.ts", SERVER)],
+        [file("a", "web/index.ts", WEB)],
+      ),
+    ).toHaveLength(1);
   });
 });

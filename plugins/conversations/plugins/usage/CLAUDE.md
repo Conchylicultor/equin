@@ -6,8 +6,8 @@
 
 - Description: Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side. Per-conversation usage — cost, tokens and launched sub-agents — counted incrementally from the transcripts (the anchored session chain plus every sub-agent), stored in conversations_ext_usage and exposed to every conversation list (LiveColumns.Expose).
 - Web:
-  - Contributes: `LiveExposures.Register` "conversations_ext_usage"
-  - Uses: `network/live.LiveExposures`
+  - Contributes: `FieldPresentation.Register` "exposure:conversations_ext_usage"
+  - Uses: `network/live.FieldPresentation`
 - Server:
   - Contributes:
     - `live.columns.expose` "conversations ← conversations_ext_usage"
@@ -31,7 +31,7 @@
     - `stats/cost.onPriceTableUpdated`
     - `tasks/tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/usage/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `conversations_ext_usage`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_usage`)
   - Register:
     - `defineJob('conversations.usage.sync')`
     - `defineJob('conversations.usage.backfill')`

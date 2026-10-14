@@ -19,7 +19,7 @@ export { songAttachments } from "./internal/schema-attachments";
 
 export default {
   description:
-    "Persists source-agnostic Sonata song rows (generic metadata) and serves the `sonata.songs` live collection (sortable and filterable by the columns other plugins contribute). Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.",
+    "Persists source-agnostic Sonata song rows (generic metadata) and serves the `sonata.songs` live collection (sortable and filterable by every field an extension exposes on the songs entity). Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.",
   httpRoutes: {
     [deleteSong.route]: handleDeleteSong,
     [updateSong.route]: handleUpdateSong,

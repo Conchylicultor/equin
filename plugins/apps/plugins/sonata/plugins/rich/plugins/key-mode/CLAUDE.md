@@ -57,7 +57,7 @@ inferred key.
     - `infra/entity-extensions.defineExtension`
     - `network/live.serveCollection`
   - DB schema: `plugins/apps/plugins/sonata/plugins/rich/plugins/key-mode/server/internal/tables.ts`
-  - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_key_auto_detect`)
+  - Entity extension of: `apps/sonata/library` (table `library_ext_key_auto_detect`)
   - Exports (values): `songKeyAutoDetect`
   - Resources: `sonata-key-auto-detect:rows` (keyed, point)
   - Routes: `POST /api/sonata/songs/:id/key-auto-detect`

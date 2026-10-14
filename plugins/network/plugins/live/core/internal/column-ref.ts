@@ -15,12 +15,12 @@ declare const MINTED: unique symbol;
 /** The fields of a column ref, before it is minted (see `mintColumnRef`). */
 interface ColumnRefFields {
   /**
-   * Whose column it is — the collection's own (by key), a contributed or arm
-   * set's (by its collection's key), or a scoped set's member (by the scope it
+   * Whose column it is — the collection's own (by key), an arm's (by its
+   * collection's key), an exposure's (by its entity), or a scoped set's member (by the scope it
    * binds under, a collection's `columnScope`).
    */
   readonly owner: LiveColumnRefOwner;
-  /** The column's wire name (a contributed column's is `<contributor>.<field>`). */
+  /** The column's wire name (a column set's is `<set>.<field>`). */
   readonly name: string;
   readonly domain: FilterDomainId | null;
   readonly sortable: boolean;
@@ -31,8 +31,7 @@ interface ColumnRefFields {
 /**
  * One column of a collection as a list binds a field to it: its wire name, the
  * filter domain it takes (`null` when it is not filterable) and whether it
- * sorts. Minted only by `c.column(name)` (or a contributed / scoped handle's
- * `.column()`) — a brand only `mintColumnRef` sets, so a hand-written literal,
+ * sorts. Minted only by `c.column(name)` (or a column set's `.column()`) — a brand only `mintColumnRef` sets, so a hand-written literal,
  * whose `domain` / `sortable` nothing checked, is a tsc error — typed to the
  * declared filterable ∪ sortable names, and carrying its collection's key as
  * data, so a surface reading another collection can tell (a DataView asserts

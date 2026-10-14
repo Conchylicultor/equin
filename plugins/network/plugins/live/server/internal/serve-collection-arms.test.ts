@@ -1,8 +1,9 @@
 /**
  * A union collection (`arms`) reads several tables, so one table's
  * `serveCollection` never serves it: a tsc error (`SingleTableCollection`),
- * and a module-eval throw against a cast past it. Its arms' column sets are
- * never served through `LiveColumns.Serve` either (T11).
+ * and a module-eval throw against a cast past it. Its arms' fields are bound
+ * by the union's own server half (`serveUnionCollection`), never folded like
+ * an exposure (T11).
  */
 
 import { describe, expect, test } from "bun:test";

@@ -5,7 +5,7 @@ import { parsed } from "@plugins/database/plugins/sql-projection/server";
 import { defineRunKind } from "@plugins/runs/server";
 import { RunOutcomeSchema } from "@plugins/runs/plugins/run-outcome/core";
 import { _releaseRuns } from "@plugins/release/server";
-import { releaseRunColumns } from "../../core";
+import { releaseRunArm } from "../../core";
 import { releaseOutcomeExpr } from "./outcome-sql";
 
 /**
@@ -20,7 +20,7 @@ import { releaseOutcomeExpr } from "./outcome-sql";
  * - `message` is `error`, the run's own words about the failure, verbatim.
  */
 export const releaseRunKind = defineRunKind({
-  columns: releaseRunColumns,
+  columns: releaseRunArm,
   from: _releaseRuns,
   id: _releaseRuns.id,
   base: (j) => ({

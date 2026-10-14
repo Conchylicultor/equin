@@ -1,14 +1,26 @@
-import { liveCollection } from "@plugins/network/plugins/live/core";
+import {
+  liveCollection,
+  type LiveRowsCollection,
+} from "@plugins/network/plugins/live/core";
 import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { z } from "zod";
 import {
-  TaskListItemSchema,
   PushSchema,
-  ConversationSchema,
+  TASK_STATUS_OPTIONS,
+  TaskStatusSchema,
 } from "./internal/schema";
 import { AttemptWithConversationsSchema } from "./schemas";
 import { WorkspaceSpecSchema } from "@plugins/conversations/plugins/workspace/core";
-import { tasksEntityRef } from "./entity-refs";
+import { conversationsEntityRef, tasksEntityRef } from "./entity-refs";
+import { nullable } from "@plugins/fields/core";
+import {
+  enumTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { rankValueField } from "@plugins/fields/plugins/rank/plugins/config/core";
+import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
 
 // The `conversations-gone` window's default size (the newest ended
 // conversations the queue's Done section and the welcome recents show).
@@ -34,19 +46,56 @@ export const RECENT_GONE_LIMIT = 30;
 // closure), an insert an entrant, a delete an exit — never a whole-set reload.
 // Ordered as the old list was: `rank`, then `createdAt` (the id breaks ties).
 //
-// The wire row is EXACTLY `TaskListItem` — every `tasks_v` column but the
-// heavy `description` (read per task from `taskDescriptions` below) — under
-// the legacy key `tasks`: a tab still running a bundle that declared `tasks`
-// as an old param-less keyed descriptor over `TaskListItemSchema` subscribes
-// `{}`, passes the `all` gate and parses these rows with its own
-// (identical) schema — the C39 old-bundle check, pinned by
-// `../server/internal/tree-oracle.test.ts`. A change to the row must rename
-// the key.
+// Declared by FIELDS over the `tasks` entity (`from: tasksEntityRef`): the
+// task list's fields — the title and last update (`pick`), the derived
+// `status` (an own field, bound by `../server/internal/task-rows.ts`) — carry
+// their labels, types and options, so no list builds them; and every field a
+// task extension exposes (its track, category, automation origin) folds into
+// each row under `$columns` (the base exposures), filtered and grouped in
+// memory with no list code. Each is a rarely-written side table (a track
+// switch, a filing, a categorisation — unlike a conversation's usage), so
+// folding them into this boot-preloaded set stays cheap.
+//
+// The wire row is `TaskListItem` — every `tasks_v` column but the heavy
+// `description` (read per task from `taskDescriptions` below) — plus the
+// additive `$columns`, under the legacy key `tasks`: a tab still running a
+// bundle that declared `tasks` as an old param-less keyed descriptor over
+// `TaskListItemSchema` subscribes `{}`, passes the `all` gate and parses these
+// rows with its own schema, which strips the keys it does not know — the C39
+// old-bundle check, pinned by `../server/internal/tree-oracle.test.ts`. A
+// removed, renamed or retyped field must rename the key.
 //
 // Boot-critical (`preload: "boot"`): the task list paints from the boot
 // snapshot. Named `taskRows` because `tasks` is the server's view handle.
 export const taskRows = liveCollection("tasks", {
-  row: TaskListItemSchema,
+  from: tasksEntityRef,
+  pick: ["title", "updatedAt"],
+  fields: {
+    status: enumTextField(TaskStatusSchema.options, {
+      label: "Status",
+      options: TASK_STATUS_OPTIONS,
+    }),
+  },
+  carry: {
+    pick: [
+      "id",
+      "folderId",
+      "groupId",
+      "clusterId",
+      "titleAuto",
+      "author",
+      "droppedAt",
+      "heldAt",
+      "createdAt",
+    ],
+    fields: {
+      // The wire `Rank` value object over the stored key (`rankValueField`).
+      rank: rankValueField(),
+      active: boolField(),
+      finishedAt: nullable(dateField()),
+      dependencies: stringListField(),
+    },
+  },
   id: "id",
   all: {
     orderBy: [
@@ -60,6 +109,10 @@ export const taskRows = liveCollection("tasks", {
   },
   preload: "boot",
 });
+
+/** A task as `taskRows` delivers it: a `TaskListItem` and its exposed fields under `$columns`. */
+export type TaskRow =
+  typeof taskRows extends LiveRowsCollection<infer R> ? R : never;
 
 // One task's `description` — the heavy text the `tasks` set leaves out — read
 // by id (`useLiveRow(taskDescriptions, id)`): lookup-only, so it loads only
@@ -161,17 +214,62 @@ export const pushRows = liveCollection("pushes", {
 // Boot-critical (`preload: "boot"`): the queue and the welcome view paint from
 // the boot snapshot.
 //
-// Both queue reads (`conversations-active`, `conversations-gone`) reach their
-// TASK (`exposes`, over the owner joins' `task` lookup): every field a task
-// extension exposes (its track) rides each row under `$columns`, so the Queue
-// filters and groups by it in memory with no list code. The conversation's own
-// exposures (`base`) are left off on purpose: usage upserts on every
-// transcript append, and folding it into this boot-preloaded set would push a
-// diff to every client per append — the Queue shows no usage.
-const QUEUE_EXPOSES = { task: tasksEntityRef } as const;
+// Both queue reads (`conversations-active`, `conversations-gone`) are declared
+// by FIELDS over the `conversations` entity: the Queue lists exactly the
+// fields the conversation lists do (`CONVERSATION_QUEUE_PICK` + the owners'
+// joined columns), derived from the entity, and the row carries every other
+// column the full `Conversation` has (`carry`) — the wire row is the same.
+//
+// They reach their TASK (`related`, over the owner joins' `task` lookup):
+// every field a task extension exposes (its track) rides each row under
+// `$columns`, so the Queue filters and groups by it in memory with no list
+// code. The conversation's own exposures (`baseExposures: false`) are left off
+// on purpose: usage upserts on every transcript append, and folding it into
+// this boot-preloaded set would push a diff to every client per append — the
+// Queue shows no usage.
+const QUEUE_RELATED = { task: tasksEntityRef } as const;
+
+/** The conversation fields the Queue lists, in list order. */
+const CONVERSATION_QUEUE_PICK = [
+  "title",
+  "status",
+  "model",
+  "kind",
+  "runtime",
+  "createdAt",
+  "updatedAt",
+  "endedAt",
+] as const;
+
+/** The owners' columns the Queue lists: the attempt's worktree, the task's current title. */
+const CONVERSATION_QUEUE_OWN_FIELDS = {
+  worktreePath: textField({ label: "Worktree" }),
+  taskTitle: textField({ label: "Task" }),
+};
+
+/** Every other column a `Conversation` carries — on the row, in no list. */
+const CONVERSATION_QUEUE_CARRY = {
+  pick: [
+    "id",
+    "attemptId",
+    "claudeSessionId",
+    "waitingFor",
+    "spawnedBy",
+    "closeRequested",
+    "hibernatedAt",
+    "lastViewedAt",
+    "waitingMenu",
+  ],
+  fields: { taskId: textField(), active: boolField() },
+} as const;
 
 export const conversationsActive = liveCollection("conversations-active", {
-  row: ConversationSchema,
+  from: conversationsEntityRef,
+  pick: CONVERSATION_QUEUE_PICK,
+  fields: CONVERSATION_QUEUE_OWN_FIELDS,
+  carry: CONVERSATION_QUEUE_CARRY,
+  related: QUEUE_RELATED,
+  baseExposures: false,
   id: "id",
   all: {
     orderBy: [["createdAt", "desc"]],
@@ -181,12 +279,16 @@ export const conversationsActive = liveCollection("conversations-active", {
     },
   },
   preload: "boot",
-  exposes: QUEUE_EXPOSES,
 });
 // The live `system` conversations (machine-spawned automation): the same
 // shape and routes as `conversationsActive`, the other half of `kind`.
 export const conversationsSystem = liveCollection("conversations-system", {
-  row: ConversationSchema,
+  from: conversationsEntityRef,
+  pick: CONVERSATION_QUEUE_PICK,
+  fields: CONVERSATION_QUEUE_OWN_FIELDS,
+  carry: CONVERSATION_QUEUE_CARRY,
+  related: QUEUE_RELATED,
+  baseExposures: false,
   id: "id",
   all: {
     orderBy: [["createdAt", "desc"]],
@@ -204,28 +306,42 @@ export const conversationsSystem = liveCollection("conversations-system", {
 // so the queue's Done section pages through the whole history as the user
 // scrolls (`useLive` with a viewport: its first page IS the default window). A close
 // is an entrant at the top, a restore an exit; it is not L2-persisted (a
-// bounded window leaves L2). Nothing filters it (`filterable: {}`).
+// bounded window leaves L2). Its listed fields filter it (derived).
 // Boot-critical: the default window paints from the boot snapshot. Counted
 // (`count: true`): `useLive(conversationsGone, { count: true })` is how many
 // conversations have ended in all — the welcome counts, and the Done
 // section's exact count — preloaded with the window, one COUNT per write.
 export const conversationsGone = liveCollection("conversations-gone", {
-  row: ConversationSchema,
+  from: conversationsEntityRef,
+  pick: CONVERSATION_QUEUE_PICK,
+  fields: CONVERSATION_QUEUE_OWN_FIELDS,
+  carry: CONVERSATION_QUEUE_CARRY,
+  related: QUEUE_RELATED,
+  baseExposures: false,
   id: "id",
-  filterable: {},
   sortable: ["endedAt"],
   default: { orderBy: [["endedAt", "desc"]], limit: RECENT_GONE_LIMIT },
   maxLimit: 500,
   count: true,
   preload: "boot",
-  exposes: QUEUE_EXPOSES,
 });
 // One conversation by id, whatever its status or age (`useLiveRow`): the
 // conversation pane, every toolbar control and chip that holds an id. A point
 // read, so a done conversation older than the newest `RECENT_GONE_LIMIT` is
 // found like any other (W9) — no REST fallback. Lookup-only (`:rows` alone,
-// never preloaded); a write to row R reaches only the tuples holding R.
+// never preloaded); a write to row R reaches only the tuples holding R. The
+// same full `Conversation` row as the lists, declared by the same fields; it
+// reaches no entity (a lookup-only read folds no exposure), so its rows carry
+// no `$columns`.
 export const conversationsById = liveCollection("conversations.by-id", {
-  row: ConversationSchema,
+  from: conversationsEntityRef,
+  carry: {
+    pick: [...CONVERSATION_QUEUE_PICK, ...CONVERSATION_QUEUE_CARRY.pick],
+    fields: {
+      ...CONVERSATION_QUEUE_OWN_FIELDS,
+      ...CONVERSATION_QUEUE_CARRY.fields,
+    },
+  },
+  baseExposures: false,
   id: "id",
 });

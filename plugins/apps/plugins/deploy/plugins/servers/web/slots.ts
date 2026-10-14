@@ -1,4 +1,3 @@
-import { defineFieldExtensions } from "@plugins/primitives/plugins/data-view/web";
 import { defineDetailSections } from "@plugins/primitives/plugins/detail-sections/web";
 import type { Server } from "../shared";
 
@@ -19,13 +18,3 @@ import type { Server } from "../shared";
  * not itself a contribution; once it is, they collapse into peers of it.
  */
 export const ServerDetail = defineDetailSections<{ server: Server }>();
-
-export const Servers = {
-  /**
-   * Extra DataView `FieldDef<Server>[]` injected by other plugins. A field
-   * extension is a *component* (not plain data) so its `value` closure can
-   * capture hook-loaded data — e.g. `status` reads the health plugin's own
-   * live resource and yields a `status` enum field. Mirrors `Tasks.Fields`.
-   */
-  Fields: defineFieldExtensions<Server>(),
-};

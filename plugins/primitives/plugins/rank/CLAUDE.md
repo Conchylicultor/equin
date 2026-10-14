@@ -135,6 +135,8 @@ import { withRank } from "@plugins/primitives/plugins/rank/server";
     - `conversations/agents`
     - `conversations/conversations-view/grouped`
     - `conversations/conversations-view/queue`
+    - `fields/rank/config`
+    - `page/block-entity`
     - `page/editor`
     - `page/markdown-apply`
     - `primitives/data-view/view-order`

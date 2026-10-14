@@ -1,12 +1,10 @@
 import { z } from "zod";
-import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import {
-  liveInstant,
-  liveNumber,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
+  liveCollection,
+  liveValue,
+  type LiveRowsCollection,
+} from "@plugins/network/plugins/live/core";
 import {
-  ConversationModelSchema,
   FALLBACK_MODEL,
   StoredModelSchema,
 } from "@plugins/conversations/plugins/model-provider/core";
@@ -17,6 +15,7 @@ import {
 } from "@plugins/fields/core";
 import { uuidField } from "@plugins/fields/plugins/uuid/plugins/config/core";
 import {
+  enumTextField,
   textField,
   parsedTextField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
@@ -89,14 +88,9 @@ export const RECENT_CALLS_LIMIT = 1000;
  * NULL`), so it filters, groups and counts on the server like any column while
  * no write can ever make it disagree with `error`.
  */
-export const ClaudeCliCallStatusSchema = z.enum(["ok", "error"]);
+export const CLAUDE_CLI_CALL_STATUSES = ["ok", "error"] as const;
+export const ClaudeCliCallStatusSchema = z.enum(CLAUDE_CLI_CALL_STATUSES);
 export type ClaudeCliCallStatus = z.infer<typeof ClaudeCliCallStatusSchema>;
-
-/** A row of the {@link claudeCliCalls} collection: the call, plus its derived `status`. */
-export const ClaudeCliCallRowSchema = ClaudeCliCallSchema.extend({
-  status: ClaudeCliCallStatusSchema,
-});
-export type ClaudeCliCallRow = z.infer<typeof ClaudeCliCallRowSchema>;
 
 /**
  * The call log — Debug → Claude CLI Calls — as a live collection: a bounded
@@ -108,24 +102,49 @@ export type ClaudeCliCallRow = z.infer<typeof ClaudeCliCallRowSchema>;
  * the recorder trims the log to `RECENT_CALLS_LIMIT` rows, every query here is
  * over at most that many — the full-text `contains` over the prompt is a scan of
  * a table that cannot grow past it.
+ *
+ * Its fields are the log's physical columns ({@link claudeCliCallFields}) as a
+ * list shows them, plus the derived `status`; the ones no list shows ride on
+ * the row (`carry`).
  */
 export const claudeCliCalls = liveCollection("claude-cli-calls", {
-  row: ClaudeCliCallRowSchema,
-  id: "id",
-  filterable: {
-    sourceName: liveText(),
-    model: liveText(ConversationModelSchema),
-    status: liveText(ClaudeCliCallStatusSchema),
-    prompt: liveText(),
-    output: liveText(),
-    error: liveText(),
-    durationMs: liveNumber(),
-    createdAt: liveInstant(),
+  fields: {
+    status: enumTextField(CLAUDE_CLI_CALL_STATUSES, {
+      label: "Status",
+      options: {
+        ok: { label: "Succeeded", variant: "success" },
+        error: { label: "Failed", variant: "destructive" },
+      },
+    }),
+    createdAt: dateField({ label: "Time" }),
+    sourceName: textField({ label: "Source" }),
+    model: parsedTextField(StoredModelSchema, {
+      label: "Model",
+      default: FALLBACK_MODEL,
+    }),
+    durationMs: intField({ label: "Duration" }),
+    // Filter-only text columns ("Prompt contains …", "Error is not empty").
+    prompt: textField({ label: "Prompt" }),
+    output: nullable(textField({ label: "Output" })),
+    error: nullable(textField({ label: "Error" })),
   },
+  carry: {
+    fields: {
+      id: claudeCliCallFields.id,
+      system: claudeCliCallFields.system,
+      sourceContext: claudeCliCallFields.sourceContext,
+      correlationId: claudeCliCallFields.correlationId,
+    },
+  },
+  id: "id",
   sortable: ["createdAt", "durationMs", "sourceName", "model"],
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },
   maxLimit: RECENT_CALLS_LIMIT,
 });
+
+/** A row of the {@link claudeCliCalls} collection: the call, plus its derived `status`. */
+export type ClaudeCliCallRow =
+  typeof claudeCliCalls extends LiveRowsCollection<infer R> ? R : never;
 
 /**
  * The answer to "which model calls produced this record?" — a discriminated

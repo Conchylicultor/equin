@@ -1,3 +1,4 @@
+import { exposedColumns } from "@plugins/network/plugins/live/core";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
 import {
   songIdKind,
@@ -13,8 +14,12 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { transcriptionColumns } from "../../core";
 import { retryTranscription } from "../../shared/endpoints";
+import { songTranscriptionShape } from "../../shared/shape";
+
+// The run state every song row carries, folded in from the transcription
+// exposure (`$columns.transcription`).
+const transcription = exposedColumns(songTranscriptionShape.exposure);
 
 function OpenConversation({ convId }: { convId: string | null }) {
   // Null only between the row's insert and the launch, which one request
@@ -32,7 +37,7 @@ function OpenConversation({ convId }: { convId: string | null }) {
 
 /**
  * What a transcribed song shows in place of its score until the score exists:
- * read live off the song's row (its `transcription` columns), so it follows
+ * read live off the song's row (the fields the transcription exposure folds in), so it follows
  * the run — transcribing (with the agent's conversation to watch or step
  * into), failed (the reason and Retry). Once the agent submits, the player
  * re-hydrates and shows the score instead.
@@ -54,7 +59,7 @@ export function TranscriptionBody({ songId }: { songId: string }) {
       </Text>
     );
   }
-  const t = transcriptionColumns.read(song.row);
+  const t = transcription.read(song.row);
   switch (t.status) {
     case "transcribing":
       return (

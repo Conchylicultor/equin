@@ -8,7 +8,7 @@ import { _deployServers } from "@plugins/apps/plugins/deploy/plugins/servers/ser
 import { _deployRuns } from "@plugins/apps/plugins/deploy/plugins/deployments/server";
 import { defineRunKind } from "@plugins/runs/server";
 import { RunOutcomeSchema } from "@plugins/runs/plugins/run-outcome/core";
-import { DEPLOY_STATUS_OUTCOME, deployRunColumns } from "../../core";
+import { DEPLOY_STATUS_OUTCOME, deployRunArm } from "../../core";
 
 /**
  * `deploy_runs.status` → the shared outcome vocabulary, folded out of the typed
@@ -50,7 +50,7 @@ const serverJoin: LookupJoin<"server", typeof _deployServers> = {
  * - `message` is the CLI's own words, verbatim.
  */
 export const deployRunKind = defineRunKind({
-  columns: deployRunColumns,
+  columns: deployRunArm,
   from: _deployRuns,
   id: _deployRuns.id,
   joins: [serverJoin],

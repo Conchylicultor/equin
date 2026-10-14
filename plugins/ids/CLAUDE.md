@@ -156,7 +156,9 @@ is reported by the schema file that exports it, which is where its plugin's
     - `idRef`
 - Core:
   - Uses:
+    - `fields.ExactOptions`
     - `fields.FieldDef`
+    - `fields.FieldMarks`
     - `fields.FieldMeta`
     - `fields.FieldType`
     - `fields.pickMeta`

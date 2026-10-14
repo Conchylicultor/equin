@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { fieldsToZodObject } from "@plugins/fields/core";
+import { serverFields } from "../core";
 
 /**
  * The SSH key this app holds for a server, carrying its own evidence.
@@ -26,15 +28,12 @@ export type SshKey = z.infer<typeof SshKeySchema>;
 // different writer and lifecycle, owned by the `health` sub-plugin's
 // `deploy_servers_ext_health` side-table. Keeping a `status` column here beside
 // a probe that owns the real verdict would be two sources of truth.
-export const ServerSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  host: z.string(),
-  port: z.number(),
-  sshUser: z.string(),
-  consoleUrl: z.string().nullable(),
+//
+// The registry's fields are the entity's (`serverFields`); the derived `sshKey`
+// (a secrets lookup beside `ssh_public_key`) joins them here, for the detail
+// pane and the endpoints. The live list carries the fields alone — the key is
+// read per server (`serverSshKey`).
+export const ServerSchema = fieldsToZodObject(serverFields).extend({
   sshKey: SshKeySchema.nullable(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
 });
 export type Server = z.infer<typeof ServerSchema>;

@@ -27,6 +27,7 @@ import type {
 import type {
   ColumnRef,
   ExtensionJoin,
+  ExtensionPresence,
 } from "@plugins/infra/plugins/query-resource/core";
 import { extensionIndexName } from "./index-names";
 
@@ -143,7 +144,8 @@ export interface EntityExtension<
   // attempts.taskId }` — a column of an earlier join naming the parent's id):
   // LEFT on that column, routed `reverse` like a lookup (a side row's write
   // reaches the hosts whose `on` names its parent). An exposing extension's
-  // join reads each exposed field's `absent` where the side row is missing.
+  // join reads each exposed field's derived `absent` (its declared default,
+  // else NULL) where the side row is missing, and carries its presence field.
   join<A extends string>(
     alias: A,
     opts?: { on: ColumnRef },
@@ -317,23 +319,36 @@ export function defineExtension<
         parentKey: parentTable.id,
         wireColumns: entity.wireColumns,
         ...(opts === undefined ? {} : { on: opts.on }),
-        ...(exposure === null
-          ? {}
-          : {
-              absent: Object.fromEntries(
-                Object.entries(exposure.fields).map(([f, x]) => [f, x.absent]),
-              ),
-            }),
+        ...(exposure === null ? {} : exposureReads(exposure)),
       };
     },
   }) as unknown as ExtensionOf<Sh, M>;
 }
 
+// What an exposing extension's join reads beyond its columns: each exposed
+// column field's missing-row value (`absent`, derived from the field's
+// declared default — NULL reads the raw column), and the presence field read
+// off the side row's existence.
+function exposureReads(
+  exposure: EntityExposure,
+): Pick<ExtensionJoin, "absent" | "presence"> {
+  const absent: Record<string, string | number | boolean | null> = {};
+  const presence: Record<string, ExtensionPresence> = {};
+  for (const [f, field] of Object.entries(exposure.fields)) {
+    if (field.presence === null) absent[f] = field.absent;
+    else presence[f] = { values: field.presence.values };
+  }
+  return {
+    absent,
+    ...(Object.keys(presence).length > 0 ? { presence } : {}),
+  };
+}
+
 // An exposure names its extension by data the browser declared (`parent`,
 // `name`, so `slice`), which must be THIS table — and an exposed field's
-// `absent` is what a parent with no side row reads in every list, so a literal
-// DB default that disagrees would make "no row" and "a defaulted row" read two
-// different values.
+// derived `absent` (its declared default, else NULL) is what a parent with no
+// side row reads in every list, so a literal DB default that disagrees would
+// make "no row" and "a defaulted row" read two different values.
 function assertExposure<Sh extends AnyExtensionShape>(
   exposure: EntityExposure,
   tableName: string,
@@ -364,11 +379,14 @@ function assertExposure<Sh extends AnyExtensionShape>(
     { default?: unknown } | undefined
   >;
   for (const [f, field] of Object.entries(exposure.fields)) {
+    if (field.presence !== null) continue;
     const declared = columns[f]?.default;
     const literal = literalDefaultOf(declared);
     if (literal.kind === "literal" && literal.value !== field.absent) {
       fail(
-        `exposed field "${f}" reads ${JSON.stringify(field.absent)} where the side row is missing, but its column defaults to ${JSON.stringify(literal.value)} — a missing row and a defaulted one must read the same value.`,
+        field.absent === null
+          ? `exposed field "${f}" declares no default, so a missing side row reads NULL — but its column defaults to ${JSON.stringify(literal.value)}. Declare it on the field (\`{ default: ${JSON.stringify(literal.value)} }\`): a missing row and a defaulted one must read the same value.`
+          : `exposed field "${f}" reads its default ${JSON.stringify(field.absent)} where the side row is missing, but its column defaults to ${JSON.stringify(literal.value)} — a missing row and a defaulted one must read the same value.`,
       );
     }
   }

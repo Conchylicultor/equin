@@ -1,19 +1,20 @@
 /**
  * A UNION collection (`liveCollection(key, { arms })`, T12) and its arms' own
- * column sets (`liveArmColumns`, A16), plus the owner-discriminated column
- * declarations every reader switches on (T11).
+ * fields (`liveArm`, A16), plus the owner-discriminated column declarations
+ * every reader switches on (T11).
  */
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import {
-  liveNumber,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
+import { nullable } from "@plugins/fields/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
+import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
+import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
+import { exposedColumns } from "./exposed-columns";
 import { liveCollection } from "./live-collection";
 import {
-  liveArmColumns,
-  liveColumns,
+  liveArm,
   LIVE_COLUMNS_KEY,
   scopedLiveColumns,
   type LiveColumnsDeclaration,
@@ -38,13 +39,13 @@ const runs = () =>
     maxLimit: 30,
   });
 
-const BuildRow = z.object({ exitCode: z.number().nullable() });
+/** The build arm's one field, as its core would declare it. */
+const BUILD_FIELDS = { exitCode: nullable(intField({ label: "Exit code" })) };
 
 describe("liveCollection — the `arms` overload", () => {
   test("a union is a window whose rows carry `$columns`", () => {
     const c = runs();
     expect(c.arms).toEqual({ discriminator: "kind" });
-    expect(c.contributed).toBe(false);
     expect(c.columnScope).toBeNull();
     // `rowKeys` stay the author's fields: `$columns` is folded, never bound.
     expect(c.rowKeys).toEqual(["runKey", "kind", "label", "startedAt"]);
@@ -70,7 +71,7 @@ describe("liveCollection — the `arms` overload", () => {
     expect(c.arms).toBeNull();
   });
 
-  test("runtime throws mirror the overload: contributed, columnScope, no default, a bad discriminator", () => {
+  test("runtime throws mirror the overload: exposes, columnScope, no default, a bad discriminator", () => {
     const base = {
       row: Run,
       id: "runKey",
@@ -88,9 +89,17 @@ describe("liveCollection — the `arms` overload", () => {
       untyped(`test.live.arms-bad-${seq++}`, {
         ...base,
         arms: { discriminator: "kind" },
+        exposes: { base: entityRef("runs", {}) },
+      }),
+    ).toThrow(/exposes beside `arms`/);
+    // The deleted `contributed` option fails loudly rather than being ignored.
+    expect(() =>
+      untyped(`test.live.arms-bad-${seq++}`, {
+        ...base,
+        arms: { discriminator: "kind" },
         contributed: true,
       }),
-    ).toThrow(/contributed beside `arms`/);
+    ).toThrow(/`contributed` no longer exists/);
     expect(() =>
       untyped(`test.live.arms-bad-${seq++}`, {
         ...base,
@@ -119,7 +128,7 @@ describe("liveCollection — the `arms` overload", () => {
     ).toThrow(/is the id/);
   });
 
-  test("types: the overload refuses contributed / columnScope, and types the discriminator (T12)", () => {
+  test("types: the overload refuses exposes / columnScope, and types the discriminator (T12)", () => {
     // Never called — the assertions are the `@ts-expect-error`s.
     const _typesOnly = () => {
       const spec = {
@@ -132,27 +141,37 @@ describe("liveCollection — the `arms` overload", () => {
       } as const;
       // A union needs nothing beside `arms`: every window pages.
       liveCollection("t.a", { ...spec, arms: { discriminator: "kind" } });
-      // One line per refused call: past three failed overloads TypeScript may
-      // report the call itself rather than the field at fault.
-      const arms = { discriminator: "kind" } as const;
-      // @ts-expect-error — a union's columns are its arms', never contributed
-      liveCollection("t.b", { ...spec, arms, contributed: true });
-      // @ts-expect-error — nor scoped
-      liveCollection("t.c", { ...spec, arms, columnScope: "s" });
-      const nope = { discriminator: "nope" } as const;
-      // @ts-expect-error — the discriminator is a row field
-      liveCollection("t.d", { ...spec, arms: nope });
+      // Overload resolution reports the refused spec at every field the last
+      // overload tried (the fields spelling's) has no place for.
+      liveCollection("t.b", {
+        ...spec,
+        // @ts-expect-error — a union's columns are its arms', never exposed
+        arms: { discriminator: "kind" },
+        // @ts-expect-error — (the same refusal, reported at the field)
+        exposes: { base: entityRef("runs", {}) },
+      });
+      liveCollection("t.c", {
+        ...spec,
+        // @ts-expect-error — nor scoped
+        arms: { discriminator: "kind" },
+        columnScope: "s",
+      });
+      liveCollection("t.d", {
+        ...spec,
+        // @ts-expect-error — the discriminator is a row field
+        arms: { discriminator: "nope" },
+      });
     };
     void _typesOnly;
   });
 });
 
-describe("liveArmColumns", () => {
+describe("liveArm — the column set", () => {
   test("wire names are `<arm>.<field>`; the owner names the collection and the arm", () => {
     const c = runs();
-    const build = liveArmColumns(c, "build", {
-      row: BuildRow,
-      filterable: { exitCode: liveNumber() },
+    const build = liveArm(c, "build", {
+      label: "Build",
+      fields: BUILD_FIELDS,
       sortable: ["exitCode"],
     });
     expect(build.owner).toEqual({
@@ -172,11 +191,7 @@ describe("liveArmColumns", () => {
 
   test("read: null on another arm's row; its own slice parsed once; a missing own slice throws (A16)", () => {
     const c = runs();
-    const build = liveArmColumns(c, "build", {
-      row: BuildRow,
-      filterable: {},
-      sortable: [],
-    });
+    const build = liveArm(c, "build", { label: "Build", fields: BUILD_FIELDS });
     const other = {
       runKey: "backup:1",
       kind: "backup",
@@ -210,29 +225,25 @@ describe("liveArmColumns", () => {
       maxLimit: 30,
     });
     expect(() =>
-      liveArmColumns(
+      liveArm(
         // @ts-expect-error — only a union collection has arms
         plain,
         "build",
-        { row: BuildRow, filterable: {}, sortable: [] },
+        { label: "Build", fields: BUILD_FIELDS },
       ),
     ).toThrow(/not declared with `arms`/);
     expect(() =>
-      liveArmColumns(runs(), "a.b", {
-        row: BuildRow,
-        filterable: {},
-        sortable: [],
-      }),
+      liveArm(runs(), "a.b", { label: "A", fields: BUILD_FIELDS }),
     ).toThrow(/plain identifier/);
   });
 });
 
 describe("the codec switches on the owner (T11)", () => {
-  test("a union decodes its arms' columns; a contributed / scoped set is refused there; an arm set elsewhere is refused", () => {
+  test("a union decodes its arms' columns; an exposed / scoped set is refused there; an arm set elsewhere is refused", () => {
     const c = runs();
-    const build = liveArmColumns(c, "build", {
-      row: BuildRow,
-      filterable: { exitCode: liveNumber() },
+    const build = liveArm(c, "build", {
+      label: "Build",
+      fields: BUILD_FIELDS,
       sortable: ["exitCode"],
     });
     const columns: readonly LiveColumnsDeclaration[] = [build];
@@ -265,32 +276,32 @@ describe("the codec switches on the owner (T11)", () => {
       } as never),
     ).toThrow(/arm columns "build" belong to "test.live.arms-/);
 
-    const contributedHost = liveCollection(`test.live.arms-co-${seq++}`, {
+    // An exposure is read by a collection reaching its entity — never a union.
+    const runsEntity = entityRef("test_arm_runs", {});
+    const extra = exposedColumns(
+      defineExtensionShape({
+        key: "runKey",
+        fields: { size: intField({ label: "Size", default: 0 }) },
+        exposes: { parent: runsEntity, name: "extra", fields: { size: {} } },
+      }).exposure,
+    );
+    expect(() =>
+      c.window.window.encode({
+        orderBy: [[extra.wireName("size"), "asc"]],
+        columns: [extra],
+      } as never),
+    ).toThrow(/which the collection's `exposes` does not reach/);
+    const host = liveCollection(`test.live.arms-ex-${seq++}`, {
       row: Run,
       id: "runKey",
       filterable: {},
       sortable: ["startedAt"],
       default: { orderBy: [["startedAt", "desc"]], limit: 10 },
       maxLimit: 30,
-      contributed: true,
-    });
-    const contributed = liveColumns(contributedHost, "extra", {
-      row: BuildRow,
-      filterable: {},
-      sortable: ["exitCode"],
-    });
-    expect(contributed.owner).toEqual({
-      kind: "contributed",
-      collection: contributedHost.key,
+      exposes: { base: runsEntity },
     });
     expect(() =>
-      c.window.window.encode({
-        orderBy: [["extra.exitCode", "asc"]],
-        columns: [contributed],
-      } as never),
-    ).toThrow(/not declared `contributed: true`/);
-    expect(() =>
-      contributedHost.window.window.encode({
+      host.window.window.encode({
         orderBy: [["build.exitCode", "asc"]],
         columns,
       } as never),

@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { serversRootPane, serverDetailPane } from "./panes";
-import { ServerDetail, Servers } from "./slots";
+import { ServerDetail } from "./slots";
 import { ServerEditForm } from "./components/server-edit-form";
 import { ServerDeleteAction } from "./components/server-delete-action";
 import {
@@ -12,14 +12,15 @@ import { IdKinds } from "@plugins/ids/web";
 import { deployServerIdKind } from "../core";
 
 export { serversRootPane, serverDetailPane, NEW_SERVER_ID } from "./panes";
-export { Servers, ServerDetail } from "./slots";
+export { ServerDetail } from "./slots";
 export {
   generateSshKeypair,
   importSshPrivateKey,
   servers,
+  serverSshKey,
   SshKeySchema,
 } from "../shared";
-export type { Server, SshKey } from "../shared";
+export type { Server, ServerListRow, SshKey } from "../shared";
 
 export default {
   description: "Server registry for the deployment platform.",
@@ -47,7 +48,6 @@ export default {
   ],
   slots: {
     ...ServerDetail,
-    ...Servers,
     itemActions: ServerItemActions,
     "deploy-servers": serversRootPane,
     "deploy-server-detail": serverDetailPane,

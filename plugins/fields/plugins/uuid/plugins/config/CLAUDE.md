@@ -7,7 +7,10 @@
 - Description: UUID field factory (uuidField) for building field records.
 - Core:
   - Uses:
+    - `fields.declaredDefault`
+    - `fields.ExactOptions`
     - `fields.FieldDef`
+    - `fields.FieldMarks`
     - `fields.FieldMeta`
     - `fields.pickMeta`
     - `fields/uuid.uuidFieldType`

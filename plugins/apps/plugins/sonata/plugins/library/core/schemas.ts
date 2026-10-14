@@ -8,6 +8,7 @@ import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { idKindField } from "@plugins/ids/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { songIdKind } from "./id-kind";
 
 /**
@@ -30,8 +31,8 @@ import { songIdKind } from "./id-kind";
  */
 export const songFields = {
   id: idKindField(songIdKind),
-  title: textField(),
-  composer: nullable(textField()),
+  title: textField({ label: "Title", primary: true }),
+  composer: nullable(textField({ label: "Composer" })),
   durationSec: floatField(),
   endBeat: floatField(),
   createdAt: dateField(),
@@ -42,8 +43,16 @@ export const songFields = {
    * open pane.
    */
   sourcesChangedAt: dateField(),
-  source: textField(),
+  source: textField({ label: "Source" }),
 } satisfies FieldsRecord;
+
+/**
+ * The songs entity by reference — what browser-safe declarations name it with
+ * (the library collection's `from`, an extension shape's `exposes.parent`),
+ * carrying its field record. The server builds `sonata_songs` from it
+ * (`defineEntity(songsEntityRef, …)`), so the two are one declaration.
+ */
+export const songsEntityRef = entityRef("sonata_songs", songFields);
 
 export const SongSchema = fieldsToZodObject(songFields);
 

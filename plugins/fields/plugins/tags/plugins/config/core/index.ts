@@ -1,6 +1,7 @@
 export {
   tagsField,
   type TagsFieldDef,
+  type TagsFieldOptions,
   type TagsOption,
   type TagsOptionInput,
 } from "./internal/tags";

@@ -1,1 +1,6 @@
-export { rankField, type RankFieldDef } from "./internal/rank";
+export {
+  rankField,
+  rankValueField,
+  type RankFieldDef,
+  type RankValueFieldDef,
+} from "./internal/rank";

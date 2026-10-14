@@ -10,7 +10,7 @@ import {
   type ConversationSidebarProps,
 } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 import { useQueueRows, type QueueRow } from "./use-queue-rows";
-import { useQueueFields } from "./queue-fields";
+import { QUEUE_EXTRA_FIELDS, QUEUE_OVERRIDES } from "./queue-fields";
 import {
   QueueItemActions,
   CloseConversationContext,
@@ -33,7 +33,6 @@ export function QueueSource({
 }: DataViewSourceProps<ConversationSidebarProps>): ReactElement {
   const { activeId, linkTo, onCloseConversation } = hostProps;
   const { rows, dispatchReorder, readiness, paging } = useQueueRows();
-  const fields = useQueueFields();
   // Every accessor below keeps its identity across renders (module constants,
   // or memoized on what they close over): the list view memoizes each row on
   // them, so a fresh closure here would re-render every row of the queue.
@@ -67,11 +66,13 @@ export function QueueSource({
       {render<QueueRow>({
         rows,
         // The rows are `conversationsActive`'s (and `conversationsGone`'s,
-        // which reaches the same entities): every field an extension of what
-        // they reach exposes — a task's track — joins the schema, filtered
-        // and grouped in memory.
+        // declared with the same fields and reach): the schema is derived
+        // from it — the conversation's fields and every field an extension of
+        // what it reaches exposes (a task's track) — filtered and grouped in
+        // memory. The Queue adds only its `section`.
         collection: conversationsActive,
-        fields,
+        overrides: QUEUE_OVERRIDES,
+        extraFields: QUEUE_EXTRA_FIELDS,
         rowKey: queueRowKey,
         readiness,
         ...(paging ? { paging } : {}),

@@ -23,21 +23,22 @@ Consumers read only the generic aggregate:
   is the registered categories, sorted by `order ?? 0` then id — fixed for the
   process, `preload: "boot-and-keep"` (hydrated before first paint, never
   garbage-collected), read through `useTaskCategories()`.
-- **Web:** the plugin contributes a `category` enum `FieldDef<TaskListItem>`
-  into the task-list's `Tasks.Fields` seam (`CategoryField` closes the field's
-  `value` over `useTaskCategoryMap()`), so the tasks DataView can group/filter
-  by category with no task-list code naming any category. Both hooks return a
-  `ResourceResult` (`useTaskCategories()` → the registry,
-  `useTaskCategoryMap()` → `taskId → categoryId`): not loaded yet is the
-  loading arm, never an empty registry or an empty map (which would claim
-  every task uncategorized). The field carries that state on to the DataView
-  rather than folding it into `null` (the None bucket) or its options into
-  `[]`: `pending` while EITHER read has never loaded, `readError` when either
-  failed with nothing held (the map's first, each with its own Retry) — so
-  its cells, and a view grouped / sorted / filtered by it, render loading or
-  the failure instead of filing every task under None, or laying sections out
-  under raw ids that relabel and reorder when the registry lands
-  (`web/internal/category-read.ts`, tested beside it).
+- **Lists:** the shape EXPOSES `category` (`taskCategoryShape.exposes`, served
+  by `LiveColumns.Expose(tasksCategory)`), so every list whose rows reach a
+  task — the task list (`taskRows` is `from: tasksEntityRef`) — gets a
+  `category` field, filtered, sorted and grouped by it with no list code
+  naming any category. A task with no row reads NULL (the field declares no
+  default): the None bucket. Its options are the LIVE registry
+  (`web/internal/presentation.ts`: `FieldPresentation.Register` with
+  `useOptions: useTaskCategoryOptions`), in registry order — a
+  category-grouped list lays its sections out in it and names them by its
+  labels. The options are a read: loading until the registry is known, never
+  raw-id sections that relabel and reorder when it lands.
+- **Hooks:** both return a `ResourceResult` (`useTaskCategories()` → the
+  registry, `useTaskCategoryMap()` → `taskId → categoryId`, which the task
+  detail's dependency card reads): not loaded yet is the loading arm, never an
+  empty registry or an empty map (which would claim every task
+  uncategorized).
 
 ## Storage + live state
 
@@ -46,8 +47,7 @@ Consumers read only the generic aggregate:
   category | null)` upserts / deletes.
 - `taskCategories` (`shared/resources.ts`) is a `liveCollection` declared
   **`all`** (P8 v3 step 18): the whole ordered set of `{ taskId, category }`
-  rows, ordered by `taskId`, `preload: "boot"` so the default category-grouped
-  tasks view never flashes "None" on first paint. Served by `serveCollection`
+  rows, ordered by `taskId`, `preload: "boot"`. Served by `serveCollection`
   from the extension handle (`server/internal/resource.ts`, options in
   `serve-options.ts`): a routed, L2-persisted alias — a category set is one
   entrant (a refill + one `orderOf`), a change a one-row refill, a clear or the

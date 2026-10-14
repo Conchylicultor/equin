@@ -13,6 +13,7 @@ import { Library } from "./slots";
 import { IdKinds } from "@plugins/ids/web";
 import { songIdKind } from "../core";
 import { sonataLibraryPane, sonataPlayerPane } from "./panes";
+import { songPresentation } from "./internal/presentation";
 
 export { Library } from "./slots";
 export type { SourceHydration } from "./slots";
@@ -30,6 +31,8 @@ export default {
     "Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances.",
   contributions: [
     IdKinds.Kind({ kind: songIdKind }),
+    // How the songs entity's fields present in the library list.
+    songPresentation,
     Sonata.Home({ id: "library", component: SongLibrary }),
     // The player pane's header. The song title is NOT here: a pane contributes
     // exactly one `title` item into its own header, and the player's title is

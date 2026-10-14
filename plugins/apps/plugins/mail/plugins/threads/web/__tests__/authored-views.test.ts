@@ -15,14 +15,15 @@ import type {
   FilterOperatorSet,
 } from "@plugins/primitives/plugins/data-view/core";
 import {
+  deriveFields,
   lowerFilterGroup,
   renameColumns,
   resolveLiveFields,
 } from "@plugins/primitives/plugins/data-view/web/testing";
 import { tagsOperatorSet } from "@plugins/fields/plugins/tags/plugins/filter/web/testing";
 import { boolOperatorSet } from "@plugins/fields/plugins/bool/plugins/filter/web/testing";
-import type { MailThread } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
-import { MAIL_THREAD_FIELDS, mailThreads } from "../../core";
+import { mailAccountIdKind } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import { mailThreads, type MailThreadRow } from "../../core";
 import { mailThreadsSource } from "../internal/source";
 
 /**
@@ -32,10 +33,10 @@ import { mailThreadsSource } from "../internal/source";
  * mailbox. Nothing else in the system would notice.
  *
  * So this suite reads the real config file and lowers each authored filter
- * through the REAL operator sets the Filter control runs, asserting every tab
- * lowers to its scope — and that the scope, renamed by the live source's own
- * field plan to the column each field binds (`labels` → `labelIds`), is a
- * filter the collection's declaration accepts. It is the only thing standing between a typo'd operator id and a
+ * through the REAL operator sets the Filter control runs, over the fields the
+ * list DERIVES from `mailThreads`, asserting every tab lowers to its scope —
+ * and that the scope, renamed by the live source's own field plan to its
+ * columns, is a filter the collection's declaration accepts. It is the only thing standing between a typo'd operator id and a
  * Spam tab showing the inbox.
  */
 const CONFIG_PATH = join(
@@ -70,23 +71,35 @@ const SETS: FilterOperatorSet[] = [tagsOperatorSet, boolOperatorSet];
 const resolve = (typeId: string): FilterOperatorSet | undefined =>
   SETS.find((s) => s.match === typeId);
 
-// The fields as the pane declares them for lowering: each binds its column
-// through the collection's own ref (`labels` → `labelIds`), exactly as
-// `useMailThreadFieldDefs` does. Only what the lowering reads.
-const fields: FieldDef<MailThread>[] = MAIL_THREAD_FIELDS.map((spec) => ({
-  id: spec.id,
-  label: spec.label,
-  type: spec.type,
-  ...(spec.column === undefined
-    ? {}
-    : { column: mailThreads.column(spec.column) }),
-}));
+// The fields the pane's DataView derives from the collection — what the
+// authored rules name.
+const fields = deriveFields(mailThreads, true, [])
+  .fields as FieldDef<MailThreadRow>[];
+
+describe("the threads list's field ids", () => {
+  it("are the vocabulary the authored tabs and saved views name", () => {
+    expect(fields.map((f) => f.id)).toEqual([
+      "subject",
+      "lastMessageAt",
+      "unread",
+      "starred",
+      "important",
+      "hasAttachments",
+      "messageCount",
+      "snippet",
+      "accountId",
+      "labels",
+    ]);
+  });
+});
 
 // The live source's real field plan — which fields the Filter control offers
 // and the column each lowers to — under the pane's account scope.
 const plan = resolveLiveFields(
   fields,
-  mailThreadsSource.scoped({ where: { accountId: "account" } }),
+  mailThreadsSource.scoped({
+    where: { accountId: mailAccountIdKind.key("account") },
+  }),
   resolve,
   "authored-views test",
 );
@@ -94,7 +107,7 @@ const plan = resolveLiveFields(
 const FILTERABLE: Filterable = mailThreads.filterable;
 
 const labels = (op: "hasAll" | "hasNone", tag: string) =>
-  clause("labelIds", op, [tag]);
+  clause("labels", op, [tag]);
 
 const EXPECTED: Record<string, Filter> = {
   inbox: labels("hasAll", "INBOX"),

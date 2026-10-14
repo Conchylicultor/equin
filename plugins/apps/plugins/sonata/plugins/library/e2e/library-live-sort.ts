@@ -1,10 +1,10 @@
 /**
- * The Sonata library sorts and filters by columns OTHER plugins contribute
+ * The Sonata library sorts and filters by fields OTHER plugins expose
  * (playback-history's play stats) on the server, and follows their writes
  * live.
  *
  *  1. opens the library's "All" table and applies the "Recently played" sort
- *     preset (`lastPlayedAt desc`, a contributed column);
+ *     preset (`lastPlayedAt desc`, an exposed field);
  *  2. records a play of a song that is NOT at the top — through the API, as a
  *     second tab's player would — and asserts the song moves to the top of the
  *     open table, without a reload, with its Plays cell counting the new play;
@@ -57,7 +57,13 @@ const TABS_READY = 'button[title="All"]';
 interface SongRow {
   id: string;
   title: string;
-  $columns: { playback: { playCount: number; lastPlayedAt: string | null } };
+  // The playback exposure's slice: `<parent>_ext_<name>` (entity-extensions).
+  $columns: {
+    sonata_songs_ext_playback: {
+      playCount: number;
+      lastPlayedAt: string | null;
+    };
+  };
 }
 
 /** Every song, as the library collection serves it (one window, over HTTP). */
@@ -100,7 +106,7 @@ async function applyPreset(
 }
 
 await withBrowser(async (h) => {
-  const r = report("sonata library — contributed columns, sorted live");
+  const r = report("sonata library — exposed fields, sorted live");
   const { page } = await h.session();
 
   await boot(page, pathUrl("/sonata"), {
@@ -111,12 +117,12 @@ await withBrowser(async (h) => {
   await page.locator(TABS_READY).first().click();
   await page.keyboard.press("Escape");
 
-  // ---- 1. "Recently played": sorted by a contributed column --------------
+  // ---- 1. "Recently played": sorted by an exposed field --------------
   await applyPreset(page, 'button[aria-label^="Sort"]', "Recently played");
   const songs = await librarySongs(page);
   const byRecent = [...songs].sort((a, b) =>
-    (b.$columns.playback.lastPlayedAt ?? "").localeCompare(
-      a.$columns.playback.lastPlayedAt ?? "",
+    (b.$columns.sonata_songs_ext_playback.lastPlayedAt ?? "").localeCompare(
+      a.$columns.sonata_songs_ext_playback.lastPlayedAt ?? "",
     ),
   );
   // A played song a few rows down, whose title no other song shares (so its
@@ -132,7 +138,7 @@ await withBrowser(async (h) => {
       (s) =>
         titleCount.get(s.title) === 1 &&
         s.title.length > 3 &&
-        s.$columns.playback.lastPlayedAt !== null,
+        s.$columns.sonata_songs_ext_playback.lastPlayedAt !== null,
     );
   if (target === undefined) {
     throw new Error(
@@ -148,12 +154,12 @@ await withBrowser(async (h) => {
     { timeoutMs: 60_000 },
   );
   r.ok(
-    "the table is sorted by last played (a contributed column), the target below the top",
+    "the table is sorted by last played (an exposed field), the target below the top",
     top.ok,
     `first row: ${top.value[0] ?? "(none)"}`,
   );
   await snap(page, OUT, "recently-played");
-  const playsBefore = target.$columns.playback.playCount;
+  const playsBefore = target.$columns.sonata_songs_ext_playback.playCount;
 
   await page.evaluate(() => {
     (window as unknown as { __noReload?: boolean }).__noReload = true;
@@ -189,13 +195,15 @@ await withBrowser(async (h) => {
   );
   await snap(page, OUT, "after-play");
 
-  // ---- 3. "Unplayed": filtered by a defaulted contributed column --------
+  // ---- 3. "Unplayed": filtered by a defaulted exposed field --------
   await applyPreset(
     page,
     'button[aria-label^="Filter"], button[aria-label$=" rule"], button[aria-label$=" rules"]',
     "Unplayed",
   );
-  const neverPlayed = songs.filter((s) => s.$columns.playback.playCount === 0);
+  const neverPlayed = songs.filter(
+    (s) => s.$columns.sonata_songs_ext_playback.playCount === 0,
+  );
   r.note(`${neverPlayed.length} song(s) never played`);
   // Exact while every never-played song renders; past that, the rendered rows
   // are a prefix (the viewport, the first page), so only their content counts.

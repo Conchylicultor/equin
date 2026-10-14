@@ -1,20 +1,31 @@
 import {
+  BUILD_STATUS_OPTIONS_META,
   buildStatusOf,
   killedSignalName,
   type BuildRunOutcome,
   type BuildStatus,
 } from "@plugins/build/plugins/build-status/core";
-import { Badge, type BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import {
+  Badge,
+  type BadgeVariant,
+} from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 
+/** Each status's dot colour — the one web-only fact beside its label and tint. */
+const DOT_COLOR_CLASS: Record<BuildStatus, string> = {
+  running: "bg-warning animate-pulse",
+  success: "bg-success",
+  failed: "bg-destructive",
+  superseded: "bg-muted-foreground/60",
+  interrupted: "bg-muted-foreground/60",
+  killed: "bg-muted-foreground/60",
+};
+
 /**
- * Single source of truth for build-run status display metadata.
- *
- * Colour carries the one distinction that matters: `failed` is destructive
- * because it is the only status a human must act on. `superseded`,
- * `interrupted` and `killed` are muted — none of them is a code defect, so none
- * of them should draw the eye the way a real failure must.
+ * Build-run status display metadata: the label and tint are core's
+ * (`BUILD_STATUS_OPTIONS_META`, which the build arm's field declares its
+ * options with), the dot colour is the web's.
  *
  * Declaration order is the order the filter dropdown offers
  * (`BUILD_STATUS_OPTIONS` is derived from it, never hand-written).
@@ -22,30 +33,24 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 export const BUILD_STATUS_META: Record<
   BuildStatus,
   { label: string; badgeVariant: BadgeVariant; dotColorClass: string }
-> = {
-  running: {
-    label: "Running",
-    badgeVariant: "warning",
-    dotColorClass: "bg-warning animate-pulse",
-  },
-  success: { label: "Success", badgeVariant: "success", dotColorClass: "bg-success" },
-  failed: { label: "Failed", badgeVariant: "destructive", dotColorClass: "bg-destructive" },
-  superseded: {
-    label: "Superseded",
-    badgeVariant: "muted",
-    dotColorClass: "bg-muted-foreground/60",
-  },
-  interrupted: {
-    label: "Interrupted",
-    badgeVariant: "muted",
-    dotColorClass: "bg-muted-foreground/60",
-  },
-  killed: {
-    label: "Killed externally",
-    badgeVariant: "muted",
-    dotColorClass: "bg-muted-foreground/60",
-  },
-};
+> = Object.fromEntries(
+  (
+    Object.entries(BUILD_STATUS_OPTIONS_META) as [
+      BuildStatus,
+      (typeof BUILD_STATUS_OPTIONS_META)[BuildStatus],
+    ][]
+  ).map(([status, o]) => [
+    status,
+    {
+      label: o.label,
+      badgeVariant: o.variant,
+      dotColorClass: DOT_COLOR_CLASS[status],
+    },
+  ]),
+) as Record<
+  BuildStatus,
+  { label: string; badgeVariant: BadgeVariant; dotColorClass: string }
+>;
 
 export const BUILD_STATUS_OPTIONS: { value: BuildStatus; label: string }[] = (
   Object.entries(BUILD_STATUS_META) as [BuildStatus, { label: string }][]
@@ -60,13 +65,18 @@ function buildStatusText(run: BuildRunOutcome, status: BuildStatus): string {
   const { label } = BUILD_STATUS_META[status];
   if (run.exitCode === null) return label;
   if (status === "failed") return `${label} (exit ${run.exitCode})`;
-  if (status === "killed") return `${label} (${killedSignalName(run.exitCode)})`;
+  if (status === "killed")
+    return `${label} (${killedSignalName(run.exitCode)})`;
   return label;
 }
 
 /** The run's status as a dot alone, for list rows that carry their own label. */
 export function BuildStatusDot({ run }: { run: BuildRunOutcome }) {
-  return <StatusDot colorClass={BUILD_STATUS_META[buildStatusOf(run)].dotColorClass} />;
+  return (
+    <StatusDot
+      colorClass={BUILD_STATUS_META[buildStatusOf(run)].dotColorClass}
+    />
+  );
 }
 
 /** Dot + label, for a row or a table cell. */
@@ -85,7 +95,10 @@ export function BuildStatusBadge({ run }: { run: BuildRunOutcome }) {
   const status = buildStatusOf(run);
   const meta = BUILD_STATUS_META[status];
   return (
-    <Badge variant={meta.badgeVariant} icon={<StatusDot colorClass={meta.dotColorClass} />}>
+    <Badge
+      variant={meta.badgeVariant}
+      icon={<StatusDot colorClass={meta.dotColorClass} />}
+    >
       {buildStatusText(run, status)}
     </Badge>
   );

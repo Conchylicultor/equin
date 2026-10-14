@@ -20,27 +20,26 @@ Design: [`research/2026-07-29-global-agent-origin-provenance-for-pages.md`](../.
 - `page_blocks_ext_origin` is a presence side-table (`source` column + the
   synthesized `blockId` key/timestamps). Presence = agent-created. Only
   `type="page"` blocks are marked, roots and nested pages alike.
-- **The marker set is a `liveCollection`, `agentPages`** (`shared/resources.ts`,
-  key `pages-origin.all`), declared **`all`** (ordered by `blockId`, at most
-  one row per page): `OriginField` projects an origin for every page, so it
-  holds the set entire. It is served by
-  `serveCollection(agentPages, { from: pageBlocksOrigin })` — the extension
-  handle's wire columns — with `...agentPagesServed.declare` spread into the
-  server contributions, and `OriginField` reads it with
-  `useLive(agentPages, { select })`. The sibling `starred` is the same shape.
-  The 24h TTL keeps the live set in single digits.
-- **The Scratch section is a contributed field + config-authored filters.**
-  `OriginField` yields one `origin` enum `FieldDef<PageRow>` (options
-  **Private** / **Scratch**) into `PageTree.Fields`;
+- **The origin is an EXPOSED presence field** (`shared/resources.ts`:
+  `exposes.presence: { id: "origin", values: { present: "agent", absent:
+  "user" } }`). It folds into every list whose rows are blocks — `pages.tree`,
+  the pages sidebar — served by `LiveColumns.Expose(pageBlocksOrigin)`
+  (server) and presented by `FieldPresentation.Register({ owner:
+  agentPageShape.exposure })` (web): a `CASE` on the side row's existence, so
+  it filters and groups like any column and a page with no marker reads
+  `"user"`, never null. There is no browser-side marker set to read. The 24h
+  TTL keeps the marked set in single digits.
+- **The Scratch section is the exposed field + config-authored filters.**
+  The options are labelled after the sections (**Private** / **Scratch**);
   `config/apps/pages/page-tree/pages-sidebar.jsonc` authors two tree views of
   the `sections`-chrome sidebar over it — `pages` ("Private", `origin is user`)
   and `scratch` ("Scratch", `origin is agent`, `hideWhenEmpty`) — both with
-  `filterScope: "roots"`. Unmarked rows project `"user"` (never null), so every
-  page lands in exactly one section. The root scope tests ROOTS only and keeps
-  each kept root's whole subtree, so a subtree is never split between the two
-  and neither pulls in the other's ancestors. Drag-reorder works in both: the
-  tree's drop contract carries an anchor, not a rank, so a section seeing only
-  its own roots cannot mint a colliding key.
+  `filterScope: "roots"`. Every page lands in exactly one section. The root
+  scope tests ROOTS only and keeps each kept root's whole subtree, so a
+  subtree is never split between the two and neither pulls in the other's
+  ancestors. Drag-reorder works in both: the tree's drop contract carries an
+  anchor, not a rank, so a section seeing only its own roots cannot mint a
+  colliding key. `shared/resources.test.ts` pins the id and its values.
 - **The sweep is `defineRetention` + its `beforeDelete` seam**, mirroring how
   trash drives `purgeTrashedPages`: the primitive's DELETE clears the MARKER,
   the callback removes the PAGES through `deleteBlocksSubtree` — the delete
@@ -56,25 +55,21 @@ Design: [`research/2026-07-29-global-agent-origin-provenance-for-pages.md`](../.
 
 ## Plugin reference
 
-- Description: Agent-origin provenance for pages: contributes an `origin` enum field (Private / Scratch) into the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (x-singularity-origin: agent) with the script that minted it, a bounded live resource exposes the marker set to the Pages sidebar's `origin` field, and a 24h retention sweep trashes the marked pages.
+- Description: Agent-origin provenance for pages: presents the exposed `origin` field (Private / Scratch) of the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (x-singularity-origin: agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and a 24h retention sweep trashes the marked pages.
 - Web:
-  - Contributes: `PageTree.Fields` "origin" → `OriginField`
-  - Uses:
-    - `apps/pages/page-tree.PageTree`
-    - `network/live.useLive`
-    - `primitives/live-state.foldResource`
+  - Contributes: `FieldPresentation.Register` "exposure:page_blocks_ext_origin"
+  - Uses: `network/live.FieldPresentation`
   - Exports (types): `AgentPageRow`
   - Exports (values): `AgentPageRowSchema`
 - Server:
   - Contributes:
-    - `resource.declare` "pages-origin.all"
-    - `resource.declare` "pages-origin.all:rows"
+    - `live.columns.expose` "page_blocks ← page_blocks_ext_origin"
     - `page.editor.block.afterCreate`
   - Uses:
     - `database.db`
     - `infra/entity-extensions.defineExtension`
     - `infra/retention.defineRetention`
-    - `network/live.serveCollection`
+    - `network/live.LiveColumns`
     - `page/editor._blocks`
     - `page/editor.BlockLifecycle`
     - `page/editor.deleteBlocksSubtree`
@@ -83,8 +78,5 @@ Design: [`research/2026-07-29-global-agent-origin-provenance-for-pages.md`](../.
   - Entity extension of: `page/editor` (table `editor_ext_origin`)
   - Exports (values): `pageBlocksOrigin`
   - Register: `defineJob('retention.page_blocks_ext_origin')`
-  - Resources:
-    - `pages-origin.all` (keyed)
-    - `pages-origin.all:rows` (keyed, point)
 
 <!-- AUTOGENERATED:END -->

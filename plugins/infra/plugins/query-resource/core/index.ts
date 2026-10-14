@@ -8,6 +8,7 @@ export type {
   ColumnRef,
   ColumnRefsOf,
   ExtensionJoin,
+  ExtensionPresence,
   JoinColumns,
   JoinFamily,
   JoinRef,

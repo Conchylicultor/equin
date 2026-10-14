@@ -14,7 +14,6 @@ import {
   defineResource,
   keptSnapshotValue,
   loadResourceByKey,
-  onDeferredResourcesBound,
   Resource as ResourceContribution,
 } from "@plugins/framework/plugins/server-core/core";
 import type { Resource } from "@plugins/framework/plugins/resource-runtime/core";
@@ -63,7 +62,6 @@ import {
   type LiveAllCollection,
   type LiveCollection,
   type LiveColumnsDeclaration,
-  type LiveColumnsOwner,
   type LiveGroup,
   type LiveCountParams,
   type LiveGroupParams,
@@ -83,10 +81,13 @@ import {
 import {
   LiveColumns,
   type ExposingExtension,
-  type ServedColumns,
   type ServedScopedColumns,
 } from "./serve-columns";
-import { exposureFolds } from "./exposure-folds";
+import {
+  exposedBinding,
+  exposureFolds,
+  type ExposureFold,
+} from "./exposure-folds";
 import {
   compileExternalCollection,
   type AnyCollection,
@@ -172,7 +173,7 @@ type ColumnOverrides<
 
 /**
  * The row fields a collection binds to columns: every key of its row but
- * `$columns`, which a contributed collection folds its contributors into.
+ * `$columns`, which a collection reaching exposures folds them into.
  */
 type BoundFields<Row> = Exclude<keyof Row & string, typeof LIVE_COLUMNS_KEY>;
 
@@ -350,7 +351,6 @@ export function compileCollection<
 >(
   collection: SingleTableCollection<Row, F, S>,
   opts: ServeCollectionOptions<T, Row, J, keyof F & string>,
-  contributed?: readonly ServedColumns[],
   scoped?: readonly ServedScopedColumns[],
   exposed?: readonly ExposingExtension[],
 ): CollectionSpecs;
@@ -361,9 +361,8 @@ export function compileCollection<
 >(
   collection: LiveAllCollection<Row>,
   opts: ServeAllCollectionOptions<T, Row, J>,
-  // Positional like the window form's: an `all` set is never contributed or
-  // scoped (refused when non-empty), and folds the exposures it reaches.
-  contributed?: readonly ServedColumns[],
+  // Positional like the window form's: an `all` set is never scoped (refused
+  // when non-empty), and folds the exposures it reaches.
   scoped?: readonly ServedScopedColumns[],
   exposed?: readonly ExposingExtension[],
 ): AllCollectionSpecs<Row>;
@@ -391,7 +390,6 @@ export function compileCollection<
   served:
     | ServeCollectionOptions<T, Row, J, string>
     | ServeAllCollectionOptions<T, Row, readonly AllJoinSpec[]>,
-  contributed: readonly ServedColumns[] = [],
   scoped: readonly ServedScopedColumns[] = [],
   exposed: readonly ExposingExtension[] = [],
 ): CollectionSpecs | LookupCollectionSpecs | AllCollectionSpecs<Row> {
@@ -399,12 +397,12 @@ export function compileCollection<
     throw new Error(`serveCollection("${collection.key}"): ${message}`);
   };
   // First (C4): an `all` collection has no window either, so the lookup-only
-  // branch below would compile it as `:rows` alone. It is never contributed or
-  // scoped — what a boot-time compile folds in.
+  // branch below would compile it as `:rows` alone. It is never scoped —
+  // what a boot-time compile folds in.
   if (collection.all !== undefined) {
-    if (contributed.length > 0 || scoped.length > 0) {
+    if (scoped.length > 0) {
       fail(
-        "contributed or scoped columns were served for a collection declared `all` — its definition is fixed at module eval, never folded from contributions.",
+        "scoped columns were served for a collection declared `all` — its definition is fixed at module eval, never folded from contributions.",
       );
     }
     return compileAllSpecs(
@@ -424,55 +422,9 @@ export function compileCollection<
       "a union collection (declared with `arms`) reads several tables — its server half compiles its arms as one union, never one table's `serveCollection`",
     );
   }
-  const isContributed =
-    (collection as { contributed?: boolean }).contributed === true;
-  if (contributed.length > 0 && !isContributed) {
-    fail(
-      "contributed columns were served for a collection not declared `contributed: true`",
-    );
-  }
-  // Each contributor's handle, by name — two contributions of one name would
-  // fold into one `$columns` slot.
+  // Every set folded into `$columns`, by name — two sets of one name would
+  // fold into one slot.
   const handles: LiveColumnsDeclaration[] = [];
-  for (const c of contributed) {
-    // Typed contributed (`ServedColumns`); checked against a cast past it.
-    const owner: LiveColumnsOwner = c.handle.owner;
-    switch (owner.kind) {
-      case "contributed":
-        if (owner.collection !== collection.key) {
-          fail(
-            `contributed columns "${c.handle.name}" belong to "${owner.collection}"`,
-          );
-        }
-        break;
-      case "scoped":
-      case "arm":
-        fail(
-          `columns "${c.handle.name}" are ${owner.kind === "scoped" ? "a scoped set (served by `LiveColumns.Scoped`)" : `arm "${owner.arm}"'s own (served by its union)`} — only a contributed set is served through \`LiveColumns.Serve\``,
-        );
-        break;
-      case "exposed":
-        fail(
-          `columns "${c.handle.name}" are an exposure (served by \`LiveColumns.Expose\`) — only a contributed set is served through \`LiveColumns.Serve\``,
-        );
-        break;
-      default:
-        owner satisfies never;
-    }
-    // The type admits only an extension join; a cast past it would widen the
-    // base collection's semantics (an INNER lookup drops hosts).
-    if ((c.join as { kind: string }).kind !== "extension") {
-      fail(
-        `contributed columns "${c.handle.name}" are read through a "${(c.join as { kind: string }).kind}" join — a contributor may only join an extension (\`ext.join(alias)\`)`,
-      );
-    }
-    if (handles.some((h) => h.name === c.handle.name)) {
-      fail(
-        `two LiveColumns.Serve contributions are named "${c.handle.name}" — a contributor's name is its \`$columns\` slot`,
-      );
-    }
-    handles.push(c.handle);
-  }
   const from: CollectionSource = opts.from;
   const table = isEntitySource(from) ? from.table : from;
   // An entity binds through its WIRE columns — the ones it already agreed to
@@ -484,9 +436,9 @@ export function compileCollection<
     string,
     ((j: unknown) => ColumnRef | ExprField) | undefined
   >;
-  // The exposures its `exposes` reaches (`./exposure-folds`): each folds like
-  // a contributor — its own extension join, its fields by name — but is
-  // reached by entity, never named by the collection.
+  // The exposures its `exposes` reaches (`./exposure-folds`): each folds
+  // through its own extension join, its fields by name — reached by entity,
+  // never named by the collection.
   const exposes = collection.exposes ?? null;
   const folds = exposureFolds(
     exposes,
@@ -497,18 +449,16 @@ export function compileCollection<
     fail,
   );
   const exposedHandles: LiveColumnsDeclaration[] = folds.map((f) => f.handle);
-  // Every set folded into `$columns`: the contributors, then the exposures.
+  // Every set folded into `$columns`: the exposures.
   const foldedSets: {
     handle: LiveColumnsDeclaration;
     join: ExtensionJoin;
-    columns: ServedColumns["columns"];
-  }[] = [
-    ...contributed,
-    ...folds.map((f) => ({ handle: f.handle, join: f.join, columns: {} })),
-  ];
+    /** Its fields bind through `exposedBinding`. */
+    fold: ExposureFold;
+  }[] = folds.map((f) => ({ handle: f.handle, join: f.join, fold: f }));
   handles.push(...exposedHandles);
-  // A row carries `$columns` when another plugin may add to it.
-  const foldsColumns = isContributed || exposes !== null;
+  // A row carries `$columns` when it reaches an entity others may expose on.
+  const foldsColumns = exposes !== null;
   const joinSpecs: readonly JoinSpec[] = [
     ...(opts.joins ?? []),
     ...foldedSets.map((c) => c.join),
@@ -620,33 +570,40 @@ export function compileCollection<
     }
     boundRefs.set(name, ref);
   }
-  // Contributed and exposed columns: each set's fields, read through its own
-  // join (by property name, or a contributor's override) and projected flat
-  // under their wire names (`<set>.<field>`); every row folds them into
-  // `$columns`.
-  const contributedFields = new Map<
+  // Exposed columns: each set's fields, read through its own join (by
+  // property name) and projected flat under their wire names
+  // (`<set>.<field>`); every row folds them into `$columns`.
+  const foldedFields = new Map<
     string,
-    { contributor: string; field: string; schema: unknown }
+    { set: string; field: string; schema: unknown }
   >();
   for (const c of foldedSets) {
     const alias = c.join.alias;
-    const own = { [alias]: refs[alias] };
     const shape = c.handle.rowShape;
     for (const field of c.handle.fields) {
       const wire = c.handle.wireName(field);
-      const override = c.columns[field];
-      const ref: ColumnRef = override
-        ? override(own)
-        : (refs[alias]?.[field] ??
-          fail(
-            `contributed field "${wire}" binds to no wire column of join "${alias}" — pass it in \`columns\`.`,
-          ));
+      const binding = exposedBinding(c.fold, field, refs[alias], fail);
+      if (isExprField(binding)) {
+        // A presence field: an expression over the join's key, rendered once
+        // like a row's expression field (never wire-encoded).
+        bound.set(
+          wire,
+          joins.renderExpr(binding, { name: wire, baseColumns: sourceColumns }),
+        );
+        foldedFields.set(wire, {
+          set: c.handle.name,
+          field,
+          schema: shape[field],
+        });
+        continue;
+      }
+      const ref: ColumnRef = binding;
       if (
         ref.from !== alias ||
         !Object.values(refs[alias] ?? {}).some((r) => r.col === ref.col)
       ) {
         fail(
-          `contributed field "${wire}" binds to "${ref.from}"."${ref.col.name}", which is not a wire column of its join "${alias}".`,
+          `exposed field "${wire}" binds to "${ref.from}"."${ref.col.name}", which is not a wire column of its join "${alias}".`,
         );
       }
       // A column with a wire codec is compared as stored, so an exposed
@@ -654,8 +611,8 @@ export function compileCollection<
       // filterable column.
       bound.set(wire, joins.render(ref));
       boundRefs.set(wire, ref);
-      contributedFields.set(wire, {
-        contributor: c.handle.name,
+      foldedFields.set(wire, {
+        set: c.handle.name,
         field,
         schema: shape[field],
       });
@@ -663,7 +620,7 @@ export function compileCollection<
   }
   const rowShape = collection.row.shape as Readonly<Record<string, unknown>>;
   const fieldSchema = (name: string): ZodParser<unknown> => {
-    const schema = (contributedFields.get(name)?.schema ?? rowShape[name]) as
+    const schema = (foldedFields.get(name)?.schema ?? rowShape[name]) as
       Partial<ZodParser<unknown>> | undefined;
     if (typeof schema?.safeParse !== "function") {
       return fail(`row schema field "${name}" is not a zod schema.`);
@@ -699,7 +656,7 @@ export function compileCollection<
   }
   const lists = collection.window !== undefined;
   // The collection's own filterable columns (what a grouping may read), and
-  // with every contributor's (by wire name) what a window may read.
+  // with every exposed set's (by wire name) what a window may read.
   const ownFilterable = lists
     ? Object.keys(collection.filterable as object)
     : [];
@@ -731,15 +688,15 @@ export function compileCollection<
       );
     }
   }
-  // A contributed collection's row: its contributors' flat wire-named values,
-  // wire-encoded like any column, folded into `$columns[contributor][field]`
-  // (every contributor present, so a row always carries each slice).
+  // A row reaching exposures: their flat wire-named values, wire-encoded like
+  // any column, folded into `$columns[set][field]` (every set present, so a
+  // row always carries each slice).
   const fold = (out: Record<string, unknown>): void => {
     const cols: Record<string, Record<string, unknown>> = Object.fromEntries(
       handles.map((h) => [h.name, {}]),
     );
-    for (const [wire, { contributor, field }] of contributedFields) {
-      cols[contributor]![field] = out[wire];
+    for (const [wire, { set, field }] of foldedFields) {
+      cols[set]![field] = out[wire];
       delete out[wire];
     }
     out[LIVE_COLUMNS_KEY] = cols;
@@ -759,13 +716,13 @@ export function compileCollection<
           return out;
         };
   const withEncode = encodeRow ? { encodeRow } : {};
-  // The order signature reads a sorted contributed column off `$columns`.
+  // The order signature reads a sorted exposed column off `$columns`.
   const readField = (row: Record<string, unknown>, field: string): unknown => {
-    const c = contributedFields.get(field);
+    const c = foldedFields.get(field);
     return c === undefined
       ? row[field]
       : (row[LIVE_COLUMNS_KEY] as Record<string, Record<string, unknown>>)[
-          c.contributor
+          c.set
         ]![c.field];
   };
   const base =
@@ -838,7 +795,7 @@ export function compileCollection<
   };
 
   const codec = collection.window.window;
-  // Every column set a query may name: the contributors served here, and the
+  // Every column set a query may name: the exposures folded here, and the
   // scoped sets' members AS THEY STAND (a scope's members are data) — rebuilt
   // only when some set's members changed, so the codec's per-array memo holds.
   let declared: { key: string; all: readonly LiveColumnsDeclaration[] } = {
@@ -949,7 +906,7 @@ export function compileCollection<
 
   const groupCodec = collection.groups.groups;
   // What a grouping and a count may name beside the collection's own columns:
-  // its exposed ones (a contributor's never — its codec knows none).
+  // its exposed ones.
   const exposedFilterable = exposedHandles.flatMap((h) =>
     Object.keys(h.wireFilterable),
   );
@@ -1064,7 +1021,7 @@ export function compileCollection<
       // maxLimit comes from the declaration's codec; the limit is decoded
       // with the served column sets, like every other part of the tuple — and
       // so is the params gate: the descriptor's own decode knows no
-      // contributed or scoped column, and would refuse a tuple naming one.
+      // exposed or scoped column, and would refuse a tuple naming one.
       window: {
         limitOf: (params: LiveWindowParams) => decode(params).limit,
         validateParams: (params) => {
@@ -1220,7 +1177,7 @@ export function serveCollection<
   // register its `key`. Bound eagerly — unless it reaches exposures, whose
   // `LiveColumns.Expose` contributions are known only at boot: then both
   // halves are deferred (registered now, compiled at `bindDeferredResources`,
-  // before the preload assert and the L2 sweep). It is never contributed or
+  // before the preload assert and the L2 sweep). It is never
   // scoped (`compileAllSpecs` refuses a cast that says so).
   if (collection.all !== undefined) {
     const allOpts = served as ServeAllCollectionOptions<
@@ -1266,7 +1223,6 @@ export function serveCollection<
     };
   }
   if (
-    (collection as { contributed?: boolean }).contributed === true ||
     ((collection as { columnScope?: string | null }).columnScope ?? null) !==
       null ||
     (collection.exposes ?? null) !== null
@@ -1370,39 +1326,15 @@ async function bootIdsOf(source: PreloadRowsSource): Promise<string[]> {
   });
 }
 
-// ── Contributed, scoped and exposing collections: compiled at boot ───────
-// A `contributed: true` collection's columns come from other plugins'
-// `LiveColumns.Serve` contributions, a `columnScope` collection's scoped
-// sets from `LiveColumns.Scoped` ones, and an `exposes` collection's exposed
-// fields from `LiveColumns.Expose` ones — all known only once contributions
-// are collected. Its three resources are DEFERRED: registered now under their
+// ── Scoped and exposing collections: compiled at boot ───────────────────
+// A `columnScope` collection's scoped sets come from `LiveColumns.Scoped`
+// contributions, and a collection reaching an entity its exposed fields from
+// `LiveColumns.Expose` ones — both known only once contributions are
+// collected. Its three resources are DEFERRED: registered now under their
 // descriptors (so `Resource.Declare`, preload and the boot snapshot see them),
-// compiled — every contribution naming the collection folded in — at
+// compiled — every contribution reaching the collection folded in — at
 // `bindDeferredResources`, before anything serves or the change feed rebuilds
 // triggers from the route layout.
-
-/** The contributed collections this process serves — what a `LiveColumns.Serve` must name. */
-const contributedKeys = new Set<string>();
-
-// A served column set no contributed collection here compiles would never
-// reach the wire: its web half would fail every decode instead. Fail boot.
-onDeferredResourcesBound(() => {
-  const orphans = LiveColumns.Serve.getContributions().filter(
-    (s) => !contributedKeys.has(s.handle.owner.collection),
-  );
-  if (orphans.length > 0) {
-    throw new Error(
-      `[live] ${orphans.length} LiveColumns.Serve contribution(s) name a collection no \`serveCollection\` serves here: ` +
-        orphans
-          .map(
-            (s) =>
-              `"${s.handle.owner.collection}" ← "${s.handle.name}" (${s._pluginId ?? "?"})`,
-          )
-          .join(", ") +
-        ". Serve the contributed collection (declared `contributed: true`), or drop the contribution.",
-    );
-  }
-});
 
 function serveDeferred<
   Row,
@@ -1418,19 +1350,15 @@ function serveDeferred<
   // compiled at boot as a window it does not have.
   if ((collection as { all?: unknown }).all !== undefined) {
     throw new Error(
-      `serveCollection("${collection.key}"): a collection declared \`all\` reached the window's deferred path — it is never contributed or scoped, and its exposures fold through its own deferred bind.`,
+      `serveCollection("${collection.key}"): a collection declared \`all\` reached the window's deferred path — it is never scoped, and its exposures fold through its own deferred bind.`,
     );
   }
-  if (collection.contributed) contributedKeys.add(collection.key);
   // Compiled once, at the first bind, from every contribution naming it.
   let specs: CollectionSpecs | undefined;
   const compiled = (): CollectionSpecs =>
     (specs ??= compileCollection(
       collection,
       opts,
-      LiveColumns.Serve.getContributions().filter(
-        (s) => s.handle.owner.collection === collection.key,
-      ),
       collection.columnScope === null
         ? []
         : LiveColumns.Scoped.getContributions(),

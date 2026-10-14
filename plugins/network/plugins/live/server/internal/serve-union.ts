@@ -57,7 +57,7 @@ import type { ServedCollection } from "./serve-collection";
 // rows of N kinds, each from its own table, listed in one window. Each arm
 // binds the collection's base fields to its own table (by name, through the
 // same `j` a `serveCollection` override reads), and its own column set
-// (`liveArmColumns`) to its own columns; its rows carry those under
+// (`liveArm`) to its own fields; its rows carry those under
 // `$columns[<arm>]`. The compile is query-resource's `compileUnionCollection`;
 // what is decided here is the filter language's half:
 //
@@ -93,7 +93,7 @@ export type UnionFieldBinding = ColumnRef | ExprField;
  * and each binding's value against its row (T9).
  */
 export interface UnionArmBinding {
-  /** The arm's own column set (`liveArmColumns`) — its `owner.arm` is the arm's kind. */
+  /** The arm (`liveArm`) — its `owner.arm` is the arm's kind. */
   columns: LiveColumnsDeclaration;
   /** Its base table (or an entity, read through its table). Never a view. */
   from: RoutedSource;
@@ -220,11 +220,10 @@ export function compileUnion<
           );
         }
         break;
-      case "contributed":
       case "scoped":
       case "exposed":
         fail(
-          `columns "${b.columns.name}" are a ${owner.kind} set — an arm binds its own \`liveArmColumns\`.`,
+          `columns "${b.columns.name}" are a ${owner.kind} set — an arm binds its own \`liveArm\`.`,
         );
         break;
       default:

@@ -314,32 +314,6 @@ describe("serveCollectionOn — a window collection", () => {
       }),
     ).toThrow(/never a snapshot/);
   });
-
-  test("a contributed collection is refused (tsc and a throw)", () => {
-    const h = createHarness();
-    const c = liveCollection(key("contributed"), {
-      row: RowSchema,
-      id: "id",
-      filterable: {},
-      sortable: ["rank"],
-      default: { orderBy: [["rank", "asc"]], limit: 10 },
-      maxLimit: 50,
-      contributed: true,
-    });
-    expect(() =>
-      serveCollectionOn(
-        h.runtime,
-        // @ts-expect-error — its rows fold other plugins' Postgres columns
-        c,
-        {
-          source: "external",
-          changes: "notified",
-          window: () => [],
-          rows: () => [],
-        },
-      ),
-    ).toThrow(/`contributed: true` collection .* has no external spelling/);
-  });
 });
 
 describe("serveCollectionOn — every window's $key", () => {

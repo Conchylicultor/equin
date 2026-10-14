@@ -100,8 +100,8 @@ export interface LiveQuery<F, S extends string> {
   orderBy?: LiveOrderBy<S>;
   limit?: number;
   /**
-   * The contributed column sets (`liveColumns` handles) this query's `where` /
-   * `orderBy` name by wire name (`<contributor>.<field>`) — what the codec
+   * The column sets (exposures, arms, scoped sets) this query's `where` /
+   * `orderBy` name by wire name (`<set>.<field>`) — what the codec
    * validates those names against. Not part of the wire params.
    */
   columns?: readonly LiveColumnsDeclaration[];

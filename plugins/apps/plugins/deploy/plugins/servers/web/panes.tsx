@@ -1,4 +1,7 @@
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import {
+  ResourceErrorInline,
+  useCombinedResources,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
@@ -11,7 +14,7 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { deployApp } from "@plugins/apps/plugins/deploy/plugins/shell/core";
 import { serversRoute, serverDetailRoute } from "../core";
-import { servers } from "../shared";
+import { servers, serverSshKey, type Server } from "../shared";
 import { ServersList } from "./components/servers-list";
 import { ServerCreateForm } from "./components/server-create-form";
 import { ServerDetail } from "./slots";
@@ -81,7 +84,6 @@ function ServersRoot() {
 function ServerDetailBody() {
   const { serverId } = serverDetailPane.useParams();
   const openPane = useOpenPane();
-  const serversResult = useLive(servers);
 
   if (serverId === NEW_SERVER_ID) {
     return (
@@ -96,30 +98,46 @@ function ServerDetailBody() {
       </PaneChrome>
     );
   }
+  return <ExistingServerBody serverId={serverId} />;
+}
 
-  if (serversResult.status === "loading") {
-    return (
-      <PaneChrome pane={serverDetailPane}>
-        <Loading variant="rows" />
-      </PaneChrome>
-    );
+/**
+ * A registered server's pane: the registry row beside the key this app holds
+ * for it (`serverSshKey`, read per server — the list rows carry no key), joined
+ * into the `Server` every section is handed. Loading until BOTH land: a
+ * section never sees a server without knowing whether it has a key.
+ */
+function ExistingServerBody({ serverId }: { serverId: string }) {
+  const combined = useCombinedResources({
+    servers: useLive(servers),
+    sshKey: useLive(serverSshKey, { serverId }),
+  });
+
+  switch (combined.status) {
+    case "loading":
+      return (
+        <PaneChrome pane={serverDetailPane}>
+          <Loading variant="rows" />
+        </PaneChrome>
+      );
+    case "error":
+      return (
+        <PaneChrome pane={serverDetailPane}>
+          <ResourceErrorInline
+            variant="block"
+            subject="the server"
+            error={combined.error}
+            refetch={combined.refetch}
+          />
+        </PaneChrome>
+      );
+    case "ready":
+      break;
   }
-  if (serversResult.status === "error") {
-    return (
-      <PaneChrome pane={serverDetailPane}>
-        <ResourceErrorInline
-          variant="block"
-          subject="the servers"
-          error={serversResult.error}
-          refetch={serversResult.refetch}
-        />
-      </PaneChrome>
-    );
-  }
 
-  const server = serversResult.data.find((s) => s.id === serverId) ?? null;
+  const row = combined.data.servers.find((s) => s.id === serverId) ?? null;
 
-  if (!server) {
+  if (!row) {
     return (
       <PaneChrome pane={serverDetailPane}>
         <Text as="div" variant="body" className="text-muted-foreground p-lg">
@@ -129,6 +147,7 @@ function ServerDetailBody() {
     );
   }
 
+  const server: Server = { ...row, sshKey: combined.data.sshKey };
   // The whole pane body is the one section slot: identity, SSH setup and
   // deployments are peer contributions, and the host owns all of the chrome.
   return (

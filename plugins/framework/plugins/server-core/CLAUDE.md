@@ -47,12 +47,14 @@ before the barrier.
 
 **`bindDeferredResources`** (`core/resources.ts`) runs right after
 `collectContributions`: a deferred resource (`defineDeferredResource` — a
-`network/live` collection whose columns other plugins contribute) compiles its
+`network/live` collection whose fields other plugins contribute — exposures,
+scoped column sets, union arms) compiles its
 server half from contributions, which exist only now, and must be bound before
 the preload assert reads the registry and before the barrier's change feed
 rebuilds triggers from the route layout. Then it runs every check registered
-with `onDeferredResourcesBound` (network/live's "a `LiveColumns.Serve` no
-collection here compiles"); a throw from a bind or a check fails boot, so such a
+with `onDeferredResourcesBound` (a cross-check over what the binds consumed,
+e.g. "every contribution names a collection served here"); a throw from a bind
+or a check fails boot, so such a
 graph never serves.
 
 ### Both modes declare their namespace FIRST

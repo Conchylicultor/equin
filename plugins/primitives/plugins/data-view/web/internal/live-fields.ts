@@ -28,9 +28,9 @@ export type ResolveOperatorSet = (
 
 /** How one field reads the collection: the column it lowers to, and what that column takes. */
 interface FieldColumn {
-  /** The column's wire name (a contributed column's is `<contributor>.<field>`). */
+  /** The column's wire name (a column set's is `<set>.<field>`). */
   name: string;
-  /** The contributed-column handle that declared it; absent for the collection's own. */
+  /** The column set that declared it (an exposure, an arm, a scoped set); absent for the collection's own. */
   handle?: LiveColumnsDeclaration;
   /** The filter domain the column takes; `null` = not filterable. */
   domain: string | null;
@@ -48,15 +48,16 @@ export interface LiveFieldPlan<TRow> {
   /** Field id → the column it lowers to (filter and sort). */
   columnOf: ReadonlyMap<string, string>;
   /**
-   * The contributed-column handles the offered fields bind to, by contributor
-   * name — a query naming one of their columns hands the codec that handle.
+   * The column sets the offered fields bind to, by set name — a query naming
+   * one of their columns hands the codec that set.
    */
   handles: ReadonlyMap<string, LiveColumnsDeclaration>;
   /**
    * Field id → the column a `GROUP BY` can count it by: the collection's OWN
    * filterable column, or an EXPOSED one, of a text / number / boolean domain
-   * (what the live codec's `checkGroupBy` accepts). A contributed column is
-   * never one — the server groups by its own and its exposed columns only.
+   * (what the live codec's `checkGroupBy` accepts). An arm's or a scoped
+   * column is never one — the server groups by its own and its exposed
+   * columns only.
    */
   groupColumns: ReadonlyMap<string, LiveGroupColumn>;
 }
@@ -84,7 +85,7 @@ const GROUPABLE_DOMAINS: ReadonlySet<string> = new Set<LiveGroupableDomain>([
  *   server lists every section with its exact count, each section pages its
  *   own rows (`DataViewSectioning` `declared`);
  * - `prefix` — a one-bucket-per-value grouping over a sortable column no
- *   grouping can count (a contributed one): the column leads the order, so the
+ *   grouping can count (an arm's): the column leads the order, so the
  *   sections are contiguous and follow appearance;
  * - `buckets` — any other grouping over a sortable column (a date by day): its
  *   buckets over the loaded rows, as in memory;
@@ -132,7 +133,6 @@ function columnFor<TRow>(
         }
         break;
       case "own":
-      case "contributed":
       case "arm":
         if (owner.collection !== c.key) {
           throw new Error(
@@ -244,9 +244,11 @@ export function resolveLiveFields<TRow>(
     }
     const set = resolveOperatorSet(field.type ?? "text");
     if (column.domain !== null && set !== undefined) {
-      if (set.domain !== column.domain) {
+      // An enum over booleans / numbers lowers in its values' domain.
+      const domain = field.valueDomain ?? set.domain;
+      if (domain !== column.domain) {
         throw new Error(
-          `data-view (${who}): field "${field.id}" filters over ${set.domain} (its type "${field.type ?? "text"}"), but its column "${column.name}" of "${source.collection.key}" is declared ${column.domain}.`,
+          `data-view (${who}): field "${field.id}" filters over ${domain} (its type "${field.type ?? "text"}"), but its column "${column.name}" of "${source.collection.key}" is declared ${column.domain}.`,
         );
       }
       if (scopeColumns.has(column.name)) continue;

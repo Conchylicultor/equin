@@ -40,6 +40,7 @@ Own plugin, not `runs/core`, so `runs/web` can import the chip without
   - Exports (types): `RunOutcome`
   - Exports (values):
     - `isRunInFlight`
+    - `RUN_OUTCOME_OPTIONS_META`
     - `RUN_OUTCOMES`
     - `RunOutcomeSchema`
 

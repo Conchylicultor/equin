@@ -1,10 +1,16 @@
 import { z } from "zod";
+import { fieldsToZodObject, nullable } from "@plugins/fields/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import {
+  enumTextField,
+  parsedTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { ReleaseLogsResponseSchema } from "./endpoints";
-import {
-  liveInstant,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
+import { RELEASE_TARGETS } from "./targets";
 
 // WHY a run was cut. `candidate` is packed and built for a named platform — a
 // bundle `ship` can pick; `staged` is a `--dev` run that claims no
@@ -16,37 +22,60 @@ export const ReleaseRunKindSchema = z.enum(["staged", "candidate"]);
 
 // Where a run stands. Same closed-set policy as `ReleaseRunKindSchema`, and it
 // likewise decodes the `release_runs.status` column.
-export const ReleaseRunStatusSchema = z.enum([
-  "running",
-  "succeeded",
-  "failed",
-]);
+export const RELEASE_RUN_STATUSES = ["running", "succeeded", "failed"] as const;
+export const ReleaseRunStatusSchema = z.enum(RELEASE_RUN_STATUSES);
 
 // One release run as seen by the client. Mirrors the `release_runs` table EXCEPT
 // `pid` — that is an internal liveness marker (see tables.ts), never part of the
 // public resource payload.
-export const ReleaseRunSchema = z.object({
-  id: z.string(),
-  composition: z.string(),
-  target: z.string(),
-  namespace: z.string(),
+//
+// The fields a release-history list shows, in its order (`target` the title);
+// `composition` scopes the history to one composition (its pane states it as
+// data) and is not the list's to show.
+const RELEASE_RUN_LISTED = {
+  // A free string (a run cut for a target since removed still reads), so its
+  // chips come from the declared targets, not from a closed set.
+  target: textField({
+    label: "Target",
+    primary: true,
+    optionMeta: Object.fromEntries(
+      RELEASE_TARGETS.map((t) => [t.id, { label: t.label }]),
+    ),
+  }),
+  status: enumTextField(RELEASE_RUN_STATUSES, {
+    label: "Status",
+    default: "running",
+    options: {
+      running: { label: "Running", variant: "warning" },
+      succeeded: { label: "Succeeded", variant: "success" },
+      failed: { label: "Failed", variant: "destructive" },
+    },
+  }),
+  platform: nullable(textField({ label: "Platform" })),
+  startedAt: dateField({ label: "Started" }),
+  finishedAt: nullable(dateField({ label: "Finished" })),
+  composition: textField({ label: "Composition" }),
+};
+const RELEASE_RUN_CARRIED = {
+  id: textField(),
+  namespace: textField(),
   // Stamped from the request's `ReleaseIntent` at claim time. Never null:
   // pre-existing rows read `staged` through the column default, which is what
   // they were.
-  kind: ReleaseRunKindSchema,
-  status: ReleaseRunStatusSchema,
-  startedAt: z.coerce.date(),
-  finishedAt: z.coerce.date().nullable(),
-  exitCode: z.number().int().nullable(),
-  platform: z.string().nullable(),
-  artifactPath: z.string().nullable(),
-  port: z.number().int().nullable(),
+  kind: parsedTextField(ReleaseRunKindSchema, { default: "staged" }),
+  exitCode: nullable(intField()),
+  artifactPath: nullable(textField()),
+  port: nullable(intField()),
   // Provenance of the source tree this run was cut from. Null on runs that never
   // wrote a manifest, and on rows predating provenance. `commitDirty` forces
   // `Staleness.unknown` — the sha names the parent commit, not the bytes.
-  commitSha: z.string().nullable(),
-  commitDirty: z.boolean().nullable(),
-  error: z.string().nullable(),
+  commitSha: nullable(textField()),
+  commitDirty: nullable(boolField()),
+  error: nullable(textField()),
+};
+export const ReleaseRunSchema = fieldsToZodObject({
+  ...RELEASE_RUN_CARRIED,
+  ...RELEASE_RUN_LISTED,
 });
 
 export type ReleaseRun = z.infer<typeof ReleaseRunSchema>;
@@ -89,16 +118,9 @@ const RELEASE_HISTORY_VIEW_ID = "studio.release.history";
 // whichever namespace produced it, while this window is namespace-scoped (a
 // collection's base `where` applies to its `:rows` read too).
 export const releaseHistory = liveCollection("release.history", {
-  row: ReleaseRunSchema,
+  fields: RELEASE_RUN_LISTED,
+  carry: { fields: RELEASE_RUN_CARRIED },
   id: "id",
-  filterable: {
-    composition: liveText(),
-    target: liveText(),
-    status: liveText(ReleaseRunStatusSchema),
-    platform: liveText(),
-    startedAt: liveInstant(),
-    finishedAt: liveInstant(),
-  },
   sortable: ["target", "status", "platform", "startedAt", "finishedAt"],
   default: { orderBy: [["startedAt", "desc"]], limit: 100 },
   maxLimit: 500,

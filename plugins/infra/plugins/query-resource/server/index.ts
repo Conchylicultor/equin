@@ -24,7 +24,7 @@ export type {
   UnionGroupsQuery,
   UnionOrderKey,
 } from "./internal/compile-union-window";
-export { compileJoins, joinRefs } from "./internal/joins";
+export { compileJoins, joinRefs, presenceExpr } from "./internal/joins";
 export type { ReadColumn } from "./internal/joins";
 export type { CompiledGroups } from "./internal/compile-groups";
 export type {

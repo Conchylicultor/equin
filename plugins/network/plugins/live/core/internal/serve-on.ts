@@ -681,11 +681,6 @@ export function compileExternalCollection(
       "a union collection (declared with `arms`) reads several tables — it has no external spelling.",
     );
   }
-  if (collection.contributed === true) {
-    fail(
-      "a `contributed: true` collection folds other plugins' Postgres columns — it has no external spelling.",
-    );
-  }
   if ((collection.columnScope ?? null) !== null) {
     fail(
       "a `columnScope` collection folds scoped column sets from Postgres — it has no external spelling.",

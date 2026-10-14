@@ -1,6 +1,6 @@
 import { defineDetailSections } from "@plugins/primitives/plugins/detail-sections/web";
 import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
-import type { EventSourceRun } from "@plugins/apps/plugins/events/plugins/events-core/core";
+import type { EventSourceRunRow } from "@plugins/apps/plugins/events/plugins/events-core/core";
 
 /**
  * Per-row actions on the run ledger. A slot rather than a hardcoded button for
@@ -8,7 +8,7 @@ import type { EventSourceRun } from "@plugins/apps/plugins/events/plugins/events
  * one action it owns (open the run) and anything else a run grows — a re-run, a
  * copy-id — is a contribution, not a branch here.
  */
-export const RunActions = defineItemActions<EventSourceRun>();
+export const RunActions = defineItemActions<EventSourceRunRow>();
 
 /**
  * The run pane, as ONE render slot. The pane body is a run summary plus this

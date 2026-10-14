@@ -5,19 +5,23 @@ Favorites/starred pages, as a **presence-only marker** — not a bespoke sidebar
 - `page_blocks_ext_starred` is a pure presence side-table (one row per starred
   page, no columns of its own beyond the synthesized `blockId` key/timestamps).
   Presence = starred; there is no rank/order column.
-- The plugin contributes a single `starred` bool `FieldDef<PageRow>` into the
-  page-tree's `PageTree.Fields` field-extension seam (`StarredField` closes the
-  field's `value` over the starred id set). That makes `starred` a filter
-  dimension of the one `pages-sidebar` DataView.
-- **One read serves everything.** `useStarredPageIds()`
+- **`starred` is an EXPOSED presence field** (`shared/resources.ts`:
+  `exposes.presence: { id: "starred" }`, a boolean). It folds into every list
+  whose rows are blocks — `pages.tree`, the pages sidebar — served by
+  `LiveColumns.Expose(pageBlocksStarred)` (server: `parent_id IS NOT NULL` on
+  the joined side row, so it filters on the server like any column) and
+  presented by `FieldPresentation.Register({ owner: starredPageShape.exposure
+  })` (web). That makes `starred` a filter dimension of the one
+  `pages-sidebar` DataView with no field code anywhere.
+  `shared/resources.test.ts` pins the id.
+- **The toggles read the favorites set.** `useStarredPageIds()`
   (`web/internal/use-starred-ids.ts`) is the only reader of the `starredPages`
-  collection (`useLive(starredPages, { select })`, the whole set); the field and both
+  collection (`useLive(starredPages, { select })`, the whole set); both
   toggles go through it, so they cannot disagree and every mount shares one
   subscription tuple. It returns a read (`ResourceResult<ReadonlySet<string>>`):
-  not known yet and failed are their own arms, and each caller decides: the toggles render a disabled loading button (a hollow
-  star would claim "not a favorite", and a click would star an already-starred
-  page), while `StarredField` projects an empty set, so Favorites stays empty
-  until the set lands.
+  not known yet and failed are their own arms — the toggles render a disabled
+  loading button (a hollow star would claim "not a favorite", and a click
+  would star an already-starred page).
 - **Favorites is a filtered `list` view instance** of the `pages-sidebar`
   DataView (authored in `page-tree`'s config, filtering on `starred = true`) —
   not a separate `Pages.Sidebar` contribution. The DataView renders with the
@@ -28,9 +32,9 @@ Favorites/starred pages, as a **presence-only marker** — not a bespoke sidebar
   column and no reorder endpoint.
 - `starredPages` (`shared/resources.ts`, key `pages-starred.all`) is a
   `liveCollection` declared **`all`** (ordered by `blockId`, at most one row
-  per page), not read by id: `StarredField` needs `starred` for every row the
-  DataView filters over, so its reader holds the favorites set entire — no
-  favorite reads as unstarred past a window's edge. It is served by
+  per page), not read by id: a toggle may sit on any page, so its reader holds
+  the favorites set entire — no favorite reads as unstarred past a window's
+  edge. It is served by
   `serveCollection(starredPages, { from: pageBlocksStarred })` — the extension
   handle's wire columns — and `...starredPagesServed.declare` is spread into
   the server contributions. Star and unstar are an entrant / exit of the set
@@ -42,19 +46,19 @@ Favorites/starred pages, as a **presence-only marker** — not a bespoke sidebar
 
 ## Plugin reference
 
-- Description: Favorites/starred pages for the Pages app: contributes a `starred` bool field into the Pages sidebar DataView (Favorites is a filtered list view) plus star toggles on page-tree rows and the page header. Starred-pages side-table (page_blocks_ext_starred): presence-only marker plus the star toggle endpoint. Contributes a `starred` bool field into the Pages sidebar DataView.
+- Description: Favorites/starred pages for the Pages app: presents the exposed `starred` field of the Pages sidebar DataView (Favorites is a filtered list view) plus star toggles on page-tree rows and the page header. Starred-pages side-table (page_blocks_ext_starred): presence-only marker plus the star toggle endpoint, and its presence exposed as the `starred` field of every list whose rows are blocks (LiveColumns.Expose).
 - Web:
   - Contributes:
-    - `PageTree.Fields` "starred" → `StarredField`
+    - `FieldPresentation.Register` "exposure:page_blocks_ext_starred"
     - `PageTree.RowActions` "star" → `StarRowAction`
     - `pageDetailPane.Actions` "star" → `StarHeaderAction`
   - Uses:
     - `apps/pages/page-tree.pageDetailPane`
     - `apps/pages/page-tree.PageTree`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.FieldPresentation`
     - `network/live.useLive`
     - `primitives/icon-button.IconButton`
-    - `primitives/live-state.foldResource`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.ResourceResult`
@@ -64,9 +68,11 @@ Favorites/starred pages, as a **presence-only marker** — not a bespoke sidebar
   - Contributes:
     - `resource.declare` "pages-starred.all"
     - `resource.declare` "pages-starred.all:rows"
+    - `live.columns.expose` "page_blocks ← page_blocks_ext_starred"
   - Uses:
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
+    - `network/live.LiveColumns`
     - `network/live.serveCollection`
     - `page/editor._blocks`
   - DB schema: `plugins/apps/plugins/pages/plugins/starred/server/internal/tables.ts`

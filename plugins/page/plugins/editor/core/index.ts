@@ -30,7 +30,7 @@ export {
   blockLocations,
   BlockLocationSchema,
 } from "./resources";
-export type { BlockLocation } from "./resources";
+export type { BlockLocation, PagesTreeRow } from "./resources";
 
 export {
   listPages,

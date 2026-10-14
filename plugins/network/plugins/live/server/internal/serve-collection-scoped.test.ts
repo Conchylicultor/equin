@@ -103,12 +103,7 @@ function setup() {
         ]
       : [],
   );
-  const specs = compileCollection(
-    c,
-    { from: songs, db: recording.db },
-    [],
-    [set],
-  );
+  const specs = compileCollection(c, { from: songs, db: recording.db }, [set]);
   const window = compileWindowQuery(c.window, specs.window).serverOpts;
   // What the browser hands the codec: the members as it knows them.
   const handle: LiveColumnsDeclaration = scopedLiveColumns(SCOPE, "custom", {
@@ -290,7 +285,6 @@ describe("serveCollection with a scoped column set", () => {
     const specs = compileCollection(
       c,
       { from: songs, db: recordingQueryDb().db },
-      [],
       [set],
     );
     expect(
@@ -332,12 +326,9 @@ describe("serveCollection with a scoped column set", () => {
       maxLimit: 50,
     });
     expect(() =>
-      compileCollection(
-        plain,
-        { from: songs, db: recordingQueryDb().db },
-        [],
-        [set],
-      ),
+      compileCollection(plain, { from: songs, db: recordingQueryDb().db }, [
+        set,
+      ]),
     ).toThrow(/declares no `columnScope`/);
   });
 

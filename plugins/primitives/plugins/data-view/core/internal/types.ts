@@ -307,12 +307,21 @@ export interface FieldExtensionsDescriptor<TRow> extends SlotHandle {
  * filter SQL never reads options at all, so a tint never reaches the server.
  */
 export interface FieldOption {
+  /**
+   * The value's canonical spelling (`fields/core`'s `optionKey`): a string
+   * value is itself, a boolean / number its `String` (an enum over a
+   * {@link FieldDefBase.valueDomain}), and `"null"` labels the field's
+   * no-value — its cell, its group-by "None" section and its filter chip.
+   */
   value: string;
   label: string;
   /** Chip tint for the READ cell. Default `"muted"`. */
   variant?: BadgeVariant;
   /** Tooltip on the read chip — why this value means what it means. */
   hint?: string;
+  /** Labels filter chips and group sections, but the read cell draws nothing
+   *  (`fields/core`'s `FieldOptionMeta.quiet`). */
+  quiet?: true;
   /**
    * The `value` of this option's parent option, making the set a forest
    * (e.g. a place category under its group). Absent → a root. Read by
@@ -382,6 +391,16 @@ interface FieldDefBase<TRow> {
   type?: string;
   /** Comparable projection used for sort/search/filter. */
   value?: (row: TRow) => FieldValue;
+  /**
+   * The filter domain an `enum` field's VALUES live in when they are not its
+   * option strings: an enum over booleans (a probe verdict's `true` /
+   * `false`, labelled Online / Offline) or numbers. `value` returns the raw
+   * value, `options` are keyed by its canonical spelling (`"true"`), and the
+   * enum operators lower a picked option back to the value it spells — so
+   * the in-memory evaluator and a server column filter the same values.
+   * Absent = the values are the option strings themselves.
+   */
+  valueDomain?: "boolean" | "number";
   /**
    * Multi-value projection for tags-style fields. Folded into search and read by
    * the filter as a `stringArray` row value. Mutually exclusive with `value`.
@@ -1284,9 +1303,25 @@ interface DataViewHeldRowProps<TRow> {
  * prefix of a paged read (`paging`), never both: a tree over a partial paged
  * set orphans the children whose parents are not loaded yet. Both keys stay
  * optional, so a `HierarchyConfig | undefined` prop still fits its arm.
+ * Either way they are rows of a live collection (`collection` — its fields are
+ * derived from it, see {@link DataViewBaseProps.fields}), or rows of nothing
+ * declared, whose schema is the hand `fields` (required).
  */
 export type DataViewInMemoryOrigin<TRow> = DataViewInMemoryRows<TRow> &
-  (DataViewHierarchyRows<TRow> | DataViewPagedRows<TRow>);
+  (DataViewHierarchyRows<TRow> | DataViewPagedRows<TRow>) &
+  (
+    | { collection?: undefined; fields: FieldDef<TRow>[] }
+    | {
+        /**
+         * The live collection the rows come from, when they are one's (the
+         * Queue's `conversationsActive`, merged in memory with other reads):
+         * its fields — declared by fields, picked and own — and every field
+         * an extension exposes for an entity it reaches join the schema,
+         * read off the rows (`network/live`, "Fields").
+         */
+        collection: DataViewRowsCollection;
+      }
+  );
 
 /** An in-memory origin whose rows form a tree. */
 interface DataViewHierarchyRows<TRow> {
@@ -1322,21 +1357,58 @@ interface DataViewInMemoryRows<TRow> extends DataViewHeldRowProps<TRow> {
    * as a confirmed-empty one (`emptyState` needs `ready` and zero rows).
    */
   readiness?: ResourceReadiness;
-  /**
-   * The live collection the rows come from, when they are one's (the Queue's
-   * `conversationsActive`, merged in memory with other reads): every field an
-   * entity extension exposes for an entity its `exposes` reaches joins the
-   * schema, read off the rows' `$columns` (`network/live`, "Exposed fields").
-   */
-  collection?: DataViewRowsCollection;
   source?: never;
 }
 
-/** What an in-memory DataView needs of the collection its rows come from. */
+/** What a DataView needs of the collection its rows come from: its fields, entity and reach. */
 export type DataViewRowsCollection = Pick<
   LiveRowsCollection<unknown>,
-  "key" | "exposes"
->;
+  "key" | "exposes" | "fields" | "from"
+> & { readonly rowKeys: readonly string[] };
+
+/**
+ * What a list may change of one derived field (`DataViewBaseProps.overrides`)
+ * — its presentation and which controls offer it, never its value or type.
+ * `cell` is a method so an override built against the collection's row type
+ * applies to a list whose rows extend it (the Queue's): a cell reads the row
+ * the list hands it.
+ */
+export type FieldOverride<TRow> = Partial<
+  Pick<
+    FieldDefBase<TRow>,
+    | "label"
+    | "header"
+    | "width"
+    | "align"
+    | "visible"
+    | "groupable"
+    | "sortable"
+    | "filterable"
+    | "primary"
+    | "leading"
+    | "dropOrder"
+    | "section"
+  >
+> & {
+  cell?(row: TRow): ReactNode;
+  /**
+   * The list's inline-edit write-back (`FieldDefBase.onEdit`): persistence is
+   * the list's, never the declaration's — a method for the same reason as
+   * `cell`.
+   */
+  onEdit?(row: TRow, next: FieldValue): void | Promise<void>;
+};
+
+/**
+ * A list's overrides of its derived fields, by id — built by
+ * `fieldOverrides(collection, { … })`, which types the ids against the
+ * collection's (an unknown id is a tsc error, and throws at mount).
+ */
+export interface FieldOverrides<TRow> {
+  /** The collection the ids are its fields' (asserted against the DataView's). */
+  readonly collection: string;
+  readonly byId: Readonly<Record<string, FieldOverride<TRow>>>;
+}
 
 /** See {@link DataViewRenderProps.rowsComplete}. */
 export type DataViewRowsComplete<TRow> =
@@ -1500,7 +1572,25 @@ export interface DataViewSearch {
 }
 
 export interface DataViewBaseProps<TRow> {
-  fields: FieldDef<TRow>[];
+  /**
+   * The schema BY HAND — for rows of no collection declared by fields (an
+   * in-memory list of rows from nothing declared: required there). A list
+   * whose collection is declared by fields (`liveCollection({ from, pick,
+   * fields })`) DERIVES its schema — the collection's fields, the exposed
+   * fields of every entity it reaches, its arms' fields, each presented by
+   * its registration (`FieldPresentation`) — and passing `fields` beside one
+   * throws: it says what to change with `overrides` and adds with
+   * `extraFields`. (Beside a collection in the old `row` spelling, `fields`
+   * is still its base schema, until phase 2b deletes that spelling.)
+   */
+  fields?: FieldDef<TRow>[];
+  /** Changes to derived fields, by id (`fieldOverrides(collection, { … })`). */
+  overrides?: FieldOverrides<TRow>;
+  /**
+   * Fields the list computes itself (the Queue's `section`), after the
+   * derived ones — an id a derived field already uses throws.
+   */
+  extraFields?: FieldDef<TRow>[];
   /** Restrict + order by view id; omitted → all contributions by order/title. */
   views?: string[];
   defaultView?: string;

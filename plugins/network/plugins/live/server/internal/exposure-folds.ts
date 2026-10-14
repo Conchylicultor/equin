@@ -1,10 +1,13 @@
-import { getTableName } from "drizzle-orm";
+import { getTableName, type SQLWrapper } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import {
   BASE_RELATION,
+  type ColumnRef,
+  type ExprField,
   type ExtensionJoin,
   type LookupJoin,
 } from "@plugins/infra/plugins/query-resource/core";
+import { presenceExpr } from "@plugins/infra/plugins/query-resource/server";
 import {
   exposedColumns,
   LIVE_COLUMNS_KEY,
@@ -100,14 +103,15 @@ export function exposureFolds(
       );
     }
     sets.add(slice);
-    for (const field of Object.keys(exposure.fields)) {
-      const owner = fields.get(field);
+    // A list names an exposed field by its id (`as`, else its key).
+    for (const { id } of Object.values(exposure.fields)) {
+      const owner = fields.get(id);
       if (owner !== undefined) {
         fail(
-          `exposed field "${field}" of "${slice}" collides with ${owner}'s — a list names a field by its bare id, so one collection reaches one field of a name.`,
+          `exposed field "${id}" of "${slice}" collides with ${owner}'s — a list names a field by its bare id, so one collection reaches one field of a name.`,
         );
       }
-      fields.set(field, `"${slice}"`);
+      fields.set(id, `"${slice}"`);
     }
     let join: ExtensionJoin;
     if (via === null) {
@@ -125,4 +129,35 @@ export function exposureFolds(
     folds.push({ handle: exposedColumns(exposure), join });
   }
   return folds;
+}
+
+/**
+ * What one exposed field of `fold` binds to, over its join's refs (`j[alias]`
+ * — each a column ref that also renders as SQL): a column field, its join's
+ * wire column of the same name; the PRESENCE field, the expression over the
+ * join's key (`presenceExpr` — `IS NOT NULL`, or a `CASE` to its two
+ * literals). Throws on a column field its join offers no wire column for.
+ */
+export function exposedBinding(
+  fold: ExposureFold,
+  field: string,
+  own: Readonly<Record<string, unknown>> | undefined,
+  fail: (message: string) => never,
+): ColumnRef | ExprField {
+  const { handle, join } = fold;
+  const refs = Object.values(own ?? {}) as (ColumnRef & SQLWrapper)[];
+  if (handle.exposure.fields[field]?.presence != null) {
+    const key =
+      refs.find((r) => r.col === join.key) ??
+      fail(
+        `the presence field "${handle.wireName(field)}" reads its join "${join.alias}"'s key, which the join does not offer.`,
+      );
+    return presenceExpr(join, field, key);
+  }
+  return (
+    (own?.[field] as ColumnRef | undefined) ??
+    fail(
+      `exposed field "${handle.wireName(field)}" binds to no wire column of its join "${join.alias}".`,
+    )
+  );
 }

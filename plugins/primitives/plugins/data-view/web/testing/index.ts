@@ -20,3 +20,6 @@ export type {
   PagedViewUnderTest,
 } from "./paged-data-view";
 export { describePagedConformance } from "./paged-conformance";
+// The real field derivation (a collection's fields, presented by the given
+// registrations), so a host's test resolves the schema its list derives.
+export { deriveFields } from "../internal/derived-fields";

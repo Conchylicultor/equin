@@ -4,10 +4,7 @@ import type {
   _conversations,
   conversationOwnerJoins,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import type {
-  CONVERSATION_FILTERABLE,
-  ConversationListLiveRow,
-} from "../../core";
+import type { allConversations, ConversationListLiveRow } from "../../core";
 
 // Apart from `collection.ts` (which REGISTERS the served collections at module
 // eval), so a suite compiling the same declaration against its own database
@@ -22,5 +19,5 @@ export const allConversationsDefaults: readonly DefaultScope<
   typeof _conversations,
   ConversationListLiveRow,
   typeof conversationOwnerJoins,
-  keyof typeof CONVERSATION_FILTERABLE
+  keyof (typeof allConversations)["filterable"]
 >[] = [{ unless: "kind", where: (j) => ne(j.base.kind, "system") }];

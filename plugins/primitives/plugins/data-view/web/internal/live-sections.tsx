@@ -27,7 +27,7 @@ import type { LiveGroupColumn } from "./live-fields";
 import { NO_VIEWPORT } from "./pages-viewport";
 import { NO_PLACEHOLDERS } from "./pages-paging";
 import { useLivePagesPaging } from "./use-live-pages-paging";
-import { NULL_GROUP_KEY, NULL_GROUP_LABEL } from "./use-data-view-sections";
+import { NULL_GROUP_KEY, nullGroupLabel } from "./use-data-view-sections";
 
 // A live source grouped by a groupable column, server-sectioned
 // (research/2026-10-08-primitives-data-view-live-server-sections.md): ONE
@@ -129,7 +129,7 @@ export function serverSections(
   if (noneCount > 0) {
     ordered.push({
       key: NULL_GROUP_KEY,
-      label: NULL_GROUP_LABEL,
+      label: nullGroupLabel(field),
       order: 0,
       count: noneCount,
       value: null,

@@ -32,7 +32,7 @@
     - `tasks/tasks-core._tasks`
     - `tasks/tasks-core.taskStatusChanged`
   - DB schema: `plugins/tasks/plugins/auto-start/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_auto_start`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_auto_start`)
   - Exports (values):
     - `claimAutoStart`
     - `getTaskAutoStart`

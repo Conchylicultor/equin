@@ -263,7 +263,9 @@ describe("defineExtension derived updatedAt", () => {
       recordingDb,
     );
     const [upsert] = statements;
-    expect(conflictSet(upsert?.sql)).toBe(`"semitones" = $4, "label" = $5`);
+    expect(conflictSet(upsert?.sql)).toBe(
+      `"semitones" = $5, "label" = $6, "source" = $7`,
+    );
     expect(bindsADate(upsert?.params)).toBe(false);
   });
 

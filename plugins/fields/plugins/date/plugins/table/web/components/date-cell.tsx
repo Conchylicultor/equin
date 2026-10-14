@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import type { TableCellProps } from "@plugins/primitives/plugins/data-view/web";
 
-/** Read-only date cell: a relative "Nd ago" label. */
+/** Read-only date cell: a relative "Nd ago" label, kept current as time passes. */
 export function DateCell(props: TableCellProps): ReactNode {
   const { value } = props;
   const date =
@@ -12,5 +12,5 @@ export function DateCell(props: TableCellProps): ReactNode {
         ? null
         : new Date(value as string);
   if (!date || Number.isNaN(date.getTime())) return null;
-  return <span>{formatRelativeTime(date)}</span>;
+  return <RelativeTime date={date} />;
 }

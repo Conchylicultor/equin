@@ -9,6 +9,7 @@ import { Reports } from "@plugins/reports/web";
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
   liveDataSource,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
@@ -40,7 +41,8 @@ export function ReportsView({
 }) {
   return (
     <DataView<Report>
-      fields={fields}
+      overrides={overrides}
+      extraFields={extraFields}
       views={["table", "list"]}
       defaultView="table"
       storageKey={REPORTS_VIEW}
@@ -52,84 +54,57 @@ export function ReportsView({
   );
 }
 
-// Static: the field schema derives nothing from the loaded rows. `kind` and
-// `source` declare no `options` — their option lists are the source's facets.
-const fields: FieldDef<Report>[] = [
-  {
-    id: "kind",
-    label: "Kind",
-    type: "enum",
-    value: (r) => r.kind,
+// How the derived fields present here. `kind` and `source` declare no
+// `options` — their option lists are the source's facets. `message` and
+// `fingerprint` are searched only (the summary shows the message).
+const overrides = fieldOverrides(reportsList, {
+  kind: {
     cell: (r) => (
       <Badge variant="muted" className="font-mono">
         {r.kind}
       </Badge>
     ),
-    sortable: true,
-    filterable: true,
     width: "10rem",
   },
-  {
-    id: "source",
-    label: "Source",
-    type: "enum",
-    value: (r) => r.source,
+  source: {
     cell: (r) => (
       <Badge variant="muted" className="font-mono">
         {r.source}
       </Badge>
     ),
-    sortable: true,
-    filterable: true,
     width: "10rem",
   },
-  {
-    id: "noise",
-    label: "Noise",
-    type: "bool",
-    value: (r) => r.noise,
+  noise: {
     cell: (r) => (r.noise ? <Badge variant="warning">noise</Badge> : null),
-    sortable: false,
-    filterable: true,
     width: "6rem",
   },
-  {
-    id: "rateLimited",
-    label: "Rate-limited",
-    type: "bool",
-    value: (r) => r.rateLimited,
+  rateLimited: {
     cell: (r) =>
       r.rateLimited ? <Badge variant="destructive">rate-limited</Badge> : null,
-    sortable: false,
-    filterable: true,
     width: "8rem",
   },
-  {
-    id: "count",
-    label: "×",
-    type: "int",
-    value: (r) => r.count,
+  count: {
     cell: (r) =>
       r.count > 1 ? (
         <span className="tabular-nums text-muted-foreground">×{r.count}</span>
       ) : null,
-    sortable: true,
     align: "end",
     width: "4rem",
   },
-  {
-    id: "lastSeenAt",
-    label: "When",
-    type: "date",
-    value: (r) => r.lastSeenAt,
+  lastSeenAt: {
     cell: (r) => (
       <span className="text-muted-foreground">
         <RelativeTime date={r.lastSeenAt} />
       </span>
     ),
-    sortable: true,
     width: "7rem",
   },
+  message: { visible: false },
+  fingerprint: { visible: false },
+});
+
+// Static: the fields the list computes itself.
+const extraFields: FieldDef<Report>[] = [
   {
     id: "context",
     label: "",

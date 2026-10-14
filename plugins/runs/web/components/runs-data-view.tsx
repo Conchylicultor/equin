@@ -10,7 +10,6 @@ import {
   type Activation,
 } from "@plugins/primitives/plugins/link-gesture/core";
 import { runRowKey, runs, type RunRow } from "../../core";
-import { useRunFields } from "../internal/fields";
 import { Runs } from "../internal/slots";
 import { RUNS_VIEW } from "../internal/view-id";
 
@@ -73,8 +72,10 @@ export interface RunsDataViewProps {
  *
  * One ordinary `<DataView>` over the `runs` union window (live key-range
  * pages): the rows arrive already merged, so the host needs to know nothing
- * about arms. Filter, sort and search compile to SQL across every ledger at
- * once, the pages cut across arm boundaries without duplicating or dropping a row,
+ * about arms — and its fields are derived (the base fields from `runs`,
+ * presented in `../internal/presentation.tsx`; every arm's from its `liveArm`).
+ * Filter, sort and search compile to SQL across every ledger at once, the
+ * pages cut across arm boundaries without duplicating or dropping a row,
  * and a write to one ledger refills just the rows it changed.
  *
  * The same component at every density: a build popover and a full debug pane are
@@ -91,19 +92,21 @@ export function RunsDataView({
 }: RunsDataViewProps): ReactNode {
   const openPane = useOpenPane();
   const kinds = Runs.Kind.useContributions();
-  const fields = useRunFields(kinds);
 
   const openers = useMemo(
     () =>
       new Map(
-        kinds.flatMap((k) => (k.link ? [[k.kind, k.link] as const] : [])),
+        kinds.flatMap((k) =>
+          k.link ? [[k.arm.owner.arm, k.link] as const] : [],
+        ),
       ),
     [kinds],
   );
 
   // No `renderRow`: the row body is the list's own, built from the field schema,
   // so it obeys the view's visible fields. An arm decorates the line with a
-  // leading glyph and contributes columns — it does not replace the line. See
+  // leading glyph and declares fields (derived from its `liveArm`) — it does
+  // not replace the line. See
   // `Runs` in `internal/slots.ts` for why that seam no longer exists.
   const viewOptions = useMemo(
     () => ({
@@ -143,8 +146,6 @@ export function RunsDataView({
     <DataView<RunRow>
       storageKey={RUNS_VIEW}
       source={runsSource}
-      fields={fields}
-      fieldExtensions={Runs.Fields}
       views={views}
       defaultView={defaultView}
       pinnedView={pinnedView}

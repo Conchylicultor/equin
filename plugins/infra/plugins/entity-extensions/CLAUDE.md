@@ -67,22 +67,50 @@ The handle is an `Entity` (`name`, `table`, `schema`, `wireColumns`) plus `key`,
 
 ### `exposes` — fields every list of the parent shows
 
-`defineExtensionShape({ …, exposes: { parent, name, fields: { f: { label, absent, options? } } } })`
+`defineExtensionShape({ …, exposes: { parent, name, fields?: { f: { label?, as?, options? } }, presence? } })`
 declares, once, which own fields every list whose rows reach `parent` (an
-`EntityRef` — `entityRef("tasks")`, tasks-core's `tasksEntityRef`) shows, sorts,
-filters and groups by. `absent` is what a parent with NO side row reads (track:
-`"main"`, usage: `0`); the wire type is the field's widened by it. `options`
-must name every wire value (tsc). The shape carries the resolved
+`EntityRef` — `entityRef("tasks", taskFields)`, tasks-core's `tasksEntityRef`)
+shows, sorts, filters and groups by. The shape carries the resolved
 `exposure: EntityExposure | null` (`slice` = `<parent>_ext_<name>`).
-`defineExtension` asserts the parent table and name match the exposure and a
-literal `meta.columns[f].default` equals `absent`.
+
+- **What a missing side row reads is derived, never authored** (there is no
+  `absent` — tsc rejects one): the field's DECLARED default
+  (`enumTextField(TRACKS, { default: "main" })`, `floatField({ default: 0 })`
+  — `FieldDef.defaultDeclared`, set only when the caller passed `default`),
+  COALESCEd in SQL; otherwise NULL, and the exposed wire schema is the field's
+  made `.nullable()` (the row type says `| null`). A factory's implicit
+  backfill (`intField()`'s `0`, `dateField()`'s epoch) is not a declaration.
+  A declared default must be a string, number or boolean literal (it is the
+  COALESCE's operand). `defineExtension` asserts a literal
+  `meta.columns[f].default` equals it — so a DB default on a field that
+  declares none throws: declare it on the field.
+- `label` / `options` fall back to the field's own meta (`FieldMeta.label`,
+  `FieldMeta.optionMeta` — `enumTextField(values, { options })`); `options`
+  must name every value the exposed wire reads, keyed by its canonical
+  spelling (`fields/core`'s `OptionKey`: `"true"` / `"false"`, and `"null"`
+  when a missing row reads NULL — health's `{ true: Online, false: Offline,
+  null: Unknown }`) (tsc).
+- `as` — the field's id in every list when it differs from its column key
+  (health's `ok` listed as `status`): saved views and filter presets keep
+  their ids. The exposure, `$columns` and the wire names stay keyed by the
+  column (`<slice>.ok`); data-view's field id is `as`.
+- `presence: { id, label, values?, options? }` — a field derived from whether
+  the side row EXISTS (no column): a boolean (`starred`), or one of two
+  literals (`values: { present: "agent", absent: "user" }`), with optional
+  `options` for the two values (`"true"` / `"false"` for a boolean). The join carries it (`ExtensionJoin.presence`) and
+  query-resource's `presenceExpr` renders `(<slice>.parent_id IS NOT NULL)`
+  or the `CASE`; it projects into `$columns[<slice>][<id>]`, filters, sorts
+  and groups on the server like any exposed field. An exposure exposes at
+  least one field or its presence.
+- `defineExtension` asserts the parent table and name match the exposure.
 
 Wire it in the plugin's two runtimes — `LiveColumns.Expose(ext)` (server) and
-`LiveExposures.Register({ exposure: shape.exposure, present? })` (web, with
-per-field `cell` / `width` / `align`); the `live:exposures-registered` check
-enforces both. A collection names the entities it reaches (`liveCollection({
-exposes })`) and folds every exposure of them — see `network/live`'s CLAUDE.md,
-"Exposed fields". `tasks/task-track` and `conversations/usage` are the
+`FieldPresentation.Register({ owner: shape.exposure, fields? })` (web, with
+per-field `cell` / `width` / `align` / `useOptions`); the
+`live:exposures-registered` check enforces both. A collection names the
+entities it reaches (`liveCollection({ from, related })`) and folds every
+exposure of them — see `network/live`'s CLAUDE.md, "Fields" and "Exposed
+fields". `tasks/task-track` and `conversations/usage` are the
 reference exposures.
 
 ### The key is named after the parent
@@ -135,7 +163,7 @@ serveCollection(songsCollection, {
 });
 ```
 
-A side row I / U / D then refills its parent row — only in the tuples whose SQL reads the join, and for a tuple that only projects it, only when that tuple holds the parent (`plugins/infra/plugins/query-resource/CLAUDE.md`, *Joins*). The spec carries the extension's `wireColumns`, so `j.playback` offers only those — a server-only column (by default the timestamps) cannot be bound. A parent with no side row reads the extension's DEFAULTS, not NULL: a column whose meta declares a literal `default` (`columns: { playCount: { default: 0 } }`) is read as `COALESCE(playback.play_count, 0)` everywhere the SQL reads it — the projection, a filter, a sort — so "never played" is `playCount = 0` in SQL as it is in the extension's own semantics. Every other field bound to the join must be nullable (a parent with no side row reads NULL; checked at module eval). A collection whose columns OTHER plugins own reads an extension this way through a contributed-column handle (`network/live`'s `liveColumns` + `serveColumns(handle, { join: ext.join(alias) })`).
+A side row I / U / D then refills its parent row — only in the tuples whose SQL reads the join, and for a tuple that only projects it, only when that tuple holds the parent (`plugins/infra/plugins/query-resource/CLAUDE.md`, *Joins*). The spec carries the extension's `wireColumns`, so `j.playback` offers only those — a server-only column (by default the timestamps) cannot be bound. A parent with no side row reads the extension's DEFAULTS, not NULL: a column whose meta declares a literal `default` (`columns: { playCount: { default: 0 } }`) is read as `COALESCE(playback.play_count, 0)` everywhere the SQL reads it — the projection, a filter, a sort — so "never played" is `playCount = 0` in SQL as it is in the extension's own semantics. Every other field bound to the join must be nullable (a parent with no side row reads NULL; checked at module eval). A collection reads another plugin's extension this way through its EXPOSED fields (`exposes`, above; `network/live`'s `LiveColumns.Expose(ext)`).
 
 A `select: { conversationId: t.parentId, … }` map or a `.map((r) => ({ songId: r.parentId, … }))` is the hand-rolled projection `no-hand-rolled-entity-projection` bans: a column added to the table silently misses the wire.
 

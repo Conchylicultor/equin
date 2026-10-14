@@ -1,4 +1,4 @@
-import { z } from "zod";
+import type { z } from "zod";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import {
@@ -6,10 +6,11 @@ import {
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
-import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
+import { tagsField } from "@plugins/fields/plugins/tags/plugins/config/core";
 import { idKindField } from "@plugins/ids/core";
 import { wireSchema } from "@plugins/infra/plugins/entities/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
+import { pagesEntityRef } from "@plugins/page/plugins/block-entity/core";
 import { TAG_COLORS } from "./tag-color";
 import { pageTagIdKind } from "./tag-id";
 
@@ -41,11 +42,20 @@ export type PageTagRow = z.infer<typeof PageTagRowSchema>;
  * `page_blocks_ext_tags` entity extension (`server/internal/tables.ts`), keyed
  * on the page's id. One row per TAGGED page: a page with no tags has no row
  * (writing `[]` deletes it).
+ *
+ * `tagIds` is a tags field (a `jsonb` string array, the column it always was)
+ * and is EXPOSED, under the id `tags`, to every list whose rows are blocks —
+ * the pages sidebar filters and groups by it. Its options are the vocabulary,
+ * read live (`web/internal/presentation.ts`); it declares no default, so an
+ * untagged page reads NULL there — no tags.
  */
 export const pageTagAssignmentShape = defineExtensionShape({
   key: "pageId",
-  fields: {
-    tagIds: jsonField({ schema: z.array(z.string()), default: [] }),
+  fields: { tagIds: tagsField({ label: "Tags" }) },
+  exposes: {
+    parent: pagesEntityRef,
+    name: "tags",
+    fields: { tagIds: { as: "tags" } },
   },
 });
 export const PageTagAssignmentRowSchema = pageTagAssignmentShape.schema;

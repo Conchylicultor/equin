@@ -1,9 +1,7 @@
 import type { EntityExposure } from "@plugins/infra/plugins/entity-extensions/core";
-import type {
-  FilterColumn,
-  FilterDomainId,
-} from "@plugins/network/plugins/live/plugins/filter/core";
+import type { FilterColumn } from "@plugins/network/plugins/live/plugins/filter/core";
 import type { LiveColumnRef } from "./column-ref";
+import { schemaDomain } from "./field-domain";
 import type { LiveRowSchema } from "./live-collection";
 import {
   typedColumns,
@@ -17,21 +15,11 @@ import {
 // entity, never named by one. Its name is the exposure's slice (the
 // extension's table name, `tasks_ext_track`), so its wire names are
 // `<slice>.<field>` and its rows carry it under `$columns[<slice>]`. Every
-// exposed field filters (in the domain its field TYPE reads in) and every one
-// but a string array sorts; a groupable one (text / number / boolean) groups
-// on the server like a collection's own column.
-
-/** The filter domain each field TYPE's values read in. A type missing here cannot be exposed. */
-const DOMAIN_OF_TYPE: Readonly<Record<string, FilterDomainId>> = {
-  text: "text",
-  enum: "text",
-  int: "number",
-  float: "number",
-  number: "number",
-  date: "instant",
-  bool: "boolean",
-  tags: "stringArray",
-};
+// exposed field with a filter domain filters in it (`./field-domain` — the one
+// derivation every live field shares, read off its wire schema) and sorts,
+// but a string array; a groupable one (text / number / boolean) groups on the
+// server like a collection's own column. A field with no domain (a JSON
+// value) is carried and shown, never filtered or sorted.
 
 /** An exposure as a column set (see {@link exposedColumns}). */
 export interface LiveExposedColumns<
@@ -57,8 +45,7 @@ const memo = new WeakMap<EntityExposure, LiveExposedColumns>();
 
 /**
  * An exposure's column set — one object per exposure (memoized), so a codec
- * keyed on the set it is handed sees one set. Throws on a field whose type has
- * no filter domain (an exposure is filterable by construction).
+ * keyed on the set it is handed sees one set.
  */
 export function exposedColumns<R extends Record<string, unknown>>(
   exposure: EntityExposure<R>,
@@ -71,11 +58,8 @@ export function exposedColumns<R extends Record<string, unknown>>(
   const filterable: Record<string, FilterColumn> = {};
   const sortable: string[] = [];
   for (const [field, f] of Object.entries(exposure.fields)) {
-    const domain = Object.hasOwn(DOMAIN_OF_TYPE, f.typeId)
-      ? DOMAIN_OF_TYPE[f.typeId]!
-      : fail(
-          `field "${field}" is of type "${f.typeId}", which has no filter domain — expose a text, enum, int, float, number, date, bool or tags field.`,
-        );
+    const domain = schemaDomain(f.wire);
+    if (domain === null) continue;
     filterable[field] = { domain } as FilterColumn;
     if (domain !== "stringArray") sortable.push(field);
   }

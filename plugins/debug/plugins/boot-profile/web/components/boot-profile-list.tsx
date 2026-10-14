@@ -4,9 +4,9 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
   liveDataSource,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { bootTraces, type BootTraceItem } from "../../core";
 import { bootProfileDetailPane } from "../panes";
 
@@ -26,7 +26,7 @@ export function BootProfileList(): ReactElement {
   return (
     <DataView<BootTraceItem>
       source={bootTracesSource}
-      fields={fields}
+      overrides={overrides}
       views={["list"]}
       storageKey={BOOT_PROFILES_VIEW}
       rowActivation={(r) =>
@@ -42,40 +42,19 @@ export function BootProfileList(): ReactElement {
   );
 }
 
-// Static: every sortable / filterable field's id IS its collection column.
-const fields: FieldDef<BootTraceItem>[] = [
-  {
-    id: "worktree",
-    label: "Worktree",
-    type: "text",
-    value: (r) => r.worktree,
-    primary: true,
-    sortable: true,
-    filterable: true,
-  },
-  {
-    id: "id",
-    label: "Id",
-    type: "text",
-    value: (r) => r.id,
+// How the derived fields present here.
+const overrides = fieldOverrides(bootTraces, {
+  id: {
     cell: (r) => (
       <span className="font-mono text-muted-foreground">{r.id}</span>
     ),
-    sortable: false,
-    filterable: false,
   },
-  {
-    id: "createdAt",
-    label: "When",
-    type: "date",
-    value: (r) => r.createdAt,
+  createdAt: {
     cell: (r) => (
       <span className="text-muted-foreground">
         <RelativeTime date={r.createdAt} />
       </span>
     ),
-    sortable: true,
-    filterable: true,
     align: "end",
   },
-];
+});

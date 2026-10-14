@@ -290,7 +290,6 @@ beforeAll(async () => {
   const specs = compileCollection(
     collection,
     { from: hostsTable, db: db as unknown as QueryDb },
-    [],
     [set],
   );
   const opts = compileWindowQuery(collection.window, specs.window).serverOpts;

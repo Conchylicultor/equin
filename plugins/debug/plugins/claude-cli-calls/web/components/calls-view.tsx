@@ -16,6 +16,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
   liveDataSource,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
@@ -44,7 +45,8 @@ export function CallsView({
 }) {
   return (
     <DataView<ClaudeCliCallRow>
-      fields={fields}
+      overrides={overrides}
+      extraFields={extraFields}
       views={["table", "list"]}
       defaultView="table"
       storageKey={CALLS_VIEW}
@@ -73,71 +75,68 @@ function contextSummary(context: Record<string, unknown> | null): string {
     .join(" ");
 }
 
-// Static: the field schema derives nothing from the loaded rows. Every
-// sortable / filterable field's id IS its collection column, and its `value`
-// that column's value; `summary` and `context` are derived, so display-only.
-const fields: FieldDef<ClaudeCliCallRow>[] = [
-  {
-    id: "status",
-    label: "Status",
+// How the derived fields present here (the collection declares their labels,
+// types and filters). `prompt`, `output` and `error` are filter-only text
+// columns ("Prompt contains …", "Error is not empty"), hidden by default — the
+// summary column already shows the output / error.
+const overrides = fieldOverrides(claudeCliCalls, {
+  status: {
     header: false,
-    type: "enum",
-    value: (r) => r.status,
-    options: [
-      { value: "ok", label: "Succeeded", variant: "success" },
-      { value: "error", label: "Failed", variant: "destructive" },
-    ],
+    label: "Status",
     cell: (r) =>
       r.status === "error" ? (
         <StatusDot colorClass="bg-destructive" />
       ) : (
         <StatusDot colorClass="bg-success" />
       ),
-    sortable: false,
-    filterable: true,
     width: "2rem",
   },
-  {
-    id: "createdAt",
-    label: "Time",
-    type: "date",
-    value: (r) => r.createdAt,
+  createdAt: {
     cell: (r) => (
       <Text tone="muted" title={r.createdAt.toLocaleString()}>
         <RelativeTime date={r.createdAt} />
       </Text>
     ),
-    sortable: true,
-    filterable: true,
     width: "7rem",
   },
-  {
-    id: "sourceName",
-    label: "Source",
-    type: "enum",
-    value: (r) => r.sourceName,
+  sourceName: {
     cell: (r) => (
       <Badge variant="muted" mono>
         {r.sourceName}
       </Badge>
     ),
-    sortable: true,
-    filterable: true,
     width: "12rem",
   },
-  {
-    id: "model",
-    label: "Model",
-    type: "enum",
-    value: (r) => r.model,
+  model: {
     cell: (r) => {
       const meta = modelMeta(r.model);
       return <Badge colorClass={familyClass(meta.family)}>{meta.label}</Badge>;
     },
-    sortable: true,
-    filterable: true,
     width: "8rem",
   },
+  durationMs: {
+    // A slow call (over SLOW_CALL_MS) reads in the warning tint.
+    cell: (r) =>
+      r.durationMs > SLOW_CALL_MS ? (
+        <Text className="tabular-nums text-warning">
+          {formatCallDuration(r.durationMs)}
+        </Text>
+      ) : (
+        <Text tone="muted" className="tabular-nums">
+          {formatCallDuration(r.durationMs)}
+        </Text>
+      ),
+    align: "end",
+    width: "6rem",
+  },
+  prompt: { visible: false },
+  output: { visible: false },
+  error: { visible: false },
+});
+
+// What the list computes itself: `summary` and `context` are derived from the
+// row, so display-only.
+const extraFields: FieldDef<ClaudeCliCallRow>[] = [
   {
     id: "summary",
     label: "Summary",
@@ -176,38 +175,4 @@ const fields: FieldDef<ClaudeCliCallRow>[] = [
     filterable: false,
     width: "minmax(0,14rem)",
   },
-  {
-    id: "durationMs",
-    label: "Duration",
-    type: "int",
-    value: (r) => r.durationMs,
-    // A slow call (over SLOW_CALL_MS) reads in the warning tint.
-    cell: (r) =>
-      r.durationMs > SLOW_CALL_MS ? (
-        <Text className="tabular-nums text-warning">
-          {formatCallDuration(r.durationMs)}
-        </Text>
-      ) : (
-        <Text tone="muted" className="tabular-nums">
-          {formatCallDuration(r.durationMs)}
-        </Text>
-      ),
-    sortable: true,
-    filterable: true,
-    align: "end",
-    width: "6rem",
-  },
-  // Filter-only text columns: "Prompt contains …", "Error is not empty". Hidden
-  // by default — the summary column already shows the output / error.
-  ...(["prompt", "output", "error"] as const).map(
-    (id): FieldDef<ClaudeCliCallRow> => ({
-      id,
-      label: id === "prompt" ? "Prompt" : id === "output" ? "Output" : "Error",
-      type: "text",
-      value: (r) => r[id],
-      sortable: false,
-      filterable: true,
-      visible: false,
-    }),
-  ),
 ];

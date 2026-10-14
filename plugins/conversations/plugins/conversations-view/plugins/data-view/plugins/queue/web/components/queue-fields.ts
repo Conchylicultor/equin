@@ -1,45 +1,49 @@
-import { useMemo } from "react";
-import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
-import { useConversationFieldDefs } from "@plugins/conversations/plugins/all-conversations/web";
+import {
+  fieldOverrides,
+  type FieldDef,
+} from "@plugins/primitives/plugins/data-view/web";
+import { conversationsActive } from "@plugins/tasks/plugins/tasks-core/core";
 import type { QueueRow } from "./use-queue-rows";
 
-const SECTION_FIELD: FieldDef<QueueRow> = {
-  id: "section",
-  label: "Section",
-  type: "enum",
-  value: (r) => r.section,
-  groupable: true,
-  filterable: false,
-  options: [
-    { value: "pinned", label: "Pinned" },
-    { value: "queued", label: "Queue" },
-    { value: "working", label: "Working" },
-    { value: "lost", label: "Lost" },
-    { value: "unranked", label: "Unranked" },
-    { value: "disconnected", label: "Disconnected" },
-    { value: "done", label: "Done" },
-  ],
-};
+/**
+ * The synthetic `section` field that drives the read-time partitioning — the
+ * one field the Queue computes itself (`extraFields`); every other is derived
+ * from its collection (`conversationsActive`: the conversations entity's
+ * fields, the owners' columns and every exposed field of the task it reaches).
+ */
+export const QUEUE_EXTRA_FIELDS: FieldDef<QueueRow>[] = [
+  {
+    id: "section",
+    label: "Section",
+    type: "enum",
+    value: (r) => r.section,
+    groupable: true,
+    filterable: false,
+    options: [
+      { value: "pinned", label: "Pinned" },
+      { value: "queued", label: "Queue" },
+      { value: "working", label: "Working" },
+      { value: "lost", label: "Lost" },
+      { value: "unranked", label: "Unranked" },
+      { value: "disconnected", label: "Disconnected" },
+      { value: "done", label: "Done" },
+    ],
+  },
+];
 
 /**
- * The Queue DataView field schema: the shared conversation display fields (reused
- * verbatim from `all-conversations`, forced non-groupable so the gear's group-by
- * picker offers only `section` + `None`) plus the synthetic `section` field that
- * drives the read-time partitioning. The `FieldDef<Conversation>` → `FieldDef<QueueRow>`
- * cast is safe — `QueueRow` extends `Conversation` and `TRow` appears only in
- * contravariant (accessor) positions (the DataView docs sanction this cast).
+ * The conversation fields, forced non-groupable so the gear's group-by picker
+ * offers only `section` (and the exposed fields, a task's track) + `None`.
  */
-export function useQueueFields(): FieldDef<QueueRow>[] {
-  const conversationFields = useConversationFieldDefs();
-  // Memoized: the schema's identity is part of every list row's memo key.
-  return useMemo(
-    () => [
-      ...(conversationFields as FieldDef<QueueRow>[]).map((f) => ({
-        ...f,
-        groupable: false,
-      })),
-      SECTION_FIELD,
-    ],
-    [conversationFields],
-  );
-}
+export const QUEUE_OVERRIDES = fieldOverrides(conversationsActive, {
+  title: { groupable: false },
+  status: { groupable: false },
+  model: { groupable: false },
+  kind: { groupable: false },
+  runtime: { groupable: false },
+  createdAt: { groupable: false },
+  updatedAt: { groupable: false },
+  endedAt: { groupable: false },
+  worktreePath: { groupable: false },
+  taskTitle: { groupable: false },
+});

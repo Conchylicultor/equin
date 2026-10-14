@@ -1,9 +1,12 @@
 import { z } from "zod";
-import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import { nullable } from "@plugins/fields/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import {
-  liveInstant,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
+  enumTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 
 /**
  * The verbs over a deployment, as the app launches them.
@@ -22,7 +25,8 @@ import {
  * hand. It is the app's one primary action; `converge` and `ship` stay because
  * the row actions and scripted callers still name them individually.
  */
-export const DeployVerbSchema = z.enum(["converge", "ship", "update"]);
+export const DEPLOY_VERBS = ["converge", "ship", "update"] as const;
+export const DeployVerbSchema = z.enum(DEPLOY_VERBS);
 export type DeployVerb = z.infer<typeof DeployVerbSchema>;
 
 /**
@@ -34,7 +38,8 @@ export type DeployVerb = z.infer<typeof DeployVerbSchema>;
  * phase — so "a single-verb run has no phase" is a fact of the type, not a
  * convention.
  */
-export const DeployPhaseSchema = z.enum(["converge", "build", "ship"]);
+export const DEPLOY_PHASES = ["converge", "build", "ship"] as const;
+export const DeployPhaseSchema = z.enum(DEPLOY_PHASES);
 export type DeployPhase = z.infer<typeof DeployPhaseSchema>;
 
 /**
@@ -168,6 +173,8 @@ export const deployRuns = liveValue("deploy.runs", {
  * - dates, not ISO strings — this shape is fed to a DataView, where a `date`
  *   field sorts and filters on a real `Date`.
  */
+export const DEPLOY_RUN_STATUSES = ["running", "succeeded", "failed"] as const;
+
 export const DeployRunRecordSchema = z.object({
   id: z.string(),
   deploymentId: z.string(),
@@ -196,7 +203,7 @@ export const DeployRunRecordSchema = z.object({
    * different namespace and inherited through the DB fork. Neither is this
    * process's to close, and both stay as the honest record of what was observed.
    */
-  status: z.enum(["running", "succeeded", "failed"]),
+  status: z.enum(DEPLOY_RUN_STATUSES),
   /** Which leg an `update` died on. Null unless the run failed on one. */
   phaseFailed: DeployPhaseSchema.nullable(),
   startedAt: z.coerce.date(),
@@ -225,18 +232,51 @@ const DEPLOY_HISTORY_VIEW_ID = "deploy.deployment.history";
  * history surface, so that surface's custom columns sort and filter it.
  */
 export const deployRunHistory = liveCollection("deploy.run-history", {
-  row: DeployRunRecordSchema,
-  id: "id",
-  filterable: {
-    deploymentId: liveText(),
-    verb: liveText(DeployVerbSchema),
-    status: liveText(),
-    releaseRunId: liveText(),
-    commitSha: liveText(),
-    message: liveText(),
-    startedAt: liveInstant(),
-    finishedAt: liveInstant(),
+  // Declared by FIELDS: the run record's listed fields (label, type, options,
+  // filter domain) are derived into the History DataView, which names none of
+  // them. The row is `DeployRunRecord` (the ledger's columns by name): what no
+  // list shows rides in `carry`.
+  fields: {
+    status: enumTextField(DEPLOY_RUN_STATUSES, {
+      label: "Outcome",
+      primary: true,
+      options: {
+        running: { label: "Running" },
+        succeeded: { label: "Succeeded" },
+        failed: { label: "Failed" },
+      },
+    }),
+    // The closed verb set, declared (not derived from the loaded rows, a
+    // server-paginated window that would offer only the verbs on the page).
+    verb: enumTextField(DEPLOY_VERBS, {
+      label: "Verb",
+      options: {
+        update: { label: "Update" },
+        converge: { label: "Converge" },
+        ship: { label: "Ship" },
+      },
+    }),
+    commitSha: nullable(textField({ label: "Commit" })),
+    releaseRunId: nullable(textField({ label: "Release" })),
+    startedAt: dateField({ label: "Started" }),
+    message: nullable(textField({ label: "Message" })),
+    // Filterable (and, for `finishedAt`, sortable) without being a column the
+    // History shows: `deploymentId` is the scope every window states
+    // (`scoped({ where: { deploymentId } })`), which can only name a listed
+    // field.
+    deploymentId: textField({ label: "Deployment" }),
+    finishedAt: nullable(dateField({ label: "Finished" })),
   },
+  carry: {
+    fields: {
+      id: textField(),
+      serverId: textField(),
+      compositionId: textField(),
+      phaseFailed: nullable(enumTextField(DEPLOY_PHASES)),
+      exitCode: nullable(intField()),
+    },
+  },
+  id: "id",
   sortable: [
     "status",
     "verb",

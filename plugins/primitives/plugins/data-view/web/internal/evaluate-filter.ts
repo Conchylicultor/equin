@@ -162,8 +162,10 @@ export function makeRowMatcher<TRow>(
     if (!field || !set) {
       throw new Error(`data-view filter: no filterable field "${id}"`);
     }
-    columns.push({ id, field, domain: set.domain });
-    filterable[id] = { domain: set.domain };
+    // An enum over booleans / numbers lowers in its values' domain.
+    const domain = field.valueDomain ?? set.domain;
+    columns.push({ id, field, domain });
+    filterable[id] = { domain };
   }
   const declared: Filterable = filterable;
   return (row) => {

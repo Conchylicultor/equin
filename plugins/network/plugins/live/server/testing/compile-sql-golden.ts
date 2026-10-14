@@ -58,6 +58,7 @@ import type {
   PointParams,
   WindowParams,
 } from "@plugins/primitives/plugins/live-state/core";
+import { nullable } from "@plugins/fields/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { enumTextField } from "@plugins/fields/plugins/text/plugins/config/core";
@@ -71,7 +72,6 @@ import {
 import {
   exposedColumns,
   liveCollection,
-  liveColumns,
   scopedLiveColumns,
   type LiveColumnsDeclaration,
 } from "../../core";
@@ -84,7 +84,6 @@ import {
   type CollectionSpecs,
 } from "../internal/serve-collection";
 import {
-  serveColumns,
   serveScopedColumns,
   type ScopedMemberRead,
 } from "../internal/serve-columns";
@@ -558,16 +557,26 @@ const scValues = pgTable(
   (t) => [primaryKey({ columns: [t.dataViewId, t.rowKey, t.columnId] })],
 );
 
-const contribSongs = pgTable("golden_contrib_songs", {
+const playsSongs = pgTable("golden_plays_songs", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
 });
-const contribPlayback = defineExtension(
-  contribSongs,
+const playsSongsRef = entityRef("golden_plays_songs", {});
+// A defaulted count and a nullable instant, exposed to every list of songs.
+const songPlayback = defineExtension(
+  playsSongs,
   "playback",
   defineExtensionShape({
     key: "songId",
-    fields: { playCount: intField(), lastPlayedAt: dateField() },
+    fields: {
+      playCount: intField({ label: "Plays", default: 0 }),
+      lastPlayedAt: nullable(dateField({ label: "Last played" })),
+    },
+    exposes: {
+      parent: playsSongsRef,
+      name: "playback",
+      fields: { playCount: {}, lastPlayedAt: {} },
+    },
   }),
   { columns: { playCount: { default: 0 } } },
 );
@@ -997,7 +1006,7 @@ async function collectionCases(): Promise<Record<string, Json>> {
       { id: "a", title: "A", n: 1 },
       { id: "b", title: "B", n: 2 },
     ]);
-    const specs = compileCollection(c, { from: scSongs, db }, [], [set]);
+    const specs = compileCollection(c, { from: scSongs, db }, [set]);
     const handle: LiveColumnsDeclaration = scopedLiveColumns(SCOPE, "custom", {
       c1: { domain: "text", sortable: true },
       "cc-2": { domain: "number", sortable: true },
@@ -1026,56 +1035,50 @@ async function collectionCases(): Promise<Record<string, Json>> {
     });
   }
 
-  // Contributed columns: an extension with a defaulted column, folded into `$columns`.
+  // An exposure sorted, filtered and cut by: a defaulted column (COALESCEd)
+  // and a nullable one, folded into `$columns`.
   {
-    const c = liveCollection("golden.contributed", {
+    const c = liveCollection("golden.exposed-sort", {
       row: z.object({ id: z.string(), title: z.string() }),
       id: "id",
       filterable: { title: liveText() },
       sortable: ["title"],
       default: { orderBy: [["title", "asc"]], limit: 10 },
       maxLimit: 30,
-      contributed: true,
+      exposes: { base: playsSongsRef },
     });
-    const handle = liveColumns(c, "playback", {
-      row: z.object({
-        playCount: z.number(),
-        lastPlayedAt: z.coerce.date().nullable(),
-      }),
-      filterable: { playCount: liveNumber() },
-      sortable: ["playCount", "lastPlayedAt"],
-    });
+    const stats = exposedColumns(songPlayback.exposure);
+    const PLAYS = stats.wireName("playCount");
+    const LAST = stats.wireName("lastPlayedAt");
     const { db, h } = harness([
       {
         id: "s1",
         title: "a",
-        "playback.playCount": 3,
-        "playback.lastPlayedAt": new Date("2026-09-30T10:00:00.000Z"),
+        [PLAYS]: 3,
+        [LAST]: new Date("2026-09-30T10:00:00.000Z"),
       },
-      {
-        id: "s2",
-        title: "b",
-        "playback.playCount": 0,
-        "playback.lastPlayedAt": null,
-      },
+      { id: "s2", title: "b", [PLAYS]: 0, [LAST]: null },
     ]);
-    const specs = compileCollection(c, { from: contribSongs, db }, [
-      serveColumns(handle, { join: contribPlayback.join("playback") }),
-    ]);
+    const specs = compileCollection(
+      c,
+      { from: playsSongs, db },
+      [],
+      [songPlayback],
+    );
     const encode = (q: object, cuts?: object) =>
       c.window.window.encode(
-        { ...q, columns: [handle] } as never,
+        { ...q, columns: [stats] } as never,
         cuts as never,
       );
-    out.contributed = await collectionRecord(h, c, specs, {
+    out.exposedSort = await collectionRecord(h, c, specs, {
       window: {
         default: encode({}),
         byPlays: encode({
-          orderBy: [["playback.playCount", "desc"]],
-          where: { "playback.playCount": { gt: 3 } },
+          orderBy: [[PLAYS, "desc"]],
+          where: { [PLAYS]: { gt: 3 } },
         }),
         byPlayedCut: encode(
-          { orderBy: [["playback.lastPlayedAt", "desc"]] },
+          { orderBy: [[LAST, "desc"]] },
           { after: JSON.stringify([null, "s2"]) },
         ),
       },
@@ -1517,34 +1520,73 @@ const xpConvs = pgTable("golden_xp_convs", {
   title: text("title").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
 });
-const xpTasksRef = entityRef("golden_xp_tasks");
-const xpConvsRef = entityRef("golden_xp_convs");
+const xpTasksRef = entityRef("golden_xp_tasks", {});
+const xpConvsRef = entityRef("golden_xp_convs", {});
+// A declared default (`main`): a missing row reads it, COALESCEd.
 const xpTrack = defineExtension(
   xpTasks,
   "track",
   defineExtensionShape({
     key: "taskId",
-    fields: { track: enumTextField(["sidequest"] as const) },
-    exposes: {
-      parent: xpTasksRef,
-      name: "track",
-      fields: { track: { label: "Track", absent: "main" } },
+    fields: {
+      track: enumTextField(["main", "sidequest"] as const, {
+        label: "Track",
+        default: "main",
+      }),
     },
+    exposes: { parent: xpTasksRef, name: "track", fields: { track: {} } },
   }),
+  { columns: { track: { default: "main" } } },
 );
+// `cost` declares 0; `plays` declares nothing (a missing row reads NULL, no
+// COALESCE) and is listed as `playCount` (`as`).
 const xpUsage = defineExtension(
   xpConvs,
   "usage",
   defineExtensionShape({
     key: "conversationId",
-    fields: { cost: intField() },
+    fields: {
+      cost: intField({ label: "Cost", default: 0 }),
+      plays: intField({ label: "Plays" }),
+    },
     exposes: {
       parent: xpConvsRef,
       name: "usage",
-      fields: { cost: { label: "Cost", absent: 0 } },
+      fields: { cost: {}, plays: { as: "playCount" } },
     },
   }),
   { columns: { cost: { default: 0 } } },
+);
+// Presence: a boolean on the related task, two literals on the base.
+const xpStarred = defineExtension(
+  xpTasks,
+  "starred",
+  defineExtensionShape({
+    key: "taskId",
+    fields: {},
+    exposes: {
+      parent: xpTasksRef,
+      name: "starred",
+      presence: { id: "starred", label: "Starred" },
+    },
+  }),
+);
+const xpOrigin = defineExtension(
+  xpConvs,
+  "origin",
+  defineExtensionShape({
+    key: "conversationId",
+    fields: {},
+    exposes: {
+      parent: xpConvsRef,
+      name: "origin",
+      presence: {
+        id: "origin",
+        label: "Origin",
+        values: { present: "agent", absent: "user" },
+      },
+    },
+  }),
 );
 const xpOwnerJoins = [
   {
@@ -1574,8 +1616,16 @@ async function exposedCases(): Promise<Record<string, Json>> {
   const out: Record<string, Json> = {};
   const TRACK = "golden_xp_tasks_ext_track.track";
   const COST = "golden_xp_convs_ext_usage.cost";
-  const track = exposedColumns(xpTrack.exposure);
-  const usage = exposedColumns(xpUsage.exposure);
+  const PLAYS = "golden_xp_convs_ext_usage.plays";
+  const STARRED = "golden_xp_tasks_ext_starred.starred";
+  const ORIGIN = "golden_xp_convs_ext_origin.origin";
+  const served = [xpTrack, xpUsage, xpStarred, xpOrigin];
+  const columns = [
+    exposedColumns(xpTrack.exposure),
+    exposedColumns(xpUsage.exposure),
+    exposedColumns(xpStarred.exposure),
+    exposedColumns(xpOrigin.exposure),
+  ];
 
   {
     const c = liveCollection("golden.exposed-window", {
@@ -1589,17 +1639,33 @@ async function exposedCases(): Promise<Record<string, Json>> {
     });
     const createdAt = new Date("2026-10-12T10:00:00.000Z");
     const { db, h } = harness([
-      { id: "c1", title: "a", createdAt, [TRACK]: "main", [COST]: 0 },
-      { id: "c2", title: "b", createdAt, [TRACK]: "sidequest", [COST]: 7 },
+      {
+        id: "c1",
+        title: "a",
+        createdAt,
+        [TRACK]: "main",
+        [COST]: 0,
+        [PLAYS]: null,
+        [STARRED]: false,
+        [ORIGIN]: "user",
+      },
+      {
+        id: "c2",
+        title: "b",
+        createdAt,
+        [TRACK]: "sidequest",
+        [COST]: 7,
+        [PLAYS]: 3,
+        [STARRED]: true,
+        [ORIGIN]: "agent",
+      },
     ]);
     const specs = compileCollection(
       c,
       { from: xpConvs, joins: xpOwnerJoins, db },
       [],
-      [],
-      [xpTrack, xpUsage],
+      served,
     );
-    const columns = [track, usage];
     const encode = (q: object) =>
       c.window.window.encode({ ...q, columns } as never);
     out.window = await collectionRecord(h, c, specs, {
@@ -1610,6 +1676,9 @@ async function exposedCases(): Promise<Record<string, Json>> {
           where: { [TRACK]: "main" },
           orderBy: [[COST, "desc"]],
         }),
+        neverPlayed: encode({ where: { [PLAYS]: { isEmpty: true } } }),
+        starred: encode({ where: { [STARRED]: true } }),
+        byAgents: encode({ where: { [ORIGIN]: "agent" } }),
       },
       point: { two: c.rows.point.encode(["c1", "c2"]) },
       groups: {
@@ -1624,6 +1693,14 @@ async function exposedCases(): Promise<Record<string, Json>> {
         trackOfCostly: c.groups.groups.encode({
           groupBy: TRACK as never,
           where: { [COST]: { gt: 0 } } as never,
+          columns,
+        }),
+        starred: c.groups.groups.encode({
+          groupBy: STARRED as never,
+          columns,
+        }),
+        origin: c.groups.groups.encode({
+          groupBy: ORIGIN as never,
           columns,
         }),
       },
@@ -1651,10 +1728,9 @@ async function exposedCases(): Promise<Record<string, Json>> {
           all,
           { from: xpConvs, joins: xpOwnerJoins, db },
           [],
-          [],
-          [xpTrack, xpUsage],
+          served,
         ),
-      { ...sample, [TRACK]: "sidequest" },
+      { ...sample, [TRACK]: "sidequest", [STARRED]: true },
     );
     // No exposure served: the rows still carry `$columns`, and the
     // definition differs from the folded one.

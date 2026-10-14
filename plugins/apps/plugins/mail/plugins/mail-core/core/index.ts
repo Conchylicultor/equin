@@ -59,6 +59,7 @@ export {
   mailSyncStateFields,
   mailLabelFields,
   mailThreadFields,
+  mailThreadsEntityRef,
   mailMessageFields,
   mailMessageLabelFields,
   mailAttachmentFields,

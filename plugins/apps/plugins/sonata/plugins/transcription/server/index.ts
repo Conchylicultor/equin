@@ -14,7 +14,6 @@ import {
   handleRetryTranscription,
   handleTranscribeSong,
 } from "./internal/routes";
-import { transcriptionColumnsServed } from "./internal/columns";
 import { transcriptionProfile } from "./internal/profile";
 import { submitTranscriptionTool } from "./internal/mcp-tool";
 import { transcriptionConversationEndedJob } from "./internal/conversation-ended";
@@ -22,14 +21,14 @@ import { SONATA_CATEGORY_ID } from "./internal/launch";
 
 export default {
   description:
-    "Owns the sonata_songs_ext_transcription side-table: a transcribed song's run state (status, input, task, latest conversation, error). POST transcribe creates the song (MusicXML source), a Sonata task and a transcribing agent in a `sonata.transcription` scratch workspace (CLAUDE.md = the instructions, ./bin/st = the toolkit); its sonata_submit_transcription MCP tool imports the agent's MusicXML into the song. Serves the library's `transcription` columns; a conversation closed before submitting marks the song failed (retry relaunches).",
+    "Owns the sonata_songs_ext_transcription side-table: a transcribed song's run state (status, input, task, latest conversation, error). POST transcribe creates the song (MusicXML source), a Sonata task and a transcribing agent in a `sonata.transcription` scratch workspace (CLAUDE.md = the instructions, ./bin/st = the toolkit); its sonata_submit_transcription MCP tool imports the agent's MusicXML into the song. Exposes its status, latest conversation and error to every list of songs (LiveColumns.Expose); a conversation closed before submitting marks the song failed (retry relaunches).",
   httpRoutes: {
     [transcribeSong.route]: handleTranscribeSong,
     [retryTranscription.route]: handleRetryTranscription,
     [getSongTranscription.route]: handleGetSongTranscription,
   },
   contributions: [
-    LiveColumns.Serve(transcriptionColumnsServed),
+    LiveColumns.Expose(songTranscription),
     TaskCategory({ id: SONATA_CATEGORY_ID, label: "Sonata", order: 13 }),
     Trigger({
       on: conversationStatusChanged,

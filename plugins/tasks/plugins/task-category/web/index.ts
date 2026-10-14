@@ -1,14 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Tasks } from "@plugins/tasks/plugins/task-list/web";
-import { CategoryField } from "./components/category-field";
+import { categoryPresentation } from "./internal/presentation";
 
 export { useTaskCategories, useTaskCategoryMap } from "./hooks";
 export type { TaskCategoryMap } from "./hooks";
 
 export default {
   description:
-    "Per-task category (registry-driven, system-set only): contributes the `category` enum field into the tasks DataView so the task list can group by it.",
-  contributions: [
-    Tasks.Fields({ id: "category", section: null, component: CategoryField }),
-  ],
+    "Per-task category (registry-driven, system-set only): presents the exposed `category` field of every list whose rows reach a task (the task list groups by it), its options read from the live category registry.",
+  contributions: [categoryPresentation],
 } satisfies PluginDefinition;

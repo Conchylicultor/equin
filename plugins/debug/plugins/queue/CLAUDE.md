@@ -35,10 +35,10 @@
     - `trigger-actions` "enabled" → `TriggerEnabledAction`
     - `trigger-actions` "delete" → `DeleteTriggerAction`
     - `DebugApp.Sidebar` "Queue"
-  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×8
     - `primitives/live-state` ×6
-    - `primitives/data-view` ×4
+    - `primitives/data-view` ×5
     - `infra/background/catalog` ×2
     - `infra/endpoints` ×2
     - `network/live` ×2

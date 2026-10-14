@@ -18,6 +18,7 @@ const FIELD: FieldDef<Row> = {
       hint: "The run succeeded and found nothing.",
     },
     { value: "idle", label: "Idle" },
+    { value: "manual", label: "By hand", quiet: true },
   ],
 };
 
@@ -62,5 +63,36 @@ describe("EnumCell reads its display metadata off the option", () => {
     const { getByText } = renderCell("shotgun");
     const chip = getByText("shotgun").parentElement;
     expect(chip?.className).toContain("text-muted-foreground");
+  });
+
+  it("labels a boolean and the no-value by their canonical spelling", () => {
+    const verdict: FieldDef<unknown> = {
+      id: "status",
+      label: "Status",
+      type: "enum",
+      valueDomain: "boolean",
+      options: [
+        { value: "true", label: "Online", variant: "success" },
+        { value: "null", label: "Unknown" },
+      ],
+    };
+    const cell = (value: boolean | null) =>
+      render(<EnumCell field={verdict} value={value} raw={{}} />);
+    expect(cell(true).getByText("Online")).toBeTruthy();
+    expect(cell(null).getByText("Unknown")).toBeTruthy();
+  });
+
+  it("draws nothing for the no-value no option labels", () => {
+    const { container } = render(
+      <EnumCell field={FIELD as FieldDef<unknown>} value={null} raw={{}} />,
+    );
+    expect(container.textContent).toBe("");
+  });
+});
+
+describe("a quiet option", () => {
+  it("labels filters and groups but draws no chip in the cell", () => {
+    const { container } = renderCell("manual");
+    expect(container.textContent).toBe("");
   });
 });

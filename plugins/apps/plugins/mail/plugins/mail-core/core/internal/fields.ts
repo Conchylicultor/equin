@@ -10,6 +10,7 @@ import {
   parsedTextField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { externalIdField, idKindField } from "@plugins/ids/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import {
   mailAccountIdKind,
   mailAttachmentIdKind,
@@ -128,24 +129,26 @@ export const mailLabelFields = {
   updatedAt: dateField(),
 } satisfies FieldsRecord;
 
+// A thread's labels are the ones every list of threads names it by (the
+// threads DataView's fields derive from them, `mailThreadsEntityRef`).
 export const mailThreadFields = {
   id: externalIdField({
     reason:
       "Gmail's own thread id — the local mirror is keyed by the id the Gmail API returns.",
   }),
-  accountId: idKindField(mailAccountIdKind),
-  subject: nullable(textField()),
-  snippet: nullable(textField()),
+  accountId: idKindField(mailAccountIdKind, { label: "Account" }),
+  subject: nullable(textField({ label: "Subject", primary: true })),
+  snippet: nullable(textField({ label: "Snippet" })),
   participants: jsonField<z.infer<typeof MailAddressSchema>[]>({
     schema: z.array(MailAddressSchema),
     default: [],
   }),
-  lastMessageAt: nullable(dateField()),
-  messageCount: intField(),
-  unread: boolField(),
-  starred: boolField(),
-  important: boolField(),
-  hasAttachments: boolField(),
+  lastMessageAt: nullable(dateField({ label: "Date" })),
+  messageCount: intField({ label: "Messages" }),
+  unread: boolField({ label: "Unread" }),
+  starred: boolField({ label: "Starred" }),
+  important: boolField({ label: "Important" }),
+  hasAttachments: boolField({ label: "Attachment" }),
   labelIds: jsonField<string[]>({ schema: z.array(z.string()), default: [] }),
   historyId: nullable(textField()),
   createdAt: dateField(),
@@ -276,6 +279,9 @@ export const MailAccountSchema = fieldsToZodObject(mailAccountFields);
 export const MailSyncStateSchema = fieldsToZodObject(mailSyncStateFields);
 export const MailLabelSchema = fieldsToZodObject(mailLabelFields);
 export const MailThreadSchema = fieldsToZodObject(mailThreadFields);
+
+/** The `mail_threads` entity, as browser code names it (`defineEntity(mailThreadsEntityRef, …)`). */
+export const mailThreadsEntityRef = entityRef("mail_threads", mailThreadFields);
 export const MailMessageSchema = fieldsToZodObject(mailMessageFields);
 export const MailMessageLabelSchema = fieldsToZodObject(mailMessageLabelFields);
 export const MailAttachmentSchema = fieldsToZodObject(mailAttachmentFields);

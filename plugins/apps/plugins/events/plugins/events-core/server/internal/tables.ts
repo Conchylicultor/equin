@@ -5,8 +5,8 @@ import {
 } from "@plugins/infra/plugins/entities/server";
 import {
   eventSourceFields,
-  eventFields,
-  eventSourceRunFields,
+  eventsEntityRef,
+  eventSourceRunsEntityRef,
   eventSourceRunEventFields,
 } from "../../core";
 
@@ -64,7 +64,7 @@ const eventSources = defineEntity("event_sources", eventSourceFields, {
   ],
 });
 
-const events = defineEntity("events", eventFields, {
+const events = defineEntity(eventsEntityRef, {
   primaryKey: "id",
   // Which columns move `updatedAt` (derived by a DB trigger; a write to it
   // raises). Every list-visible column counts; the sighting stamps
@@ -126,32 +126,28 @@ const events = defineEntity("events", eventFields, {
   ],
 });
 
-const eventSourceRuns = defineEntity(
-  "event_source_runs",
-  eventSourceRunFields,
-  {
-    primaryKey: "id",
-    columns: {
-      sourceId: {
-        references: {
-          column: () => eventSources.table.id,
-          onDelete: "cascade",
-        },
+const eventSourceRuns = defineEntity(eventSourceRunsEntityRef, {
+  primaryKey: "id",
+  columns: {
+    sourceId: {
+      references: {
+        column: () => eventSources.table.id,
+        onDelete: "cascade",
       },
-      startedAt: { default: defaultNow() },
-      outcome: { default: "unchanged" },
-      eventsFound: { default: 0 },
-      eventsCreated: { default: 0 },
-      eventsUpdated: { default: 0 },
-      eventsDisappeared: { default: 0 },
-      flags: { default: [] },
     },
-    indexes: (t) => [
-      // The source detail pane's Runs section: this source, newest first.
-      index("event_source_runs_source_started_idx").on(t.sourceId, t.startedAt),
-    ],
+    startedAt: { default: defaultNow() },
+    outcome: { default: "unchanged" },
+    eventsFound: { default: 0 },
+    eventsCreated: { default: 0 },
+    eventsUpdated: { default: 0 },
+    eventsDisappeared: { default: 0 },
+    flags: { default: [] },
   },
-);
+  indexes: (t) => [
+    // The source detail pane's Runs section: this source, newest first.
+    index("event_source_runs_source_started_idx").on(t.sourceId, t.startedAt),
+  ],
+});
 
 const eventSourceRunEvents = defineEntity(
   "event_source_run_events",

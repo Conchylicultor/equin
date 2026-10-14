@@ -7,7 +7,7 @@
   // whose `views` name it (only `pages`: "New page"), and its `⋯` holds that
   // view's search / filter / sort plus "Section settings" and "Add section".
   //
-  // `visibleFields: ["title"]` on every view keeps the contributed `starred`
+  // `visibleFields: ["title"]` on every view keeps the exposed `starred`
   // bool and `origin` enum pure FILTER dimensions: the default (absent) shows
   // every schema field, which would render a chip on every row. Filter/sort/
   // search always see the full schema.
@@ -17,7 +17,7 @@
   // view instance (data-view/view-order), which is why `starred` needs no rank
   // column. `hideWhenEmpty`: nothing starred → no Favorites header at all.
   //
-  // Private and Scratch partition the page tree by the contributed `origin`
+  // Private and Scratch partition the page tree by the exposed `origin`
   // enum (agent-origin): pages written by an automated session are `agent`,
   // everything else `user`. `filterScope: "roots"` tests the ROOTS only and
   // keeps each kept root's whole subtree, so a subtree is never split between

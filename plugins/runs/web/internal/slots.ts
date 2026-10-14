@@ -1,8 +1,9 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web";
-import { defineFieldExtensions } from "@plugins/primitives/plugins/data-view/web";
 import type { OpenPaneFn } from "@plugins/primitives/plugins/pane/web";
+import type { FieldsRecord } from "@plugins/fields/core";
+import type { LiveArm } from "@plugins/network/plugins/live/core";
 import type { RunRow } from "../../core";
 import { GenericRunLeading } from "../components/generic-run-leading";
 
@@ -11,14 +12,18 @@ export interface RunRowProps {
   run: RunRow;
 }
 
+/** One arm of the `runs` union, as its core declares it (`liveArm(runs, kind, …)`). */
+export type RunArm = LiveArm<RunRow, FieldsRecord, string>;
+
 /**
- * What an arm registers on the web: its label, and — optionally — where a row of
- * that kind goes when it is clicked.
+ * What an arm registers on the web: the arm itself — its kind and label are
+ * the arm's (`liveArm(runs, kind, { label })`), never restated — and,
+ * optionally, where a row of that kind goes when it is clicked.
  *
- * The label cannot come from the server registry: the `kind` filter chip has to
- * offer every kind, including the ones with no row on the current page, so its
- * options are derived from the registered kinds rather than from the loaded
- * window. This is that registration.
+ * The kinds cannot come from the server registry: the `kind` filter chip has
+ * to offer every kind, including the ones with no row on the current page, so
+ * its options are derived from the registered kinds rather than from the
+ * loaded window. This is that registration.
  *
  * `link` receives the caller's own `openPane`, so the arm navigates from the
  * surface the row is rendered in rather than always at the root. It returns a
@@ -28,8 +33,7 @@ export interface RunRowProps {
  * honest behaviour, not a click that quietly does nothing.
  */
 export interface RunKindContribution {
-  kind: string;
-  label: string;
+  arm: RunArm;
   link?: (run: RunRow, ctx: { openPane: OpenPaneFn }) => LinkTarget;
 }
 
@@ -46,12 +50,15 @@ export interface RunKindContribution {
  * chips its own fields already described (deploy's).
  *
  * So a row is fields, and only fields. A domain's detail belongs in the pane its
- * `Kind.open` pushes; a domain's columns belong in `Fields`, where they are also
- * filterable, sortable and groupable rather than merely visible.
+ * `Kind.link` pushes; a domain's columns are its arm's fields (`liveArm`, core;
+ * presented by `FieldPresentation.Register({ owner: arm })`), where they are
+ * also filterable, sortable and groupable rather than merely visible.
  */
 export const Runs = {
   /** One per arm: the kind's label, and optionally how to open one of its rows. */
-  Kind: defineSlot<RunKindContribution>(),
+  Kind: defineSlot<RunKindContribution>({
+    docLabel: (c) => c.arm.owner.arm,
+  }),
   /**
    * The list-row leading indicator for one kind. Falls back to the outcome dot.
    *
@@ -62,6 +69,4 @@ export const Runs = {
     key: (p) => p.run.kind,
     fallback: GenericRunLeading,
   }),
-  /** Where an arm contributes its own `FieldDef`s — the standard data-view seam. */
-  Fields: defineFieldExtensions<RunRow>(),
 };

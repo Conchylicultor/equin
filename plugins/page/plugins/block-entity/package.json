@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-page-block-entity",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The `page_blocks` entity by reference (pagesEntityRef: its name and wire fields) and the Rank wire field. A leaf, so a browser-safe declaration a server schema file also loads — an extension shape's `exposes.parent` (starred, agent-origin, tags) — names the entity without reaching the editor's core barrel, whose Lexical / Yjs modules cannot load synchronously."
+}

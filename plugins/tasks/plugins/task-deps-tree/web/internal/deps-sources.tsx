@@ -6,7 +6,7 @@ import {
   type HierarchyConfig,
 } from "@plugins/primitives/plugins/data-view/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
+import type { TaskRow } from "@plugins/tasks/plugins/tasks-core/core";
 import { moveTaskInDepsTree } from "@plugins/tasks/core";
 import {
   Tasks,
@@ -24,7 +24,7 @@ import { DepsActions } from "./deps-actions";
 /** The host props the deps-tree section threads to both sources. */
 export interface DepsHostProps {
   taskId: string;
-  allTasks: readonly TaskListItem[];
+  allTasks: readonly TaskRow[];
   memberIds: ReadonlySet<string>;
   /** Where a row goes: a link, so middle- / ⌘-click open it in a browser tab. */
   linkTo: (id: string) => LinkTarget;
@@ -76,8 +76,10 @@ export function DepsSource({
   );
   return (
     <>
-      {render<DepsTreeRow>({
+      {render<DepsTreeRow<TaskRow>>({
         rows,
+        // The rows are `taskRows`' (each task's row, spread with its tree
+        // edge), so the schema is the task list's — derived from it.
         ...taskFieldSchema,
         rowKey: (r) => r.id,
         hierarchy: depsHierarchy,
@@ -112,7 +114,7 @@ export function CreatedSource({
   );
   return (
     <>
-      {render<TaskListItem>({
+      {render<TaskRow>({
         rows,
         ...taskFieldSchema,
         rowKey: (t) => t.id,

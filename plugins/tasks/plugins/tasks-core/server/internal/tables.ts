@@ -5,13 +5,15 @@ import {
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
 import {
-  taskFields,
-  attemptFields,
-  taskDependencyFields,
-  pushFields,
   attemptDeliveryFields,
-  conversationFields,
+  pushFields,
+  taskDependencyFields,
 } from "../../core/internal/fields";
+import {
+  attemptsEntityRef,
+  conversationsEntityRef,
+  tasksEntityRef,
+} from "../../core/entity-refs";
 
 // Physical tables only. This file is a load-order leaf: it must NOT import
 // from any other plugin's schema/tables file so that cross-plugin schemas can
@@ -28,7 +30,7 @@ import {
 // cascade / set-null edges, DB defaults, and indexes are declared in the entity
 // meta below, reproducing the previous raw-drizzle DDL byte-for-byte.
 
-const tasksEntity = defineEntity("tasks", taskFields, {
+const tasksEntity = defineEntity(tasksEntityRef, {
   primaryKey: "id",
   // Which columns move `updatedAt` (derived by a DB trigger; a write to it
   // raises). `clusterId` is a cluster relabel — bookkeeping, not a fact about
@@ -77,7 +79,7 @@ const tasksEntity = defineEntity("tasks", taskFields, {
 });
 export const _tasks = tasksEntity.table;
 
-const attemptsEntity = defineEntity("attempts", attemptFields, {
+const attemptsEntity = defineEntity(attemptsEntityRef, {
   primaryKey: "id",
   updatedAt: {
     touchedBy: {
@@ -168,7 +170,7 @@ const attemptDeliveriesEntity = defineEntity(
 );
 export const _attemptDeliveries = attemptDeliveriesEntity.table;
 
-const conversationsEntity = defineEntity("conversations", conversationFields, {
+const conversationsEntity = defineEntity(conversationsEntityRef, {
   primaryKey: "id",
   // Which columns move `updatedAt` (derived by a DB trigger; a write to it
   // raises). New messages are tracked by the status proxy: a turn enters

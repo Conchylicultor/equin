@@ -67,9 +67,10 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { PendingMoveOverlay } from "../internal/use-pending-move-overlay";
 import { CollectFieldExtensions } from "../internal/field-extensions";
 import {
-  useExposedFields,
-  withExposedFields,
-} from "../internal/exposed-fields";
+  CollectFieldOptions,
+  listSchema,
+  useDerivedFields,
+} from "../internal/derived-fields";
 import { CollectFacetOptions } from "../internal/facet-options";
 import { CollectRowOrder } from "../internal/row-order";
 import {
@@ -207,6 +208,8 @@ function CollectBodyFields<TRow>(props: {
   source: Pick<
     DataViewBodyProps<TRow>,
     | "fields"
+    | "overrides"
+    | "extraFields"
     | "fieldExtensions"
     | "storageKey"
     | "rowKey"
@@ -233,19 +236,24 @@ function CollectBodyFields<TRow>(props: {
         : (source.rowKey as (row: TRow, index: number) => string),
     [live, source.rowKey],
   );
-  // The fields every extension the rows' collection reaches exposes (a live
-  // source's, or the in-memory rows' declared `collection`), appended to the
-  // host's own — a duplicate id throws.
+  // The schema: derived from the rows' collection (a live source's, or the
+  // in-memory rows' declared `collection`) — its own fields, the exposed fields
+  // of every entity it reaches, its arms' — with the list's `overrides` and
+  // `extraFields`; or the host's hand `fields` for rows of no collection
+  // declared by fields. A duplicate id throws.
   const collection = live?.collection ?? source.collection;
-  const exposed = useExposedFields(collection, live !== undefined);
+  const derived = useDerivedFields(collection, live !== undefined);
   const base = useMemo(
     () =>
-      withExposedFields(
-        source.fields as FieldDef<unknown>[],
-        exposed,
-        collection?.key,
-      ),
-    [source.fields, exposed, collection],
+      listSchema({
+        collection,
+        derived: derived.fields,
+        fields: source.fields as FieldDef<unknown>[] | undefined,
+        overrides: source.overrides as
+          Parameters<typeof listSchema>[0]["overrides"] | undefined,
+        extraFields: source.extraFields as FieldDef<unknown>[] | undefined,
+      }),
+    [collection, derived, source.fields, source.overrides, source.extraFields],
   );
   // Fields are checked where they are declared: the host's own (and the
   // exposed ones) here, each field-extension contributor's inside its own
@@ -267,31 +275,35 @@ function CollectBodyFields<TRow>(props: {
     [live, resolveOperatorSet],
   );
   return (
-    <CollectFieldExtensions
-      sources={
-        source.fieldExtensions
-          ? [
-              DataViewSlots.FieldExtension,
-              source.fieldExtensions as FieldExtensionsDescriptor<unknown>,
-            ]
-          : [DataViewSlots.FieldExtension]
-      }
-      base={base}
-      storageKey={source.storageKey}
-      rowKey={rowKey as (row: unknown, index: number) => string}
-      liveColumnScope={liveColumnScope}
-      validate={validate}
-    >
-      {(folded) => (
-        <CollectFacetOptions
-          source={live as LiveDataSource<unknown> | undefined}
-          fields={folded}
-          resolveOperatorSet={resolveOperatorSet}
+    <CollectFieldOptions readers={derived.optionReaders} fields={base}>
+      {(presented) => (
+        <CollectFieldExtensions
+          sources={
+            source.fieldExtensions
+              ? [
+                  DataViewSlots.FieldExtension,
+                  source.fieldExtensions as FieldExtensionsDescriptor<unknown>,
+                ]
+              : [DataViewSlots.FieldExtension]
+          }
+          base={presented}
+          storageKey={source.storageKey}
+          rowKey={rowKey as (row: unknown, index: number) => string}
+          liveColumnScope={liveColumnScope}
+          validate={validate}
         >
-          {(fields) => children(fields, rowKey)}
-        </CollectFacetOptions>
+          {(folded) => (
+            <CollectFacetOptions
+              source={live as LiveDataSource<unknown> | undefined}
+              fields={folded}
+              resolveOperatorSet={resolveOperatorSet}
+            >
+              {(fields) => children(fields, rowKey)}
+            </CollectFacetOptions>
+          )}
+        </CollectFieldExtensions>
       )}
-    </CollectFieldExtensions>
+    </CollectFieldOptions>
   );
 }
 
@@ -313,6 +325,8 @@ interface SectionActivation {
  *  early-return, which unmounts the whole body (a separate component). */
 function DataViewBodyInner<TRow>(
   props: DataViewBodyProps<TRow> & {
+    /** The whole schema — derived, hand-declared and contributed, folded. */
+    fields: FieldDef<TRow>[];
     /** The row key the origin implies (`rowKey`, or a live collection's id). */
     rowKeyOf: (row: TRow, index: number) => string;
     /** Present only on a `sections` surface: the surface-wide record of which

@@ -1342,6 +1342,11 @@ before this existed).
   read chip; absent ⇒ `"muted"`.
 - `hint` is the chip's tooltip — why this value means what it means ("Empty" =
   the run succeeded and found nothing).
+- `value` is the value's canonical spelling (`fields/core`'s `optionKey`): an
+  enum over booleans / numbers keeps raw row values and declares
+  `FieldDef.valueDomain`, so the enum filter lowers a picked `"true"` back to
+  `true`; the option `"null"` labels the no-value — its chip, the "None"
+  section's label (`nullGroupLabel`) and a filter chip lowering to `isEmpty`.
 
 `BadgeVariant` lives in **`badge/core`** for exactly this reason: a data
 declaration in another plugin's `core` has to be able to spell it, and
@@ -1736,7 +1741,7 @@ so a private "extra meta" slot beside it is always a duplicate.
 
 `FieldDef.value` is a *synchronous* `(row) => FieldValue` and cannot call hooks, so
 a field whose projection must close over **hook-loaded data** owned by another
-plugin (e.g. a play-count living in another plugin's live resource) has to be
+plugin (e.g. a deployment's release candidate, read off the filesystem) has to be
 produced from inside a mounted component.
 
 **One contribution shape.** A field-extension contribution is a **component** (not
@@ -1769,26 +1774,51 @@ function RatingFields({ render }: FieldExtensionProps<Item>) {
 MyFields({ id: "rating", section: null, component: RatingFields });
 ```
 
-Under a live `source` a contributor needs no hook at all when its data rides on
-the rows: a contributed column (`network/live`'s `liveColumns`) is read off the
-row and bound as the field's `column`, so the server sorts and filters by it —
-Sonata's play-count field is `{ value: (s) => playbackColumns.read(s).playCount,
-column: playbackColumns.column("playCount") }`.
+Per-row data another plugin owns is not a field extension at all: the plugin
+exposes it from its entity extension (`defineExtensionShape({ exposes })`), and
+every list whose collection reaches the entity derives the field, bound to its
+exposed column so the server sorts and filters by it (Sonata's play count).
 
-**Exposed fields come before the fold, with no contributor.** An entity
-extension that EXPOSES fields (`defineExtensionShape({ exposes })`, registered
-by `LiveExposures.Register` — `network/live`, "Exposed fields") is in the
-schema of every DataView whose rows reach its entity: `useExposedFields`
-(`web/internal/exposed-fields.ts`) derives one `FieldDef` per exposed field
-(id the bare field key — saved views keep naming it; `enum` with its options
-when it declares them, else its field type; the registration's cell / width /
-align), and `CollectBodyFields` appends them to the host's fields before
-`CollectFieldExtensions` — an id the host (or another exposure) already uses
-throws. The collection is the live source's, or — for in-memory rows taken
-from one (the Queue) — the origin's `collection` prop; only a live source
-binds `column`, so an exposed groupable column groups as server sections
-(`LiveGroupColumn.handle` goes to the groups read). Prefer an exposure over a
-per-list field-extension slot for a field of an entity extension.
+**Derived fields come before the fold, with no contributor.** A list whose
+rows are a collection declared by fields (`liveCollection({ from, pick,
+fields })` — `network/live`, "Fields") DERIVES its schema
+(`web/internal/derived-fields.tsx`, `deriveFields` / `listSchema`), in
+declaration order:
+
+1. the collection's own fields (`collection.fields`: picked from its entity,
+   then its own) — id the field key, label / title flag / options from the
+   field declaration, `enum` when it declares options, else its field type, a
+   string array multi-valued (`values`);
+2. the exposed fields of every entity it reaches (`from`, `related`) — id the
+   exposure field's id (`as`, else its key);
+3. a union's arm fields (`liveArm`) — ids `<arm>.<field>`, listed under the
+   arm's `label` (`section`);
+4. each presented by its owner's registration (`FieldPresentation.Register` —
+   the entity, the exposure, the arm, or the collection itself for its listed
+   fields (one property of a picked field set by both it and its entity
+   throws): `cell(value, row)`, `width`, `align`, `visible`, `groupable`, and
+   `useOptions`, folded by `CollectFieldOptions` — a live READ makes the field
+   `pending` (its `optionsResult` loading) until the options land, then they
+   are its `options`; a failure with nothing held is its `readError`; a plain
+   array (a registry, a display-name lookup) is its options at once);
+5. else its type's contributed cell (`DataViewSlots.Cell`: a date is a ticking
+   relative time, an enum a chip wearing its option's variant).
+
+A list then says only what it changes, by id — `overrides={fieldOverrides(
+collection, { status: { groupable: false } })}` (typed against the
+collection's field ids: an unknown id is a tsc error, and throws at mount) —
+and what it computes itself, `extraFields` (the Queue's `section`). A hand
+`fields` beside a collection declared by fields throws (and so does a list
+with neither); beside a collection in the old `row` spelling, `fields` is
+still its base schema, with the exposed and arm fields appended (deleted in
+phase 2b). An id two fields share throws. The collection is the live
+source's, or — for in-memory rows taken from one (the Queue) — the origin's
+`collection` prop (an in-memory DataView without one needs `fields`, tsc);
+only a live source binds an exposed or arm field's `column`, so an exposed
+groupable column groups as server sections (`LiveGroupColumn.handle` goes to
+the groups read); an own field lowers under its own id. Prefer an exposure (or
+a presentation) over a per-list field-extension slot for a field of an entity
+or its extensions.
 
 **A field's own read: `pending` and `readError`, never a stand-in value.** A
 contributor whose values come from a read of its own states where that read
@@ -1823,8 +1853,8 @@ site** (and, consequently, the row typing):
    contributions** (`MyFields({ id, component })`, like any `defineRenderSlot`) and
    — being a slot — is itself the `FieldExtensionsDescriptor` the host reads (no
    extra `.Row`-style member, unlike item-actions). Pass it to
-   `<DataView fieldExtensions={MyFields} />` (Sonata's play-count / last-played
-   fields). Full `TRow` typing.
+   `<DataView fieldExtensions={MyFields} />` (the Deployments list's release
+   column — Group C, moving to client fields in phase 2b). Full `TRow` typing.
 
 **One fold over an ordered source list.** `CollectFieldExtensions` (internal) folds
 `[DataViewSlots.FieldExtension, ...(props.fieldExtensions ? [props.fieldExtensions] : [])]`,
@@ -1844,8 +1874,8 @@ override (`config/primitives/data-view/primitives.data-view.field-extension.json
 **Intentional asymmetry vs `RowOrder`.** There is deliberately no
 `GlobalFieldExtensionProps` (a field extension is one shape whether registered
 globally or per-consumer) while the sibling `GlobalRowOrderProps` remains:
-`FieldExtension` had **two** cases to unify (global custom-columns + per-consumer
-Sonata); `RowOrder` has only the global one (`view-order`), so there is nothing to
+`FieldExtension` had **two** cases to unify (global custom-columns + the
+per-consumer factories); `RowOrder` has only the global one (`view-order`), so there is nothing to
 symmetrize. Do **not** "restore symmetry" by re-splitting `FieldExtension` or by
 minting a per-consumer `RowOrder` factory that has no consumer. See
 ["The global `RowOrder` slot"](#the-global-roworder-slot-cross-plugin) under
@@ -2010,7 +2040,7 @@ stored opaquely as a `jsonField<FilterGroup>` (validated whole through
 A DataView's rows come from exactly ONE origin — `DataViewProps` is a union, so a
 stand-in (`rows={[]}` beside a server origin) cannot be spelled:
 
-- `{ rows; loading?; rowKey }` — in memory;
+- `{ rows; readiness?; rowKey; fields | collection }` — in memory;
 - `{ source }` — a live collection (`liveDataSource`, web; its types are
   core's), read as
   `network/live`'s key-range pages (`useLive`), kept live by the rows on
@@ -2085,7 +2115,7 @@ export const threadsSource = liveDataSource(mailThreads, { searchable: ["subject
   (debounced 200 ms, `or(contains …)` over `searchable`), and canonicalized; a
   tree over the language's bounds is the error arm. Sort rules map to columns (an
   empty sort takes the collection default); a duplicate column is dropped. A
-  query naming a contributed column hands the codec that handle.
+  query naming a custom (scoped) column hands the codec that set's handle.
 - **A saved rule that does not resolve** is PENDING while the deferred plugin
   tier is still loading (a contributor may not have registered its field yet —
   the skeleton), and the error arm once it settled
@@ -2098,7 +2128,7 @@ export const threadsSource = liveDataSource(mailThreads, { searchable: ["subject
     never a date bucket) over a **groupable** column: the collection's OWN
     filterable text / number / boolean column, or an EXPOSED one
     (`LiveFieldPlan.groupColumns`; what live's `checkGroupBy` accepts — a
-    contributed column never is). The
+    custom (scoped) column never is). The
     origin is `SourceView` `kind: "sectioned"` (`useLiveSource` →
     `useSectionedReads`): ONE `useLive(c, { groupBy, where, limit: LIST_MAX })`
     over the SAME lowered `scope ∧ filter ∧ search` the rows use lists every
@@ -2116,7 +2146,7 @@ export const threadsSource = liveDataSource(mailThreads, { searchable: ["subject
     closing never remounts the body. A search-only change keeps the last
     ready groups until the new read settles. Full at `LIST_MAX` groups, the
     body footer says so ("the smallest groups are not listed"); a filter or
-    search naming a contributed column is the error arm
+    search naming a custom (scoped) column is the error arm
     (`UngroupableFilterError` — a `GROUP BY` cannot count it).
   - **Order prefix** — a `oneBucketPerValue` grouping over a column that only
     SORTS: it is prepended to the order and its sections follow first

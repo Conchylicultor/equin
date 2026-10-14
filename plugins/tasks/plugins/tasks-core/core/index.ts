@@ -1,6 +1,7 @@
 export {
   TaskSchema,
   TaskStatusSchema,
+  TASK_STATUS_OPTIONS,
   AttemptSchema,
   AttemptStatusSchema,
   PushSchema,
@@ -37,6 +38,7 @@ export type { ConversationSummary, AttemptWithConversations } from "./schemas";
 // keyed-ness; the server resources are built from these). See ./resources.ts.
 export {
   taskRows,
+  type TaskRow,
   taskDescriptions,
   attemptRows,
   attemptWorkspaces,

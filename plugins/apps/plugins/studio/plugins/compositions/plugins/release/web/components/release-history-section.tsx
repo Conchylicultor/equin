@@ -6,18 +6,14 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
   liveDataSource,
-  type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { useConfigResult } from "@plugins/config_v2/web";
 import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import {
-  RELEASE_TARGETS,
-  releaseHistory,
-  type ReleaseRun,
-} from "@plugins/release/core";
+import { releaseHistory, type ReleaseRun } from "@plugins/release/core";
 import { releaseDetailPane } from "../panes";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
@@ -30,14 +26,6 @@ const RELEASE_HISTORY_VIEW = defineDataView("studio.release.history");
 const releaseHistorySource = liveDataSource(releaseHistory, {
   searchable: ["composition", "target", "platform"],
 });
-
-// Closed status set (the `release_runs.status` enum), labelled for the enum
-// filter chip and group-by.
-const STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: "running", label: "Running" },
-  { value: "succeeded", label: "Succeeded" },
-  { value: "failed", label: "Failed" },
-];
 
 function statusBadge(run: ReleaseRun): ReactNode {
   if (run.status === "running") {
@@ -67,75 +55,43 @@ function statusBadge(run: ReleaseRun): ReactNode {
   );
 }
 
-// The rows are a live window (only a segmented prefix is ever loaded here), so
-// the field schema is static — it derives nothing from the loaded rows.
+// How the derived fields present here (the collection declares their labels,
+// types and filters; the status and target chips come from their options).
 // `platform` is a free string set whose full enumeration lives server-side, so
 // it stays a sortable text column rather than a client-derived (and thus
 // partial) enum filter.
-const fields: FieldDef<ReleaseRun>[] = [
-  {
-    id: "target",
-    label: "Target",
-    type: "enum",
-    value: (r) => r.target,
-    options: RELEASE_TARGETS.map((t) => ({ value: t.id, label: t.label })),
+const overrides = fieldOverrides(releaseHistory, {
+  target: {
     cell: (r) => <Badge variant="muted">{r.target}</Badge>,
-    primary: true,
-    sortable: true,
-    filterable: true,
     width: "9rem",
   },
-  {
-    id: "status",
-    label: "Status",
-    type: "enum",
-    value: (r) => r.status,
-    options: STATUS_OPTIONS,
-    cell: (r) => statusBadge(r),
-    sortable: true,
-    filterable: true,
-    width: "8rem",
-  },
-  {
-    id: "platform",
-    label: "Platform",
-    type: "enum",
-    value: (r) => r.platform,
+  status: { cell: (r) => statusBadge(r), width: "8rem" },
+  platform: {
     cell: (r) =>
       r.platform ? (
         <span className="font-mono text-muted-foreground">{r.platform}</span>
       ) : null,
-    sortable: true,
     width: "10rem",
   },
-  {
-    id: "startedAt",
-    label: "Started",
-    type: "date",
-    value: (r) => r.startedAt,
+  startedAt: {
     cell: (r) => (
       <span className="text-muted-foreground">
         <RelativeTime date={r.startedAt} />
       </span>
     ),
-    sortable: true,
     width: "8rem",
   },
-  {
-    id: "finishedAt",
-    label: "Finished",
-    type: "date",
-    value: (r) => r.finishedAt,
+  finishedAt: {
     cell: (r) =>
       r.finishedAt ? (
         <span className="text-muted-foreground">
           <RelativeTime date={r.finishedAt} />
         </span>
       ) : null,
-    sortable: true,
     width: "8rem",
   },
-];
+  composition: { visible: false },
+});
 
 export function ReleaseHistorySection({ id }: { id: string }): ReactNode {
   // The composition's name scopes the query, and it is not known until the
@@ -178,7 +134,7 @@ function ReleaseHistory({
   return (
     <DataView<ReleaseRun>
       storageKey={RELEASE_HISTORY_VIEW}
-      fields={fields}
+      overrides={overrides}
       views={["list", "table"]}
       defaultView="list"
       selectedRowId={selectedRunId}

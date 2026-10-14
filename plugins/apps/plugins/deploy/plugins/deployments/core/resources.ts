@@ -1,6 +1,8 @@
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
-import { DeploymentSchema } from "./schemas";
 
 /**
  * Every deployment, as a live collection over `deploy_deployments`: a bounded
@@ -19,9 +21,21 @@ import { DeploymentSchema } from "./schemas";
  * the collection's, not a promise that the set stays small.
  */
 export const deployments = liveCollection("deploy.deployments", {
-  row: DeploymentSchema,
+  // Declared by FIELDS, the row being `Deployment` (the table's columns by
+  // name). `serverId` is the one listed field — the scope a reader filters by;
+  // the rest ride on the row for the pane and the list's own columns.
+  fields: { serverId: textField({ label: "Server" }) },
+  carry: {
+    fields: {
+      id: textField(),
+      compositionId: textField(),
+      hostnames: stringListField(),
+      loopbackPort: intField(),
+      createdAt: dateField(),
+      updatedAt: dateField(),
+    },
+  },
   id: "id",
-  filterable: { serverId: liveText() },
   sortable: ["createdAt"],
   default: { orderBy: [["createdAt", "asc"]], limit: 100 },
   maxLimit: 500,

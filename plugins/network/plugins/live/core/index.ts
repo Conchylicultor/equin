@@ -4,24 +4,33 @@ export { liveCollection } from "./internal/live-collection";
 export { isPointId } from "./internal/window-descriptor";
 export type { LiveColumnRef, LiveColumnRefOwner } from "./internal/column-ref";
 export {
-  liveArmColumns,
-  liveColumns,
+  liveArm,
   LIVE_COLUMNS_KEY,
   LIVE_SCOPED_KEY,
   scopedLiveColumns,
 } from "./internal/live-columns";
 export type {
   ContributedColumns,
+  LiveArm,
   LiveArmColumnsHandle,
   LiveColumnsDeclaration,
   LiveColumnsOwner,
-  LiveColumnsHandle,
-  LiveContributedCollection,
   LiveScopedColumns,
   ScopedColumnMember,
   WithContributedColumns,
 } from "./internal/live-columns";
 export { exposedColumns } from "./internal/exposed-columns";
+export type {
+  FieldsRow,
+  LabelledKeys,
+  LiveField,
+  LiveFieldIds,
+  LiveFields,
+  LiveFieldsSpec,
+  LiveRelated,
+  RequireLabel,
+} from "./internal/live-fields";
+export type { DomainOfValue, FieldsFilterable } from "./internal/field-domain";
 export type { LiveExposedColumns } from "./internal/exposed-columns";
 export { liveValue } from "./internal/live-value";
 export { LIVE_QUERY_MAX_BYTES } from "./internal/query-value";
@@ -80,6 +89,8 @@ export type {
   LiveCountDescriptor,
   LiveCountedCollection,
   LiveExposes,
+  LiveFieldsDefault,
+  LiveFieldsForm,
   LiveGroupCodec,
   LiveGroupsDescriptor,
   LiveLookupCollection,

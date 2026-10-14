@@ -13,7 +13,6 @@ import {
   conversationHistory,
   type ConversationListLiveRow,
 } from "@plugins/conversations/plugins/all-conversations/core";
-import { useConversationFieldDefs } from "@plugins/conversations/plugins/all-conversations/web";
 import {
   SidebarConversationItem,
   type ConversationSidebarProps,
@@ -75,12 +74,12 @@ export function HistorySource({
   render,
 }: DataViewSourceProps<ConversationSidebarProps>): ReactElement {
   const { activeId, linkTo, onCloseConversation } = hostProps;
-  const fields = useConversationFieldDefs();
 
   return (
     <CloseConversationContext.Provider value={onCloseConversation}>
       {render<ConversationListLiveRow>({
-        fields,
+        // The schema is derived from the collection (the conversations
+        // entity's fields, the owners' columns, every exposed field).
         source: historySource,
         selectedRowId: activeId ?? undefined,
         rowActivation: (c) => linkTo(c.id),

@@ -158,13 +158,16 @@ drizzle):
   raw stored key, and a static predicate's `j` (`JoinPlan.columns()`) offers the
   raw columns — a predicate states its own NULL handling. A computed default
   (`defaultNow()`, SQL) is never coalesced. An extension join's `absent`
-  (an exposing extension's — `exposure.fields[f].absent`) overrides the
-  default per column: `null` reads the raw column, a literal is bound PLAIN
-  (`sql.param(value)`, never the column's write encoder — track's `"main"` is
-  a value the side table never stores), and a decoding column whose schema
-  refuses the literal (`parsedText` over `["sidequest"]`) reads through
-  `parsed(z.union([schema, z.literal(value)]))`, so a persisted compile's
-  definition still reads the decoder as data.
+  (an exposing extension's — `exposure.fields[f].absent`, derived from each
+  field's declared default) overrides the default per column: `null` reads
+  the raw column, a literal is bound PLAIN (`sql.param(value)`).
+- **Presence fields** (`ExtensionJoin.presence`, an exposing extension's
+  `exposes.presence`): a field read off the side row's EXISTENCE, no column.
+  `presenceExpr(join, id, keyRef)` (server barrel) makes it an `ExprField`
+  over the join's key ref — `(<alias>.<key> IS NOT NULL)` (boolean) or
+  `(CASE WHEN <alias>.<key> IS NOT NULL THEN $p::text ELSE $a::text END)` —
+  never NULL, bound like any expression field (its provenance the key
+  column), so it projects, filters, sorts and groups.
 - `QueryDb`'s step gains `leftJoin` / `innerJoin`; `server/testing`'s
   `recordingQueryDb` is the fake that renders every query through drizzle's real
   dialect.
@@ -884,7 +887,6 @@ importing `db` never touches a worktree — no test env shim needed.
     - `database/sql-projection.decodedRow`
     - `database/sql-projection.decoderOrigin`
     - `database/sql-projection.nullable`
-    - `database/sql-projection.parsed`
     - `database/sql-projection.SqlDecoderLike`
     - `primitives/keyset.atOrBeforePredicate`
     - `primitives/keyset.orderByClauses`
@@ -920,6 +922,7 @@ importing `db` never touches a worktree — no test env shim needed.
     - `compileUnionCollection`
     - `deferredWindowQueryResource`
     - `joinRefs`
+    - `presenceExpr`
     - `windowQueryResource`
 - Cross-plugin:
   - Imported by:
@@ -953,6 +956,7 @@ importing `db` never touches a worktree — no test env shim needed.
     - `ColumnRefsOf`
     - `ExprField`
     - `ExtensionJoin`
+    - `ExtensionPresence`
     - `JoinColumns`
     - `JoinFamily`
     - `JoinRef`

@@ -6,6 +6,7 @@ import {
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
   liveDataSource,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
@@ -35,7 +36,8 @@ export function EventsView({
   return (
     <DataView<EmissionListRow>
       storageKey={EVENTS_VIEW}
-      fields={fields}
+      overrides={overrides}
+      extraFields={extraFields}
       views={["table", "list"]}
       defaultView="table"
       source={emissionsSource}
@@ -60,56 +62,30 @@ export function MatchedBadge({ count }: { count: number }) {
   );
 }
 
-const fields: FieldDef<EmissionListRow>[] = [
-  {
-    id: "emittedAt",
-    label: "Time",
-    type: "date",
-    value: (r) => r.emittedAt,
+// How the derived fields present here. `match` is filter-only: the Matched
+// column already says it.
+const overrides = fieldOverrides(eventEmissions, {
+  emittedAt: {
     cell: (r) => <WhenText date={r.emittedAt} prefix="Emitted" />,
-    sortable: true,
-    filterable: true,
     width: "6rem",
   },
-  {
-    id: "eventName",
-    label: "Event",
-    type: "enum",
-    value: (r) => r.eventName,
+  eventName: {
     cell: (r) => (
       <Text variant="code" title={r.eventName}>
         {r.eventName}
       </Text>
     ),
-    primary: true,
-    sortable: true,
-    filterable: true,
     width: "minmax(8rem,16rem)",
   },
-  {
-    id: "matchedCount",
-    label: "Matched",
-    type: "int",
-    value: (r) => r.matchedCount,
+  matchedCount: {
     cell: (r) => <MatchedBadge count={r.matchedCount} />,
-    sortable: true,
-    filterable: true,
     width: "max-content",
   },
-  {
-    // Filter-only: the Matched column already says it.
-    id: "match",
-    label: "Match",
-    type: "enum",
-    value: (r) => r.match,
-    options: [
-      { value: "matched", label: "Matched", variant: "success" },
-      { value: "unmatched", label: "Unmatched", variant: "destructive" },
-    ],
-    sortable: false,
-    filterable: true,
-    visible: false,
-  },
+  match: { visible: false },
+});
+
+// What the list computes itself: the payload, compacted.
+const extraFields: FieldDef<EmissionListRow>[] = [
   {
     id: "payload",
     label: "Payload",

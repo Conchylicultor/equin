@@ -75,7 +75,7 @@ never the reverse) and the feature fully opt-in and removable.
     - `tasks/tasks-core.getConversation`
     - `ui/icons/sprites.defineSavedIconSource`
   - DB schema: `plugins/conversations/plugins/conversation-preprompt/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `conversations_ext_preprompt`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_preprompt`)
   - Exports (values):
     - `conversationPreprompt`
     - `recordConversationPreprompt`

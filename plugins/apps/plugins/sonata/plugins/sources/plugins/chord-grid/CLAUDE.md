@@ -153,7 +153,7 @@ directives establish); the selected voicing strategy from the shared
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
   - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/server/internal/tables.ts`
-  - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_chord_grid`)
+  - Entity extension of: `apps/sonata/library` (table `library_ext_chord_grid`)
   - Exports (values): `songChordGrid`
   - Routes:
     - `POST /api/sonata/songs/chord-grid`

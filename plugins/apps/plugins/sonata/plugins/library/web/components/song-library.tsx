@@ -4,16 +4,13 @@ import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
 } from "@plugins/primitives/plugins/data-view/web";
-import type {
-  CreateOption,
-  FieldDef,
-} from "@plugins/primitives/plugins/data-view/web";
+import type { CreateOption } from "@plugins/primitives/plugins/data-view/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { SonataDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { songLibrary, updateSong } from "../../core";
 import type { Song } from "../../core";
@@ -48,12 +45,13 @@ const LIBRARY_VIEW = defineDataView("sonata.library");
  * `Library.SongActions` contributions, the currently-loaded ring as
  * `selectedRowId`, and opening a song as `rowActivation` (a link).
  *
- * Extra fields (e.g. play-count / last-played from `playback-history`) are
- * injected via the `Library.Fields` extension factory passed as
- * `fieldExtensions` — each binds one of its plugin's contributed columns, so it
- * appears in the Sort pill, the Filter pill, and as a table column, sorted and
- * filtered on the server; prerecorded orderings are just named sort presets
- * (authored in config) over those fields rather than bespoke toolbar chips.
+ * The fields are derived from the collection: the songs entity's (presented
+ * by `songPresentation`), and every field an extension exposes on a song —
+ * play count / last played from `playback-history`, tracks from the MIDI
+ * source — each in the Sort pill, the Filter pill, and a table column, sorted
+ * and filtered on the server; prerecorded orderings are just named sort
+ * presets (authored in config) over those fields rather than bespoke toolbar
+ * chips.
  */
 export function SongLibrary() {
   // Does the library hold any song at all? One row answers it — the first-run
@@ -74,98 +72,48 @@ export function SongLibrary() {
   // write surfaces via the global mutation toast (no local onError).
   const { mutate: saveSong } = useEndpointMutation(updateSong);
   const sources = Library.Source.useContributions();
-  // The player-side source registry carries each source's human label + icon
-  // (the `Library.Source` registry above is id-only). Its ids match the opaque
-  // `source` stamped on each song, so it doubles as the "Source" column's option
-  // set — the library never hard-codes a source name.
-  const sonataSources = SonataDocument.Source.useContributions();
-  const sourceOptions = useMemo(
-    () => sonataSources.map((s) => ({ value: s.id, label: s.label })),
-    [sonataSources],
-  );
 
-  const fields: FieldDef<Song>[] = useMemo(
-    () => [
-      {
-        id: "title",
-        label: "Title",
-        type: "text",
-        value: (s) => s.title,
-        // Title is NOT NULL — ignore a cleared cell so it reverts to the
-        // current value rather than persisting an empty string.
-        onEdit: (s, next) => {
-          const title = String(next ?? "").trim();
-          if (!title) return;
-          saveSong({ params: { id: s.id }, body: { title } });
+  // The list's fields are derived — the songs entity's, its saved-view ids
+  // (`duration`, `added`), and every field an extension exposes on a song
+  // (plays, tracks, …). What the list itself says of them: the inline-edit
+  // write-backs and two cells.
+  const overrides = useMemo(
+    () =>
+      fieldOverrides(songLibrary, {
+        title: {
+          // Title is NOT NULL — ignore a cleared cell so it reverts to the
+          // current value rather than persisting an empty string.
+          onEdit: (s, next) => {
+            const title = String(next ?? "").trim();
+            if (!title) return;
+            saveSong({ params: { id: s.id }, body: { title } });
+          },
         },
-        sortable: true,
-        filterable: true,
-        width: "minmax(0,2fr)",
-      },
-      {
-        id: "composer",
-        label: "Composer",
-        type: "text",
-        // Project the raw nullable value (not a placeholder) so the inline
-        // editor opens from the true value and clearing it stores `null`.
-        // No `cell`: the field is editable, so `EditableCell` owns the empty
-        // rendering and paints its own italic "Empty" hint — which is the
-        // affordance (it invites the edit) where the old card's flat "Unknown"
-        // was not. Both views read the same.
-        value: (s) => s.composer,
-        onEdit: (s, next) => {
-          const composer = String(next ?? "").trim();
-          saveSong({
-            params: { id: s.id },
-            body: { composer: composer || null },
-          });
+        composer: {
+          // The raw nullable value, so the inline editor opens from the true
+          // value and clearing it stores `null`. No `cell`: the field is
+          // editable, so `EditableCell` owns the empty rendering and paints its
+          // own italic "Empty" hint — the affordance that invites the edit.
+          onEdit: (s, next) => {
+            const composer = String(next ?? "").trim();
+            saveSong({
+              params: { id: s.id },
+              body: { composer: composer || null },
+            });
+          },
         },
-        sortable: true,
-        filterable: true,
-        width: "minmax(0,1fr)",
-      },
-      {
-        id: "source",
-        label: "Source",
-        // The opaque per-song source id, rendered as a muted tag via the enum
-        // field type (labels resolved from `sourceOptions`, i.e. the source
-        // registry). Read-only: a song's source is immutable, so no `onEdit`.
-        type: "enum",
-        options: sourceOptions,
-        value: (s) => s.source,
-        sortable: true,
-        filterable: true,
-        width: "8rem",
-      },
-      {
-        id: "duration",
-        label: "Length",
-        // `int` derives its data-view cell + filter from `number` via the
-        // fields `extends` chain (int → number); the explicit `cell` below is the
-        // tier-1 override (m:ss), so the inherited number cell is bypassed while
-        // the inherited number range filter still applies in the filter bar.
-        type: "int",
-        value: (s) => s.durationSec,
-        cell: (s) => formatDuration(s.durationSec),
-        sortable: true,
-        column: songLibrary.column("durationSec"),
-        width: "5rem",
-        align: "end",
-      },
-      {
-        id: "added",
-        label: "Added",
-        type: "date",
-        // `createdAt` is a Date on the wire; the `date` type sorts on it
-        // directly, rendered as a relative "Nd ago" label.
-        value: (s) => s.createdAt,
-        cell: (s) => formatRelativeTime(s.createdAt),
-        sortable: true,
-        column: songLibrary.column("createdAt"),
-        width: "7rem",
-      },
-    ],
-    [saveSong, sourceOptions],
+        // m:ss over the inherited number cell; the number range filter stays.
+        duration: {
+          cell: (s) => formatDuration(s.duration),
+          width: "5rem",
+          align: "end",
+        },
+        added: {
+          cell: (s) => formatRelativeTime(s.added),
+          width: "7rem",
+        },
+      }),
+    [saveSong],
   );
 
   return (
@@ -182,8 +130,7 @@ export function SongLibrary() {
         ) : (
           <DataView<Song>
             source={songLibrarySource}
-            fields={fields}
-            fieldExtensions={Library.Fields}
+            overrides={overrides}
             views={["gallery", "table"]}
             defaultView="gallery"
             storageKey={LIBRARY_VIEW}

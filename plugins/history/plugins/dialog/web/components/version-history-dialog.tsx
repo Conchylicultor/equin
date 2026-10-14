@@ -11,8 +11,8 @@ import {
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
   liveDataSource,
-  type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import {
   Stack,
@@ -64,38 +64,17 @@ const VERSIONS_VIEW = defineDataView("history.versions");
 // the whole history. Nothing to search: a version is a label and a time.
 const versionsSource = liveDataSource(historyVersions, { searchable: [] });
 
-// The fields are the timeline's sort / Properties dimensions; `createdAt` is
-// the one collection column (it sorts). The row body is drawn by
+// The timeline's fields are the collection's (sort / Properties dimensions);
+// `createdAt` is the one that sorts. The row body is drawn by
 // `TimelineRowBody`, so a version with no author and no checkpoint reads as a
-// label and a time rather than a run of empty separators.
-const fields: FieldDef<Version>[] = [
-  {
-    id: "label",
-    label: "Version",
-    type: "text",
-    value: (v) => v.label || "Version",
-    primary: true,
-    sortable: false,
-    filterable: false,
-  },
-  {
-    id: "createdAt",
-    label: "When",
-    type: "date",
-    value: (v) => v.createdAt,
-    cell: (v) => <RelativeTime date={v.createdAt} />,
-    sortable: true,
-    filterable: false,
-  },
-  {
-    id: "author",
-    label: "Author",
-    type: "text",
-    value: (v) => v.author,
-    sortable: false,
-    filterable: false,
-  },
-];
+// label and a time rather than a run of empty separators. The scope's two
+// columns are not the timeline's to show.
+const overrides = fieldOverrides(historyVersions, {
+  label: { cell: (v) => v.label || "Version", primary: true },
+  createdAt: { cell: (v) => <RelativeTime date={v.createdAt} /> },
+  sourceId: { visible: false },
+  entityId: { visible: false },
+});
 
 // One timeline row: the label, then when — and whether it is a checkpoint and
 // who made it, only when it says so.
@@ -235,7 +214,7 @@ function VersionHistoryBody({
           <DataView<Version>
             storageKey={VERSIONS_VIEW}
             source={source}
-            fields={fields}
+            overrides={overrides}
             views={["list"]}
             density="compact"
             itemActions={VersionItemActions}

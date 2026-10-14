@@ -1,15 +1,11 @@
 /**
- * The two whole sets this plugin serves over its side-tables hold EVERY row:
+ * The whole set this plugin serves over a side-table holds EVERY row:
+ * `automations.launch-decisions.all` — a launch list joins it to every task
+ * it shows, so a decision past the old window's `maxLimit` (2000) must still
+ * be in it (read before as undecided).
  *
- * - `automations.origins` — the task list's Automation field reads it whole,
- *   so an automated task past the old 2000-row read must still be in it (read
- *   before as filed by hand);
- * - `automations.launch-decisions.all` — a launch list joins it to every task
- *   it shows, so a decision past the old window's `maxLimit` (2000) must
- *   still be in it (read before as undecided).
- *
- * The real declarations, compiled with the served bindings against a
- * throwaway database carrying the real schema, load each set FULL.
+ * The real declaration, compiled with the served bindings against a
+ * throwaway database carrying the real schema, loads the set FULL.
  *
  * Requires a running Postgres cluster (started by ./singularity build).
  * Run: `./singularity test plugins/tasks/plugins/automations`.
@@ -24,8 +20,8 @@ import {
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
 import { compileCollection } from "@plugins/network/plugins/live/server/testing";
-import { automationOrigins, launchDecisions } from "../../core";
-import { tasksLaunchDecision, tasksOrigin } from "./tables";
+import { launchDecisions } from "../../core";
+import { tasksLaunchDecision } from "./tables";
 
 setDefaultTimeout(120_000);
 
@@ -44,14 +40,6 @@ beforeAll(async () => {
     SELECT 'at-' || g, 'task ' || g, false, 'a' || lpad(g::text, 6, '0')
     FROM generate_series(1, ${COUNT}) g`);
   const at = new Date();
-  await t.db.insert(tasksOrigin.table).values(
-    ids.map((taskId) => ({
-      taskId,
-      automationId: "probe",
-      sourceKeys: [],
-      filedAt: at,
-    })),
-  );
   await t.db.insert(tasksLaunchDecision.table).values(
     ids.map((taskId) => ({
       taskId,
@@ -64,19 +52,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await t?.drop();
-});
-
-test("the origin set holds the automated task past the old read's maxLimit", async () => {
-  const specs = compileCollection(automationOrigins, {
-    from: tasksOrigin,
-    db: t.db as unknown as QueryDb,
-  });
-  const rows = await specs.all.loader({});
-  expect(rows).toHaveLength(COUNT);
-  expect(rows.find((r) => r.taskId === LAST)).toEqual({
-    taskId: LAST,
-    automationId: "probe",
-  });
 });
 
 test("the decision set holds the decision past the old window's maxLimit", async () => {

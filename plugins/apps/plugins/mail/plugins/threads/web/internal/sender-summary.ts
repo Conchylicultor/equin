@@ -1,11 +1,13 @@
-import type { MailThread } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import type { MailThreadRow } from "../../core";
 
 // A compact one-line label for a thread row's left column: the display names (or
 // email local-parts) of the thread's participants. The thread stores a single
 // merged `participants` list (not separate from/to), so this summarizes whoever
 // is on the thread. De-duplicated, capped to keep the row single-line.
-export function senderSummary(thread: MailThread): string {
-  const names = thread.participants.map(addressLabel).filter((s) => s.length > 0);
+export function senderSummary(thread: MailThreadRow): string {
+  const names = thread.participants
+    .map(addressLabel)
+    .filter((s) => s.length > 0);
   const unique = [...new Set(names)];
   if (unique.length === 0) return "(unknown)";
   if (unique.length <= 3) return unique.join(", ");

@@ -89,9 +89,22 @@ export interface ExtensionJoin<
    * What a host with no side row reads per column (by property name): a
    * literal its read COALESCEs to — overriding the column's literal DB
    * default — or `null` (read NULL, no COALESCE). An exposing extension's
-   * fields (`exposure.fields[f].absent`).
+   * fields (`exposure.fields[f].absent`, derived from each field's declared
+   * default).
    */
   absent?: Readonly<Record<string, string | number | boolean | null>>;
+  /**
+   * Fields read off the side row's EXISTENCE (an exposing extension's
+   * presence, by field id): no column — `presenceExpr` renders
+   * `(<alias>.<key> IS NOT NULL)`, or a `CASE` to two literals.
+   */
+  presence?: Readonly<Record<string, ExtensionPresence>>;
+}
+
+/** A field derived from whether an extension's side row exists (see `ExtensionJoin.presence`). */
+export interface ExtensionPresence {
+  /** Two literals instead of a boolean: read where the row exists / is missing. */
+  readonly values: { readonly present: string; readonly absent: string } | null;
 }
 
 /**

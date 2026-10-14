@@ -1,7 +1,6 @@
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import {
-  defineFieldExtensions,
   defineItemActions,
   type CreateOption,
 } from "@plugins/primitives/plugins/data-view/web";
@@ -27,15 +26,13 @@ import type { Song } from "../core";
  *    the table's reserved trailing track) or the default `"revealed"` (the
  *    hover cluster). There is no per-view action list, so an action added here
  *    can never reach one view and miss the other.
- *  - `Fields` — extra DataView `FieldDef<Song>[]` injected by other plugins. A
- *    field extension is a *component* (not plain data), though the library's
- *    contributors need no hook: `playback-history` reads its play-count /
- *    last-played columns off the song row (`playbackColumns.read`, the
- *    `$columns` its `LiveColumns.Serve` folds in) and binds each field to
- *    `playbackColumns.column(…)`. Contributed fields show
- *    up in the Sort pill, the Filter pill, and as table columns for free, so a
- *    prerecorded "Most played" ordering is just a named `SortRule[]` over the
- *    `playCount` field (a config sort preset) rather than a bespoke toggle chip.
+ *
+ * Extra library fields are not a seam here: a plugin EXPOSES them from its
+ * extension of the songs entity (`defineExtensionShape({ exposes })`, e.g.
+ * playback-history's play count), and every list of songs derives them —
+ * sortable, filterable, and a table column for free, so a prerecorded "Most
+ * played" ordering is just a named `SortRule[]` over `playCount` (a config
+ * sort preset).
  */
 /**
  * What a source knows about a song at open time. `pending` means the source HAS
@@ -72,5 +69,4 @@ export const Library = {
    * Play painted at rest (`zone: "persistent"`), Delete on hover.
    */
   SongActions: defineItemActions<Song>(),
-  Fields: defineFieldExtensions<Song>(),
 };

@@ -31,6 +31,7 @@ export { compareValues } from "./internal/grouping";
 export { optionDescendants } from "./internal/option-tree";
 
 export { scopeFilterRows } from "./internal/filter-scope";
+export { fieldOverrides } from "./internal/field-overrides";
 export type {
   FilterScope,
   FilterScopeAccessors,
@@ -98,6 +99,8 @@ export type {
   DataViewDataOrigin,
   DataViewInMemoryOrigin,
   DataViewRowsCollection,
+  FieldOverride,
+  FieldOverrides,
   DataViewPaging,
   DataViewPagingTotal,
   DataViewRowsComplete,

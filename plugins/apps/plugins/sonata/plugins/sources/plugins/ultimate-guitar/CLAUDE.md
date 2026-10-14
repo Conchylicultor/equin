@@ -275,7 +275,7 @@ surfacing as crash tasks, not just toasts.
   - DB schema:
     - `plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/server/internal/tables-tab-saved.ts`
     - `plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/server/internal/tables.ts`
-  - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_ultimate_guitar`)
+  - Entity extension of: `apps/sonata/library` (table `library_ext_ultimate_guitar`)
   - Exports (types): `UgTabSavedPayload`
   - Exports (values):
     - `fetchUgTabContent`

@@ -43,8 +43,6 @@ export interface LiveQueryCodecSpec {
   key: string;
   /** The row field that identifies a row — the order's tiebreaker, and a cut's last element. */
   id: string;
-  /** A contributed collection's queries may name its contributors' columns (by wire name); any other's may not. */
-  contributed: boolean;
   /** A collection's column scope: its queries may name scoped sets of that scope; `null` = none. */
   columnScope: string | null;
   /** A union collection's queries may name its arms' own columns (by wire name); any other's may not. */
@@ -160,12 +158,12 @@ export function createLiveQueryCodec<C extends string, S extends string>(
       );
     }
   }
-  // A dot is how a contributed column's wire name reads (`<contributor>.<field>`),
-  // so no column of the collection's own may carry one.
+  // A dot is how a column set's wire name reads (`<set>.<field>`), so no
+  // column of the collection's own may carry one.
   for (const column of [...Object.keys(spec.filterable), ...spec.sortable]) {
     if (column.includes(".")) {
       fail(
-        `"${column}" cannot be a column name — "." separates a contributed column's contributor from its field`,
+        `"${column}" cannot be a column name — "." separates a column set's name from its field`,
       );
     }
   }
@@ -204,18 +202,6 @@ export function createLiveQueryCodec<C extends string, S extends string>(
             );
           }
           break;
-        case "contributed":
-          if (!spec.contributed) {
-            fail(
-              "a query names contributed columns, but the collection is not declared `contributed: true`",
-            );
-          }
-          if (owner.collection !== spec.key) {
-            fail(
-              `contributed columns "${handle.name}" belong to "${owner.collection}"`,
-            );
-          }
-          break;
         case "arm":
           if (!spec.arms) {
             fail(
@@ -239,7 +225,7 @@ export function createLiveQueryCodec<C extends string, S extends string>(
           owner satisfies never;
       }
       if (names.has(handle.name)) {
-        fail(`two contributed column sets are named "${handle.name}"`);
+        fail(`two column sets are named "${handle.name}"`);
       }
       names.add(handle.name);
       filterable = { ...filterable, ...handle.wireFilterable };

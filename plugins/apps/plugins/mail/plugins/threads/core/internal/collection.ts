@@ -1,12 +1,9 @@
-import { MailThreadSchema } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
-import { liveCollection } from "@plugins/network/plugins/live/core";
+import { mailThreadsEntityRef } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import { tagsField } from "@plugins/fields/plugins/tags/plugins/config/core";
 import {
-  liveBoolean,
-  liveInstant,
-  liveNumber,
-  liveStringArray,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
+  liveCollection,
+  type LiveRowsCollection,
+} from "@plugins/network/plugins/live/core";
 
 /**
  * The threads list's live collection: `mail_threads`, read by the DataView as
@@ -14,50 +11,49 @@ import {
  * feed — a thread write refills exactly that thread in the live pages that hold (or
  * now admit) it, with no revision tick and no refetch of the loaded pages.
  *
- * `filterable` is the ONE declaration of what the list can filter on: the
- * DataView's Filter control offers exactly the fields whose column is here,
- * and the server strict-decodes against it. `labelIds` is the jsonb array every
- * mailbox tab's authored scope is a containment op over (the `labels` field
- * binds it through `MailThreadFieldSpec.column`). `snippet` has no field: it is
- * searched only. `accountId` has no field either: it is the SCOPE the pane
- * states as data (`mailThreadsSource.scoped({ where: { accountId } })`) — a
- * field cannot bind it (`MailThreadColumn` excludes it), and the DataView never
- * offers a scope column to the Filter control, so the user can neither name
- * nor widen it.
+ * Declared by FIELDS: the thread entity's listed fields (their labels, types,
+ * filter domains) are the list's — the DataView derives them, and the server
+ * strict-decodes every filter against them. Their ids are the contract the
+ * authored mailbox tabs (`config/apps/mail/threads/mail-threads.jsonc`) are
+ * written against — rename one and its rules go with it.
  *
- * `labelIds` is not sortable: a jsonb array has no order.
+ * - `labels` is the axis every mailbox tab's scope is a containment op over —
+ *   an own field the server binds to the `label_ids` jsonb array (the field
+ *   id is the persisted vocabulary, the column's name is not). Not sortable: a
+ *   jsonb array has no order.
+ * - `snippet` is listed only to be searched (`mailThreadsSource`'s
+ *   `searchable`), `accountId` only to be the SCOPE the pane states as data
+ *   (`mailThreadsSource.scoped({ where: { accountId } })`) — the DataView
+ *   never offers a scope column to the Filter control, so the user can
+ *   neither name nor widen it. Both are off the list body
+ *   (`web/internal/presentation.tsx`).
  *
  * `columnScope` is the threads DataView's id (`defineDataView("mail-threads")`,
  * asserted equal at mount): the user's custom columns on that surface sort and
  * filter the window server-side (`custom.<column id>`).
  */
 export const mailThreads = liveCollection("mail.threads", {
-  row: MailThreadSchema,
+  from: mailThreadsEntityRef,
+  pick: [
+    "subject",
+    "lastMessageAt",
+    "unread",
+    "starred",
+    "important",
+    "hasAttachments",
+    "messageCount",
+    "snippet",
+    "accountId",
+  ],
+  fields: { labels: tagsField({ label: "Labels" }) },
+  carry: { pick: ["id", "participants", "createdAt"] },
   id: "id",
-  filterable: {
-    accountId: liveText(),
-    subject: liveText(),
-    snippet: liveText(),
-    lastMessageAt: liveInstant(),
-    labelIds: liveStringArray(),
-    unread: liveBoolean(),
-    starred: liveBoolean(),
-    important: liveBoolean(),
-    hasAttachments: liveBoolean(),
-    messageCount: liveNumber(),
-  },
   sortable: ["subject", "lastMessageAt", "messageCount"],
   default: { orderBy: [["lastMessageAt", "desc"]], limit: 100 },
   maxLimit: 500,
   columnScope: "mail-threads",
 });
 
-/**
- * A column of the threads collection a field may bind to — never `accountId`,
- * the pane's scope (the DataView would not offer it to Filter anyway: a field
- * over a scope column only sorts).
- */
-export type MailThreadColumn = Exclude<
-  keyof typeof mailThreads.filterable | (typeof mailThreads.sortable)[number],
-  "accountId"
->;
+/** One row of the threads list: the listed fields and what a row draws beside them. */
+export type MailThreadRow =
+  typeof mailThreads extends LiveRowsCollection<infer R> ? R : never;

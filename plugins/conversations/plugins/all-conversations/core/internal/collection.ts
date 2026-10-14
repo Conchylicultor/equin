@@ -1,66 +1,69 @@
-import type { z } from "zod";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import {
   liveCollection,
-  type WithContributedColumns,
+  type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
 import {
-  ConversationSchema,
   conversationsEntityRef,
   tasksEntityRef,
 } from "@plugins/tasks/plugins/tasks-core/core";
-import { CONVERSATION_FILTERABLE, CONVERSATION_SORTABLE } from "./fields";
-
-/**
- * One row of a conversation LIST (All-conversations, sidebar History): what the
- * lists render, sort, filter and search — the conversation's own columns plus
- * its owners' (`worktreePath`, `taskId`, and the task's current `taskTitle`).
- *
- * It leaves out what no list reads — `active`, `waitingFor`, `lastViewedAt`,
- * `claudeSessionId`, `closeRequested`, `hibernatedAt`, `attemptId` — so the
- * tmux poller's `waitingFor` / `lastViewedAt` writes fall outside every list's
- * route gate and load nothing.
- */
-export const ConversationListRowSchema = ConversationSchema.pick({
-  id: true,
-  title: true,
-  status: true,
-  model: true,
-  kind: true,
-  runtime: true,
-  spawnedBy: true,
-  createdAt: true,
-  updatedAt: true,
-  endedAt: true,
-  worktreePath: true,
-  taskId: true,
-  taskTitle: true,
-});
-export type ConversationListRow = z.infer<typeof ConversationListRowSchema>;
-
-/**
- * A row as the two live lists deliver it: the list row plus every exposed
- * field under `$columns` (both collections declare `exposes`).
- */
-export type ConversationListLiveRow =
-  WithContributedColumns<ConversationListRow>;
+import { CONVERSATION_SORTABLE } from "./fields";
 
 // The two lists share one shape; each is its own collection because a
 // collection's `columnScope` is the one DataView surface whose custom columns
 // sort and filter it (asserted equal to the surface's `storageKey` at mount).
+// Declared by FIELDS: every list field — its label, type, options, filter
+// domain — is the conversations entity's (`pick`) or one of the owners' joined
+// columns (`fields`), so the lists name none of them.
+//
+// A row is what the lists render, sort, filter and search — the conversation's
+// own columns plus its owners' (`worktreePath`, `taskId`, and the task's
+// current `taskTitle`). It leaves out what no list reads — `active`,
+// `waitingFor`, `lastViewedAt`, `claudeSessionId`, `closeRequested`,
+// `hibernatedAt`, `attemptId` — so the tmux poller's `waitingFor` /
+// `lastViewedAt` writes fall outside every list's route gate and load nothing.
+
+/** The conversation fields a list shows, in list order. */
+const CONVERSATION_LIST_PICK = [
+  "title",
+  "status",
+  "model",
+  "kind",
+  "runtime",
+  "createdAt",
+  "updatedAt",
+  "endedAt",
+] as const;
+
+/**
+ * The owners' columns a list shows: the attempt's worktree, and the owning
+ * task's CURRENT title (joined live: a task rename reaches every list holding
+ * its conversations). Searchable and filterable; no facet — a facet over a
+ * joined text column would recount on every rename.
+ */
+const CONVERSATION_LIST_OWN_FIELDS = {
+  worktreePath: textField({ label: "Worktree" }),
+  taskTitle: textField({ label: "Task" }),
+};
+
+/** What a row carries that no list shows. */
+const CONVERSATION_LIST_CARRY = {
+  pick: ["id", "spawnedBy"],
+  fields: { taskId: textField() },
+} as const;
+
 const CONVERSATION_LIST_DEFAULT = {
   orderBy: [["createdAt", "desc"]],
   limit: 100,
 } as const;
 const CONVERSATION_LIST_MAX_LIMIT = 500;
 /**
- * What a list row reaches: the conversation itself (`base` — its usage) and
- * its task (`task`, the owner joins' lookup — its track). Every field an
- * extension of either exposes sorts, filters and groups the lists server-side.
+ * What a list row reaches beyond the conversation itself (its own exposures —
+ * usage — fold as `from`'s): its task (`task`, the owner joins' lookup — its
+ * track). Every field an extension of either exposes sorts, filters and groups
+ * the lists server-side.
  */
-const CONVERSATION_LIST_EXPOSES = {
-  base: conversationsEntityRef,
-  task: tasksEntityRef,
-} as const;
+const CONVERSATION_LIST_RELATED = { task: tasksEntityRef } as const;
 
 /**
  * The All-conversations pane's list: every conversation, newest first, read as
@@ -72,14 +75,16 @@ const CONVERSATION_LIST_EXPOSES = {
  * exactly what it asks for, system rows included.
  */
 export const allConversations = liveCollection("conversations.all", {
-  row: ConversationListRowSchema,
+  from: conversationsEntityRef,
+  pick: CONVERSATION_LIST_PICK,
+  fields: CONVERSATION_LIST_OWN_FIELDS,
+  carry: CONVERSATION_LIST_CARRY,
+  related: CONVERSATION_LIST_RELATED,
   id: "id",
-  filterable: CONVERSATION_FILTERABLE,
   sortable: CONVERSATION_SORTABLE,
   default: CONVERSATION_LIST_DEFAULT,
   maxLimit: CONVERSATION_LIST_MAX_LIMIT,
   columnScope: "all-conversations",
-  exposes: CONVERSATION_LIST_EXPOSES,
   // Counted: the list's section count is exact while only its scope applies.
   count: true,
 });
@@ -91,14 +96,26 @@ export const allConversations = liveCollection("conversations.all", {
  * {@link allConversations}, no default scope.
  */
 export const conversationHistory = liveCollection("conversations.history", {
-  row: ConversationListRowSchema,
+  from: conversationsEntityRef,
+  pick: CONVERSATION_LIST_PICK,
+  fields: CONVERSATION_LIST_OWN_FIELDS,
+  carry: CONVERSATION_LIST_CARRY,
+  related: CONVERSATION_LIST_RELATED,
   id: "id",
-  filterable: CONVERSATION_FILTERABLE,
   sortable: CONVERSATION_SORTABLE,
   default: CONVERSATION_LIST_DEFAULT,
   maxLimit: CONVERSATION_LIST_MAX_LIMIT,
   columnScope: "conversations-sidebar",
-  exposes: CONVERSATION_LIST_EXPOSES,
   // Counted: the list's section count is exact while only its scope applies.
   count: true,
 });
+
+/**
+ * A row as the two live lists deliver it: the list row plus every exposed
+ * field under `$columns` (both collections reach entities).
+ */
+export type ConversationListLiveRow =
+  typeof allConversations extends LiveRowsCollection<infer R> ? R : never;
+
+/** One row of a conversation LIST (All-conversations, sidebar History), its exposed fields aside. */
+export type ConversationListRow = Omit<ConversationListLiveRow, "$columns">;

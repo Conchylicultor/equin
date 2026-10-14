@@ -50,9 +50,9 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `Pane.Register` "report-detail"
     - `Pane.Register` "reports"
     - `DebugApp.Sidebar` "Reports"
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×5
-    - `primitives/data-view` ×3
+    - `primitives/data-view` ×4
     - `primitives/css/ui-kit` ×2
     - `reports` ×2
     - `apps-core/tabs.appLinkProps`

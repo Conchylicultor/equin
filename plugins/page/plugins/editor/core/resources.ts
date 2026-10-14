@@ -1,6 +1,15 @@
 import { z } from "zod";
-import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
-import { BlockSchema, PageRowSchema } from "./schemas";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import {
+  liveCollection,
+  liveValue,
+  type LiveRowsCollection,
+} from "@plugins/network/plugins/live/core";
+import {
+  pagesEntityRef,
+  rankWireField,
+} from "@plugins/page/plugins/block-entity/core";
+import { BlockSchema, type PageRow } from "./schemas";
 
 // All live pages (`type="page"` blocks), the WHOLE set (`all`): the sidebar
 // renders every page, and the `[[` / page-link pickers filter it by title
@@ -28,8 +37,36 @@ import { BlockSchema, PageRowSchema } from "./schemas";
 // read cannot apply. Pinned by `../server/internal/pages-tree-oracle.test.ts`.
 //
 // Not preloaded: nothing reads it until the Pages app (or a page chip) mounts.
+//
+// Declared by FIELDS: the rows ARE `page_blocks` rows (`from`), so every
+// extension exposing fields of a block folds into them under `$columns` —
+// starred, agent-origin and tags today, each served by its own plugin's
+// `LiveColumns.Expose` and presented by its own `FieldPresentation`. A list
+// (the sidebar) derives those fields; it names none of them. The one field a
+// list shows of the row itself is `editedAt` (own: an expression over the
+// rollup, bound by `columns` server-side); the title is a list's own
+// projection of `data`. The row is otherwise carried, field for field the
+// `PageRowSchema` the HTTP read keeps (pinned equal below).
 export const pagesTree = liveCollection("pages.tree", {
-  row: PageRowSchema,
+  from: pagesEntityRef,
+  fields: { editedAt: dateField({ label: "Edited" }) },
+  carry: {
+    pick: [
+      "id",
+      "pageId",
+      "parentId",
+      "type",
+      "data",
+      "rank",
+      "expanded",
+      "createdAt",
+      "updatedAt",
+    ],
+    // The page row's place in its sidebar group: set on every live page row
+    // (invariant I-DR), so carried non-null here though the entity's column
+    // is NULL on content rows.
+    fields: { docRank: rankWireField() },
+  },
   id: "id",
   all: {
     orderBy: [["createdAt", "asc"]],
@@ -39,6 +76,21 @@ export const pagesTree = liveCollection("pages.tree", {
     },
   },
 });
+
+/** A row as `pagesTree` delivers it: the page row plus every exposed field under `$columns`. */
+export type PagesTreeRow =
+  typeof pagesTree extends LiveRowsCollection<infer R> ? R : never;
+
+type Equal<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+type Assert<T extends true> = T;
+/**
+ * The derived row IS the `PageRow` the HTTP read and the oracle parse
+ * (`Required`: zod infers the `z.unknown()` payload as optional, a field
+ * never is).
+ */
+export type _PinPagesTreeRow = Assert<
+  Equal<Omit<PagesTreeRow, "$columns">, Required<PageRow>>
+>;
 
 // A page's content forest: every block whose nearest page ancestor is
 // `pageId`, sub-page rows included, pushed whole whenever it changes. A value

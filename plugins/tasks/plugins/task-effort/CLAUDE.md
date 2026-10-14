@@ -29,7 +29,7 @@
     - `tasks/launch-options.TaskLaunchServer`
     - `tasks/tasks-core._tasks`
   - DB schema: `plugins/tasks/plugins/task-effort/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_effort`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_effort`)
   - Exports (values):
     - `getTaskEffort`
     - `setTaskEffort`

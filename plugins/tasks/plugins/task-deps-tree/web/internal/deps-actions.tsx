@@ -8,7 +8,10 @@ import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { removeTaskDependency } from "@plugins/tasks/core";
-import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
+import type {
+  TaskListItem,
+  TaskRow,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import type { DepsTreeRow } from "@plugins/tasks/plugins/task-deps-tree/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -19,7 +22,7 @@ const linkOffIcon = symbol("link-off");
 // The deps-tree row-action slot. Contributed into by web/index.ts and passed to
 // the DataView via `itemActions`; every view renders its contributions in the
 // row's trailing affordance.
-export const DepsActions = defineItemActions<DepsTreeRow>();
+export const DepsActions = defineItemActions<DepsTreeRow<TaskRow>>();
 
 /**
  * Detach: remove the edge to this row's rendered (primary) parent, so the task

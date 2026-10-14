@@ -84,7 +84,7 @@ On submit, in order:
     - `tasks/tasks-core._tasks`
     - `tasks/tasks-core.getConversation`
   - DB schema: `plugins/tasks/plugins/outcome-report/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_outcome_report`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_outcome_report`)
   - Register:
     - `mcpTool('submit_outcome_report')`
     - `mcpInstructions('outcome-report')`

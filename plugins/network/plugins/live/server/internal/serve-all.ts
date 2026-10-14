@@ -26,7 +26,7 @@ import {
   LIVE_COLUMNS_KEY,
   type LiveAllCollection,
 } from "@plugins/network/plugins/live/core";
-import { exposureFolds } from "./exposure-folds";
+import { exposedBinding, exposureFolds } from "./exposure-folds";
 import type { ExposingExtension } from "./serve-columns";
 import {
   isEntitySource,
@@ -43,7 +43,7 @@ import {
 // query-resource's `compileAllCollection` into its two resources: `key` (the
 // whole ordered set, a routed `scopedMembership` alias the runtime keeps
 // current and L2 persists) and `key:rows` (the point sibling). It is never
-// contributed, scoped or a union: those paths compile at boot from other
+// scoped or a union: those paths compile at boot from other
 // plugins' contributions, while an `all` collection's definition (A18) is
 // fixed at module eval. The one exception is its `exposes`: the exposures it
 // reaches (`LiveColumns.Expose`) are folded at boot (`serveCollection` defers
@@ -199,17 +199,16 @@ export function compileAllSpecs<Row>(
     throw new Error(`serveCollection("${collection.key}"): ${message}`);
   };
   // C4 — typed away (`LiveAllCollection` has no such field); refused against
-  // a cast: contributed and scoped columns compile at boot from contributions,
+  // a cast: scoped columns compile at boot from contributions,
   // and a union reads several tables; an `all` set is one table's, compiled
   // here once.
   const cast = collection as unknown as {
-    contributed?: unknown;
     columnScope?: unknown;
     arms?: unknown;
   };
-  if (cast.contributed === true || (cast.columnScope ?? null) !== null) {
+  if ((cast.columnScope ?? null) !== null) {
     fail(
-      "a collection declared `all` cannot be `contributed` or `columnScope`d — its definition (the L2 fingerprint) is fixed at module eval, never folded from contributions at boot.",
+      "a collection declared `all` cannot be `columnScope`d — its definition (the L2 fingerprint) is fixed at module eval, never folded from contributions at boot.",
     );
   }
   if ((cast.arms ?? null) !== null) {
@@ -276,18 +275,16 @@ export function compileAllSpecs<Row>(
       Readonly<Record<string, unknown>> | undefined
     >;
     const out: SelectMap = {};
-    // An exposed field binds to its own join's column of the same name.
-    const exposedRefs = folds.flatMap(({ handle, join }) =>
-      handle.fields.map((field) => {
-        const ref = j[join.alias]?.[field] as ColumnRef | undefined;
-        return [
-          handle.wireName(field),
-          ref ??
-            fail(
-              `exposed field "${handle.wireName(field)}" is not a wire column of its extension "${join.alias}".`,
-            ),
-        ] as const;
-      }),
+    // An exposed field binds to its own join's column of the same name — the
+    // presence field to the expression over the join's key.
+    const exposedRefs = folds.flatMap((fold) =>
+      fold.handle.fields.map(
+        (field) =>
+          [
+            fold.handle.wireName(field),
+            exposedBinding(fold, field, j[fold.join.alias], fail),
+          ] as const,
+      ),
     );
     for (const name of [
       ...collection.rowKeys,

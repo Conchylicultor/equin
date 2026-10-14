@@ -1,8 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Runs } from "@plugins/runs/web";
-import { BACKUP_RUN_KIND } from "@plugins/backup/core";
 import { BackupRunDetail, backupRunPane } from "@plugins/backup/web";
-import { BackupRunFields } from "./components/backup-run-fields";
+import { backupRunArm } from "../core";
 import {
   BackupArchiveSize,
   BackupSourcesSection,
@@ -15,6 +14,7 @@ import {
   backupSources,
   backupTargetResults,
 } from "./internal/payload";
+import { backupRunPresentation } from "./internal/presentation";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
@@ -22,16 +22,13 @@ export default {
     "The backup arm's presence on the merged run surface: the kind's label, its rows' activation into the backup run-detail pane, its four scalar columns (native status, archive size, source and target counts) as real filterable and sortable SQL dimensions, and the three detail sections — the archive's size on one line, the manifest's source reports, and the per-target outcome with its Grant access remediation.",
   contributions: [
     Runs.Kind({
-      kind: BACKUP_RUN_KIND,
-      label: "Backup",
+      arm: backupRunArm,
       link: (run, { openPane }) =>
         openPane.to(backupRunPane, { runId: run.id }, { mode: "push" }),
     }),
-    Runs.Fields({
-      id: BACKUP_RUN_KIND,
-      section: "Backup",
-      component: BackupRunFields,
-    }),
+    // Its fields' cells; the fields — under their "Backup" band — are the
+    // arm's (`backupRunArm`, core).
+    backupRunPresentation,
     // A one-line section: no `component`, so the host paints one static row
     // with no chevron and nothing to expand. How big the archive came out is
     // the first question asked of a finished backup — a nightly archive that

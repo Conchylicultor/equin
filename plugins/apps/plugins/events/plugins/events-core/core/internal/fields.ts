@@ -10,15 +10,18 @@ import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
+import { tagsField } from "@plugins/fields/plugins/tags/plugins/config/core";
 import {
   EventDateSchema,
   type EventDate,
 } from "@plugins/apps/plugins/events/plugins/event-date/core";
 import {
   EVENT_CATEGORIES,
+  EVENT_CATEGORY_META,
   REFRESH_CADENCES,
   RUN_EVENT_ACTIONS,
   RUN_OUTCOMES,
+  RUN_OUTCOME_META,
   SOURCE_STATUSES,
 } from "./vocab";
 
@@ -130,7 +133,7 @@ export const eventSourceFields = {
  */
 export const eventFields = {
   id: idKindField(eventIdKind),
-  sourceId: textField(),
+  sourceId: textField({ label: "Source" }),
   /**
    * Dedup identity, unique per `(sourceId, externalId)`. A source type MAY
    * supply it; when it can't (an LLM extraction can't), the ENGINE derives
@@ -143,8 +146,8 @@ export const eventFields = {
    * `recurring` date is the rule signature, not the anchor.
    */
   externalId: textField(),
-  title: textField(),
-  description: nullable(textField()),
+  title: textField({ label: "Title", primary: true }),
+  description: nullable(textField({ label: "Description" })),
   /**
    * When it happens, stated ONCE — a single instant, or a whole series with its
    * recurrence rule. The AUTHORITY on time for this row.
@@ -179,22 +182,27 @@ export const eventFields = {
    * `endsAt` / `allDay`) forward from `date` on a schedule and at boot, so
    * correctness does not depend on the source being re-extracted.
    */
-  startsAt: dateField(),
+  startsAt: dateField({ label: "When" }),
   endsAt: nullable(dateField()),
   allDay: boolField(),
-  venue: nullable(textField()),
-  city: nullable(textField()),
-  url: nullable(textField()),
+  venue: nullable(textField({ label: "Venue" })),
+  city: nullable(textField({ label: "City" })),
+  url: nullable(textField({ label: "Link" })),
   imageUrl: nullable(textField()),
   /** Free text ("Free", "12–18 €") — venues do not publish a normalizable number. */
-  price: nullable(textField()),
-  category: enumTextField(EVENT_CATEGORIES),
-  // `jsonField<string[]>`, NOT `stringListField`: the `string-list` field type has
-  // no `Fields.Storage` contribution, so `defineEntity` cannot map it to a column
-  // (it is a config-only type). This is the `mail_threads.labelIds` idiom.
-  tags: jsonField<string[]>({ schema: z.array(z.string()), default: [] }),
+  price: nullable(textField({ label: "Price" })),
+  category: enumTextField(EVENT_CATEGORIES, {
+    label: "Category",
+    options: EVENT_CATEGORY_META,
+  }),
+  // `tagsField`, NOT `stringListField`: the `string-list` field type has no
+  // `Fields.Storage` contribution, so `defineEntity` cannot map it to a column
+  // (it is a config-only type). A tags column is the `jsonb` string array this
+  // always was; its type is what lists filter it by (has any / all / none of).
+  // An open vocabulary: no suggested options.
+  tags: tagsField({ label: "Tags" }),
   /** Projection of `date`: true iff its `kind` is `recurring`. */
-  recurring: boolField(),
+  recurring: boolField({ label: "Recurring" }),
   /** Projection of `date`: the series' human label ("every Thursday"). */
   recurrenceLabel: nullable(textField()),
   // No `seriesKey`: with one row per series the ROW is the series, and its
@@ -203,7 +211,7 @@ export const eventFields = {
   // does not use wins nothing.
   firstSeenAt: dateField(),
   lastSeenAt: dateField(),
-  disappearedAt: nullable(dateField()),
+  disappearedAt: nullable(dateField({ label: "Disappeared" })),
   createdAt: dateField(),
   updatedAt: dateField(),
 } satisfies FieldsRecord;
@@ -214,18 +222,21 @@ export const eventFields = {
  */
 export const eventSourceRunFields = {
   id: idKindField(eventRunIdKind),
-  sourceId: textField(),
-  startedAt: dateField(),
+  sourceId: textField({ label: "Source" }),
+  startedAt: dateField({ label: "Started", primary: true }),
   finishedAt: nullable(dateField()),
-  outcome: enumTextField(RUN_OUTCOMES),
-  eventsFound: intField(),
-  eventsCreated: intField(),
-  eventsUpdated: intField(),
-  eventsDisappeared: intField(),
+  outcome: enumTextField(RUN_OUTCOMES, {
+    label: "Outcome",
+    options: RUN_OUTCOME_META,
+  }),
+  eventsFound: intField({ label: "Found" }),
+  eventsCreated: intField({ label: "New" }),
+  eventsUpdated: intField({ label: "Updated" }),
+  eventsDisappeared: intField({ label: "Gone" }),
   /** The fingerprint this run observed (null when the probe cannot fingerprint). */
   fingerprint: nullable(textField()),
-  durationMs: nullable(intField()),
-  error: nullable(textField()),
+  durationMs: nullable(intField({ label: "Duration" })),
+  error: nullable(textField({ label: "Error" })),
   /**
    * What the extractor could not express, one free-text entry per limitation —
    * global to the run, never per event.

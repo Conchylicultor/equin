@@ -10,6 +10,7 @@ import {
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
+import { deployServersEntityRef } from "@plugins/apps/plugins/deploy/plugins/servers/core";
 
 /**
  * One reachability verdict per server — the row of the
@@ -83,6 +84,27 @@ export const serverHealthShape = defineExtensionShape({
     platform: nullable(enumTextField(PLATFORM_TAGS)),
   },
   serverOnly: ["hostKeyLine"],
+  // The verdict reaches every list of servers as its `status` field (the id a
+  // saved view names): reachable, unreachable, or NULL for a server never
+  // probed — a missing row reads NULL, so "never checked" is a value the list
+  // can group and filter by, not an absence. Each of the three is labelled by
+  // its spelling (Online / Offline / Unknown — the filter chips, the group
+  // headers).
+  exposes: {
+    parent: deployServersEntityRef,
+    name: "health",
+    fields: {
+      ok: {
+        as: "status",
+        label: "Status",
+        options: {
+          true: { label: "Online", variant: "success" },
+          false: { label: "Offline", variant: "destructive" },
+          null: { label: "Unknown", hint: "Never checked" },
+        },
+      },
+    },
+  },
 });
 export const ServerHealthRowSchema = serverHealthShape.schema;
 export type ServerHealthRow = z.infer<typeof ServerHealthRowSchema>;

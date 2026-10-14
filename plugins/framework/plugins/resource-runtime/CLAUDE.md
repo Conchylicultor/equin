@@ -599,8 +599,9 @@ on an undeclared column, and a key-changing identity UPDATE) and
 ## Deferred resources (`defineDeferredResource` / `bindDeferredResources`)
 
 A resource whose server half can only be compiled once the plugin graph's
-contributions are known — a `network/live` collection whose columns other
-plugins contribute (`LiveColumns.Serve`). `defineDeferredResource(contract,
+contributions are known — a `network/live` collection whose fields other
+plugins contribute: exposed extension fields (`LiveColumns.Expose`), scoped
+column sets (`LiveColumns.Scoped`) or union arms. `defineDeferredResource(contract,
 bind)` registers the entry NOW, from the contract alone: key, mode (a keyed
 contract is keyed; a non-keyed deferred resource is a push value), schema,
 `keyOf`, preload — so `Resource.Declare`, `preloadedKeys()` and the boot

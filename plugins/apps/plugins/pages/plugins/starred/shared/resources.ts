@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
+import { pagesEntityRef } from "@plugins/page/plugins/block-entity/core";
 
 // One row per starred page, in the `page_blocks_ext_starred` entity-extension
 // table that `server/internal/tables.ts` builds from this shape. Presence in the
@@ -8,21 +9,29 @@ import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/c
 // order of its own either — the Favorites view's row order lives in data-view's
 // `view-order`. `createdAt` (when the page was starred) rides on the wire as a
 // plain field of the shape.
+//
+// It EXPOSES its presence to every list whose rows are blocks (`exposes` — the
+// pages sidebar today): `starred`, a boolean, true exactly when the page has
+// a row. So the sidebar's Favorites view is a filter on it, with no code
+// naming this plugin.
 export const starredPageShape = defineExtensionShape({
   key: "blockId",
   fields: {},
   wireTimestamps: ["createdAt"],
+  exposes: {
+    parent: pagesEntityRef,
+    name: "starred",
+    presence: { id: "starred", label: "Starred" },
+  },
 });
 export const StarredPageRowSchema = starredPageShape.schema;
 export type StarredPageRow = z.infer<typeof StarredPageRowSchema>;
 
 // The favorites, as the WHOLE ordered set (`all`), NOT a lookup by id: the
-// dominant consumer is `StarredField`, which needs starred-ness for EVERY row
-// the `pages-sidebar` DataView filters over. An id-set read would have to name
-// every page id; the favorites set holds at most one row per page, so its
-// reader holds it entire — no favorite ever reads as unstarred past a
-// window's edge. Mirrors the sibling `agent-origin` plugin, which contributes
-// the same kind of Set-backed field into the same `PageTree.Fields` slot.
+// star toggles (`useStarredPageIds`) read starred-ness for whichever page they
+// sit on, and the set holds at most one row per page, so its reader holds it
+// entire — no favorite ever reads as unstarred past a window's edge. (The
+// sidebar's `starred` field is the exposure above, folded into `pages.tree`.)
 //
 // Rows key on `blockId` (the side-table pk — the starred page's id); the
 // server half is served from the extension handle in
@@ -39,7 +48,7 @@ export const starredPages = liveCollection("pages-starred.all", {
     orderBy: [["blockId", "asc"]],
     unbounded: {
       reason:
-        "at most one row per page, and the pages sidebar projects starred-ness for every page",
+        "at most one row per page, and the star toggles read starred-ness for any page",
     },
   },
 });

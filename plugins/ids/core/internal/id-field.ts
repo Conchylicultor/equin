@@ -1,6 +1,8 @@
 import { z } from "zod";
 import {
+  type ExactOptions,
   type FieldDef,
+  type FieldMarks,
   type FieldMeta,
   type FieldType,
   pickMeta,
@@ -51,18 +53,22 @@ export function idKindOfDecoder(schema: object): AnyIdKind | undefined {
  * and `kind.schema` / `kind.parse` for one arriving from outside.
  *
  * `defaultValue` is `""`, exactly as `textField`'s: an id column is always
- * written by its mint, never from a field default.
+ * written by its mint, never from a field default. Its options mark the field
+ * (`FieldMarks` — a `label` lets a list show it).
  */
-export function idKindField<P extends string>(
+export function idKindField<
+  P extends string,
+  const O extends FieldMeta = Record<never, never>,
+>(
   kind: IdKind<P, IdShape>,
-  opts?: FieldMeta,
-): FieldDef<Id<P>> {
+  opts?: ExactOptions<O, FieldMeta>,
+): FieldDef<Id<P>> & FieldMarks<O> {
   return Object.freeze({
     type: textFieldType as FieldType<Id<P>>,
     schema: storedIdSchema(kind),
     defaultValue: "" as Id<P>,
     meta: pickMeta(opts),
-  });
+  }) as FieldDef<Id<P>> & FieldMarks<O>;
 }
 
 // Every external-id decoder minted, and why the id is not one of ours.

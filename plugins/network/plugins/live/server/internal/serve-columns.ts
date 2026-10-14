@@ -4,93 +4,11 @@ import { defineServerContribution } from "@plugins/framework/plugins/server-core
 import type { RoutedRecomputeOn } from "@plugins/framework/plugins/resource-runtime/core";
 import type {
   ColumnRef,
-  ColumnRefsOf,
   ExtensionJoin,
   JoinFamily,
-  JoinRef,
-  JoinWireColumns,
 } from "@plugins/infra/plugins/query-resource/core";
 import type { EntityExposure } from "@plugins/infra/plugins/entity-extensions/core";
 import type { FilterDomainId } from "@plugins/network/plugins/live/plugins/filter/core";
-import type {
-  LiveColumnsDeclaration,
-  LiveColumnsHandle,
-  LiveColumnsOwner,
-} from "@plugins/network/plugins/live/core";
-
-// The server half of a contributed-column handle (`liveColumns`, core): the
-// join its fields are read through, and — for a field whose name is not its
-// join column's — which column it binds to. Contributed, never registered: a
-// `LiveColumns.Serve` contribution is collected with every other, and the
-// contributed collection's `serveCollection` compiles them all at boot
-// (`bindDeferredResources`), before anything serves or a trigger is rebuilt
-// from the route layout.
-
-/** The `j` a contributed field's override is written over: its own join's wire columns. */
-type ContributorRefs<J extends ExtensionJoin> = {
-  readonly [K in J["alias"]]: ColumnRefsOf<K, JoinWireColumns<J>>;
-};
-
-/** A contributed field bound to one of its join's wire columns: `(j) => j.playback.lastPlayedAt`. */
-type ContributorOverride<J extends ExtensionJoin> = (
-  j: ContributorRefs<J>,
-) => JoinRef<ContributorRefs<J>>;
-
-/**
- * `columns` is optional while every field of the handle is a wire column of
- * the join by name, and REQUIRED — naming exactly the missing ones — when some
- * are not.
- */
-type ContributorColumns<N extends string, J extends ExtensionJoin> = [
-  Exclude<N, keyof JoinWireColumns<J>>,
-] extends [never]
-  ? { columns?: { [K in N]?: ContributorOverride<J> } }
-  : {
-      columns: { [K in N]?: ContributorOverride<J> } & {
-        [K in Exclude<N, keyof JoinWireColumns<J>>]: ContributorOverride<J>;
-      };
-    };
-
-/** One contributor's columns, served: what `serveCollection` compiles into the collection. */
-export interface ServedColumns {
-  /** A CONTRIBUTED set's handle — only a contributor serves through `LiveColumns.Serve`. */
-  readonly handle: LiveColumnsDeclaration & {
-    readonly owner: Extract<LiveColumnsOwner, { kind: "contributed" }>;
-  };
-  /**
-   * The relation its fields are read through: an extension's `join(alias)`,
-   * and only that — a LEFT join 1:1 on the host's id, so contributing columns
-   * can neither drop a host row (a required lookup's INNER join would) nor
-   * change which table's writes route to the collection as membership.
-   */
-  readonly join: ExtensionJoin;
-  /** Field → the column it binds to, for a field not named like its join column. */
-  readonly columns: Readonly<Record<string, (j: unknown) => ColumnRef>>;
-}
-
-/**
- * Serve a contributed-column handle: read its fields through `join` (by
- * property name, or through `columns`), typed like `serveCollection`'s
- * overrides (T2) — a relation, a column of another table or a server-only
- * column cannot be spelled. Spread into a `LiveColumns.Serve(...)` contribution.
- */
-export function serveColumns<
-  CRow,
-  F,
-  S extends string,
-  const J extends ExtensionJoin,
->(
-  handle: LiveColumnsHandle<CRow, F, S>,
-  opts: { join: J } & ContributorColumns<keyof CRow & string, J>,
-): ServedColumns {
-  return {
-    handle,
-    join: opts.join,
-    columns: (opts.columns ?? {}) as Readonly<
-      Record<string, (j: unknown) => ColumnRef>
-    >,
-  };
-}
 
 // ── Scoped column sets ─────────────────────────────────────────────────────
 // A collection declared with a `columnScope` sorts and filters by columns whose
@@ -213,14 +131,6 @@ export interface ExposingExtension {
 }
 
 export const LiveColumns = {
-  /**
-   * A contributed collection's columns, served by the plugin that owns them
-   * (`serveColumns(handle, { join })`). Collected at boot; the collection's
-   * `serveCollection` compiles every contribution naming it.
-   */
-  Serve: defineServerContribution<ServedColumns>("live.columns.serve", {
-    docLabel: (s) => `${s.handle.owner.collection} ← ${s.handle.name}`,
-  }),
   /**
    * A scoped column set (`serveScopedColumns`): every collection declaring a
    * `columnScope` sorts and filters by its members in that scope. Collected at

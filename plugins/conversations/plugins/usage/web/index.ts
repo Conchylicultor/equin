@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { LiveExposures } from "@plugins/network/plugins/live/web";
+import { FieldPresentation } from "@plugins/network/plugins/live/web";
 import {
   formatTokensCompact,
   formatUsd,
@@ -10,9 +10,9 @@ export default {
   description:
     "Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side.",
   contributions: [
-    LiveExposures.Register({
-      exposure: conversationUsageShape.exposure,
-      present: {
+    FieldPresentation.Register({
+      owner: conversationUsageShape.exposure,
+      fields: {
         costUsd: { cell: formatUsd, width: "6rem", align: "end" },
         tokens: { cell: formatTokensCompact, width: "6rem", align: "end" },
         agentCount: { width: "5rem", align: "end" },

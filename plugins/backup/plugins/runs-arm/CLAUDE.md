@@ -117,11 +117,12 @@ look.
   The non-skipped filter lives in `web/internal/payload.ts`, applying the same
   reading as the `WHERE` inside the count expression, so the section and the
   number cannot disagree.
-- `backup.targetResults` / `backup.sources` are columns of the arm's
-  `liveArmColumns` set with **no** `FieldDef` and no filter or sort — a jsonb
-  blob has no comparable projection. Every field must be a column; not every
-  column need be a field. Their schemas (`core/internal/payload-schemas.ts`)
-  are the arm row's own, read through `backupRunColumns.read(run)`; the server
+- `backup.targetResults` / `backup.sources` are the arm's CARRIED fields
+  (`liveArm`'s `carry`): on the slice, never listed, filtered or sorted — a
+  jsonb blob has no comparable projection. Every field must be a column; not
+  every column need be a listed field. Their schemas
+  (`core/internal/payload-schemas.ts`) are the arm slice's own, read through
+  `backupRunArm.read(run)`; the server
   decodes `sources` with the same schema (idempotent, so the browser re-parses
   its output). They are second spellings of ones in `backup/shared`
   (plugin-private), pinned by `ZodParser<BackupTargetResult>` /
@@ -148,8 +149,8 @@ compiler — a real follow-up, and a bigger change than it looks.
 - Description: The backup arm's presence on the merged run surface: the kind's label, its rows' activation into the backup run-detail pane, its four scalar columns (native status, archive size, source and target counts) as real filterable and sortable SQL dimensions, and the three detail sections — the archive's size on one line, the manifest's source reports, and the per-target outcome with its Grant access remediation. The backup arm of the unified run space: binds backup_runs into the runs union — its native status folded into the shared outcome vocabulary (partial included, since backup is the only kind that can half-succeed), a label naming what the run covered, and the source / target counts plus the raw per-target results as its own columns. Reads null for namespace (a backup covers the machine, not a checkout — the table's own namespace column is the in-flight index's scope discriminator, not a fact about the run) and for message (a backup's failure words are per-target).
 - Web:
   - Contributes:
-    - `Runs.Kind`
-    - `Runs.Fields` "backup" → `BackupRunFields`
+    - `Runs.Kind` "backup"
+    - `FieldPresentation.Register` "arm:runs:backup"
     - `BackupRunDetail.Section` "Archive"
     - `BackupRunDetail.Section` "Sources" → `BackupSourcesSection`
     - `BackupRunDetail.Section` "Targets" → `BackupTargetsSection`
@@ -157,6 +158,7 @@ compiler — a real follow-up, and a bigger change than it looks.
     - `auth.GrantAccessButton`
     - `backup.BackupRunDetail`
     - `backup.backupRunPane`
+    - `network/live.FieldPresentation`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
     - `primitives/css/rigid.rigidClass`
@@ -175,15 +177,17 @@ compiler — a real follow-up, and a bigger change than it looks.
 - Core:
   - Uses:
     - `backup.BACKUP_RUN_KIND`
-    - `network/live.liveArmColumns`
-    - `network/live/filter.liveNumber`
-    - `network/live/filter.liveText`
+    - `fields.nullable`
+    - `fields/int/config.intField`
+    - `fields/json/config.jsonField`
+    - `fields/text/config.enumTextField`
+    - `network/live.liveArm`
     - `runs.runs`
   - Exports (types): `BackupRunStatus`
   - Exports (values):
     - `BACKUP_RUN_STATUSES`
     - `BACKUP_STATUS_OUTCOME`
-    - `backupRunColumns`
+    - `backupRunArm`
     - `BackupSourceReportSchema`
     - `BackupTargetResultSchema`
 

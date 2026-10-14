@@ -1,11 +1,7 @@
 import { useMemo } from "react";
 import { mapRow, useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
-import {
-  DEFAULT_TASK_TRACK,
-  type StoredTaskTrack,
-  type TaskTrack,
-} from "../core";
+import { DEFAULT_TASK_TRACK, type TaskTrack } from "../core";
 import { taskTracks, type TaskTrackRow } from "../shared/resources";
 
 /** One task's track: a read — loading, failed, or the track. */
@@ -25,18 +21,19 @@ export function useTaskTrack(taskId: string): TaskTrackResult {
 }
 
 /** Every stored (non-main) track: a read of taskId → track. */
-export type StoredTracks = ResourceResult<ReadonlyMap<string, StoredTaskTrack>>;
+export type StoredTracks = ResourceResult<ReadonlyMap<string, TaskTrack>>;
 
 // Stable (module-level), so the `select` re-runs only when the set changes.
 function toTrackMap(
   rows: readonly TaskTrackRow[],
-): ReadonlyMap<string, StoredTaskTrack> {
+): ReadonlyMap<string, TaskTrack> {
   return new Map(rows.map((r) => [r.taskId, r.track]));
 }
 
 /**
  * Every stored track, from the whole `taskTracks` set, for a surface that
- * needs a track for EVERY task (the task list's field). A task missing from a
+ * needs a track for EVERY task it shows (the sidequest launch list; a list of
+ * tasks reads the exposed `track` field instead). A task missing from a
  * READY map is main; not loaded yet is the loading arm, never an empty map
  * (which would claim every task is main). The set is preloaded, so a
  * boot-hydrated read renders ready on its first render.

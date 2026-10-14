@@ -205,11 +205,19 @@ const json = (rows: readonly unknown[]): Rec[] =>
   JSON.parse(JSON.stringify(rows)) as Rec[];
 const byId = (a: Rec, b: Rec) => (String(a.id) < String(b.id) ? -1 : 1);
 const sortedById = (rows: readonly unknown[]): Rec[] => json(rows).sort(byId);
+/** Rows without their exposed fields (`$columns`). */
+const ownRows = (rows: readonly unknown[]): Rec[] =>
+  (rows as Rec[]).map(({ $columns: _c, ...rest }) => rest as Rec);
 
 async function checkTasks(): Promise<number> {
   return inParis(async (db, raw) => {
     const compiled = compileTasks(db);
-    const full = (await compiled.all.loader({})) as Rec[];
+    // The set reaches the tasks extensions' exposures (`from`); none is
+    // served here, so every row's `$columns` is empty — the rest is the
+    // view's row.
+    const loaded = (await compiled.all.loader({})) as Rec[];
+    expect(loaded.map((r) => r.$columns)).toEqual(loaded.map(() => ({})));
+    const full = ownRows(loaded);
     // `tasks_v` minus `description`: the set's row is `TaskListItem`.
     const view = (await raw.select().from(tasks)).map(
       ({ description: _d, ...rest }) => rest,
@@ -243,9 +251,9 @@ async function checkTasks(): Promise<number> {
       ];
       const scoped = await compiled.all.loader({}, { affectedIds: s });
       const want = json(full).filter((r) => s.includes(String(r.id)));
-      expect(sortedById(scoped)).toEqual(want.sort(byId));
+      expect(sortedById(ownRows(scoped))).toEqual(want.sort(byId));
       const point = await compiled.rows.loader({ ids: s.join(",") });
-      expect(sortedById(point)).toEqual(want.sort(byId));
+      expect(sortedById(ownRows(point))).toEqual(want.sort(byId));
     }
     return full.length;
   });

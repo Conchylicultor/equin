@@ -7,6 +7,7 @@ import {
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
   liveDataSource,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -14,13 +15,10 @@ import { eventsApp } from "@plugins/apps/plugins/events/plugins/shell/core";
 import {
   externalUrl,
   type ListedEvent,
-  type SourcedEvent,
 } from "@plugins/apps/plugins/events/plugins/events-core/core";
-import { EVENT_LIST_SEARCHABLE, eventsList } from "../core";
-import { eventFieldDefs } from "./internal/fields";
+import { EVENT_LIST_SEARCHABLE, eventsList, type EventListRow } from "../core";
 import { useOpenEvent } from "./internal/use-open-event";
 import { EventRow } from "./components/event-row";
-import { EventList } from "./slots";
 
 /**
  * The Events surface id. Config-backed like every DataView: the view instances
@@ -40,6 +38,16 @@ const eventsListSource = liveDataSource(eventsList, {
   searchable: EVENT_LIST_SEARCHABLE,
 });
 
+/**
+ * The fields are `eventsList`'s, derived (the events entity's, presented by
+ * `./internal/presentation.tsx` and, for `sourceId`, by the sources plugin).
+ * The source dimension is a grouping dimension, not searchable text: an id
+ * typed into the search box must not match every event from that source.
+ */
+const EVENT_LIST_OVERRIDES = fieldOverrides(eventsList, {
+  sourceId: { filterable: false },
+});
+
 export const eventListPane = Pane.define({
   title: "Events",
   route: defineRoute({ id: "event-list", segment: "list" }),
@@ -56,10 +64,9 @@ function EventListPaneView(): ReactElement {
 
   return (
     <PaneChrome pane={eventListPane}>
-      <DataView<SourcedEvent>
+      <DataView<EventListRow>
         storageKey={EVENTS_LIST_VIEW}
-        fields={eventFieldDefs}
-        fieldExtensions={EventList.Fields}
+        overrides={EVENT_LIST_OVERRIDES}
         onRowActivate={openEvent}
         views={["list", "table", "gallery"]}
         emptyState={
@@ -74,7 +81,7 @@ function EventListPaneView(): ReactElement {
           },
           gallery: {
             // The poster as the card's cover. `imageUrl` is deliberately NOT a
-            // `FieldDef` (it is a display input, not a sort/filter dimension —
+            // listed field (it is a display input, not a sort/filter dimension —
             // see core/internal/fields.ts), so the cover comes from the
             // accessor rather than `coverField`, which only resolves field ids.
             // No usable poster → `null` → no cover region at all, i.e. exactly

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { FieldOptionMeta } from "@plugins/fields/core";
 
 /**
  * The shared outcome vocabulary every run kind maps its own status into.
@@ -42,6 +43,24 @@ export type RunOutcome = (typeof RUN_OUTCOMES)[number];
  * throws on it rather than letting an unlabelled row into the list.
  */
 export const RunOutcomeSchema = z.enum(RUN_OUTCOMES);
+
+/**
+ * How each outcome presents — its label and chip tint, declared once beside
+ * the vocabulary so the field (`runs`' `outcome`), its filter options and its
+ * group headers read the same words the dot / chip / badge do.
+ *
+ * Colour carries one distinction and one only: `failed` is destructive because
+ * it is the one outcome someone must act on. `partial` is a warning — it needs
+ * a look, not a fix. `canceled` is muted: nothing went wrong, the run simply
+ * stopped being the answer.
+ */
+export const RUN_OUTCOME_OPTIONS_META = {
+  running: { label: "Running", variant: "warning" },
+  succeeded: { label: "Succeeded", variant: "success" },
+  partial: { label: "Partial", variant: "warning" },
+  failed: { label: "Failed", variant: "destructive" },
+  canceled: { label: "Canceled", variant: "muted" },
+} as const satisfies { readonly [O in RunOutcome]: FieldOptionMeta };
 
 /** Is this run still in flight? The one predicate several surfaces need. */
 export function isRunInFlight(outcome: RunOutcome): boolean {

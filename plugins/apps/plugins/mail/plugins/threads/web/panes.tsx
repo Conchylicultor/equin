@@ -16,9 +16,9 @@ import { threadPane } from "@plugins/apps/plugins/mail/plugins/reading-pane/web"
 import { mailApp } from "@plugins/apps/plugins/mail/plugins/shell/core";
 import {
   mailAccount,
-  type MailThread,
+  mailAccountIdKind,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
-import { useMailThreadFieldDefs } from "./internal/fields";
+import type { MailThreadRow } from "../core";
 import { mailThreadsSource } from "./internal/source";
 import { ThreadRow } from "./components/thread-row";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -79,7 +79,6 @@ function MailThreadsList({
   accountId: string | null;
 }): ReactElement {
   const openPane = useOpenPane();
-  const fields = useMailThreadFieldDefs();
   // The account is the scope every tuple carries — data, not a server-side
   // subquery. The DataView never offers a scope column to the Filter control,
   // so the user can neither name nor widen it.
@@ -87,7 +86,9 @@ function MailThreadsList({
     () =>
       accountId === null
         ? mailThreadsSource.awaitingScope(["accountId"])
-        : mailThreadsSource.scoped({ where: { accountId } }),
+        : mailThreadsSource.scoped({
+            where: { accountId: mailAccountIdKind.key(accountId) },
+          }),
     [accountId],
   );
 
@@ -96,9 +97,8 @@ function MailThreadsList({
   const selectedRowId = threadPane.useRouteEntry()?.params.threadId;
 
   return (
-    <DataView<MailThread>
+    <DataView<MailThreadRow>
       storageKey={MAIL_THREADS_VIEW}
-      fields={fields}
       views={["list"]}
       selectedRowId={selectedRowId}
       // Said once the window settled on no thread — never while it loads.
@@ -106,7 +106,7 @@ function MailThreadsList({
       viewOptions={{
         list: {
           size: "md",
-          leading: (t: MailThread) =>
+          leading: (t: MailThreadRow) =>
             t.starred ? (
               <Icon icon={starIcon} active className="icon-auto text-warning" />
             ) : (
@@ -115,7 +115,7 @@ function MailThreadsList({
                 className="icon-auto text-muted-foreground"
               />
             ),
-          renderRow: (t: MailThread) => <ThreadRow thread={t} />,
+          renderRow: (t: MailThreadRow) => <ThreadRow thread={t} />,
         },
       }}
       source={source}

@@ -107,9 +107,10 @@ export interface ExtensionShapeDef<
   // the primitive, and leaving them off keeps a write that changes nothing from
   // sending a row diff just because `updatedAt` moved.
   wireTimestamps?: readonly W[];
-  // The own fields every list of the parent shows, filters and groups by —
-  // with what a parent with no side row reads (`./exposure.ts`). A server-only
-  // field, a timestamp or the key cannot be exposed (tsc).
+  // The own fields every list of the parent shows, filters and groups by, and
+  // the extension's presence (`./exposure.ts`). What a parent with no side row
+  // reads is derived from each field's declared default. A server-only field,
+  // a timestamp or the key cannot be exposed (tsc).
   exposes?: ExposesDecl;
 }
 
@@ -125,10 +126,11 @@ export function defineExtensionShape<
 >(
   def: ExtensionShapeDef<K, F, S, W> & { exposes?: undefined },
 ): ExtensionShape<K, F, S, W>;
-// With `exposes`: `X` keeps each `absent` literal (`"main"`), so the exposed
-// row's type is the stored value widened by it; `ExposesCheck` rejects a key
-// that is not an own wire field and an `options` record that does not name
-// exactly the wire values.
+// With `exposes`: `X` keeps the declaration literal (the presence's `values`),
+// so the exposed row's type is each field's value (`| null` unless its default
+// is declared) and the presence's; `ExposesCheck` rejects a key that is not an
+// own wire field, an authored `absent`, and an `options` record that does not
+// name exactly the field's values.
 export function defineExtensionShape<
   K extends string,
   F extends FieldsRecord,

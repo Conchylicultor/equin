@@ -7,18 +7,24 @@ filters/sorts across all of it, so filter/sort/search compile to SQL per window
 tuple, read as live key-range pages — the mail threads shape.
 
 ```
-core/internal/fields.ts       the shared field-id vocabulary (browser-safe data)
-  ↓                                ↓
-web/internal/fields.tsx       core/internal/collection.ts   (liveCollection)
-  (FieldDef[] + value/cell)        ↓
-                              server/internal/collection.ts (serveCollection:
-                                the source lookup + the default scopes)
+events-core: eventFields (labels, options, types)  →  eventsEntityRef
+  ↓
+core/internal/collection.ts   (liveCollection({ from: eventsEntityRef, pick }))
+  ↓                                    ↓
+web: DataView derives its fields   server/internal/collection.ts (serveCollection:
+  (presentation: internal/              the source lookup + the default scopes)
+   presentation.tsx)
 ```
 
-One vocabulary, two runtimes: the web `FieldDef[]` derives from
-`EVENT_LIST_FIELDS`, and the collection declares `EVENT_LIST_FILTERABLE` /
-`EVENT_LIST_SORTABLE` (the same file), so they cannot drift on which dimensions
-exist or what domain they filter in.
+Declared once, derived everywhere: each field — its label, type, options and
+filter domain — is the `events` entity's (`events-core`'s `eventFields`). The
+collection `pick`s which of them the list shows (`EVENT_LIST_PICK`, in list
+order) and `EVENT_LIST_SORTABLE`; the row schema and the filterable columns are
+derived from the picked fields, so the server and the DataView cannot drift on
+which dimensions exist or what domain they filter in. The list's own code is
+only `overrides`; the cells that are not a type's default (the absolute When,
+the link chip) are presented once against the entity
+(`FieldPresentation.Register({ owner: eventsEntityRef })`).
 
 ## Live, with no tick
 
@@ -44,25 +50,28 @@ revision tick and a refetch:
 
 ## Every typed field is a filter AND a sort dimension
 
-That is the whole reason this is a DataView. Adding a dimension means adding a
-`FieldDef` + an `EVENT_LIST_FILTERABLE` entry (and `EVENT_LIST_SORTABLE`, if it
-sorts — the live source refuses a sortable field whose column is not) — **never**
-a bespoke toggle chip on the toolbar, and never a hand-rolled `.map()` of
-`<Row>` (`no-adhoc-row-list`). A few ids differ between the two sides on purpose:
+That is the whole reason this is a DataView. Adding a dimension means labelling
+the field on the entity and picking it here (plus `EVENT_LIST_SORTABLE`, if it
+sorts — only an index-backed column should) — **never** a hand `FieldDef`, a
+bespoke toggle chip on the toolbar, or a hand-rolled `.map()` of `<Row>`
+(`no-adhoc-row-list`). A few fields on purpose:
 
-- **`sourceId` is declared with no web field here.** The `source` dimension
-  arrives as a *contributed* field extension through the exported
-  `EventList.Fields` descriptor — only the `sources` plugin holds the live
-  `event_sources` rows its option list is built from. Because the column is
-  already declared under the same id, that contributed field filters and sorts
-  server-side the moment it lands, with zero edits here. This plugin names no
+- **`sourceId` is picked with no presentation here.** Its options are the live
+  sources, presented by the `sources/source-field` plugin
+  (`FieldPresentation.Register({ owner: eventsEntityRef, fields: { sourceId:
+  { useOptions } } })`) — only that plugin holds the live `event_sources` rows.
+  Filter, sort and group compile to SQL on the raw id. This plugin names no
   source type, ever.
-- **`tags` is the jsonb string array**, filtered in the `stringArray` domain
-  (has all / any / none of). It is not sortable: a jsonb array has no order.
-- **`description` is searched only** (no field): the search box lowers to
-  `contains` over `EVENT_LIST_SEARCHABLE`. A tag is not searchable text any
-  more (the fetchPage query searched `tags::text`; a live collection's filterable
-  columns are row fields) — the Tags filter finds one.
+- **`tags` is a tags field** (the jsonb string array), filtered in the
+  `stringArray` domain (has all / any / none of). It is not sortable: a jsonb
+  array has no order.
+- **`description` is listed but off the body** (`visible: false`): a search
+  column must be a filterable text column, so it is a field — the search box
+  lowers to `contains` over `EVENT_LIST_SEARCHABLE`. A tag is not searchable
+  text (a live collection's filterable columns are row fields) — the Tags
+  filter finds one.
+
+`core/internal/fields.test.ts` pins the derived ids (saved views name them).
 
 ## Disappeared events, and a disabled source's, are hidden by DEFAULT
 
@@ -124,20 +133,18 @@ ascending), `All`, and `By category` (grouped). The surface is the collection's
 
 ## Plugin reference
 
-- Description: The events DataView: the live `events.list` collection (live key-range pages kept fresh by the routed change feed) rendered as list / table / gallery, with every typed field a filter and sort dimension and the saved views authored in config. Reachable from the Events sidebar. Events DataView server: the `events.list` live collection over the events table joined to its source (a required lookup, routed in reverse: a source write refills that source's events, gated on the columns the list reads), with soft-deleted events and a disabled source's events hidden by default.
+- Description: The events DataView: the live `events.list` collection (live key-range pages kept fresh by the routed change feed) rendered as list / table / gallery, its fields derived from the events entity (the absolute When cell and the link chip presented here) and the saved views authored in config. Reachable from the Events sidebar. Events DataView server: the `events.list` live collection over the events table joined to its source (a required lookup, routed in reverse: a source write refills that source's events, gated on the columns the list reads), with soft-deleted events and a disabled source's events hidden by default.
 - Web:
-  - Slots:
-    - `EventList.Fields`
-    - `eventListPane.Actions`
-  - Slot contributors:
-    - `EventList.Fields` ← `apps.events.sources.source-field`
-    - `eventListPane.Actions` ← `primitives.pane`
+  - Slots: `eventListPane.Actions`
+  - Slot contributors: `eventListPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "event-list"
     - `Events.Sidebar` "Events"
+    - `FieldPresentation.Register` "entity:events"
   - Uses:
     - `apps/events/events-core.useEventSourceOrigin`
     - `apps/events/shell.Events`
+    - `network/live.FieldPresentation`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -146,15 +153,13 @@ ascending), `All`, and `By category` (grouped). The surface is the collection's
     - `primitives/css/text.Text`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
-    - `primitives/data-view.defineFieldExtensions`
+    - `primitives/data-view.fieldOverrides`
     - `primitives/data-view.liveDataSource`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
-    - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`
   - Exports (values):
-    - `EventList`
     - `eventListPane`
     - `EventRow`
     - `useEventUrl`
@@ -175,23 +180,19 @@ ascending), `All`, and `By category` (grouped). The surface is the collection's
 - Core:
   - Uses:
     - `apps/events/events-core.EVENT_CATEGORIES`
-    - `apps/events/events-core.SourcedEventSchema`
+    - `apps/events/events-core.EVENT_CATEGORY_META`
+    - `apps/events/events-core.eventsEntityRef`
+    - `apps/events/events-core.eventSourceFields`
+    - `apps/events/events-core.SourcedEvent`
+    - `fields/text/config.textField`
     - `network/live.liveCollection`
-    - `network/live/filter.liveBoolean`
-    - `network/live/filter.liveInstant`
-    - `network/live/filter.liveStringArray`
-    - `network/live/filter.liveText`
-  - Exports (types):
-    - `EventFieldSpec`
-    - `EventFieldType`
+    - `network/live.LiveRowsCollection`
+  - Exports (types): `EventListRow`
   - Exports (values):
     - `EVENT_CATEGORY_OPTIONS`
-    - `EVENT_LIST_FIELDS`
     - `EVENT_LIST_SEARCHABLE`
     - `eventsList`
 - Cross-plugin:
-  - Imported by:
-    - `apps/events/sources/source-detail/runs/extracted-events`
-    - `apps/events/sources/source-field`
+  - Imported by: `apps/events/sources/source-detail/runs/extracted-events`
 
 <!-- AUTOGENERATED:END -->

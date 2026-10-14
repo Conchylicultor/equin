@@ -1,19 +1,17 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import type {
-  FieldDef,
-  HierarchyConfig,
+import {
+  fieldOverrides,
+  type HierarchyConfig,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
-import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { createTask, moveTask } from "@plugins/tasks/core";
-import type {
-  TaskListItem,
-  TaskStatus,
+import {
+  taskRows,
+  type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { patchTask } from "@plugins/tasks/web";
 import {
-  STATUS_META,
   StatusIcon,
   StatusBadge,
 } from "@plugins/tasks/plugins/task-status/web";
@@ -37,51 +35,29 @@ export async function createTaskRow(args: {
   return task.id;
 }
 
-// Filter chip choices are derived from the single status-metadata source, so the
-// labels never drift from the rest of the app.
-const STATUS_OPTIONS = (
-  Object.entries(STATUS_META) as [TaskStatus, { label: string }][]
-).map(([value, meta]) => ({ value, label: meta.label }));
-
-const taskFields: FieldDef<TaskListItem>[] = [
-  {
-    id: "title",
-    label: "Title",
-    type: "text",
-    primary: true,
-    value: (t) => t.title || "Untitled",
-    onEdit: (t, next) =>
-      patchTask(t.id, { title: String(next ?? "").trim() || "Untitled" }),
-  },
-  {
-    id: "status",
-    label: "Status",
-    type: "enum",
-    align: "end",
-    options: STATUS_OPTIONS,
-    value: (t) => t.status,
-    cell: (t) => <StatusBadge status={t.status} />,
-  },
-  {
-    id: "updatedAt",
-    label: "Updated",
-    type: "date",
-    align: "end",
-    value: (t) => t.updatedAt,
-    cell: (t) => <RelativeTime date={t.updatedAt} />,
-  },
-];
-
 /**
- * THE task field schema: the base fields plus every `Tasks.Fields` contributor
- * (track, category, …). Every task DataView spreads this one value into its
- * props/bundle, so a surface cannot take the base fields without the
- * contributed ones — the drift that left the deps-tree without the track
- * column. `taskFields` stays module-private on purpose.
+ * THE task list schema: every task DataView spreads this one value into its
+ * props/bundle, so no surface can drift from another (the drift that once
+ * left the deps-tree without the track column). The fields are DERIVED from
+ * the collection (`taskRows`, declared by fields over the `tasks` entity):
+ * the title, status and last update, and every field a task extension
+ * exposes — its track, category and automation (`origin`) — so a new
+ * exposure joins every task list with no code here. The list says only how
+ * three of them present (`fieldOverrides`, by id).
  */
 export const taskFieldSchema = {
-  fields: taskFields,
-  fieldExtensions: Tasks.Fields,
+  collection: taskRows,
+  overrides: fieldOverrides(taskRows, {
+    title: {
+      onEdit: (t, next) =>
+        patchTask(t.id, { title: String(next ?? "").trim() || "Untitled" }),
+    },
+    status: {
+      align: "end",
+      cell: (t) => <StatusBadge status={t.status} />,
+    },
+    updatedAt: { align: "end" },
+  }),
 };
 
 // No expand hooks. Expand/collapse is per-(surface, view-instance, row) device-

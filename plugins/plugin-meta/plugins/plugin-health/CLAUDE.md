@@ -44,7 +44,7 @@
     - `tasks/tasks-core.createTask`
     - `tasks/tasks-core.getConversation`
   - DB schema: `plugins/plugin-meta/plugins/plugin-health/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_health_review`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_health_review`)
   - Exports (values): `healthReviewExt`
   - Register: `mcpTool('propose_task')`
   - Resources:

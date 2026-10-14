@@ -259,17 +259,17 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `fields/date/config.dateField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
+    - `fields/tags/config.tagsField`
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
     - `ids.defineIdKind`
     - `ids.idKindField`
     - `ids.IdOf`
     - `infra/endpoints.defineEndpoint`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
+    - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
-    - `network/live/filter.liveInstant`
-    - `network/live/filter.liveNumber`
-    - `network/live/filter.liveText`
   - Exports (types):
     - `CreateEventSourceBody`
     - `EventCategory`
@@ -280,6 +280,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `EventSourceId`
     - `EventSourceRun`
     - `EventSourceRunEvent`
+    - `EventSourceRunRow`
     - `ExtractedEvent`
     - `ExtractionResult`
     - `ExtractionStatus`
@@ -300,10 +301,12 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `CreateEventSourceBodySchema`
     - `deleteEventSource`
     - `EVENT_CATEGORIES`
+    - `EVENT_CATEGORY_META`
     - `eventFields`
     - `eventIdKind`
     - `eventRunIdKind`
     - `EventSchema`
+    - `eventsEntityRef`
     - `eventSourceFields`
     - `eventSourceIdKind`
     - `eventSourceRunEventFields`
@@ -311,6 +314,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `eventSourceRunFields`
     - `eventSourceRuns`
     - `EventSourceRunSchema`
+    - `eventSourceRunsEntityRef`
     - `eventSources`
     - `EventSourceSchema`
     - `externalUrl`
@@ -327,6 +331,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `RefreshSourceResultSchema`
     - `RUN_EVENT_ACTIONS`
     - `RUN_EVENTS_LIMIT`
+    - `RUN_OUTCOME_META`
     - `RUN_OUTCOMES`
     - `runEvents`
     - `RunEventSchema`

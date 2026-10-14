@@ -106,32 +106,52 @@ tokens, so anything that imports the barrels back would cycle.
     - `Fields.Identity` ×26
   - Exports (values): `Fields`
 - Cross-plugin:
-  - Imported by: 70 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 84 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×48
-    - `apps` ×8
+    - `apps` ×12
+    - `infra` ×4
     - `debug` ×3
-    - `infra` ×3
     - `tasks` ×3
+    - `release` ×2
+    - `backup/runs-arm`
+    - `build/runs-arm`
     - `config_v2`
     - `conversations/summary`
+    - `history/engine`
     - `ids`
+    - `network/live`
+    - `page/block-entity`
     - `plugin-meta/plugin-health`
     - `primitives/data-view`
+    - `reports`
+    - `runs`
 - Core:
   - Exports (types):
+    - `DeclaredDefault`
+    - `ExactOptions`
     - `FieldDef`
     - `FieldIdentity`
+    - `FieldMarks`
     - `FieldMeta`
+    - `FieldOptionMeta`
     - `FieldsRecord`
     - `FieldType`
     - `InferFieldsObject`
     - `InferFieldValue`
+    - `Labelled`
+    - `MetaMarksOf`
+    - `OptionKey`
+    - `OptionValue`
+    - `Unfilterable`
   - Exports (values):
+    - `declaredDefault`
     - `defineFieldIdentity`
     - `defineFieldType`
     - `fieldSchemaWithDefault`
     - `fieldsToZodObject`
+    - `NULL_OPTION_KEY`
     - `nullable`
+    - `optionKey`
     - `pickMeta`
     - `resolveTypeChain`
 - Sub-plugins:

@@ -201,6 +201,31 @@ describe("partitionIntoSections", () => {
     expect(desc.map((s) => s.label)).toEqual(["Done", "To do", "None"]);
   });
 
+  test('the None section takes the label of the option spelled "null"', () => {
+    const rows: Task[] = [
+      { id: "1", status: null },
+      { id: "2", status: "todo" },
+    ];
+    const byHand = {
+      ...statusField,
+      options: [
+        ...(statusField.options ?? []),
+        { value: "null", label: "By hand" },
+      ],
+    };
+    const sections = partitionIntoSections(
+      rows,
+      [byHand],
+      by("status"),
+      rowKey,
+      stubOpts({ enum: optionOrderGrouping }, "asc"),
+    );
+    expect(sections.map((s) => [s.key, s.label])).toEqual([
+      ["todo", "To do"],
+      [NULL_GROUP_KEY, "By hand"],
+    ]);
+  });
+
   test("the resolved grouping is planned ONCE, over every non-null value", () => {
     const seen: unknown[][] = [];
     const spy: FieldGrouping = {

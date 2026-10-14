@@ -17,7 +17,6 @@
     - `queue-actions` "add-to-queue" → `AddToQueueAction`
     - `queue-actions` "close" → `CloseAction`
   - Uses:
-    - `conversations/all-conversations.useConversationFieldDefs`
     - `conversations/conversations-view/data-view.ConversationSidebarProps`
     - `conversations/conversations-view/data-view.SidebarConversationItem`
     - `conversations/conversations-view/data-view.SidebarSources`
@@ -29,6 +28,8 @@
     - `network/live.useLive`
     - `primitives/data-view.DataViewPaging`
     - `primitives/data-view.defineItemActions`
+    - `primitives/data-view.FieldDef`
+    - `primitives/data-view.fieldOverrides`
     - `primitives/data-view.useLivePagesPaging`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.combineResources`

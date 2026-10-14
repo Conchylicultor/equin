@@ -48,35 +48,50 @@ const conversations = pgTable("xpdb_conversations", {
   attemptId: text("attempt_id").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
 });
-const tasksRef = entityRef("xpdb_tasks");
-const conversationsRef = entityRef("xpdb_conversations");
+const tasksRef = entityRef("xpdb_tasks", {});
+const conversationsRef = entityRef("xpdb_conversations", {});
 
 const track = defineExtension(
   tasks,
   "track",
   defineExtensionShape({
     key: "taskId",
-    fields: { track: enumTextField(["sidequest"] as const) },
-    exposes: {
-      parent: tasksRef,
-      name: "track",
-      fields: { track: { label: "Track", absent: "main" } },
+    fields: {
+      track: enumTextField(["main", "sidequest"] as const, {
+        label: "Track",
+        default: "main",
+      }),
     },
+    exposes: { parent: tasksRef, name: "track", fields: { track: {} } },
   }),
+  { columns: { track: { default: "main" } } },
 );
 const usage = defineExtension(
   conversations,
   "usage",
   defineExtensionShape({
     key: "conversationId",
-    fields: { cost: intField() },
-    exposes: {
-      parent: conversationsRef,
-      name: "usage",
-      fields: { cost: { label: "Cost", absent: 0 } },
-    },
+    fields: { cost: intField({ label: "Cost", default: 0 }) },
+    exposes: { parent: conversationsRef, name: "usage", fields: { cost: {} } },
   }),
   { columns: { cost: { default: 0 } } },
+);
+const starred = defineExtension(
+  tasks,
+  "starred",
+  defineExtensionShape({
+    key: "taskId",
+    fields: {},
+    exposes: {
+      parent: tasksRef,
+      name: "starred",
+      presence: {
+        id: "starred",
+        label: "Starred",
+        values: { present: "yes", absent: "no" },
+      },
+    },
+  }),
 );
 
 const ownerJoins = [
@@ -141,7 +156,10 @@ beforeAll(async () => {
          ('c1', 'a1', '2026-10-12T10:00:00Z'),
          ('c2', 'a2', '2026-10-12T11:00:00Z'),
          ('c3', 'a3', '2026-10-12T12:00:00Z');
+       CREATE TABLE xpdb_tasks_ext_starred (parent_id text PRIMARY KEY,
+         created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
        INSERT INTO xpdb_tasks_ext_track (parent_id, track) VALUES ('t1', 'sidequest');
+       INSERT INTO xpdb_tasks_ext_starred (parent_id) VALUES ('t2');
        INSERT INTO xpdb_conversations_ext_usage (parent_id, cost) VALUES ('c1', 7), ('c2', 7);`,
     ),
   );
@@ -156,7 +174,6 @@ const compiled = () =>
   compileCollection(
     list,
     { from: conversations, joins: ownerJoins, db: db as unknown as QueryDb },
-    [],
     [],
     [track, usage],
   );
@@ -223,6 +240,38 @@ describe("exposed columns on a real database", () => {
           xpdb_tasks_ext_track: { track: "main" },
         },
       ],
+    ]);
+  });
+
+  test("a presence field groups and filters by the side row's existence", async () => {
+    const STARRED = "xpdb_tasks_ext_starred.starred";
+    const specs = compileCollection(
+      list,
+      { from: conversations, joins: ownerJoins, db: db as unknown as QueryDb },
+      [],
+      [starred],
+    );
+    const starredColumns = [exposedColumns(starred.exposure)];
+    expect(
+      await specs.groups.loader(
+        list.groups.groups.encode({
+          groupBy: STARRED as never,
+          columns: starredColumns,
+        }),
+      ),
+    ).toEqual([
+      { value: "no", count: 2 },
+      { value: "yes", count: 1 },
+    ]);
+    const window = compileWindowQuery(list.window, specs.window).serverOpts;
+    const rows = (await window.loader(
+      list.window.window.encode({
+        where: { [STARRED]: "yes" } as never,
+        columns: starredColumns,
+      }),
+    )) as Record<string, unknown>[];
+    expect(rows.map((r) => [r.id, r[LIVE_COLUMNS_KEY]])).toEqual([
+      ["c2", { xpdb_tasks_ext_starred: { starred: "yes" } }],
     ]);
   });
 });

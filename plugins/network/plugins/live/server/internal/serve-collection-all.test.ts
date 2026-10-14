@@ -5,7 +5,7 @@
  * base `where`) and compiled by query-resource's `compileAllCollection`. The
  * branch is taken BEFORE the lookup-only one (an `all` collection has no
  * window either), registers BOTH minted keys (A28's runtime half), and never
- * reaches the contributed / scoped path.
+ * reaches the scoped path.
  *
  * The runtime behaviour over a real database (entrant, exit, order move,
  * value-only refill, the idle `{}` snapshot) is
@@ -41,7 +41,7 @@ import {
 import { withWire } from "@plugins/database/plugins/sql-column/server";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { compileCollection, serveCollection } from "./serve-collection";
-import type { ServedColumns } from "./serve-columns";
+import type { ServedScopedColumns } from "./serve-columns";
 
 const items = pgTable("sca_items", {
   id: text("id").primaryKey(),
@@ -234,18 +234,10 @@ describe("serveCollection — the `all` arm (C4)", () => {
     expect(calls[0]!.sql).toContain(`"sca_items"."title" || ' (' ||`);
   });
 
-  test("refusals at module eval: a cast past the type, a nullable read on a non-null field, a wire form, a contribution", () => {
+  test("refusals at module eval: a cast past the type, a nullable read on a non-null field, a wire form, a scoped set", () => {
     const { db } = recordingQueryDb();
     const c = allCollection();
-    // A cast past `all?: never`'s twin: an `all` collection never contributed.
-    expect(() =>
-      serveCollection({ ...c, contributed: true } as typeof c, {
-        from: items,
-        joins: [notesJoin],
-        columns: { notes: (j) => j.kids.count },
-        db,
-      }),
-    ).toThrow(/cannot be `contributed` or `columnScope`d/);
+    // A cast past `all?: never`'s twin: an `all` collection never scoped.
     expect(() =>
       serveCollection({ ...c, columnScope: "s" } as typeof c, {
         from: items,
@@ -253,16 +245,15 @@ describe("serveCollection — the `all` arm (C4)", () => {
         columns: { notes: (j) => j.kids.count },
         db,
       }),
-    ).toThrow(/cannot be `contributed` or `columnScope`d/);
-    // compileCollection's boot-time arguments (contributed / scoped sets)
-    // never reach an `all` compile.
-    const extra = {} as ServedColumns;
+    ).toThrow(/cannot be `columnScope`d/);
+    // compileCollection's boot-time scoped sets never reach an `all` compile.
+    const extra = {} as ServedScopedColumns;
     expect(() =>
       (
         compileCollection as unknown as (
           c: unknown,
           o: unknown,
-          contributed: readonly ServedColumns[],
+          scoped: readonly ServedScopedColumns[],
         ) => unknown
       )(
         c,
@@ -274,9 +265,7 @@ describe("serveCollection — the `all` arm (C4)", () => {
         },
         [extra],
       ),
-    ).toThrow(
-      /contributed or scoped columns were served for a collection declared `all`/,
-    );
+    ).toThrow(/scoped columns were served for a collection declared `all`/);
     // A nullable aggregate on a non-null field (the type's runtime backstop).
     expect(() =>
       compileCollection(c, {

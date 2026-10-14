@@ -2,7 +2,7 @@ import {
   defineEntity,
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
-import { songFields } from "../../core/schemas";
+import { songsEntityRef } from "../../core/schemas";
 
 // Physical table — **source-agnostic** generic metadata only. Per-source raw
 // (MIDI attachment, chord-grid JSON, …) lives in each source plugin's own
@@ -12,11 +12,11 @@ import { songFields } from "../../core/schemas";
 // `schema-attachments.ts` sibling.
 //
 // The table + the `Song` wire schema both derive from the single `songFields`
-// record (core), so a column/schema drift is unrepresentable. `source` carries
+// record (core, carried by `songsEntityRef`), so a column/schema drift is unrepresentable. `source` carries
 // no DB default: `createSongRow` is the sole insert path and always supplies a
 // source, so the NOT NULL constraint is the real guarantee (a source-less insert
 // must fail loudly rather than silently default).
-const songs = defineEntity("sonata_songs", songFields, {
+const songs = defineEntity(songsEntityRef, {
   primaryKey: "id",
   columns: {
     // Score-level (composed-timeline) length columns carry no DB default.

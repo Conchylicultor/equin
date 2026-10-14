@@ -6,10 +6,7 @@ import {
   DataView,
   defineDataView,
 } from "@plugins/primitives/plugins/data-view/web";
-import {
-  taskRows,
-  type TaskListItem,
-} from "@plugins/tasks/plugins/tasks-core/core";
+import { taskRows, type TaskRow } from "@plugins/tasks/plugins/tasks-core/core";
 import { Tasks } from "../slots";
 import {
   taskFieldSchema,
@@ -31,7 +28,7 @@ export function TasksListView({
   return (
     <ResourceView resource={result} fallback={<Loading variant="rows" />}>
       {(rows) => (
-        <DataView<TaskListItem>
+        <DataView<TaskRow>
           rows={rows}
           {...taskFieldSchema}
           rowKey={(t) => t.id}

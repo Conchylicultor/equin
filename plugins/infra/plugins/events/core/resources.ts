@@ -1,13 +1,11 @@
 import { z } from "zod";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
-import {
-  liveInstant,
-  liveNumber,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
 import { fieldsToZodObject, type FieldsRecord } from "@plugins/fields/core";
 import { uuidField } from "@plugins/fields/plugins/uuid/plugins/config/core";
-import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import {
+  enumTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
@@ -77,12 +75,34 @@ export const EMISSIONS_CAP = 1000;
  * in SQL, so it filters, groups and counts on the server like any column while
  * no write can make it disagree with `matchedCount`.
  */
-export const EmissionMatchSchema = z.enum(["matched", "unmatched"]);
+export const EMISSION_MATCHES = ["matched", "unmatched"] as const;
+export const EmissionMatchSchema = z.enum(EMISSION_MATCHES);
 export type EmissionMatch = z.infer<typeof EmissionMatchSchema>;
 
+// The emission fields a list shows, in its order (`match` filter-only), and the
+// ones its rows carry beside them.
+const EMISSION_LISTED = {
+  emittedAt: dateField({ label: "Time" }),
+  eventName: textField({ label: "Event", primary: true }),
+  matchedCount: intField({ label: "Matched" }),
+  match: enumTextField(EMISSION_MATCHES, {
+    label: "Match",
+    options: {
+      matched: { label: "Matched", variant: "success" },
+      unmatched: { label: "Unmatched", variant: "destructive" },
+    },
+  }),
+};
+const EMISSION_CARRIED = {
+  id: eventEmissionFields.id,
+  payload: eventEmissionFields.payload,
+  matchedTriggerIds: eventEmissionFields.matchedTriggerIds,
+};
+
 /** A row of the {@link eventEmissions} collection: the emission, plus its derived `match`. */
-export const EmissionListRowSchema = EmissionRowSchema.extend({
-  match: EmissionMatchSchema,
+export const EmissionListRowSchema = fieldsToZodObject({
+  ...EMISSION_CARRIED,
+  ...EMISSION_LISTED,
 });
 export type EmissionListRow = z.infer<typeof EmissionListRowSchema>;
 
@@ -97,14 +117,9 @@ export type EmissionListRow = z.infer<typeof EmissionListRowSchema>;
  * subscribed windows through the change feed.
  */
 export const eventEmissions = liveCollection("event-emissions", {
-  row: EmissionListRowSchema,
+  fields: EMISSION_LISTED,
+  carry: { fields: EMISSION_CARRIED },
   id: "id",
-  filterable: {
-    eventName: liveText(),
-    match: liveText(EmissionMatchSchema),
-    matchedCount: liveNumber(),
-    emittedAt: liveInstant(),
-  },
   sortable: ["emittedAt", "eventName", "matchedCount"],
   default: { orderBy: [["emittedAt", "desc"]], limit: 200 },
   maxLimit: EMISSIONS_CAP,

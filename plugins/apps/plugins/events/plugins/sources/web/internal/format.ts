@@ -3,6 +3,7 @@ import {
   EXTRACTION_STATUSES,
   REFRESH_CADENCES,
   RUN_OUTCOMES,
+  RUN_OUTCOME_META,
   SOURCE_STATES,
   SOURCE_STATUSES,
   type EventSourceRun,
@@ -167,20 +168,16 @@ export const SOURCE_STATE_OPTIONS = SOURCE_STATES.map((s) => ({
   hint: SOURCE_STATE_HINT[s],
 }));
 
-export const RUN_OUTCOME_LABEL: Record<RunOutcome, string> = {
-  // Named for what it MEANS, not for the enum value: "Unchanged" alone reads as
-  // "nothing happened / something is broken", which is exactly the question the
-  // run ledger exists to answer. The saved model call is the headline.
-  unchanged: "Unchanged",
-  extracted: "Extracted",
-  failed: "Failed",
-};
+// Declared once with the run entity's `outcome` field (events-core's
+// `RUN_OUTCOME_META`, which every list of runs derives its chip from); these
+// read it for the surfaces that paint a chip themselves.
+export const RUN_OUTCOME_LABEL = Object.fromEntries(
+  RUN_OUTCOMES.map((o) => [o, RUN_OUTCOME_META[o].label]),
+) as Record<RunOutcome, string>;
 
-export const RUN_OUTCOME_VARIANT: Record<RunOutcome, BadgeVariant> = {
-  unchanged: "muted",
-  extracted: "success",
-  failed: "destructive",
-};
+export const RUN_OUTCOME_VARIANT = Object.fromEntries(
+  RUN_OUTCOMES.map((o) => [o, RUN_OUTCOME_META[o].variant ?? "muted"]),
+) as Record<RunOutcome, BadgeVariant>;
 
 export const RUN_OUTCOME_OPTIONS = RUN_OUTCOMES.map((o) => ({
   value: o,

@@ -474,11 +474,17 @@ remote is built here.
     - `POST /api/release/runs/:id/preview/stop`
 - Core:
   - Uses:
+    - `fields.fieldsToZodObject`
+    - `fields.nullable`
+    - `fields/bool/config.boolField`
+    - `fields/date/config.dateField`
+    - `fields/int/config.intField`
+    - `fields/text/config.enumTextField`
+    - `fields/text/config.parsedTextField`
+    - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveCollection`
     - `network/live.liveValue`
-    - `network/live/filter.liveInstant`
-    - `network/live/filter.liveText`
     - `release/bundles.ReleaseManifestSchema`
   - Exports (types):
     - `PlatformTag`

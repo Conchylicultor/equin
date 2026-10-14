@@ -2,7 +2,7 @@
  * The backup arm's discriminator value.
  *
  * Spelled once because it is load-bearing in two places that must agree: the
- * arm of its `liveArmColumns` set (every wire name and row key prefix), and
+ * kind of its `liveArm` (every wire name and row key prefix), and
  * the `run.kind` guard every field accessor makes before decoding a row as one
  * of this arm's.
  *

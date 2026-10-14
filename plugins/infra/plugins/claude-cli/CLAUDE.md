@@ -176,7 +176,6 @@ block keep taking a plain `ClaudeCliCall`.
     - `useClaudeCliCalls`
 - Core:
   - Uses:
-    - `conversations/model-provider.ConversationModelSchema`
     - `conversations/model-provider.FALLBACK_MODEL`
     - `conversations/model-provider.StoredModelSchema`
     - `fields.FieldsRecord`
@@ -185,14 +184,13 @@ block keep taking a plain `ClaudeCliCall`.
     - `fields/date/config.dateField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
+    - `fields/text/config.enumTextField`
     - `fields/text/config.parsedTextField`
     - `fields/text/config.textField`
     - `fields/uuid/config.uuidField`
     - `network/live.liveCollection`
+    - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
-    - `network/live/filter.liveInstant`
-    - `network/live/filter.liveNumber`
-    - `network/live/filter.liveText`
   - Exports (types):
     - `ClaudeCliCall`
     - `ClaudeCliCallRow`

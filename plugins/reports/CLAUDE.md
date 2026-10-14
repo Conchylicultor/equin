@@ -167,14 +167,15 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 - Core:
   - Uses:
     - `config_v2.defineConfig`
+    - `fields.nullable`
+    - `fields/bool/config.boolField`
+    - `fields/date/config.dateField`
     - `fields/int/config.intField`
+    - `fields/json/config.jsonField`
+    - `fields/text/config.textField`
     - `ids.defineIdKind`
     - `ids.IdOf`
     - `network/live.liveCollection`
-    - `network/live/filter.liveBoolean`
-    - `network/live/filter.liveInstant`
-    - `network/live/filter.liveNumber`
-    - `network/live/filter.liveText`
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `Report`
@@ -186,7 +187,6 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `reportDetailRoute`
     - `reportIdKind`
     - `REPORTS_SEARCHABLE`
-    - `ReportSchema`
     - `reportsConfig`
     - `reportsList`
     - `reportsRootRoute`

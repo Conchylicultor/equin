@@ -29,7 +29,10 @@ table/filter capabilities from `text` via the identity `extends` chain.
 - Core:
   - Uses:
     - `config_v2/fields.fieldSample`
+    - `fields.declaredDefault`
+    - `fields.ExactOptions`
     - `fields.FieldDef`
+    - `fields.FieldMarks`
     - `fields.FieldMeta`
     - `fields.pickMeta`
     - `fields/multiline-text.multilineTextFieldType`

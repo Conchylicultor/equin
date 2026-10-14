@@ -84,7 +84,7 @@ and endpoint contract are consumed by this plugin's own `web` and `server` only.
     - `tasks/tasks-core._tasks`
     - `tasks/tasks-core.createTask`
   - DB schema: `plugins/page/plugins/prompt/plugins/link/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_prompt_block`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_prompt_block`)
   - Exports (values):
     - `createTaskFromPromptBlock`
     - `getPromptTaskOrigin`

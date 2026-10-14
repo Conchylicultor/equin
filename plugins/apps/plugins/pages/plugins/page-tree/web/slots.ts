@@ -1,11 +1,12 @@
 import type { ComponentType } from "react";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import { defineDetailSections } from "@plugins/primitives/plugins/detail-sections/web";
-import {
-  defineFieldExtensions,
-  defineItemActions,
-} from "@plugins/primitives/plugins/data-view/web";
-import type { Block, PageRow } from "@plugins/page/plugins/editor/core";
+import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
+import type {
+  Block,
+  PageRow,
+  PagesTreeRow,
+} from "@plugins/page/plugins/editor/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 /**
@@ -100,17 +101,15 @@ export const PageDetail = {
  *  - `RowActions` — trailing actions on a page-tree row (e.g. delete, star).
  *    Mirrors the task-list `Tasks.TaskActions` pattern so other plugins can add
  *    row actions without editing the row component. Contributors receive the
- *    full page `row` (derive id/title from it) via `ItemActionProps<PageRow>`.
- *  - `Fields` — extra DataView `FieldDef<PageRow>[]` injected by other plugins. A
- *    field extension is a *component* (not plain data) so its `value` closure can
- *    capture hook-loaded data — e.g. `starred` reads its own live resource and
- *    yields a `starred` bool field. Contributed fields show up in the Sort pill,
- *    the Filter pill, and as columns/chips for free, so "Favorites" is just a
- *    filtered `list` view over the `starred` field rather than a bespoke sidebar.
+ *    full page `row` (derive id/title from it) via `ItemActionProps<PagesTreeRow>`.
+ *
+ * There is no field seam: the sidebar's fields are `pages.tree`'s, derived —
+ * a plugin that adds a field to every page (starred, origin, tags) EXPOSES it
+ * on its `page_blocks` extension (`defineExtensionShape({ exposes })`), so
+ * "Favorites" is just a filtered `list` view over the exposed `starred`.
  */
 export const PageTree = {
-  RowActions: defineItemActions<PageRow>(),
-  Fields: defineFieldExtensions<PageRow>(),
+  RowActions: defineItemActions<PagesTreeRow>(),
   /**
    * A small always-visible mark at a page-tree row's trailing edge — what
    * something says ABOUT the page at a glance (its tags, as colored dots). The

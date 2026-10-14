@@ -85,11 +85,11 @@ unbounded.
     - `Pane.Register` "debug-boot-profiles-list"
     - `DebugApp.Sidebar` "Boot Profile"
     - `DebugApp.Sidebar` "Boot Profiles"
-  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug/profiling` ×8
     - `primitives/perfs/boot-trace` ×7
+    - `primitives/data-view` ×4
     - `primitives/pane` ×4
-    - `primitives/data-view` ×3
     - `primitives/css/spacing` ×2
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
@@ -141,8 +141,7 @@ unbounded.
     - `fields/text/config.textField`
     - `fields/uuid/config.uuidField`
     - `network/live.liveCollection`
-    - `network/live/filter.liveInstant`
-    - `network/live/filter.liveText`
+    - `network/live.LiveRowsCollection`
   - Exports (types):
     - `BootTraceItem`
     - `SavedBootTrace`

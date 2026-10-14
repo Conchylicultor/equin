@@ -1,37 +1,12 @@
 import { z } from "zod";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { nullable } from "@plugins/fields/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import {
-  liveBoolean,
-  liveInstant,
-  liveNumber,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
-
-// Web-safe view of a report row. Generic columns only — the per-kind payload
-// lives in `data` (validated server-side by each kind's ReportKindSpec.schema),
-// and kind-specific rendering is delegated to the matching Reports.KindView.
-export const ReportSchema = z.object({
-  id: z.string(),
-  kind: z.string(),
-  fingerprint: z.string(),
-  worktree: z.string(),
-  source: z.string(),
-  message: z.string(),
-  url: z.string().nullable(),
-  userAgent: z.string().nullable(),
-  data: z.record(z.unknown()),
-  count: z.number().int(),
-  rateLimited: z.boolean(),
-  noise: z.boolean(),
-  lastClientId: z.string().nullable(),
-  lastBuildId: z.string().nullable(),
-  taskId: z.string().nullable(),
-  firstSeenAt: z.coerce.date(),
-  lastSeenAt: z.coerce.date(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-});
-export type Report = z.infer<typeof ReportSchema>;
+import type { LiveRowsCollection } from "@plugins/network/plugins/live/core";
 
 /**
  * The Debug → Reports DataView's id (its `storageKey`): the surface
@@ -54,25 +29,45 @@ const REPORTS_VIEW_ID = "debug.reports";
 // window. Read as key-range pages (no depth limit); NOT preloaded — a
 // produced table may have no L2-persisted reader (A6), and a window never is.
 export const reportsList = liveCollection("reports.list", {
-  row: ReportSchema,
-  id: "id",
-  // What the Reports DataView can filter on, by filter-language domain.
-  // `message` and `fingerprint` have no field: they are searched only.
-  filterable: {
-    kind: liveText(),
-    source: liveText(),
-    noise: liveBoolean(),
-    rateLimited: liveBoolean(),
-    count: liveNumber(),
-    lastSeenAt: liveInstant(),
-    message: liveText(),
-    fingerprint: liveText(),
+  // Generic columns only — the per-kind payload lives in `data` (validated
+  // server-side by each kind's ReportKindSpec.schema), and kind-specific
+  // rendering is delegated to the matching Reports.KindView. `message` and
+  // `fingerprint` are searched (filterable text, hidden by default).
+  fields: {
+    kind: textField({ label: "Kind" }),
+    source: textField({ label: "Source" }),
+    noise: boolField({ label: "Noise" }),
+    rateLimited: boolField({ label: "Rate-limited" }),
+    count: intField({ label: "×" }),
+    lastSeenAt: dateField({ label: "When" }),
+    message: textField({ label: "Message" }),
+    fingerprint: textField({ label: "Fingerprint" }),
   },
+  carry: {
+    fields: {
+      id: textField(),
+      worktree: textField(),
+      url: nullable(textField()),
+      userAgent: nullable(textField()),
+      data: jsonField({ schema: z.record(z.unknown()), default: {} }),
+      lastClientId: nullable(textField()),
+      lastBuildId: nullable(textField()),
+      taskId: nullable(textField()),
+      firstSeenAt: dateField(),
+      createdAt: dateField(),
+      updatedAt: dateField(),
+    },
+  },
+  id: "id",
   sortable: ["kind", "source", "count", "lastSeenAt"],
   default: { orderBy: [["lastSeenAt", "desc"]], limit: 100 },
   maxLimit: 500,
   columnScope: REPORTS_VIEW_ID,
 });
+
+/** One recorded report, as the list and the detail pane read it. */
+export type Report =
+  typeof reportsList extends LiveRowsCollection<infer R> ? R : never;
 
 /** The text columns the search box matches (any of, case-insensitively). */
 export const REPORTS_SEARCHABLE = ["message", "kind", "fingerprint"] as const;

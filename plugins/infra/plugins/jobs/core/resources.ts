@@ -1,4 +1,9 @@
 import { z } from "zod";
+import { fieldsToZodObject, nullable } from "@plugins/fields/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import {
   liveInstant,
@@ -88,19 +93,26 @@ export const jobsList = liveValue("jobs-list", {
 
 // ─── Dead-letter archive (see server/internal/dead-job-gc.ts) ──────────────
 
-// One archived row of `dead_jobs`, field for column: the `deadJobs` collection
-// binds each field to its column by name. The two timestamps are coerced Dates
-// — a `timestamp` column reads back as a `Date` through drizzle's query
-// builder, and crosses the wire as an ISO string.
-export const DeadJobRowSchema = z.object({
-  id: z.string(),
-  jobName: z.string(),
-  input: z.unknown(),
-  attempts: z.number(),
-  maxAttempts: z.number(),
-  lastError: z.string().nullable(),
-  diedAt: z.coerce.date().nullable(),
-  archivedAt: z.coerce.date(),
+// The fields of an archived `dead_jobs` row, field for column: the `deadJobs`
+// collection binds each to its column by name. The two timestamps are coerced
+// Dates — a `timestamp` column reads back as a `Date` through drizzle's query
+// builder, and crosses the wire as an ISO string. The listed ones are what the
+// Dead tab shows (in its order); the carried ones ride on the row.
+const DEAD_JOB_LISTED = {
+  jobName: textField({ label: "Job", primary: true }),
+  attempts: intField({ label: "Attempts" }),
+  diedAt: nullable(dateField({ label: "Died" })),
+  lastError: nullable(textField({ label: "Last error" })),
+  archivedAt: dateField({ label: "Archived" }),
+};
+const DEAD_JOB_CARRIED = {
+  id: textField(),
+  input: jsonField({ schema: z.unknown(), default: null }),
+  maxAttempts: intField(),
+};
+export const DeadJobRowSchema = fieldsToZodObject({
+  ...DEAD_JOB_CARRIED,
+  ...DEAD_JOB_LISTED,
 });
 export type DeadJobRow = z.infer<typeof DeadJobRowSchema>;
 
@@ -133,15 +145,9 @@ export const DEAD_JOBS_ARCHIVE_CAP = 2000;
  * dead-job GC archives or purges.
  */
 export const deadJobs = liveCollection("dead-jobs", {
-  row: DeadJobRowSchema,
+  fields: DEAD_JOB_LISTED,
+  carry: { fields: DEAD_JOB_CARRIED },
   id: "id",
-  filterable: {
-    jobName: liveText(),
-    lastError: liveText(),
-    attempts: liveNumber(),
-    diedAt: liveInstant(),
-    archivedAt: liveInstant(),
-  },
   sortable: ["archivedAt", "diedAt", "jobName", "attempts"],
   default: { orderBy: [["archivedAt", "desc"]], limit: 200 },
   maxLimit: DEAD_JOBS_ARCHIVE_CAP,

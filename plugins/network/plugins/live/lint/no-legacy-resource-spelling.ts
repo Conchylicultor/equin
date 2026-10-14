@@ -48,11 +48,11 @@ const REPLACEMENT = {
   usePointResource: "`useLiveRow`",
   usePointResources: "`useLive(c, { ids })`",
   useWindowResource: "`useLive(c, query)`",
-  // The deferred and multi-tuple substrate the paged read and the
-  // contributed-column collections compile to (not a fourth way to declare,
-  // serve or read one).
+  // The deferred and multi-tuple substrate the paged read and the exposing /
+  // scoped collections compile to (not a fourth way to declare, serve or read
+  // one).
   defineDeferredResource:
-    "`serveCollection` (a `contributed` / `columnScope` collection binds deferred)",
+    "`serveCollection` (an exposing / `columnScope` collection binds deferred)",
   deferredWindowQueryResource: "`serveCollection`",
   useResources:
     "`useLive` (a scrolled list: a DataView `liveDataSource`, which reads `useLive(c, query, { viewport })`)",

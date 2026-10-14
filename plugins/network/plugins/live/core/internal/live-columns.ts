@@ -3,24 +3,26 @@ import type {
   Filterable,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import { KIND_RE } from "@plugins/infra/plugins/query-resource/core";
-import type {
-  LiveArmsCollection,
-  LiveCollection,
-  LiveRowSchema,
-} from "./live-collection";
+import type { LiveArmsCollection, LiveRowSchema } from "./live-collection";
 import { mintColumnRef, type LiveColumnRef } from "./column-ref";
 import type { LiveFilterable } from "./query";
+import {
+  fieldsToZodObject,
+  type FieldsRecord,
+  type InferFieldValue,
+} from "@plugins/fields/core";
+import { fieldDomain, type FieldsFilterable } from "./field-domain";
+import type { LiveField, LiveFields, RequireLabel } from "./live-fields";
 
-// Contributed columns: a collection declared `contributed: true` can be
-// sorted and filtered by columns OTHER plugins own (Sonata's library by a
-// song's play count, which playback-history owns). The set is open, so the
-// collection names none of them: each contributor declares a HANDLE here, in
-// its own core (browser-safe, nothing registered), and serves it from its own
-// server (`serveColumns` + `LiveColumns.Serve`). A query over contributed
-// columns hands the codec the handles it reads, so encoding validates against
-// them — there is no registry to be empty before a plugin tier loads.
+// Column sets: the fields a row carries under `$columns`, beside its own —
+// an entity extension's exposed fields (`exposedColumns`), a union arm's own
+// fields (`liveArm`), a surface's custom columns (`scopedLiveColumns`). Each
+// set is a DECLARATION (browser-safe, nothing registered) that its readers —
+// the codec, the server compile, a list — read generically; a query naming a
+// set's columns hands the codec the declarations it reads, so encoding
+// validates against them.
 
-/** The reserved row field a contributed collection's rows carry the contributed values under. */
+/** The reserved row field a row carries its column sets' values under (by set name). */
 export const LIVE_COLUMNS_KEY = "$columns";
 
 /**
@@ -32,14 +34,14 @@ export const LIVE_COLUMNS_KEY = "$columns";
 export const LIVE_SCOPED_KEY = "$scoped";
 
 /**
- * A row's contributed values: contributor name → its fields. Opaque to
- * everyone but the handles, which parse their own slice (`handle.read(row)`).
+ * A row's column-set values: set name → its fields. Opaque to everyone but
+ * the sets, which parse their own slice (`set.read(row)`).
  */
 export type ContributedColumns = Readonly<
   Record<string, Readonly<Record<string, unknown>>>
 >;
 
-/** A contributed collection's row: the author's row, plus its contributed values. */
+/** A row carrying column sets: the author's row, plus every set's values. */
 export type WithContributedColumns<Row> = Row & {
   readonly $columns: ContributedColumns;
 };
@@ -49,17 +51,14 @@ export type WithContributedColumns<Row> = Row & {
  * reader switches on it exhaustively (T11): a fourth kind of set is a tsc
  * error at each site that must decide what it means there.
  *
- * - `contributed` — another plugin's columns on a `contributed: true`
- *   collection (`liveColumns`), served by `serveColumns`;
  * - `scoped` — a data-defined set (`scopedLiveColumns`), read by whichever
  *   collection declares `scope` as its `columnScope`;
- * - `arm` — one arm's own columns on an `arms` (union) collection
- *   (`liveArmColumns`), present only on that arm's rows;
+ * - `arm` — one arm's own fields on an `arms` (union) collection
+ *   (`liveArm`), present only on that arm's rows;
  * - `exposed` — an entity extension's exposed fields (`exposedColumns`), read
  *   by every collection whose `exposes` reaches `entity`.
  */
 export type LiveColumnsOwner =
-  | { readonly kind: "contributed"; readonly collection: string }
   | { readonly kind: "scoped"; readonly scope: string }
   | {
       readonly kind: "arm";
@@ -71,8 +70,8 @@ export type LiveColumnsOwner =
 /**
  * What every reader of a column set needs of it — the codec (which wire names
  * it may validate), the server compile (which fields to bind and fold), a
- * column ref — with its row type erased. A typed {@link LiveColumnsHandle} /
- * {@link LiveArmColumnsHandle} is one.
+ * column ref — with its row type erased. A typed {@link LiveArmColumnsHandle}
+ * is one.
  */
 export interface LiveColumnsDeclaration {
   readonly kind: "live-columns";
@@ -83,7 +82,7 @@ export interface LiveColumnsDeclaration {
    * (an arm's set is named by its arm).
    */
   readonly name: string;
-  /** Every field the contributor projects (its row schema's keys). */
+  /** Every field the set projects (its row schema's keys). */
   readonly fields: readonly string[];
   /** Its row schema's fields, by name — each field's own schema. */
   readonly rowShape: Readonly<Record<string, unknown>>;
@@ -96,93 +95,8 @@ export interface LiveColumnsDeclaration {
 }
 
 /**
- * One contributor's columns on a contributed collection: their row schema, and
- * which of them filter (in which domain) and sort. Wire names are
- * `<name>.<field>`.
- */
-export interface LiveColumnsHandle<
-  CRow,
-  F,
-  S extends string,
-> extends LiveColumnsDeclaration {
-  readonly owner: { readonly kind: "contributed"; readonly collection: string };
-  /** The contributor's fields, parsed by `read`. */
-  readonly row: LiveRowSchema<CRow>;
-  readonly fields: readonly (keyof CRow & string)[];
-  /** Field → filter domain (by FIELD name). */
-  readonly filterable: F;
-  readonly sortable: readonly S[];
-  /** A column ref a list binds a field to (`FieldDef.column`), carrying this handle. */
-  column(field: NoInfer<(keyof F & string) | S>): LiveColumnRef;
-  /** This contributor's slice of a row, parsed with its row schema (once per row object). */
-  read(row: { readonly $columns: ContributedColumns }): CRow;
-}
-
-/** A collection a contributor may declare columns on. */
-export type LiveContributedCollection<
-  Row,
-  F,
-  S extends string,
-> = LiveCollection<WithContributedColumns<Row>, F, S> & { contributed: true };
-
-/**
- * Declare one contributor's columns on a `contributed: true` collection (a
- * collection without it is a tsc error, and throws). Browser-safe and
- * registers nothing: the handle is the declaration, and the contributor's
- * server serves it (`serveColumns(handle, { join })` in a `LiveColumns.Serve`
- * contribution).
- */
-export function liveColumns<
-  Row,
-  F0,
-  S0 extends string,
-  CRow,
-  const F extends LiveFilterable<CRow>,
-  const S extends keyof CRow & string = never,
->(
-  collection: LiveContributedCollection<Row, F0, S0>,
-  name: string,
-  spec: {
-    row: LiveRowSchema<CRow>;
-    filterable: F;
-    sortable: readonly S[];
-  },
-): LiveColumnsHandle<CRow, F, S> {
-  const fail = (message: string): never => {
-    throw new Error(`liveColumns("${collection.key}", "${name}"): ${message}`);
-  };
-  if ((collection as { contributed?: boolean }).contributed !== true) {
-    fail("the collection is not declared `contributed: true`");
-  }
-  if (!KIND_RE.test(name)) {
-    fail("a contributor name is a plain identifier (no `.`)");
-  }
-  const owner = { kind: "contributed", collection: collection.key } as const;
-  const parts = typedColumns(owner, name, spec, fail, () => handle);
-  const parsed = new WeakMap<object, CRow>();
-  const handle: LiveColumnsHandle<CRow, F, S> = {
-    ...parts,
-    owner,
-    read: (row) => {
-      const cached = parsed.get(row);
-      if (cached !== undefined) return cached;
-      const slice = row.$columns[name];
-      if (slice === undefined) {
-        return fail(
-          "the row carries no values for this contributor — is its server half (`serveColumns` in a `LiveColumns.Serve` contribution) mounted?",
-        );
-      }
-      const value = spec.row.parse(slice);
-      parsed.set(row, value);
-      return value;
-    },
-  };
-  return handle;
-}
-
-/**
- * What a typed column set (contributed or arm) shares: its declaration, its
- * row schema and filter / sort vocabulary, and the refs a list binds to.
+ * What a typed column set (an arm's) has: its declaration, its row schema and
+ * filter / sort vocabulary, and the refs a list binds to.
  */
 export type TypedColumnsParts<CRow, F, S extends string> = Omit<
   LiveColumnsDeclaration,
@@ -256,13 +170,13 @@ export function typedColumns<CRow, F, S extends string>(
 // An `arms` collection (`liveCollection(key, { arms: { discriminator } })`)
 // lists rows of N kinds in one window — the runs of every run kind. The base
 // fields are every arm's; each arm's OWN fields (a build's exit code, a
-// backup's archive size) ride its rows under `$columns[<arm>]`, declared here
-// in the arm's core (browser-safe) and served by the union's server half. A
-// row of another arm carries no slice for it: `read` answers `null` there,
-// and throws when its own arm's row lacks one (A16) — a server that did not
-// fold the arm is a bug, never "no values".
+// backup's archive size) ride its rows under `$columns[<arm>]`, declared in
+// the arm's core (`liveArm`, browser-safe) and served by the union's server
+// half. A row of another arm carries no slice for it: `read` answers `null`
+// there, and throws when its own arm's row lacks one (A16) — a server that
+// did not fold the arm is a bug, never "no values".
 
-/** One arm's own columns on an `arms` collection (see {@link liveArmColumns}). */
+/** One arm's own columns on an `arms` collection (see {@link liveArm}). */
 export interface LiveArmColumnsHandle<
   Row,
   CRow,
@@ -290,13 +204,14 @@ export interface LiveArmColumnsHandle<
 }
 
 /**
- * Declare one arm's own columns on an `arms` collection (a collection without
- * `arms` is a tsc error, and throws). `arm` is the arm's kind — the value its
- * rows carry in the collection's discriminator — and every wire name's prefix
+ * An arm's column set from its row schema and filter / sort vocabulary —
+ * `liveArm`'s substrate (a collection without `arms` is a tsc error, and
+ * throws). `arm` is the arm's kind — the value its rows carry in the
+ * collection's discriminator — and every wire name's prefix
  * (`<arm>.<field>`). Browser-safe and registers nothing: the union's server
  * half binds and folds it.
  */
-export function liveArmColumns<
+function armColumns<
   Row,
   F0,
   S0 extends string,
@@ -314,9 +229,7 @@ export function liveArmColumns<
   },
 ): LiveArmColumnsHandle<WithContributedColumns<Row>, CRow, F, S> {
   const fail = (message: string): never => {
-    throw new Error(
-      `liveArmColumns("${collection.key}", "${arm}"): ${message}`,
-    );
+    throw new Error(`liveArm("${collection.key}", "${arm}"): ${message}`);
   };
   const arms = (collection as { arms?: { discriminator: string } | null }).arms;
   if (arms === undefined || arms === null) {
@@ -362,7 +275,7 @@ export function liveArmColumns<
 // a surface's custom columns, defined in its config. Their server half is a
 // `LiveColumns.Scoped` contribution (the side table they live in, and the
 // members a scope has now); this is the browser half: a declaration built from
-// the members the client knows, handed to the codec like any contributed set.
+// the members the client knows, handed to the codec like any other set.
 // The server decodes a tuple against the members IT has, strictly.
 
 /** One member of a scoped set, as a query may name it. */
@@ -439,4 +352,113 @@ export function scopedLiveColumns(
     },
   };
   return handle;
+}
+
+// ── Arms in the fields spelling ─────────────────────────────────────────────
+// An arm is declared by FIELDS (phase 2 of fields-declared-once): it names
+// its fields once — each with its label and options — and the rest is
+// derived: the slice's row schema, each field's
+// filter domain (`./field-domain`), and the descriptors every list of the
+// union shows (`listed`, ids `<arm>.<field>`, under the arm's `label`).
+
+/** One arm of a union collection declared by fields (see {@link liveArm}). */
+export interface LiveArm<
+  Row,
+  F extends FieldsRecord,
+  S extends string,
+  C extends FieldsRecord = Record<never, never>,
+> extends LiveArmColumnsHandle<
+  Row,
+  { [K in keyof (F & C)]: InferFieldValue<(F & C)[K]> },
+  FieldsFilterable<F>,
+  S
+> {
+  /** The arm's name in every list — the band its fields are listed under (`"Build"`). */
+  readonly label: string;
+  /** The fields every list of the union shows for this arm, by id (`<arm>.<field>`), in declaration order. */
+  readonly listed: LiveFields<`${string}.${keyof F & string}`>;
+}
+
+/**
+ * Declare one arm's own fields on an `arms` collection, by field: `label` is
+ * the arm's (the band its fields are listed under), each field carries its
+ * own (tsc, `RequireLabel`), and `sortable` stays explicit (index-backed).
+ * Every field with a filter domain filters in it. `carry` puts fields on the
+ * arm's slice that no list shows (a jsonb blob a detail pane decodes): never
+ * listed, filterable or sortable.
+ */
+export function liveArm<
+  Row,
+  F0,
+  S0 extends string,
+  D extends keyof Row & string,
+  const F extends FieldsRecord,
+  const S extends keyof F & string = never,
+  const C extends FieldsRecord = Record<never, never>,
+>(
+  collection: LiveArmsCollection<Row, F0, S0, D>,
+  arm: string,
+  spec: {
+    label: string;
+    fields: F & RequireLabel<F>;
+    carry?: C;
+    sortable?: readonly S[];
+  },
+): LiveArm<WithContributedColumns<Row>, F, S, C> {
+  const fail = (message: string): never => {
+    throw new Error(`liveArm("${collection.key}", "${arm}"): ${message}`);
+  };
+  if (spec.label.trim().length === 0) fail("`label` is empty.");
+  const carried = spec.carry ?? ({} as C);
+  for (const name of Object.keys(carried)) {
+    if (Object.hasOwn(spec.fields, name)) {
+      fail(`"${name}" is both a listed and a carried field.`);
+    }
+  }
+  const filterable: Record<string, FilterColumn> = {};
+  for (const [name, field] of Object.entries(spec.fields)) {
+    const label = field.meta.label;
+    if (label === undefined || label.trim().length === 0) {
+      fail(
+        `field "${name}" has no label — declare it with one (\`{ label }\`), or \`carry\` it if no list shows it.`,
+      );
+    }
+    const domain = fieldDomain(field);
+    if (domain !== null) filterable[name] = { domain } as FilterColumn;
+  }
+  const sortable = spec.sortable ?? [];
+  type Slice = { [K in keyof (F & C)]: InferFieldValue<(F & C)[K]> };
+  const handle = armColumns(collection, arm, {
+    row: fieldsToZodObject({
+      ...spec.fields,
+      ...carried,
+    }) as unknown as LiveRowSchema<Slice>,
+    filterable: filterable as unknown as FieldsFilterable<F> &
+      LiveFilterable<Slice>,
+    sortable,
+  });
+  const listed = Object.freeze(
+    Object.fromEntries(
+      Object.entries(spec.fields).map(([name, field]) => {
+        const id = `${arm}.${name}`;
+        const descriptor: LiveField = Object.freeze({
+          id,
+          key: name,
+          label: field.meta.label!,
+          typeId: field.type.id,
+          options: field.meta.optionMeta ?? null,
+          primary: field.meta.primary === true,
+          domain: filterable[name]?.domain ?? null,
+          sortable: (sortable as readonly string[]).includes(name),
+        });
+        return [id, descriptor];
+      }),
+    ),
+  ) as LiveFields<`${string}.${keyof F & string}`>;
+  return Object.assign(handle, { label: spec.label, listed }) as LiveArm<
+    WithContributedColumns<Row>,
+    F,
+    S,
+    C
+  >;
 }

@@ -12,7 +12,7 @@ import {
   BACKUP_RUN_STATUSES,
   BACKUP_STATUS_OUTCOME,
   BackupSourceReportSchema,
-  backupRunColumns,
+  backupRunArm,
   type BackupRunStatus,
 } from "../../core";
 
@@ -77,7 +77,7 @@ function sourceCountExpr(manifest: unknown): SQL {
  * — so a `pid` write routes nowhere.
  */
 export const backupRunKind = defineRunKind({
-  columns: backupRunColumns,
+  columns: backupRunArm,
   from: _backupRuns,
   id: _backupRuns.id,
   base: (j) => ({

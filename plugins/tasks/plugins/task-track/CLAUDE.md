@@ -17,9 +17,12 @@ Per-task **track** — `main` or `sidequest`. Design:
 ## Storage
 
 The set of tracks is closed, so it is plain data in `core/` (`TASK_TRACKS`,
-`TRACK_META`) — not a registry. The `tasks_ext_track` entity-extension table
-holds a row only for a NON-default track: **absence = main**. That default is a
-real value, not "unknown" — every filing path that does not choose a track (the
+`TRACK_META`) — not a registry. The `tasks_ext_track` entity-extension table's
+`track` column is `enumTextField(TASK_TRACKS, { default: "main" })` with DB
+default `'main'`, and holds a row only for a NON-default track:
+**absence = main** — the field's declared default, which is also what every
+list exposing the track reads for a task with no row. That default is a real
+value, not "unknown" — every filing path that does not choose a track (the
 draft form, Improve, the chain endpoint, `propose_task`) is main with no code
 change. `setTaskTrack(id, "main")` deletes the row.
 
@@ -29,10 +32,18 @@ One `liveCollection` (`task-tracks.all`), read two ways:
 
 - `useTaskTrack(taskId)` — point read, exact, a `ResourceResult<TaskTrack>`: `loading` until known (never a
   stand-in "main").
-- `useStoredTracks()` — the task list's `track` field: the collection is
-  declared `all` (at most one row per task), so the field holds every stored
-  row — preloaded (`boot-and-keep`), read with `useLive(taskTracks, { select
-  })`; see `shared/resources.ts`.
+- `useStoredTracks()` — every stored row as a taskId → track map: the
+  collection is declared `all` (at most one row per task), preloaded
+  (`boot-and-keep`), read with `useLive(taskTracks, { select })` — the
+  sidequest autopilot's launch list reads it; see `shared/resources.ts`.
+
+No list reads either: the shape EXPOSES the track (`exposes`, served by
+`LiveColumns.Expose(tasksTrack)`), so every list whose rows reach a task — the
+task list (`taskRows` is `from: tasksEntityRef`), the conversation lists —
+gets a `track` field (id `track`), filtered, sorted and grouped by it, with no
+list code. Its presentation (`FieldPresentation.Register({ owner:
+taskTrackShape.exposure })`) is the default enum chip in each value's
+`TRACK_META` tint and hint.
 
 The track is decided per filing and is NOT inherited by subtasks (it is not a
 `TaskLaunchServer` option).
@@ -41,23 +52,19 @@ The track is decided per filing and is NOT inherited by subtasks (it is not a
 
 ## Plugin reference
 
-- Description: Per-task track (main | sidequest): the track badge, a `track` enum field in the tasks DataView (badge cell, groupable, filterable), the clickable Track control the task detail header renders to switch it, and the exposed `track` field of every list whose rows reach a task. Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (the whole set for the task list, point reads for one task), the endpoint that switches a task's track, the tasks.trackChanged trigger event every track write emits, and the track exposed to every list whose rows reach a task (LiveColumns.Expose).
+- Description: Per-task track (main | sidequest): the track badge, the clickable Track control the task detail header renders to switch it, and the exposed `track` field of every list whose rows reach a task (the task list, the conversation lists). Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (the whole set for the task list, point reads for one task), the endpoint that switches a task's track, the tasks.trackChanged trigger event every track write emits, and the track exposed to every list whose rows reach a task (LiveColumns.Expose).
 - Web:
-  - Contributes:
-    - `Tasks.Fields` "track" → `TrackField`
-    - `LiveExposures.Register` "tasks_ext_track"
+  - Contributes: `FieldPresentation.Register` "exposure:tasks_ext_track"
   - Uses:
     - `infra/endpoints.fetchEndpoint`
-    - `network/live.LiveExposures`
+    - `network/live.FieldPresentation`
     - `network/live.mapRow`
     - `network/live.useLive`
     - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
-    - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `shell/notifications.toast`
-    - `tasks/task-list.Tasks`
   - Exports (values):
     - `TaskTrackControl`
     - `useStoredTracks`
@@ -81,7 +88,7 @@ The track is decided per filing and is NOT inherited by subtasks (it is not a
   - DB schema:
     - `plugins/tasks/plugins/task-track/server/internal/tables-events.ts`
     - `plugins/tasks/plugins/task-track/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_track`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_track`)
   - Exports (types):
     - `SidequestTask`
     - `TaskTrackChangedPayload`
@@ -99,13 +106,10 @@ The track is decided per filing and is NOT inherited by subtasks (it is not a
   - Routes: `PUT /api/tasks/:taskId/track`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
-  - Exports (types):
-    - `StoredTaskTrack`
-    - `TaskTrack`
+  - Exports (types): `TaskTrack`
   - Exports (values):
     - `DEFAULT_TASK_TRACK`
     - `putTaskTrack`
-    - `STORED_TASK_TRACKS`
     - `TASK_TRACKS`
     - `TaskTrackSchema`
     - `TRACK_META`

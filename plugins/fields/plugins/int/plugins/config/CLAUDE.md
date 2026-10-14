@@ -27,7 +27,10 @@ its table/filter capabilities from `number` via the identity `extends` chain.
 - Core:
   - Uses:
     - `config_v2/fields.fieldSample`
+    - `fields.declaredDefault`
+    - `fields.ExactOptions`
     - `fields.FieldDef`
+    - `fields.FieldMarks`
     - `fields.FieldMeta`
     - `fields.pickMeta`
     - `fields/int.intFieldType`
@@ -36,13 +39,16 @@ its table/filter capabilities from `number` via the identity `extends` chain.
     - `intField`
     - `intSample`
 - Cross-plugin:
-  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×11
-    - `apps` ×3
-    - `infra` ×3
+    - `apps` ×7
+    - `infra` ×4
     - `conversations` ×2
     - `apps-core/surface/floating/wallpaper`
+    - `backup/runs-arm`
+    - `build/runs-arm`
     - `fields/object/config`
+    - `release`
     - `reports`
     - `tasks/automations`
 

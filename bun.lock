@@ -3989,6 +3989,10 @@
       "name": "@singularity/plugin-page-audio",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/block-entity": {
+      "name": "@singularity/plugin-page-block-entity",
+      "version": "0.0.1",
+    },
     "plugins/page/plugins/block-text-write": {
       "name": "@singularity/plugin-page-block-text-write",
       "version": "0.0.1",
@@ -8503,6 +8507,8 @@
     "@singularity/plugin-page-attachment-block": ["@singularity/plugin-page-attachment-block@workspace:plugins/page/plugins/attachment-block"],
 
     "@singularity/plugin-page-audio": ["@singularity/plugin-page-audio@workspace:plugins/page/plugins/audio"],
+
+    "@singularity/plugin-page-block-entity": ["@singularity/plugin-page-block-entity@workspace:plugins/page/plugins/block-entity"],
 
     "@singularity/plugin-page-block-text-write": ["@singularity/plugin-page-block-text-write@workspace:plugins/page/plugins/block-text-write"],
 

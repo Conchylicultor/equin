@@ -16,38 +16,35 @@ import { LIVE_COLUMNS_KEY } from "./live-columns";
 // Exposed columns: an extension's exposed fields as a column set, read by every
 // collection whose `exposes` reaches the exposure's entity.
 
-const tasks = entityRef("tasks");
-const conversations = entityRef("conversations");
+const tasks = entityRef("tasks", {});
+const conversations = entityRef("conversations", {});
 
 const trackShape = defineExtensionShape({
   key: "taskId",
-  fields: { track: enumTextField(["sidequest"] as const) },
-  exposes: {
-    parent: tasks,
-    name: "track",
-    fields: {
-      track: {
-        label: "Track",
-        absent: "main",
-        options: {
-          main: { label: "Main" },
-          sidequest: { label: "Sidequest", variant: "info" },
-        },
+  fields: {
+    track: enumTextField(["main", "sidequest"] as const, {
+      label: "Track",
+      default: "main",
+      options: {
+        main: { label: "Main" },
+        sidequest: { label: "Sidequest", variant: "info" },
       },
-    },
+    }),
   },
+  exposes: { parent: tasks, name: "track", fields: { track: {} } },
 });
 const usageShape = defineExtensionShape({
   key: "conversationId",
-  fields: { cost: intField(), lastAt: dateField(), open: boolField() },
+  fields: {
+    cost: intField({ label: "Cost", default: 0 }),
+    lastAt: dateField({ label: "Last" }),
+    open: boolField({ label: "Open", default: false }),
+  },
   exposes: {
     parent: conversations,
     name: "usage",
-    fields: {
-      cost: { label: "Cost", absent: 0 },
-      lastAt: { label: "Last", absent: null },
-      open: { label: "Open", absent: false },
-    },
+    fields: { cost: {}, lastAt: {}, open: {} },
+    presence: { id: "counted", label: "Counted" },
   },
 });
 const track = exposedColumns(trackShape.exposure);
@@ -71,11 +68,13 @@ describe("exposedColumns", () => {
       "conversations_ext_usage.cost": { domain: "number" },
       "conversations_ext_usage.lastAt": { domain: "instant" },
       "conversations_ext_usage.open": { domain: "boolean" },
+      "conversations_ext_usage.counted": { domain: "boolean" },
     });
     expect(usage.wireSortable).toEqual([
       "conversations_ext_usage.cost",
       "conversations_ext_usage.lastAt",
       "conversations_ext_usage.open",
+      "conversations_ext_usage.counted",
     ]);
     expect(track.column("track")).toMatchObject({
       owner: { kind: "exposed", entity: "tasks" },
@@ -85,7 +84,7 @@ describe("exposedColumns", () => {
     });
   });
 
-  it("throws on a field whose type has no filter domain", () => {
+  it("carries a field with no filter domain, never filtering or sorting it", () => {
     const shape = defineExtensionShape({
       key: "taskId",
       fields: {
@@ -97,11 +96,15 @@ describe("exposedColumns", () => {
       exposes: {
         parent: tasks,
         name: "blob",
-        fields: { blob: { label: "Blob", absent: null } },
+        fields: { blob: { label: "Blob" } },
       },
     });
-    expect(() => exposedColumns(shape.exposure)).toThrow(
-      /field "blob" is of type "json", which has no filter domain/,
+    const blob = exposedColumns(shape.exposure);
+    expect(blob.fields).toEqual(["blob"]);
+    expect(blob.wireFilterable).toEqual({});
+    expect(blob.wireSortable).toEqual([]);
+    expect(() => blob.column("blob")).toThrow(
+      /not a declared filterable or sortable column/,
     );
   });
 
