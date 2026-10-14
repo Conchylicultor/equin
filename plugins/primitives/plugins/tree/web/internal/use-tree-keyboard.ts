@@ -5,60 +5,13 @@ import {
   type KeyboardEvent,
   type RefCallback,
 } from "react";
-import type { ExpandChange, LazyChildren, TreeNode } from "../../core";
+import {
+  treeKeyMove,
+  type ExpandChange,
+  type KeyboardLine,
+  type LazyChildren,
+} from "../../core";
 import type { TreeItem } from "./types";
-
-/** One painted line of the tree, as the keyboard walks it (placeholders skipped). */
-export type KeyboardLine<T extends TreeItem> =
-  { kind: "node"; node: TreeNode<T>; depth: number } | { kind: "placeholder" };
-
-/** The move a key asks for on the focused row — pure, so it is testable alone. */
-export type TreeKeyMove =
-  | { kind: "focus"; id: string }
-  | { kind: "expand"; id: string; expanded: boolean }
-  | { kind: "none" };
-
-/**
- * What a key does on the row `id`, given the painted lines (WAI-ARIA tree
- * pattern): ↑/↓ the previous / next row, Home/End the first / last; → opens a
- * closed row that has (or may have) children, else steps into its first child;
- * ← closes an open row, else steps out to its parent.
- */
-export function treeKeyMove<T extends TreeItem>(
-  key: string,
-  id: string,
-  lines: readonly KeyboardLine<T>[],
-  lazyChildren: LazyChildren<T> | undefined,
-): TreeKeyMove {
-  const nodes = lines.flatMap((l) => (l.kind === "node" ? [l.node] : []));
-  const at = nodes.findIndex((n) => n.id === id);
-  if (at < 0) return { kind: "none" };
-  const node = nodes[at]!;
-  const focus = (target: TreeNode<T> | undefined): TreeKeyMove =>
-    target ? { kind: "focus", id: target.id } : { kind: "none" };
-  const hasChildren =
-    node.children.length > 0 || (lazyChildren?.hasChildren(node) ?? false);
-  switch (key) {
-    case "ArrowDown":
-      return focus(nodes[at + 1]);
-    case "ArrowUp":
-      return focus(nodes[at - 1]);
-    case "Home":
-      return focus(nodes[0]);
-    case "End":
-      return focus(nodes[nodes.length - 1]);
-    case "ArrowRight":
-      if (!hasChildren) return { kind: "none" };
-      if (!node.expanded) return { kind: "expand", id, expanded: true };
-      return focus(node.children[0]);
-    case "ArrowLeft":
-      if (hasChildren && node.expanded)
-        return { kind: "expand", id, expanded: false };
-      return focus(nodes.find((n) => n.id === node.parentId));
-    default:
-      return { kind: "none" };
-  }
-}
 
 /**
  * Arrow-key navigation for a `TreeList` whose rows are focusable: a key on a

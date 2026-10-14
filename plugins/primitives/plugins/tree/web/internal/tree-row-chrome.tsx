@@ -1,29 +1,16 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  type KeyboardEvent,
-  type MouseEvent,
-  type ReactNode,
-  type Ref,
-} from "react";
+import type { ReactNode, Ref } from "react";
 import type {
   DraggableAttributes,
   DraggableSyntheticListeners,
 } from "@dnd-kit/core";
-import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import {
   RowActions,
   rowActionsAnchor,
 } from "@plugins/primitives/plugins/row-actions/web";
-import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
-import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
-import type { TreeDisclosureProps } from "../../core";
-import { Tree } from "../slots";
-import { TreeDisclosureToggle } from "./tree-disclosure-toggle";
-import { TreeGuides } from "./tree-guides";
+import { TreeLeading } from "./tree-leading";
+import { treeRowGestures } from "./tree-row-gestures";
 import { treeRowIndentStyle } from "./tree-indent";
 
 export type TreeRowChromeProps = {
@@ -101,52 +88,6 @@ export type TreeRowChromeProps = {
 };
 
 /**
- * The current (and default) icon-bearing disclosure, extracted verbatim from
- * the row below. Used when no `Tree.Disclosure` is contributed, so rows render
- * identically even if the tree-disclosure plugin is not loaded. The `merged`
- * variant of tree-disclosure mirrors this byte-for-byte.
- *
- * Notion-style merged slot: icon at rest, chevron on row hover, both sharing
- * one size-5 box — only on a row with children; a leaf keeps its icon. The
- * icon is purely visual (the row click navigates); the overlaid chevron button
- * owns the toggle.
- */
-function DefaultMergedDisclosure({
-  icon,
-  hasChildren,
-  isOpen,
-  onToggle,
-}: TreeDisclosureProps) {
-  return (
-    <Center as="span" axis="both" className="relative size-5">
-      <Center
-        as="span"
-        axis="both"
-        className={cn(
-          hasChildren &&
-            "group-hover/tree-row:opacity-0 group-hover/tree-row:pointer-events-none",
-        )}
-      >
-        {icon}
-      </Center>
-      {hasChildren && (
-        <TreeDisclosureToggle
-          isOpen={isOpen}
-          onToggle={onToggle}
-          className={cn(
-            // The chevron button overlays the icon slot full-bleed (icon at
-            // rest, chevron on hover). It is the layer itself, so it takes the
-            // class rather than a wrapping <Layer>.
-            layerClasses(),
-            "opacity-0 pointer-events-none group-hover/tree-row:opacity-100 group-hover/tree-row:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto",
-          )}
-        />
-      )}
-    </Center>
-  );
-}
-
-/**
  * Pure presentational tree-row chrome: indentation, a fixed row height, and a
  * reserved chevron slot. No hooks, no context, no dnd-kit *logic* — the
  * editable RowChrome computes the drag source via dnd-kit and passes the
@@ -160,9 +101,6 @@ function DefaultMergedDisclosure({
  * ancestor also carries a bare `group` (e.g. the shadcn sidebar wrapper) —
  * showing every row's actions at once. Hence the row/no-adhoc-row exception.
  */
-/** The row the latest gesture's first click landed on (see `onDoubleClick`). */
-let firstClickTarget: EventTarget | null = null;
-
 export function TreeRowChrome({
   rowId,
   rowKey,
@@ -185,25 +123,12 @@ export function TreeRowChrome({
   dragListeners,
   guides = false,
 }: TreeRowChromeProps) {
-  // A UI plugin can contribute the icon-bearing leading disclosure (merged /
-  // dimmed-leaf / column). Exactly one is expected — its Region internally
-  // dispatches to the active variant. With none, fall back to the inline
-  // default merged disclosure.
-  const disclosures = Tree.Disclosure.useContributions();
-  const disclosure = disclosures[0];
-  const disclosureProps: TreeDisclosureProps = {
-    icon,
-    hasChildren,
-    isOpen,
-    onToggle,
-  };
-  // A link row's select click reads its gestures (⌘-click opens the href in a
-  // browser tab); the aux/mousedown halves catch the middle button.
-  const selectLink =
-    onSelect && selectHref
-      ? linkProps({ open: onSelect, href: selectHref })
-      : undefined;
-  const selectClick = selectLink?.onClick ?? onSelect;
+  const gestures = treeRowGestures({
+    onSelect,
+    selectHref,
+    onOpen,
+    clickOpens,
+  });
   return (
     <Stack
       direction="row"
@@ -213,44 +138,7 @@ export function TreeRowChrome({
       data-tree-row
       data-tree-id={rowId}
       data-row-key={rowKey}
-      onClick={
-        onOpen
-          ? (e: MouseEvent) => {
-              // `detail` counts the clicks of one gesture; the second click of
-              // a double-click belongs to `onOpen`, not to another select.
-              if (e.detail > 1) return;
-              firstClickTarget = e.currentTarget;
-              if (clickOpens) onOpen();
-              else if (selectLink) selectLink.onClick(e);
-              else onSelect?.();
-            }
-          : selectClick
-      }
-      onAuxClick={selectLink?.onAuxClick}
-      onMouseDown={selectLink?.onMouseDown}
-      onDoubleClick={
-        onOpen && !clickOpens
-          ? (e: MouseEvent) => {
-              // Only a double-click whose FIRST click landed on this row: when
-              // that click opened something and the row under the pointer was
-              // replaced in between, the second click is not this row's.
-              if (e.currentTarget !== firstClickTarget) return;
-              onOpen();
-            }
-          : undefined
-      }
-      tabIndex={onOpen ? 0 : undefined}
-      onKeyDown={
-        onOpen
-          ? (e: KeyboardEvent) => {
-              // Only the row's own key press — never one bubbling from a
-              // control inside it (a rename input, an action button).
-              if (e.key !== "Enter" || e.target !== e.currentTarget) return;
-              e.preventDefault();
-              onOpen();
-            }
-          : undefined
-      }
+      {...gestures}
       {...dragAttributes}
       {...dragListeners}
       // Bespoke named-group (group/tree-row) hover scoping: Row's bare-group
@@ -285,55 +173,15 @@ export function TreeRowChrome({
       )}
       style={treeRowIndentStyle(depth)}
     >
-      {guides && <TreeGuides depth={depth} />}
-      {icon != null ? (
-        // useContributions() seals the `component` field, so the disclosure
-        // can't be rendered as <Disclosure/>; route it through renderIsolated
-        // (which unseals and applies the error-boundary middleware).
-        disclosure ? (
-          renderIsolated(
-            Tree.Disclosure,
-            disclosure as unknown as Contribution,
-            disclosureProps,
-          )
-        ) : (
-          <DefaultMergedDisclosure {...disclosureProps} />
-        )
-      ) : hasChildren ? (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle?.();
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-          aria-label={isOpen ? "Collapse" : "Expand"}
-          className={cn(
-            "size-5 rounded-md",
-            "hover:bg-background/60",
-            "opacity-40 group-hover/tree-row:opacity-100",
-          )}
-        >
-          <Center axis="both" className="size-full">
-            <CollapsibleChevron open={isOpen} className="size-4" />
-          </Center>
-        </button>
-      ) : (
-        // A leaf: reserve the chevron's width for alignment, but render no
-        // expander — a chevron exists exactly when the row has children (or a
-        // lazy row may have some). Dropping onto a leaf still nests under it.
-        <span className="size-5" aria-hidden />
-      )}
-      {leading != null && (
-        <Center
-          as="span"
-          axis="both"
-          onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          {leading}
-        </Center>
-      )}
+      <TreeLeading
+        depth={depth}
+        hasChildren={hasChildren}
+        isOpen={isOpen}
+        onToggle={onToggle}
+        icon={icon}
+        leading={leading}
+        guides={guides}
+      />
       {children}
       {/* The shared cluster, not a second hand-rolled one: it reveals with
           opacity behind a right-edge `Pin mask`, so it reserves no flow width

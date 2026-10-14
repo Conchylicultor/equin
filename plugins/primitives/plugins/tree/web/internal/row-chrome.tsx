@@ -9,7 +9,6 @@ import { useCallback, type ReactNode } from "react";
 import { SelectionCheckbox } from "@plugins/primitives/plugins/multi-select/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import type { TreeNode } from "../../core";
 import type { TreeItem } from "./types";
 import {
@@ -21,6 +20,7 @@ import {
 } from "./use-tree-row";
 import { TreeRowChrome } from "./tree-row-chrome";
 import { TreeChildPlaceholder } from "./tree-child-placeholder";
+import { TreeDropZones } from "./tree-drop-zones";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -269,32 +269,12 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
               {accent}
             </div>
           )}
-          <Pin ref={beforeRef} to="top" stretch decorative className="h-[6px]">
-            {isOverBefore && (
-              <Pin
-                to="top"
-                spanOffset="xs"
-                decorative
-                className="bg-primary h-[2px] rounded-full"
-              />
-            )}
-          </Pin>
-          <Pin
-            ref={afterRef}
-            to="bottom"
-            stretch
-            decorative
-            className="h-[6px]"
-          >
-            {isOverAfter && (
-              <Pin
-                to="bottom"
-                spanOffset="xs"
-                decorative
-                className="bg-primary h-[2px] rounded-full"
-              />
-            )}
-          </Pin>
+          <TreeDropZones
+            beforeRef={beforeRef}
+            afterRef={afterRef}
+            isOverBefore={isOverBefore}
+            isOverAfter={isOverAfter}
+          />
         </div>
       </RowControlsProvider>
       {/* In windowed mode the flat list already contains every visible descendant in paint order, so recursing here would double-render. */}

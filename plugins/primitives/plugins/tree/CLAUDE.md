@@ -235,9 +235,14 @@ return is `useMemo`'d because it is now a context value.
     - `RowMenuItem`
     - `TreeDisclosureContribution`
     - `TreeDisclosureToggleProps`
+    - `TreeDropZonesProps`
     - `TreeItem`
+    - `TreeLeadingProps`
     - `TreeListContextValue`
     - `TreeListProps`
+    - `TreeModel`
+    - `TreeModelArgs`
+    - `TreeModelContext`
     - `TreeRowChromeProps`
     - `UseFlatExpandAllReturn`
   - Exports (values):
@@ -245,32 +250,48 @@ return is `useMemo`'d because it is now a context value.
     - `RenameInput`
     - `RowChrome`
     - `Tree`
+    - `TreeChildPlaceholder`
     - `TreeDisclosureToggle`
+    - `TreeDropZones`
+    - `TreeLeading`
     - `TreeList`
+    - `TreeListProvider`
     - `TreeRowChrome`
+    - `treeRowGestures`
+    - `treeRowIndentStyle`
     - `useFlatExpandAll`
     - `useOptionalRowControls`
     - `useOptionalTreeListContext`
+    - `useTreeKeyboard`
     - `useTreeListContext`
+    - `useTreeModel`
     - `useTreeRow`
 - Core:
   - Uses:
     - `primitives/rank.computeFlatReorder`
     - `primitives/rank.Rank`
   - Exports (types):
+    - `ChildPlaceholder`
     - `DropZone`
     - `ExpandChange`
+    - `FlatTreeLine`
+    - `KeyboardLine`
     - `LazyChildren`
     - `TreeChildrenState`
     - `TreeDisclosureProps`
+    - `TreeKeyMove`
     - `TreeNode`
   - Exports (values):
     - `buildTree`
+    - `childPlaceholder`
     - `computeDrop`
+    - `flatNodeIds`
+    - `flattenVisible`
     - `isDescendant`
     - `resolveDropParent`
     - `selectionRoots`
     - `subtreeIds`
+    - `treeKeyMove`
 - Cross-plugin:
   - Imported by:
     - `apps/pages/page-tree`

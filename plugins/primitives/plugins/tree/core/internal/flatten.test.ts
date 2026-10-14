@@ -1,10 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import type { TreeNode } from "../../core";
-import { treeKeyMove, type KeyboardLine } from "./use-tree-keyboard";
-import type { TreeItem } from "./types";
+import type { TreeNode } from "./tree";
+import {
+  flatNodeIds,
+  flattenVisible,
+  treeKeyMove,
+  type KeyboardLine,
+} from "./flatten";
 
-type Row = TreeItem;
+type Row = {
+  id: string;
+  parentId: string | null;
+  rank: Rank;
+  expanded: boolean;
+};
 
 function node(
   id: string,
@@ -25,12 +34,12 @@ const src = node("src", null, [main, util], true);
 const docs = node("docs", null);
 const readme = node("README.md", null);
 const lines: KeyboardLine<Row>[] = [
-  { kind: "node", node: src, depth: 0 },
-  { kind: "node", node: main, depth: 1 },
-  { kind: "node", node: util, depth: 1 },
-  { kind: "node", node: docs, depth: 0 },
+  { kind: "node", node: src },
+  { kind: "node", node: main },
+  { kind: "node", node: util },
+  { kind: "node", node: docs },
   { kind: "placeholder" },
-  { kind: "node", node: readme, depth: 0 },
+  { kind: "node", node: readme },
 ];
 const lazy = {
   hasChildren: (r: Row) => r.id === "docs",
@@ -85,5 +94,46 @@ describe("treeKeyMove", () => {
     expect(treeKeyMove("ArrowLeft", "README.md", lines, lazy)).toEqual({
       kind: "none",
     });
+  });
+});
+
+describe("flattenVisible", () => {
+  test("descends only into open nodes, with each open lazy node's placeholder after its children", () => {
+    const openDocs = node("docs", null, [], true);
+    const flat = flattenVisible([src, openDocs, readme], (n) =>
+      n.id === "docs" ? { kind: "loading" } : null,
+    );
+    expect(
+      flat.map((l) =>
+        l.kind === "node"
+          ? `${l.depth}:${l.node.id}`
+          : `${l.depth}:…${l.parent.id}`,
+      ),
+    ).toEqual([
+      "0:src",
+      "1:src/main.ts",
+      "1:src/util.ts",
+      "0:docs",
+      "1:…docs",
+      "0:README.md",
+    ]);
+    expect(flatNodeIds(flat)).toEqual([
+      "src",
+      "src/main.ts",
+      "src/util.ts",
+      "docs",
+      "README.md",
+    ]);
+  });
+
+  test("a closed node hides its subtree and asks for no placeholder", () => {
+    const closed = node("src", null, [main, util], false);
+    const asked: string[] = [];
+    const flat = flattenVisible([closed], (n) => {
+      asked.push(n.id);
+      return null;
+    });
+    expect(flatNodeIds(flat)).toEqual(["src"]);
+    expect(asked).toEqual([]);
   });
 });

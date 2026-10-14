@@ -11,6 +11,20 @@ export type {
 } from "./internal/row-chrome";
 export { TreeRowChrome } from "./internal/tree-row-chrome";
 export type { TreeRowChromeProps } from "./internal/tree-row-chrome";
+export { TreeLeading } from "./internal/tree-leading";
+export type { TreeLeadingProps } from "./internal/tree-leading";
+export { TreeDropZones } from "./internal/tree-drop-zones";
+export type { TreeDropZonesProps } from "./internal/tree-drop-zones";
+export { treeRowGestures } from "./internal/tree-row-gestures";
+export { TreeChildPlaceholder } from "./internal/tree-child-placeholder";
+export { treeRowIndentStyle } from "./internal/tree-indent";
+export { useTreeModel } from "./internal/use-tree-model";
+export type {
+  TreeModel,
+  TreeModelArgs,
+  TreeModelContext,
+} from "./internal/use-tree-model";
+export { useTreeKeyboard } from "./internal/use-tree-keyboard";
 export { TreeDisclosureToggle } from "./internal/tree-disclosure-toggle";
 export type { TreeDisclosureToggleProps } from "./internal/tree-disclosure-toggle";
 export { Tree } from "./slots";
@@ -19,6 +33,7 @@ export { RenameInput } from "./internal/rename-input";
 export type { RenameInputProps } from "./internal/rename-input";
 export {
   useTreeRow,
+  TreeListProvider,
   useTreeListContext,
   useOptionalTreeListContext,
   useOptionalRowControls,

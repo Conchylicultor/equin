@@ -12,9 +12,13 @@ import {
 } from "@dnd-kit/core";
 import { useRankReorderItem } from "@plugins/primitives/plugins/rank-reorder/web";
 import { useRevealOnActive } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
-import type { ExpandChange, LazyChildren, TreeNode } from "../../core";
+import type {
+  ChildPlaceholder,
+  ExpandChange,
+  LazyChildren,
+  TreeNode,
+} from "../../core";
 import type { TreeItem } from "./types";
-import type { ChildPlaceholder } from "./tree-child-placeholder";
 
 export type TreeListContextValue<T extends TreeItem> = {
   rows: readonly T[];
