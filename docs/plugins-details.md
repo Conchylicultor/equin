@@ -16948,7 +16948,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `sessionDivergenceConfig`
           - `SessionDivergencePayloadSchema`
-    - **`slow-ops`** — Records slow client operations (page load, element appearance) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates with caller attribution, plus the slow-op report kind and the slow-ops.list snapshot value the pane reads. Subscribes to runtime-profiler slow spans and client signals; files one deduped report per distinct slow operation (investigation task filed on demand).
+    - **`slow-ops`** — Records slow client operations (page load, element appearance) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates and their callers (one row per op × caller), both written through change producers, plus the slow-op report kind and the live collections the pane reads (slow-ops.ops list, slow-ops.op detail, slow-ops.callers). Subscribes to runtime-profiler slow spans and client signals; files one deduped report per distinct slow operation (investigation task filed on demand).
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "slow-op"
@@ -16970,10 +16970,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/icons.Icon`
       - Server:
         - Contributes:
-          - `resource.declare` "slow-ops.list"
+          - `resource.declare` "slow-ops.callers"
+          - `resource.declare` "slow-ops.callers:groups"
+          - `resource.declare` "slow-ops.callers:rows"
+          - `resource.declare` "slow-ops.op:rows"
+          - `resource.declare` "slow-ops.ops"
+          - `resource.declare` "slow-ops.ops:groups"
+          - `resource.declare` "slow-ops.ops:rows"
           - `ConfigV2.Register` "slow-op"
           - `report-kind` "slow-op"
-          - `change-feed-exclusion` "slow_ops"
+          - `change-producer` "slow_op_callers"
+          - `change-producer` "slow_ops"
+          - `fork-data-exclusion` "slow_op_callers"
           - `fork-data-exclusion` "slow_ops"
         - Uses: 24 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
           - `infra/jobs` ×4
@@ -16984,12 +16992,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/log-channels` ×2
           - `reports` ×2
           - `database/admin.ExcludeFromFork`
-          - `database/change-feed.ExcludeFromChangeFeed`
+          - `database/change-feed.defineChangeProducer`
           - `database.db`
           - `debug/trace/engine.captureTrace`
           - `infra/endpoints.implement`
           - `infra/retention.defineRetention`
-          - `network/live.serveValue`
+          - `network/live.serveCollection`
         - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
         - Exports (types): `RecordSlowOpInput`
         - Exports (values):
@@ -16997,12 +17005,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readSlowOpMarkers`
           - `recordSlowOp`
           - `recordSlowOpBatch`
-        - Register: `defineJob('retention.slow_ops')`
-        - Resources: `slow-ops.list` (invalidate, snapshot)
+        - Register:
+          - `defineJob('retention.slow_ops')`
+          - `defineJob('retention.slow_op_callers')`
+        - Resources:
+          - `slow-ops.callers` (keyed, window)
+          - `slow-ops.callers:groups` (push)
+          - `slow-ops.callers:rows` (keyed, point)
+          - `slow-ops.op:rows` (keyed, point)
+          - `slow-ops.ops` (keyed, window)
+          - `slow-ops.ops:groups` (push)
+          - `slow-ops.ops:rows` (keyed, point)
         - Routes: `POST /api/slow-ops/client`
       - Core:
         - Uses:
           - `config_v2.defineConfig`
+          - `debug/trace/engine.traceListRoute`
           - `fields.FieldsRecord`
           - `fields.fieldsToZodObject`
           - `fields/date/config.dateField`
@@ -17015,12 +17033,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/runtime-profiler.SPAN_MEASURES`
           - `infra/runtime-profiler.SpanMeasure`
           - `infra/runtime-profiler.WaitBreakdown`
-          - `network/live.liveValue`
+          - `network/live.liveCollection`
+          - `network/live/filter.liveInstant`
+          - `network/live/filter.liveNumber`
+          - `network/live/filter.liveText`
+          - `primitives/pane.defineRoute`
         - Exports (types):
           - `CallerBreakdown`
           - `CallerRef`
           - `MeasureStat`
           - `SlowOp`
+          - `SlowOpCaller`
+          - `SlowOpDetail`
+          - `SlowOpListRow`
           - `SlowOpMarker`
           - `SlowOpMeasures`
           - `SlowOpReportPayload`
@@ -17032,14 +17057,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `loadSeverity`
           - `MAX_CLIENT_SLOW_OP_ITEMS`
           - `OTHER_VARIANT`
+          - `slowOpById`
+          - `slowOpCallerFields`
+          - `slowOpCallers`
+          - `SlowOpCallerSchema`
           - `slowOpConfig`
+          - `slowOpDetailRoute`
+          - `SlowOpDetailSchema`
           - `slowOpFields`
+          - `SlowOpListRowSchema`
           - `SlowOpMarkerSchema`
           - `SlowOpMeasuresSchema`
           - `SlowOpReportPayloadSchema`
           - `SlowOpSampleSchema`
           - `SlowOpSchema`
-          - `slowOpsValue`
+          - `slowOpsList`
           - `VARIANT_CAP`
           - `VariantBreakdownSchema`
       - Cross-plugin:
@@ -17084,22 +17116,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `debug/timeline`
           - Exemptions:
             - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-cluster-stream.ts` (debt)
-        - **`pane`** — Aggregates tab of the Slow Events pane: a global, ranked overview of slow operations with per-operation caller attribution.
+        - **`pane`** — Aggregates tab of the Slow Events pane: a live, paged ranking of slow operations, and the per-operation detail pane (callers, waits, variants, measures, recent samples).
           - Web:
-            - Contributes: `SlowEvents.View` "Aggregates" → `SlowOpsView`
-            - Uses:
+            - Slots: `slow-op-detail.actions`
+            - Slot contributors: `slow-op-detail.actions` ← `primitives.pane`
+            - Contributes:
+              - `SlowEvents.View` "Aggregates" → `SlowOpsView`
+              - `Pane.Register` "slow-op-detail"
+            - Uses: 21 symbols — full list in [`plugins/debug/plugins/slow-ops/plugins/pane/REFERENCE.md`](../plugins/debug/plugins/slow-ops/plugins/pane/REFERENCE.md)
+              - `primitives/data-view` ×4
+              - `primitives/pane` ×3
               - `apps-core/tabs.appLink`
               - `debug/trace/pane.SlowEvents`
-              - `network/live.useLive`
+              - `network/live.useLiveRow`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/center.Center`
               - `primitives/css/link-chip.LinkChip`
+              - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
               - `primitives/css/yield.yieldClass`
-              - `primitives/data-view.DataView`
-              - `primitives/data-view.defineDataView`
-              - `primitives/data-view.FieldDef`
-              - `primitives/live-state.matchResource`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/relative-time.RelativeTime`
@@ -24857,11 +24893,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
           - Cross-plugin:
-            - Imported by: 32 plugins — full list in [`plugins/network/plugins/live/plugins/filter/REFERENCE.md`](../plugins/network/plugins/live/plugins/filter/REFERENCE.md)
+            - Imported by: 33 plugins — full list in [`plugins/network/plugins/live/plugins/filter/REFERENCE.md`](../plugins/network/plugins/live/plugins/filter/REFERENCE.md)
               - `apps` ×10
+              - `debug` ×4
               - `infra` ×4
               - `conversations` ×3
-              - `debug` ×3
               - `release` ×2
               - `tasks` ×2
               - `backup/runs-arm`
@@ -29171,9 +29207,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Badge`
               - `formatStatusLabel`
           - Cross-plugin:
-            - Imported by: 163 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 164 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
-              - `debug` ×34
+              - `debug` ×35
               - `conversations` ×23
               - `reports` ×11
               - `primitives` ×9
@@ -29240,13 +29276,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 112 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×28
               - `primitives` ×24
               - `page` ×18
               - `conversations` ×7
+              - `debug` ×6
               - `ui` ×6
-              - `debug` ×5
               - `apps-core` ×4
               - `plugin-meta` ×3
               - `fields` ×2
@@ -29745,9 +29781,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `PlaceholderProps`
             - Exports (values): `Placeholder`
           - Cross-plugin:
-            - Imported by: 81 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
+            - Imported by: 82 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
               - `apps` ×27
-              - `debug` ×17
+              - `debug` ×18
               - `primitives` ×13
               - `page` ×7
               - `conversations` ×4
@@ -30401,12 +30437,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 399 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 398 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×101
               - `apps` ×78
               - `conversations` ×53
               - `page` ×25
-              - `debug` ×23
+              - `debug` ×22
               - `ui` ×22
               - `tasks` ×15
               - `apps-core` ×13
@@ -30594,8 +30630,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 67 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×59
+        - Contributes: 69 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×61
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
@@ -30777,8 +30813,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowFilter`
           - `useSortController`
       - Server:
-        - Contributes: 61 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×59
+        - Contributes: 63 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×61
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -33368,9 +33404,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 91 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×91
-        - Contributes: 114 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Slot contributors: 92 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×92
+        - Contributes: 115 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountsPane.Actions` "title" → `PaneTitleItem`
           - `agentDetailPane.Actions` "title" → `PaneTitleItem`
@@ -33471,6 +33507,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serversRootPane.Actions` "title" → `PaneTitleItem`
           - `settings-config-index.actions` "title" → `PaneTitleItem`
           - `shellOutputPane.Actions` "title" → `PaneTitleItem`
+          - `slow-op-detail.actions` "title" → `PaneTitleItem`
           - `slowEventsPane.Actions` "title" → `PaneTitleItem`
           - `sonataLibraryPane.Actions` "title" → `PaneTitleItem`
           - `sonataPlayerPane.Actions` "title" → `PaneTitleItem`
@@ -33596,10 +33633,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceAppId`
           - `useSyncPaneRegistry`
       - Cross-plugin:
-        - Imported by: 169 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 170 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×60
           - `conversations` ×29
-          - `debug` ×23
+          - `debug` ×24
           - `active-data` ×10
           - `tasks` ×9
           - `plugin-meta` ×6
@@ -35191,8 +35228,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 246 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×246
+    - Contributes: 247 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×247
     - Uses: 21 symbols — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
       - `reorder/editor` ×5
       - `config_v2` ×3
@@ -35217,8 +35254,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 245 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×245
+    - Contributes: 246 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×246
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`

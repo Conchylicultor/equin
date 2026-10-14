@@ -30,7 +30,6 @@ export const slowOpsList = liveCollection("slow-ops.ops", {
   sortable: ["totalMs", "count", "maxMs", "lastMs", "waitMs", "lastSeenAt"],
   default: { orderBy: [["totalMs", "desc"]], limit: 100 },
   maxLimit: 500,
-  scroll: true,
 });
 
 /**
@@ -61,5 +60,4 @@ export const slowOpCallers = liveCollection("slow-ops.callers", {
   sortable: ["totalMs", "count", "maxMs", "lastSeenAt"],
   default: { orderBy: [["totalMs", "desc"]], limit: 50 },
   maxLimit: 500,
-  scroll: true,
 });

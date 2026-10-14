@@ -835,9 +835,9 @@ See "Open questions" in the design doc.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 91 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×91
-  - Contributes: 114 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 92 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×92
+  - Contributes: 115 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountsPane.Actions` "title" → `PaneTitleItem`
     - `agentDetailPane.Actions` "title" → `PaneTitleItem`
@@ -938,6 +938,7 @@ See "Open questions" in the design doc.
     - `serversRootPane.Actions` "title" → `PaneTitleItem`
     - `settings-config-index.actions` "title" → `PaneTitleItem`
     - `shellOutputPane.Actions` "title" → `PaneTitleItem`
+    - `slow-op-detail.actions` "title" → `PaneTitleItem`
     - `slowEventsPane.Actions` "title" → `PaneTitleItem`
     - `sonataLibraryPane.Actions` "title" → `PaneTitleItem`
     - `sonataPlayerPane.Actions` "title" → `PaneTitleItem`
@@ -1063,10 +1064,10 @@ See "Open questions" in the design doc.
     - `useSurfaceAppId`
     - `useSyncPaneRegistry`
 - Cross-plugin:
-  - Imported by: 169 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 170 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×60
     - `conversations` ×29
-    - `debug` ×23
+    - `debug` ×24
     - `active-data` ×10
     - `tasks` ×9
     - `plugin-meta` ×6
