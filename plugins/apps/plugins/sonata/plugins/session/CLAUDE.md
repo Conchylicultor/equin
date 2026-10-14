@@ -69,7 +69,7 @@ cannot drift apart.
   which holds the last frame's beat), a drift correction (`resyncTimeline`)
   and a clock swap (`rebaseTimeline`).
 
-On the session's own clock the cursor is `timeline.beatAt(now)` each frame,
+On the session's own clock the cursor is `timeline.positionAt(now)` each frame,
 with a loop iteration change flagged as a `seek` write.
 
 ## Clocks and transport drivers

@@ -296,6 +296,57 @@ describe("startScheduling: a loop's rest", () => {
     h.cancel();
   });
 
+  it("stays on the cursor's timeline through rests and a long speed drag", () => {
+    // The drag test above, with a rest before every repeat: each note sounds
+    // when the cursor's position reaches its beat (outside the rest), and a
+    // note already handed over before a change lands within the look-ahead's
+    // share of that change of the timeline the cursor reads afterwards.
+    const r = recorder();
+    const s = store();
+    const h = startScheduling(song(16), s.timelines, r.resolve, ctx);
+    const dispatched: { note: ScheduledNote; tl: PlaybackTimeline }[] = [];
+    const schedule = r.resolve().schedule.bind(r.resolve());
+    (r.resolve() as { schedule: (n: ScheduledNote) => void }).schedule = (
+      n,
+    ) => {
+      dispatched.push({ note: n, tl: s.current() });
+      schedule(n);
+    };
+    s.start(5, cycle);
+    let worstSec = 0;
+    for (let i = 0; i < 400; i++) {
+      runTo(ctx.currentTime + 0.02 + ((i * 7919) % 17) / 1000);
+      const bpm = 50 + ((i * 37) % 120);
+      s.retempo(bpm);
+      // What the cursor now shows at each pending note's onset.
+      const tl = s.current();
+      for (const { note } of dispatched) {
+        if (note.when <= ctx.currentTime) continue;
+        const at = tl.positionAt(note.when);
+        // Beats off, in seconds at the tempo now playing.
+        const off =
+          ((Math.abs(at.beat - (note.pitch - 60)) + at.rest) * 60) / bpm;
+        worstSec = Math.max(worstSec, off);
+      }
+    }
+    runTo(ctx.currentTime + 1);
+    const pitches = dispatched.map((d) => d.note.pitch);
+    // The head (beats 5–7), then beats 4–7 each repeat — never the rest's 2–3.
+    expect(pitches.length).toBeGreaterThan(10); // head + 2 repeats
+    for (const [i, p] of pitches.entries()) {
+      expect(p).toBe(60 + (i < 3 ? 5 + i : 4 + ((i - 3) % 4)));
+    }
+    for (const { note, tl } of dispatched) {
+      const at = tl.positionAt(note.when);
+      expect(at.rest).toBe(0);
+      expect(at.beat).toBeCloseTo(note.pitch - 60, 6);
+    }
+    // A committed note can't follow a change; it is at most the look-ahead
+    // (40 ms) scaled by the tempo jump away from the cursor — no accumulation.
+    expect(worstSec).toBeLessThan(0.1);
+    h.cancel();
+  });
+
   it("sounds the rest's span when asked (the metronome counting through it)", () => {
     const r = recorder();
     const s = store();
