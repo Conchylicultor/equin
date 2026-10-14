@@ -1,4 +1,10 @@
-import type { ReactNode } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import {
   cn,
   ControlSizeProvider,
@@ -35,6 +41,21 @@ import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
  * ```
  */
 export const rowActionsAnchor = "group/row-actions relative";
+
+/** The anchor's group class as a selector (`/` escaped), for finding the row a
+ *  cluster reveals off. Spelled literally: jsdom has no `CSS.escape`. */
+const ANCHOR_SELECTOR = ".group\\/row-actions";
+
+/** What can take keyboard focus by itself — the question "can Tab land inside
+ *  this row before it reaches the actions?". */
+const FOCUS_STOP =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable=""], [contenteditable="true"]';
+
+/** The row-side signals that the user is reaching for this row: the pointer is
+ *  on it (`pointerover` bubbles from every child; `pointermove` covers a row
+ *  that mounted under a resting pointer, which gets no `over`), or focus
+ *  entered it. */
+const INTENT_EVENTS = ["pointerover", "pointermove", "focusin"] as const;
 
 /**
  * Coupled opacity↔pointer-events reveal, keyed on the primitive's own
@@ -134,7 +155,63 @@ export type RowActionsProps = RowActionsCommonProps &
  * reveal that changed layout would slide the open menu sideways the moment the
  * pointer left the row.
  */
-export function RowActions({
+export function RowActions(props: RowActionsProps & { surface?: boolean }) {
+  // Only a PINNED, hover-revealed cluster can wait: it is out of flow, so
+  // whether its buttons exist changes no geometry. An in-flow cluster
+  // (`pin={null}` — a table's reserved track) sizes its track by its content,
+  // and an `alwaysVisible` one is on screen at rest.
+  const deferrable = !props.alwaysVisible && props.pin !== null;
+  const [sentinelRef, reached] = useRowReached(deferrable);
+  if (deferrable && !reached) return <span ref={sentinelRef} hidden />;
+  return <RowActionsCluster {...props} />;
+}
+
+/**
+ * Has the user reached for the row this cluster sits in? A hover-revealed
+ * cluster is invisible and inert until then, so mounting its buttons is
+ * deferred to that moment: a list mounts N rows at once (a group unfolding, a
+ * page of results), and each cluster is a handful of buttons with their
+ * tooltips — the bulk of what a row costs to mount, for affordances nobody can
+ * see yet.
+ *
+ * Reached means: the pointer is over the row (`:hover` already, or any of
+ * {@link INTENT_EVENTS} on the anchor), or focus entered it. The focus half is
+ * what keeps keyboard reach: Tab lands on the row's own control first, which
+ * mounts the cluster just after it in the sequence. A row with NO focus stop of
+ * its own (a plain container row) gives Tab nothing to land on before the
+ * actions, so it is reached at once — exactly the eager cluster it always had.
+ * So is a cluster with no anchor above it: nothing would ever arm it.
+ *
+ * Once reached, always reached: the cluster stays mounted (a popup opened from
+ * it, a tooltip mid-fade), never torn down when the pointer leaves.
+ */
+function useRowReached(
+  deferrable: boolean,
+): [RefObject<HTMLSpanElement | null>, boolean] {
+  const sentinelRef = useRef<HTMLSpanElement>(null);
+  const [reached, setReached] = useState(false);
+  useLayoutEffect(() => {
+    if (!deferrable || reached) return;
+    const anchor = sentinelRef.current?.closest(ANCHOR_SELECTOR);
+    if (
+      !(anchor instanceof HTMLElement) ||
+      anchor.matches(":hover") ||
+      anchor.querySelector(FOCUS_STOP) === null
+    ) {
+      setReached(true);
+      return;
+    }
+    const reach = () => setReached(true);
+    for (const type of INTENT_EVENTS)
+      anchor.addEventListener(type, reach, { passive: true });
+    return () => {
+      for (const type of INTENT_EVENTS) anchor.removeEventListener(type, reach);
+    };
+  }, [deferrable, reached]);
+  return [sentinelRef, reached];
+}
+
+function RowActionsCluster({
   children,
   pin = "right",
   alwaysVisible = false,

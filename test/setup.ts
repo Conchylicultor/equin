@@ -113,6 +113,26 @@ Object.defineProperty(globalThis, "ResizeObserver", {
   writable: true,
 });
 
+// jsdom ships no Web Animations API, so any component reaching an `el.animate`
+// tween (the collapsible fold) throws on its first toggle. jsdom has no clock to
+// run one against either, so the stub is an animation that has already played:
+// `finish` fires on the next microtask, landing the same end state a real
+// tween reaches. A test asserting on the tween itself installs its own
+// `Element.prototype.animate` (see collapsible's fold-motion test).
+Element.prototype.animate = function (): Animation {
+  const anim = {
+    startTime: null as number | null,
+    onfinish: null as ((ev: AnimationPlaybackEvent) => void) | null,
+    cancel(): void {
+      this.onfinish = null;
+    },
+  };
+  queueMicrotask(() =>
+    anim.onfinish?.call(anim as never, {} as AnimationPlaybackEvent),
+  );
+  return anim as unknown as Animation;
+};
+
 // jsdom under vitest exposes a non-functional `localStorage` (Node's
 // `--localstorage-file` stub). Install a deterministic in-memory Storage so code
 // under test that persists to localStorage works and starts each file clean.

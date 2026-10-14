@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { DndContext } from "@dnd-kit/core";
-import { SortableContext } from "@dnd-kit/sortable";
+import { DeferredSortableList } from "@plugins/primitives/plugins/sortable-list/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { ReorderAreaContext } from "@plugins/reorder/plugins/editor/web";
 import { ReorderItemMiddleware } from "../internal/dnd-item-middleware";
@@ -31,8 +30,8 @@ function contributionOf(
 
 /**
  * The ambient shape a real reorder area establishes: `ReorderEditor`'s
- * `SortableList` (a `DndContext` + `SortableContext`) with the area context
- * around it. The CLAIM is deliberately NOT part of it — the list middleware
+ * `DeferredSortableList` (enabled — edit mode) with the area context around
+ * it. The CLAIM is deliberately NOT part of it — the list middleware
  * hands one out per `renderItem` call, which `Claimed` below stands in for.
  */
 function Area({ ids, children }: { ids: string[]; children: ReactNode }) {
@@ -44,9 +43,9 @@ function Area({ ids, children }: { ids: string[]; children: ReactNode }) {
         onRemoveNode: () => {},
       }}
     >
-      <DndContext>
-        <SortableContext items={ids}>{children}</SortableContext>
-      </DndContext>
+      <DeferredSortableList enabled items={ids} onMove={() => {}}>
+        {children}
+      </DeferredSortableList>
     </ReorderAreaContext.Provider>
   );
 }
@@ -61,8 +60,8 @@ function Claimed({ children }: { children: ReactNode }) {
 }
 
 beforeEach(() => {
-  // `SortableItem` is `disabled` outside edit mode, and a disabled sortable
-  // spreads no dnd attributes — so the marker we assert on only exists in edit
+  // Outside edit mode no drag host is mounted, so an item wears no dnd
+  // attributes — so the marker we assert on only exists in edit
   // mode. Which branch the middleware takes is independent of it.
   setEditMode(true);
 });

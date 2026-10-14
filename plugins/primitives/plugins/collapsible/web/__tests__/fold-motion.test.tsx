@@ -15,15 +15,12 @@ import {
 
 // jsdom has neither the Web Animations API nor layout: stand in for both, and
 // hold animation frames so a test decides when the next one runs.
-class FakeEffect {
-  constructor(readonly target: Element) {}
-}
 interface FakeAnimation {
   keyframes: Keyframe[];
-  effect: FakeEffect;
   onfinish: (() => void) | null;
   cancel: () => void;
 }
+const setupAnimate = Element.prototype.animate;
 let animations: FakeAnimation[] = [];
 let frames: Map<number, FrameRequestCallback> = new Map();
 let nextFrameId = 0;
@@ -31,11 +28,9 @@ let nextFrameId = 0;
 beforeEach(() => {
   animations = [];
   frames = new Map();
-  vi.stubGlobal("KeyframeEffect", FakeEffect);
   Element.prototype.animate = function (keyframes) {
     const anim: FakeAnimation = {
       keyframes: keyframes as Keyframe[],
-      effect: new FakeEffect(this),
       onfinish: null,
       cancel: () => {},
     };
@@ -53,9 +48,8 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
   vi.restoreAllMocks();
-  delete (Element.prototype as { animate?: unknown }).animate;
+  Element.prototype.animate = setupAnimate;
 });
 
 function nextFrame() {

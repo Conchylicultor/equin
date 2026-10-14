@@ -243,6 +243,18 @@ function ReorderInner({
   // `null` until first measured — regime defaults to wrap (never overlaps) until
   // a real width is known, so we don't flash a collapse-into-popover on mount.
   const [hostWidth, setHostWidth] = useState<number | null>(null);
+
+  const state = useMemo(
+    () => applyTree(contributions, items),
+    [contributions, items],
+  );
+  // Who reads the measurement: the edit-mode chrome (the regime, the item
+  // boxes' axis) and, at rest, only the nodes an area draws itself — a divider
+  // turns its rule upright in a row. An area of plain contributions at rest
+  // reads neither, so it measures nothing: every render slot is an area,
+  // several per list row, and each measure is a style + layout read in the
+  // commit that mounted it.
+  const measured = editMode || state.entries.some(isNodeData);
   // Measure the host for BOTH flow axis and width. The host is the box that
   // lays the sentinel out (`layoutHost`), not its `parentElement`: a
   // `display: contents` wrapper (the app-shell sidebar's) has no box — width 0,
@@ -252,18 +264,17 @@ function ReorderInner({
   // observe time, since the sentinel may not be mounted on the first render.
   const host = () => {
     const sentinel = sentinelRef.current;
-    return sentinel ? layoutHost(sentinel) : null;
+    return measured && sentinel ? layoutHost(sentinel) : null;
   };
-  useResizeObserver(host, () => {
-    const el = host();
-    if (!el) return;
-    setOrientation(flowAxis(el) === "row" ? "horizontal" : "vertical");
-    setHostWidth(el.clientWidth);
-  });
-
-  const state = useMemo(
-    () => applyTree(contributions, items),
-    [contributions, items],
+  useResizeObserver(
+    host,
+    () => {
+      const el = host();
+      if (!el) return;
+      setOrientation(flowAxis(el) === "row" ? "horizontal" : "vertical");
+      setHostWidth(el.clientWidth);
+    },
+    { deps: [measured] },
   );
 
   const hiddenItems = useMemo(
@@ -440,8 +451,11 @@ function ReorderInner({
 
   // --- Map state into the editor's presentational entries --------------------
 
+  // `edit` is the mode the node draws in — passed, not read from the global
+  // signal, because the popover regime draws the same nodes twice: editable
+  // in its popover, and at rest in its display-only inline row.
   const renderNode = useCallback(
-    (data: ReorderNodeData): ReorderEntry | null => {
+    (data: ReorderNodeData, edit: boolean): ReorderEntry | null => {
       const nodeType = nodeTypes.get(data.type);
       if (!nodeType) return null; // unknown type → fail-soft skip
       const parsed = nodeType.schema.safeParse(data.payload);
@@ -472,7 +486,7 @@ function ReorderInner({
                   {memberType.render({
                     payload: memberParsed.success ? memberParsed.data : {},
                     id: m.id,
-                    editMode,
+                    editMode: edit,
                     onPatch: (np: unknown) =>
                       patchNodeRef.current(
                         memberId,
@@ -510,7 +524,7 @@ function ReorderInner({
           node: nodeType.render({
             payload,
             id: data.id,
-            editMode,
+            editMode: edit,
             children,
             onPatch,
             onRemove,
@@ -525,42 +539,14 @@ function ReorderInner({
         node: nodeType.render({
           payload,
           id: renderId,
-          editMode,
+          editMode: edit,
           onPatch,
           onRemove,
         }),
       };
     },
-    [editMode, renderItem, nodeTypes],
+    [renderItem, nodeTypes],
   );
-
-  const entries = useMemo<ReorderEntry[]>(() => {
-    const out: ReorderEntry[] = [];
-    for (const entry of state.entries) {
-      if (isNodeData(entry)) {
-        // eslint-disable-next-line react-hooks/refs -- not a render-phase ref read: `renderNode` reads patchNode/onRemoveNode via stable refs only inside the onPatch/onRemove handlers it returns (fired on user action), never during this memo pass. The refs keep those handlers stable so `entries` identity doesn't churn every live-state push.
-        const mapped = renderNode(entry);
-        if (mapped) out.push(mapped);
-        continue;
-      }
-      out.push({
-        kind: "item",
-        id: entryKey(entry),
-        excluded: !!(entry as Record<string, unknown>).excludeFromReorder,
-        // CLAIMED: this is THE site that makes a contribution an item of this
-        // area. The provider lands directly above the item middleware's element
-        // (`renderItem` applies the item middlewares inside itself), which
-        // consumes the claim and resets it to `false` for everything below — so
-        // a slot dispatched from inside the contribution can never inherit it.
-        node: (
-          <ReorderItemClaimContext.Provider value={true}>
-            {renderItem(entry)}
-          </ReorderItemClaimContext.Provider>
-        ),
-      });
-    }
-    return out;
-  }, [state.entries, renderItem, renderNode]);
 
   // The drag overlay re-renders the active contribution (catalog-aware); node
   // ids resolve to null (nodes aren't top-level draggable).
@@ -619,6 +605,43 @@ function ReorderInner({
           ? "popover"
           : "editor-wrap";
 
+  // The editor's entries, and — in the popover regime — the inline row's. That
+  // row is display-only, nodes included: they draw their at-rest form there (a
+  // spacer's gap, a divider's rule), never the draggable placeholder, which
+  // belongs to the popover's editor.
+  const { entries, inlineEntries } = useMemo(() => {
+    // One list per mode drawn: the editor's, plus the inline row's at rest.
+    const modes = regime === "popover" ? [editMode, false] : [editMode];
+    const lists = modes.map((): ReorderEntry[] => []);
+    for (const entry of state.entries) {
+      if (isNodeData(entry)) {
+        for (const [m, edit] of modes.entries()) {
+          // eslint-disable-next-line react-hooks/refs -- not a render-phase ref read: `renderNode` reads patchNode/onRemoveNode via stable refs only inside the onPatch/onRemove handlers it returns (fired on user action), never during this memo pass. The refs keep those handlers stable so `entries` identity doesn't churn every live-state push.
+          const mapped = renderNode(entry, edit);
+          if (mapped) lists[m]!.push(mapped);
+        }
+        continue;
+      }
+      const item: ReorderEntry = {
+        kind: "item",
+        id: entryKey(entry),
+        excluded: !!(entry as Record<string, unknown>).excludeFromReorder,
+        // CLAIMED: this is THE site that makes a contribution an item of this
+        // area. The provider lands directly above the item middleware's element
+        // (`renderItem` applies the item middlewares inside itself), which
+        // consumes the claim and resets it to `false` for everything below — so
+        // a slot dispatched from inside the contribution can never inherit it.
+        node: (
+          <ReorderItemClaimContext.Provider value={true}>
+            {renderItem(entry)}
+          </ReorderItemClaimContext.Provider>
+        ),
+      };
+      for (const list of lists) list.push(item);
+    }
+    return { entries: lists[0]!, inlineEntries: lists[1] ?? null };
+  }, [state.entries, renderItem, renderNode, editMode, regime]);
+
   const wrap = regime === "editor-wrap";
   const strategy =
     injected?.strategy ?? (wrap ? rectSortingStrategy : undefined);
@@ -653,7 +676,7 @@ function ReorderInner({
     [orientation, hideItem, onRemoveNode],
   );
 
-  if (regime === "popover") {
+  if (inlineEntries !== null) {
     return (
       <>
         {sentinel}
@@ -661,7 +684,7 @@ function ReorderInner({
             item/node non-draggable, no chrome, no SortableContext). */}
         <ReorderAreaContext.Provider value={inlineArea}>
           <ReorderEffectiveEditModeContext.Provider value={false}>
-            {entries.map((e) => (
+            {inlineEntries.map((e) => (
               <Fragment key={e.id}>{e.node}</Fragment>
             ))}
           </ReorderEffectiveEditModeContext.Provider>

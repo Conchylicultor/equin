@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import {
   PluginProvider,
@@ -175,7 +175,10 @@ describe("gallery view item-action zones", () => {
     // It also sits in the card's flow (the footer), not in the pinned overlay
     // the revealed cluster uses.
     expect(getByTestId("play").closest(".absolute")).toBeNull();
-    // The revealed one is in that pinned, hover-revealed cluster.
+    // The revealed one is in that pinned, hover-revealed cluster — mounted
+    // once the card is reached (the footer's button gives the card a focus stop
+    // of its own, so the cluster waits for the pointer or focus).
+    fireEvent.pointerOver(getByTestId("play"));
     expect(getByTestId("delete").closest(REVEALED)).not.toBeNull();
   });
 });

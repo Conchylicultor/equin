@@ -20,9 +20,9 @@
 //   --nested  a CSS selector for the content that slot dispatch renders; it is
 //             what must contain no sortable of its own
 //
-// Edit mode MUST be on: `SortableReorderItem` passes `disabled={!editMode}`,
-// dnd-kit returns no `listeners` when disabled, and `SortableItem` then spreads
-// no attributes at all — so the `aria-roledescription="sortable"` marker is
+// Edit mode MUST be on: an area's drag host (the `DeferredSortableList`
+// registrations that hand each item its dnd-kit attributes) is mounted only in
+// edit mode — so the `aria-roledescription="sortable"` marker is
 // absent everywhere outside edit mode and the probe would read 0 both before and
 // after the fix, proving nothing. The `total > 0` guard below asserts that edit
 // mode really engaged, so `inside === 0` means something.

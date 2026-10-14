@@ -26,9 +26,9 @@
  *  4. Edit mode OFF again ⇒ back to zero, and the session is left as it was
  *     found.
  *
- * Edit mode MUST be on for any of this to be visible: `SortableReorderItem`
- * passes `disabled={!editMode}`, dnd-kit hands back no listeners when disabled,
- * and `SortableItem` then spreads no attributes — so the
+ * Edit mode MUST be on for any of this to be visible: an area's drag host
+ * (the `DeferredSortableList` registrations that hand each item its dnd-kit
+ * attributes) is mounted only in edit mode — so the
  * `aria-roledescription="sortable"` marker is absent outside edit mode. Step 0
  * asserts that absence rather than assuming it.
  *

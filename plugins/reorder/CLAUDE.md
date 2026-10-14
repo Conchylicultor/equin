@@ -44,11 +44,13 @@ presentational editor `@plugins/reorder/plugins/editor/web` (itself wrapping
 1. **`ReorderListMiddleware`** (list, priority 0) — reads the slot's `items` tree via `useConfig(descriptor)`, applies it over the live catalog via `applyTree()`, maps the resulting `groupedEntries` into the editor's presentational `entries` (items as item-middleware-wrapped contributions, spacers, pre-rendered group boxes), and renders `<ReorderEditor>` wired to `setConfig` + the DB-backed group endpoints. If a slot has no descriptor (runtime-only render slot or an unresolved id), it falls back to natural order with no reorder applied.
 2. **`ReorderItemMiddleware`** (item, priority 50) — wraps each contribution with `SortableReorderItem` (from the editor barrel) for smooth displacement animations during drag. In edit mode, also renders grouping zones (center zone for group creation, join zone for existing groups).
 
+**Outside edit mode an area mounts no drag machinery.** Every render slot is an area — several per list row — so the editor's list is a `DeferredSortableList` (`primitives/sortable-list`): the `DndContext` and the per-item `useSortable` registrations mount beside the items only while edit mode is on, and toggling it never remounts a contribution. Likewise the list middleware measures its host (flow axis, width) only while something reads it — the edit-mode chrome, or an area drawing nodes (a divider's upright rule) — not for an area of plain contributions at rest.
+
 ### Shared presentational editor (`plugins/editor`)
 
 The drag-and-drop list itself lives in the **`editor` sub-plugin**
 (`plugins/reorder/plugins/editor/`) as `<ReorderEditor>` — a purely
-presentational component (SortableList + move dispatch + flat `sortableIds` +
+presentational component (DeferredSortableList + move dispatch + flat `sortableIds` +
 hide/restore + registry-driven `inserts`/`onRemoveNode`). It has just two opaque
 entry kinds — `item` and a generic `node` (with optional `memberIds` for
 containers) — and knows nothing about config_v2, the live catalog, the

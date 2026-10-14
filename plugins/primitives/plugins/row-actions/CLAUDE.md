@@ -63,6 +63,29 @@ reveal leaves the actions on screen after the pointer leaves.
 into the cluster reveals it in the same tick. Design:
 `research/2026-08-07-global-row-action-click-pinning.md`.
 
+## A pinned hover cluster mounts when its row is reached
+
+A list mounts N rows at once (a group unfolding, a page of results), and a hover
+cluster is the bulk of what a row costs — a handful of `IconButton`s, each a
+tooltip root, often a reorder area of its own — for buttons nobody can see yet.
+So a **pinned, hover-revealed** cluster renders only a hidden sentinel until its
+row is *reached*, then mounts its buttons and keeps them:
+
+- **pointer** — `pointerover` / `pointermove` on the anchor (`move` covers a row
+  that mounted under a resting pointer), or the anchor already `:hover`;
+- **focus** — `focusin` anywhere in the anchor. Tab lands on the row's own
+  control first, which mounts the cluster just after it in the sequence.
+
+Two cases mount at once, exactly as before: a row with **no focus stop of its
+own** (a plain container row — Tab could only ever land on the actions
+themselves), and a cluster with **no `rowActionsAnchor` above it** (nothing would
+arm it). An **in-flow** cluster (`pin={null}`, a table's reserved track) and an
+**`alwaysVisible`** one never wait: the first sizes its track by its content,
+the second is on screen at rest.
+
+A test reaching for a hover action does what a user does first —
+`fireEvent.pointerOver(<something in the row>)` — before querying it.
+
 ## The reveal is opacity-only, never layout
 
 The cluster is pinned, so it reserves no flow width and its geometry is identical

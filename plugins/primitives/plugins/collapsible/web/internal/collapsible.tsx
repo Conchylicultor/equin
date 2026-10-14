@@ -216,7 +216,8 @@ export function CollapsibleContent({
  */
 function useFoldMotion(open: boolean) {
   const ref = useRef<HTMLDivElement>(null);
-  const running = useRef<Animation | null>(null);
+  /** The tween in flight, and the box it runs on. */
+  const running = useRef<{ anim: Animation; el: HTMLElement } | null>(null);
   /** The box is pinned at a tween's first frame, waiting for its start. */
   const pinned = useRef(false);
   const [present, setPresent] = useState(open);
@@ -236,11 +237,7 @@ function useFoldMotion(open: boolean) {
     // far end. Only this box's own tween: a fold-away that unmounted its box
     // leaves its (held) animation on the detached node, which a reopen must not
     // start from.
-    const prior =
-      running.current?.effect instanceof KeyframeEffect &&
-      running.current.effect.target === el
-        ? running.current
-        : null;
+    const prior = running.current?.el === el ? running.current.anim : null;
     const from =
       prior || pinned.current
         ? {
@@ -279,7 +276,7 @@ function useFoldMotion(open: boolean) {
       );
       // Now, not the frame stamp, which predates any long task this frame ran.
       anim.startTime = performance.now();
-      running.current = anim;
+      running.current = { anim, el };
       anim.onfinish = () => {
         if (!motion.opening) {
           // Stays `running`: a reopen landing before the unmount must cancel

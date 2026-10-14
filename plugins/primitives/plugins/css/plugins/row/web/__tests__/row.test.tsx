@@ -5,6 +5,13 @@ import { Row, type RowFocus } from "../internal/row";
 
 afterEach(cleanup);
 
+/** Point at the row: a hover-revealed cluster mounts its buttons only once the
+ *  row is reached (see `row-actions`), so a test reaching for an action does
+ *  what a user does first. */
+function reachRow() {
+  fireEvent.pointerOver(screen.getByRole("button", { name: "label" }));
+}
+
 // Pins the structural invariant the `Row` primitive exists to guarantee: a
 // clickable row that carries interactive `actions` must NEVER emit a
 // <button>/<a> nested inside another <button>/<a> (invalid DOM whose failure is
@@ -18,6 +25,7 @@ describe("Row — no nested interactive elements", () => {
         label
       </Row>,
     );
+    reachRow();
     const action = screen.getByTestId("act");
     // The action's nearest button ancestor is itself — it is not inside the
     // row's primary <button>.
@@ -35,6 +43,7 @@ describe("Row — no nested interactive elements", () => {
         label
       </Row>,
     );
+    reachRow();
     fireEvent.click(screen.getByTestId("act"));
     expect(actionClick).toHaveBeenCalledTimes(0); // (sanity: separate spy)
     expect(rowClick).not.toHaveBeenCalled();
@@ -57,6 +66,7 @@ describe("Row — no nested interactive elements", () => {
         label
       </Row>,
     );
+    reachRow();
     fireEvent.click(screen.getByTestId("act"));
     expect(actionClick).toHaveBeenCalledTimes(1);
   });
@@ -79,6 +89,7 @@ describe("Row — the trailing cluster is the row-actions primitive", () => {
     expect(container.firstElementChild!.className).toContain(
       "group/row-actions",
     );
+    reachRow();
     // At rest the cluster is invisible AND inert — never one without the other,
     // or the hidden cluster parks a live click-target over the row's trailing
     // edge.

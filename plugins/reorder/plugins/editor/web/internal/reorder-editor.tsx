@@ -1,5 +1,5 @@
 import { Fragment, useMemo } from "react";
-import { SortableList } from "@plugins/primitives/plugins/sortable-list/web";
+import { DeferredSortableList } from "@plugins/primitives/plugins/sortable-list/web";
 import {
   ReorderAreaContext,
   RestoreButton,
@@ -78,11 +78,15 @@ export function ReorderEditor({
 
   return (
     <ReorderAreaContext.Provider value={ctxValue}>
-      <SortableList
+      {/* Deferred: outside edit mode no drag machinery is mounted at all —
+          every render slot in the app is a reorder area, several per list row
+          — and entering edit mode binds it beside the items, never above
+          them, so no contribution remounts on the toggle. */}
+      <DeferredSortableList
         items={sortableIds}
         onMove={handleMove}
-        overlay={editMode ? renderOverlay : undefined}
-        disabled={!editMode}
+        overlay={renderOverlay}
+        enabled={editMode}
         orientation={orientation}
         strategy={strategy}
       >
@@ -99,7 +103,7 @@ export function ReorderEditor({
         ) : (
           itemNodes
         )}
-      </SortableList>
+      </DeferredSortableList>
     </ReorderAreaContext.Provider>
   );
 }

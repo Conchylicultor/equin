@@ -23,7 +23,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
+import { DeferredSortableItem } from "@plugins/primitives/plugins/sortable-list/web";
 import { GrowRelay } from "@plugins/primitives/plugins/css/plugins/grow-relay/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -220,7 +220,7 @@ function ReorderItemBox({
     : "contents";
 
   return (
-    <SortableItem id={itemKey} disabled={!editMode} className={itemClassName}>
+    <DeferredSortableItem id={itemKey} className={itemClassName}>
       {() => (
         <>
           {editMode && (
@@ -282,7 +282,7 @@ function ReorderItemBox({
           )}
         </>
       )}
-    </SortableItem>
+    </DeferredSortableItem>
   );
 }
 
@@ -311,10 +311,10 @@ export function SpacerReorderItem({
   }
 
   return (
-    // The SortableItem wrapper inherits the spacer's flex-grow role so the
+    // The sortable item's wrapper inherits the spacer's flex-grow role so the
     // draggable placeholder still absorbs slack like the live gap it replaces.
     // eslint-disable-next-line layout/no-adhoc-layout -- flex-grow spacer placeholder absorbing slack
-    <SortableItem id={itemKey} className="flex-1">
+    <DeferredSortableItem id={itemKey} className="flex-1">
       {({ isDragging }) => (
         // The draggable dashed spacer placeholder: a flex-grow, centered box
         // carrying drag chrome (cursor-grab, dashed ring).
@@ -334,7 +334,7 @@ export function SpacerReorderItem({
           />
         </div>
       )}
-    </SortableItem>
+    </DeferredSortableItem>
   );
 }
 
@@ -408,7 +408,7 @@ export function DividerReorderItem({
   }
 
   return (
-    <SortableItem id={itemKey}>
+    <DeferredSortableItem id={itemKey}>
       {({ isDragging }) => (
         <div
           className={cn(
@@ -432,7 +432,7 @@ export function DividerReorderItem({
           />
         </div>
       )}
-    </SortableItem>
+    </DeferredSortableItem>
   );
 }
 
