@@ -53,8 +53,14 @@ await withBrowser(async (h) => {
     row.evaluate((el) => el.scrollIntoView({ block: "center" }));
   await centre();
   await page.waitForTimeout(300);
-  const trigger = row.getByRole("button", { name: /Context compacted|Compacted on request/ });
-  r.ok("the rule names the compaction", (await trigger.count()) === 1, "no trigger button in the row");
+  const trigger = row.getByRole("button", {
+    name: /Context compacted|Compacted on request/,
+  });
+  r.ok(
+    "the rule names the compaction",
+    (await trigger.count()) === 1,
+    "no trigger button in the row",
+  );
   await snap(page, out, "folded");
 
   await trigger.click();
