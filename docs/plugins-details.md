@@ -29261,6 +29261,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CollapsibleTriggerControlProps`
           - `CollapsibleTriggerProps`
           - `ExpandAllButtonProps`
+          - `FoldMotionProps`
           - `UseCollapsibleOptions`
           - `UseCollapsibleReturn`
           - `UseExpandAllReturn`
@@ -29271,6 +29272,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CollapsibleProvider`
           - `CollapsibleTrigger`
           - `ExpandAllButton`
+          - `FoldMotion`
           - `useCollapsible`
           - `useCollapsibleContext`
           - `useExpandAll`
@@ -34957,10 +34959,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Slots: `Tree.Disclosure`
         - Slot contributors: `Tree.Disclosure` ← `ui.tree-disclosure`
-        - Uses: 33 symbols — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
+        - Uses: 34 symbols — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
           - `primitives/css/ui-kit` ×6
+          - `primitives/collapsible` ×3
           - `primitives/multi-select` ×3
-          - `primitives/collapsible` ×2
           - `primitives/rank-reorder` ×2
           - `primitives/row-actions` ×2
           - `primitives/search` ×2

@@ -6,6 +6,7 @@ export {
   CollapsibleTrigger,
   CollapsibleContent,
   CollapsibleChevron,
+  FoldMotion,
   useCollapsibleContext,
 } from "./internal/collapsible";
 export type {
@@ -15,6 +16,7 @@ export type {
   CollapsibleContentProps,
   CollapsibleChevronProps,
   CollapsibleCtx,
+  FoldMotionProps,
 } from "./internal/collapsible";
 
 export {

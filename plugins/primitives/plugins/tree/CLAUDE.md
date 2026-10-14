@@ -217,10 +217,10 @@ non-tree view.
 - Web:
   - Slots: `Tree.Disclosure`
   - Slot contributors: `Tree.Disclosure` ← `ui.tree-disclosure`
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
+    - `primitives/collapsible` ×3
     - `primitives/multi-select` ×3
-    - `primitives/collapsible` ×2
     - `primitives/rank-reorder` ×2
     - `primitives/row-actions` ×2
     - `primitives/search` ×2

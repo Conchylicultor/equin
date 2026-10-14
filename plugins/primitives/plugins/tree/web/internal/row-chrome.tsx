@@ -9,6 +9,7 @@ import { useCallback, type ReactNode } from "react";
 import { SelectionCheckbox } from "@plugins/primitives/plugins/multi-select/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 import type { TreeNode } from "../../core";
 import type { TreeItem } from "./types";
 import {
@@ -278,8 +279,11 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
         </div>
       </RowControlsProvider>
       {/* In windowed mode the flat list already contains every visible descendant in paint order, so recursing here would double-render. */}
-      {!ctx.windowed && isOpen && (
-        <div>
+      {/* Children fold in and out with the shared collapsible tween. A
+          windowed tree has no nested box to animate: its rows are one flat
+          list, so opening a node there just inserts them. */}
+      {!ctx.windowed && (
+        <FoldMotion open={isOpen}>
           {node.children.map((child) => (
             <TreeRowSlot
               key={child.id}
@@ -294,7 +298,7 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
               guides={ctx.guides}
             />
           )}
-        </div>
+        </FoldMotion>
       )}
     </div>
   );

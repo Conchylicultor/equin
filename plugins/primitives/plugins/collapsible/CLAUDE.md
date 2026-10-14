@@ -58,6 +58,11 @@ wrapper clips only while it moves — a sticky header or a spilling popover insi
 settled-open content is never cut. Every collapsible therefore animates; there is
 no per-site opt-in to forget.
 
+`FoldMotion` is that tween on its own — `open` plus children, no collapsible
+context, no `region` role — for a fold whose open state lives elsewhere: the
+`tree` primitive folds a node's children with it. `CollapsibleContent` is
+`FoldMotion` plus the context's state, id and role.
+
 An unfold survives a slow mount. Mounting a long list can hold the main thread
 for hundreds of milliseconds, and the browser dates an animation from a frame
 stamp taken before that work — so a tween started in the commit had already
@@ -86,6 +91,7 @@ fold and an unfold (`--path /agents --header Queue`).
     - `CollapsibleTriggerControlProps`
     - `CollapsibleTriggerProps`
     - `ExpandAllButtonProps`
+    - `FoldMotionProps`
     - `UseCollapsibleOptions`
     - `UseCollapsibleReturn`
     - `UseExpandAllReturn`
@@ -96,6 +102,7 @@ fold and an unfold (`--path /agents --header Queue`).
     - `CollapsibleProvider`
     - `CollapsibleTrigger`
     - `ExpandAllButton`
+    - `FoldMotion`
     - `useCollapsible`
     - `useCollapsibleContext`
     - `useExpandAll`

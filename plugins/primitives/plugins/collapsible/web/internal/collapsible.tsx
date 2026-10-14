@@ -172,23 +172,50 @@ export function CollapsibleContent({
   ...props
 }: CollapsibleContentProps) {
   const { open, contentId } = useCtx();
-  const { ref, present } = useFoldMotion(open);
-
-  if (!present) return null;
-
   return (
-    <div
-      ref={ref}
+    <FoldMotion
+      open={open}
       data-slot="collapsible-content"
-      data-state={open ? "open" : "closed"}
       id={contentId}
       role="region"
-      // Folding away: still painted, no longer there for focus or a reader.
-      inert={!open}
     >
       <div className={className} {...props}>
         {children}
       </div>
+    </FoldMotion>
+  );
+}
+
+export interface FoldMotionProps extends ComponentProps<"div"> {
+  /** Shown, or folded away. */
+  open: boolean;
+}
+
+/**
+ * The fold itself, without the collapsible's state or semantics: a box that
+ * holds its children while `open` and tweens their height and opacity when
+ * `open` flips — kept mounted (and `inert`) after a close until its fold-away
+ * has run, then unmounted. `CollapsibleContent` is this box plus the context's
+ * open state, id and `region` role; reach for `FoldMotion` directly when the
+ * open state lives elsewhere and the box carries no `region` — a tree node's
+ * children, opened by the tree's own expand model.
+ *
+ * The props land on the moving box, so keep padding and borders on a box
+ * INSIDE it: the tween clips this box, and anything on it would stop the fold
+ * at its padding and then jump.
+ */
+export function FoldMotion({ open, children, ...props }: FoldMotionProps) {
+  const { ref, present } = useFoldMotion(open);
+  if (!present) return null;
+  return (
+    <div
+      {...props}
+      ref={ref}
+      data-state={open ? "open" : "closed"}
+      // Folding away: still painted, no longer there for focus or a reader.
+      inert={!open}
+    >
+      {children}
     </div>
   );
 }
