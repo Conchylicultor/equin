@@ -5218,6 +5218,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slot contributors:
               - `SonataDocument.Source` ← `apps.sonata.sources.chord-grid`
               - `SonataDocument.Source` ← `apps.sonata.sources.midi`
+              - `SonataDocument.Source` ← `apps.sonata.sources.musicxml`
               - `SonataDocument.Source` ← `apps.sonata.sources.ultimate-guitar`
               - `SonataDocument.Analyzer` ← `apps.sonata.rich.chord-analyzer`
               - `SonataDocument.SongSetting` ← `apps.sonata.rich.chord-mode`
@@ -5260,8 +5261,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSongSetting`
               - `useWriteSongSetting`
           - Cross-plugin:
-            - Imported by: 24 plugins — full list in [`plugins/apps/plugins/sonata/plugins/document/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/document/REFERENCE.md)
-              - `apps` ×24
+            - Imported by: 25 plugins — full list in [`plugins/apps/plugins/sonata/plugins/document/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/document/REFERENCE.md)
+              - `apps` ×25
         - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the `sonata.songs` live collection (sortable and filterable by the columns other plugins contribute). Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
           - Web:
             - Slots:
@@ -5273,11 +5274,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slot contributors:
               - `Library.Source` ← `apps.sonata.sources.chord-grid`
               - `Library.Source` ← `apps.sonata.sources.midi`
+              - `Library.Source` ← `apps.sonata.sources.musicxml`
               - `Library.Source` ← `apps.sonata.sources.ultimate-guitar`
+              - `Library.Source` ← `apps.sonata.transcription`
               - `Library.SongActions` ← `apps.sonata.library`
               - `Library.Fields` ← `apps.sonata.playback-history`
               - `Library.Fields` ← `apps.sonata.sources.midi`
               - `Library.Fields` ← `apps.sonata.sources.midi.folders`
+              - `Library.Fields` ← `apps.sonata.transcription`
               - `sonataLibraryPane.Actions` ← `primitives.pane`
               - `sonataPlayerPane.Actions` ← `apps.sonata.audio.engine`
               - `sonataPlayerPane.Actions` ← `apps.sonata.audio.metronome`
@@ -5326,6 +5330,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/persistent-draft.useDraft`
               - `primitives/relative-time.formatRelativeTime`
               - `ui/icons.Icon`
+            - Exports (types): `SourceHydration`
             - Exports (values):
               - `Library`
               - `openSongImperative`
@@ -5409,9 +5414,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/sources/midi`
               - `apps/sonata/sources/midi/file-preview`
               - `apps/sonata/sources/midi/folders`
+              - `apps/sonata/sources/musicxml`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/sources/ultimate-guitar/alignment`
               - `apps/sonata/track-mixer`
+              - `apps/sonata/transcription`
               - `apps/sonata/transport-bar`
               - `apps/sonata/transpose`
             - Extended by:
@@ -5419,8 +5426,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/rich/chord-mode` (table `sonata_songs_ext_chord_mode`)
               - `apps/sonata/rich/key-mode` (table `sonata_songs_ext_key_auto_detect`)
               - `apps/sonata/sources/midi` (table `sonata_songs_ext_midi`)
+              - `apps/sonata/sources/musicxml` (table `sonata_songs_ext_musicxml`)
               - `apps/sonata/playback-history` (table `sonata_songs_ext_playback`)
               - `apps/sonata/rich/rhythm-controls` (table `sonata_songs_ext_rhythm`)
+              - `apps/sonata/transcription` (table `sonata_songs_ext_transcription`)
               - `apps/sonata/transpose` (table `sonata_songs_ext_transpose`)
               - `apps/sonata/sources/ultimate-guitar/alignment` (table `sonata_songs_ext_ug_alignment`)
               - `apps/sonata/sources/ultimate-guitar` (table `sonata_songs_ext_ultimate_guitar`)
@@ -6450,6 +6459,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ScoreRecording`
               - `SectionAnnotation`
               - `SectionData`
+              - `Swing`
               - `TempoEvent`
               - `TempoIndex`
               - `TimeSigEvent`
@@ -6499,6 +6509,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `spellScore`
               - `startTimeline`
               - `subdivideBars`
+              - `swingBeat`
+              - `swingScore`
               - `tonicFifths`
               - `unrollLoop`
         - **`session`** — Sonata playback session: plays a song's composed content — the tempo-scaled score, the rAF transport over a per-surface cursor store, the A–B loop, the count-in, seek / scrub verbs, the play- and seek-on-load intents, a stack of clocks, and a stack of transport drivers (an external medium — a recording — that owns the position while registered). Mountable by any host (useSession); defines the per-session SonataSession.{Provider,Effect} slots the audio plugins contribute to.
@@ -6776,6 +6788,45 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `defineJob('sonata.midi.import')`
                       - `defineWarmup('sonata.midi-folders.reconcile')`
                       - `defineFileWatcher('sonata-midi-folders.folders')`
+            - **`musicxml`** — MusicXML file input source for Sonata: compile() parses a score-partwise document into a Score (parts and staves as tracks, ties merged, repeats unrolled, chord symbols, tempo, swing). Persists per-song MusicXML as an attachment and contributes the library Import affordance and hydration. Owns the sonata_songs_ext_musicxml side-table: per-song MusicXML attachment + content hash. Creates MusicXML-backed songs from an uploaded document (content-hash dedup) and fills an existing MusicXML song with a document (importMusicXmlForSong, for the transcription flow).
+              - Web:
+                - Contributes:
+                  - `SonataDocument.Source` "MusicXML"
+                  - `Library.Source` "musicxml"
+                - Uses:
+                  - `apps/sonata/document.SonataDocument`
+                  - `apps/sonata/library.Library`
+                  - `apps/sonata/library.openSongImperative`
+                  - `infra/attachments.getAttachmentFile`
+                  - `infra/attachments.uploadAttachment`
+                  - `infra/endpoints.fetchEndpoint`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
+                  - `ui/icons.Icon`
+              - Server:
+                - Uses:
+                  - `apps/sonata/library._songs`
+                  - `apps/sonata/library.createSongRow`
+                  - `apps/sonata/library.songAttachments`
+                  - `apps/sonata/library.updateSongMeta`
+                  - `database.db`
+                  - `infra/attachments.createAttachment`
+                  - `infra/attachments.getAttachment`
+                  - `infra/endpoints.implement`
+                  - `infra/entity-extensions.defineExtension`
+                - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/musicxml/server/internal/tables.ts`
+                - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_musicxml`)
+                - Exports (types): `ImportMusicXmlForSongInput`
+                - Exports (values):
+                  - `importMusicXmlForSong`
+                  - `MUSICXML_SOURCE_ID`
+                  - `MusicXmlParseError`
+                - Routes:
+                  - `POST /api/sonata/songs/musicxml`
+                  - `GET /api/sonata/songs/:id/musicxml`
+              - Cross-plugin:
+                - Imported by: `apps/sonata/transcription`
             - **`ultimate-guitar`** — Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (lyric-proportional, bar-quantized timing synthesis → chord annotations, sections, lyrics, synthesized 4/4 tempo). Chord notes are generated by the shell's reactive re-voicing step from the chord annotations. Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section. Ultimate Guitar source server: fetches raw tabs from UG's private mobile API (fails loudly), and owns the sonata_songs_ext_ultimate_guitar side-table — creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration), announcing sonata.ug.tabSaved when a song's sheet content changes.
               - Web:
                 - Contributes:
@@ -7116,6 +7167,77 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/piano-roll`
               - `apps/sonata/rich/chord-mode`
               - `apps/sonata/rich/rhythm-controls`
+        - **`transcription`** — Sonata transcription in the library: a 'Transcribe…' entry in the + menu (a video/post link, or page images and PDFs) that creates the song and starts the transcribing agent; a transcribed song shows its live run state in the player until the score is in (Open conversation, and the error + Retry when it failed); and a Transcribing / Failed badge on its card. Owns the sonata_songs_ext_transcription side-table: a transcribed song's run state (status, input, task, latest conversation, error). POST transcribe creates the song (MusicXML source), a Sonata task and a transcribing agent in a `sonata.transcription` scratch workspace (CLAUDE.md = the instructions, ./bin/st = the toolkit); its sonata_submit_transcription MCP tool imports the agent's MusicXML into the song. Serves the library's `transcription` columns; a conversation closed before submitting marks the song failed (retry relaunches).
+          - Web:
+            - Contributes:
+              - `Library.Source` "transcription"
+              - `Library.Fields` "transcription" → `TranscriptionFields`
+            - Uses:
+              - `apps-core/tabs.appLinkProps`
+              - `apps/sonata/library.Library`
+              - `apps/sonata/library.openSongImperative`
+              - `infra/attachments.uploadAttachment`
+              - `infra/endpoints.fetchEndpoint`
+              - `network/live.useLiveRow`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/inline.Inline`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/spinner.Spinner`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.DialogDescription`
+              - `primitives/css/ui-kit.DialogTitle`
+              - `primitives/css/ui-kit.Input`
+              - `primitives/loading.Loading`
+              - `primitives/overlay/imperative-dialog.openDialog`
+              - `ui/icons.Icon`
+          - Server:
+            - Contributes:
+              - `live.columns.serve` "sonata.songs ← transcription"
+              - `taskCategory` "sonata"
+              - `trigger` "sonata.transcription.conversation-ended"
+            - Uses: 30 symbols — full list in [`plugins/apps/plugins/sonata/plugins/transcription/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/transcription/REFERENCE.md)
+              - `apps/sonata/library` ×4
+              - `apps/sonata/sources/musicxml` ×3
+              - `conversations/workspace` ×3
+              - `tasks/tasks-core` ×3
+              - `infra/deps` ×2
+              - `infra/endpoints` ×2
+              - `network/live` ×2
+              - `tasks/task-category` ×2
+              - `conversations/model-provider/catalog.getModelCatalog`
+              - `conversations.createConversation`
+              - `database.db`
+              - `infra/attachments.getAttachment`
+              - `infra/claude-cli/availability.assertClaudeCodeReady`
+              - `infra/entity-extensions.defineExtension`
+              - `infra/events.Trigger`
+              - `infra/jobs.defineJob`
+              - `infra/mcp.Mcp`
+            - DB schema: `plugins/apps/plugins/sonata/plugins/transcription/server/internal/tables.ts`
+            - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_transcription`)
+            - Register:
+              - `defineJob('sonata.transcription.conversation-ended')`
+              - `mcpTool('sonata_submit_transcription')`
+            - Routes:
+              - `POST /api/sonata/transcribe`
+              - `POST /api/sonata/songs/:id/transcription/retry`
+              - `GET /api/sonata/songs/:id/transcription`
+          - Core:
+            - Uses:
+              - `apps/sonata/library.songLibrary`
+              - `network/live.liveColumns`
+              - `network/live/filter.liveText`
+            - Exports (types): `TranscriptionStatus`
+            - Exports (values):
+              - `TRANSCRIPTION_STATUSES`
+              - `transcriptionColumns`
+          - Deps:
+            - Uses:
+              - `infra/deps.defineDep`
+              - `infra/deps/python.pythonEnv`
+            - Exports (values): `transcriptionDep`
         - **`transport-bar`** — Sonata transport controls: the play/pause button at the head of the player's transport strip (togglePlay, count-in aware) and the playback-speed jog wheel in the player header, folded to its readout at rest.
           - Web:
             - Contributes:
@@ -8687,10 +8809,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Imported by: 32 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `apps-core` ×9
           - `debug` ×8
-          - `apps` ×6
+          - `apps` ×7
           - `shell` ×2
           - `active-data/song`
           - `build`
@@ -9885,7 +10007,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/commit-list.parseDiffNumstatZ`
       - `primitives/commit-list.parseGitLog`
       - `primitives/commit-list.tryRunGit`
-      - `tasks/tasks-core.getAttempt`
+      - `tasks/tasks-core.getAttemptRow`
       - `tasks/tasks-core.listPushesByPushId`
     - Exports (values):
       - `getRangeFiles`
@@ -10145,11 +10267,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 103 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 104 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×23
       - `debug` ×14
       - `backup` ×13
-      - `conversations` ×12
+      - `conversations` ×13
       - `ui` ×11
       - `auth` ×5
       - `tasks` ×4
@@ -10411,25 +10533,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "claude-code-unavailable-at-spawn"
       - `report-kind` "conversation-spawn-failed"
       - `report-kind` "held-turn-undelivered"
-    - Uses: 67 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 65 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×28
       - `conversations/transcript-watcher` ×7
-      - `config_v2` ×3
+      - `conversations/workspace` ×3
       - `infra/claude-cli/availability` ×3
       - `reports` ×3
+      - `config_v2` ×2
       - `conversations/session-chain` ×2
       - `database` ×2
       - `infra/endpoints` ×2
       - `infra/events` ×2
-      - `infra/worktree` ×2
       - `tasks/auto-start` ×2
       - `tasks/task-category` ×2
       - `conversations/model-provider/catalog.getModelCatalog`
       - `conversations/preprompts.resolvePreprompt`
-      - `database/fork.databaseForkJob`
       - `infra/attachments.getAttachment`
       - `infra/jobs.defineJob`
-      - `infra/worktree/spare-pool.spareRefillJob`
       - `shell/notifications.recordNotification`
       - `tasks/task-effort.getTaskEffort`
       - `tasks/task-preprompt.getTaskPreprompt`
@@ -10500,6 +10620,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses:
       - `config_v2.defineConfig`
       - `conversations/model-provider.ModelChoiceSchema`
+      - `conversations/workspace.WorkspaceSpecSchema`
       - `fields/bool/config.boolField`
       - `fields/int/config.intField`
       - `infra/endpoints.defineEndpoint`
@@ -10549,12 +10670,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `RewindRefusalSchema`
       - `stopConversation`
   - Cross-plugin:
-    - Imported by: 63 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Imported by: 64 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `conversations` ×49
       - `tasks` ×4
+      - `apps` ×3
       - `review` ×3
       - `active-data` ×2
-      - `apps` ×2
       - `debug/profiling/ops`
       - `improve`
       - `page/annotations/agent-notes/agent-page`
@@ -11173,6 +11294,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConversationView`
           - `draftToPlainText`
           - `isDraftEmpty`
+          - `useAttemptWorkspaceKind`
           - `useConversationOpener`
           - `usePromptComposer`
           - `useRegisterPromptComposer`
@@ -11383,6 +11505,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `resource.declare` "edited-files"
             - Uses:
+              - `conversations/workspace.findWorkspaceOfConversation`
               - `infra/git/checkout-watch.acquireCheckoutWatch`
               - `infra/git/git-read-cache.createSignedMemo`
               - `infra/host/host-read-pool.withHeavyReadSlot`
@@ -11391,7 +11514,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/commit-list.parseDiffNumstatZ`
               - `primitives/commit-list.runGit`
               - `primitives/commit-list.WorktreeGoneError`
-              - `tasks/tasks-core.getConversation`
             - Exports (values):
               - `editedFilesServed`
               - `editedFilesSignature`
@@ -13254,6 +13376,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations.useLiveConversation`
               - `conversations/conversation-view.Conversation`
               - `conversations/conversation-view.isDraftEmpty`
+              - `conversations/conversation-view.useAttemptWorkspaceKind`
               - `conversations/conversation-view.useRegisterPromptComposer`
               - `conversations/conversation-view/pending-turn.sendConversationTurn`
               - `primitives/latest-ref.useLatestRef`
@@ -14061,6 +14184,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Resources: `model-provider.catalog` (push, notified)
           - Cross-plugin:
             - Imported by:
+              - `apps/sonata/transcription`
               - `conversations`
               - `conversations/agents`
               - `conversations/summary`
@@ -14531,6 +14655,89 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineJob('conversations.usage.backfill')`
           - `defineJob('conversations.usage.reprice')`
           - `defineWarmup('conversations.usage.backfill')`
+    - **`workspace`** — Agent workspaces — where a conversation runs (a git worktree, or a scratch directory): the WorkspaceImpl contract and the per-kind registry the conversation lifecycle calls through (path, commit, prepare, finish, launch fragment, resumability), the scratch-profile registry feature plugins contribute to, and the conversation → workspace lookup.
+      - Server:
+        - Uses: `database.db`
+        - Exports (types):
+          - `LaunchContext`
+          - `LaunchFragment`
+          - `Resumability`
+          - `ScratchProfileDef`
+          - `WorkspaceAt`
+          - `WorkspaceImpl`
+        - Exports (values):
+          - `defineScratchProfile`
+          - `findWorkspaceOfConversation`
+          - `ScratchProfile`
+          - `Workspace`
+          - `workspaceOfAttempt`
+          - `workspaceOfConversation`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/sonata/transcription`
+          - `conversations`
+          - `conversations/conversation-view/code`
+          - `conversations/workspace/scratch`
+          - `conversations/workspace/worktree`
+          - `debug/scratch-hello`
+          - `tasks/tasks-core`
+      - Core:
+        - Exports (types):
+          - `WorkspaceCapability`
+          - `WorkspaceKind`
+          - `WorkspaceKindState`
+          - `WorkspaceSpec`
+        - Exports (values):
+          - `assertCapability`
+          - `DEFAULT_WORKSPACE`
+          - `hasCapability`
+          - `satisfiesCapabilities`
+          - `WORKSPACE_KINDS`
+          - `workspaceAllows`
+          - `WorkspaceKindSchema`
+          - `WorkspaceSpecSchema`
+      - Test helpers:
+        - Server: `@plugins/conversations/plugins/workspace/server/testing`
+          - `installWorkspaceImpl` — Sets `impl` as its kind's workspace, replacing any registered one — for a test, which runs without the plugin register phase and may share the module with other suites.
+          - `resetScratchProfiles` — Clears the profile registry (tests).
+          - `resetWorkspaceRegistry` — Clears the registry.
+      - Plugins:
+        - **`scratch`** — The scratch workspace: a conversation runs in a plain directory (`state/workspaces/<attemptId>`) holding only its scratch profile's CLAUDE.md and inputs — no git, DB fork or build. Launched with the user's own settings, the app's MCP server scoped to the profile's tool allowlist, and the profile's permissions; reaped a week after its task is done or dropped.
+          - Server:
+            - Uses:
+              - `conversations/workspace.findWorkspaceOfConversation`
+              - `conversations/workspace.ScratchProfile`
+              - `conversations/workspace.Workspace`
+              - `conversations/workspace.WorkspaceImpl`
+              - `infra/jobs.defineJob`
+              - `infra/mcp.Mcp`
+              - `primitives/log-channels.defineLogSink`
+              - `tasks/tasks-core.getAttempt`
+              - `tasks/tasks-core.getTask`
+            - Register:
+              - `mcpScope('scope')`
+              - `defineJob('workspace.scratch-reap')`
+          - Core:
+            - Uses: `infra/paths.CLAUDE_USER_CONFIG`
+            - Exports (values):
+              - `assertDirTrusted`
+              - `ensureDirTrusted`
+              - `isDirTrusted`
+              - `withDirTrusted`
+        - **`worktree`** — The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out in the spawn job, resumable while the checkout exists.
+          - Server:
+            - Uses:
+              - `config_v2.forkConfig`
+              - `config_v2.getConfig`
+              - `conversations/workspace.Workspace`
+              - `database/fork.databaseForkJob`
+              - `infra/worktree.ensureMainWorktreeRoot`
+              - `infra/worktree.gitWorktreesDir`
+              - `infra/worktree.setupWorktree`
+              - `infra/worktree/spare-pool.spareRefillJob`
+          - Test helpers:
+            - Server: `@plugins/conversations/plugins/workspace/plugins/worktree/server/testing`
+              - `worktreeWorkspace`
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Server:
@@ -14556,11 +14763,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadKnownRelations`
       - `quotedRelationsIn`
   - Cross-plugin:
-    - Imported by: 109 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×30
+    - Imported by: 112 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×32
       - `page` ×15
+      - `conversations` ×12
       - `infra` ×12
-      - `conversations` ×11
       - `tasks` ×9
       - `debug` ×6
       - `active-data` ×5
@@ -14967,7 +15174,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `forkExclusionsSchema`
           - `getForkExclusions`
       - Cross-plugin:
-        - Imported by: `conversations`
+        - Imported by: `conversations/workspace/worktree`
     - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a current writer). Two persist modes (a FULL recompute replaces; a persisted alias's trailing window lowers the floor), an hourly compact job, and a boot catch-up that seeds each persisted alias from its row and replays the changelog by scope — or, when history was pruned past the floor or a rollup was healed, recomputes every persisted key.
       - Server:
         - Contributes: `fork-data-exclusion` "live_state_snapshot"
@@ -16782,6 +16989,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reportsPane`
       - Cross-plugin:
         - Imported by: `active-data/report`
+    - **`scratch-hello`** — Debug scratch profile `scratch.hello`: a minimal scratch agent (a note file, one profile-only MCP tool, flag_raise) for checking what a scratch workspace's agent receives.
+      - Server:
+        - Uses:
+          - `conversations/workspace.defineScratchProfile`
+          - `conversations/workspace.ScratchProfile`
+          - `conversations/workspace.workspaceOfConversation`
+          - `infra/mcp.Mcp`
+        - Register: `mcpTool('scratch_hello_where')`
     - **`sentinel`** — Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone, attention while it restarts or the machine is under duress, read from the sentinel.status push resource), with its stats — load per core, free memory and builds at a glance, and each signal that can trip duress against its limit when expanded — read from the sentinel.vitals push resource. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource (with the duress latch), and a sentinel-down report when main gives up respawning it. Its worker writes the latest reading to a host-global vitals file every tick, served on every backend as the sentinel.vitals push resource.
       - Web:
         - Contributes:
@@ -20938,6 +21153,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/page-tree`
           - `apps/sonata/library`
           - `apps/sonata/sources/midi`
+          - `apps/sonata/sources/musicxml`
+          - `apps/sonata/transcription`
           - `conversations`
           - `conversations/agents`
           - `page/attachment-block`
@@ -21343,6 +21560,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/agent-manager/welcome`
+              - `apps/sonata/transcription`
               - `conversations`
               - `conversations/agents`
               - `conversations/model-provider/catalog`
@@ -21438,6 +21656,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/chord/song-index`
           - `apps/prototypes/thumbnails`
+          - `apps/sonata/transcription`
           - `infra/audio-analysis`
           - `infra/deps/build`
           - `infra/launcher`
@@ -21552,6 +21771,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`python`** — The python installer kind of infra/deps (pythonEnv, runPython, PythonEntryError) over uv, with its caches as declared data dirs Its uv-updater sub-plugin keeps every python/ project's uv.lock and .python-version current.
           - Cross-plugin:
             - Imported by:
+              - `apps/sonata/transcription`
               - `infra/audio-analysis`
               - `integrations/youtube`
           - Exemptions:
@@ -21664,8 +21884,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isCodec`
           - `multipart`
       - Cross-plugin:
-        - Imported by: 197 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×49
+        - Imported by: 199 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×51
           - `conversations` ×26
           - `debug` ×18
           - `infra` ×16
@@ -21738,6 +21958,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defaultNow`
           - `defaultRandom`
           - `defineEntity`
+          - `isDbDefault`
           - `sqlDefault`
       - Core:
         - Uses: `fields.fieldsToZodObject`
@@ -21777,6 +21998,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities.EntityColumns`
           - `infra/entities.EntityMeta`
           - `infra/entities.EntityMetaBase`
+          - `infra/entities.isDbDefault`
           - `infra/entities.TouchedBy`
         - Exports (types):
           - `EntityExtension`
@@ -21812,8 +22034,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 33 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
-          - `apps` ×13
+        - Imported by: 35 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+          - `apps` ×15
           - `tasks` ×10
           - `conversations` ×6
           - `page` ×3
@@ -21917,8 +22139,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggerRowSchema`
           - `TriggersPayloadSchema`
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
-          - `apps` ×6
+        - Imported by: 28 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
+          - `apps` ×7
           - `conversations` ×6
           - `tasks` ×6
           - `page` ×4
@@ -22766,9 +22988,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 67 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
-          - `apps` ×18
-          - `conversations` ×13
+        - Imported by: 69 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+          - `apps` ×19
+          - `conversations` ×14
           - `infra` ×11
           - `debug` ×9
           - `tasks` ×4
@@ -23019,20 +23241,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
       - Cross-plugin:
         - Imported by:
+          - `apps/sonata/transcription`
           - `conversations/conversation-view/push-and-exit`
           - `conversations/summary`
+          - `conversations/workspace/scratch`
           - `database/query`
           - `debug/profiling/boot-bench`
           - `debug/profiling/runtime`
           - `debug/queue-health`
+          - `debug/scratch-hello`
           - `debug/timeline`
           - `page/annotations/agent-access`
           - `plugin-meta/plugin-health`
           - `tasks`
           - `tasks/outcome-report`
+        - Endpoint callers: `scratch`
       - Server:
         - Exports (types):
           - `McpInstructions`
+          - `McpScope`
+          - `McpScopeResolver`
           - `McpTool`
           - `McpToolContext`
           - `McpToolResult`
@@ -23129,6 +23357,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CLAUDE_DIR`
           - `CLAUDE_PROJECTS_DIR`
           - `CLAUDE_SESSIONS_DIR`
+          - `CLAUDE_USER_CONFIG`
           - `DATA_DIR_KINDS`
           - `dataRoot`
           - `defineAppDataDir`
@@ -23159,12 +23388,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 55 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 56 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `debug` ×10
           - `infra` ×8
           - `build` ×7
+          - `conversations` ×5
           - `backup` ×4
-          - `conversations` ×4
           - `framework` ×4
           - `primitives` ×3
           - `release` ×3
@@ -23993,7 +24222,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineJob('worktree.spare-refill')`
               - `defineWarmup('worktree.spare-refill')`
           - Cross-plugin:
-            - Imported by: `conversations`
+            - Imported by: `conversations/workspace/worktree`
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:
@@ -24793,8 +25022,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 222 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×62
+        - Imported by: 223 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×63
           - `conversations` ×35
           - `tasks` ×26
           - `debug` ×23
@@ -24893,8 +25122,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
           - Cross-plugin:
-            - Imported by: 33 plugins — full list in [`plugins/network/plugins/live/plugins/filter/REFERENCE.md`](../plugins/network/plugins/live/plugins/filter/REFERENCE.md)
-              - `apps` ×10
+            - Imported by: 34 plugins — full list in [`plugins/network/plugins/live/plugins/filter/REFERENCE.md`](../plugins/network/plugins/live/plugins/filter/REFERENCE.md)
+              - `apps` ×11
               - `debug` ×4
               - `infra` ×4
               - `conversations` ×3
@@ -29207,8 +29436,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Badge`
               - `formatStatusLabel`
           - Cross-plugin:
-            - Imported by: 164 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
-              - `apps` ×38
+            - Imported by: 165 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+              - `apps` ×39
               - `debug` ×35
               - `conversations` ×23
               - `reports` ×11
@@ -29590,9 +29819,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 87 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+              - `apps` ×16
               - `debug` ×16
-              - `apps` ×15
               - `reports` ×12
               - `conversations` ×9
               - `primitives` ×9
@@ -29986,8 +30215,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 387 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×95
+            - Imported by: 389 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×97
               - `conversations` ×62
               - `primitives` ×50
               - `debug` ×34
@@ -30032,6 +30261,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/pages/page-tree`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/sources/ultimate-guitar/alignment`
+              - `apps/sonata/transcription`
               - `apps/website/improve`
               - `build`
               - `conversations/conversation-view/op-status`
@@ -30181,8 +30411,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 358 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×92
+            - Imported by: 360 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×94
               - `conversations` ×71
               - `primitives` ×40
               - `debug` ×32
@@ -30437,9 +30667,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 398 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 400 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×101
-              - `apps` ×78
+              - `apps` ×80
               - `conversations` ×53
               - `page` ×25
               - `debug` ×22
@@ -32441,8 +32671,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LoadingVariant`
         - Exports (values): `Loading`
       - Cross-plugin:
-        - Imported by: 185 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×62
+        - Imported by: 186 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×63
           - `ui` ×19
           - `primitives` ×17
           - `conversations` ×16
@@ -32536,12 +32766,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getLogChannels`
           - `MAX_EMIT_LINES`
       - Cross-plugin:
-        - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 54 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `debug` ×12
           - `apps` ×9
           - `infra` ×8
           - `database` ×7
-          - `conversations` ×3
+          - `conversations` ×4
           - `build` ×2
           - `tasks` ×2
           - `backup`
@@ -33269,6 +33499,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/events/sources`
               - `apps/home/app-cards`
               - `apps/sonata/sources/ultimate-guitar`
+              - `apps/sonata/transcription`
               - `auth`
               - `primitives/overlay/imperative-dialog/confirm`
               - `ui/theme-engine/theme-gallery`
@@ -37712,6 +37943,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/deploy`
           - `apps/home`
           - `apps/prototypes`
+          - `apps/sonata/transcription`
           - `build`
           - `config_v2/settings`
           - `conversations`
@@ -38349,27 +38581,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTaskAttempts`
           - `useTaskConversations`
       - Server:
-        - Contributes: 26 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `resource.declare` ×17
+        - Contributes: 27 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `resource.declare` ×18
           - `derived-view` ×4
           - `ids.kind` ×3
           - `derived-table` ×2
-        - Uses: 21 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `primitives/rank` ×3
-          - `database/sql-projection` ×2
-          - `infra/entities` ×2
-          - `infra/git/git-watcher` ×2
-          - `infra/worktree` ×2
+        - Uses:
+          - `database.db`
           - `database/derived-tables.DerivedTable`
           - `database/derived-views.View`
-          - `database.db`
+          - `database/sql-projection.nullable`
+          - `database/sql-projection.parsed`
           - `ids.IdKinds`
           - `infra/attachments.Attachments`
+          - `infra/entities.defaultNow`
+          - `infra/entities.defineEntity`
           - `infra/events.defineTriggerEvent`
           - `infra/git/git-read-cache.createSignedMemo`
+          - `infra/git/git-watcher.defineRefReaction`
+          - `infra/git/git-watcher.lastKnownMainSha`
           - `infra/host/host-read-pool.withHeavyReadSlot`
+          - `infra/worktree.ensureMainWorktreeRoot`
           - `network/live.serveCollection`
           - `primitives/commit-list.runGit`
+          - `primitives/rank.nextRankUnder`
+          - `primitives/rank.RankExecutor`
+          - `primitives/rank.withRank`
         - DB schema:
           - `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`
@@ -38461,6 +38698,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pushLanded`
           - `PushSchema`
           - `RECENT_GONE_LIMIT`
+          - `recordScratchDelivery`
           - `removeTaskDependency`
           - `setConversationHibernated`
           - `taskAttachments`
@@ -38485,6 +38723,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineTriggerEvent('conversation.statusChanged')`
           - `defineRefReaction('tasks.push-ledger (refs/heads/main)')`
         - Resources:
+          - `attempt-workspaces:rows` (keyed, point)
           - `attempts` (keyed)
           - `attempts:rows` (keyed, point)
           - `conversations-active` (keyed)
@@ -38503,23 +38742,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` (keyed)
           - `tasks:rows` (keyed, point)
       - Core:
-        - Uses:
-          - `conversations/model-provider.FALLBACK_MODEL`
-          - `conversations/model-provider.StoredModelSchema`
-          - `conversations/terminal-menu.TerminalMenu`
-          - `conversations/terminal-menu.TerminalMenuSchema`
-          - `fields.fieldsToZodObject`
-          - `fields.nullable`
+        - Uses: 21 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations/workspace` ×3
+          - `fields/text/config` ×3
+          - `conversations/model-provider` ×2
+          - `conversations/terminal-menu` ×2
+          - `fields` ×2
           - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
           - `fields/json/config.jsonField`
           - `fields/rank/config.rankField`
-          - `fields/text/config.enumTextField`
-          - `fields/text/config.parsedTextField`
-          - `fields/text/config.textField`
           - `infra/entities.entityRef`
-          - `network/live.liveCollection`
           - `network/live/filter.liveText`
+          - `network/live.liveCollection`
           - `primitives/pane.defineRoute`
           - `primitives/rank.RankSchema`
         - Exports (types):
@@ -38542,6 +38777,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AttemptSchema`
           - `attemptsEntityRef`
           - `AttemptStatusSchema`
+          - `attemptWorkspaces`
           - `BLOCKED_STATUSES`
           - `buildTaskPrompt`
           - `CONVERSATION_TRAILER_KEY`
@@ -38573,13 +38809,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskStatusSchema`
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
-        - Imported by: 62 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 63 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×26
           - `tasks` ×14
           - `debug` ×6
           - `active-data` ×5
           - `page` ×3
           - `stats` ×2
+          - `apps/sonata/transcription`
           - `backup/sources/transcripts`
           - `code-explorer`
           - `database/query`
@@ -38706,8 +38943,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Cross-plugin:
-        - Imported by: 303 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×63
+        - Imported by: 305 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×65
           - `conversations` ×56
           - `page` ×40
           - `primitives` ×39

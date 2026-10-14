@@ -470,7 +470,10 @@ export function AudioEngine() {
       // The notes as PERFORMED: a swung score's off-beats delayed
       // (`swingScore`, the identity when straight). Only the sound swings —
       // notation, the cursor and the loop bounds stay on the straight grid.
-      const performed = swingScore({ ...scoreRef.current, notes: audibleNotes });
+      const performed = swingScore({
+        ...scoreRef.current,
+        notes: audibleNotes,
+      });
       handle = startScheduling(
         { notes: performed.notes, pedalEvents: performed.pedalEvents },
         timeline,
