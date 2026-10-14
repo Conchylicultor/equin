@@ -188,7 +188,9 @@ describe("data-view nested table: presentation", () => {
     const { getByText } = renderTable({}, { selectedRowId: "deep" });
     expect(getByText("Size")).toBeTruthy();
     const selected = rowOf(getByText, "deep.ts");
-    expect(selected.className).toContain("bg-accent");
+    // The grid row tints through `--dt-row-tint`, which its pinned first
+    // cell paints too.
+    expect(selected.className).toContain("[--dt-row-tint:var(--accent)]");
     expect(selected.className).not.toContain("text-selected-foreground");
     expect(rowOf(getByText, "README.md").className).toContain("border-b");
   });

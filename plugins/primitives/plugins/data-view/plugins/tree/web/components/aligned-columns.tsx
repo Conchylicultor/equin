@@ -16,7 +16,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { fitAlignedColumns } from "../internal/aligned-fit";
+import { fitAlignedColumns } from "@plugins/primitives/plugins/data-table/core";
 
 const arrowUpwardIcon = symbol("arrow-upward");
 const arrowDownwardIcon = symbol("arrow-downward");

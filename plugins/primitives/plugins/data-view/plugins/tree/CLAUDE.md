@@ -218,7 +218,9 @@ one `TreeList` per group section.
   other definite length must be px or rem, or it throws);
   `FieldDef.align` defaults to `"end"`. **Columns give way to the label**:
   `useAlignedFit` measures the header's label cell and drops columns (in
-  `FieldDef.dropOrder`, lower first; unnumbered last, rightmost first) until
+  `FieldDef.dropOrder`, lower first; unnumbered last, rightmost first —
+  `fitAlignedColumns`, from `data-table`'s `core`, which the grid table's fit
+  runs too) until
   the label keeps 160px — measured on the tree, so a narrow pane in a wide
   window behaves like a narrow window (never a viewport media query). A title whose field is in
   `sortHeader.sortable` is a button calling the view's `setSort` (the table

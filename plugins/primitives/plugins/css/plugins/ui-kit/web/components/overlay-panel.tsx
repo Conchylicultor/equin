@@ -12,6 +12,7 @@ import {
   type PopoverMaxHeight,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width";
 import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/single-line";
+import { SidewaysScrollProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/sideways-scroll";
 import { scopeSelectAllKeyDown } from "@plugins/primitives/plugins/select-scope/web";
 import { useRailGuard } from "@plugins/primitives/plugins/css/plugins/rail/web";
 import { OverlayBoundary } from "@plugins/primitives/plugins/overlay/plugins/overlay-boundary/web";
@@ -183,30 +184,34 @@ export function OverlayPanel({
           inside re-assert `true` locally. Outside the boundary so the crash
           fallback gets the reset too. */}
       <SingleLineProvider value={false}>
-        <OverlayBoundary>
-          {header != null && (
-            // `rail-bleed` for the inline half: it cancels and re-applies
-            // whatever rail the panel is ACTUALLY on, which the `-mx-1` here
-            // before it did not — the default role is `md` (0.75rem), so a
-            // hardcoded 4px left every popover header visibly inset, and each of
-            // the six roles wanted a different number.
-            // `-mt-1` stays hardcoded because there is no block bleed in the
-            // contract: `--rail-block-*` is published for `scroll-fade` to read,
-            // and the escape is inline-only by design.
-            // The pin offset is that published block rail, negated: a sticky
-            // box pins at its scroller's PADDING edge, so `top: 0` here left a
-            // strip of the panel's block padding above the pinned header where
-            // the scrolled items showed through.
-            <div
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- -mt-1 bleeds the header through the panel's block padding (the contract has no block escape and no named negative-margin utility); mb-1 spaces the first item off the header's border, and the ramp has no margin classes — the children are the caller's, so there is no parent gap to own it
-              className="sticky z-raised rail-bleed -mt-1 mb-1 border-b bg-popover py-xs"
-              style={HEADER_PIN_STYLE}
-            >
-              {header}
-            </div>
-          )}
-          <IconScopeProvider scope={popupScope}>{children}</IconScopeProvider>
-        </OverlayBoundary>
+        {/* A drawn box: a table inside squeezes rather than spilling past the
+            panel's edge (see `sideways-scroll.tsx`). */}
+        <SidewaysScrollProvider value={false}>
+          <OverlayBoundary>
+            {header != null && (
+              // `rail-bleed` for the inline half: it cancels and re-applies
+              // whatever rail the panel is ACTUALLY on, which the `-mx-1` here
+              // before it did not — the default role is `md` (0.75rem), so a
+              // hardcoded 4px left every popover header visibly inset, and each of
+              // the six roles wanted a different number.
+              // `-mt-1` stays hardcoded because there is no block bleed in the
+              // contract: `--rail-block-*` is published for `scroll-fade` to read,
+              // and the escape is inline-only by design.
+              // The pin offset is that published block rail, negated: a sticky
+              // box pins at its scroller's PADDING edge, so `top: 0` here left a
+              // strip of the panel's block padding above the pinned header where
+              // the scrolled items showed through.
+              <div
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- -mt-1 bleeds the header through the panel's block padding (the contract has no block escape and no named negative-margin utility); mb-1 spaces the first item off the header's border, and the ramp has no margin classes — the children are the caller's, so there is no parent gap to own it
+                className="sticky z-raised rail-bleed -mt-1 mb-1 border-b bg-popover py-xs"
+                style={HEADER_PIN_STYLE}
+              >
+                {header}
+              </div>
+            )}
+            <IconScopeProvider scope={popupScope}>{children}</IconScopeProvider>
+          </OverlayBoundary>
+        </SidewaysScrollProvider>
       </SingleLineProvider>
     </div>
   );

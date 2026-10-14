@@ -86,8 +86,8 @@ body windows, to decide whether its `RankReorderProvider` needs `measuringAlways
 
 `presentation` (default `"grid"`) is how the table looks. `grid` is the header
 row, a hairline under every row (`border-b border-border/30`), a faint hover
-tint and an accent fill on the selected row — the flat table's markup, byte for
-byte. `outline` is a sidebar's look: no header row (nor first-group labels;
+tint and an accent fill on the selected row, and the wide-table behaviour
+below. `outline` is a sidebar's look: no header row (nor first-group labels;
 group headers pin at `stickyHeaderOffset`), no row rules, and each row is the
 tree row's rounded pill — `hover:bg-accent` on a row that is not selected, and
 the `--selected` tier on the selected one (`text-selected-foreground`,
@@ -127,6 +127,57 @@ inside the tree head when the rows nest, after the disclosure. The checkbox
 reveals on the row's `group/row-actions` hover and stops its own press from
 reaching the row (no activation, no drag start).
 
+## Wide tables: column fit, sideways scroll, sticky first column
+
+A grid table goes **wide** only where something can scroll it sideways: inside
+ui-kit's `SidewaysScroll` region (opened by a vertical `Scroll`, ended by every
+`Surface` but `base` — a card, a well, a floating card — and by `OverlayPanel` —
+popovers, menus, dialogs), AND with that `Scroll` the nearest ancestor clipping
+it horizontally (a DOM walk in `useColumnFit`, for an ad-hoc clipping box).
+Anywhere else — and in `outline` presentation (a sidebar) — it squeezes into
+its box as it always did: no fit, no pinned column, no overflow. A context, not
+the DOM walk alone, because a card draws a box without clipping (a table would
+spill past its border), and because it crosses portals the right way.
+
+- **Fit.** `useColumnFit` (`web/internal/use-column-fit.ts`) decides which
+  columns show. A column whose `ColumnDef.dropOrder` is set gives way, lowest
+  first, until the first column keeps its minimum — `fitAlignedColumns`
+  (`core`, the tree's aligned-column fit, moved here unchanged and shared with
+  `data-view/tree`). A column without one never drops; the first column never
+  does. Minimums come from the track (`trackMin`, `core`): a length is itself,
+  `minmax(a, b)` is `a`, a content- or space-sized track is its header label,
+  measured once per column id while shown and kept while dropped (so the fit
+  knows when it fits again). The room is the table's box, but never past the
+  scroller's visible right edge, in the unscrolled frame. Nested (`tree`), the
+  first column's floor is 160px, the tree's label floor.
+- **Overflow.** The grid is `min-width: min-content`, every header label
+  `nowrap` (so an `auto` track floors at its label; body cells are `min-w-0`
+  truncation leaves), and a `minmax(0, …)` track is laid out floored at its
+  measured label in px (`floorAtLabel` — not `min-content`, which for a
+  truncating cell is its whole unwrapped text). So no column collapses below its
+  label; past that the grid is wider than its box. Its box then carries `data-scrolls-x`, which turns
+  the enclosing `Scroll` into the sideways scroller (and an inline-size
+  container), and `Scroll`'s CSS keeps everything but the table in place: the
+  boxes on the path to the table grow to it, and everything off that path (the
+  DataView's toolbar band, a stats band above) pins `left: 0` at
+  `max-width: 100cqi` — see `css/scroll`'s CLAUDE.md.
+- **Sticky first column.** Column 0's header label and every row's first cell
+  are `<Sticky edge="left" layer="base">` (below the `raised` header and group
+  bands, above the other cells). The cell is opaque: `--chrome-mask` under a
+  `linear-gradient` of the row's own tint. A grid row paints its tint through
+  `--dt-row-tint` (`[background-color:var(--dt-row-tint)]`; hover, selected and
+  a decoration's `highlighted` set it), never a `bg-*` class, so the pinned cell
+  follows every row state. It reaches over the row's rail inset and the column
+  gap (negative margin, paid back as padding) so nothing peeks past it.
+- **Full-span bands** — group headers (`left: 0`), group and table footers, a
+  tree's placeholder lines — pin their content to the left edge at
+  `max-width: 100cqi`, so a label or a fold line stays readable however far the
+  table scrolled.
+
+Pinned by `data-view/plugins/table/e2e/sticky-scroll.ts` (Studio explorer
+nested + Debug → Claude CLI Calls flat, 390 / 820 / 1440, light and dark).
+Verified in Chromium only (the e2e harness drives Chromium).
+
 ## Windowing + drag reorder compose
 
 `useRowDecoration` (the per-row hook seam that `data-view/table` uses to mount
@@ -148,24 +199,17 @@ reaching the row (no activation, no drag start).
 
 - Description: Sortable/filterable flex-layout data table primitive.
 - Web:
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×4
+    - `primitives/multi-select` ×3
+    - `primitives/css/sticky/stack` ×2
+    - `primitives/css/sticky` ×2
+    - `primitives/dom/element-size` ×2
+    - `primitives/row-actions` ×2
     - `primitives/css/center.Center`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/sticky.Sticky`
-    - `primitives/css/sticky.stickyOffsetPx`
-    - `primitives/css/sticky/stack.StickyStack`
-    - `primitives/css/sticky/stack.StickyStackItem`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/css/ui-kit.SingleLineProvider`
-    - `primitives/dom/element-size.useElementSize`
     - `primitives/link-gesture.activationProps`
-    - `primitives/multi-select.MultiSelectProvider`
-    - `primitives/multi-select.SelectionBar`
-    - `primitives/multi-select.SelectionCheckbox`
-    - `primitives/row-actions.RowActions`
-    - `primitives/row-actions.rowActionsAnchor`
     - `primitives/virtual-rows.useVirtualRows`
     - `ui/icons.Icon`
   - Exports (types):
@@ -192,5 +236,13 @@ reaching the row (no activation, no drag start).
     - `debug/profiling/boot`
     - `primitives/data-view/table`
     - `primitives/metrics/chart-kit`
+- Core:
+  - Exports (types):
+    - `FitColumn`
+    - `TrackMin`
+  - Exports (values):
+    - `fitAlignedColumns`
+    - `floorAtLabel`
+    - `trackMin`
 
 <!-- AUTOGENERATED:END -->

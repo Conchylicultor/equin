@@ -2315,6 +2315,12 @@ removes the whole class of nested/severed-scroll bugs.
   `<PaneScroll>`, so a DataView rendered as `PaneChrome` children scrolls for free;
   a non-pane host must supply its own `<PaneScroll>` (or equivalent `overflow-y`
   scroller) around the DataView.
+- **Sideways too, for a wide table.** A grid table wider than the pane marks
+  its box `data-scrolls-x`; the pane's `Scroll` then scrolls horizontally as
+  well (still the one scroller) and moves only the table: the toolbar band and
+  any pane content beside the DataView stay put (`css/scroll`'s CLAUDE.md). The
+  DataView itself does nothing for it. A DataView in a card or a popover never
+  goes wide (`data-table`'s CLAUDE.md, "Wide tables").
 
 **Dev-mode structural guards.** On mount `<DataView>` runs two loud-but-non-fatal
 checks (`console.error`, never throw — safe for overlay/SSR edges), after one

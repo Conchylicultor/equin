@@ -1,9 +1,10 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { Fragment, type ReactNode } from "react";
+import { Fragment, type CSSProperties, type ReactNode } from "react";
 import {
   cn,
   ControlSizeProvider,
   SingleLineProvider,
+  useSidewaysScroll,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   RowActions,
@@ -37,6 +38,7 @@ import type {
   DataTableTree,
 } from "./types";
 import { useDataTable } from "./use-data-table";
+import { NESTED_LEAD_MIN_PX, useColumnFit } from "./use-column-fit";
 import {
   runActivation,
   type Activation,
@@ -71,10 +73,10 @@ export const VIRTUALIZE_THRESHOLD = 100;
  * a DOM node takes one `ref`. The repo has no `mergeRefs`/`composeRefs` helper
  * today; lift this into a primitive if a second caller needs it.
  */
-function composeRefs(
-  a: ((el: HTMLElement | null) => void) | undefined,
-  b: ((el: Element | null) => void) | undefined,
-): ((el: HTMLDivElement | null) => void) | undefined {
+function composeRefs<E extends Element>(
+  a: ((el: E | null) => void) | undefined,
+  b: ((el: E | null) => void) | undefined,
+): ((el: E | null) => void) | undefined {
   if (!a) return b;
   if (!b) return a;
   return (el) => {
@@ -96,21 +98,79 @@ const ROW_ESTIMATE = 36;
  */
 const ROW_LOOK: Record<
   DataTablePresentation,
-  { base: string; selected: string }
+  { base: string; hover: string; selected: string }
 > = {
+  // The grid row paints its tint through `--dt-row-tint` rather than a `bg-*`
+  // class, so the sticky first cell — which must be opaque to cover the
+  // columns scrolling under it — paints the SAME tint over the surface.
   grid: {
-    base: "col-span-full grid grid-cols-subgrid items-center border-b border-border/30 text-caption hover:bg-accent/30",
-    selected: "bg-accent",
+    base: "col-span-full grid grid-cols-subgrid items-center border-b border-border/30 text-caption [background-color:var(--dt-row-tint)]",
+    hover:
+      "hover:[--dt-row-tint:color-mix(in_oklab,var(--accent)_30%,transparent)]",
+    selected: "[--dt-row-tint:var(--accent)]",
   },
+  // The hover tint applies only to a row that is not selected, so a selected
+  // row does not hover to a different tone.
   outline: {
     base: "col-span-full grid grid-cols-subgrid items-center rounded-md text-caption",
+    hover: "hover:bg-accent hover:[--scrim:var(--accent)]",
     selected:
       "bg-selected text-selected-foreground [--scrim:var(--selected)] [--row-meta:var(--selected-meta-foreground)]",
   },
 };
-/** The outline pill's hover tint — only on a row that is not selected, so a
- *  selected row does not hover to a different tone. */
-const OUTLINE_HOVER = "hover:bg-accent hover:[--scrim:var(--accent)]";
+/** A decoration's `highlighted` row (a drop target): the accent tint. */
+const ROW_HIGHLIGHT: Record<DataTablePresentation, string> = {
+  grid: "[--dt-row-tint:var(--accent)]",
+  outline: "bg-accent [--scrim:var(--accent)]",
+};
+
+/** The inline inset every subgrid row takes (`rail-follow`'s start side). */
+const RAIL_START =
+  "var(--rail-owed-start, var(--rail-start, var(--chrome-pad-x)))";
+/**
+ * The sticky first cell reaches over its row's rail inset on the left and over
+ * the column gap on the right (negative margin, paid back as padding), so
+ * nothing scrolling under it shows on either side while it is pinned, and its
+ * content still sits on the rail.
+ */
+const LEAD_EDGE: CSSProperties = {
+  marginLeft: `calc(-1 * ${RAIL_START})`,
+  paddingLeft: RAIL_START,
+  marginRight: "calc(-1 * var(--space-sm))",
+  paddingRight: "var(--space-sm)",
+};
+/** A body row's sticky first cell: opaque — the surface, under the row's own
+ *  tint — so it matches the row at rest, hovered, selected or highlighted. */
+const LEAD_CELL: CSSProperties = {
+  ...LEAD_EDGE,
+  backgroundColor: "var(--chrome-mask)",
+  backgroundImage:
+    "linear-gradient(var(--dt-row-tint, transparent), var(--dt-row-tint, transparent))",
+};
+/** A wide table's header label: never wraps. */
+const NOWRAP: CSSProperties = { whiteSpace: "nowrap" };
+
+/**
+ * A full-span band's content, pinned to the visible part of a wide table: at
+ * most as wide as the scroller shows. The scroller is an inline-size container
+ * exactly while the table overflows it (see `Scroll`), so `100cqi` is the
+ * visible width then — and the viewport, which caps nothing, otherwise.
+ */
+const SPAN_PIN: CSSProperties = { maxWidth: "100cqi" };
+
+/**
+ * Nested, the first column holds the tree head (indent, guides, disclosure)
+ * before the name, so it keeps the tree's label floor: past that the table
+ * scrolls sideways rather than squeezing the names away.
+ */
+const NESTED_LEAD_EDGE: CSSProperties = {
+  ...LEAD_EDGE,
+  minWidth: NESTED_LEAD_MIN_PX,
+};
+const NESTED_LEAD_CELL: CSSProperties = {
+  ...LEAD_CELL,
+  minWidth: NESTED_LEAD_MIN_PX,
+};
 
 /** The selection checkbox's hover reveal: `SelectionCheckbox` reveals on a BARE
  *  `group-hover`, and a table row's named group is the row-actions anchor. */
@@ -142,6 +202,28 @@ export function DataTable<TRow>({
   tree,
   selection,
 }: DataTableProps<TRow>) {
+  // A grid table in a region that may scroll it sideways (`wide`: a pane's
+  // `Scroll`, no card / popover / clipping box in between — see
+  // `useColumnFit`) scrolls when its columns do not fit — after the ones that
+  // may drop have — with its first column pinned. An outline (a sidebar), or a
+  // table in a card or a popover, keeps squeezing into its box: no pinned
+  // column, nothing dropped.
+  const sideways = useSidewaysScroll();
+  const hasActionsTrack = !!rowActions || !!rowPersistentActions;
+  // Destructured: render never reads a member off the hook output (the refs
+  // rule flags member access on a value carrying refs).
+  const {
+    wide: pinLead,
+    shown: shownColumns,
+    tracks: columnTracks,
+    overflowing,
+    containerRef: fitContainerRef,
+    gridRef: fitGridRef,
+  } = useColumnFit(columns, {
+    enabled: presentation === "grid" && sideways,
+    nested: !!tree,
+    hasActionsTrack,
+  });
   const { rows, sortState, toggleSort } = useDataTable(
     data,
     columns,
@@ -197,8 +279,8 @@ export function DataTable<TRow>({
   // subgrids that inherit those exact tracks (and the column gap), so columns
   // align structurally — independent of content. Dynamic template → inline style.
   // A trailing `auto` track holds the per-row actions column — the ONE track
-  // both clusters share, so it is reserved whenever either is present.
-  const hasActionsTrack = !!rowActions || !!rowPersistentActions;
+  // both clusters share, so it is reserved whenever either is present
+  // (`hasActionsTrack`, above).
   // Every subgrid row (column header, data row) takes the SAME block padding,
   // picked once here from the table's density.
   const rowPad = density === "compact" ? "py-row-compact" : "py-row";
@@ -207,8 +289,8 @@ export function DataTable<TRow>({
   // header row. Its label spans the leading tracks up to the first labelled
   // column — so it needs at least one unlabelled leading track, and a group to
   // ride. Otherwise it falls back to the header row (see DataTableColumnHeader).
-  const firstLabelled = columns.findIndex((col) => !!col.header);
-  const leadSpan = firstLabelled === -1 ? columns.length : firstLabelled;
+  const firstLabelled = shownColumns.findIndex((col) => !!col.header);
+  const leadSpan = firstLabelled === -1 ? shownColumns.length : firstLabelled;
   // An outline has no column labels at all — neither a header row nor labels
   // on the first group.
   const showHeader = presentation === "grid";
@@ -220,20 +302,14 @@ export function DataTable<TRow>({
     leadSpan > 0;
 
   const headerCells = (cellClassName?: string) =>
-    columns.map((col) => {
+    shownColumns.map((col, c) => {
       const sortable = col.sortable ?? !!col.value;
       const active = sortState?.columnId === col.id;
-      return (
-        <Text
-          as="span"
-          key={col.id}
-          className={cn(
-            cellClassName,
-            alignClass(col.align),
-            sortable && "cursor-pointer select-none",
-          )}
-          onClick={sortable ? () => toggleSort(col.id) : undefined}
-        >
+      // The fit measures a content-sized column's minimum on its label,
+      // which never wraps — so the label is also the narrowest an `auto` track
+      // gets. An inline box, so its width is the label's.
+      const label = (
+        <span data-column-id={col.id}>
           {col.header}
           {sortable && (
             <SortIcon
@@ -241,6 +317,41 @@ export function DataTable<TRow>({
               direction={active ? sortState!.direction : null}
             />
           )}
+        </span>
+      );
+      const cellProps = {
+        className: cn(
+          cellClassName,
+          alignClass(col.align),
+          sortable && "cursor-pointer select-none",
+        ),
+        onClick: sortable ? () => toggleSort(col.id) : undefined,
+      };
+      // The first column's label pins with the cells below it — the cell
+      // itself, so it stays the click target that sorts. A plain span like
+      // the `Text` beside it (no variant: the header row's typography).
+      return c === 0 && pinLead ? (
+        <Sticky
+          key={col.id}
+          as="span"
+          edge="left"
+          layer="base"
+          mask
+          {...cellProps}
+          style={{ ...(tree ? NESTED_LEAD_EDGE : LEAD_EDGE), ...NOWRAP }}
+        >
+          {label}
+        </Sticky>
+      ) : (
+        // Wide, a label never wraps (it is the track's floor); squeezed, it
+        // wraps as it always did.
+        <Text
+          as="span"
+          key={col.id}
+          {...cellProps}
+          style={pinLead ? NOWRAP : undefined}
+        >
+          {label}
         </Text>
       );
     });
@@ -261,7 +372,9 @@ export function DataTable<TRow>({
       }
     : undefined;
   const template = [
-    ...columns.map((col) => col.width ?? "auto"),
+    // A grid table floors a flexible column at its label (`floorAtLabel`), so
+    // overflowing scrolls it rather than collapsing the column to nothing.
+    ...columnTracks,
     ...(hasActionsTrack ? ["auto"] : []),
   ].join(" ");
 
@@ -287,7 +400,7 @@ export function DataTable<TRow>({
           // eslint-disable-next-line layout/no-adhoc-layout -- full-span line spanning the subgrid table's column tracks (a tree's placeholder child)
           className="col-span-full rail-follow"
         >
-          {span}
+          <PinToView active={pinLead}>{span}</PinToView>
         </div>
       );
     }
@@ -296,7 +409,7 @@ export function DataTable<TRow>({
         key={rowKey(row, i)}
         row={row}
         index={i}
-        columns={columns}
+        columns={shownColumns}
         rowKey={rowKey}
         selectedRowId={selectedRowId}
         rowActivation={rowActivation}
@@ -309,6 +422,7 @@ export function DataTable<TRow>({
         presentation={presentation}
         tree={tree}
         selectable={!!selection}
+        pinLead={pinLead}
       />
     );
   };
@@ -323,61 +437,82 @@ export function DataTable<TRow>({
 
   const table = (
     <ControlSizeProvider size={controlSize}>
-      <div
-        // eslint-disable-next-line layout/no-adhoc-layout -- subgrid table host: a dynamic gridTemplateColumns grid whose rows are full-span subgrids (no Frame/Grid equivalent)
-        className="grid gap-x-sm"
-        style={{ gridTemplateColumns: template }}
-        // Nesting rows make the grid a treegrid, and the grid the keyboard
-        // host: a key on a focused row walks the painted lines.
-        role={tree ? "treegrid" : undefined}
-        ref={tree?.containerRef}
-        onKeyDown={tree?.onKeyDown}
-      >
-        {/* The column-header row pins to the scroll viewport at `stickyHeaderOffset`
+      {/* The table's box: what the fit measures the room in. While the grid
+          is wider, it marks itself `data-scrolls-x` — the enclosing `Scroll`
+          then scrolls sideways too (and only then), so the pane is the one
+          scroller on both axes and the sticky header and first column pin to
+          the same edges. */}
+      <div ref={fitContainerRef} data-scrolls-x={overflowing ? "" : undefined}>
+        <div
+          // eslint-disable-next-line layout/no-adhoc-layout -- subgrid table host: a dynamic gridTemplateColumns grid whose rows are full-span subgrids (no Frame/Grid equivalent)
+          className="grid gap-x-sm"
+          style={{
+            gridTemplateColumns: template,
+            // A grid table never squeezes a column below its track's minimum
+            // (a content-sized one: its label); past that it overflows.
+            minWidth: pinLead ? "min-content" : undefined,
+          }}
+          // Nesting rows make the grid a treegrid, and the grid the keyboard
+          // host: a key on a focused row walks the painted lines.
+          role={tree ? "treegrid" : undefined}
+          ref={composeRefs<HTMLElement>(tree?.containerRef, fitGridRef)}
+          onKeyDown={tree?.onKeyDown}
+        >
+          {/* The column-header row pins to the scroll viewport at `stickyHeaderOffset`
           (0 by default; a DataView passes its toolbar height so the header stacks
           BELOW the toolbar instead of hiding behind it). `mask` follows the
           embedding surface so rows never show through the pinned bar. */}
-        {labelsOnFirstGroup || !showHeader ? null : (
-          <Sticky
-            as="div"
-            ref={headerRef}
-            edge="top"
-            mask
-            layer="raised"
-            // eslint-disable-next-line layout/no-adhoc-layout -- sticky header is itself a full-span subgrid row inheriting the host's column tracks
-            className={cn(
-              "col-span-full grid grid-cols-subgrid border-b",
-              HEADER_TEXT_CLASS,
-              // Every subgrid row — this header, each data row, each group header —
-              // takes its inline padding from the ambient rail and its block padding
-              // from the row density token. Column alignment holds because they all
-              // read the SAME rail, which is what made the old fixed padding work.
-              rowPad,
-              "rail-follow",
-            )}
-            style={{ top: stickyHeaderOffset }}
-          >
-            {headerCells()}
-            {hasActionsTrack && <span aria-hidden />}
-          </Sticky>
-        )}
-        {groups ? (
-          renderGroupedBody(groups, renderRow, groupHeaderTop, firstGroupLabels)
-        ) : rows.length > VIRTUALIZE_THRESHOLD ? (
-          <VirtualTableBody
-            rows={rows}
-            rowKey={rowKey}
-            selectedRowId={selectedRowId}
-            renderRow={renderRow}
-            keepMounted={keepMountedRowKeys}
-          />
-        ) : (
-          rows.map((row, i) => renderRow(row, i))
-        )}
-        {!groups && footer != null ? (
-          // eslint-disable-next-line layout/no-adhoc-layout -- full-span footer row spanning the subgrid table's column tracks
-          <div className="col-span-full">{footer}</div>
-        ) : null}
+          {labelsOnFirstGroup || !showHeader ? null : (
+            <Sticky
+              as="div"
+              ref={headerRef}
+              edge="top"
+              mask
+              layer="raised"
+              data-slot="data-table-header"
+              // eslint-disable-next-line layout/no-adhoc-layout -- sticky header is itself a full-span subgrid row inheriting the host's column tracks
+              className={cn(
+                "col-span-full grid grid-cols-subgrid border-b",
+                HEADER_TEXT_CLASS,
+                // Every subgrid row — this header, each data row, each group header —
+                // takes its inline padding from the ambient rail and its block padding
+                // from the row density token. Column alignment holds because they all
+                // read the SAME rail, which is what made the old fixed padding work.
+                rowPad,
+                "rail-follow",
+              )}
+              style={{ top: stickyHeaderOffset }}
+            >
+              {headerCells()}
+              {hasActionsTrack && <span aria-hidden />}
+            </Sticky>
+          )}
+          {groups ? (
+            renderGroupedBody(
+              groups,
+              renderRow,
+              groupHeaderTop,
+              pinLead,
+              firstGroupLabels,
+            )
+          ) : rows.length > VIRTUALIZE_THRESHOLD ? (
+            <VirtualTableBody
+              rows={rows}
+              rowKey={rowKey}
+              selectedRowId={selectedRowId}
+              renderRow={renderRow}
+              keepMounted={keepMountedRowKeys}
+            />
+          ) : (
+            rows.map((row, i) => renderRow(row, i))
+          )}
+          {!groups && footer != null ? (
+            // eslint-disable-next-line layout/no-adhoc-layout -- full-span footer row spanning the subgrid table's column tracks
+            <div className="col-span-full">
+              <PinToView active={pinLead}>{footer}</PinToView>
+            </div>
+          ) : null}
+        </div>
       </div>
     </ControlSizeProvider>
   );
@@ -431,6 +566,7 @@ function DataTableRow<TRow>({
   presentation,
   tree,
   selectable,
+  pinLead,
 }: {
   row: TRow;
   index: number;
@@ -451,6 +587,8 @@ function DataTableRow<TRow>({
   tree: DataTableTree<TRow> | undefined;
   /** Draw the multi-select checkbox ahead of the first cell. */
   selectable: boolean;
+  /** Pin the first cell to the scroller's left edge (grid presentation). */
+  pinLead: boolean;
 }): ReactNode {
   const decoration = useRowDecoration(row, index);
   // A row whose activation is a link reads the link gestures: ⌘/middle-click
@@ -466,10 +604,11 @@ function DataTableRow<TRow>({
   const decorationClassName = decoration?.className;
   const decorationStyle = decoration?.style;
   const decorationOverlay = decoration?.overlay;
+  const decorationHighlighted = decoration?.highlighted;
   // A decorated row in a windowed body is BOTH a drag source and a measurement
   // target, so the two refs compose (they were mutually exclusive back when
   // decoration disabled virtualization).
-  const rowRef = composeRefs(decorationRef, measure?.ref);
+  const rowRef = composeRefs<HTMLElement>(decorationRef, measure?.ref);
   const look = ROW_LOOK[presentation];
   const selected = key === selectedRowId;
   return (
@@ -482,7 +621,7 @@ function DataTableRow<TRow>({
       // eslint-disable-next-line layout/no-adhoc-layout -- CSS subgrid row inheriting the outer grid's column tracks (no Frame/Grid equivalent for subgrid)
       className={cn(
         look.base,
-        presentation === "outline" && !selected && OUTLINE_HOVER,
+        !selected && look.hover,
         // Same rail as the column header and the group headers — see there.
         rowPad,
         "rail-follow",
@@ -491,6 +630,7 @@ function DataTableRow<TRow>({
         // lays out and stacks identically, so it is inert on plain rows).
         rowActionsAnchor,
         selected && look.selected,
+        decorationHighlighted && ROW_HIGHLIGHT[presentation],
         (rowActivation || onRowOpen) && "cursor-pointer",
         decorationClassName,
       )}
@@ -557,7 +697,7 @@ function DataTableRow<TRow>({
                   : null}
             </AlignedCell>
           );
-          if (c > 0 || (!tree && !selectable)) return cell;
+          if (c > 0) return cell;
           // The first cell carries the row's head: the checkbox ahead of it,
           // and — when the rows nest — the tree head around both.
           const head = selectable ? (
@@ -568,10 +708,21 @@ function DataTableRow<TRow>({
           ) : (
             cell
           );
-          return tree ? (
-            <Fragment key={col.id}>{tree.leading(row, head)}</Fragment>
+          const lead = tree ? tree.leading(row, head) : head;
+          return pinLead ? (
+            <Sticky
+              key={col.id}
+              as="div"
+              edge="left"
+              layer="base"
+              // eslint-disable-next-line layout/no-adhoc-layout -- the pinned first grid cell must shrink to its track so its label truncates
+              className="min-w-0"
+              style={tree ? NESTED_LEAD_CELL : LEAD_CELL}
+            >
+              {lead}
+            </Sticky>
           ) : (
-            head
+            <Fragment key={col.id}>{lead}</Fragment>
           );
         })}
       </SingleLineProvider>
@@ -795,6 +946,8 @@ function renderGroupedBody<TRow>(
   groups: DataTableGroup<TRow>[],
   renderRow: (row: TRow, i: number) => ReactNode,
   groupHeaderTop: string,
+  /** Pin each band to the visible part of a sideways-scrolling table. */
+  pinLead: boolean,
   /** `first-group` mode: the FIRST group's band becomes a subgrid row carrying
    *  the column labels. Absent ⇒ every header is a full-span band. */
   firstGroupLabels?: FirstGroupLabels,
@@ -846,6 +999,9 @@ function renderGroupedBody<TRow>(
                 layer="raised"
                 // eslint-disable-next-line layout/no-adhoc-layout -- full-span sticky group-header row spanning the subgrid table's column tracks
                 className="col-span-full rail-follow"
+                // Pinned on the left too, as wide as the table's box: a
+                // sideways scroll leaves the label (and its count) in view.
+                style={pinLead ? GROUP_BAND_PIN : undefined}
               >
                 {group.header}
               </StickyStackItem>
@@ -855,12 +1011,37 @@ function renderGroupedBody<TRow>(
               : group.rows.map((row) => renderRow(row, i++))}
             {!group.collapsed && group.footer != null ? (
               // eslint-disable-next-line layout/no-adhoc-layout -- full-span group-footer row spanning the subgrid table's column tracks
-              <div className="col-span-full">{group.footer}</div>
+              <div className="col-span-full">
+                <PinToView active={pinLead}>{group.footer}</PinToView>
+              </div>
             ) : null}
           </Fragment>
         );
       })}
     </StickyStack>
+  );
+}
+
+/** A group band pinned to the left edge, as wide as the scroller shows. */
+const GROUP_BAND_PIN: CSSProperties = { left: 0, ...SPAN_PIN };
+
+/**
+ * A full-span band's content, pinned to the scroller's left edge, as wide as
+ * the scroller shows — so a fold line or a placeholder stays readable however
+ * far a wide table has scrolled. Inactive, the content as it was.
+ */
+function PinToView({
+  active,
+  children,
+}: {
+  active: boolean;
+  children: ReactNode;
+}): ReactNode {
+  if (!active) return children;
+  return (
+    <Sticky as="div" edge="left" layer="base" style={SPAN_PIN}>
+      {children}
+    </Sticky>
   );
 }
 

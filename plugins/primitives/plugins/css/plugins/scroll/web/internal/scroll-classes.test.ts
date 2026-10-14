@@ -6,7 +6,7 @@ const base = { fill: false, hideScrollbar: false, isolate: false };
 describe("scrollClasses", () => {
   test("y axis clamps the horizontal axis to hidden", () => {
     expect(scrollClasses({ ...base, axis: "y" })).toBe(
-      "overflow-y-auto overflow-x-hidden",
+      "overflow-y-auto overflow-x-hidden has-[[data-scrolls-x]]:overflow-x-auto has-[[data-scrolls-x]]:[container-type:inline-size]",
     );
   });
 
@@ -22,7 +22,7 @@ describe("scrollClasses", () => {
 
   test("fill on y/both emits min-h-0 flex-1", () => {
     expect(scrollClasses({ ...base, axis: "y", fill: true })).toBe(
-      "overflow-y-auto overflow-x-hidden min-h-0 flex-1",
+      "overflow-y-auto overflow-x-hidden has-[[data-scrolls-x]]:overflow-x-auto has-[[data-scrolls-x]]:[container-type:inline-size] min-h-0 flex-1",
     );
     expect(scrollClasses({ ...base, axis: "both", fill: true })).toBe(
       "overflow-auto min-h-0 flex-1",
@@ -37,7 +37,14 @@ describe("scrollClasses", () => {
 
   test("hideScrollbar and isolate append their flags", () => {
     expect(
-      scrollClasses({ axis: "y", fill: false, hideScrollbar: true, isolate: true }),
-    ).toBe("overflow-y-auto overflow-x-hidden no-scrollbar isolate");
+      scrollClasses({
+        axis: "y",
+        fill: false,
+        hideScrollbar: true,
+        isolate: true,
+      }),
+    ).toBe(
+      "overflow-y-auto overflow-x-hidden has-[[data-scrolls-x]]:overflow-x-auto has-[[data-scrolls-x]]:[container-type:inline-size] no-scrollbar isolate",
+    );
   });
 });

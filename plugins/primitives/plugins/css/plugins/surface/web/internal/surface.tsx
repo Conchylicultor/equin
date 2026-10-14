@@ -1,5 +1,6 @@
 import {
   cn,
+  SidewaysScrollProvider,
   SURFACE_LEVELS,
   type SurfaceLevel,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -104,7 +105,17 @@ export function Surface({
         className,
       )}
     >
-      {children}
+      {level === "base" ? (
+        children
+      ) : (
+        // A drawn box (a card, a well, a floating card) ends the
+        // sideways-scroll region: a wide table inside squeezes into it
+        // rather than spilling past its edge. `base` is the canvas itself —
+        // tone only, no edge to spill past.
+        <SidewaysScrollProvider value={false}>
+          {children}
+        </SidewaysScrollProvider>
+      )}
     </Comp>
   );
 }

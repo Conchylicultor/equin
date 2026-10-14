@@ -1,5 +1,9 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  SidewaysScrollProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
+import "./scroll.css";
 
 /**
  * Which axis (or axes) scrolls. `y` and `x` clamp the perpendicular axis to
@@ -9,7 +13,14 @@ import type React from "react";
 export type ScrollAxis = "y" | "x" | "both";
 
 const OVERFLOW_CLASS: Record<ScrollAxis, string> = {
-  y: "overflow-y-auto overflow-x-hidden",
+  // A vertical scroller ALSO scrolls sideways while it holds content marked
+  // `data-scrolls-x` — a grid table wider than its box (data-table). The pane
+  // stays the one scroller on both axes, so the table's sticky header (top)
+  // and first column (left) pin to the same scroller; a scroller of the
+  // table's own would capture the header's `top`. Meanwhile it is an
+  // inline-size container, so a band pinned to its left edge sizes itself to
+  // what is visible (`max-width: 100cqi`). Unmarked, nothing changes.
+  y: "overflow-y-auto overflow-x-hidden has-[[data-scrolls-x]]:overflow-x-auto has-[[data-scrolls-x]]:[container-type:inline-size]",
   x: "overflow-x-auto overflow-y-hidden",
   both: "overflow-auto",
 };
@@ -33,7 +44,11 @@ export function scrollClasses(opts: {
 }): string {
   return [
     OVERFLOW_CLASS[opts.axis],
-    opts.fill ? (opts.axis === "x" ? "min-w-0 flex-1" : "min-h-0 flex-1") : null,
+    opts.fill
+      ? opts.axis === "x"
+        ? "min-w-0 flex-1"
+        : "min-h-0 flex-1"
+      : null,
     opts.hideScrollbar ? "no-scrollbar" : null,
     opts.isolate ? "isolate" : null,
   ]
@@ -87,10 +102,22 @@ export function Scroll({
   return (
     <As
       ref={ref}
-      className={cn(scrollClasses({ axis, fill, hideScrollbar, isolate }), className)}
+      className={cn(
+        scrollClasses({ axis, fill, hideScrollbar, isolate }),
+        className,
+      )}
+      // A vertical scroller is where a wide grid table may scroll sideways
+      // (it opens the `SidewaysScroll` region below); the mark is what this
+      // plugin's CSS keys the pinning of everything else on, and what the
+      // table checks is the box actually clipping it.
+      data-scroll-x-host={axis === "y" ? "" : undefined}
       {...rest}
     >
-      {children}
+      {axis === "y" ? (
+        <SidewaysScrollProvider value={true}>{children}</SidewaysScrollProvider>
+      ) : (
+        children
+      )}
     </As>
   );
 }

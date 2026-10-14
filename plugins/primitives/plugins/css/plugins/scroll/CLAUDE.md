@@ -15,6 +15,24 @@ splitting `min-h-0` back out re-opens that footgun.
 The perpendicular axis is clamped to `hidden` for `axis="y"`/`"x"` so a vertical
 scroller never sprouts a stray horizontal bar.
 
+**One exception, declared by the content:** a `y` scroller (marked
+`data-scroll-x-host`, and opening ui-kit's `SidewaysScroll` region for its
+children) also scrolls sideways — and is an inline-size container (`100cqi` =
+what it shows) — while it holds an element marked `data-scrolls-x`
+(`has-[[data-scrolls-x]]:…`). A grid `DataTable` wider than its box marks
+itself so. The pane then stays the ONE scroller on both axes, which is what
+lets the table's sticky header (top) and sticky first column (left) pin to the
+same scroller — a table scrolling inside a box of its own would capture the
+header's `top`, and its group headers with it.
+
+Only the table moves (`web/internal/scroll.css`, base layer, `:where` — any
+class the element carries wins): every box on the path from the scroller to the
+table grows to the table (`fit-content`, `min-width: 100%`), and every child of
+a path box that is off the path — a stats band, the DataView's toolbar band, a
+side panel — pins `left: 0` at `max-width: 100cqi`. A positioned child
+(`absolute`, `relative`) keeps its position and scrolls instead. Unmarked,
+nothing applies. See `data-table`'s CLAUDE.md ("Wide tables").
+
 ## Scope
 
 Owns only overflow + the fill policy. **Sizing stays in `className`** — `h-*` /
@@ -35,7 +53,9 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
 
 - Description: Scroll-container layout primitive: <Scroll axis fill> owns overflow AND the flex-child fill policy (min-h-0 flex-1) as one role.
 - Web:
-  - Uses: `primitives/css/ui-kit.cn`
+  - Uses:
+    - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.SidewaysScrollProvider`
   - Exports (types):
     - `ScrollAxis`
     - `ScrollProps`

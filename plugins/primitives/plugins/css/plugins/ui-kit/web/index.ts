@@ -26,6 +26,10 @@ export {
 } from "./theme/control-size";
 
 export { SingleLineProvider, useSingleLine } from "./theme/single-line";
+export {
+  SidewaysScrollProvider,
+  useSidewaysScroll,
+} from "./theme/sideways-scroll";
 export { MenuSurfaceProvider, useMenuSurface } from "./theme/menu-surface";
 
 export {

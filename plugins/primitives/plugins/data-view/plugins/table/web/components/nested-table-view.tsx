@@ -275,6 +275,7 @@ export function NestedTableView(
     header: f.header === false ? "" : (f.header ?? f.label),
     width: f.width,
     align: f.align,
+    dropOrder: f.dropOrder,
     // The host's sortable set: a header click sorts every sibling group.
     sortable: props.sortHeader.sortable.has(f.id),
     cell: (line: Line) =>
@@ -365,9 +366,10 @@ export function NestedTableView(
         // keys, so the row the keys are on must show it.
         controls.open && "focus-ring",
         controls.isDragging && "opacity-40",
-        controls.isOverChild &&
-          "bg-accent ring-1 ring-primary/40 [--scrim:var(--accent)]",
+        controls.isOverChild && "ring-1 ring-primary/40",
       ),
+      // A drop onto the row nests under it: the row reads highlighted.
+      highlighted: controls.isOverChild,
       overlay: (
         <TreeDropZones
           beforeRef={controls.beforeRef}

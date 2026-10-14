@@ -465,10 +465,14 @@ interface FieldDefBase<TRow> {
   /** Text alignment within the table column (header + cells). Default `"start"`. */
   align?: "start" | "end" | "center";
   /**
-   * When a view runs out of room for its fixed-width columns (the tree's
-   * aligned columns), the order they give way to the row label in: lower
-   * drops first. A field without one drops after every numbered field,
-   * rightmost first.
+   * When a view runs out of room for its columns, the order they give way in:
+   * lower drops first.
+   *
+   * - The **table** (grid presentation) drops numbered fields until its first
+   *   column keeps its minimum; a field without one never drops — what still
+   *   does not fit scrolls sideways, the first column pinned.
+   * - The **tree's aligned columns** drop to keep the row label 160px; there a
+   *   field without one drops after every numbered field, rightmost first.
    */
   dropOrder?: number;
   /** Opaque per-type config for custom columns; understood only by the field

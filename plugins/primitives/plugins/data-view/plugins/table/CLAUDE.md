@@ -35,6 +35,11 @@ Flat, the table has no leading slot: a field declaring `FieldDef.leading` is an
 ordinary column here (see `data-view/CLAUDE.md`, "Leading field"). Nested, it
 has one (below).
 
+`FieldDef.dropOrder` maps to `ColumnDef.dropOrder`: in a narrow pane the
+numbered columns give way (lowest first) before the table scrolls sideways with
+its first column pinned — `data-table`'s CLAUDE.md ("Wide tables"). Both the
+flat and the nested table do this; `presentation: "outline"` does neither.
+
 Surface options reach `DataTable` straight through: `viewOptions.table`
 (`TableViewOptions.columnHeader`), `FieldDef.header` (mapped as
 `header: f.header === false ? "" : (f.header ?? f.label)`), the surface's

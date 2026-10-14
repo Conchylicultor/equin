@@ -173,6 +173,7 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
     header: f.header === false ? "" : (f.header ?? f.label),
     width: f.width,
     align: f.align,
+    dropOrder: f.dropOrder,
     value: f.value ? (row: unknown) => coerce(f.value!(row)) : undefined,
     // The host's sortable set, never `value`'s presence: a field showing a
     // value its list cannot order by (a live source's derived or unsortable

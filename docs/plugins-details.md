@@ -30224,7 +30224,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempted by: `primitives/css/row` (0 debt)
         - **`scroll`** — Scroll-container layout primitive: <Scroll axis fill> owns overflow AND the flex-child fill policy (min-h-0 flex-1) as one role.
           - Web:
-            - Uses: `primitives/css/ui-kit.cn`
+            - Uses:
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.SidewaysScrollProvider`
             - Exports (types):
               - `ScrollAxis`
               - `ScrollProps`
@@ -30442,6 +30444,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Uses:
               - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.SidewaysScrollProvider`
               - `primitives/css/ui-kit.SURFACE_LEVELS`
               - `primitives/css/ui-kit.SurfaceLevel`
               - `primitives/select-scope.scopeSelectAllKeyDown`
@@ -30740,6 +30743,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SidebarRail`
               - `SidebarSeparator`
               - `SidebarTrigger`
+              - `SidewaysScrollProvider`
               - `SingleLineProvider`
               - `subThemeScope`
               - `SURFACE_LEVELS`
@@ -30757,6 +30761,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `usePortalThemeScope`
               - `useRegionForwardedAttrs`
               - `useSidebar`
+              - `useSidewaysScroll`
               - `useSingleLine`
           - Cross-plugin:
             - Imported by: 401 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
@@ -30888,24 +30893,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/notifications`
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
       - Web:
-        - Uses:
+        - Uses: 21 symbols — full list in [`plugins/primitives/plugins/data-table/REFERENCE.md`](../plugins/primitives/plugins/data-table/REFERENCE.md)
+          - `primitives/css/ui-kit` ×4
+          - `primitives/multi-select` ×3
+          - `primitives/css/sticky/stack` ×2
+          - `primitives/css/sticky` ×2
+          - `primitives/dom/element-size` ×2
+          - `primitives/row-actions` ×2
           - `primitives/css/center.Center`
           - `primitives/css/spacing.Stack`
-          - `primitives/css/sticky.Sticky`
-          - `primitives/css/sticky.stickyOffsetPx`
-          - `primitives/css/sticky/stack.StickyStack`
-          - `primitives/css/sticky/stack.StickyStackItem`
           - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.cn`
-          - `primitives/css/ui-kit.ControlSizeProvider`
-          - `primitives/css/ui-kit.SingleLineProvider`
-          - `primitives/dom/element-size.useElementSize`
           - `primitives/link-gesture.activationProps`
-          - `primitives/multi-select.MultiSelectProvider`
-          - `primitives/multi-select.SelectionBar`
-          - `primitives/multi-select.SelectionCheckbox`
-          - `primitives/row-actions.RowActions`
-          - `primitives/row-actions.rowActionsAnchor`
           - `primitives/virtual-rows.useVirtualRows`
           - `ui/icons.Icon`
         - Exports (types):
@@ -30932,6 +30930,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/profiling/boot`
           - `primitives/data-view/table`
           - `primitives/metrics/chart-kit`
+      - Core:
+        - Exports (types):
+          - `FitColumn`
+          - `TrackMin`
+        - Exports (values):
+          - `fitAlignedColumns`
+          - `floorAtLabel`
+          - `trackMin`
     - **`data-view`** — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
       - Web:
         - Slots:

@@ -181,7 +181,7 @@ describe("data-view nested table: lazy children", () => {
     expect(alert.textContent).toContain("Permission denied");
     // A placeholder is one full-span line, not a row of cells.
     expect(alert.closest("[data-tree-row]")).toBeNull();
-    expect(alert.parentElement!.className).toContain("col-span-full");
+    expect(alert.closest(".col-span-full")).not.toBeNull();
     fireEvent.click(getByRole("button", { name: "Retry" }));
     expect(retry).toHaveBeenCalledTimes(1);
   });

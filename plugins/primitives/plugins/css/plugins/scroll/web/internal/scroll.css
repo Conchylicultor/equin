@@ -1,0 +1,34 @@
+/* While a vertical <Scroll> holds a grid table wider than its box (the
+   table's box is marked `data-scrolls-x`, see data-table) it also scrolls
+   sideways — and only the table should move.
+
+   - Every box on the path from the scroller down to the table grows to the
+     table (`fit-content` resolves to the table's min-content then, never
+     narrower than the scroller), so it spans the whole scrollable width.
+   - Every child of such a box that is OFF the path — a stats band above the
+     table, the DataView's toolbar band, a side panel — pins to the left edge at
+     the visible width (`100cqi`: the scroller is an inline-size container
+     then). Its parent spans the scroll width, so it has room to stay put.
+
+   Nothing inside the table is touched (its own box does not `:has()` itself).
+   In the base layer and zero-specificity (`:where`), so a class the element
+   carries wins: a positioned child (absolute, relative) keeps its position and
+   just scrolls; an explicit width keeps its width. */
+@layer base {
+  :where([data-scroll-x-host]:has([data-scrolls-x]) :has([data-scrolls-x])) {
+    width: fit-content;
+    min-width: 100%;
+  }
+
+  :where(
+      :is(
+          [data-scroll-x-host]:has([data-scrolls-x]),
+          [data-scroll-x-host]:has([data-scrolls-x]) :has([data-scrolls-x])
+        )
+        > :not([data-scrolls-x]):not(:has([data-scrolls-x]))
+    ) {
+    position: sticky;
+    left: 0;
+    max-width: 100cqi;
+  }
+}

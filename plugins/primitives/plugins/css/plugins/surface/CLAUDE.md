@@ -114,6 +114,7 @@ never be clobbered.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.SidewaysScrollProvider`
     - `primitives/css/ui-kit.SURFACE_LEVELS`
     - `primitives/css/ui-kit.SurfaceLevel`
     - `primitives/select-scope.scopeSelectAllKeyDown`

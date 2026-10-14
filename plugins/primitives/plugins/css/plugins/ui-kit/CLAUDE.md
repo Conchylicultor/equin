@@ -84,6 +84,13 @@ The global UI kit — one cohesive design-system unit. It owns:
   action (attach, add, point at): no fill, muted dashed hairline and label, full
   strength on hover. Use it instead of restyling an `outline` with
   `border-dashed text-muted-foreground`; `shape="pill"` for the chip form.
+- **`SidewaysScroll`** (`web/theme/sideways-scroll.tsx`) —
+  `SidewaysScrollProvider` / `useSidewaysScroll`, the twin of `SingleLine`:
+  whether content may scroll its region sideways. A vertical `Scroll` opens it;
+  every drawn box ends it (`Surface` but `base`, and `OverlayPanel` here, so
+  popovers and dialogs reset it for what they portal). A wide grid `DataTable`
+  reads it (data-table's "Wide tables"). Lives here so `OverlayPanel` can reset
+  it without a layer inversion.
 - **The portal-forward bridge** (`web/components/portal-forward.tsx`) —
   `PortalForwardProvider` / `usePortalForwardedAttrs`. Portals relocate content to
   `document.body`, severing it from the DOM ancestry that carries ancestry-derived
@@ -551,6 +558,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `SidebarRail`
     - `SidebarSeparator`
     - `SidebarTrigger`
+    - `SidewaysScrollProvider`
     - `SingleLineProvider`
     - `subThemeScope`
     - `SURFACE_LEVELS`
@@ -568,6 +576,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `usePortalThemeScope`
     - `useRegionForwardedAttrs`
     - `useSidebar`
+    - `useSidewaysScroll`
     - `useSingleLine`
 - Cross-plugin:
   - Imported by: 401 plugins — full list in [REFERENCE.md](./REFERENCE.md)

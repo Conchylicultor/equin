@@ -37,6 +37,13 @@ export interface ColumnDef<TRow> {
    */
   sortable?: boolean;
   cell?: (row: TRow) => ReactNode;
+  /**
+   * When the table runs out of room, the order this column gives way in: lower
+   * drops first, until the first column keeps its minimum. A column without one
+   * never drops — whatever still does not fit scrolls sideways. The first column
+   * never drops. Grid presentation only.
+   */
+  dropOrder?: number;
 }
 
 /**
@@ -255,4 +262,9 @@ export interface DataTableRowDecoration {
   className?: string;
   style?: CSSProperties;
   overlay?: ReactNode;
+  /**
+   * The row reads highlighted — a drop target under a drag — in the
+   * presentation's own selected tint, which the sticky first cell follows.
+   */
+  highlighted?: boolean;
 }
