@@ -199,10 +199,26 @@ export function CollapsibleContent({
  * starts from where the box is, so a quick double click reverses smoothly.
  * Under `prefers-reduced-motion` the tween has no duration — the same states,
  * no motion.
+ *
+ * The tween starts on the first frame AFTER the commit, on the real clock.
+ * Opening mounts the content, and mounting a long list of rows can hold the
+ * main thread for hundreds of milliseconds. The browser dates an animation from
+ * its frame clock, which was stamped before that work ran — so a tween created
+ * in the commit (or even in the next frame's callback, whose stamp also
+ * predates the long task) has already elapsed by the time anything paints, and
+ * the content snaps open: the fold-away (whose content is already mounted)
+ * animated, the unfold did not. So the commit only PINS the box at its first
+ * frame (inline height + opacity, clipped); the tween starts on the next
+ * animation frame, measuring the natural height there — after whatever the
+ * mount rendered — and its start time is set to `performance.now()` rather
+ * than the stale frame stamp. A slow mount now delays the motion instead of
+ * swallowing it.
  */
 function useFoldMotion(open: boolean) {
   const ref = useRef<HTMLDivElement>(null);
   const running = useRef<Animation | null>(null);
+  /** The box is pinned at a tween's first frame, waiting for its start. */
+  const pinned = useRef(false);
   const [present, setPresent] = useState(open);
   const [prevOpen, setPrevOpen] = useState(open);
   const [motion, setMotion] = useState<{ opening: boolean } | null>(null);
@@ -215,60 +231,83 @@ function useFoldMotion(open: boolean) {
   useLayoutEffect(() => {
     const el = ref.current;
     if (motion === null || el === null) return;
-    const natural = el.scrollHeight;
-    // Interrupted: start from the in-flight frame. Otherwise from the far end.
-    // Only this box's own tween: a fold-away that unmounted its box leaves its
-    // (held) animation on the detached node, which a reopen must not start from.
+    // Interrupted: start from the in-flight frame — a running tween's, or the
+    // pinned first frame of one that has not started yet. Otherwise from the
+    // far end. Only this box's own tween: a fold-away that unmounted its box
+    // leaves its (held) animation on the detached node, which a reopen must not
+    // start from.
     const prior =
       running.current?.effect instanceof KeyframeEffect &&
       running.current.effect.target === el
         ? running.current
         : null;
-    const from = prior
-      ? {
-          height: el.getBoundingClientRect().height,
-          opacity: Number(getComputedStyle(el).opacity),
-        }
-      : {
-          height: motion.opening ? 0 : natural,
-          opacity: motion.opening ? 0 : 1,
-        };
+    const from =
+      prior || pinned.current
+        ? {
+            height: el.getBoundingClientRect().height,
+            opacity: Number(getComputedStyle(el).opacity),
+          }
+        : {
+            height: motion.opening ? 0 : el.scrollHeight,
+            opacity: motion.opening ? 0 : 1,
+          };
     prior?.cancel();
-    const reduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
+    running.current = null;
     el.style.overflow = "hidden";
-    const anim = el.animate(
-      [
-        { height: `${from.height}px`, opacity: from.opacity },
+
+    const start = (duration: number) => {
+      pinned.current = false;
+      const to = motion.opening ? el.scrollHeight : 0;
+      el.style.height = "";
+      el.style.opacity = "";
+      const anim = el.animate(
+        [
+          { height: `${from.height}px`, opacity: from.opacity },
+          { height: `${to}px`, opacity: motion.opening ? 1 : 0 },
+        ],
         {
-          height: `${motion.opening ? natural : 0}px`,
-          opacity: motion.opening ? 1 : 0,
+          duration,
+          easing: FOLD_EASING,
+          // Backwards: a frame stamped before the start time below still
+          // paints the first keyframe, never the unclipped box. A fold-away
+          // also holds its last frame (height 0) until React unmounts the box.
+          // Without it the animation's effect drops the moment it finishes, a
+          // commit before the unmount lands, and the full content paints for
+          // one frame between the collapse and its removal.
+          fill: motion.opening ? "backwards" : "both",
         },
-      ],
-      {
-        duration: reduced ? 0 : FOLD_MS,
-        easing: FOLD_EASING,
-        // A fold-away holds its last frame (height 0) until React unmounts the
-        // box. Without it the animation's effect drops the moment it finishes,
-        // a commit before the unmount lands, and the full content paints for
-        // one frame between the collapse and its removal.
-        fill: motion.opening ? "none" : "forwards",
-      },
-    );
-    running.current = anim;
-    anim.onfinish = () => {
-      if (!motion.opening) {
-        // Stays `running`: a reopen landing before the unmount must cancel
-        // this held frame, and starts from it (height 0).
-        setPresent(false);
-        return;
-      }
-      running.current = null;
-      // Settled open: natural height again, and nothing clipped (a sticky
-      // header or a spilling popover inside must not be cut by the fold).
-      el.style.overflow = "";
+      );
+      // Now, not the frame stamp, which predates any long task this frame ran.
+      anim.startTime = performance.now();
+      running.current = anim;
+      anim.onfinish = () => {
+        if (!motion.opening) {
+          // Stays `running`: a reopen landing before the unmount must cancel
+          // this held frame, and starts from it (height 0).
+          setPresent(false);
+          return;
+        }
+        running.current = null;
+        // Settled open: natural height again, and nothing clipped (a sticky
+        // header or a spilling popover inside must not be cut by the fold).
+        el.style.overflow = "";
+      };
     };
+
+    // No motion wanted: nothing to protect from a slow commit, and pinning
+    // would paint one empty frame for nothing.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      start(0);
+      return;
+    }
+    // Pin the first frame now (before paint), start the tween next frame.
+    el.style.height = `${from.height}px`;
+    el.style.opacity = String(from.opacity);
+    pinned.current = true;
+    const frame = requestAnimationFrame(() => start(FOLD_MS));
+    // A flip before the start re-runs this from the pinned frame; an unmount
+    // drops the box with it.
+    return () => cancelAnimationFrame(frame);
   }, [motion]);
 
   return { ref, present };
