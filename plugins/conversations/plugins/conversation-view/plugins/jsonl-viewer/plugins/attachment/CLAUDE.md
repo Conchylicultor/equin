@@ -9,13 +9,18 @@
   - Slots: `JsonlViewerAttachment.Renderer`
   - Slot contributors: 27 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `JsonlViewerAttachment.Renderer` ×27
-  - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
+  - Contributes:
+    - `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
+    - `JsonlViewer.ContextRole` "attachment:unrendered"
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/css/text.Text`
     - `primitives/slot-render.defineDispatchSlot`
-  - Exports (values): `JsonlViewerAttachment`
+  - Exports (types): `AttachmentRole`
+  - Exports (values):
+    - `attachmentRenderer`
+    - `JsonlViewerAttachment`
 - Cross-plugin:
   - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×27

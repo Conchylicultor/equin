@@ -6,9 +6,11 @@
 
 - Description: Renders command-permissions attachment events showing permission grants for the session.
 - Web:
-  - Contributes: `JsonlViewerAttachment.Renderer` "command_permissions" → `CommandPermissionsView`
+  - Contributes:
+    - `JsonlViewerAttachment.Renderer` "command_permissions" → `CommandPermissionsView`
+    - `JsonlViewer.ContextRole` "attachment:command_permissions"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

@@ -1,5 +1,9 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { formatTokenCount } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import {
+  ContextFold,
+  formatTokenCount,
+  useHostedContext,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import {
   Collapsible,
@@ -30,14 +34,17 @@ function tokenDrop(e: CompactionEvent): string | null {
  * A context compaction: one thin rule across the transcript, so the thread
  * reads straight through it. The summary the agent continues from and the
  * files it re-read fold behind the rule — the summary as rendered markdown,
- * never as a message the user sent.
+ * never as a message the user sent — and so does the context the harness
+ * re-injected right after (a host: `hostsContext`), as a nested fold.
  */
 export function CompactionRow({ event }: { event: JsonlEvent }) {
   const e = event as CompactionEvent;
   const drop = tokenDrop(e);
   const label =
     e.trigger === "manual" ? "Compacted on request" : "Context compacted";
-  const hasFold = e.summary !== undefined || e.files.length > 0;
+  const hosted = useHostedContext();
+  const hasFold =
+    e.summary !== undefined || e.files.length > 0 || hosted !== null;
 
   const rule = (
     <>
@@ -114,6 +121,9 @@ export function CompactionRow({ event }: { event: JsonlEvent }) {
                 </Stack>
               ))}
             </Stack>
+          )}
+          {hosted !== null && (
+            <ContextFold label="Context re-injected" members={hosted} />
           )}
         </Stack>
       </CollapsibleContent>

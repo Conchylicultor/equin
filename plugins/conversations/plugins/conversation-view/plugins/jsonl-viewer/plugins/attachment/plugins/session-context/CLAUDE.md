@@ -19,9 +19,11 @@ falling out of a hardcoded table.
 
 - Description: Renders the session-context attachment — the ambient briefing blocks (user identity, git status, …) the harness injected at launch — as one collapsed card with a section per block.
 - Web:
-  - Contributes: `JsonlViewerAttachment.Renderer` "session_context" → `SessionContextView`
+  - Contributes:
+    - `JsonlViewerAttachment.Renderer` "session_context" → `SessionContextView`
+    - `JsonlViewer.ContextRole` "attachment:session_context"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`

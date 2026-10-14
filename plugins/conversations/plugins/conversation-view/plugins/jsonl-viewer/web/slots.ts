@@ -58,8 +58,51 @@ export interface TranscriptEndContribution {
   component: ComponentType<{ conversation: Conversation }>;
 }
 
+/**
+ * What an event is to the reader, as far as folding harness context goes:
+ *
+ * - `context` — model context the harness injected (instructions, environment,
+ *   tool / skill / agent listings…). A run of these folds behind one rule.
+ * - `ambient` — joins a context run it sits in or next to, but never starts
+ *   one: an unrendered attachment subtype, a `System · informational` notice.
+ *   On its own it stays a row.
+ * - `conversation` — breaks a run. The default for any event nobody classifies.
+ */
+export type ContextRole = "context" | "ambient" | "conversation";
+
+/**
+ * Logic-only contribution classifying events for the context fold. Each
+ * contributor answers only for the events it owns (`undefined` otherwise); the
+ * first answer wins. A `fallback` contribution is asked only when no regular
+ * one answered — the attachment plugin's "any subtype nobody renders is
+ * ambient" rule.
+ *
+ * Folding never removes an event: every member still renders through its own
+ * `EventRow`, behind a closed disclosure. Readers of the event list (stats,
+ * artifacts, outline) are unaffected.
+ */
+export interface ContextRoleContribution {
+  id: string;
+  role: (event: JsonlEvent) => ContextRole | undefined;
+  fallback?: boolean;
+}
+
+/**
+ * `hostsContext`: the run of context events directly after this event folds
+ * INTO its row instead of standing as its own fold. The renderer must place it
+ * (`useHostedContext()` → `<ContextFold>`); `EventRow` throws in dev when a host
+ * never reads it. Only exact-string `match`es can host.
+ */
+export interface EventRendererMeta {
+  hostsContext?: true;
+}
+
 export const JsonlViewer = {
-  EventRenderer: defineDispatchSlot<{ event: JsonlEvent }, JsonlEvent["kind"]>({
+  EventRenderer: defineDispatchSlot<
+    { event: JsonlEvent },
+    JsonlEvent["kind"],
+    EventRendererMeta
+  >({
     key: (p) => p.event.kind,
     fallback: UnknownEventRow,
     docLabel: (c) => String(c.match),
@@ -73,6 +116,7 @@ export const JsonlViewer = {
     docLabel: (c) => String(c.match),
   }),
   EventFilter: defineSlot<EventFilterContribution>({ docLabel: (p) => p.id }),
+  ContextRole: defineSlot<ContextRoleContribution>({ docLabel: (p) => p.id }),
   Overlay: defineRenderSlot<OverlayContribution>({ docLabel: (p) => p.id }),
   PendingPromptAction: defineRenderSlot<PendingPromptActionContribution>({
     docLabel: (p) => p.id,

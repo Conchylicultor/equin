@@ -6,9 +6,11 @@
 
 - Description: Renders edited-text-file attachment events as a collapsible file path with the resulting file content shown as a syntax-highlighted code listing.
 - Web:
-  - Contributes: `JsonlViewerAttachment.Renderer` "edited_text_file" → `EditedTextFileView`
+  - Contributes:
+    - `JsonlViewerAttachment.Renderer` "edited_text_file" → `EditedTextFileView`
+    - `JsonlViewer.ContextRole` "attachment:edited_text_file"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/code-listing.CatNListing`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`

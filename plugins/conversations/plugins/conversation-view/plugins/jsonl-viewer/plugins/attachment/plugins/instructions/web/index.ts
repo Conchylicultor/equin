@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { JsonlViewerAttachment } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
+import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
 import { InstructionsView } from "./components/instructions-view";
 
 export default {
@@ -7,9 +7,10 @@ export default {
   description:
     "Renders the instructions attachment in both its flavors — the launch snapshot of the project instruction files (CLAUDE.md), and the session-start re-read reporting which of them dropped out — as the plural twin of the nested-memory card.",
   contributions: [
-    JsonlViewerAttachment.Renderer({
+    ...attachmentRenderer({
       match: "instructions",
       component: InstructionsView,
+      role: "context",
     }),
   ],
 } satisfies PluginDefinition;

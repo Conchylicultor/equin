@@ -6,9 +6,11 @@
 
 - Description: Renders agent-listing-delta attachment events showing which agent types are available (or added/removed) for the Agent tool.
 - Web:
-  - Contributes: `JsonlViewerAttachment.Renderer` "agent_listing_delta" → `AgentListingDeltaView`
+  - Contributes:
+    - `JsonlViewerAttachment.Renderer` "agent_listing_delta" → `AgentListingDeltaView`
+    - `JsonlViewer.ContextRole` "attachment:agent_listing_delta"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

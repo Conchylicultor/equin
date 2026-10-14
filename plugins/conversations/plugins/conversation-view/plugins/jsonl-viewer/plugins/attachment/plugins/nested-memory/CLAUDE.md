@@ -6,9 +6,11 @@
 
 - Description: Renders nested-memory attachment events showing which CLAUDE.md files were loaded as context.
 - Web:
-  - Contributes: `JsonlViewerAttachment.Renderer` "nested_memory" → `NestedMemoryAttachmentView`
+  - Contributes:
+    - `JsonlViewerAttachment.Renderer` "nested_memory" → `NestedMemoryAttachmentView`
+    - `JsonlViewer.ContextRole` "attachment:nested_memory"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
     - `primitives/css/scroll.Scroll`

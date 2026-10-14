@@ -33,9 +33,11 @@ row's actual news, so it keeps the header for the count instead.
 
 - Description: Renders the instructions attachment in both its flavors — the launch snapshot of the project instruction files (CLAUDE.md), and the session-start re-read reporting which of them dropped out — as the plural twin of the nested-memory card.
 - Web:
-  - Contributes: `JsonlViewerAttachment.Renderer` "instructions" → `InstructionsView`
+  - Contributes:
+    - `JsonlViewerAttachment.Renderer` "instructions" → `InstructionsView`
+    - `JsonlViewer.ContextRole` "attachment:instructions"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
     - `primitives/css/scroll.Scroll`

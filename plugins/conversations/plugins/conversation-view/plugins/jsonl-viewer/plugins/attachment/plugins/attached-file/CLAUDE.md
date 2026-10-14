@@ -40,9 +40,11 @@ rendering a card with an empty body.
 
 - Description: Renders a file the user attached to their message: a pasted image shown inline at its own aspect with a small/large toggle, or a text file as a syntax-highlighted listing behind its path.
 - Web:
-  - Contributes: `JsonlViewerAttachment.Renderer` "file" → `AttachedFileView`
+  - Contributes:
+    - `JsonlViewerAttachment.Renderer` "file" → `AttachedFileView`
+    - `JsonlViewer.ContextRole` "attachment:file"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
     - `primitives/overlay/image-viewer.ViewerThumbnail`

@@ -33,8 +33,10 @@ spelling it rendered.)
   - Contributes:
     - `JsonlViewerAttachment.Renderer` "deferred_tools_delta" → `DeferredToolsDeltaView`
     - `JsonlViewerAttachment.Renderer` "deferred_tools_record" → `DeferredToolsRecordView`
+    - `JsonlViewer.ContextRole` "attachment:deferred_tools_delta"
+    - `JsonlViewer.ContextRole` "attachment:deferred_tools_record"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`

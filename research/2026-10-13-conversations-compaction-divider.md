@@ -52,6 +52,8 @@ parser emits one event, and nothing downstream ever sees the summary as a user m
 
 `compact_boundary` no longer reaches `SystemRow`; nothing else in the repo matches on it.
 
+Follow-up: harness context re-injected after the compaction folds into this divider too — see `2026-10-14-conversations-context-fold.md`.
+
 ## Verification
 
 - `./singularity test plugins/conversations/plugins/transcript-watcher` (parser cases: boundary +

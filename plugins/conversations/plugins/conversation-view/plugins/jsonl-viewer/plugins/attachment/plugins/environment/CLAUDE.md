@@ -23,9 +23,11 @@ failed to arrive.
 
 - Description: Renders the environment attachment — where the agent is running — as either the opening snapshot or, when the harness reports changes, the fields that moved with their from → to values.
 - Web:
-  - Contributes: `JsonlViewerAttachment.Renderer` "environment" → `EnvironmentView`
+  - Contributes:
+    - `JsonlViewerAttachment.Renderer` "environment" → `EnvironmentView`
+    - `JsonlViewer.ContextRole` "attachment:environment"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
     - `primitives/css/rigid.rigidClass`

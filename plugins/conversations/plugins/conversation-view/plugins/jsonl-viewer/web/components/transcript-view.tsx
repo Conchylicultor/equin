@@ -30,6 +30,10 @@ import { TranscriptEventsProvider } from "./transcript-events-context";
 import { paneScrollScope } from "./pane-scroll-scope";
 import { SectionExpandProvider } from "./section-sticky-context";
 import { useVisibleEvents } from "../use-visible-events";
+import { useContextRuns } from "../use-context-runs";
+import type { ContextFoldPhase } from "../context-runs";
+import { ContextFold } from "./context-fold";
+import { eventKey } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 
 function StickyUserHeader({ children }: { children: ReactNode }) {
   const [expanded, setExpanded] = useState(false);
@@ -60,29 +64,54 @@ function StickyUserHeader({ children }: { children: ReactNode }) {
   );
 }
 
+const FOLD_LABEL: Record<ContextFoldPhase, string> = {
+  session: "Session context",
+  update: "Context update",
+};
+
 function EventSections({ events }: { events: JsonlEvent[] }) {
+  const items = useContextRuns(events);
+  // Sections open at each user prompt. A context run never contains one (a
+  // prompt is conversation), so a prompt is always a plain event item.
   const sections = useMemo(() => {
     const result: { start: number; end: number }[] = [];
     let sectionStart = 0;
-    for (let i = 1; i < events.length; i++) {
-      if (events[i]?.kind === "user-text") {
+    for (let i = 1; i < items.length; i++) {
+      const item = items[i]!;
+      if (item.kind === "event" && events[item.index]?.kind === "user-text") {
         result.push({ start: sectionStart, end: i });
         sectionStart = i;
       }
     }
-    if (events.length > 0) {
-      result.push({ start: sectionStart, end: events.length });
+    if (items.length > 0) {
+      result.push({ start: sectionStart, end: items.length });
     }
     return result;
-  }, [events]);
+  }, [items, events]);
 
-  const renderEvent = (i: number) => {
-    const event = events[i]!;
+  const membersOf = (indices: readonly number[]) =>
+    indices.map((index) => ({ event: events[index]!, index }));
+
+  const renderItem = (n: number) => {
+    const item = items[n]!;
+    if (item.kind === "fold") {
+      const first = events[item.members[0]!]!;
+      return (
+        <div key={`fold:${item.members[0]}`} data-event-key={eventKey(first)}>
+          <ContextFold
+            label={FOLD_LABEL[item.phase]}
+            members={membersOf(item.members)}
+          />
+        </div>
+      );
+    }
+    const event = events[item.index]!;
     return (
       <EventRow
-        key={event.kind === "tool-call" ? event.toolUseId : i}
+        key={event.kind === "tool-call" ? event.toolUseId : item.index}
         event={event}
-        index={i}
+        index={item.index}
+        hosted={item.hosted && membersOf(item.hosted)}
       />
     );
   };
@@ -93,21 +122,26 @@ function EventSections({ events }: { events: JsonlEvent[] }) {
     // composer below the pane hold nothing that was sent yet.
     <ImageGallery>
       {sections.map((section) => {
-        const firstEvent = events[section.start]!;
-        if (firstEvent.kind !== "user-text") {
+        const first = items[section.start]!;
+        // Keyed by the first EVENT's index, as before folding existed, so a run
+        // forming or growing does not remount the sections after it.
+        const key = first.kind === "fold" ? first.members[0]! : first.index;
+        const opensWithPrompt =
+          first.kind === "event" && events[first.index]?.kind === "user-text";
+        if (!opensWithPrompt) {
           return (
-            <Fragment key={section.start}>
+            <Fragment key={key}>
               {Array.from({ length: section.end - section.start }, (_, j) =>
-                renderEvent(section.start + j),
+                renderItem(section.start + j),
               )}
             </Fragment>
           );
         }
         return (
-          <Stack key={section.start} gap="sm">
-            <StickyUserHeader>{renderEvent(section.start)}</StickyUserHeader>
+          <Stack key={key} gap="sm">
+            <StickyUserHeader>{renderItem(section.start)}</StickyUserHeader>
             {Array.from({ length: section.end - section.start - 1 }, (_, j) =>
-              renderEvent(section.start + 1 + j),
+              renderItem(section.start + 1 + j),
             )}
           </Stack>
         );

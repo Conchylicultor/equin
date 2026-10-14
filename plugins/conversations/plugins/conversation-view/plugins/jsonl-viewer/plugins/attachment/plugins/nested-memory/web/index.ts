@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { JsonlViewerAttachment } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
+import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
 import { NestedMemoryAttachmentView } from "./components/nested-memory-attachment-view";
 
 export default {
@@ -7,9 +7,10 @@ export default {
   description:
     "Renders nested-memory attachment events showing which CLAUDE.md files were loaded as context.",
   contributions: [
-    JsonlViewerAttachment.Renderer({
+    ...attachmentRenderer({
       match: "nested_memory",
       component: NestedMemoryAttachmentView,
+      role: "context",
     }),
   ],
 } satisfies PluginDefinition;

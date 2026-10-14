@@ -5,7 +5,16 @@ import { RawJsonAction } from "./components/raw-json-button";
 import { TimestampAction } from "./components/timestamp-action";
 
 export { JsonlViewer } from "./slots";
-export type { OverlayContribution, EventFilterContribution } from "./slots";
+export type {
+  OverlayContribution,
+  EventFilterContribution,
+  ContextRole,
+  ContextRoleContribution,
+  EventRendererMeta,
+} from "./slots";
+export { ContextFold } from "./components/context-fold";
+export { useHostedContext } from "./components/hosted-context";
+export type { ContextMember } from "./components/hosted-context";
 export { JsonlPane } from "./components/jsonl-pane";
 export { TranscriptView } from "./components/transcript-view";
 export type { TranscriptViewProps } from "./components/transcript-view";

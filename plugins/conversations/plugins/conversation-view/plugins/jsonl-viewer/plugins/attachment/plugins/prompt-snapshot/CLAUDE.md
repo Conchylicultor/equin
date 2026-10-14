@@ -40,9 +40,11 @@ never pushes the rest of the conversation off the screen.
 
 - Description: Renders the snapshot of the exact system prompt an agent was given: its size and tool count on the collapsed line, the prompt sections and the tool names (never their descriptions) in the body.
 - Web:
-  - Contributes: `JsonlViewerAttachment.Renderer` "prompt_snapshot" → `PromptSnapshotView`
+  - Contributes:
+    - `JsonlViewerAttachment.Renderer` "prompt_snapshot" → `PromptSnapshotView`
+    - `JsonlViewer.ContextRole` "attachment:prompt_snapshot"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`

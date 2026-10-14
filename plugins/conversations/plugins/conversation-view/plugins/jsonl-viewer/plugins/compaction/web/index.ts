@@ -4,11 +4,12 @@ import { CompactionRow } from "./components/compaction-row";
 
 export default {
   description:
-    "Renders a context compaction as one thin rule across the transcript — Context compacted · 316k → 12k — folding the summary the agent continues from (as markdown) and the files it re-read.",
+    "Renders a context compaction as one thin rule across the transcript — Context compacted · 316k → 12k — folding the summary the agent continues from (as markdown), the files it re-read, and the context the harness re-injected right after.",
   contributions: [
     JsonlViewer.EventRenderer({
       match: "compaction",
       component: CompactionRow,
+      hostsContext: true,
     }),
   ],
 } satisfies PluginDefinition;

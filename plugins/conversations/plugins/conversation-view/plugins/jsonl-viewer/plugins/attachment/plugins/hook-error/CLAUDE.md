@@ -11,8 +11,12 @@
     - `JsonlViewerAttachment.Renderer` "hook_blocking_error" → `HookErrorView`
     - `JsonlViewerAttachment.Renderer` "hook_cancelled" → `HookErrorView`
     - `JsonlViewerAttachment.Renderer` "hook_stopped_continuation" → `HookErrorView`
+    - `JsonlViewer.ContextRole` "attachment:hook_blocking_error"
+    - `JsonlViewer.ContextRole` "attachment:hook_cancelled"
+    - `JsonlViewer.ContextRole` "attachment:hook_non_blocking_error"
+    - `JsonlViewer.ContextRole` "attachment:hook_stopped_continuation"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

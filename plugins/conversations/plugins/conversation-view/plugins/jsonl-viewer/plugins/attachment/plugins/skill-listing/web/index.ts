@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { JsonlViewerAttachment } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
+import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
 import { SkillListingView } from "./components/skill-listing-view";
 
 export default {
@@ -7,9 +7,10 @@ export default {
   description:
     "Renders skill-listing attachment events showing skills available in the current session.",
   contributions: [
-    JsonlViewerAttachment.Renderer({
+    ...attachmentRenderer({
       match: "skill_listing",
       component: SkillListingView,
+      role: "context",
     }),
   ],
 } satisfies PluginDefinition;

@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { JsonlViewerAttachment } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
+import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
 import { QueuedCommandAttachmentView } from "./components/queued-command-attachment-view";
 
 export default {
@@ -7,9 +7,10 @@ export default {
   description:
     "Renders queued_command attachment events — a prompt the user queued while the agent was busy, awaiting delivery on the next turn.",
   contributions: [
-    JsonlViewerAttachment.Renderer({
+    ...attachmentRenderer({
       match: "queued_command",
       component: QueuedCommandAttachmentView,
+      role: "conversation",
     }),
   ],
 } satisfies PluginDefinition;

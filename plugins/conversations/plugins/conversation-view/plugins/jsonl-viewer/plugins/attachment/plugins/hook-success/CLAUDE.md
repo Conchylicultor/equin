@@ -6,9 +6,11 @@
 
 - Description: Renders hook_success attachment events: the execution record of a hook command (which hook, exit code, duration), surfacing stderr/non-zero exits.
 - Web:
-  - Contributes: `JsonlViewerAttachment.Renderer` "hook_success" → `HookSuccessView`
+  - Contributes:
+    - `JsonlViewerAttachment.Renderer` "hook_success" → `HookSuccessView`
+    - `JsonlViewer.ContextRole` "attachment:hook_success"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

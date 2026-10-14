@@ -4,12 +4,14 @@
 
 ## Plugin reference
 
-- Description: Renders a context compaction as one thin rule across the transcript — Context compacted · 316k → 12k — folding the summary the agent continues from (as markdown) and the files it re-read.
+- Description: Renders a context compaction as one thin rule across the transcript — Context compacted · 316k → 12k — folding the summary the agent continues from (as markdown), the files it re-read, and the context the harness re-injected right after.
 - Web:
   - Contributes: `JsonlViewer.EventRenderer` "compaction" → `CompactionRow`
   - Uses:
+    - `conversations/conversation-view/jsonl-viewer.ContextFold`
     - `conversations/conversation-view/jsonl-viewer.formatTokenCount`
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+    - `conversations/conversation-view/jsonl-viewer.useHostedContext`
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
     - `primitives/collapsible.Collapsible`
     - `primitives/collapsible.CollapsibleChevron`

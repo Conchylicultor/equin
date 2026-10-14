@@ -4,9 +4,11 @@
 
 ## Plugin reference
 
-- Description: Renders system events in the JSONL viewer.
+- Description: Renders system events in the JSONL viewer; an informational notice folds with the harness context around it.
 - Web:
-  - Contributes: `JsonlViewer.EventRenderer` "system" → `SystemRow`
+  - Contributes:
+    - `JsonlViewer.EventRenderer` "system" → `SystemRow`
+    - `JsonlViewer.ContextRole` "system:informational"
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.EventLine`
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`

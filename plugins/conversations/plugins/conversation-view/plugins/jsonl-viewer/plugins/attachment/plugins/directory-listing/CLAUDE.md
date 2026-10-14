@@ -33,9 +33,11 @@ row rather than rendering an empty card.
 
 - Description: Renders the directory listings the harness hands the agent: the directory and its entry count on the collapsed line, the entry names in the body.
 - Web:
-  - Contributes: `JsonlViewerAttachment.Renderer` "directory" → `DirectoryListingView`
+  - Contributes:
+    - `JsonlViewerAttachment.Renderer` "directory" → `DirectoryListingView`
+    - `JsonlViewer.ContextRole` "attachment:directory"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
     - `primitives/css/scroll.Scroll`

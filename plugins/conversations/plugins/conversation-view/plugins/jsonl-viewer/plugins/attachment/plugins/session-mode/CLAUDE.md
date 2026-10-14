@@ -40,9 +40,13 @@ What each row leaves the reader with:
     - `JsonlViewerAttachment.Renderer` "plan_mode" → `SessionModeView`
     - `JsonlViewerAttachment.Renderer` "plan_mode_exit" → `SessionModeView`
     - `JsonlViewerAttachment.Renderer` "ultra_effort_enter" → `SessionModeView`
+    - `JsonlViewer.ContextRole` "attachment:auto_mode"
+    - `JsonlViewer.ContextRole` "attachment:plan_mode"
+    - `JsonlViewer.ContextRole` "attachment:plan_mode_exit"
+    - `JsonlViewer.ContextRole` "attachment:ultra_effort_enter"
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.EventLine`
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
     - `ui/icons.Icon`
 

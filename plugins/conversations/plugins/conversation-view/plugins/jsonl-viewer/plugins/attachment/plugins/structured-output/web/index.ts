@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { JsonlViewerAttachment } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
+import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
 import { StructuredOutputView } from "./components/structured-output-view";
 
 export default {
@@ -7,9 +7,10 @@ export default {
   description:
     "Renders the schema-shaped result a subagent returned: its headline field on the collapsed line, and a readable one-level reading of the arbitrary result object in the body.",
   contributions: [
-    JsonlViewerAttachment.Renderer({
+    ...attachmentRenderer({
       match: "structured_output",
       component: StructuredOutputView,
+      role: "conversation",
     }),
   ],
 } satisfies PluginDefinition;

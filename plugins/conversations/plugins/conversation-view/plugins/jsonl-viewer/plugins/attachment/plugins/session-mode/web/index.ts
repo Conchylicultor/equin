@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { JsonlViewerAttachment } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
+import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
 import { SessionModeView } from "./components/session-mode-view";
 
 export default {
@@ -9,21 +9,25 @@ export default {
   contributions: [
     // Four spellings of one fact, so one component: the reading differs only in
     // label, icon and which value is worth naming.
-    JsonlViewerAttachment.Renderer({
+    ...attachmentRenderer({
       match: "auto_mode",
       component: SessionModeView,
+      role: "context",
     }),
-    JsonlViewerAttachment.Renderer({
+    ...attachmentRenderer({
       match: "plan_mode",
       component: SessionModeView,
+      role: "conversation",
     }),
-    JsonlViewerAttachment.Renderer({
+    ...attachmentRenderer({
       match: "plan_mode_exit",
       component: SessionModeView,
+      role: "conversation",
     }),
-    JsonlViewerAttachment.Renderer({
+    ...attachmentRenderer({
       match: "ultra_effort_enter",
       component: SessionModeView,
+      role: "conversation",
     }),
   ],
 } satisfies PluginDefinition;

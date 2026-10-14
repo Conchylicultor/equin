@@ -83,6 +83,28 @@ never a hand-rolled expand toggle. `JsonlPane` wraps the rendered events (not th
 pending turns or the composer) in one `<ImageGallery>` per pane, so every
 thumbnail in a row joins the pane's ← / → set with no wiring.
 
+## Harness context folds behind one rule
+
+Runs of harness-injected context — the session-start burst (instructions,
+environment, tool / skill / agent listings…), the re-sends mid-conversation, the
+re-injection after a compaction — render as `Session context · N items` /
+`Context update · N items` rules (`ContextFold`), closed by default. It is a
+**view** step (`useContextRuns` over `useVisibleEvents`' output, the pure
+`groupContextRuns`), never a parser fold or a filter: every reader of the event
+list still sees every event, and every member still renders as its own
+`EventRow` once opened — fallback card and investigate action included.
+
+- **Classification is declared by whoever renders the event**, through
+  `JsonlViewer.ContextRole` (`context` starts a fold, `ambient` joins one,
+  `conversation` / unanswered breaks one). An attachment subtype registers with
+  `attachmentRenderer({ match, component, role })` (attachment/web), which
+  emits the renderer and the role together — a new subtype cannot skip the
+  decision. An unrendered subtype is `ambient`.
+- **A host** (`EventRenderer({ …, hostsContext: true })`) takes the run right
+  after its event into its own row: read it with `useHostedContext()` and place
+  `<ContextFold>`. A host that never reads it throws in dev. The compaction
+  divider is the one host.
+
 ## Overlays: get the scroller from `paneScrollScope.useRoot()`
 
 An `Overlay` contribution renders as a SIBLING of the transcript scroller (inside
@@ -118,10 +140,12 @@ back.
     - `JsonlViewer.EventRenderer`
     - `JsonlViewer.PendingPrompt`
     - `JsonlViewer.EventFilter`
+    - `JsonlViewer.ContextRole`
     - `JsonlViewer.Overlay`
     - `JsonlViewer.PendingPromptAction`
     - `JsonlViewer.TranscriptEnd`
-  - Slot contributors: 24 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 53 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `JsonlViewer.ContextRole` ×29
     - `JsonlViewer.EventRenderer` ×14
     - `JsonlViewer.Overlay` ×4
     - `JsonlViewer.EventFilter` ×2
@@ -131,9 +155,11 @@ back.
   - Contributes:
     - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
     - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/conversation-view/jsonl-viewer/row-actions` ×4
+    - `primitives/collapsible` ×4
     - `conversations/conversation-view/pending-turn` ×3
+    - `primitives/css/ui-kit` ×2
     - `primitives/dom/auto-scroll` ×2
     - `primitives/relative-time` ×2
     - `primitives/slot-render` ×2
@@ -148,7 +174,6 @@ back.
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.cn`
     - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
@@ -159,12 +184,17 @@ back.
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `ui/icons.Icon`
   - Exports (types):
+    - `ContextMember`
+    - `ContextRole`
+    - `ContextRoleContribution`
     - `EventFilterContribution`
+    - `EventRendererMeta`
     - `OverlayContribution`
     - `SectionExpand`
     - `TranscriptSubject`
     - `TranscriptViewProps`
   - Exports (values):
+    - `ContextFold`
     - `EventLine`
     - `formatTime`
     - `formatTokenCount`
@@ -173,6 +203,7 @@ back.
     - `paneScrollScope`
     - `Timestamp`
     - `TranscriptView`
+    - `useHostedContext`
     - `useJsonlConversationId`
     - `useLastAssistantEvent`
     - `useRowMarkdown`
@@ -210,7 +241,7 @@ back.
   - **`background-shells`** — The background-shell surfaces: every background Bash shell of a conversation and its state (useConversationShells, folded from the transcript the view already holds), its live output tail…
   - **`code-listing`** — Renders `cat -n` tool output (`CatNListing`) as a syntax-highlighted, line-numbered listing: parses the gutter off and hands the code to syntax-highlight's `CodeListing`.
   - **`collapsible-card`** — Disclosure-card primitive: the whole header row is the toggle (no chevron; aria-expanded + an Expand/Collapse label carry the state), optional interactive sibling aside (never nested), and a…
-  - **`compaction`** — Renders a context compaction as one thin rule across the transcript — Context compacted · 316k → 12k — folding the summary the agent continues from (as markdown) and the files it re-read.
+  - **`compaction`** — Renders a context compaction as one thin rule across the transcript — Context compacted · 316k → 12k — folding the summary the agent continues from (as markdown), the files it re-read, and the…
   - **`event-counter`** — Displays the total event count in the conversation toolbar.
   - **`fields-card`** — Shared appearance for a headline + truncating summary preview + fold-out key/value field list. Used by the queued task-notification card and the native task-notification row so the two never diverge.
   - **`file-path`** — Clickable file path component with RTL ellipsis, copy button, and file-peek pane integration.
@@ -223,7 +254,7 @@ back.
   - **`row-actions`** — Owns WHICH actions a JSONL transcript row carries: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. The cluster itself (reveal, guards, popup-hold) is…
   - **`subagents`** — The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live…
   - **`summary`** — Renders summary separator events in the JSONL viewer.
-  - **`system`** — Renders system events in the JSONL viewer.
+  - **`system`** — Renders system events in the JSONL viewer; an informational notice folds with the harness context around it.
   - **`task-notification`** — Renders background task completion notifications in the JSONL viewer, with a button onto the finished task that the owning plugin contributes through TaskNotification.Open (first claim wins).
   - **`teammate-message`** — Renders messages relayed from other Claude sessions (<teammate-message> blocks) distinctly from human user messages.
   - **`tool-call`** — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.

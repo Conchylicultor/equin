@@ -6,9 +6,11 @@
 
 - Description: Renders skill-listing attachment events showing skills available in the current session.
 - Web:
-  - Contributes: `JsonlViewerAttachment.Renderer` "skill_listing" → `SkillListingView`
+  - Contributes:
+    - `JsonlViewerAttachment.Renderer` "skill_listing" → `SkillListingView`
+    - `JsonlViewer.ContextRole` "attachment:skill_listing"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

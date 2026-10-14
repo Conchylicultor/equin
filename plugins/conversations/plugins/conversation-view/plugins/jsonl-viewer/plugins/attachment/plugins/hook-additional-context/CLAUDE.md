@@ -6,9 +6,11 @@
 
 - Description: Renders hook_additional_context attachment events: the context a PreToolUse/PostToolUse hook injected into the agent before a tool ran.
 - Web:
-  - Contributes: `JsonlViewerAttachment.Renderer` "hook_additional_context" → `HookAdditionalContextView`
+  - Contributes:
+    - `JsonlViewerAttachment.Renderer` "hook_additional_context" → `HookAdditionalContextView`
+    - `JsonlViewer.ContextRole` "attachment:hook_additional_context"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

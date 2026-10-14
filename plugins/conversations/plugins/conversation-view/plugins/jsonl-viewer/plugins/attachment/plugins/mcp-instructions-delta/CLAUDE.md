@@ -26,9 +26,11 @@ run to hundreds of lines.
 
 - Description: Renders mcp_instructions_delta attachment events — an MCP server's standing instructions entering or leaving the agent's context mid-session — in the same +/− grammar as the deferred-tools delta.
 - Web:
-  - Contributes: `JsonlViewerAttachment.Renderer` "mcp_instructions_delta" → `McpInstructionsDeltaView`
+  - Contributes:
+    - `JsonlViewerAttachment.Renderer` "mcp_instructions_delta" → `McpInstructionsDeltaView`
+    - `JsonlViewer.ContextRole` "attachment:mcp_instructions_delta"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`

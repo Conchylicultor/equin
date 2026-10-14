@@ -11833,10 +11833,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JsonlViewer.EventRenderer`
               - `JsonlViewer.PendingPrompt`
               - `JsonlViewer.EventFilter`
+              - `JsonlViewer.ContextRole`
               - `JsonlViewer.Overlay`
               - `JsonlViewer.PendingPromptAction`
               - `JsonlViewer.TranscriptEnd`
-            - Slot contributors: 24 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Slot contributors: 53 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `JsonlViewer.ContextRole` ×29
               - `JsonlViewer.EventRenderer` ×14
               - `JsonlViewer.Overlay` ×4
               - `JsonlViewer.EventFilter` ×2
@@ -11846,9 +11848,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 34 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Uses: 39 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `conversations/conversation-view/jsonl-viewer/row-actions` ×4
+              - `primitives/collapsible` ×4
               - `conversations/conversation-view/pending-turn` ×3
+              - `primitives/css/ui-kit` ×2
               - `primitives/dom/auto-scroll` ×2
               - `primitives/relative-time` ×2
               - `primitives/slot-render` ×2
@@ -11863,7 +11867,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/sticky.Sticky`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.cn`
               - `primitives/dom/scroll-reveal.revealElement`
               - `primitives/live-state.ResourceView`
               - `primitives/loading.Loading`
@@ -11874,12 +11877,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/scope/surface-id.useSurfaceTabId`
               - `ui/icons.Icon`
             - Exports (types):
+              - `ContextMember`
+              - `ContextRole`
+              - `ContextRoleContribution`
               - `EventFilterContribution`
+              - `EventRendererMeta`
               - `OverlayContribution`
               - `SectionExpand`
               - `TranscriptSubject`
               - `TranscriptViewProps`
             - Exports (values):
+              - `ContextFold`
               - `EventLine`
               - `formatTime`
               - `formatTokenCount`
@@ -11888,6 +11896,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `paneScrollScope`
               - `Timestamp`
               - `TranscriptView`
+              - `useHostedContext`
               - `useJsonlConversationId`
               - `useLastAssistantEvent`
               - `useRowMarkdown`
@@ -11953,13 +11962,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Slots: `JsonlViewerAttachment.Renderer`
                 - Slot contributors: 27 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/REFERENCE.md)
                   - `JsonlViewerAttachment.Renderer` ×27
-                - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
+                - Contributes:
+                  - `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
+                  - `JsonlViewer.ContextRole` "attachment:unrendered"
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                   - `primitives/css/text.Text`
                   - `primitives/slot-render.defineDispatchSlot`
-                - Exports (values): `JsonlViewerAttachment`
+                - Exports (types): `AttachmentRole`
+                - Exports (values):
+                  - `attachmentRenderer`
+                  - `JsonlViewerAttachment`
               - Cross-plugin:
                 - Imported by: 27 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/REFERENCE.md)
                   - `conversations` ×27
@@ -11970,26 +11984,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Plugins:
                 - **`agent-listing-delta`** — Renders agent-listing-delta attachment events showing which agent types are available (or added/removed) for the Agent tool.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "agent_listing_delta" → `AgentListingDeltaView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "agent_listing_delta" → `AgentListingDeltaView`
+                      - `JsonlViewer.ContextRole` "attachment:agent_listing_delta"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                 - **`attached-file`** — Renders a file the user attached to their message: a pasted image shown inline at its own aspect with a small/large toggle, or a text file as a syntax-highlighted listing behind its path.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "file" → `AttachedFileView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "file" → `AttachedFileView`
+                      - `JsonlViewer.ContextRole` "attachment:file"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                       - `primitives/overlay/image-viewer.ViewerThumbnail`
                       - `primitives/syntax-highlight.CodeListing`
                 - **`command-permissions`** — Renders command-permissions attachment events showing permission grants for the session.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "command_permissions" → `CommandPermissionsView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "command_permissions" → `CommandPermissionsView`
+                      - `JsonlViewer.ContextRole` "attachment:command_permissions"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
@@ -11998,26 +12018,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Contributes:
                       - `JsonlViewerAttachment.Renderer` "date" → `DateAttachmentView`
                       - `JsonlViewerAttachment.Renderer` "date_change" → `DateAttachmentView`
+                      - `JsonlViewer.ContextRole` "attachment:date"
+                      - `JsonlViewer.ContextRole` "attachment:date_change"
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `ui/icons.Icon`
                 - **`deferred-tools`** — Renders both spellings of the deferred-tool roster: the full deferred_tools_record listing and the deferred_tools_delta showing tools becoming available or removed mid-session.
                   - Web:
                     - Contributes:
                       - `JsonlViewerAttachment.Renderer` "deferred_tools_delta" → `DeferredToolsDeltaView`
                       - `JsonlViewerAttachment.Renderer` "deferred_tools_record" → `DeferredToolsRecordView`
+                      - `JsonlViewer.ContextRole` "attachment:deferred_tools_delta"
+                      - `JsonlViewer.ContextRole` "attachment:deferred_tools_record"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/scroll.Scroll`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                 - **`directory-listing`** — Renders the directory listings the harness hands the agent: the directory and its entry count on the collapsed line, the entry names in the body.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "directory" → `DirectoryListingView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "directory" → `DirectoryListingView`
+                      - `JsonlViewer.ContextRole` "attachment:directory"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                       - `primitives/css/scroll.Scroll`
@@ -12025,17 +12051,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/text.Text`
                 - **`edited-text-file`** — Renders edited-text-file attachment events as a collapsible file path with the resulting file content shown as a syntax-highlighted code listing.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "edited_text_file" → `EditedTextFileView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "edited_text_file" → `EditedTextFileView`
+                      - `JsonlViewer.ContextRole` "attachment:edited_text_file"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/code-listing.CatNListing`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                 - **`environment`** — Renders the environment attachment — where the agent is running — as either the opening snapshot or, when the harness reports changes, the fields that moved with their from → to values.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "environment" → `EnvironmentView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "environment" → `EnvironmentView`
+                      - `JsonlViewer.ContextRole` "attachment:environment"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                       - `primitives/css/rigid.rigidClass`
@@ -12048,15 +12078,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Contributes:
                       - `JsonlViewerAttachment.Renderer` "batching_reminder_sent" → `HarnessNudgeView`
                       - `JsonlViewerAttachment.Renderer` "silent_turn_reminder" → `HarnessNudgeView`
+                      - `JsonlViewer.ContextRole` "attachment:batching_reminder_sent"
+                      - `JsonlViewer.ContextRole` "attachment:silent_turn_reminder"
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `ui/icons.Icon`
                 - **`hook-additional-context`** — Renders hook_additional_context attachment events: the context a PreToolUse/PostToolUse hook injected into the agent before a tool ran.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "hook_additional_context" → `HookAdditionalContextView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "hook_additional_context" → `HookAdditionalContextView`
+                      - `JsonlViewer.ContextRole` "attachment:hook_additional_context"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
@@ -12067,31 +12101,41 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `JsonlViewerAttachment.Renderer` "hook_blocking_error" → `HookErrorView`
                       - `JsonlViewerAttachment.Renderer` "hook_cancelled" → `HookErrorView`
                       - `JsonlViewerAttachment.Renderer` "hook_stopped_continuation" → `HookErrorView`
+                      - `JsonlViewer.ContextRole` "attachment:hook_blocking_error"
+                      - `JsonlViewer.ContextRole` "attachment:hook_cancelled"
+                      - `JsonlViewer.ContextRole` "attachment:hook_non_blocking_error"
+                      - `JsonlViewer.ContextRole` "attachment:hook_stopped_continuation"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                 - **`hook-message`** — Renders hook_system_message attachment events — a hook's informational line (a tip, a reminder) — as a calm one-line row, distinct from the loud hook-error card.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "hook_system_message" → `HookMessageView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "hook_system_message" → `HookMessageView`
+                      - `JsonlViewer.ContextRole` "attachment:hook_system_message"
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `ui/icons.Icon`
                 - **`hook-success`** — Renders hook_success attachment events: the execution record of a hook command (which hook, exit code, duration), surfacing stderr/non-zero exits.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "hook_success" → `HookSuccessView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "hook_success" → `HookSuccessView`
+                      - `JsonlViewer.ContextRole` "attachment:hook_success"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                 - **`instructions`** — Renders the instructions attachment in both its flavors — the launch snapshot of the project instruction files (CLAUDE.md), and the session-start re-read reporting which of them dropped out — as the plural twin of the nested-memory card.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "instructions" → `InstructionsView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "instructions" → `InstructionsView`
+                      - `JsonlViewer.ContextRole` "attachment:instructions"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                       - `primitives/css/scroll.Scroll`
@@ -12099,34 +12143,42 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/text.Text`
                 - **`mcp-instructions-delta`** — Renders mcp_instructions_delta attachment events — an MCP server's standing instructions entering or leaving the agent's context mid-session — in the same +/− grammar as the deferred-tools delta.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "mcp_instructions_delta" → `McpInstructionsDeltaView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "mcp_instructions_delta" → `McpInstructionsDeltaView`
+                      - `JsonlViewer.ContextRole` "attachment:mcp_instructions_delta"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/scroll.Scroll`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                 - **`model`** — Renders the model attachment — which model the harness put behind the session — as a one-line row naming the model, its exact id, and its knowledge cutoff.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "model" → `ModelView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "model" → `ModelView`
+                      - `JsonlViewer.ContextRole` "attachment:model"
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `ui/icons.Icon`
                 - **`nested-memory`** — Renders nested-memory attachment events showing which CLAUDE.md files were loaded as context.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "nested_memory" → `NestedMemoryAttachmentView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "nested_memory" → `NestedMemoryAttachmentView`
+                      - `JsonlViewer.ContextRole` "attachment:nested_memory"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                       - `primitives/css/scroll.Scroll`
                       - `primitives/css/text.Text`
                 - **`prompt-snapshot`** — Renders the snapshot of the exact system prompt an agent was given: its size and tool count on the collapsed line, the prompt sections and the tool names (never their descriptions) in the body.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "prompt_snapshot" → `PromptSnapshotView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "prompt_snapshot" → `PromptSnapshotView`
+                      - `JsonlViewer.ContextRole` "attachment:prompt_snapshot"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/cluster.Cluster`
                       - `primitives/css/fill.Fill`
@@ -12135,24 +12187,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/text.Text`
                 - **`queued-command`** — Renders queued_command attachment events — a prompt the user queued while the agent was busy, awaiting delivery on the next turn.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "queued_command" → `QueuedCommandAttachmentView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "queued_command" → `QueuedCommandAttachmentView`
+                      - `JsonlViewer.ContextRole` "attachment:queued_command"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/fields-card.FieldsCard`
                       - `conversations/conversation-view/jsonl-viewer/queued-prompt-card.QueuedPromptCard`
                       - `ui/icons.Icon`
                 - **`remote-session`** — Renders the remote_session_change attachment — the conversation became followed from claude.ai — as a one-line row linking out to the session.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "remote_session_change" → `RemoteSessionView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "remote_session_change" → `RemoteSessionView`
+                      - `JsonlViewer.ContextRole` "attachment:remote_session_change"
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `ui/icons.Icon`
                 - **`session-context`** — Renders the session-context attachment — the ambient briefing blocks (user identity, git status, …) the harness injected at launch — as one collapsed card with a section per block.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "session_context" → `SessionContextView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "session_context" → `SessionContextView`
+                      - `JsonlViewer.ContextRole` "attachment:session_context"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/scroll.Scroll`
                       - `primitives/css/spacing.Stack`
@@ -12164,33 +12222,43 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `JsonlViewerAttachment.Renderer` "plan_mode" → `SessionModeView`
                       - `JsonlViewerAttachment.Renderer` "plan_mode_exit" → `SessionModeView`
                       - `JsonlViewerAttachment.Renderer` "ultra_effort_enter" → `SessionModeView`
+                      - `JsonlViewer.ContextRole` "attachment:auto_mode"
+                      - `JsonlViewer.ContextRole` "attachment:plan_mode"
+                      - `JsonlViewer.ContextRole` "attachment:plan_mode_exit"
+                      - `JsonlViewer.ContextRole` "attachment:ultra_effort_enter"
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                       - `ui/icons.Icon`
                 - **`skill-listing`** — Renders skill-listing attachment events showing skills available in the current session.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "skill_listing" → `SkillListingView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "skill_listing" → `SkillListingView`
+                      - `JsonlViewer.ContextRole` "attachment:skill_listing"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                 - **`structured-output`** — Renders the schema-shaped result a subagent returned: its headline field on the collapsed line, and a readable one-level reading of the arbitrary result object in the body.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "structured_output" → `StructuredOutputView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "structured_output" → `StructuredOutputView`
+                      - `JsonlViewer.ContextRole` "attachment:structured_output"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/scroll.Scroll`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                 - **`task-reminder`** — Renders task-reminder attachment events showing periodic task list injections.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "task_reminder" → `TaskReminderAttachmentView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "task_reminder" → `TaskReminderAttachmentView`
+                      - `JsonlViewer.ContextRole` "attachment:task_reminder"
                     - Uses:
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/fill.fillClasses`
                       - `primitives/css/rigid.rigidClass`
@@ -12199,19 +12267,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/ui-kit.cn`
                 - **`team-context`** — Renders the team_context attachment — the harness telling the agent which teammate it is, and in which session team.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "team_context" → `TeamContextView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "team_context" → `TeamContextView`
+                      - `JsonlViewer.ContextRole` "attachment:team_context"
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `ui/icons.Icon`
                 - **`tool-output-notice`** — Renders the harness's notes about a tool's output — a Read that came back partial, and a Bash command whose output only the agent saw.
                   - Web:
                     - Contributes:
                       - `JsonlViewerAttachment.Renderer` "read_truncation_notice" → `ToolOutputNoticeView`
                       - `JsonlViewerAttachment.Renderer` "bash_output_audience_note" → `ToolOutputNoticeView`
+                      - `JsonlViewer.ContextRole` "attachment:bash_output_audience_note"
+                      - `JsonlViewer.ContextRole` "attachment:read_truncation_notice"
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
-                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
                       - `ui/icons.Icon`
             - **`background-shells`** — The background-shell surfaces: every background Bash shell of a conversation and its state (useConversationShells, folded from the transcript the view already holds), its live output tail (useShellOutput), the one state chip every surface shows, and the read-only output pane that streams it. Serves the live tail of one background shell's output file: resolves the file from the conversation's own transcript (never from the browser), checks its shape, reads its last 64 KB per change, and watches it with a per-write (kqueue) file watcher while subscribed.
               - Web:
@@ -12319,12 +12391,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Imported by: 28 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/REFERENCE.md)
                   - `conversations` ×28
-            - **`compaction`** — Renders a context compaction as one thin rule across the transcript — Context compacted · 316k → 12k — folding the summary the agent continues from (as markdown) and the files it re-read.
+            - **`compaction`** — Renders a context compaction as one thin rule across the transcript — Context compacted · 316k → 12k — folding the summary the agent continues from (as markdown), the files it re-read, and the context the harness re-injected right after.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "compaction" → `CompactionRow`
                 - Uses:
+                  - `conversations/conversation-view/jsonl-viewer.ContextFold`
                   - `conversations/conversation-view/jsonl-viewer.formatTokenCount`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                  - `conversations/conversation-view/jsonl-viewer.useHostedContext`
                   - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                   - `primitives/collapsible.Collapsible`
                   - `primitives/collapsible.CollapsibleChevron`
@@ -12605,9 +12679,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `primitives/css/ui-kit.Separator`
-            - **`system`** — Renders system events in the JSONL viewer.
+            - **`system`** — Renders system events in the JSONL viewer; an informational notice folds with the harness context around it.
               - Web:
-                - Contributes: `JsonlViewer.EventRenderer` "system" → `SystemRow`
+                - Contributes:
+                  - `JsonlViewer.EventRenderer` "system" → `SystemRow`
+                  - `JsonlViewer.ContextRole` "system:informational"
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.EventLine`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
@@ -29280,9 +29356,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useCollapsibleContext`
           - `useExpandAll`
       - Cross-plugin:
-        - Imported by: 41 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+        - Imported by: 42 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
           - `ui` ×9
-          - `conversations` ×7
+          - `conversations` ×8
           - `primitives` ×7
           - `apps` ×6
           - `plugin-meta` ×4

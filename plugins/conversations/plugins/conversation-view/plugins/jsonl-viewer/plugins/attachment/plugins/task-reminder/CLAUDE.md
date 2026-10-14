@@ -6,9 +6,11 @@
 
 - Description: Renders task-reminder attachment events showing periodic task list injections.
 - Web:
-  - Contributes: `JsonlViewerAttachment.Renderer` "task_reminder" → `TaskReminderAttachmentView`
+  - Contributes:
+    - `JsonlViewerAttachment.Renderer` "task_reminder" → `TaskReminderAttachmentView`
+    - `JsonlViewer.ContextRole` "attachment:task_reminder"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/rigid.rigidClass`

@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { JsonlViewerAttachment } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
+import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
 import { TaskReminderAttachmentView } from "./components/task-reminder-attachment-view";
 
 export default {
@@ -7,9 +7,10 @@ export default {
   description:
     "Renders task-reminder attachment events showing periodic task list injections.",
   contributions: [
-    JsonlViewerAttachment.Renderer({
+    ...attachmentRenderer({
       match: "task_reminder",
       component: TaskReminderAttachmentView,
+      role: "conversation",
     }),
   ],
 } satisfies PluginDefinition;

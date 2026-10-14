@@ -6,9 +6,11 @@
 
 - Description: Renders queued_command attachment events — a prompt the user queued while the agent was busy, awaiting delivery on the next turn.
 - Web:
-  - Contributes: `JsonlViewerAttachment.Renderer` "queued_command" → `QueuedCommandAttachmentView`
+  - Contributes:
+    - `JsonlViewerAttachment.Renderer` "queued_command" → `QueuedCommandAttachmentView`
+    - `JsonlViewer.ContextRole` "attachment:queued_command"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/fields-card.FieldsCard`
     - `conversations/conversation-view/jsonl-viewer/queued-prompt-card.QueuedPromptCard`
     - `ui/icons.Icon`

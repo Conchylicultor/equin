@@ -51,9 +51,11 @@ thousands of words.
 
 - Description: Renders the schema-shaped result a subagent returned: its headline field on the collapsed line, and a readable one-level reading of the arbitrary result object in the body.
 - Web:
-  - Contributes: `JsonlViewerAttachment.Renderer` "structured_output" → `StructuredOutputView`
+  - Contributes:
+    - `JsonlViewerAttachment.Renderer` "structured_output" → `StructuredOutputView`
+    - `JsonlViewer.ContextRole` "attachment:structured_output"
   - Uses:
-    - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment.attachmentRenderer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
