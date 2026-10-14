@@ -144,9 +144,9 @@ back.
     - `JsonlViewer.Overlay`
     - `JsonlViewer.PendingPromptAction`
     - `JsonlViewer.TranscriptEnd`
-  - Slot contributors: 54 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 55 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `JsonlViewer.ContextRole` ×29
-    - `JsonlViewer.EventRenderer` ×15
+    - `JsonlViewer.EventRenderer` ×16
     - `JsonlViewer.Overlay` ×4
     - `JsonlViewer.EventFilter` ×2
     - `JsonlViewer.PendingPrompt` ×2
@@ -229,12 +229,13 @@ back.
     - `eventKey`
     - `jsonlEvents`
 - Cross-plugin:
-  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×40
+  - Imported by: 42 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×41
     - `tasks/outcome-report`
 - Exemptions:
   - Exempts itself from: `no-db-backed-notify` — `server/internal/jsonl-events-resource.ts` (debt)
 - Sub-plugins:
+  - **`api-request`** — Renders the model API call settings Claude Code logs (model, effort, thinking, max tokens, permission mode, betas, tool set) as a change log: the first call's settings, then one row per call that…
   - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
   - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
   - **`attachment`** — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.

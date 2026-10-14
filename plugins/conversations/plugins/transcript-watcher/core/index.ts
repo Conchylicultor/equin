@@ -26,3 +26,9 @@ export {
 } from "./relay";
 export { ForeignSessionPayloadSchema } from "./foreign-session";
 export type { ForeignSessionPayload } from "./foreign-session";
+export { RequestConfigSchema, requestConfigChanges } from "./request-config";
+export type {
+  RequestConfig,
+  RequestConfigChange,
+  RequestConfigScalarField,
+} from "./request-config";

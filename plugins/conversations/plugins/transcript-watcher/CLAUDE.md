@@ -134,6 +134,9 @@ memo degrades to a full chain re-read on every push.
     - `ForeignSessionPayload`
     - `JsonlEvent`
     - `QuestionAnswer`
+    - `RequestConfig`
+    - `RequestConfigChange`
+    - `RequestConfigScalarField`
     - `TeammateMessage`
     - `TokenUsage`
     - `ToolCallResult`
@@ -147,6 +150,8 @@ memo degrades to a full chain re-read on every push.
     - `JsonlEventSchema`
     - `PREPROMPT_TAG`
     - `QuestionAnswerSchema`
+    - `requestConfigChanges`
+    - `RequestConfigSchema`
     - `stripRelayBoilerplate`
     - `tokenUsageOf`
     - `TokenUsageSchema`

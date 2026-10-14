@@ -1593,6 +1593,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/api-request": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-api-request",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-text": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-text",
       "version": "0.0.1",
@@ -7359,6 +7363,8 @@
     "@singularity/plugin-conversations-conversation-view-hold-and-exit": ["@singularity/plugin-conversations-conversation-view-hold-and-exit@workspace:plugins/conversations/plugins/conversation-view/plugins/hold-and-exit"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-api-request": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-api-request@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/api-request"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-text": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-text@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-text"],
 

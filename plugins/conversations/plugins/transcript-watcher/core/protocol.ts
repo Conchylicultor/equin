@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { RequestConfigSchema } from "./request-config";
 
 // Wire tag the agent reads in its first user turn. Named `special_instructions`
 // (not `preprompt`) so the model reads it as an imperative to follow. The
@@ -223,6 +224,23 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     /** Absolute path of the checkpointed file. */
     path: z.string(),
     created: z.boolean(),
+  }),
+  z.object({
+    // A model API call whose settings differ from the previous call by the
+    // same caller — `type: "api-request"` lines are written once per call, and
+    // the parser emits only the first and the ones that changed something,
+    // counting the identical calls after each into its `calls`, so the
+    // transcript reads as a log of configuration changes.
+    kind: z.literal("api-request"),
+    at: z.string(),
+    /** Claude Code's `querySource`: `repl_main_thread`, or a side caller. */
+    source: z.string(),
+    config: RequestConfigSchema,
+    /** The same caller's previous settings; null on its first call. */
+    previous: RequestConfigSchema.nullable(),
+    /** Calls made with these settings, this one included: the identical calls
+     *  that follow it are counted here rather than emitted as rows. */
+    calls: z.number().int(),
   }),
   z.object({
     kind: z.literal("unknown"),

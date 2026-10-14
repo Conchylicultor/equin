@@ -721,5 +721,80 @@ describe("readJsonlEvents — file-history-delta checkpoints", () => {
     expect((await readJsonlEvents(path)).map((e) => e.kind)).toEqual([
       "unknown",
     ]);
+describe("api-request lines", () => {
+  const apiRequest = (
+    at: string,
+    over: { effort?: string; querySource?: string; params?: unknown } = {},
+  ) => ({
+    type: "api-request",
+    timestamp: at,
+    querySource: over.querySource ?? "repl_main_thread",
+    shapeHash: "shape-1",
+    params: over.params ?? {
+      model: "model-a",
+      betas: ["a", "b"],
+      max_tokens: 128000,
+      thinking: { type: "adaptive" },
+      output_config: { effort: over.effort ?? "medium" },
+      safeguards: [
+        {
+          type: "dangerous_tool_use",
+          classifier_context: { permission_mode: "auto" },
+        },
+      ],
+    },
+  });
+
+  test("keeps a caller's first call and the ones that changed its settings", async () => {
+    const path = await writeFixture([
+      apiRequest("2026-06-30T00:00:01.000Z"),
+      apiRequest("2026-06-30T00:00:02.000Z"),
+      apiRequest("2026-06-30T00:00:03.000Z", { effort: "high" }),
+      apiRequest("2026-06-30T00:00:04.000Z", { effort: "high" }),
+    ]);
+    const events = (await readJsonlEvents(path)).filter(
+      (e) => e.kind === "api-request",
+    );
+    expect(
+      events.map((e) => [e.at, e.previous?.effort ?? null, e.config.effort]),
+    ).toEqual([
+      ["2026-06-30T00:00:01.000Z", null, "medium"],
+      ["2026-06-30T00:00:03.000Z", "medium", "high"],
+    ]);
+    expect(events[0]!.config).toEqual({
+      model: "model-a",
+      effort: "medium",
+      thinking: "adaptive",
+      maxTokens: 128000,
+      permissionMode: "auto",
+      betas: ["a", "b"],
+      shapeHash: "shape-1",
+    });
+  });
+
+  test("compares each caller against its own previous call", async () => {
+    const path = await writeFixture([
+      apiRequest("2026-06-30T00:00:01.000Z"),
+      apiRequest("2026-06-30T00:00:02.000Z", {
+        querySource: "compact",
+        effort: "low",
+      }),
+      apiRequest("2026-06-30T00:00:03.000Z"),
+    ]);
+    const events = (await readJsonlEvents(path)).filter(
+      (e) => e.kind === "api-request",
+    );
+    expect(events.map((e) => [e.source, e.previous === null])).toEqual([
+      ["repl_main_thread", true],
+      ["compact", true],
+    ]);
+  });
+
+  test("a line without params.model stays unknown", async () => {
+    const path = await writeFixture([
+      apiRequest("2026-06-30T00:00:01.000Z", { params: { betas: [] } }),
+    ]);
+    const events = await readJsonlEvents(path);
+    expect(events.map((e) => e.kind)).toEqual(["unknown"]);
   });
 });

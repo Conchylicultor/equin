@@ -10,10 +10,17 @@ import {
   userPromptText,
   tokenUsageOf,
   QuestionAnswerSchema,
+  requestConfigChanges,
 } from "../../core";
-import type { JsonlEvent, QuestionAnswer, ToolCallResult } from "../../core";
+import type {
+  JsonlEvent,
+  QuestionAnswer,
+  ToolCallResult,
+} from "../../core";
+import { requestConfigOf } from "./api-request";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
+type ApiRequestEvent = Extract<JsonlEvent, { kind: "api-request" }>;
 type CompactionEvent = Extract<JsonlEvent, { kind: "compaction" }>;
 
 /** The `compactMetadata` a `compact_boundary` line carries; every field optional, since Claude Code owns the shape. */
@@ -386,6 +393,13 @@ async function buildEvents(
   // and the re-read files that follow join it. Any line that is neither (an
   // assistant turn, the next prompt) closes it.
   let compaction: CompactionEvent | null = null;
+  // The last `api-request` row emitted per caller (`querySource`): a call is
+  // emitted only when it is the caller's first or differs from its previous
+  // one; an identical call is counted into that row's `calls` instead, so ~one
+  // line per model call collapses to the changes without losing the trace.
+  // Keyed per caller so a side caller (compaction, a subagent) using other
+  // settings does not read as the main thread flipping back and forth.
+  const lastRequestBySource = new Map<string, ApiRequestEvent>();
 
   // One home for user-turn text handling, shared by the string-content branch
   // and the array text-block branch (which previously duplicated it). Closes
@@ -731,6 +745,30 @@ async function buildEvents(
             : `${backup.realParentDir}/${name}`,
           created: backup.backupFileName === null,
         });
+        continue;
+      }
+    }
+
+    if (type === "api-request") {
+      const config = requestConfigOf(obj);
+      if (config) {
+        const source =
+          typeof obj.querySource === "string" ? obj.querySource : "";
+        const last = lastRequestBySource.get(source);
+        if (last && requestConfigChanges(last.config, config).length === 0) {
+          last.calls += 1;
+          continue;
+        }
+        const event: ApiRequestEvent = {
+          kind: "api-request",
+          at: ts,
+          source,
+          config,
+          previous: last?.config ?? null,
+          calls: 1,
+        };
+        lastRequestBySource.set(source, event);
+        events.push(event);
         continue;
       }
     }

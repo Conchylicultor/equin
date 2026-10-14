@@ -231,6 +231,7 @@
       - **`hold-and-exit`** — Exit-menu entry that marks the task as held and closes the conversation.
       - **`jsonl-viewer`** [exempt] — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL…
         - Plugins:
+          - **`api-request`** — Renders the model API call settings Claude Code logs (model, effort, thinking, max tokens, permission mode, betas, tool set) as a change log: the first call's settings, then one row per call that…
           - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
           - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
           - **`attachment`** [27 sub-plugins] — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
