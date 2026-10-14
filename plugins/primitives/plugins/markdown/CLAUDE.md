@@ -55,6 +55,7 @@ Design rationale lives in:
     - `active-data`
     - `active-data/go`
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
+    - `conversations/conversation-view/jsonl-viewer/compaction`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/jsonl-viewer/teammate-message`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`

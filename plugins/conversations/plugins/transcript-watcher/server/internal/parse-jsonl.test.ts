@@ -574,3 +574,89 @@ describe("readJsonlEventsFromChain", () => {
     expect(single.filter((e) => e.kind === "attachment")).toHaveLength(1);
   });
 });
+
+describe("readJsonlEvents — context compaction", () => {
+  const boundary = (uuid: string) => ({
+    type: "system",
+    subtype: "compact_boundary",
+    content: "Conversation compacted",
+    uuid,
+    parentUuid: null,
+    timestamp: TS,
+    compactMetadata: { trigger: "auto", preTokens: 318372, postTokens: 10167 },
+  });
+  const summaryLine = (uuid: string, parentUuid: string) => ({
+    ...userLine(
+      uuid,
+      parentUuid,
+      "This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.\n\nSummary:\n## Done\n\n- the thing\n\nIf you need specific details from before compaction, read the full transcript at: /x.jsonl\nContinue the conversation from where it left off without asking the user any further questions.",
+    ),
+    isCompactSummary: true,
+    isVisibleInTranscriptOnly: true,
+  });
+  const attachmentLine = (
+    uuid: string,
+    parentUuid: string,
+    attachment: Record<string, unknown>,
+  ) => ({ type: "attachment", uuid, parentUuid, timestamp: TS, attachment });
+
+  test("boundary, summary and re-read files fold into one compaction event", async () => {
+    const path = await writeFixture([
+      userLine("u1", null, "first"),
+      boundary("b"),
+      summaryLine("s", "b"),
+      attachmentLine("f1", "s", {
+        type: "file",
+        filename: "/w/out.txt",
+        content: {
+          type: "text",
+          file: { filePath: "/w/out.txt", numLines: 11 },
+        },
+      }),
+      attachmentLine("f2", "f1", {
+        type: "compact_file_reference",
+        filename: "/w/plan.md",
+        displayPath: "plan.md",
+      }),
+      attachmentLine("k", "f2", { type: "invoked_skills", skills: [] }),
+      assistantLine("a", "k", "carrying on"),
+      attachmentLine("f3", "a", {
+        type: "file",
+        filename: "/w/later.txt",
+        content: {
+          type: "text",
+          file: { filePath: "/w/later.txt", numLines: 2 },
+        },
+      }),
+    ]);
+    const events = await readJsonlEvents(path);
+    expect(events.map((e) => e.kind)).toEqual([
+      "user-text",
+      "compaction",
+      "attachment",
+      "assistant-text",
+      "attachment",
+    ]);
+    expect(events[1]).toEqual({
+      kind: "compaction",
+      at: TS,
+      trigger: "auto",
+      preTokens: 318372,
+      postTokens: 10167,
+      summary: "## Done\n\n- the thing",
+      files: [
+        { path: "/w/out.txt", lines: 11 },
+        { path: "/w/plan.md", lines: undefined },
+      ],
+    });
+  });
+
+  test("a summary is never a user message, even without a boundary", async () => {
+    const path = await writeFixture([
+      userLine("u1", null, "first"),
+      summaryLine("s", "u1"),
+    ]);
+    const events = await readJsonlEvents(path);
+    expect(events.map((e) => e.kind)).toEqual(["user-text", "compaction"]);
+  });
+});

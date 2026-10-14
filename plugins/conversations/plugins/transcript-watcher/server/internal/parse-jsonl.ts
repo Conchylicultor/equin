@@ -1,4 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
+import { z } from "zod";
 import {
   extractPreprompt,
   activeLineUuids,
@@ -13,6 +14,37 @@ import {
 import type { JsonlEvent, QuestionAnswer, ToolCallResult } from "../../core";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
+type CompactionEvent = Extract<JsonlEvent, { kind: "compaction" }>;
+
+/** The `compactMetadata` a `compact_boundary` line carries; every field optional, since Claude Code owns the shape. */
+const CompactMetadataSchema = z.object({
+  trigger: z.string().optional(),
+  preTokens: z.number().optional(),
+  postTokens: z.number().optional(),
+});
+
+/** The preamble Claude Code puts before every compact summary — the harness talking, not the summary. */
+const COMPACT_SUMMARY_PREAMBLE =
+  /^This session is being continued from a previous conversation[^\n]*\n+(?:Summary:\s*\n)?/;
+
+/** The instructions Claude Code appends after every compact summary, addressed to the agent. */
+const COMPACT_SUMMARY_POSTSCRIPT =
+  /\n+(?:If you need specific details from before compaction|Continue the conversation from where it left off)[\s\S]*$/;
+
+/** The attachment subtypes Claude Code writes for the files it re-reads right after compacting. */
+const COMPACTION_FILE_SUBTYPES = new Set(["file", "compact_file_reference"]);
+
+function compactionFile(
+  att: Record<string, unknown>,
+): CompactionEvent["files"][number] | null {
+  if (typeof att.filename !== "string") return null;
+  const content = att.content as { file?: { numLines?: unknown } } | undefined;
+  const lines = content?.file?.numLines;
+  return {
+    path: att.filename,
+    lines: typeof lines === "number" ? lines : undefined,
+  };
+}
 
 const xmlParser = new XMLParser({ parseTagValue: false, trimValues: true });
 
@@ -336,6 +368,10 @@ async function buildEvents(
   // <special_instructions> would emit a second `preprompt` event. Not observed;
   // no global dedup until a test shows it firing.
   let seenPreprompt = false;
+  // The compaction being folded: its boundary line opens it, and the summary
+  // and the re-read files that follow join it. Any line that is neither (an
+  // assistant turn, the next prompt) closes it.
+  let compaction: CompactionEvent | null = null;
 
   // One home for user-turn text handling, shared by the string-content branch
   // and the array text-block branch (which previously duplicated it). Closes
@@ -396,6 +432,9 @@ async function buildEvents(
     if (!ts || Number.isNaN(Date.parse(ts))) continue;
 
     const type = obj.type;
+    if (compaction && type !== "attachment" && obj.isCompactSummary !== true) {
+      compaction = null;
+    }
     const msg = obj.message as
       | {
           role?: string;
@@ -404,6 +443,22 @@ async function buildEvents(
           stop_reason?: string;
         }
       | undefined;
+
+    if (type === "user" && obj.isCompactSummary === true) {
+      // The summary the agent continues from — written by the harness, never
+      // a message the user sent. A summary with no boundary before it still
+      // folds into a compaction of its own.
+      if (!compaction) {
+        compaction = { kind: "compaction", at: ts, files: [] };
+        events.push(compaction);
+      }
+      const summary = extractText(msg?.content)
+        .replace(COMPACT_SUMMARY_PREAMBLE, "")
+        .replace(COMPACT_SUMMARY_POSTSCRIPT, "")
+        .trim();
+      if (summary) compaction.summary = summary;
+      continue;
+    }
 
     if (type === "user" && msg?.role === "user") {
       const isMeta = obj.isMeta === true;
@@ -574,6 +629,18 @@ async function buildEvents(
       continue;
     }
 
+    if (type === "system" && obj.subtype === "compact_boundary") {
+      const meta = CompactMetadataSchema.safeParse(obj.compactMetadata);
+      compaction = {
+        kind: "compaction",
+        at: ts,
+        ...(meta.success ? meta.data : {}),
+        files: [],
+      };
+      events.push(compaction);
+      continue;
+    }
+
     if (type === "system") {
       const subtype =
         typeof obj.subtype === "string" ? (obj.subtype as string) : undefined;
@@ -603,6 +670,13 @@ async function buildEvents(
           typeof (att as Record<string, unknown>).type === "string"
             ? ((att as Record<string, unknown>).type as string)
             : "unknown";
+        if (compaction && COMPACTION_FILE_SUBTYPES.has(subtype)) {
+          const file = compactionFile(att as Record<string, unknown>);
+          if (file) {
+            compaction.files.push(file);
+            continue;
+          }
+        }
         events.push({ kind: "attachment", at: ts, subtype, attachment: att });
       }
       continue;

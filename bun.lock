@@ -1710,6 +1710,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-collapsible-card",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/compaction": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-compaction",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/event-counter": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter",
       "version": "0.0.1",
@@ -7368,6 +7372,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-code-listing": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-code-listing@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/code-listing"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-collapsible-card": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-collapsible-card@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-compaction": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-compaction@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/compaction"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/event-counter"],
 

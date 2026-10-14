@@ -162,6 +162,26 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     text: z.string(),
   }),
   z.object({
+    // One context compaction, folded from the run of lines Claude Code writes
+    // for it: the `compact_boundary` system line (its token counts), the
+    // `isCompactSummary` user line (the summary the agent continues from — not
+    // something the user wrote) and the files re-read right after it.
+    kind: z.literal("compaction"),
+    at: z.string(),
+    trigger: z.string().optional(),
+    preTokens: z.number().optional(),
+    postTokens: z.number().optional(),
+    /** The summary as markdown, without the harness's "This session is being continued…" preamble. */
+    summary: z.string().optional(),
+    files: z.array(
+      z.object({
+        path: z.string(),
+        /** Present when the file's content was re-attached, absent for a bare reference. */
+        lines: z.number().optional(),
+      }),
+    ),
+  }),
+  z.object({
     kind: z.literal("preprompt"),
     at: z.string(),
     text: z.string(),

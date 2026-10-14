@@ -28,6 +28,7 @@
     - `conversations/conversation-view/jsonl-viewer/attachment/instructions`
     - `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`
     - `conversations/conversation-view/jsonl-viewer/attachment/session-mode`
+    - `conversations/conversation-view/jsonl-viewer/compaction`
     - `conversations/conversation-view/jsonl-viewer/task-notification`
     - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
     - `conversations/conversation-view/jsonl-viewer/tool-call/read`
