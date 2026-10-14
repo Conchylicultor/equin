@@ -607,6 +607,12 @@
       "parent": null
     },
     {
+      "paneId": "slow-op-detail",
+      "segment": "op/:id",
+      "appIndex": false,
+      "parent": "traces"
+    },
+    {
       "paneId": "sonata-library",
       "segment": "",
       "appIndex": true,

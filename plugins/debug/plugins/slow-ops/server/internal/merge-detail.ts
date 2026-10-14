@@ -10,8 +10,8 @@ import {
 } from "../../core";
 
 // Pure merges of a span's detail (variant + measures) into a slow-op row, run
-// inside `upsertSlowOpIn`'s row-locked read-modify-write. Kept apart from the
-// DB funnel so they are testable without a database.
+// by the batch fold (fold-batch.ts) and mirrored in SQL by merge-sql.ts. Kept
+// apart from the DB funnel so they are testable without a database.
 
 // Merge a variant into the breakdown, then keep it bounded: the top
 // VARIANT_CAP by totalMs stay named and everything past them folds into one

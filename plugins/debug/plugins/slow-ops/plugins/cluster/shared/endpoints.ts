@@ -10,12 +10,22 @@ import { SlowOpSchema } from "@plugins/debug/plugins/slow-ops/core";
 // rather than blanking the whole view — loud-but-resilient. The client parses
 // each streamed `worktree` NDJSON frame with this schema.
 //
-// A cluster row omits `variants` / `measures`: the merged view does not use
-// them, and selecting them would turn every fork still on the older schema
-// into an error row until it rebuilds.
-export const ClusterSlowOpSchema = SlowOpSchema.omit({
-  variants: true,
-  measures: true,
+// A cluster row is exactly what the merged view reads (aggregate.ts) — an
+// explicit pick mirroring handle-cluster.ts's SELECT, so a column added to or
+// dropped from `slow_ops` never changes what the cross-fork parse expects.
+// Selecting nothing else keeps every fork readable whichever schema it is on:
+// one still carrying the legacy `callers` column, one that has dropped it, one
+// older than `variants` / `measures`.
+export const ClusterSlowOpSchema = SlowOpSchema.pick({
+  id: true,
+  worktree: true,
+  operationKind: true,
+  operation: true,
+  count: true,
+  totalMs: true,
+  maxMs: true,
+  recentSamples: true,
+  lastSeenAt: true,
 });
 export type ClusterSlowOp = z.infer<typeof ClusterSlowOpSchema>;
 

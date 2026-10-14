@@ -1,12 +1,9 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { eq, sql } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
+import type { ProducerExecutor } from "@plugins/database/plugins/change-feed/server";
 import {
   runInBackgroundLane,
   runWithoutProfiling,
-  type SpanDetail,
-  type WaitBreakdown,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { recordReport } from "@plugins/reports/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
@@ -18,23 +15,13 @@ import {
   createShedBuffer,
   type ShedSummary,
 } from "@plugins/infra/plugins/host/plugins/duress/server";
-import type { ReportSource } from "@plugins/reports/core";
-import type {
-  CallerBreakdown,
-  CallerRef,
-  SlowOpMarker,
-  SlowOpSample,
-} from "../../core";
-import { mergeMeasures, mergeVariant } from "./merge-detail";
-import { _slowOps } from "./tables";
+import type { SlowOpMarker } from "../../core";
+import { foldSlowOpBatch, type FoldedBatch, type FoldItem } from "./fold-batch";
+import type { RecordSlowOpInput } from "./input";
+import { buildCallerUpsert, buildOpUpsert } from "./merge-sql";
+import { slowOpCallersProducer, slowOpsProducer } from "./producer";
 
-// The only report sources a slow-op originates from — narrowed from the
-// canonical ReportSource union (now in reports/core), so this stays a checked
-// subset of the real origins rather than a drifting hand-rolled copy.
-type SlowOpSource = Extract<
-  ReportSource,
-  "server-slow-op" | "client-slow-op" | "server-boot-monitor"
->;
+export type { RecordSlowOpInput } from "./input";
 
 // A slim overlay marker per recorded slow op, dual-written to a durable log
 // channel. Mirrors the health sampler's `defineLogSink({ id: "health" })` — each
@@ -51,117 +38,6 @@ const markerChannel = defineLogSink({
   },
 });
 
-export interface RecordSlowOpInput {
-  operationKind: string;
-  operation: string;
-  durationMs: number;
-  thresholdMs: number;
-  // The report source attributed to the rollup report (server-slow-op vs
-  // client-slow-op). The funnel doesn't infer it — the caller knows its origin.
-  source: SlowOpSource;
-  // Who issued this operation, when known. The caller-attribution fix: this is
-  // what the whole refactor exists to capture. Server spans pass their immediate
-  // enclosing span (a SpanRef); client `element` signals pass their route
-  // ({ kind: "route", label }); page-load passes nothing.
-  caller?: CallerRef | null;
-  // Per-layer wait charged to this entry span (gate/lock → ms), when it waited.
-  // Merged per layer into the row's durable `waits` so the wait-vs-work split
-  // survives restart. Only entry spans (loader/http/sub/push) carry it.
-  waits?: WaitBreakdown;
-  // The tripping span's variant (which instance ran — a loader's params) and
-  // measures (fan-out, frame size, …). Merged into the row's `variants`
-  // breakdown and `measures` stats, and stamped on the newest sample.
-  detail?: SpanDetail;
-  // Additive cold-start attribution (client `element` signal only). When the
-  // notifications transport was not ready at resource mount, this duration is
-  // transport time-to-first-data, not resource compute. Threaded into the report
-  // `data` (jsonb — no migration) so the report title/description says WHY.
-  transportColdStart?: boolean;
-  transportWaitMs?: number;
-  // The durable trace captured for this same trip (when the engine admitted
-  // one). Stamped into the newest recentSamples entry and the report `data` so
-  // the aggregate view and the slow-op task both deep-link the evidence. Null
-  // when the trace was rate-limited or the engine is disabled.
-  traceId?: string;
-  // The instant the span actually tripped. Stamped by recordSlowOp itself
-  // BEFORE the duress shed gate, so an item buffered during a duress episode
-  // replays with its true in-freeze instant (recentSamples atTime, marker
-  // line, lastSeenAt) instead of the post-episode flush time. Callers omit it.
-  occurredAt?: Date;
-}
-
-// Merge a caller into the existing breakdown list: bump an existing entry
-// matched by (kind,label), else append a fresh one.
-function mergeCaller(
-  callers: CallerBreakdown[],
-  caller: CallerRef,
-  durationMs: number,
-): CallerBreakdown[] {
-  const next = callers.map((c) => ({ ...c }));
-  const existing = next.find(
-    (c) => c.kind === caller.kind && c.label === caller.label,
-  );
-  if (existing) {
-    existing.count += 1;
-    existing.totalMs += durationMs;
-    if (durationMs > existing.maxMs) existing.maxMs = durationMs;
-  } else {
-    next.push({
-      kind: caller.kind,
-      label: caller.label,
-      count: 1,
-      totalMs: durationMs,
-      maxMs: durationMs,
-    });
-  }
-  return next;
-}
-
-// Sum an incoming per-layer wait map into the existing one (layer → total ms).
-// A plain additive merge mirroring the aggregate's wait accumulation.
-function mergeWaits(
-  existing: WaitBreakdown,
-  incoming: WaitBreakdown,
-): WaitBreakdown {
-  const next: WaitBreakdown = { ...existing };
-  for (const layer in incoming) {
-    next[layer] = (next[layer] ?? 0) + incoming[layer]!;
-  }
-  return next;
-}
-
-// Insert the new contention sample and cap the ring at the newest 10. Mirrors
-// the `callers` read-modify-write merge, but a bounded insert (no dedupe) —
-// each sample is a distinct point-in-time capture, stamped with the trip's
-// true `occurredAt`. Sorted newest-first by atTime (not prepend order): a
-// duress-shed item replays after the episode with an in-freeze occurredAt, so
-// arrival order is not time order — sorting keeps the "newest 10" contract
-// honest under out-of-order replay.
-export function mergeSample(
-  samples: SlowOpSample[],
-  snapshot: ContentionSnapshot,
-  durationMs: number,
-  traceId: string | undefined,
-  occurredAt: Date,
-  detail?: SpanDetail,
-): SlowOpSample[] {
-  const sample: SlowOpSample = {
-    atTime: occurredAt,
-    durationMs,
-    snapshot,
-    traceId,
-  };
-  if (detail?.variant !== undefined) sample.variant = detail.variant;
-  if (detail?.measures) sample.measures = detail.measures;
-  return [sample, ...samples]
-    .sort(
-      // atTime is a Date in fresh entries but an ISO string once round-tripped
-      // through the jsonb column — normalize before comparing.
-      (a, b) => new Date(b.atTime).getTime() - new Date(a.atTime).getTime(),
-    )
-    .slice(0, 10);
-}
-
 function shedSummaryMessage(s: ShedSummary): string {
   const shed = Object.values(s.byCascade).reduce((a, c) => a + c.shed, 0);
   const dropped = Object.values(s.byCascade).reduce((a, c) => a + c.dropped, 0);
@@ -176,8 +52,8 @@ function shedSummaryMessage(s: ShedSummary): string {
 // duress episode, past the first-N-per-cascade grant the FULL input is
 // buffered and the funnel below is skipped; after the episode clears, replay
 // re-drives recordSlowOp per item — the aggregate upsert's onConflictDoUpdate
-// merge is idempotent per item and order-insensitive, so counts / totals /
-// maxMs stay truthful post-flush. Each buffered item carries the `occurredAt`
+// merge is order-insensitive, so counts / totals / maxMs stay truthful
+// post-flush. Each buffered item carries the `occurredAt`
 // stamped before admit, so replayed recentSamples / marker lines / lastSeenAt
 // land at their true in-freeze instants, not the flush time — and the
 // newest-occurrence guards in the upsert keep an out-of-order replay from
@@ -204,7 +80,7 @@ const slowOpShed = createShedBuffer<RecordSlowOpInput>({
 
 // THE single ingest funnel for every slow-op signal — the server span hook and
 // the client endpoint both collapse here. Upserts the deduped aggregate by
-// (operationKind, operation, worktree), merges the caller attribution, and
+// (operationKind, operation, worktree) and its caller row, and
 // fires the per-operation report (fire-and-forget so a slow report path never
 // blocks recording). Failures propagate loudly.
 //
@@ -218,7 +94,7 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
 // re-settle hundreds of resources at once), and opening a Postgres transaction
 // per item was the other half of the amplification the batching exists to stop
 // — 210 commits during a stall, against the backend that IS the stall. One
-// contention snapshot and ONE transaction cover the whole batch.
+// contention snapshot and ONE upsert per table cover the whole batch.
 //
 // Nothing is filtered here. Every input that clears the shed gate is upserted,
 // markered, and reported exactly as it would have been alone.
@@ -240,30 +116,28 @@ export async function recordSlowOpBatch(
   // handle-client-slow-op) BEFORE this call — evidence-first — and carries its
   // own independent shed gate inside captureTrace, so first-N traces still land
   // even when this row write is shed (and vice versa).
-  const admitted: RecordSlowOpInput[] = [];
+  const admitted: FoldItem[] = [];
   for (const input of inputs) {
-    input.occurredAt ??= new Date();
+    const occurredAt = (input.occurredAt ??= new Date());
     if (!slowOpShed.admit(input).persist) continue;
-    admitted.push(input);
+    admitted.push({ input, occurredAt });
   }
   if (admitted.length === 0) return;
 
-  // One transaction so each onConflictDoUpdate row lock serializes concurrent
-  // callers for the same key, making the callers read-merge-write race-tolerant.
-  // Wrapped in runWithoutProfiling: the slow_ops upsert is itself a `db` span that
-  // would otherwise re-feed the slow-op recorder (self-amplifying loop). The
-  // suppression ALS propagates through every awaited query inside the callback.
-  // Hoisted out of the suppression callback so the dual-write markers below can
-  // reuse the same captured box state. Assigned inside the scope (the await must
-  // stay there); non-null after the callback resolves.
+  // Wrapped in runWithoutProfiling: the slow_ops upserts are themselves `db`
+  // spans that would otherwise re-feed the slow-op recorder (self-amplifying
+  // loop). The suppression ALS propagates through every awaited query inside
+  // the callback. The snapshot is hoisted out of the suppression callback so
+  // the dual-write markers below can reuse the same captured box state.
+  // Assigned inside the scope (the await must stay there); non-null after the
+  // callback resolves.
   //
   // Wrapped OUTSIDE that in runInBackgroundLane: without the declaration this
   // write inherits the origin of whatever tripped it, so a slow op recorded
   // inside a `sub` load would ride the interactive lane and compete for the
-  // reserved connections with the very human it is measuring. Concurrent
-  // slow_ops upserts serialize for seconds on this row lock — the observability
-  // subsystem amplifying the outage it records. Suppression ("don't record") and
-  // the lane ("isn't human-blocking") are separate axes; both apply here. See
+  // reserved connections with the very human it is measuring. Suppression
+  // ("don't record") and the lane ("isn't human-blocking") are separate axes;
+  // both apply here. See
   // research/2026-07-09-global-interactive-lane-origin-based-db-gating.md.
   let snapshot!: ContentionSnapshot;
   await runInBackgroundLane(() =>
@@ -271,26 +145,22 @@ export async function recordSlowOpBatch(
       // Capture the box state at the instant this batch tripped. Cached (≤1s) so a
       // storm of slow ops collapses onto one read; inside runWithoutProfiling so
       // its own pg query never re-feeds this recorder. The await MUST stay inside
-      // the suppression scope (same reason as the transaction below).
+      // the suppression scope (same reason as the writes below).
       snapshot = await getContentionSnapshot();
 
-      // The await MUST run inside the suppression scope. A bare `() => db…`
+      // The awaits MUST run inside the suppression scope. A bare `() => db…`
       // returns the lazy query unexecuted, so its execution (and the acquire +
       // query spans the pool wrapper records) would run after the ALS scope exits
       // — defeating suppression and re-opening the self-feedback loop. The same
       // hazard applies to the enclosing lane scope: an escaped await would take
-      // its pool connection outside the background declaration. That is why the
-      // per-item loop lives INSIDE this transaction callback rather than the
-      // transaction living inside a per-item loop.
-      await db.transaction(async (tx) => {
-        for (const input of admitted) {
-          await upsertSlowOpIn(tx, input, input.occurredAt!, snapshot);
-        }
-      });
+      // its pool connection outside the background declaration.
+      await writeSlowOpRows(
+        foldSlowOpBatch(admitted, snapshot, runtimeNamespace()),
+      );
     }),
   );
 
-  for (const input of admitted) {
+  for (const { input, occurredAt } of admitted) {
     const {
       operationKind,
       operation,
@@ -307,7 +177,7 @@ export async function recordSlowOpBatch(
     // above; reuse it so the marker shares the box state the aggregate recorded.
     markerChannel.publish(
       JSON.stringify({
-        atTime: input.occurredAt!,
+        atTime: occurredAt,
         durationMs,
         operationKind,
         operation,
@@ -339,119 +209,31 @@ export async function recordSlowOpBatch(
   }
 }
 
-/**
- * The transaction handle `db.transaction(cb)` hands its callback. Derived from
- * the call itself rather than named from drizzle's internals, so it tracks the
- * driver's own type.
- */
-type SlowOpTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
-// The durable upsert half of recordSlowOp, db-parametrized so the DB-backed
-// suite can drive the SQL semantics (greatest/least timestamps, the
-// newest-occurrence guards, ring ordering) against a throwaway Postgres — the
-// session-chain `recordSessionId(…, conn)` precedent. Opens its OWN transaction
-// around one item, so a single-item caller keeps exactly the semantics it had.
-// Production callers go through recordSlowOpBatch, which owns the shed gate,
-// the lane + profiling-suppression scopes, the ONE batch transaction, the
-// marker dual-write, and the report.
-export async function upsertSlowOp(
-  input: RecordSlowOpInput,
-  occurredAt: Date,
-  snapshot: ContentionSnapshot,
-  conn: NodePgDatabase = db,
+// The durable write of a folded batch: ONE upsert per table, each through its
+// change producer (which routes the ids it returned to live readers, coalesced
+// to one flush per 2 s — see ./producer). Every list merge runs in SQL against
+// the row ON CONFLICT locked (merge-sql.ts), so no JS runs under a lock and a
+// batch is two autocommit statements however many items it holds — never a
+// transaction per item (the 2026-09-02 amplification). The two statements are
+// not atomic together: between them a reader can see an op's counters one
+// batch ahead of its callers. Executor-parametrized so the DB-backed suite
+// drives the SQL merges against a throwaway Postgres.
+export async function writeSlowOpRows(
+  batch: FoldedBatch,
+  executor: ProducerExecutor = db,
 ): Promise<void> {
-  await conn.transaction(async (tx) => {
-    await upsertSlowOpIn(tx, input, occurredAt, snapshot);
-  });
-}
-
-// The body: one item's upsert against an ALREADY-OPEN transaction. The row lock
-// the onConflictDoUpdate takes is what makes the callers/waits/samples
-// read-modify-write below race-tolerant, so every caller must supply a
-// transaction — a batch shares one across its items, a lone item gets its own
-// from the wrapper above.
-export async function upsertSlowOpIn(
-  tx: SlowOpTx,
-  input: RecordSlowOpInput,
-  occurredAt: Date,
-  snapshot: ContentionSnapshot,
-): Promise<void> {
-  const {
-    operationKind,
-    operation,
-    durationMs,
-    thresholdMs,
-    caller,
-    waits,
-    traceId,
-    detail,
-  } = input;
-  const worktree = runtimeNamespace();
-
-  // `occurredAt` is the trip instant, which under duress-shed replay is
-  // EARLIER than now and may be older than what the row already recorded. The
-  // timestamps take greatest/least so replay can never regress them, and the
-  // last-* attribution (lastMs / thresholdMs) only applies when this
-  // occurrence is at least as new as the row's last_seen_at — ON CONFLICT SET
-  // expressions all read the PRE-update row, so both guards see the same
-  // last_seen_at consistently.
-  const isNewest = sql`${occurredAt} >= ${_slowOps.lastSeenAt}`;
-  const [row] = await tx
-    .insert(_slowOps)
-    .values({
-      worktree,
-      operationKind,
-      operation,
-      count: 1,
-      totalMs: durationMs,
-      maxMs: durationMs,
-      lastMs: durationMs,
-      thresholdMs,
-      callers: [],
-      firstSeenAt: occurredAt,
-      lastSeenAt: occurredAt,
-    })
-    .onConflictDoUpdate({
-      target: [_slowOps.operationKind, _slowOps.operation, _slowOps.worktree],
-      set: {
-        count: sql`${_slowOps.count} + 1`,
-        totalMs: sql`${_slowOps.totalMs} + ${durationMs}`,
-        maxMs: sql`greatest(${_slowOps.maxMs}, ${durationMs})`,
-        lastMs: sql`case when ${isNewest} then ${durationMs} else ${_slowOps.lastMs} end`,
-        thresholdMs: sql`case when ${isNewest} then ${thresholdMs} else ${_slowOps.thresholdMs} end`,
-        firstSeenAt: sql`least(${_slowOps.firstSeenAt}, ${occurredAt})`,
-        lastSeenAt: sql`greatest(${_slowOps.lastSeenAt}, ${occurredAt})`,
-      },
-    })
-    .returning();
-
-  if (!row) throw new Error("recordSlowOp: upsert returned no row");
-
-  // A second read-modify-write within the same row-locked transaction so
-  // both ring merges stay race-safe. recentSamples is ALWAYS updated (every
-  // slow op gets a contention sample); callers is merged additionally only
-  // when a caller is known (page-load passes null).
-  const callers = caller
-    ? mergeCaller(row.callers, caller, durationMs)
-    : row.callers;
-  const nextWaits = waits ? mergeWaits(row.waits, waits) : row.waits;
-  const recentSamples = mergeSample(
-    row.recentSamples,
-    snapshot,
-    durationMs,
-    traceId,
-    occurredAt,
-    detail,
-  );
-  const variants =
-    detail?.variant !== undefined
-      ? mergeVariant(row.variants, detail.variant, durationMs)
-      : row.variants;
-  const measures = detail?.measures
-    ? mergeMeasures(row.measures, detail.measures)
-    : row.measures;
-  await tx
-    .update(_slowOps)
-    .set({ callers, waits: nextWaits, recentSamples, variants, measures })
-    .where(eq(_slowOps.id, row.id));
+  if (batch.ops.length > 0) {
+    await slowOpsProducer.mutate(
+      executor,
+      (q, t) => buildOpUpsert(q, t, batch.ops),
+      { latency: "background" },
+    );
+  }
+  if (batch.callers.length > 0) {
+    await slowOpCallersProducer.mutate(
+      executor,
+      (q, t) => buildCallerUpsert(q, t, batch.callers),
+      { latency: "background" },
+    );
+  }
 }

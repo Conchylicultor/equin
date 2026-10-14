@@ -14,8 +14,8 @@ import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 
 // Per-operation caller attribution: who issued this operation (the immediate
-// enclosing request/loader span), how often, and how slow. Mirrors the
-// profiler's in-memory `ParentBreakdown`, persisted alongside the aggregate.
+// enclosing request/loader span), how often, and how slow. The shape of the
+// legacy `callers` column; live callers are `slow_op_callers` rows.
 export const CallerBreakdownSchema = z.object({
   kind: z.string(),
   label: z.string(),
@@ -71,7 +71,7 @@ export type SlowOpMeasures = z.infer<typeof SlowOpMeasuresSchema>;
 // One captured contention sample: the box state at the instant a span tripped
 // its threshold, with the span's own duration. Stored as a capped ring on the
 // aggregate row (newest first, last 10) so a storm's shape is visible per op
-// without unbounded growth. Mirrors the `callers` ring pattern. `traceId` links
+// without unbounded growth. `traceId` links
 // the freshest sample to the durable trace the same trip captured (when the
 // engine admitted one), so the aggregate view can deep-link the evidence.
 export const SlowOpSampleSchema = z.object({
@@ -104,6 +104,11 @@ export const slowOpFields = {
   maxMs: floatField(),
   lastMs: floatField(),
   thresholdMs: floatField(),
+  // LEGACY — no longer read or written. Callers moved to their own table
+  // (`slowOpCallerFields` / `slow_op_callers`, one row per op × caller) so an
+  // op's caller set is never capped or rewritten as one JSON value. The column
+  // stays one push longer only because a hot swap's outgoing backend still
+  // names it in its upsert; the follow-up push drops it. Read no field of it.
   callers: jsonField<CallerBreakdown[]>({
     schema: z.array(CallerBreakdownSchema),
     default: [],
@@ -125,8 +130,58 @@ export const slowOpFields = {
   lastSeenAt: dateField(),
 } satisfies FieldsRecord;
 
+// The full row (every column, the legacy `callers` included) — what the
+// table stores. Wire reads use one of the projections below, never this.
 export const SlowOpSchema = fieldsToZodObject(slowOpFields);
 export type SlowOp = z.infer<typeof SlowOpSchema>;
+
+// One op as the detail pane reads it (`slow-ops.op`): every column but the
+// legacy `callers` — the callers are their own paged collection.
+export const SlowOpDetailSchema = SlowOpSchema.omit({ callers: true });
+export type SlowOpDetail = z.infer<typeof SlowOpDetailSchema>;
+
+// One op as the ranked list reads it (`slow-ops.ops`): the counters only — no
+// JSON list, so a 100-row window is a few KB. `waitMs` (the summed `waits`)
+// and `lastTraceId` (the newest sample's trace) are derived server-side.
+export const SlowOpListRowSchema = SlowOpSchema.pick({
+  id: true,
+  worktree: true,
+  operationKind: true,
+  operation: true,
+  count: true,
+  totalMs: true,
+  maxMs: true,
+  lastMs: true,
+  thresholdMs: true,
+  firstSeenAt: true,
+  lastSeenAt: true,
+}).extend({
+  waitMs: z.number(),
+  lastTraceId: z.string().nullable(),
+});
+export type SlowOpListRow = z.infer<typeof SlowOpListRowSchema>;
+
+// Who issued a slow op, one row per (op, caller): how often and how slow. The
+// op is named by its key (operationKind, operation, worktree), not by
+// `slow_ops.id`, so the detail's callers window filters on text columns and
+// the recorder writes it without looking the op up. Additive counters only —
+// nothing is capped or folded; the detail pages them by total time.
+export const slowOpCallerFields = {
+  id: uuidField(),
+  worktree: textField(),
+  operationKind: textField(),
+  operation: textField(),
+  callerKind: textField(),
+  callerLabel: textField(),
+  count: intField(),
+  totalMs: floatField(),
+  maxMs: floatField(),
+  firstSeenAt: dateField(),
+  lastSeenAt: dateField(),
+} satisfies FieldsRecord;
+
+export const SlowOpCallerSchema = fieldsToZodObject(slowOpCallerFields);
+export type SlowOpCaller = z.infer<typeof SlowOpCallerSchema>;
 
 // The web-safe overlay shape for the health-monitor charts: a slim projection of
 // a sample (no full contention snapshot), published one-per-recorded-slow-op to

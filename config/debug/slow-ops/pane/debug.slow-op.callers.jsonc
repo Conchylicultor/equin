@@ -1,0 +1,10 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    { "id": "by-total", "name": "By total time", "view": { "type": "table", "sort": [{ "fieldId": "totalMs", "direction": "desc" }] } },
+    { "id": "recent", "name": "Recent", "view": { "type": "table", "sort": [{ "fieldId": "lastSeenAt", "direction": "desc" }] } }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

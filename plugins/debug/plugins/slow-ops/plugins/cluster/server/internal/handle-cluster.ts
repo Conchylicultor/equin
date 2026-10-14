@@ -13,21 +13,19 @@ import { listLiveForkDatabases } from "./live-fork-databases";
 // (already-contended) cluster while still parallelising the merge.
 const FANOUT_CONCURRENCY = 6;
 
-// Aliased to the camelCase field names `ClusterSlowOpSchema` declares (the slow-op
-// wire schema minus the two columns the cluster view does not read), so the schema
+// Aliased to the camelCase field names `ClusterSlowOpSchema` declares (exactly
+// the slow-op columns the cluster view reads), so the schema
 // that defines a slow op on the wire is also the one that parses it off the
 // wire here — ONE definition, and the read is checked exactly as the live
 // resource's is. The types line up with no coercion: `count` is int4, the `_ms`
-// columns are float8, the three JSON columns are jsonb, and the timestamps are
+// columns are float8, `recent_samples` is jsonb, and the timestamps are
 // timestamptz, so node-postgres already hands back numbers, decoded objects and
 // Dates. (The hand-rolled `RawRow` this replaced declared `number | string` for
 // the numeric columns and `Number()`-ed them; nothing ever arrived as a string.)
 const SELECT_SLOW_OPS = `
   SELECT id, worktree, operation_kind AS "operationKind", operation, count,
-         total_ms AS "totalMs", max_ms AS "maxMs", last_ms AS "lastMs",
-         threshold_ms AS "thresholdMs", callers, waits,
-         recent_samples AS "recentSamples", first_seen_at AS "firstSeenAt",
-         last_seen_at AS "lastSeenAt"
+         total_ms AS "totalMs", max_ms AS "maxMs",
+         recent_samples AS "recentSamples", last_seen_at AS "lastSeenAt"
   FROM slow_ops
 `;
 

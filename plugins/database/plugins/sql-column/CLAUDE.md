@@ -155,15 +155,17 @@ End to end, on the real reads:
 
 | column set | per row | on its real read |
 |---|---|---|
-| `slow_ops.callers` + `waits` + `recentSamples` | 4.96 µs | +25 ms on the whole-table load (5 130 rows) |
+| `slow_ops.callers` + `waits` + `recentSamples` | 4.96 µs | +25 ms on the former whole-table load (5 130 rows) |
 | `mail_messages` ×6 jsonb columns | 3.97 µs | +0.12 ms on a 30-message thread |
 | `traces.snapshot` | 1.7 µs | one row, on the detail pane only |
 
-The Slow Ops pane's read (the `slow-ops.list` snapshot value) is the only measurable one, and it is
-measurable for a reason that predates the decoder: it is an **unbounded**
-full-table read that already loads ~19 MB and already parses every byte of it
-against the same field schemas. It wants bounding, not a cheaper decoder.
-Everything else is sub-millisecond.
+The Slow Ops pane's read (the former `slow-ops.list` snapshot value) was the only measurable one,
+and it was measurable for a reason that predates the decoder: it was an
+**unbounded** full-table read that loaded ~19 MB and parsed every byte of it
+against the same field schemas. It wanted bounding, not a cheaper decoder —
+and is now bounded: the pane reads a slim, paged `slow-ops.ops` window with no
+JSON column, and one op's lists only when its detail opens. Everything else is
+sub-millisecond.
 
 ## Adopting it generates no migration
 

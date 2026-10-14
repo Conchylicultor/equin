@@ -1,15 +1,13 @@
 /**
- * Suite for shed-replay timestamp honesty (Stage 4 of
- * research/2026-07-11-global-observability-freeze-blind-spots.md): a slow-op
- * buffered during a duress episode replays with its true in-freeze
- * `occurredAt`, and an out-of-order replay can never regress last_seen_at or
- * clobber fresher last-* attribution. The greatest/least + newest-occurrence
- * guards live in SQL, so the DB half drives the db-parametrized upsertSlowOp
- * against a throwaway Postgres (db-test-fixture) seeded with the REAL
- * migration chain; the ring ordering is pure and tested directly.
+ * The batch write against a real Postgres (db-test-fixture, seeded with the
+ * REAL migration chain): a folded batch is ONE upsert per table through the
+ * change producers, with every list merge in SQL (merge-sql.ts). The suite
+ * pins the semantics the recorder documents — shed-replay timestamp honesty
+ * (research/2026-07-11-global-observability-freeze-blind-spots.md), batch
+ * accumulation, per-caller rows — and checks the SQL merges against an oracle:
+ * the pre-batching per-item merge, applied one item at a time in JS.
  *
- * Run: `bun test plugins/debug/plugins/slow-ops/server/internal`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./singularity test plugins/debug/plugins/slow-ops`
  */
 
 import {
@@ -26,19 +24,33 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
-import type { ContentionSnapshot } from "@plugins/infra/plugins/host/plugins/contention/server";
-import type { SlowOpSample } from "../../core";
 import {
+  flushNow,
+  mountProducersForTest,
+} from "@plugins/database/plugins/change-feed/server/testing";
+import type { routeChange } from "@plugins/database/plugins/change-feed/server";
+import type { ContentionSnapshot } from "@plugins/infra/plugins/host/plugins/contention/server";
+import type {
+  SlowOpMeasures,
+  SlowOpSample,
+  VariantBreakdown,
+} from "../../core";
+import {
+  foldSlowOpBatch,
   mergeSample,
-  upsertSlowOp,
-  upsertSlowOpIn,
-  type RecordSlowOpInput,
-} from "./record-slow-op";
-import { _slowOps } from "./tables";
+  mergeWaits,
+  type FoldItem,
+} from "./fold-batch";
+import type { RecordSlowOpInput } from "./input";
+import { mergeMeasures, mergeVariant } from "./merge-detail";
+import { slowOpCallersProducer, slowOpsProducer } from "./producer";
+import { writeSlowOpRows } from "./record-slow-op";
+import { _slowOpCallers, _slowOps } from "./tables";
 
 const T0 = new Date("2026-07-11T03:30:00.000Z");
 const T1 = new Date("2026-07-11T03:32:00.000Z");
 const T2 = new Date("2026-07-11T03:34:00.000Z");
+const WT = "wt-test";
 
 const snapshot = (atTime: Date): ContentionSnapshot => ({
   atTime,
@@ -51,85 +63,66 @@ const snapshot = (atTime: Date): ContentionSnapshot => ({
   pgTopDatabases: [],
 });
 
-const input = (over: Partial<RecordSlowOpInput> = {}): RecordSlowOpInput => ({
-  operationKind: "loader",
-  operation: "test-op",
-  durationMs: 100,
-  thresholdMs: 50,
-  source: "server-slow-op",
-  ...over,
+const item = (
+  occurredAt: Date,
+  over: Partial<RecordSlowOpInput> = {},
+): FoldItem => ({
+  occurredAt,
+  input: {
+    operationKind: "loader",
+    operation: "test-op",
+    durationMs: 100,
+    thresholdMs: 50,
+    source: "server-slow-op",
+    ...over,
+  },
 });
 
-describe("mergeSample", () => {
-  test("stamps the sample at its occurredAt, not the write instant", () => {
-    const [newest] = mergeSample([], snapshot(T1), 100, undefined, T1);
-    expect(newest?.atTime).toBe(T1);
-  });
-
-  test("an older replayed sample sorts behind an already-present newer one", () => {
-    const ring = mergeSample([], snapshot(T2), 100, undefined, T2);
-    const merged = mergeSample(ring, snapshot(T1), 200, undefined, T1);
-    expect(merged.map((s) => s.atTime)).toEqual([T2, T1]);
-  });
-
-  test("orders against jsonb-round-tripped entries whose atTime is an ISO string", () => {
-    // A sample read back from the jsonb column carries atTime as an ISO
-    // string at runtime despite the Date-typed schema — the sort must
-    // normalize both representations.
-    const persisted = [
-      { atTime: T2.toISOString(), durationMs: 100, snapshot: snapshot(T2) },
-    ] as unknown as SlowOpSample[];
-    const merged = mergeSample(persisted, snapshot(T1), 200, undefined, T1);
-    expect(merged.map((s) => new Date(s.atTime).getTime())).toEqual([
-      T2.getTime(),
-      T1.getTime(),
-    ]);
-  });
-
-  test("caps the ring at the newest 10 by time, dropping the oldest", () => {
-    let ring: SlowOpSample[] = [];
-    for (let i = 0; i < 10; i++) {
-      const at = new Date(T1.getTime() + (i + 1) * 1000);
-      ring = mergeSample(ring, snapshot(at), 100, undefined, at);
-    }
-    // A replayed sample older than everything in a full ring is not among the
-    // newest 10 — it drops instead of evicting a newer entry.
-    const merged = mergeSample(ring, snapshot(T0), 200, undefined, T0);
-    expect(merged).toHaveLength(10);
-    expect(
-      merged.some((s) => new Date(s.atTime).getTime() === T0.getTime()),
-    ).toBe(false);
-  });
-});
-
-describe("upsertSlowOp (real DB)", () => {
+describe("writeSlowOpRows (real DB)", () => {
   let t: TestDb;
+  let routed: Parameters<typeof routeChange>[0][] = [];
+  let unmount: () => void;
+
+  // One batch, as recordSlowOpBatch writes it (one snapshot per batch).
+  const write = async (items: FoldItem[], at = T1): Promise<void> => {
+    await writeSlowOpRows(foldSlowOpBatch(items, snapshot(at), WT), t.db);
+  };
+
+  const readOps = () => t.db.select().from(_slowOps);
+  const readOne = async () => {
+    const rows = await readOps();
+    expect(rows).toHaveLength(1);
+    return rows[0]!;
+  };
+  const readCallers = () => t.db.select().from(_slowOpCallers);
 
   beforeAll(async () => {
     t = await createTestDb({ prefix: "slowop_test" });
     await runMigrations(t.db);
+    unmount = mountProducersForTest([slowOpsProducer, slowOpCallersProducer], {
+      route: (change) => routed.push(change),
+    });
   });
 
   afterAll(async () => {
+    unmount();
     await t.drop();
   });
 
   beforeEach(async () => {
     await t.db.execute(sql`DELETE FROM slow_ops`);
+    await t.db.execute(sql`DELETE FROM slow_op_callers`);
+    flushNow(slowOpsProducer);
+    flushNow(slowOpCallersProducer);
+    routed = [];
   });
-
-  async function readRow() {
-    const rows = await t.db.select().from(_slowOps);
-    expect(rows).toHaveLength(1);
-    return rows[0]!;
-  }
 
   test("a shed-then-replayed op lands at its original occurredAt, not write time", async () => {
     // T1 is minutes in the past relative to the write — exactly a duress-shed
     // item replayed after the episode cleared.
-    await upsertSlowOp(input(), T1, snapshot(T1), t.db);
+    await write([item(T1)]);
 
-    const row = await readRow();
+    const row = await readOne();
     expect(row.firstSeenAt.getTime()).toBe(T1.getTime());
     expect(row.lastSeenAt.getTime()).toBe(T1.getTime());
     expect(new Date(row.recentSamples[0]!.atTime).getTime()).toBe(T1.getTime());
@@ -138,32 +131,17 @@ describe("upsertSlowOp (real DB)", () => {
   test("an out-of-order replay never regresses timestamps or clobbers last-* attribution", async () => {
     // A live op lands first (T2), then an in-freeze item from EARLIER (T1)
     // replays after it — the interleaving the flush can produce.
-    await upsertSlowOp(
-      input({ durationMs: 100, thresholdMs: 50 }),
-      T2,
-      snapshot(T2),
-      t.db,
-    );
-    await upsertSlowOp(
-      input({ durationMs: 200, thresholdMs: 75 }),
-      T1,
-      snapshot(T1),
-      t.db,
-    );
+    await write([item(T2, { durationMs: 100, thresholdMs: 50 })]);
+    await write([item(T1, { durationMs: 200, thresholdMs: 75 })]);
 
-    const row = await readRow();
-    // Aggregates accumulate order-insensitively.
+    const row = await readOne();
     expect(row.count).toBe(2);
     expect(row.totalMs).toBe(300);
     expect(row.maxMs).toBe(200);
-    // Timestamps: last never regresses, first pulls back to the true onset.
     expect(row.lastSeenAt.getTime()).toBe(T2.getTime());
     expect(row.firstSeenAt.getTime()).toBe(T1.getTime());
-    // last-* attribution still describes the NEWEST occurrence (T2), not the
-    // replayed older one.
     expect(row.lastMs).toBe(100);
     expect(row.thresholdMs).toBe(50);
-    // The ring is newest-first by true time despite the arrival order.
     expect(row.recentSamples.map((s) => new Date(s.atTime).getTime())).toEqual([
       T2.getTime(),
       T1.getTime(),
@@ -171,156 +149,289 @@ describe("upsertSlowOp (real DB)", () => {
   });
 
   test("a genuinely newer occurrence advances last_seen_at and takes over last-* attribution", async () => {
-    await upsertSlowOp(
-      input({ durationMs: 200, thresholdMs: 75 }),
-      T1,
-      snapshot(T1),
-      t.db,
-    );
-    await upsertSlowOp(
-      input({ durationMs: 100, thresholdMs: 50 }),
-      T2,
-      snapshot(T2),
-      t.db,
-    );
+    await write([item(T1, { durationMs: 200, thresholdMs: 75 })]);
+    await write([item(T2, { durationMs: 100, thresholdMs: 50 })]);
 
-    const row = await readRow();
+    const row = await readOne();
     expect(row.lastSeenAt.getTime()).toBe(T2.getTime());
     expect(row.firstSeenAt.getTime()).toBe(T1.getTime());
     expect(row.lastMs).toBe(100);
     expect(row.thresholdMs).toBe(50);
   });
-});
 
-describe("upsertSlowOpIn (real DB, one transaction per batch)", () => {
-  let t: TestDb;
+  test("distinct operations in one batch each get their own row", async () => {
+    await write([
+      item(T1, { operation: "op-a" }),
+      item(T1, { operation: "op-b" }),
+    ]);
 
-  beforeAll(async () => {
-    t = await createTestDb({ prefix: "slowop_batch_test" });
-    await runMigrations(t.db);
-  });
-
-  afterAll(async () => {
-    await t.drop();
-  });
-
-  beforeEach(async () => {
-    await t.db.execute(sql`DELETE FROM slow_ops`);
-  });
-
-  // The client beacon arrives as a batch and recordSlowOpBatch drives every
-  // item through ONE transaction — the whole point of the batching, since a
-  // transaction per item is what amplified the stall it reports. What the
-  // shared transaction must NOT change is the per-item semantics, so drive the
-  // same body the batch drives and assert each item still lands on its own key
-  // with its own attribution.
-  test("distinct operations in one transaction each get their own row", async () => {
-    await t.db.transaction(async (tx) => {
-      await upsertSlowOpIn(tx, input({ operation: "op-a" }), T1, snapshot(T1));
-      await upsertSlowOpIn(tx, input({ operation: "op-b" }), T1, snapshot(T1));
-    });
-
-    const rows = await t.db.select().from(_slowOps);
+    const rows = await readOps();
     expect(rows.map((r) => r.operation).sort()).toEqual(["op-a", "op-b"]);
-    for (const row of rows) {
-      expect(row.count).toBe(1);
-      expect(row.lastSeenAt.getTime()).toBe(T1.getTime());
-    }
+    for (const row of rows) expect(row.count).toBe(1);
   });
 
-  // Two settles of the SAME resource inside one boot wave land in one batch, so
-  // both hit the same row through the same transaction. The onConflictDoUpdate
-  // accumulation has to hold within a transaction exactly as it does across
-  // them — the second insert must see the first one's row.
-  test("repeats of one operation in the same transaction accumulate onto one row", async () => {
-    await t.db.transaction(async (tx) => {
-      await upsertSlowOpIn(
-        tx,
-        input({ durationMs: 100, thresholdMs: 50 }),
-        T1,
-        snapshot(T1),
-      );
-      await upsertSlowOpIn(
-        tx,
-        input({ durationMs: 300, thresholdMs: 50 }),
-        T2,
-        snapshot(T2),
-      );
-    });
+  test("repeats of one operation in one batch accumulate onto one row", async () => {
+    await write([item(T1, { durationMs: 100 }), item(T2, { durationMs: 300 })]);
 
-    const rows = await t.db.select().from(_slowOps);
-    expect(rows).toHaveLength(1);
-    const row = rows[0]!;
+    const row = await readOne();
     expect(row.count).toBe(2);
     expect(row.totalMs).toBe(400);
     expect(row.maxMs).toBe(300);
     expect(row.lastMs).toBe(300);
-    expect(row.firstSeenAt.getTime()).toBe(T1.getTime());
-    expect(row.lastSeenAt.getTime()).toBe(T2.getTime());
-    // Both samples are in the ring, newest first.
     expect(row.recentSamples.map((s) => new Date(s.atTime).getTime())).toEqual([
       T2.getTime(),
       T1.getTime(),
     ]);
   });
 
-  // Per-item caller attribution survives the shared transaction: two routes
-  // waiting on the same resource in one batch both appear in the breakdown.
-  test("per-item callers merge independently within one transaction", async () => {
-    await t.db.transaction(async (tx) => {
-      await upsertSlowOpIn(
-        tx,
-        input({ caller: { kind: "route", label: "/a" } }),
-        T1,
-        snapshot(T1),
-      );
-      await upsertSlowOpIn(
-        tx,
-        input({ caller: { kind: "route", label: "/b" } }),
-        T1,
-        snapshot(T1),
-      );
-      await upsertSlowOpIn(
-        tx,
-        input({ caller: { kind: "route", label: "/a" } }),
-        T1,
-        snapshot(T1),
-      );
-    });
-
-    const rows = await t.db.select().from(_slowOps);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]!.callers.map((c) => [c.label, c.count]).sort()).toEqual([
-      ["/a", 2],
-      ["/b", 1],
+  // Every caller keeps its own row, accumulated across batches — no cap.
+  test("each (op, caller) is one additive row across batches", async () => {
+    await write([
+      item(T1, { caller: { kind: "route", label: "/a" }, durationMs: 10 }),
+      item(T1, { caller: { kind: "route", label: "/b" }, durationMs: 20 }),
     ]);
+    await write([
+      item(T2, { caller: { kind: "route", label: "/a" }, durationMs: 40 }),
+      item(T2, { caller: null }),
+    ]);
+
+    expect((await readOne()).count).toBe(4);
+    const callers = await readCallers();
+    expect(
+      callers.map((c) => [c.callerLabel, c.count, c.totalMs, c.maxMs]).sort(),
+    ).toEqual([
+      ["/a", 2, 50, 40],
+      ["/b", 1, 20, 20],
+    ]);
+    const a = callers.find((c) => c.callerLabel === "/a")!;
+    expect(a.firstSeenAt.getTime()).toBe(T1.getTime());
+    expect(a.lastSeenAt.getTime()).toBe(T2.getTime());
   });
 
-  // A batch is all-or-nothing: one item's failure rolls the whole transaction
-  // back. That is the deliberate trade the shared transaction makes, so pin it
-  // rather than leave it to be discovered.
-  test("a throw inside the batch transaction rolls back every item in it", async () => {
-    const boom = new Error("batch item failed");
-    let rejected = false;
-    await t.db
-      .transaction(async (tx) => {
-        await upsertSlowOpIn(
-          tx,
-          input({ operation: "op-a" }),
-          T1,
-          snapshot(T1),
-        );
-        throw boom;
-      })
-      .catch((err: unknown) => {
-        // Only OUR failure is expected here; anything else is a real problem
-        // and must keep propagating.
-        if (err !== boom) throw err;
-        rejected = true;
-      });
-    expect(rejected).toBe(true);
+  test("hundreds of callers on one op all stay named", async () => {
+    const items = Array.from({ length: 300 }, (_, i) =>
+      item(T1, { caller: { kind: "route", label: `/c/${i}` } }),
+    );
+    await write(items);
+    expect(await readCallers()).toHaveLength(300);
+  });
 
-    const rows = await t.db.select().from(_slowOps);
-    expect(rows).toHaveLength(0);
+  test("the variant bound holds on the batch that creates the row and on the merge", async () => {
+    const batch = (from: number) =>
+      Array.from({ length: 15 }, (_, i) =>
+        item(T1, {
+          durationMs: 100 + from + i,
+          detail: { variant: `v${from + i}` },
+        }),
+      );
+    await write(batch(0));
+    expect((await readOne()).variants).toHaveLength(11);
+    await write(batch(100));
+    const row = await readOne();
+    expect(row.variants).toHaveLength(11);
+    expect(row.variants.at(-1)?.variant).toBe("(other)");
+    expect(row.variants.reduce((a, v) => a + v.count, 0)).toBe(30);
+  });
+
+  test("each write routes the ids it touched, coalesced to one flush", async () => {
+    await write([
+      item(T1, { operation: "op-a", caller: { kind: "route", label: "/a" } }),
+    ]);
+    await write([item(T1, { operation: "op-b" })]);
+    expect(routed).toEqual([]); // coalesced: nothing routes before the window
+
+    flushNow(slowOpsProducer);
+    flushNow(slowOpCallersProducer);
+    const ops = await readOps();
+    const callers = await readCallers();
+    const byTable = new Map(routed.map((c) => [c.table, c]));
+    expect([...(byTable.get("slow_ops")?.ids ?? [])].sort()).toEqual(
+      ops.map((r) => r.id).sort(),
+    );
+    expect(byTable.get("slow_op_callers")?.ids).toEqual([callers[0]!.id]);
+  });
+
+  // Two backends write the same ops at once during a hot swap. Each batch is
+  // sorted by key, so both take the row locks in the same order.
+  test("concurrent overlapping batches complete and both count", async () => {
+    const ops = ["op-a", "op-b", "op-c", "op-d"];
+    const batch = (order: string[]) =>
+      order.map((operation) =>
+        item(T1, { operation, caller: { kind: "route", label: "/x" } }),
+      );
+    await Promise.all(
+      Array.from({ length: 6 }, (_, i) =>
+        write(batch(i % 2 === 0 ? ops : [...ops].reverse())),
+      ),
+    );
+    const rows = await readOps();
+    expect(rows.map((r) => r.count)).toEqual([6, 6, 6, 6]);
+    expect((await readCallers()).map((c) => c.count)).toEqual([6, 6, 6, 6]);
+  });
+
+  // The oracle: random occurrences, split into random batches, written through
+  // fold + SQL merge, must equal the pre-batching per-item merge applied one
+  // item at a time in arrival order.
+  test("fold + SQL merge equals the per-item merge, over random batches", async () => {
+    const rand = mulberry32(42);
+    for (let round = 0; round < 8; round++) {
+      await t.db.execute(sql`DELETE FROM slow_ops`);
+      await t.db.execute(sql`DELETE FROM slow_op_callers`);
+
+      const items: FoldItem[] = Array.from({ length: 60 }, (_, i) => {
+        const pick = <T>(xs: readonly T[]): T =>
+          xs[Math.floor(rand() * xs.length)]!;
+        const at = new Date(T0.getTime() + Math.floor(rand() * 600) * 1000 + i);
+        return item(at, {
+          operation: pick(["op-a", "op-b", "op-c"]),
+          durationMs: 10 + Math.floor(rand() * 500),
+          thresholdMs: pick([50, 75]),
+          caller:
+            rand() < 0.2
+              ? null
+              : { kind: "route", label: pick(["/a", "/b", "/c", "/d"]) },
+          waits: rand() < 0.5 ? { [pick(["g1", "g2"])]: 5 } : undefined,
+          detail: {
+            ...(rand() < 0.6 ? { variant: pick(["v1", "v2", "v3"]) } : {}),
+            ...(rand() < 0.5
+              ? { measures: { subscribers: Math.floor(rand() * 100) } }
+              : {}),
+          },
+        });
+      });
+
+      for (let i = 0; i < items.length;) {
+        const n = 1 + Math.floor(rand() * 12);
+        await write(items.slice(i, i + n), items[i]!.occurredAt);
+        i += n;
+      }
+
+      const expected = sequentialOracle(items);
+      const rows = await readOps();
+      expect(rows).toHaveLength(expected.ops.size);
+      for (const row of rows) {
+        const want = expected.ops.get(row.operation)!;
+        expect(row.count).toBe(want.count);
+        expect(row.totalMs).toBe(want.totalMs);
+        expect(row.maxMs).toBe(want.maxMs);
+        expect(row.lastMs).toBe(want.lastMs);
+        expect(row.thresholdMs).toBe(want.thresholdMs);
+        expect(row.firstSeenAt.getTime()).toBe(want.firstSeenAt.getTime());
+        expect(row.lastSeenAt.getTime()).toBe(want.lastSeenAt.getTime());
+        expect(row.waits).toEqual(want.waits);
+        expect(row.measures).toEqual(want.measures);
+        expect(sortVariants(row.variants)).toEqual(sortVariants(want.variants));
+        expect(
+          row.recentSamples.map((s) => [
+            new Date(s.atTime).getTime(),
+            s.durationMs,
+          ]),
+        ).toEqual(
+          want.recentSamples.map((s) => [
+            new Date(s.atTime).getTime(),
+            s.durationMs,
+          ]),
+        );
+      }
+      const callers = await readCallers();
+      expect(
+        callers
+          .map(
+            (c) =>
+              `${c.operation}|${c.callerLabel}|${c.count}|${c.totalMs}|${c.maxMs}`,
+          )
+          .sort(),
+      ).toEqual([...expected.callers].sort());
+    }
   });
 });
+
+// The per-item merge the recorder ran before batching (one read-modify-write
+// per occurrence), kept here as the oracle the batch write must match.
+function sequentialOracle(items: FoldItem[]) {
+  interface Row {
+    count: number;
+    totalMs: number;
+    maxMs: number;
+    lastMs: number;
+    thresholdMs: number;
+    firstSeenAt: Date;
+    lastSeenAt: Date;
+    waits: Record<string, number>;
+    recentSamples: SlowOpSample[];
+    variants: VariantBreakdown[];
+    measures: SlowOpMeasures;
+  }
+  const ops = new Map<string, Row>();
+  const callers = new Map<string, [number, number, number]>();
+  for (const { input, occurredAt } of items) {
+    const d = input.durationMs;
+    let row = ops.get(input.operation);
+    if (!row) {
+      row = {
+        count: 1,
+        totalMs: d,
+        maxMs: d,
+        lastMs: d,
+        thresholdMs: input.thresholdMs,
+        firstSeenAt: occurredAt,
+        lastSeenAt: occurredAt,
+        waits: {},
+        recentSamples: [],
+        variants: [],
+        measures: {},
+      };
+      ops.set(input.operation, row);
+    } else {
+      const newest = occurredAt.getTime() >= row.lastSeenAt.getTime();
+      row.count += 1;
+      row.totalMs += d;
+      row.maxMs = Math.max(row.maxMs, d);
+      if (newest) {
+        row.lastMs = d;
+        row.thresholdMs = input.thresholdMs;
+        row.lastSeenAt = occurredAt;
+      }
+      if (occurredAt < row.firstSeenAt) row.firstSeenAt = occurredAt;
+    }
+    if (input.waits) row.waits = mergeWaits(row.waits, input.waits);
+    row.recentSamples = mergeSample(
+      row.recentSamples,
+      snapshot(occurredAt),
+      d,
+      input.traceId,
+      occurredAt,
+      input.detail,
+    );
+    if (input.detail?.variant !== undefined) {
+      row.variants = mergeVariant(row.variants, input.detail.variant, d);
+    }
+    if (input.detail?.measures) {
+      row.measures = mergeMeasures(row.measures, input.detail.measures);
+    }
+    if (input.caller) {
+      const key = `${input.operation}|${input.caller.label}`;
+      const c = callers.get(key) ?? [0, 0, 0];
+      callers.set(key, [c[0] + 1, c[1] + d, Math.max(c[2], d)]);
+    }
+  }
+  return {
+    ops,
+    callers: [...callers].map(([k, [n, tot, mx]]) => `${k}|${n}|${tot}|${mx}`),
+  };
+}
+
+const sortVariants = (vs: VariantBreakdown[]) =>
+  [...vs].sort((a, b) => a.variant.localeCompare(b.variant));
+
+// A seeded PRNG, so a failing round reproduces.
+function mulberry32(seed: number): () => number {
+  let a = seed;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let r = Math.imul(a ^ (a >>> 15), 1 | a);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}

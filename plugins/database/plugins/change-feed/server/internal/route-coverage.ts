@@ -102,7 +102,7 @@ export function findUncoveredRouteTables(
 
 // The remediation copy for each reason. Every case shares the universal fallback:
 // give the table a change source (a change producer), or make the resource a
-// plain push resource with no scope (hydrate-on-mount, like slow_ops).
+// plain push resource with no scope (hydrate-on-mount, like Studio's sample-rows).
 const REASON_SECTIONS: Record<
   RouteCoverageReason,
   { heading: string; fix: string }
@@ -146,7 +146,7 @@ export function formatUncoveredRouteError(
       "",
       heading,
       ...group,
-      `  Fix: ${fix}, or make the resource a plain push resource (no routes, hydrate-on-mount — like slow_ops).`,
+      `  Fix: ${fix}, or make the resource a plain push resource (no routes, hydrate-on-mount — like Studio's sample-rows).`,
     );
   }
   return [

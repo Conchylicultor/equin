@@ -1,6 +1,10 @@
 export {
   slowOpFields,
   SlowOpSchema,
+  SlowOpDetailSchema,
+  SlowOpListRowSchema,
+  slowOpCallerFields,
+  SlowOpCallerSchema,
   CallerBreakdownSchema,
   CallerRefSchema,
   SlowOpSampleSchema,
@@ -13,6 +17,9 @@ export {
 } from "./schema";
 export type {
   SlowOp,
+  SlowOpDetail,
+  SlowOpListRow,
+  SlowOpCaller,
   CallerBreakdown,
   CallerRef,
   SlowOpSample,
@@ -21,7 +28,8 @@ export type {
   MeasureStat,
   SlowOpMeasures,
 } from "./schema";
-export { slowOpsValue } from "./resources";
+export { slowOpsList, slowOpById, slowOpCallers } from "./resources";
+export { slowOpDetailRoute } from "./routes";
 export { slowOpConfig } from "./config";
 export { MAX_CLIENT_SLOW_OP_ITEMS } from "./limits";
 export { SlowOpReportPayloadSchema } from "./report-payload";

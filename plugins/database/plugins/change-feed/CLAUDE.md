@@ -208,11 +208,12 @@ contribution/registry sets:
   catches hand-written AND compiled resources uniformly, because the check reads
   the runtime's stored declarations, not source text. Fix: point the resource at a
   real triggered base table (not a view/rollup), drop the exclusion, give the table
-  a change producer, or serve it as an external `snapshot` live value with a
-  Refresh affordance (the precedents: Studio's `sample-rows`, which records its
-  Postgres read as a sanctioned `no-db-backed-notify` exemption, and
-  `debug/slow-ops`' `slow-ops.list`, which needs none — the check admits a read
-  of a table the serving plugin itself excludes). An
+  a change producer (the precedents: `reports`, `traces`, and `debug/slow-ops`'
+  `slow_ops` + `slow_op_callers`, each written one statement per batch with its
+  merges in SQL), or serve it as an external `snapshot` live value with a
+  Refresh affordance (the precedent: Studio's `sample-rows`, which records its
+  Postgres read as a sanctioned `no-db-backed-notify` exemption; a read of a
+  table the serving plugin itself excludes needs none). An
   endpoint read on open is not a remedy — `live/no-endpoint-read` flags it as
   debt.
 - **`assertRelationBasesSourced`** (D35, `internal/relation-bases.ts`) — **throws**

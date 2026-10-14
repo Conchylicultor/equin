@@ -2380,8 +2380,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 67 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×59
+  - Contributes: 69 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×61
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
@@ -2563,8 +2563,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useRowFilter`
     - `useSortController`
 - Server:
-  - Contributes: 61 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×59
+  - Contributes: 63 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×61
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getConfig`

@@ -1,0 +1,9 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    { "id": "newest", "name": "Newest", "view": { "type": "table", "sort": [{ "fieldId": "atTime", "direction": "desc" }] } }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

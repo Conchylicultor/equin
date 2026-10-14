@@ -1,24 +1,75 @@
 # slow-ops
 
 Durable, deduped store + recorder for slow operations, fed by server `onSlowSpan`
-and the `POST /api/slow-ops/client` endpoint. Viewer: the `pane` sub-plugin
-(Debug → Slow Ops), which reads the whole table through the `slow-ops.list`
-external snapshot value (`slowOpsValue`, in `core`), re-read on open and on
-Refresh. It is not a `db` value on purpose: `slow_ops` is `ExcludeFromChangeFeed`,
-so a pushed read would never update. `no-db-backed-notify` admits the Postgres
-read without an exemption, because it reads only a table this plugin excludes.
+and the `POST /api/slow-ops/client` endpoint. Two tables:
+
+- **`slow_ops`** — one row per (operationKind, operation, worktree): counters
+  (count, total / max / last ms, threshold, first / last seen) plus four
+  bounded JSON lists: `waits` (per layer), `variants` (top 10 + `(other)`),
+  `measures` (`{ max, last }` per measure) and `recentSamples` (newest 10).
+- **`slow_op_callers`** — one row per (op, caller): who issued the op, how often
+  and how slow. Additive counters, nothing capped or folded.
+
+Viewer: the `pane` sub-plugin (Debug → Slow Events → Aggregates), all live:
+
+- `slow-ops.ops` — the ranked list, a scroll window (100 a page, `maxLimit`
+  500) of slim rows: the counters, plus `waitMs` / `lastTraceId` derived in SQL.
+  No JSON list reaches the list.
+- `slow-ops.op` — one op by id (`useLiveRow`), for the detail pane a row opens.
+- `slow-ops.callers` — that op's callers, scoped by its key, paged by total time.
+
+## The write: one upsert per table per batch, merges in SQL
+
+`recordSlowOpBatch` stamps and shed-gates each item, then folds the admitted
+batch (`fold-batch.ts`, pure) into one row per op and one per (op, caller), and
+writes each list as ONE `INSERT … ON CONFLICT DO UPDATE` through its change
+producer (`producer.ts`). Every merge — counters, the newest-occurrence guards,
+the four JSON lists — is a SQL expression in the SET clause
+(`merge-sql.ts`), evaluated against the row ON CONFLICT locked: no read-back,
+no JS under a lock, safe across the two backends of a hot swap (each batch is
+sorted by key, so they lock in the same order). The SQL merges mirror the pure
+ones (`fold-batch.ts`, `merge-detail.ts`); `record-slow-op.test.ts` checks
+fold + SQL against the old per-item merge over random batches.
+
+**Why this shape.** The previous recorder upserted the counters, read the row
+back, merged five JSON lists in JS and rewrote the row — two statements per
+occurrence inside one transaction. That could not be a change producer
+(`mutate` is one autocommit statement), and with a trigger it was the largest
+source of change-feed churn: a self-amplifying loop (slow app → more slow-op
+writes → more notify cascade → slower app). So the table was
+`ExcludeFromChangeFeed` and the pane re-read the whole table (~19 MB) on open.
+Now both tables are change producers: no trigger, no changelog, no NOTIFY, and
+at most one flush per 2 s per table however many occurrences land
+(`coalesce`), each refilling only the changed ids of the open windows. The
+writes stay inside `runWithoutProfiling` and the background lane.
+
+**Callers live in their own table** because they are the one list with
+unbounded cardinality (a route path carries ids: the worst op had 457
+callers). Capping them like `variants` would have folded about 30% of all named
+callers into `(other)` (measured on main, 2026-10-13); as rows they stay exact
+and the detail pages them. `slow_op_callers` names its op by the text key, not
+`slow_ops.id` — the recorder never looks the op up, and the detail's window
+filters text columns (the live filter cannot compare a text operand with a
+`uuid` column). No foreign key: retention ages a caller out on its own
+`last_seen_at`, which is never later than its op's.
+
+**The legacy `callers` column** on `slow_ops` is no longer read or written. It
+outlives this change by one push only because a hot swap's outgoing backend
+still names it in its upsert; the follow-up push drops it. The backfill copied
+it into `slow_op_callers` once, at the new backend's boot; callers the
+outgoing backend merged into it during that swap window were not copied (a
+few seconds of attribution; the op's counters include them).
 
 Client `element` signals attribute to their route — they pass
-`caller: { kind: "route", label: location.pathname }`, which the recorder merges
-into the row's `callers` so the pane shows e.g. `↳ route:/agents/c/123 ×N`.
+`caller: { kind: "route", label: location.pathname }`, which lands on the op's
+`slow_op_callers` row (`route` · `/agents/c/123` ×N in the detail).
 
-A server span's `detail` lands on the row too. Its `variant` merges into `variants`
-(`◇ {"id":"42"} ×3`). Only the top 10 by total time stay named; the rest fold into
-one `(other)` entry, so the row cannot grow without bound. Its `measures` merge into
-`measures` as `{ max, last }` per measure (`# max 40 subscribers · last 12`). Both
-are also stamped on the newest sample. The merges are pure (`merge-detail.ts`). The
-cluster tab reads neither column (`ClusterSlowOpSchema`), so a fork still on the
-older schema stays readable.
+A server span's `detail` lands on the row too: its `variant` merges into
+`variants` (only the top 10 by total time stay named; the rest fold into one
+`(other)` entry, on the batch that creates the row as on every merge) and its
+`measures` into `measures`. Both are also stamped on the newest sample. The
+cluster tab reads only the columns its merge uses (`ClusterSlowOpSchema`, an
+explicit pick), so a fork on any schema stays readable.
 
 ## Cold-start slowness is UX truth — don't suppress it
 
@@ -58,7 +109,8 @@ queues each signal, waits ~250 ms (one trailing debounce, never a poll), and
 sends the accumulated items as ONE request, chunked to
 `MAX_CLIENT_SLOW_OP_ITEMS`, `keepalive`, with a `pagehide` flush so a queued
 signal is not lost when the tab goes away. On the server, one batch is one
-contention snapshot and one Postgres transaction (`recordSlowOpBatch`).
+contention snapshot and one upsert per table (`recordSlowOpBatch`) — never a
+transaction per item.
 
 This exists because the old shape amplified the very stall it reported: during
 the 2026-09-02 incident a reconnect re-settled ~420 resources at once, and the
@@ -119,7 +171,7 @@ bar).
 
 ## Plugin reference
 
-- Description: Records slow client operations (page load, element appearance) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates with caller attribution, plus the slow-op report kind and the slow-ops.list snapshot value the pane reads. Subscribes to runtime-profiler slow spans and client signals; files one deduped report per distinct slow operation (investigation task filed on demand).
+- Description: Records slow client operations (page load, element appearance) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates and their callers (one row per op × caller), both written through change producers, plus the slow-op report kind and the live collections the pane reads (slow-ops.ops list, slow-ops.op detail, slow-ops.callers). Subscribes to runtime-profiler slow spans and client signals; files one deduped report per distinct slow operation (investigation task filed on demand).
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "slow-op"
@@ -141,10 +193,18 @@ bar).
     - `ui/icons.Icon`
 - Server:
   - Contributes:
-    - `resource.declare` "slow-ops.list"
+    - `resource.declare` "slow-ops.callers"
+    - `resource.declare` "slow-ops.callers:groups"
+    - `resource.declare` "slow-ops.callers:rows"
+    - `resource.declare` "slow-ops.op:rows"
+    - `resource.declare` "slow-ops.ops"
+    - `resource.declare` "slow-ops.ops:groups"
+    - `resource.declare` "slow-ops.ops:rows"
     - `ConfigV2.Register` "slow-op"
     - `report-kind` "slow-op"
-    - `change-feed-exclusion` "slow_ops"
+    - `change-producer` "slow_op_callers"
+    - `change-producer` "slow_ops"
+    - `fork-data-exclusion` "slow_op_callers"
     - `fork-data-exclusion` "slow_ops"
   - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/jobs` ×4
@@ -155,12 +215,12 @@ bar).
     - `primitives/log-channels` ×2
     - `reports` ×2
     - `database/admin.ExcludeFromFork`
-    - `database/change-feed.ExcludeFromChangeFeed`
+    - `database/change-feed.defineChangeProducer`
     - `database.db`
     - `debug/trace/engine.captureTrace`
     - `infra/endpoints.implement`
     - `infra/retention.defineRetention`
-    - `network/live.serveValue`
+    - `network/live.serveCollection`
   - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
   - Exports (types): `RecordSlowOpInput`
   - Exports (values):
@@ -168,12 +228,22 @@ bar).
     - `readSlowOpMarkers`
     - `recordSlowOp`
     - `recordSlowOpBatch`
-  - Register: `defineJob('retention.slow_ops')`
-  - Resources: `slow-ops.list` (invalidate, snapshot)
+  - Register:
+    - `defineJob('retention.slow_ops')`
+    - `defineJob('retention.slow_op_callers')`
+  - Resources:
+    - `slow-ops.callers` (keyed, window)
+    - `slow-ops.callers:groups` (push)
+    - `slow-ops.callers:rows` (keyed, point)
+    - `slow-ops.op:rows` (keyed, point)
+    - `slow-ops.ops` (keyed, window)
+    - `slow-ops.ops:groups` (push)
+    - `slow-ops.ops:rows` (keyed, point)
   - Routes: `POST /api/slow-ops/client`
 - Core:
   - Uses:
     - `config_v2.defineConfig`
+    - `debug/trace/engine.traceListRoute`
     - `fields.FieldsRecord`
     - `fields.fieldsToZodObject`
     - `fields/date/config.dateField`
@@ -186,12 +256,19 @@ bar).
     - `infra/runtime-profiler.SPAN_MEASURES`
     - `infra/runtime-profiler.SpanMeasure`
     - `infra/runtime-profiler.WaitBreakdown`
-    - `network/live.liveValue`
+    - `network/live.liveCollection`
+    - `network/live/filter.liveInstant`
+    - `network/live/filter.liveNumber`
+    - `network/live/filter.liveText`
+    - `primitives/pane.defineRoute`
   - Exports (types):
     - `CallerBreakdown`
     - `CallerRef`
     - `MeasureStat`
     - `SlowOp`
+    - `SlowOpCaller`
+    - `SlowOpDetail`
+    - `SlowOpListRow`
     - `SlowOpMarker`
     - `SlowOpMeasures`
     - `SlowOpReportPayload`
@@ -203,14 +280,21 @@ bar).
     - `loadSeverity`
     - `MAX_CLIENT_SLOW_OP_ITEMS`
     - `OTHER_VARIANT`
+    - `slowOpById`
+    - `slowOpCallerFields`
+    - `slowOpCallers`
+    - `SlowOpCallerSchema`
     - `slowOpConfig`
+    - `slowOpDetailRoute`
+    - `SlowOpDetailSchema`
     - `slowOpFields`
+    - `SlowOpListRowSchema`
     - `SlowOpMarkerSchema`
     - `SlowOpMeasuresSchema`
     - `SlowOpReportPayloadSchema`
     - `SlowOpSampleSchema`
     - `SlowOpSchema`
-    - `slowOpsValue`
+    - `slowOpsList`
     - `VARIANT_CAP`
     - `VariantBreakdownSchema`
 - Cross-plugin:
@@ -223,6 +307,6 @@ bar).
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
 - Sub-plugins:
   - **`cluster`** [exempt] — Cross-worktree Cluster tab for the Slow Events pane: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline. Cross-worktree fan-out endpoint…
-  - **`pane`** — Aggregates tab of the Slow Events pane: a global, ranked overview of slow operations with per-operation caller attribution.
+  - **`pane`** — Aggregates tab of the Slow Events pane: a live, paged ranking of slow operations, and the per-operation detail pane (callers, waits, variants, measures, recent samples).
 
 <!-- AUTOGENERATED:END -->
