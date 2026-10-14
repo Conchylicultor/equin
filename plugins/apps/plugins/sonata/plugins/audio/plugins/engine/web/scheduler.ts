@@ -1,22 +1,20 @@
 import {
   buildTempoIndex,
+  cycleStart,
   resolvePedalSustain,
+  type LoopCycle,
   type Note,
+  type PlayPosition,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import type { InstrumentVoices } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 
 /**
- * An A–B practice-loop window in **beats** (already validated `start < end`).
- * When present, the scheduler pre-schedules the loop's notes iteration after
- * iteration with NO teardown, so the audio wraps seamlessly (the visual cursor's
- * deterministic time-fold in the transport mirrors this). `null` = play straight
- * through to the song end.
+ * Where a schedule starts: the play position's score `beat` and, inside an
+ * A–B loop's rest, the `rest` still to go before it sounds (the schedule then
+ * opens with that much silence).
  */
-export interface LoopWindowBeats {
-  start: number;
-  end: number;
-}
+export type ScheduleFrom = Pick<PlayPosition, "beat" | "rest">;
 
 /** A running playback schedule; `cancel()` tears down the look-ahead loop. */
 export interface ScheduleHandle {
@@ -35,7 +33,8 @@ export interface ScheduleHandle {
   retime(tempoSource: Score, newAudioAnchor: number): void;
   /**
    * The beat the schedule is sounding at audio time `audioTime` (an A–B loop's
-   * iterations folded back into `[loop.start, loop.end)`). What a drift check
+   * iterations folded back into its cycle; a beat inside a rest reads as the
+   * silent beat before A it stands in for). What a drift check
    * compares with an external medium's position.
    */
   beatAt(audioTime: number): number;
@@ -97,12 +96,19 @@ interface SchedEvent {
  * stays bounded by tempo (never by Score size) and scheduling keeps running even
  * when the tab is backgrounded (unlike rAF). No setInterval / polling.
  *
- * `audioAnchor` is `ctx.currentTime` captured at the play instant; `fromBeat` is
- * the cursor beat at that same instant. Notes are placed on a single monotonic
- * **cumulative-beat coordinate** `c`: the first pass runs `[fromBeat, loop.end)`
- * (or all remaining notes when not looping) at `c = start − fromBeat`, then each
- * loop iteration `k ≥ 1` lays `[loop.start, loop.end)` end to end at
- * `c = (loop.end − fromBeat) + (k−1)(loop.end − loop.start) + (start − loop.start)`.
+ * `audioAnchor` is `ctx.currentTime` captured at the play instant; `from` is
+ * the cursor's position at that same instant, whose path starts at
+ * `o = from.beat − from.rest` (a cursor paused inside a loop's rest resumes
+ * with the rest's remaining silence). Notes are placed on a single monotonic
+ * **cumulative-beat coordinate** `c`: the first pass runs `[o, loop.end)` (or
+ * all remaining notes when not looping) at `c = start − o`, then each loop
+ * iteration `k ≥ 1` lays the `LoopCycle`'s `[A − rest, B)` end to end at
+ * `c = (B − o) + (k−1)(B − (A − rest)) + (start − (A − rest))` — the rest is
+ * real time on the path, timed by the tempo map over the bar it replaces, the
+ * same definition the transport's cursor fold reads. Only the body's notes
+ * `[A, B)` sound in an iteration (`restSounds` also sounds the notes of the
+ * span the rest replaces — the metronome's clicks, which keep counting
+ * through it).
  * `when(c)` integrates that path through the tempo index from a single fixed
  * anchor, so **a loop wraps with no teardown** — the generator just keeps
  * emitting the next iteration ahead of the boundary (the fix for the audible
@@ -116,13 +122,21 @@ interface SchedEvent {
  */
 export function startScheduling(
   score: Score,
-  fromBeat: number,
+  from: ScheduleFrom,
   audioAnchor: number,
   resolveVoices: (trackId: string) => InstrumentVoices | undefined,
   ctx: AudioContext,
-  loop: LoopWindowBeats | null = null,
+  loop: LoopCycle | null = null,
+  opts: { restSounds?: boolean } = {},
 ): ScheduleHandle {
   let tempo = buildTempoIndex(score);
+  // The path origin: the cursor beat less any rest still to go (a rest only
+  // exists inside a loop).
+  const fromBeat = loop ? from.beat - from.rest : from.beat;
+  // An iteration's first beat (the rest's start), and the first beat whose
+  // notes sound in it.
+  const loopStart = loop ? cycleStart(loop) : 0;
+  const soundFrom = loop && !opts.restSounds ? loop.start : loopStart;
 
   const byStart = (a: Note, b: Note): number => a.start - b.start;
   // First pass: notes at/after the resume cursor. A note whose onset is already
@@ -130,18 +144,20 @@ export function startScheduling(
   // be re-triggered — re-attacking it would replay the previous note. When
   // looping the first pass ends at `loop.end` (the rest is covered by the loop
   // iterations); a start before `loop.start` still plays straight into the loop.
+  // Resuming inside a rest sounds nothing of it (unless `restSounds`).
+  const headFrom = opts.restSounds ? fromBeat : from.beat;
   const headNotes = score.notes
-    .filter((n) => n.start >= fromBeat && (!loop || n.start < loop.end))
+    .filter((n) => n.start >= headFrom && (!loop || n.start < loop.end))
     .sort(byStart);
   // The looped segment, replayed every iteration after the first pass.
   const loopNotes = loop
     ? score.notes
-        .filter((n) => n.start >= loop.start && n.start < loop.end)
+        .filter((n) => n.start >= soundFrom && n.start < loop.end)
         .sort(byStart)
     : [];
 
   const headLenBeats = loop ? loop.end - fromBeat : 0;
-  const loopLenBeats = loop ? loop.end - loop.start : 0;
+  const loopLenBeats = loop ? loop.end - loopStart : 0;
 
   // when(c) = anchorWhen + pathSec(c) − anchorPathSec. The anchor is fixed for
   // the schedule's life and only moves on `retime` (which re-derives the played
@@ -158,7 +174,7 @@ export function startScheduling(
       return tempo.beatToSeconds(fromBeat + c) - tempo.beatToSeconds(fromBeat);
     }
     const loopSec =
-      tempo.beatToSeconds(loop.end) - tempo.beatToSeconds(loop.start);
+      tempo.beatToSeconds(loop.end) - tempo.beatToSeconds(loopStart);
     const r = c - headLenBeats;
     const full = Math.floor(r / loopLenBeats);
     const remBeat = r - full * loopLenBeats;
@@ -166,8 +182,8 @@ export function startScheduling(
       tempo.beatToSeconds(loop.end) -
       tempo.beatToSeconds(fromBeat) +
       full * loopSec +
-      (tempo.beatToSeconds(loop.start + remBeat) -
-        tempo.beatToSeconds(loop.start))
+      (tempo.beatToSeconds(loopStart + remBeat) -
+        tempo.beatToSeconds(loopStart))
     );
   };
 
@@ -184,13 +200,12 @@ export function startScheduling(
       );
     }
     const loopSec =
-      tempo.beatToSeconds(loop.end) - tempo.beatToSeconds(loop.start);
+      tempo.beatToSeconds(loop.end) - tempo.beatToSeconds(loopStart);
     const r = sec - headSec;
     const full = Math.floor(r / loopSec);
     const remSec = r - full * loopSec;
     const remBeat =
-      tempo.secondsToBeat(tempo.beatToSeconds(loop.start) + remSec) -
-      loop.start;
+      tempo.secondsToBeat(tempo.beatToSeconds(loopStart) + remSec) - loopStart;
     return headLenBeats + full * loopLenBeats + remBeat;
   };
 
@@ -204,14 +219,14 @@ export function startScheduling(
   const beatOf = (c: number): number => {
     if (!loop || c <= headLenBeats) return fromBeat + c;
     const r = (c - headLenBeats) % loopLenBeats;
-    return loop.start + r;
+    return loopStart + r;
   };
   // The path coordinate of `beat` nearest `near`: in the head, or in the loop
   // iteration closest to the current one.
   const cOfBeatNear = (beat: number, near: number): number => {
-    if (!loop || beat < loop.start || beat >= loop.end) return beat - fromBeat;
+    if (!loop || beat < loopStart || beat >= loop.end) return beat - fromBeat;
     const candidates: number[] = beat >= fromBeat ? [beat - fromBeat] : [];
-    const offset = beat - loop.start;
+    const offset = beat - loopStart;
     const k = Math.round((near - headLenBeats - offset) / loopLenBeats) + 1;
     for (const iter of [k - 1, k, k + 1]) {
       if (iter >= 1) {
@@ -283,7 +298,7 @@ export function startScheduling(
       }
       const n = loopNotes[li++]!;
       const c =
-        headLenBeats + (iter - 1) * loopLenBeats + (n.start - loop.start);
+        headLenBeats + (iter - 1) * loopLenBeats + (n.start - loopStart);
       return buildEvent(n, c);
     }
     return null;

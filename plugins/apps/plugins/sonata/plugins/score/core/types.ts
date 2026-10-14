@@ -220,6 +220,55 @@ export interface Score {
 }
 
 // ---------------------------------------------------------------------------
+// Transport position + the A–B loop cycle (pure maths in `loop-cycle.ts`)
+// ---------------------------------------------------------------------------
+
+/**
+ * An A–B practice loop as the transport CYCLES it, in beats — the one shared
+ * definition the cursor's time-fold, the audio / metronome schedulers and the
+ * displays all read, so they agree on what plays after `B` by construction.
+ *
+ * Every repeat of the loop is one iteration of `[start - rest, end)`: `rest`
+ * beats of silence (nothing sounds, nothing is drawn as being played) leading
+ * into `start` (A), then the loop body `[start, end)`. The first pass is the
+ * song itself, from wherever playback started up to `end` (B), so a start
+ * before A plays the real song (including the bar the rest replaces on a
+ * repeat) straight into the loop.
+ *
+ * The rest is timed by the score's own tempo map over `[start - rest, start)`,
+ * so every consumer integrating the same span through the same tempo index
+ * gets the same iteration length. `rest` is `0` for a seamless B→A wrap.
+ */
+export interface LoopCycle {
+  /** A — the loop body's first beat. */
+  start: number;
+  /** B — the loop body's end (exclusive). Always `> start`. */
+  end: number;
+  /** Beats of silence before every repeat of the body (`>= 0`). */
+  rest: number;
+}
+
+/**
+ * Where the transport is — what the playback cursor holds.
+ *
+ *  - `beat` is the SCORE position: the beat sounding now, or, during a loop's
+ *    rest, the beat about to sound (A). Score-domain readers (a chord chart, a
+ *    readout, the progress bar) read only this, so they park on A during a rest.
+ *  - `rest` is how many beats of the loop's rest remain before `beat` sounds:
+ *    `0` while notes play, `> 0` only inside a rest. Whatever shows what is
+ *    BEING PLAYED (lit keys, highlighted noteheads) shows nothing while it is
+ *    positive.
+ *  - `repeat` is whether this is a repeat pass of the loop (after its first
+ *    wrap) rather than the song's own pass — what a display that unrolls the
+ *    loop ahead needs to place the cursor (see {@link AxisTimeline}).
+ */
+export interface PlayPosition {
+  beat: number;
+  rest: number;
+  repeat: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Rich-display contracts (display-agnostic, kept here to keep the graph a DAG)
 // ---------------------------------------------------------------------------
 
@@ -274,4 +323,38 @@ export interface Projection {
    * construction rather than by re-deriving a matching range.
    */
   pitchPlane?: PitchPlane;
+  /**
+   * Present iff "time-axis": what the time axis lays out. The beats
+   * `beatToY` / `yToBeat` speak are AXIS beats; for a display drawing the song
+   * as written they are the score's beats, but the piano roll may unroll an
+   * A–B loop ahead of the cursor (`unrollLoop`), drawing copies of the loop past
+   * B. Anything anchored to the transport maps through this rather than
+   * assuming the identity: the cursor's axis beat is
+   * `timeline.axisBeat(position)`, and a pointer's axis beat reads back as the
+   * play position shown there with `timeline.at(axisBeat)`.
+   */
+  timeline?: AxisTimeline;
+}
+
+/**
+ * How a display's time axis lays out the transport: axis beats ↔ play
+ * positions. The identity for a display drawing the song as written; an
+ * unrolled A–B loop otherwise (see `unrollLoop` in `loop-timeline.ts`).
+ */
+export interface AxisTimeline {
+  /** The axis beat a play position sits at (where the cursor is drawn). */
+  axisBeat(position: PlayPosition): number;
+  /**
+   * The play position the axis shows at `axisBeat` — the inverse of
+   * {@link axisBeat}: a song beat, a beat of a drawn loop copy (`repeat`), or
+   * a point inside a drawn rest (`rest > 0`, `beat` = A).
+   */
+  at(axisBeat: number): PlayPosition;
+  /**
+   * The unrolled loop, or `null` when the axis draws the song as written.
+   * `shifts[k]` is copy k's offset (axis beat − score beat): copy k's body
+   * spans `[cycle.start, cycle.end) + shifts[k]`, its rest the `cycle.rest`
+   * beats just before it.
+   */
+  loop: { cycle: LoopCycle; shifts: readonly number[] } | null;
 }

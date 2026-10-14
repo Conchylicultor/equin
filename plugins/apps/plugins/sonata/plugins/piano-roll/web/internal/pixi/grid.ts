@@ -36,9 +36,13 @@ import {
 import type { PitchGuide } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { PX_PER_SECOND } from "../../components/geometry";
 
-/** One bar marker, in authored seconds (built by the host from `bars(score)`). */
+/**
+ * One bar marker, in authored seconds (built by the host from the axis's bar
+ * lines). `index` is the bar's index in `bars(score)` — drawn as its number —
+ * or `null` for an unnumbered line (the one opening an unrolled loop's rest).
+ */
 export interface BarMarker {
-  index: number;
+  index: number | null;
   startSec: number;
 }
 

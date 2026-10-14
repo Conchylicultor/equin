@@ -1,0 +1,7 @@
+// @hash 8d1cbda286f8
+{
+  // After B, the falling notes show the loop again instead of the rest of the song.
+  "showAhead": true,
+  // Wait one empty bar before each repeat, to see the loop coming.
+  "restBeforeRepeat": true
+}

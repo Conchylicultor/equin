@@ -1,5 +1,10 @@
 import { useMemo, type DependencyList } from "react";
 import {
+  samePosition,
+  songPosition,
+  type PlayPosition,
+} from "@plugins/apps/plugins/sonata/plugins/score/core";
+import {
   defineScopedStore,
   type ScopedStore,
 } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
@@ -30,10 +35,15 @@ import {
  *    selected value changes (for frame-invariant HUD/readout consumers).
  */
 
-interface CursorState {
-  beat: number;
-}
-const cursorStore = defineScopedStore<CursorState>({ beat: 0 });
+/**
+ * The cursor holds the transport's whole {@link PlayPosition}: the score
+ * `beat`, plus — inside an A–B loop — the rest still to go before it sounds and
+ * whether this is a repeat pass. Most readers want only `beat`; a reader of
+ * what is BEING PLAYED also reads `rest`, and a display that unrolls the loop
+ * ahead places the cursor from the whole position.
+ */
+type CursorState = PlayPosition;
+const cursorStore = defineScopedStore<CursorState>(songPosition(0));
 
 export const CursorStoreProvider = cursorStore.Provider;
 export type CursorStore = ScopedStore<CursorState>;
@@ -49,24 +59,34 @@ export type CursorStore = ScopedStore<CursorState>;
  * subscription callback rather than inferred, because the synchronous store
  * write reaches imperative subscribers BEFORE React commits any `seekEpoch`.
  *
- * `setBeat` early-returns on an unchanged beat (unless it's a seek) so the
+ * A write early-returns on an unchanged position (unless it's a seek) so the
  * snapshot stays referentially stable while the store hasn't moved — required
  * for the `useSyncExternalStore` tearing check not to loop.
  */
 export interface CursorApi {
+  /** The score beat (`getPosition().beat`). */
   getBeat(): number;
+  /** The whole play position (see {@link PlayPosition}). */
+  getPosition(): PlayPosition;
+  /** Move to `beat` on the song's own pass (no rest, no repeat) — a seek, a
+   *  scrub step, a reset. */
   setBeat(beat: number, opts?: { seek?: boolean }): void;
+  /** Move to a full play position — the transport's loop-aware advance. */
+  setPosition(position: PlayPosition, opts?: { seek?: boolean }): void;
   subscribe(cb: (seek: boolean) => void): () => void;
 }
 
 /** Build the imperative cursor facade for a given scoped store instance. */
 export function cursorApiFor(store: CursorStore): CursorApi {
+  const setPosition = (next: PlayPosition, opts?: { seek?: boolean }) =>
+    store.setState((p) => (samePosition(p, next) && !opts?.seek ? p : next), {
+      meta: { seek: !!opts?.seek },
+    });
   return {
     getBeat: () => store.getState().beat,
-    setBeat: (beat, opts) =>
-      store.setState((p) => (p.beat === beat && !opts?.seek ? p : { beat }), {
-        meta: { seek: !!opts?.seek },
-      }),
+    getPosition: () => store.getState(),
+    setBeat: (beat, opts) => setPosition(songPosition(beat), opts),
+    setPosition,
     subscribe: (cb) =>
       store.subscribe((meta) =>
         cb(Boolean((meta as { seek?: boolean } | undefined)?.seek)),
@@ -88,6 +108,10 @@ export function useCursorApi(): CursorApi {
  * constant BPM number, a chord `Annotation` found in a stable array — bails out,
  * so the component never reconciles mid-region even as the cursor advances.
  *
+ * The selector also receives the whole {@link PlayPosition} as its second
+ * argument, for a reader that must tell a loop's rest from playing (a key lit
+ * at `beat` is not sounding while `position.rest > 0`).
+ *
  * `deps` invalidate the cache exactly like `useMemo`'s deps: when the selector
  * closes over new data (a new score, tempoScale, …) the same beat can map to a
  * new value, so the cache must be dropped. Pass everything the selector reads
@@ -95,9 +119,9 @@ export function useCursorApi(): CursorApi {
  * can never match), pass an `isEqual` that compares by value.
  */
 export function useCursorSelector<T>(
-  selector: (beat: number) => T,
+  selector: (beat: number, position: PlayPosition) => T,
   deps: DependencyList,
   isEqual?: (a: T, b: T) => boolean,
 ): T {
-  return cursorStore.useSelector((s) => selector(s.beat), deps, isEqual);
+  return cursorStore.useSelector((s) => selector(s.beat, s), deps, isEqual);
 }

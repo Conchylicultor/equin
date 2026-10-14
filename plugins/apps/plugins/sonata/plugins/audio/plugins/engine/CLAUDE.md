@@ -98,11 +98,26 @@ raising it again is instant. Folding volume 0 into the audible set would put the
 levels back into the rebuild effect's inputs, which is the one thing this design
 is arranged to prevent.
 
-`startScheduling(score, fromBeat, audioAnchor, resolveVoices, ctx, loop)` takes
+`startScheduling(score, from, audioAnchor, resolveVoices, ctx, loop, opts)` takes
 a per-track resolver, not a single voice manager, and calls
 `resolveVoices(note.track)?.schedule(note)`. That resolver is now simply
 `channelsRef.current.get(trackId)?.voices` — the scheduler's contract did not
 change when the strips did.
+
+## The A–B loop
+
+`loop` is the session's `loopCycle` (score/core `LoopCycle`: A, B and the rest
+before each repeat) — the same object the transport folds the cursor with, so
+the two agree on every iteration's length by construction. The scheduler lays
+the first pass `[from, B)` and then iterations of `[A - rest, B)` end to end on
+one cumulative-beat path timed through the tempo index: the rest is real time on
+the path (timed by the tempo over the bar it replaces), and only the body's
+notes `[A, B)` sound in it. `from` is the cursor's `{ beat, rest }` — a cursor
+paused inside a rest resumes with the rest's remainder of silence. The
+metronome passes `{ restSounds: true }`, so its clicks keep counting through a
+rest like a one-bar count-in to every repeat. The rebuild effect depends on the
+identity-stable `loopCycle` directly: toggling, moving the bounds or switching
+the rest rebuilds; a plain wrap never does.
 
 ## Slaved to a transport driver
 
@@ -112,7 +127,7 @@ and only its anchor comes from the driver (`transport-sync.ts`, exported for
 the metronome too):
 
 - **Rebuild.** `scheduleOrigin(readDriver(), cursor, now)` says where a
-  schedule built now starts: the cursor on the session's own clock, the
+  schedule built now starts: the cursor's position on the session's own clock, the
   driver's beat when it advances, nothing while it is `stalled`. The rebuild
   effect also keys on `syncEpoch` (a stall, a resume, the session's own
   driver seeks, a driver coming or going). Driven, the origin is read AFTER the
@@ -156,7 +171,6 @@ the metronome too):
     - `primitives/scope/scoped-store.defineScopedStore`
   - Exports (types):
     - `AudioGraph`
-    - `LoopWindowBeats`
     - `ScheduleHandle`
     - `ScheduleOrigin`
   - Exports (values):

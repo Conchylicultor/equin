@@ -29,6 +29,9 @@ export type {
   LyricChord,
   Capability,
   Projection,
+  AxisTimeline,
+  LoopCycle,
+  PlayPosition,
 } from "./types";
 
 export {
@@ -68,6 +71,18 @@ export type { PedalSpan } from "./pedal";
 
 export type { LoopWindowSec } from "./loop-fold";
 export { foldLoopTime } from "./loop-fold";
+
+export {
+  songPosition,
+  samePosition,
+  cycleStart,
+  barBeatsAt,
+  positionAtTime,
+  timeOfPosition,
+} from "./loop-cycle";
+
+export type { AxisBar, AxisScore } from "./loop-timeline";
+export { songAxis, unrollLoop } from "./loop-timeline";
 
 export type { ActiveNoteIndex } from "./active-note-index";
 export { buildActiveNoteIndex } from "./active-note-index";

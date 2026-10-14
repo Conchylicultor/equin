@@ -4,6 +4,7 @@ import {
   isAccidental,
   type KeySpeller,
   type Note,
+  type AxisTimeline,
   type PitchColumn,
   type PitchPlane,
   type Projection,
@@ -251,8 +252,14 @@ export function buildProjection(input: {
    * are the same geometry at two resolutions.
    */
   plane: PitchPlane;
-  /** Score whose tempo map converts beats → wall-clock seconds for the Y axis. */
+  /**
+   * The AXIS score the roll draws — the song as written, or the song with its
+   * A–B loop unrolled ahead (`unrollLoop`). Its tempo map converts axis beats
+   * → wall-clock seconds for the Y axis.
+   */
   score: Score;
+  /** How that axis lays out the transport — published as `timeline`. */
+  timeline: AxisTimeline;
   /** Playback tempo multiplier (1 = authored). Scales the scroll rate so slowing
    *  the tempo slows the scroll instead of stretching note heights. */
   tempoScale: number;
@@ -260,7 +267,7 @@ export function buildProjection(input: {
    *  heights — so DOM overlays stay glued to the zoomed canvas notes. */
   spread: number;
 }): Projection {
-  const { width, height, plane, score, tempoScale, spread } = input;
+  const { width, height, plane, score, timeline, tempoScale, spread } = input;
   const byPitch = columnsByPitch(plane);
 
   // Content-space Y: a note's beat maps to a fixed pixel position independent of
@@ -306,5 +313,6 @@ export function buildProjection(input: {
     pitchToX,
     noteToRect,
     pitchPlane: plane,
+    timeline,
   };
 }

@@ -11,6 +11,7 @@ import { expect, test } from "bun:test";
 import {
   buildTempoIndex,
   emptyScore,
+  songAxis,
   makeKeySpeller,
   scaleTempo,
   type Note,
@@ -132,6 +133,7 @@ test("buildProjection scales the whole Y axis by spread (and 1 is the baseline)"
       height: 400,
       plane: PIANO,
       score,
+      timeline: songAxis(emptyScore()).timeline,
       tempoScale: 1,
       spread,
     });
@@ -159,6 +161,7 @@ test("buildProjection's yToBeat inverts beatToY across tempo changes and zoom", 
     height: 400,
     plane: PIANO,
     score: scaleTempo(score, 0.5),
+    timeline: songAxis(emptyScore()).timeline,
     tempoScale: 0.5,
     spread: 1.7,
   });
@@ -223,6 +226,7 @@ test("a pitch the axis does not carry is dropped, and yields no rect", () => {
       height: 400,
       plane,
       score,
+      timeline: songAxis(emptyScore()).timeline,
       tempoScale: 1,
       spread: 1,
     });

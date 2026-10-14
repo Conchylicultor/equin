@@ -37,8 +37,8 @@ is the one place the player shows the BPM; the header carries no BPM label.
     - `sonataPlayerPane.Actions` "metronome" → `MetronomeButton`
     - `Sonata.Hud` "count-in" → `CountInOverlay`
     - `ConfigV2.WebRegister` "sonata.metronome"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/sonata/audio/engine` ×6
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/audio/engine` ×5
     - `apps/sonata/session` ×4
     - `config_v2` ×3
     - `primitives/css/control-panel` ×2

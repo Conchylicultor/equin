@@ -4,6 +4,7 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   scoreEndBeat,
+  type PlayPosition,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useConfig } from "@plugins/config_v2/web";
@@ -242,7 +243,8 @@ function NotationInner({ score }: NotationProps) {
 
   // Imperative per-frame cursor application — playhead position + note highlight,
   // ZERO React renders. Reads the latest plan + drawn-system registry from refs.
-  const applyCursor = useCallback((beat: number) => {
+  const applyCursor = useCallback((position: PlayPosition) => {
+    const beat = position.beat;
     const plan = planRef.current;
     const playhead = playheadRef.current;
     if (!plan || !playhead || plan.systems.length === 0) {
@@ -288,10 +290,12 @@ function NotationInner({ score }: NotationProps) {
 
     // Highlight: clear the previous active set, light up notes sounding now.
     // Only mounted systems have notes; the sounding note is in the (mounted)
-    // active system, so iterating every registry entry suffices.
+    // active system, so iterating every registry entry suffices. Inside an A–B
+    // loop's rest nothing sounds (the playhead waits on A), so nothing lights.
     for (const el of activeElsRef.current) el.classList.remove("is-active");
     const next: SVGElement[] = [];
-    for (const entry of registryRef.current.values()) {
+    const sounding = position.rest > 0 ? [] : registryRef.current.values();
+    for (const entry of sounding) {
       for (const n of entry.notes) {
         if (n.beat <= beat + EPS && n.end > beat + EPS) {
           n.el.classList.add("is-active");
@@ -304,7 +308,7 @@ function NotationInner({ score }: NotationProps) {
 
   // Drive the imperative path on every cursor change — no React render.
   useEffect(
-    () => cursor.subscribe(() => applyCursor(cursor.getBeat())),
+    () => cursor.subscribe(() => applyCursor(cursor.getPosition())),
     [cursor, applyCursor],
   );
 
@@ -314,8 +318,8 @@ function NotationInner({ score }: NotationProps) {
   useEffect(() => {
     lastScrolledSystemRef.current = -1;
     activeElsRef.current = [];
-    reapplyRef.current = applyCursor;
-    applyCursor(cursor.getBeat());
+    reapplyRef.current = () => applyCursor(cursor.getPosition());
+    applyCursor(cursor.getPosition());
   }, [plan, applyCursor, cursor]);
 
   // Click a notehead to seek the transport to its beat.

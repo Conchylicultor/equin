@@ -5,35 +5,48 @@ import {
   useSession,
   type DriverReading,
 } from "@plugins/apps/plugins/sonata/plugins/session/web";
-import { buildTempoIndex } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import type { ScheduleHandle } from "./scheduler";
+import {
+  buildTempoIndex,
+  type PlayPosition,
+} from "@plugins/apps/plugins/sonata/plugins/score/core";
+import type { ScheduleFrom, ScheduleHandle } from "./scheduler";
 
 /**
- * Where a look-ahead schedule built right now starts: the beat it starts from
- * and the audio time that beat sounds at — or `stalled`, when an external
- * driver owns the transport and is not advancing (nothing may be scheduled).
+ * Where a look-ahead schedule built right now starts: the position it starts
+ * from and the audio time that position sounds at — or `stalled`, when an
+ * external driver owns the transport and is not advancing (nothing may be
+ * scheduled).
  *
- * Without a driver this is the cursor at the given audio time, as every
+ * Without a driver this is the cursor's position at the given audio time (its
+ * loop rest included, so a resume inside a rest keeps the rest), as every
  * scheduler anchored before drivers existed. With one, it is the DRIVER's
  * position: the cursor trails it by up to a frame, and the medium is the
- * truth the synth must sound against.
+ * truth the synth must sound against (a driven loop never rests).
  */
 export type ScheduleOrigin =
-  | { kind: "start"; fromBeat: number; audioAnchor: number }
+  | { kind: "start"; from: ScheduleFrom; audioAnchor: number }
   | { kind: "stalled" };
 
 export function scheduleOrigin(
   reading: DriverReading,
-  cursorBeat: number,
+  cursor: PlayPosition,
   audioTime: number,
 ): ScheduleOrigin {
   switch (reading.kind) {
     case "internal":
-      return { kind: "start", fromBeat: cursorBeat, audioAnchor: audioTime };
+      return {
+        kind: "start",
+        from: { beat: cursor.beat, rest: cursor.rest },
+        audioAnchor: audioTime,
+      };
     case "stalled":
       return { kind: "stalled" };
     case "advancing":
-      return { kind: "start", fromBeat: reading.beat, audioAnchor: audioTime };
+      return {
+        kind: "start",
+        from: { beat: reading.beat, rest: 0 },
+        audioAnchor: audioTime,
+      };
   }
 }
 

@@ -18,9 +18,11 @@ import {
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import {
-  bars,
   buildTempoIndex,
   makeKeySpeller,
+  songAxis,
+  unrollLoop,
+  type PlayPosition,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
@@ -185,7 +187,15 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   const look = asSonataLook(useConfig(sonataLookConfig).look);
   const lookStyle = SONATA_LOOK_STYLES[look];
   const { spread, setSpread, setSpreadFloor } = usePlayerView();
-  const { seekTo, timelineBeats, isPlaying, play, stop } = useSession();
+  const {
+    seekTo,
+    timelineBeats,
+    isPlaying,
+    play,
+    stop,
+    loopCycle,
+    loopOptions,
+  } = useSession();
   const { content: songDocument } = useSongDocument();
   const scorePending = songDocument.kind === "pending";
   const scoreFailure =
@@ -214,6 +224,23 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
     [layout],
   );
 
+  // The AXIS the roll draws: the song as written, or — with "show loop ahead" on
+  // and a loop enabled — the song up to B followed by the loop's own repeats
+  // (each opened by its rest), so past B the falling notes are what will really
+  // play next. Everything below draws `axis.score` and places the cursor at its
+  // AXIS beat (`axis.timeline.axisBeat`), so no renderer special-cases a loop;
+  // seeks map an axis beat back to the play position shown there
+  // (`axis.timeline.at`). See `unrollLoop` in score/core.
+  const axis = useMemo(
+    () =>
+      loopCycle && loopOptions.ahead
+        ? unrollLoop(score, loopCycle)
+        : songAxis(score),
+    [score, loopCycle, loopOptions.ahead],
+  );
+  const axisScore = axis.score;
+  const timeline = axis.timeline;
+
   // Cursor-invariant projection: depends only on lane size + score, so it (and
   // every overlay anchor) stays stable while playing — only the ScrollLayer
   // moves. The canvas draws from the SAME geometry source (buildNoteVisuals
@@ -225,16 +252,20 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
         width: lane.width,
         height: lane.height,
         plane,
-        score,
+        score: axisScore,
+        timeline,
         tempoScale,
         spread,
       }),
-    [lane.width, lane.height, plane, score, tempoScale, spread],
+    [lane.width, lane.height, plane, axisScore, timeline, tempoScale, spread],
   );
 
-  // Tempo index, built once per score and reused by the ScrollLayer so it is
-  // not rebuilt every frame (the projection already built its own internally).
-  const tempo = useMemo(() => buildTempoIndex(score), [score]);
+  // Tempo indices, built once per score and reused by the ScrollLayer so they
+  // are not rebuilt every frame (the projection already built its own
+  // internally): the AXIS tempo places the cursor and maps gestures; the song's
+  // own tempo measures the song (the fit-to-lane zoom floor).
+  const tempo = useMemo(() => buildTempoIndex(axisScore), [axisScore]);
+  const songTempo = useMemo(() => buildTempoIndex(score), [score]);
 
   // --- Drag-to-scrub with momentum: the lane behaves like a movable surface. --
   // Grabbing the roll and dragging maps pointer travel 1:1 onto the scroll
@@ -260,7 +291,13 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // load, so the renderer needs no special case for it.
   const [startBeat, endBeat] = timelineBeats;
   const startSeconds = tempo.beatToSeconds(startBeat);
-  const endSeconds = tempo.beatToSeconds(endBeat);
+  const endSeconds = songTempo.beatToSeconds(endBeat);
+  // The drag's far bound on the AXIS: the song's end, or the last drawn loop
+  // copy's end when the loop is unrolled ahead (past B the axis is the loop).
+  const axisLoop = timeline.loop;
+  const axisEndSeconds = tempo.beatToSeconds(
+    axisLoop ? axisLoop.cycle.end + axisLoop.shifts.at(-1)! : endBeat,
+  );
   const wasPlaying = useRef(false);
 
   // Let the user zoom OUT until the whole song fits the lane. The song's on-screen
@@ -282,9 +319,9 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   const { handlers, phase } = useInertialDrag({
     axis: "y",
     unitsPerPixel: 1 / pxPerSecond,
-    bounds: [startSeconds, endSeconds],
-    origin: () => tempo.beatToSeconds(cursor.getBeat()),
-    onScrub: (sec) => seekTo(tempo.secondsToBeat(sec)),
+    bounds: [startSeconds, axisEndSeconds],
+    origin: () => tempo.beatToSeconds(timeline.axisBeat(cursor.getPosition())),
+    onScrub: (sec) => seekTo(timeline.at(tempo.secondsToBeat(sec)).beat),
     onGrab: () => {
       if (isPlaying) {
         wasPlaying.current = true;
@@ -316,7 +353,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
       colorMap.kind !== "settled" || hiddenIds.kind !== "settled"
         ? NO_VISUALS
         : buildNoteVisuals({
-            score,
+            score: axisScore,
             plane,
             hiddenIds: hiddenIds.value,
             colorMap: colorMap.value,
@@ -324,21 +361,23 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
             speller,
             tempoScale,
           }),
-    [score, plane, hiddenIds, colorMap, speller, tempoScale],
+    [axisScore, plane, hiddenIds, colorMap, speller, tempoScale],
   );
   // A failed track-view read also fails the score gate (`scoreFailure`);
   // unsettled views otherwise read as still loading.
   const viewPending =
     scorePending || colorMap.kind !== "settled" || hiddenIds.kind !== "settled";
 
-  // Bar markers in authored seconds (the canvas grid + bar numbers' input).
+  // Bar markers in authored seconds (the canvas grid + bar numbers' input) —
+  // the axis's own bar lines, so an unrolled loop's copies keep the loop's bar
+  // numbers and each rest opens with an unnumbered line.
   const barMarkers = useMemo(
     () =>
-      bars(score).map((b) => ({
+      axis.bars.map((b) => ({
         index: b.index,
         startSec: authoredSecondsOf(tempo, tempoScale, b.startBeat),
       })),
-    [score, tempo, tempoScale],
+    [axis, tempo, tempoScale],
   );
 
   // Live scene + app pair, published by the canvas once Pixi init settles.
@@ -372,6 +411,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // would hand effects a stale snapshot after the first resize.
   const projectionRef = useLatestRef(projection);
   const laneSizeRef = useLatestRef(lane);
+  const timelineRef = useLatestRef(timeline);
 
   // FX bridge — one per scene. See fx-context.ts for the accessor/budget design.
   const fx = useMemo(
@@ -383,10 +423,12 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
             app: pixi.app,
             getProjection: () => projectionRef.current,
             getLaneSize: () => laneSizeRef.current,
-            // The shared playback cursor — the clock note-anchored effects read
-            // so their geometry stays a pure function of the cursor (glued to
-            // the notes on pause/scrub) instead of integrating wall-clock.
-            getPlaybackBeats: () => cursor.getBeat(),
+            // The shared playback cursor, on the AXIS the notes are drawn on —
+            // the clock note-anchored effects read so their geometry stays a
+            // pure function of the cursor (glued to the notes on pause/scrub)
+            // instead of integrating wall-clock.
+            getPlaybackBeats: () =>
+              timelineRef.current.axisBeat(cursor.getPosition()),
           })
         : null,
     [pixi, cursor],
@@ -409,10 +451,13 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // Play state read imperatively by the wheel-seek pause/resume bridge.
   const isPlayingRef = useLatestRef(isPlaying);
 
-  const applyCursor = useCallback((beat: number, seek = false) => {
+  const applyCursor = useCallback((position: PlayPosition, seek = false) => {
     const scene = sceneRef.current;
     const tempo = tempoRef.current;
     const ts = tempoScaleRef.current;
+    // Where the cursor sits on the AXIS the notes are drawn on (its score beat
+    // unless the loop is unrolled ahead; see `axis` above).
+    const beat = timelineRef.current.axisBeat(position);
     // A seek/jump (scrub, seek, score reset) must re-anchor the onset tracker
     // instead of advancing through every note between the old and new position
     // — navigation must not spray note-strike FX. `reset()` defers the re-anchor
@@ -437,7 +482,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // Drive the imperative path on every cursor change — no React render. The
   // store tells us whether the change was a seek so we re-anchor onsets.
   useEffect(
-    () => cursor.subscribe((seek) => applyCursor(cursor.getBeat(), seek)),
+    () => cursor.subscribe((seek) => applyCursor(cursor.getPosition(), seek)),
     [applyCursor, cursor],
   );
 
@@ -491,8 +536,10 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
           stop();
         }
         const perPx = 1 / (PX_PER_SECOND * tempoScale * spreadRef.current);
-        const cur = tempo.beatToSeconds(cursor.getBeat());
-        seekTo(tempo.secondsToBeat(cur + e.deltaY * perPx));
+        const cur = tempo.beatToSeconds(
+          timeline.axisBeat(cursor.getPosition()),
+        );
+        seekTo(timeline.at(tempo.secondsToBeat(cur + e.deltaY * perPx)).beat);
       }
       bumpIdle();
     };
@@ -507,6 +554,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
     hasNotes,
     cursor,
     tempo,
+    timeline,
     tempoScale,
     seekTo,
     setSpread,
@@ -521,8 +569,17 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // be re-applied here in lockstep with the scene's own rescale (app.tsx).
   // Layout effect so the transform is applied before paint (no flash).
   useLayoutEffect(() => {
-    applyCursor(cursor.getBeat());
-  }, [applyCursor, cursor, pixi, lane.height, tempo, tempoScale, spread]);
+    applyCursor(cursor.getPosition());
+  }, [
+    applyCursor,
+    cursor,
+    pixi,
+    lane.height,
+    tempo,
+    timeline,
+    tempoScale,
+    spread,
+  ]);
 
   // The cursor-invariant DOM content, MEMOIZED on its real inputs. The overlay
   // subtree's element identity stays stable between frames (this component no
@@ -531,11 +588,11 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   const content = useMemo(
     () => (
       <ProjectionProvider projection={projection}>
-        <OverlayHost score={score} />
+        <OverlayHost score={axisScore} />
         <TransportOverlayHost />
       </ProjectionProvider>
     ),
-    [projection, score],
+    [projection, axisScore],
   );
 
   return (
@@ -579,7 +636,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
             visuals={visuals}
             bars={barMarkers}
             pitchLines={plane.guides}
-            scoreNotes={score.notes}
+            scoreNotes={axisScore.notes}
             showLabels={showNoteNames}
             tempoScale={tempoScale}
             spread={spread}

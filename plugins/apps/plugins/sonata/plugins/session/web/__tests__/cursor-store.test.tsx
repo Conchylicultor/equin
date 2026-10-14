@@ -9,6 +9,10 @@ import {
   type CursorApi,
 } from "../cursor-store";
 import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
+import {
+  songPosition,
+  type PlayPosition,
+} from "@plugins/apps/plugins/sonata/plugins/score/core";
 
 afterEach(cleanup);
 
@@ -49,7 +53,7 @@ describe("cursor-store", () => {
   it("setBeat dedups an unchanged beat unless it's a seek, and forwards seek via meta", () => {
     // Drive the facade directly over a fresh scoped store, so we exercise the
     // dedup + seek-meta plumbing without React in the loop.
-    const store = defineScopedStore<{ beat: number }>({ beat: 0 });
+    const store = defineScopedStore<PlayPosition>(songPosition(0));
     let api: CursorApi | null = null;
     const seen: boolean[] = [];
 

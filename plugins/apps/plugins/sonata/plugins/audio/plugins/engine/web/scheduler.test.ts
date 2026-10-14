@@ -65,6 +65,9 @@ function song(beats: number): Score {
   };
 }
 
+/** A schedule origin on the song's own pass. */
+const at = (beat: number) => ({ beat, rest: 0 });
+
 function recorder() {
   const played: ScheduledNote[] = [];
   const voices = {
@@ -76,7 +79,7 @@ function recorder() {
 describe("startScheduling: beatAt", () => {
   it("is the beat sounding at an audio time", () => {
     const r = recorder();
-    const h = startScheduling(song(16), 2, 10, r.resolve, ctx);
+    const h = startScheduling(song(16), at(2), 10, r.resolve, ctx);
     expect(h.beatAt(10)).toBeCloseTo(2, 9);
     expect(h.beatAt(11)).toBeCloseTo(4, 9);
     h.cancel();
@@ -84,9 +87,10 @@ describe("startScheduling: beatAt", () => {
 
   it("folds an A–B loop's iterations", () => {
     const r = recorder();
-    const h = startScheduling(song(16), 0, 0, r.resolve, ctx, {
+    const h = startScheduling(song(16), at(0), 0, r.resolve, ctx, {
       start: 4,
       end: 8,
+      rest: 0,
     });
     // Head runs 0..8 (4 s), then each iteration is 4 beats (2 s).
     expect(h.beatAt(4)).toBeCloseTo(0 + 8, 9); // the boundary itself
@@ -99,7 +103,7 @@ describe("startScheduling: beatAt", () => {
 describe("startScheduling: resync", () => {
   it("re-anchors so the given beat sounds at the given time", () => {
     const r = recorder();
-    const h = startScheduling(song(16), 0, 0, r.resolve, ctx);
+    const h = startScheduling(song(16), at(0), 0, r.resolve, ctx);
     runTo(1);
     // The medium says beat 2.2 at t = 1 (the synth was 100 ms behind).
     h.resync(2.2, 1);
@@ -112,7 +116,7 @@ describe("startScheduling: resync", () => {
 
   it("never re-triggers a note when moved back, and drops what a jump forward left far behind", () => {
     const r = recorder();
-    const h = startScheduling(song(16), 0, 0, r.resolve, ctx);
+    const h = startScheduling(song(16), at(0), 0, r.resolve, ctx);
     runTo(1.02);
     const before = r.played.map((n) => n.pitch);
     expect(before).toEqual([60, 61, 62]);
@@ -137,9 +141,10 @@ describe("startScheduling: resync", () => {
 
   it("lands in the loop iteration nearest the current one", () => {
     const r = recorder();
-    const h = startScheduling(song(16), 4, 0, r.resolve, ctx, {
+    const h = startScheduling(song(16), at(4), 0, r.resolve, ctx, {
       start: 4,
       end: 8,
+      rest: 0,
     });
     // The head (2 s) and one pass (2 s) in: the second pass, at beat 4.4.
     runTo(4.2);
@@ -149,6 +154,60 @@ describe("startScheduling: resync", () => {
     runTo(5);
     const next = r.played.filter((n) => n.when > 4.2 && n.pitch === 65);
     expect(next[0]?.when).toBeCloseTo(4.45, 9);
+    h.cancel();
+  });
+});
+
+describe("startScheduling: a loop's rest", () => {
+  // Loop [4, 8) with a 2-beat rest: each iteration is [2, 8) — 6 beats, 3 s.
+  const cycle = { start: 4, end: 8, rest: 2 };
+
+  it("rests before every repeat, sounding only the body", () => {
+    const r = recorder();
+    const h = startScheduling(song(16), at(4), 0, r.resolve, ctx, cycle);
+    runTo(8);
+    // First pass: beats 4..7 at 0, 0.5, 1, 1.5 s. Then 1 s of rest (the
+    // span of beats 2..3 stays silent) and the body again from 3 s.
+    const firstNotes = r.played.map((n) => [n.pitch, n.when]);
+    expect(firstNotes.slice(0, 8)).toEqual([
+      [64, 0],
+      [65, 0.5],
+      [66, 1],
+      [67, 1.5],
+      [64, 3],
+      [65, 3.5],
+      [66, 4],
+      [67, 4.5],
+    ]);
+    expect(r.played.some((n) => n.pitch === 62 || n.pitch === 63)).toBe(false);
+    h.cancel();
+  });
+
+  it("resumes a cursor paused inside the rest with the rest's remainder", () => {
+    const r = recorder();
+    // Paused one beat before A: A sounds 0.5 s after resuming.
+    const h = startScheduling(
+      song(16),
+      { beat: 4, rest: 1 },
+      0,
+      r.resolve,
+      ctx,
+      cycle,
+    );
+    runTo(1);
+    expect(r.played[0]).toMatchObject({ pitch: 64 });
+    expect(r.played[0]?.when).toBeCloseTo(0.5, 9);
+    h.cancel();
+  });
+
+  it("sounds the rest's span when asked (the metronome counting through it)", () => {
+    const r = recorder();
+    const h = startScheduling(song(16), at(4), 0, r.resolve, ctx, cycle, {
+      restSounds: true,
+    });
+    runTo(4);
+    const restClicks = r.played.filter((n) => n.when >= 2 && n.when < 3);
+    expect(restClicks.map((n) => n.pitch)).toEqual([62, 63]);
     h.cancel();
   });
 });

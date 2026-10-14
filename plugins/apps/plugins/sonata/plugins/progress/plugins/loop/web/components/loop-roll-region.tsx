@@ -1,7 +1,7 @@
 import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import type { Projection } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
   useCursorApi,
@@ -12,6 +12,7 @@ import { useEdgeAutoScroll } from "@plugins/primitives/plugins/dom/plugins/auto-
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { snapToBars } from "../loop-actions";
 import { useLoopEdgeBuckets } from "../loop-edge-state";
+import { loopOccurrences } from "../loop-occurrences";
 
 /** Height (px) of the invisible grab strip centred on each boundary line. */
 const HANDLE_HIT_PX = 12;
@@ -55,12 +56,20 @@ type BoundaryDragProps = {
  * faded / outline-only while disabled) so the same loop reads as the same thing
  * on both surfaces.
  *
+ * When the display unrolls the loop ahead (`projection.timeline.loop`), the
+ * band repeats on every drawn copy of the loop ({@link loopOccurrences}), so
+ * past B the boundaries read where the repeats really are — each copy's band
+ * sitting after its rest. Every copy's boundaries drag too: a copy maps a
+ * pointer back to the loop by its own offset.
+ *
  * Beat ↔ Y projection: `projection.beatToY` is CONTENT-space and negative for
  * positive beats (future = more negative = higher up). `B` (end) is further in
  * the future than `A` (start), so `beatToY(end) < beatToY(start)`: the band's
  * top is `beatToY(end)` and its height is `beatToY(start) - beatToY(end)`. A
  * drag maps back with `projection.yToBeat`, measuring the pointer against this
  * layer's own top edge — the content origin, wherever the scroll has put it.
+ * Those are AXIS beats; the cursor is placed on the axis, and a scroll maps
+ * back to a play position, through `projection.timeline`.
  */
 export function LoopRollRegion({ projection }: { projection: Projection }) {
   const { loop, setLoop, score, seekTo, isPlaying, play, stop } = useSession();
@@ -68,12 +77,16 @@ export function LoopRollRegion({ projection }: { projection: Projection }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   // The boundary being dragged (and whether Alt is held for off-grid placement),
   // and whether this drag's edge scroll paused playback.
-  const dragRef = useRef<{ edge: "start" | "end"; altKey: boolean } | null>(
-    null,
-  );
+  const dragRef = useRef<{
+    edge: "start" | "end";
+    altKey: boolean;
+    // The dragged occurrence's axis offset (0 = the loop itself, else a copy).
+    shift: number;
+  } | null>(null);
   const pausedRef = useRef(false);
-  const { beatToY, yToBeat } = projection;
+  const { beatToY, yToBeat, timeline } = projection;
   const H = projection.viewport.height;
+  const shifts = useMemo(() => loopOccurrences(projection), [projection]);
   // Which boundaries have scrolled off-screen (so their content-space label is
   // hidden — the screen-anchored edge chip stands in for it). Called BEFORE the
   // early return so hook order stays stable; it early-returns empty internally
@@ -87,7 +100,7 @@ export function LoopRollRegion({ projection }: { projection: Projection }) {
     const drag = dragRef.current;
     const rect = rootRef.current?.getBoundingClientRect();
     if (!drag || !rect || !loop || !yToBeat) return;
-    const beat = yToBeat(clientY - rect.top);
+    const beat = yToBeat(clientY - rect.top) - drag.shift;
     setLoop({
       ...loop,
       [drag.edge]: drag.altKey ? beat : snapToBars(beat, score),
@@ -102,11 +115,12 @@ export function LoopRollRegion({ projection }: { projection: Projection }) {
     threshold: EDGE_SCROLL_PX,
     surface: () => {
       const root = rootRef.current;
-      if (!root || !beatToY || !yToBeat) return null;
+      if (!root || !beatToY || !yToBeat || !timeline) return null;
+      const cursorAxis = () => timeline.axisBeat(cursor.getPosition());
       return {
         band: () => {
           const top =
-            root.getBoundingClientRect().top + beatToY(cursor.getBeat()) - H;
+            root.getBoundingClientRect().top + beatToY(cursorAxis()) - H;
           return { top, bottom: top + H };
         },
         scrollBy: (px) => {
@@ -115,7 +129,7 @@ export function LoopRollRegion({ projection }: { projection: Projection }) {
             stop();
           }
           const before = cursor.getBeat();
-          seekTo(yToBeat(beatToY(before) + px));
+          seekTo(timeline.at(yToBeat(beatToY(cursorAxis()) + px)).beat);
           return cursor.getBeat() !== before;
         },
       };
@@ -126,10 +140,14 @@ export function LoopRollRegion({ projection }: { projection: Projection }) {
 
   // The drag's pointer handlers — event callbacks, since they drive refs.
   const startDrag = useEventCallback(
-    (edge: "start" | "end", e: ReactPointerEvent<HTMLDivElement>) => {
+    (
+      edge: "start" | "end",
+      shift: number,
+      e: ReactPointerEvent<HTMLDivElement>,
+    ) => {
       e.stopPropagation();
       e.currentTarget.setPointerCapture(e.pointerId);
-      dragRef.current = { edge, altKey: e.altKey };
+      dragRef.current = { edge, altKey: e.altKey, shift };
     },
   );
   const continueDrag = useEventCallback(
@@ -153,28 +171,65 @@ export function LoopRollRegion({ projection }: { projection: Projection }) {
   // No region, or a display without a real time axis → render nothing.
   if (!loop || !beatToY || !yToBeat) return null;
 
-  const yA = beatToY(loop.start); // A — lower on screen (less negative)
-  const yB = beatToY(loop.end); // B — higher on screen (more negative)
-  const top = yB;
-  const height = Math.max(0, yA - yB);
-
-  // A boundary is on-screen iff it's in neither edge bucket → show its label.
-  const aOn = !edgeTop.includes("A") && !edgeBottom.includes("A");
-  const bOn = !edgeTop.includes("B") && !edgeBottom.includes("B");
-
-  const dragBoundary = (edge: "start" | "end"): BoundaryDragProps => ({
-    onPointerDown: (e) => startDrag(edge, e),
+  const dragBoundary = (
+    edge: "start" | "end",
+    shift: number,
+  ): BoundaryDragProps => ({
+    onPointerDown: (e) => startDrag(edge, shift, e),
     onPointerMove: continueDrag,
     onPointerUp: endDrag,
     onPointerCancel: endDrag,
   });
-  const dragA = dragBoundary("start");
-  const dragB = dragBoundary("end");
+
+  // A boundary is on-screen iff it's in neither edge bucket → show its labels.
+  const aOn = !edgeTop.includes("A") && !edgeBottom.includes("A");
+  const bOn = !edgeTop.includes("B") && !edgeBottom.includes("B");
 
   return (
     // Full-bleed, pointer-transparent: its top edge is the content origin the
     // drag measures against; only the grab strips and labels take the pointer.
     <Layer ref={rootRef} decorative>
+      {shifts.map((shift) => (
+        <LoopBand
+          key={shift}
+          yA={beatToY(loop.start + shift)}
+          yB={beatToY(loop.end + shift)}
+          enabled={loop.enabled}
+          aOn={aOn}
+          bOn={bOn}
+          dragA={dragBoundary("start", shift)}
+          dragB={dragBoundary("end", shift)}
+        />
+      ))}
+    </Layer>
+  );
+}
+
+/**
+ * One occurrence of the loop on the axis: the `[A, B]` band, its two grab
+ * strips and its letter labels.
+ */
+function LoopBand({
+  yA,
+  yB,
+  enabled,
+  aOn,
+  bOn,
+  dragA,
+  dragB,
+}: {
+  /** Content Y of A — lower on screen (less negative). */
+  yA: number;
+  /** Content Y of B — higher on screen (more negative). */
+  yB: number;
+  enabled: boolean;
+  aOn: boolean;
+  bOn: boolean;
+  dragA: BoundaryDragProps;
+  dragB: BoundaryDragProps;
+}) {
+  return (
+    <>
       {/* The [A, B] span, drawn as a TRANSPARENT outline — no fill, since a wash
           over the falling notes reads as distracting. The 2px border frames the
           region: the left/right edges are the "inside a loop" side rails, and the
@@ -183,10 +238,10 @@ export function LoopRollRegion({ projection }: { projection: Projection }) {
           is defined-but-disabled. */}
       <Placed
         x="fill"
-        y={{ start: top, size: height }}
+        y={{ start: yB, size: Math.max(0, yA - yB) }}
         className={cn(
           "border-2",
-          loop.enabled ? "border-primary" : "border-dashed border-primary/45",
+          enabled ? "border-primary" : "border-dashed border-primary/45",
         )}
       />
       {/* Grab strips over the B (top) and A (bottom) boundary lines. */}
@@ -201,7 +256,7 @@ export function LoopRollRegion({ projection }: { projection: Projection }) {
         <LoopLabel
           y={yB}
           label="B"
-          enabled={loop.enabled}
+          enabled={enabled}
           side="below"
           drag={dragB}
         />
@@ -210,12 +265,12 @@ export function LoopRollRegion({ projection }: { projection: Projection }) {
         <LoopLabel
           y={yA}
           label="A"
-          enabled={loop.enabled}
+          enabled={enabled}
           side="above"
           drag={dragA}
         />
       ) : null}
-    </Layer>
+    </>
   );
 }
 

@@ -421,12 +421,14 @@ export function createLabelLayer(): LabelLayerHandle {
     },
 
     setBars(bars) {
-      lastBars = bars;
+      // Only numbered bars carry a number (an unrolled loop's rest opens with
+      // an unnumbered line); `lastBars` stays parallel to `barTexts`.
+      lastBars = bars.filter((b) => b.index !== null);
       for (const t of barTexts) t.destroy();
       barTexts.length = 0;
-      for (const b of bars) {
+      for (const b of lastBars) {
         const text = new BitmapText({
-          text: String(b.index + 1),
+          text: String(b.index! + 1),
           style: { fontFamily: BAR_FONT, fontSize: BAR_FONT_PX },
           // The DOM span sat `left-1 top-0.5` under the bar line.
           x: 4,

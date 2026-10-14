@@ -14,7 +14,6 @@ import {
   scheduleOrigin,
   startScheduling,
   useDriftCorrection,
-  type LoopWindowBeats,
   type ScheduleHandle,
 } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/engine/web";
 import { useConfig } from "@plugins/config_v2/web";
@@ -55,7 +54,7 @@ export function MetronomeEngine() {
     seekEpoch,
     syncEpoch,
     readDriver,
-    loop,
+    loopCycle,
     countIn,
     registerCountIn,
     finishCountIn,
@@ -78,16 +77,12 @@ export function MetronomeEngine() {
   const countInBarsRef = useLatestRef(countInBars);
   const volumeRef = useLatestRef(volume);
 
-  // The active A–B loop window (beats), derived exactly like the audio engine: a
-  // stable signature (`loopKey`) drives the rebuild effect's deps while the live
-  // bounds are read through a ref, so a repeated wrap at a stable loop never tears
-  // down the pre-scheduled iterations (the seamless-loop behaviour, inherited).
-  const loopWindow: LoopWindowBeats | null =
-    loop && loop.enabled && loop.end > loop.start
-      ? { start: loop.start, end: loop.end }
-      : null;
-  const loopRef = useLatestRef(loopWindow);
-  const loopKey = loopWindow ? `${loopWindow.start}:${loopWindow.end}` : "";
+  // The loop as the transport cycles it (`session.loopCycle`), the SAME cycle
+  // the audio engine schedules — identity-stable while its values hold, so a
+  // repeated wrap at a stable loop never tears down the pre-scheduled
+  // iterations (the seamless-loop behaviour, inherited). The clicks keep
+  // counting through a repeat's rest (`restSounds`): the rest is one bar at A's
+  // meter, so it clicks as a one-bar count-in to every repeat.
 
   // The single click voice, recreated with the AudioContext. Created in the
   // lifecycle effect below (declared first) so the scheduling effects that read
@@ -225,7 +220,7 @@ export function MetronomeEngine() {
     // driver owns the transport — and no clicks while it is stalled.
     const origin = scheduleOrigin(
       readDriver(),
-      cursor.getBeat(),
+      cursor.getPosition(),
       ctx.currentTime,
     );
     if (origin.kind === "stalled") {
@@ -240,11 +235,12 @@ export function MetronomeEngine() {
 
     const handle = startScheduling(
       { ...scoreRef.current, notes: clickNotesRef.current },
-      origin.fromBeat,
+      origin.from,
       origin.audioAnchor,
       resolveVoices,
       ctx,
-      loopRef.current,
+      loopCycle,
+      { restSounds: true },
     );
     handleRef.current = handle;
 
@@ -254,8 +250,8 @@ export function MetronomeEngine() {
       clickVoicesRef.current?.allOff();
     };
     // `clickNotesKey` flips only on a real beat-structure/accent change (NOT a
-    // tempo frame); `seekEpoch` re-anchors on a seek; `loopKey` rebuilds with new
-    // bounds (a stable wrap leaves it unchanged → seamless). `cursor` is stable.
+    // tempo frame); `seekEpoch` re-anchors on a seek; `loopCycle` rebuilds with a
+    // new cycle (a stable wrap leaves it unchanged → seamless). `cursor` is stable.
     // `syncEpoch` re-anchors on a driver's stall / resume / own seek.
   }, [
     ctx,
@@ -264,7 +260,7 @@ export function MetronomeEngine() {
     clickNotesKey,
     seekEpoch,
     syncEpoch,
-    loopKey,
+    loopCycle,
     cursor,
     readDriver,
   ]);

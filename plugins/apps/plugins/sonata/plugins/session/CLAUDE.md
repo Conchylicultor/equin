@@ -16,6 +16,33 @@ lives in the per-surface cursor store (`CursorStoreProvider`, `useCursorApi`,
 `useCursorSelector`) so a ~60 fps advance never re-renders a `useSession()`
 consumer; the session must be mounted inside a `CursorStoreProvider`.
 
+## The A–B loop and the play position
+
+The cursor holds a `PlayPosition` (score/core), not just a beat: `beat`, plus
+the loop `rest` still to go and whether this is a `repeat` pass. `getBeat()` /
+`setBeat()` stay the everyday reads/writes; `getPosition()` / `setPosition()`
+carry the whole position, and `useCursorSelector`'s selector gets it as a second
+argument.
+
+`loop` is the user's range (`LoopRange`); `loopOptions` (`rest`, `ahead`) are
+the user's repeat preferences, pushed in by the loop UI (`setLoopOptions`; a bare
+session has both off). From them the session derives `loopCycle` — THE
+definition of what plays after B that the tick's fold, the audio and metronome
+schedulers and the piano roll all read: `null` unless a loop is enabled, else
+`{ start, end, rest }` where `rest` is one bar at A's meter (`barBeatsAt`) when
+the rest option is on. Every repeat iteration is `[A - rest, B)`; during the
+rest the cursor reads `beat = A` with `rest > 0` counting down — score readers
+park on A, and readers of what is BEING PLAYED (lit keys, highlighted
+noteheads) show nothing. `reanchor` anchors at the position's fold time
+(`timeOfPosition`), so a pause inside a rest or a repeat resumes there instead of
+replaying the song before A.
+
+With a transport driver the cycle's rest is `0`: a medium cannot fold, its wrap
+stays a seek back to A, and a rest would only freeze the picture while the
+recording plays on. (Pausing the medium for a bar would need a wall-clock timer
+against an external player — not worth the drift.) `ahead` still applies — the
+roll shows the copies, just without rests.
+
 ## The content reset
 
 The transport resets (park at the lead-in, drop the loop and count-in, stop)
@@ -44,7 +71,8 @@ tempo map, so a driver never knows the tempo scale. While one is registered:
   a scrub moves only the cursor). `seekTo` seeks it; a new driver is sought to
   the cursor on register;
 - an A–B wrap is a seek back to A (a medium cannot fold), guarded so a medium
-  still reporting the old position does not wrap twice;
+  still reporting the old position does not wrap twice; the loop's rest is not
+  applied (`loopCycle.rest` is 0 while driven);
 - `setTempoScale` asks `setRate` and adopts the rate the medium took (only the
   latest request); 0 stays the session's freeze and pauses it;
 - the driver's state is followed one way: a pause after moving, or `failed`,
@@ -97,6 +125,7 @@ without stopping.
     - `CursorStore`
     - `DriverReading`
     - `DriverState`
+    - `LoopOptions`
     - `LoopRange`
     - `SessionContent`
     - `SessionValue`

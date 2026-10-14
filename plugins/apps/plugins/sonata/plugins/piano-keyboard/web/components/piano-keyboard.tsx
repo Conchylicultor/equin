@@ -161,8 +161,10 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
   // set actually changes — i.e. when a note crosses an on/off boundary — instead
   // of reconciling and minting a fresh Map identity on every rAF tick.
   const sounding = useCursorSelector(
-    (beat) => {
+    (beat, position) => {
       const m = new Map<number, string>();
+      // Inside an A–B loop's rest nothing sounds: `beat` is the A about to play.
+      if (position.rest > 0) return m;
       // Unsettled (pending or failed) track views light nothing: the score is
       // empty then too, and the player's score gate says why.
       if (

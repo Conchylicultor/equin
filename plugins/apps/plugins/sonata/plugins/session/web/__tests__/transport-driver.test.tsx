@@ -148,6 +148,7 @@ function renderSession(score: Score) {
   return {
     session: s,
     beat: () => c().getBeat(),
+    position: () => c().getPosition(),
     drive: (d: TransportDriver) => {
       let off: () => void = () => {};
       act(() => {
@@ -336,5 +337,68 @@ describe("a transport driver", () => {
     expect(s.session().driven).toBe(false);
     expect(s.session().readDriver()).toEqual({ kind: "internal" });
     expect(s.session().isPlaying).toBe(true);
+  });
+});
+
+describe("an A–B loop's rest", () => {
+  /** A session on a clock the test sets, looping [4, 8) with the rest on. */
+  function looping() {
+    const s = renderSession(song(16));
+    const clock = { t: 0 };
+    act(() => {
+      s.session().registerClock({ now: () => clock.t });
+      s.session().setLoopOptions({ rest: true, ahead: false });
+      s.session().setLoop({ start: 4, end: 8, enabled: true });
+      s.session().seekTo(4);
+    });
+    act(() => s.session().play());
+    // The play itself anchors; run one frame to start the tick.
+    frame();
+    return {
+      s,
+      at: (t: number) => {
+        clock.t = t;
+        frame();
+      },
+    };
+  }
+
+  it("is one bar at A's meter, as the session's loop cycle", () => {
+    const { s } = looping();
+    expect(s.session().loopCycle).toEqual({ start: 4, end: 8, rest: 4 });
+  });
+
+  it("parks the cursor on A with the rest counting down, then plays the repeat", () => {
+    const { s, at } = looping();
+    at(1); // beat 6, first pass
+    expect(s.position()).toEqual({ beat: 6, rest: 0, repeat: false });
+    at(2); // B: the rest begins — a whole bar (2 s at 120 bpm) to go
+    expect(s.position()).toEqual({ beat: 4, rest: 4, repeat: true });
+    at(3);
+    expect(s.position()).toEqual({ beat: 4, rest: 2, repeat: true });
+    at(4.5); // the repeat's body: 0.5 s past A
+    expect(s.position()).toEqual({ beat: 5, rest: 0, repeat: true });
+  });
+
+  it("resumes a pause inside the rest with the rest's remainder", () => {
+    const { s, at } = looping();
+    at(3); // two beats of rest to go
+    act(() => s.session().stop());
+    act(() => s.session().play());
+    frame();
+    expect(s.position()).toEqual({ beat: 4, rest: 2, repeat: true });
+    at(3.5);
+    expect(s.position()).toEqual({ beat: 4, rest: 1, repeat: true });
+  });
+
+  it("is not applied while a medium drives (its wrap stays a seek to A)", () => {
+    const s = renderSession(song(16));
+    act(() => {
+      s.session().setLoopOptions({ rest: true, ahead: false });
+      s.session().setLoop({ start: 4, end: 8, enabled: true });
+    });
+    expect(s.session().loopCycle?.rest).toBe(4);
+    s.drive(new FakeDriver());
+    expect(s.session().loopCycle).toEqual({ start: 4, end: 8, rest: 0 });
   });
 });

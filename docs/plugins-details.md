@@ -5051,7 +5051,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/scope/scoped-store.defineScopedStore`
                 - Exports (types):
                   - `AudioGraph`
-                  - `LoopWindowBeats`
                   - `ScheduleHandle`
                   - `ScheduleOrigin`
                 - Exports (values):
@@ -5109,8 +5108,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `sonataPlayerPane.Actions` "metronome" → `MetronomeButton`
                   - `Sonata.Hud` "count-in" → `CountInOverlay`
                   - `ConfigV2.WebRegister` "sonata.metronome"
-                - Uses: 25 symbols — full list in [`plugins/apps/plugins/sonata/plugins/audio/plugins/metronome/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/audio/plugins/metronome/REFERENCE.md)
-                  - `apps/sonata/audio/engine` ×6
+                - Uses: 24 symbols — full list in [`plugins/apps/plugins/sonata/plugins/audio/plugins/metronome/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/audio/plugins/metronome/REFERENCE.md)
+                  - `apps/sonata/audio/engine` ×5
                   - `apps/sonata/session` ×4
                   - `config_v2` ×3
                   - `primitives/css/control-panel` ×2
@@ -5885,7 +5884,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/coords.pct`
                   - `primitives/css/coords.Placed`
                   - `primitives/css/layer.Layer`
-            - **`loop`** — Sonata A–B practice loop: a draggable loop region on the progression bar, a Loop toggle at the end of the player's transport strip, and L/[/] shortcuts that cycle playback within [A, B].
+            - **`loop`** — Sonata A–B practice loop: a draggable loop region on the progression bar and the piano roll, a Loop split button at the end of the player's transport strip (one-click toggle + repeat options: show the loop ahead, rest one bar before each repeat), and L/[/] shortcuts that cycle playback within [A, B]. Server registration of the A–B loop's repeat options (show loop ahead, rest before repeat).
               - Web:
                 - Contributes:
                   - `SonataProgress.Marker` "loop" → `LoopRegion`
@@ -5893,14 +5892,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Sonata.TransportEdge` "loop" → `LoopRollEdge`
                   - `SonataPlayer.Transport` "loop-toggle" → `LoopToggle`
                   - `Sonata.Effect` "loop-shortcuts" → `LoopShortcuts`
-                - Uses: 24 symbols — full list in [`plugins/apps/plugins/sonata/plugins/progress/plugins/loop/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/progress/plugins/loop/REFERENCE.md)
+                  - `Sonata.Effect` "loop-options" → `LoopOptionsSync`
+                  - `ConfigV2.WebRegister` "config"
+                - Uses: 30 symbols — full list in [`plugins/apps/plugins/sonata/plugins/progress/plugins/loop/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/progress/plugins/loop/REFERENCE.md)
                   - `apps/sonata/session` ×3
+                  - `config_v2` ×3
+                  - `primitives/css/ui-kit` ×3
                   - `apps/sonata/player` ×2
                   - `apps/sonata/progress/scrubber` ×2
                   - `apps/sonata/shell` ×2
                   - `primitives/css/coords` ×2
-                  - `primitives/css/ui-kit` ×2
                   - `primitives/hover-reveal` ×2
+                  - `config_v2/fields.FieldRenderer`
+                  - `primitives/css/control-panel.ControlPanelPopover`
                   - `primitives/css/inline.Inline`
                   - `primitives/css/layer.Layer`
                   - `primitives/css/pin.Pin`
@@ -5910,6 +5914,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/latest-ref.useEventCallback`
                   - `primitives/shortcuts.useSurfaceShortcuts`
                   - `ui/icons.Icon`
+              - Server:
+                - Contributes: `ConfigV2.Register` "config"
+                - Uses: `config_v2.ConfigV2`
             - **`scrubber`** — Sonata Transport: a draggable progression bar for song navigation. Click/drag to seek; hosts the open SonataProgress slots — Marker (rail overlays), Chapters (rail segments), Label (the label lane under the rail) and Describe (hover-preview lines).
               - Web:
                 - Slots:
@@ -6348,6 +6355,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `ActiveNoteIndex`
               - `Annotation`
+              - `AxisBar`
+              - `AxisScore`
+              - `AxisTimeline`
               - `BarPosition`
               - `Capability`
               - `ChordAnnotation`
@@ -6357,6 +6367,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `KeyEntry`
               - `KeySignature`
               - `KeySpeller`
+              - `LoopCycle`
               - `LoopWindowSec`
               - `LyricAnnotation`
               - `LyricChord`
@@ -6370,6 +6381,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PitchLayoutId`
               - `PitchPlane`
               - `PitchSpelling`
+              - `PlayPosition`
               - `Projection`
               - `Score`
               - `ScoreRecording`
@@ -6384,6 +6396,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `accidentalGlyph`
               - `asKeySignature`
+              - `barBeatsAt`
               - `barPositionAt`
               - `bars`
               - `barStartBeat`
@@ -6395,6 +6408,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `chordBars`
               - `collectKeyEntries`
               - `currentLine`
+              - `cycleStart`
               - `effectiveKeyAt`
               - `emptyScore`
               - `fifthsToTonic`
@@ -6408,15 +6422,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mergeScores`
               - `nextLine`
               - `pedalSpans`
+              - `positionAtTime`
               - `prevLine`
               - `resolvePedalSustain`
+              - `samePosition`
               - `scaleTempo`
               - `scoreEndBeat`
               - `scoreStartBeat`
+              - `songAxis`
               - `songKey`
+              - `songPosition`
               - `spellScore`
               - `subdivideBars`
+              - `timeOfPosition`
               - `tonicFifths`
+              - `unrollLoop`
         - **`session`** — Sonata playback session: plays a song's composed content — the tempo-scaled score, the rAF transport over a per-surface cursor store, the A–B loop, the count-in, seek / scrub verbs, the play- and seek-on-load intents, a stack of clocks, and a stack of transport drivers (an external medium — a recording — that owns the position while registered). Mountable by any host (useSession); defines the per-session SonataSession.{Provider,Effect} slots the audio plugins contribute to.
           - Web:
             - Slots:
@@ -6441,6 +6461,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CursorStore`
               - `DriverReading`
               - `DriverState`
+              - `LoopOptions`
               - `LoopRange`
               - `SessionContent`
               - `SessionValue`
@@ -9895,8 +9916,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 84 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×84
+    - Slot contributors: 85 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×85
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -10055,8 +10076,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 101 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `apps` ×21
+    - Imported by: 102 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `apps` ×22
       - `debug` ×14
       - `backup` ×13
       - `conversations` ×12
@@ -10151,9 +10172,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useFieldSamples`
           - `useLocalValue`
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/config_v2/plugins/fields/REFERENCE.md`](../plugins/config_v2/plugins/fields/REFERENCE.md)
+        - Imported by: 26 plugins — full list in [`plugins/config_v2/plugins/fields/REFERENCE.md`](../plugins/config_v2/plugins/fields/REFERENCE.md)
           - `fields` ×20
-          - `apps` ×3
+          - `apps` ×4
           - `config_v2/settings`
           - `primitives/data-view/view-core`
       - Core:
@@ -29304,8 +29325,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useControlPanelHost`
               - `usePanelStack`
           - Cross-plugin:
-            - Imported by: 35 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
-              - `apps` ×13
+            - Imported by: 36 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+              - `apps` ×14
               - `page` ×5
               - `primitives` ×4
               - `tasks` ×3

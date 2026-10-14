@@ -16,11 +16,7 @@ import {
   useTrackInstrumentMap,
   useTrackVolumeMap,
 } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
-import {
-  startScheduling,
-  type LoopWindowBeats,
-  type ScheduleHandle,
-} from "../scheduler";
+import { startScheduling, type ScheduleHandle } from "../scheduler";
 import {
   DEFAULT_VOLUME,
   useAudioControls,
@@ -150,7 +146,7 @@ export function AudioEngine() {
     syncEpoch,
     readDriver,
     registerClock,
-    loop,
+    loopCycle,
   } = useSession();
 
   // Imperative per-surface cursor facade. Read through a ref inside the
@@ -167,18 +163,12 @@ export function AudioEngine() {
   const scoreRef = useLatestRef(score);
   const isPlayingRef = useLatestRef(isPlaying);
 
-  // The active A–B loop window (beats), or null when no enabled region is set.
-  // Read through a ref inside the rebuild effect (the bounds are captured at the
-  // play instant), while a stable signature drives the effect's deps so the
-  // schedule rebuilds when the loop is toggled or its bounds move. A repeated
-  // wrap at a *stable* loop never changes this signature, so the seamless
-  // pre-scheduled loop (in `startScheduling`) is never torn down.
-  const loopWindow: LoopWindowBeats | null =
-    loop && loop.enabled && loop.end > loop.start
-      ? { start: loop.start, end: loop.end }
-      : null;
-  const loopRef = useLatestRef(loopWindow);
-  const loopKey = loopWindow ? `${loopWindow.start}:${loopWindow.end}` : "";
+  // The loop as the transport cycles it (`session.loopCycle`: bounds + the rest
+  // before each repeat), or null when no loop is enabled. Identity-stable while
+  // its values hold, so the rebuild effect depends on it directly: the schedule
+  // rebuilds when the loop is toggled, its bounds move or its rest changes, and
+  // a repeated wrap at a *stable* cycle never tears down the seamless
+  // pre-scheduled iterations (in `startScheduling`).
 
   // Muted tracks are dropped from the play-list before scheduling. We derive the
   // audible NOTE LIST (not a whole filtered score) keyed on `[score.notes,
@@ -527,7 +517,7 @@ export function AudioEngine() {
     // read straight from the store (it's not a render input here) — a seek bumps
     // `seekEpoch`, re-running this effect so the read reflects the new position.
     const playAnchor = ctx.currentTime;
-    const cursorBeat = cursorRef.current.getBeat();
+    const cursorAt = cursorRef.current.getPosition();
 
     // Route a track to its own channel strip, reading the ref live so it always
     // reflects the latest reconcile.
@@ -547,7 +537,7 @@ export function AudioEngine() {
       const reading = readDriver();
       const origin = scheduleOrigin(
         reading,
-        cursorBeat,
+        cursorAt,
         reading.kind === "internal" ? playAnchor : ctx.currentTime,
       );
       if (origin.kind === "stalled") return;
@@ -556,11 +546,11 @@ export function AudioEngine() {
       // this object is the only place tempo and notes are joined for scheduling.
       handle = startScheduling(
         { ...scoreRef.current, notes: audibleNotes },
-        origin.fromBeat,
+        origin.from,
         origin.audioAnchor,
         resolveVoices,
         ctx,
-        loopRef.current,
+        loopCycle,
       );
       handleRef.current = handle;
     })();
@@ -571,11 +561,11 @@ export function AudioEngine() {
       if (handleRef.current === handle) handleRef.current = null;
       for (const channel of channels) channel.voices.allOff();
     };
-    // `loopKey` (the enabled-loop bounds signature) is in deps so toggling the
-    // loop or moving its bounds rebuilds from the current cursor with the new
-    // window — a deliberate edit. A repeated wrap at a stable loop leaves `loopKey`
-    // unchanged, so the pre-scheduled iterations in `startScheduling` keep playing
-    // with no teardown (the seamless-loop fix). `loopRef` is a stable latest-ref.
+    // `loopCycle` is in deps so toggling the loop, moving its bounds or
+    // switching its rest rebuilds from the current cursor with the new cycle — a
+    // deliberate edit. A repeated wrap at a stable loop leaves it unchanged, so
+    // the pre-scheduled iterations in `startScheduling` keep playing with no
+    // teardown (the seamless-loop fix).
     // `syncEpoch` re-anchors on a driver's stall / resume / own seek (an A–B
     // wrap is one, since a medium cannot fold a loop) and on a driver coming
     // or going; `readDriver` is stable.
@@ -585,7 +575,7 @@ export function AudioEngine() {
     inUseKey,
     seekEpoch,
     syncEpoch,
-    loopKey,
+    loopCycle,
     readDriver,
   ]);
 

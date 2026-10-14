@@ -13,6 +13,7 @@ export {
   type DriverState,
   type DriverReading,
   type LoopRange,
+  type LoopOptions,
   type CountInState,
 } from "./session";
 export {
