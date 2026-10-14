@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
-import { instructionsRegistry, registry } from "./registry";
+import { instructionsRegistry, registry, scopeRegistry } from "./registry";
 
 export interface McpToolContext {
   conversationId: string;
@@ -32,11 +32,35 @@ export interface McpTool<T extends z.ZodRawShape = z.ZodRawShape> {
    * `when` that throws fails the request.
    */
   when?: (ctx: McpToolContext) => boolean | Promise<boolean>;
+  /**
+   * The scopes (scratch profiles, see {@link McpScope}) this tool is visible
+   * to — and ONLY those: a tool declaring `profiles` is never listed for a
+   * conversation in the default scope, and is listed for a profile only when
+   * that profile also names it among its tools. Omitted: a default-scope tool.
+   */
+  profiles?: readonly string[];
   handler: (
     args: z.objectOutputType<T, z.ZodTypeAny>,
     ctx: McpToolContext,
   ) => Promise<McpToolResult> | McpToolResult;
 }
+
+/**
+ * Which tools a conversation may see before any tool's own `when`:
+ * - `default` — every tool that declares no `profiles`;
+ * - `profile` — exactly `tools` (a scratch profile's allowlist), each of which
+ *   must exist and, when it declares `profiles`, name this one.
+ */
+export type McpScope =
+  | { kind: "default" }
+  | { kind: "profile"; profile: string; tools: readonly string[] };
+
+/**
+ * Resolves a conversation's {@link McpScope}. One per server (registered by
+ * the plugin that knows what a conversation runs in); with none, every
+ * conversation is in the default scope.
+ */
+export type McpScopeResolver = (ctx: McpToolContext) => Promise<McpScope>;
 
 /**
  * A section of the server-level instructions an MCP client receives once, in
@@ -67,6 +91,23 @@ export const Mcp = {
           throw new Error(`MCP tool "${tool.name}" already registered`);
         }
         registry.set(tool.name, tool as unknown as McpTool);
+      },
+    };
+  },
+  /**
+   * Registers THE scope resolver ({@link McpScopeResolver}). Returns a
+   * {@link Registration} token; a second resolver throws at register time.
+   */
+  scope(resolver: McpScopeResolver): Registration {
+    return {
+      _kind: "mcp-scope",
+      _factory: "mcpScope",
+      _doc: { label: "scope" },
+      register() {
+        if (scopeRegistry.resolver) {
+          throw new Error("MCP scope resolver already registered");
+        }
+        scopeRegistry.resolver = resolver;
       },
     };
   },

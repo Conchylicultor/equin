@@ -13,6 +13,7 @@ export default {
     Pane.Register({ pane: attemptPane }),
     Conversation.ActionBar({
       id: "attempt-switch",
+      requires: [],
       component: AttemptSwitchButton,
     }),
   ],

@@ -35,6 +35,13 @@ export const songFields = {
   durationSec: floatField(),
   endBeat: floatField(),
   createdAt: dateField(),
+  /**
+   * Stamped by every source write (`updateSongMeta`). Not an `updated_at`: it is
+   * a write-time stamp, not derived. The player keys source hydration on it, so
+   * a source that finishes preparing a song (a transcription) re-hydrates an
+   * open pane.
+   */
+  sourcesChangedAt: dateField(),
   source: textField(),
 } satisfies FieldsRecord;
 

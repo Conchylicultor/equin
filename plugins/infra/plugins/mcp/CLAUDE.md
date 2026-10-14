@@ -20,6 +20,15 @@ Both factories return a `Registration` token that goes in the plugin's server
   — i.e. the data as of when the client listed the tools, typically at connect.
   For facts held in the database that an agent needs while using the tool (a
   vocabulary to pick from). `null` adds nothing; a throw fails the listing.
+- `profiles?: readonly string[]` on a tool reserves it for those scopes (scratch
+  profiles): never listed in the default scope, listed for a profile only when
+  that profile's allowlist also names it.
+- `Mcp.scope(resolver)` — THE one resolver of a conversation's scope
+  (`{kind:"default"}` or `{kind:"profile", profile, tools}`), registered by
+  `conversations/workspace/scratch` (inverted so this plugin knows nothing of
+  conversations). A profile scope sees exactly its `tools` (an unknown or
+  foreign-reserved name throws) and gets no server instructions; `when` still
+  applies on top. Pure filter: `server/internal/scope.ts`.
 - `Mcp.instructions({ id, render })` — a section of the server instructions.
   `render(ctx)` returns the section text, or `null` to contribute nothing for
   that conversation.
@@ -48,20 +57,26 @@ client sees them at connect (Claude Code connects once per conversation).
 - Load-bearing: yes
 - Cross-plugin:
   - Imported by:
+    - `apps/sonata/transcription`
     - `conversations/conversation-view/push-and-exit`
     - `conversations/summary`
+    - `conversations/workspace/scratch`
     - `database/query`
     - `debug/profiling/boot-bench`
     - `debug/profiling/runtime`
     - `debug/queue-health`
+    - `debug/scratch-hello`
     - `debug/timeline`
     - `page/annotations/agent-access`
     - `plugin-meta/plugin-health`
     - `tasks`
     - `tasks/outcome-report`
+  - Endpoint callers: `scratch`
 - Server:
   - Exports (types):
     - `McpInstructions`
+    - `McpScope`
+    - `McpScopeResolver`
     - `McpTool`
     - `McpToolContext`
     - `McpToolResult`

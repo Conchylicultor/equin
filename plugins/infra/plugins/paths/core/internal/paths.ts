@@ -578,3 +578,6 @@ export function webDistDir(): string {
 export const CLAUDE_DIR = join(HOME_DIR, ".claude");
 export const CLAUDE_PROJECTS_DIR = join(HOME_DIR, ".claude", "projects");
 export const CLAUDE_SESSIONS_DIR = join(HOME_DIR, ".claude", "sessions");
+// Claude Code's user config file (beside `~/.claude/`, not in it): per-directory
+// state such as trust answers (`projects[<dir>].hasTrustDialogAccepted`).
+export const CLAUDE_USER_CONFIG = join(HOME_DIR, ".claude.json");

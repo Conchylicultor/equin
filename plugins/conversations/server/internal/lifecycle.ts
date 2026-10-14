@@ -1,12 +1,11 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { CONVERSATIONS_CATEGORY_ID } from "../../core/task-category";
-import { existsSync } from "node:fs";
 import { rename } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import {
   createTask,
   createAttempt,
-  getAttempt,
+  getAttemptRow,
   insertConversation,
   getConversation,
   getConversationRuntime,
@@ -38,11 +37,16 @@ import {
   attemptIdKind,
   conversationIdKind,
 } from "@plugins/tasks/plugins/task-ids/core";
-import { databaseForkJob } from "@plugins/database/plugins/fork/server";
-import { forkConfig } from "@plugins/config_v2/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { attemptBranchName } from "@plugins/infra/plugins/worktree/core";
-import { worktreePathFor } from "@plugins/infra/plugins/worktree/server";
+import {
+  DEFAULT_WORKSPACE,
+  type WorkspaceSpec,
+} from "@plugins/conversations/plugins/workspace/core";
+import {
+  Workspace,
+  workspaceOfAttempt,
+  type WorkspaceAt,
+} from "@plugins/conversations/plugins/workspace/server";
 import { spawnConversationJob } from "./spawn-job";
 import { deliverHeldTurnsJob } from "./deliver-held-turns-job";
 import { conversationCreated } from "./tables-created-event";
@@ -90,6 +94,12 @@ export interface CreateConversationOpts {
    * a truncated copy of the source's transcript; the source is untouched.
    */
   forkAtMessageUuid?: string;
+  /**
+   * Where a NEW attempt's conversations run (default: a worktree). A launch
+   * onto an existing attempt runs in that attempt's workspace; naming another
+   * one throws.
+   */
+  workspace?: WorkspaceSpec;
 }
 
 // The `runtime.create` options a launch spawns with — the spawn job's `create`
@@ -139,7 +149,8 @@ export interface PreparedConversation {
   // The caller's raw prompt, for the `conversationCreated` payload.
   rawPrompt: string | undefined;
   prepromptId: string | undefined;
-  worktreePath: string;
+  // The attempt's workspace: its path and the spec it was launched with.
+  workspace: WorkspaceAt;
   create: SpawnCreate;
   target:
     // Reuse an existing attempt's worktree (fork / +Sonnet / fork-session).
@@ -242,7 +253,7 @@ export async function prepareConversation(
   // there is no "no worktree" branch left to write.
   const spawnedBy = opts.spawnedBy ?? runtimeNamespace();
 
-  let worktreePath: string;
+  let workspace: WorkspaceAt;
   let target: PreparedConversation["target"];
   // The task this conversation belongs to, used to resolve a per-task preprompt
   // (baked into the first user turn as a <special_instructions> block). Derived
@@ -252,20 +263,36 @@ export async function prepareConversation(
   let effectiveTaskId: string | undefined;
 
   if (attemptId) {
-    const attempt = await getAttempt(attemptId);
+    const attempt = await getAttemptRow(attemptId);
     if (!attempt) throw new Error(`Unknown attemptId "${attemptId}"`);
-    worktreePath = attempt.worktreePath;
+    if (opts.workspace && !Bun.deepEquals(opts.workspace, attempt.workspace)) {
+      throw new Error(
+        `Attempt ${attemptId} runs in workspace ${JSON.stringify(attempt.workspace)}, not ${JSON.stringify(opts.workspace)}`,
+      );
+    }
+    workspace = {
+      attemptId,
+      path: attempt.worktreePath,
+      spec: attempt.workspace,
+    };
     effectiveTaskId = attempt.taskId;
     target = { kind: "reuse", attemptId, transcriptCopy };
   } else {
     effectiveTaskId = opts.taskId;
     const newId = attemptIdKind.mint();
-    // Derived purely from the id, so the path is known before the worktree dir
-    // exists. `setupWorktree` (the multi-second `git worktree add` checkout) is
-    // deferred to the durable `conversations.spawn` job — off the interactive
-    // response — and `createAttempt` inserts a row that carries the
-    // not-yet-existent path (it is never existence-checked at write time).
-    worktreePath = await worktreePathFor(newId);
+    // Validated before anything is written: an unknown scratch profile, or an
+    // input its profile refuses, throws here.
+    const spec = parseWorkspaceSpec(opts.workspace ?? DEFAULT_WORKSPACE);
+    // Derived purely from the id, so the path is known before the workspace
+    // dir exists. Its `prepare` (for a worktree, the multi-second `git worktree
+    // add` checkout) is deferred to the durable `conversations.spawn` job — off
+    // the interactive response — and `createAttempt` inserts a row that carries
+    // the not-yet-existent path (it is never existence-checked at write time).
+    workspace = {
+      attemptId: newId,
+      path: await Workspace.pathFor(spec.kind, newId),
+      spec,
+    };
     target = { kind: "new", attemptId: newId, taskId: opts.taskId };
   }
 
@@ -310,7 +337,7 @@ export async function prepareConversation(
     kind: opts.kind ?? "user",
     rawPrompt: opts.prompt,
     prepromptId,
-    worktreePath,
+    workspace,
     target,
     create: {
       prompt: resolvedPrompt,
@@ -356,19 +383,17 @@ export async function commitConversation(
       taskId = task.id;
     }
     await createAttempt(
-      { id: attemptId, taskId, worktreePath: p.worktreePath },
+      {
+        id: attemptId,
+        taskId,
+        worktreePath: p.workspace.path,
+        workspace: p.workspace.spec,
+      },
       tx,
     );
-    // The fork is a detached supervised job: it runs in its own process, so a
-    // backend restart mid-fork does not interrupt it (the workflow re-attaches
-    // to the running child). The enqueue is a row on this transaction, so it
-    // exists iff the attempt does. A failed fork retries, then dead-letters
-    // (Debug → Queue) with a deduped fork-error notification; its output is on
-    // the `database-fork` log channel (`logs/database-fork.jsonl`).
-    await databaseForkJob.enqueue(
-      { source: "singularity", target: attemptId },
-      { tx: queueTx },
-    );
+    // The workspace's own writes (a worktree's DB fork job), on this
+    // transaction, so they exist iff the attempt does.
+    await Workspace.get(p.workspace.spec.kind).onCommit(queueTx, p.workspace);
   }
 
   const conv = await insertConversation(
@@ -402,19 +427,19 @@ export async function commitConversation(
   );
 
   if (p.target.kind === "new") {
-    // New-worktree branch: background the multi-second `git worktree add` +
-    // `runtime.create` in a durable graphile job so the interactive Launch
-    // response returns immediately with a `starting` row. It has no ordering
-    // dependency on the DB fork. On failure the job records a deduped
+    // New-attempt branch: background the workspace's `prepare` (for a
+    // worktree, the multi-second `git worktree add`) + `runtime.create` in a
+    // durable graphile job so the interactive Launch response returns
+    // immediately with a `starting` row. On failure the job records a deduped
     // notification and retries; the status reconciler owns the eventual
     // `starting → gone` transition.
     await spawnConversationJob.enqueue(
       {
         conversationId: p.conversationId,
         attemptId: p.target.attemptId,
-        worktreePath: p.worktreePath,
+        worktreePath: p.workspace.path,
+        workspace: p.workspace.spec,
         runtimeId: p.runtimeId,
-        needsWorktreeSetup: true,
         create: p.create,
       },
       { tx: queueTx },
@@ -428,15 +453,18 @@ export async function commitConversation(
 export async function finishConversation(
   p: PreparedConversation,
 ): Promise<void> {
+  const workspace = Workspace.get(p.workspace.spec.kind);
   if (p.target.kind === "new") {
-    // Copy main's config dir for the new worktree. Fire-and-forget, as before,
-    // but only after commit: a rolled-back launch leaves no config dir behind.
-    const { attemptId } = p.target;
-    void runTracked("conversations:fork-config", () => forkConfig(attemptId));
+    // The workspace's post-commit step (a worktree's config-dir copy).
+    // Fire-and-forget, but only after commit: a rolled-back launch leaves
+    // nothing behind.
+    void runTracked(`conversations:workspace-finish:${workspace.kind}`, () =>
+      workspace.onFinish(p.workspace),
+    );
     return;
   }
 
-  // Reuse-attempt branch (fork / +Sonnet / fork-session): the worktree already
+  // Reuse-attempt branch (fork / +Sonnet / fork-session): the workspace already
   // exists and the only spawn step (`runtime.create`) is sub-second, so keep it
   // synchronous — no job-pickup latency for the interactive fork buttons.
   try {
@@ -448,7 +476,8 @@ export async function finishConversation(
     }
     await Runtime.get(p.runtimeId).create(
       p.conversationId,
-      p.worktreePath,
+      p.workspace.path,
+      workspace.launch(p.workspace, { conversationId: p.conversationId }),
       p.create,
     );
   } catch (err) {
@@ -500,20 +529,27 @@ export class ResumeBlockedError extends Error {
   }
 }
 
+// The workspace a conversation runs in: its attempt's.
+function workspaceOf(row: Conversation): Promise<WorkspaceAt> {
+  return workspaceOfAttempt(row.attemptId);
+}
+
+// A new attempt's spec, as its kind validates and stores it.
+function parseWorkspaceSpec(spec: WorkspaceSpec): WorkspaceSpec {
+  return Workspace.get(spec.kind).parseSpec(spec);
+}
+
 // Everything that must be true before a conversation can be handed to
 // `claude --resume`. Side-effect free ON PURPOSE (it reads, and at most asks
 // Claude Code again whether it is signed in): a refusal has to leave the
 // conversation byte-for-byte as it was, so this runs before the stale pane is
 // killed and before any status is written.
 //
-// The worktree check is the load-bearing one. A conversation's checkout can be
-// reclaimed underneath it while its branch and transcript survive, and
-// `tmux new-session -c <missing-dir>` does NOT fail on a missing directory — it
-// silently starts the pane in $HOME. Unchecked, resuming such a conversation
-// boots the agent in the user's home directory with a transcript full of
-// repo-relative paths, and the only symptom is a trust prompt for `~`.
+// The workspace check is the load-bearing one: a resume into a workspace that
+// is gone starts the agent somewhere else (see each kind's `checkResumable`).
 async function preflightResume(
   row: Conversation,
+  workspace: WorkspaceAt,
 ): Promise<{ kind: "ok" } | ResumeBlocked> {
   if (!row.claudeSessionId) {
     return {
@@ -522,15 +558,14 @@ async function preflightResume(
       message: `Conversation ${row.id} has no saved Claude session to resume.`,
     };
   }
-  if (!existsSync(row.worktreePath)) {
-    const branch = attemptBranchName(row.attemptId);
+  const resumable = Workspace.get(workspace.spec.kind).checkResumable(
+    workspace,
+  );
+  if (resumable.kind === "missing") {
     return {
       kind: "blocked",
-      reason: "worktree-missing",
-      message:
-        `This conversation's worktree checkout is gone (${row.worktreePath}), so it cannot be resumed. ` +
-        `Its branch ${branch} still exists — recreate the checkout with ` +
-        `\`git worktree add ${row.worktreePath} ${branch}\` to bring the conversation back.`,
+      reason: "workspace-missing",
+      message: resumable.message,
     };
   }
   // Last: the only check that may start a process (a re-probe when the last
@@ -556,7 +591,8 @@ async function preflightResume(
 // every statement below is destructive (kills the pane, rewrites status), so the
 // check must sit at the mutation, not one frame above it.
 async function respawnResume(row: Conversation): Promise<void> {
-  const preflight = await preflightResume(row);
+  const workspace = await workspaceOf(row);
+  const preflight = await preflightResume(row, workspace);
   if (preflight.kind === "blocked") {
     throw new ResumeBlockedError(preflight.reason, preflight.message);
   }
@@ -570,11 +606,18 @@ async function respawnResume(row: Conversation): Promise<void> {
   // "done" rows are skipped and the conversation stays stuck as done.
   await updateConversation(row.id, { status: "starting", endedAt: null });
 
-  await runtime.create(row.id, row.worktreePath, {
-    resumeSessionId: row.claudeSessionId!,
-    model: row.model,
-    effort: await resolveTaskEffort(row.taskId),
-  });
+  await runtime.create(
+    row.id,
+    workspace.path,
+    Workspace.get(workspace.spec.kind).launch(workspace, {
+      conversationId: row.id,
+    }),
+    {
+      resumeSessionId: row.claudeSessionId!,
+      model: row.model,
+      effort: await resolveTaskEffort(row.taskId),
+    },
+  );
 
   // A turn held while this conversation was last `starting` (a launch that
   // never came up, then went `gone`) is delivered now that a session runs
@@ -594,7 +637,7 @@ export async function resumeConversation(id: string): Promise<Conversation> {
   // the conversation exactly where the user left it. (`respawnResume` asserts
   // the same invariant; this call is what turns it into a clean 409 with an
   // actionable message rather than a generic failure.)
-  const preflight = await preflightResume(row);
+  const preflight = await preflightResume(row, await workspaceOf(row));
   if (preflight.kind === "blocked") {
     throw new ResumeBlockedError(preflight.reason, preflight.message);
   }
@@ -624,7 +667,7 @@ export async function ensureResumed(id: string): Promise<ResumeOutcome> {
   if (!row) throw new Error(`Conversation ${id} not found`);
   if (!row.hibernatedAt) return { kind: "not-hibernated" };
 
-  const preflight = await preflightResume(row);
+  const preflight = await preflightResume(row, await workspaceOf(row));
   if (preflight.kind === "blocked") return preflight;
 
   await respawnResume(row);
@@ -698,7 +741,7 @@ export async function rewindConversationAt(
   const row = await getConversation(id);
   if (!row) throw new Error(`Conversation ${id} not found`);
 
-  const preflight = await preflightResume(row);
+  const preflight = await preflightResume(row, await workspaceOf(row));
   if (preflight.kind === "blocked") {
     return { ok: false, reason: preflight.reason, message: preflight.message };
   }

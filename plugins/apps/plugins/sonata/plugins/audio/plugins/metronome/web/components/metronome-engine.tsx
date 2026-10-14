@@ -8,6 +8,7 @@ import type { InstrumentVoices } from "@plugins/apps/plugins/sonata/plugins/audi
 import {
   beatToSeconds,
   scoreEndBeat,
+  swingScore,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
   useAudioGraph,
@@ -196,7 +197,15 @@ export function MetronomeEngine() {
       clickVoicesRef.current ?? undefined;
 
     const handle = startScheduling(
-      { notes: clickNotesRef.current, pedalEvents: [] },
+      // Subdivision clicks swing with the song (the identity when straight).
+      {
+        notes: swingScore({
+          ...scoreRef.current,
+          notes: clickNotesRef.current,
+          pedalEvents: [],
+        }).notes,
+        pedalEvents: [],
+      },
       timeline,
       resolveVoices,
       ctx,

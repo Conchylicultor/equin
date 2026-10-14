@@ -7,6 +7,7 @@
 - Description: The python installer kind of infra/deps (pythonEnv, runPython, PythonEntryError) over uv, with its caches as declared data dirs Its uv-updater sub-plugin keeps every python/ project's uv.lock and .python-version current.
 - Cross-plugin:
   - Imported by:
+    - `apps/sonata/transcription`
     - `infra/audio-analysis`
     - `integrations/youtube`
 - Exemptions:

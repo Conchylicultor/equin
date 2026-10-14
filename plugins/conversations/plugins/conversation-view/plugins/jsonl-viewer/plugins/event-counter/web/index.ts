@@ -3,9 +3,12 @@ import { Conversation } from "@plugins/conversations/plugins/conversation-view/p
 import { EventCounter } from "./components/event-counter";
 
 export default {
-  description:
-    "Displays the total event count in the conversation toolbar.",
+  description: "Displays the total event count in the conversation toolbar.",
   contributions: [
-    Conversation.ActionBar({ id: "event-counter", component: EventCounter }),
+    Conversation.ActionBar({
+      id: "event-counter",
+      requires: [],
+      component: EventCounter,
+    }),
   ],
 } satisfies PluginDefinition;

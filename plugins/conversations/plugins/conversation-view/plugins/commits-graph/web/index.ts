@@ -9,7 +9,11 @@ export default {
     "Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.",
   contributions: [
     Pane.Register({ pane: convCommitsGraphPane }),
-    Conversation.ActionBar({ id: "commits-graph", component: CommitsChip }),
+    Conversation.ActionBar({
+      id: "commits-graph",
+      requires: ["git"],
+      component: CommitsChip,
+    }),
   ],
   slots: { "conv-commits-graph": convCommitsGraphPane },
 } satisfies PluginDefinition;

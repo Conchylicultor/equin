@@ -11,6 +11,7 @@ export default {
     Pane.Register({ pane: convPushProfilingPane }),
     Conversation.ActionBar({
       id: "push-profiling",
+      requires: ["build"],
       component: PushProfilingButton,
     }),
   ],

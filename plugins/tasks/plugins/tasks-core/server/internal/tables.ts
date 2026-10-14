@@ -9,6 +9,7 @@ import {
   attemptFields,
   taskDependencyFields,
   pushFields,
+  attemptDeliveryFields,
   conversationFields,
 } from "../../core/internal/fields";
 
@@ -84,6 +85,7 @@ const attemptsEntity = defineEntity("attempts", attemptFields, {
       taskId: true,
       worktreePath: true,
       createdAt: false,
+      workspace: true,
     },
   },
   columns: {
@@ -92,6 +94,9 @@ const attemptsEntity = defineEntity("attempts", attemptFields, {
     },
     createdAt: { default: defaultNow() },
     updatedAt: { default: defaultNow() },
+    // Backfills every attempt that predates the column: they all ran in a
+    // worktree.
+    workspace: { default: { kind: "worktree" } },
   },
   // tasks_v derives task status via per-task correlated subqueries on
   // attempts.task_id (has_attempt / has_completed / has_active / has_blocking_dep).
@@ -142,6 +147,26 @@ const pushesEntity = defineEntity("pushes", pushFields, {
 // drizzle-kit schema-glob discovery. Name kept (no underscore) so consumers
 // don't churn.
 export const pushes = pushesEntity.table;
+
+// A non-push delivery (see `attemptDeliveryFields`): keyed by the attempt, so
+// recording it twice is an upsert, never a second fact.
+const attemptDeliveriesEntity = defineEntity(
+  "attempt_deliveries",
+  attemptDeliveryFields,
+  {
+    primaryKey: "attemptId",
+    columns: {
+      attemptId: {
+        references: {
+          column: () => attemptsEntity.table.id,
+          onDelete: "cascade",
+        },
+      },
+      deliveredAt: { default: defaultNow() },
+    },
+  },
+);
+export const _attemptDeliveries = attemptDeliveriesEntity.table;
 
 const conversationsEntity = defineEntity("conversations", conversationFields, {
   primaryKey: "id",

@@ -335,6 +335,7 @@ torch.
   - Imported by:
     - `apps/chord/song-index`
     - `apps/prototypes/thumbnails`
+    - `apps/sonata/transcription`
     - `infra/audio-analysis`
     - `infra/deps/build`
     - `infra/launcher`

@@ -23,6 +23,7 @@ import {
   listConversationIdsForAttempt,
   listPushesForAttempt,
 } from "@plugins/tasks/plugins/tasks-core/server";
+import { hasCapability } from "@plugins/conversations/plugins/workspace/core";
 import type { AttemptPending, AttemptWork } from "../../core/protocol";
 import {
   probeHeadMain,
@@ -52,7 +53,7 @@ interface WorkContext {
   ledgerPushes: number;
 }
 
-// `null` when the attempt row is gone. Its conversations went with it (FK
+// Unmeasurable when the attempt row is gone. Its conversations went with it (FK
 // cascade), so the landed grep has nothing to filter on — the standing is
 // genuinely unmeasurable rather than "nothing landed", and both the signature and
 // the value say so.
@@ -60,15 +61,30 @@ interface WorkContext {
 // Every read is a TABLE's (`attempts`, `conversations`, `pushes`), never a
 // view's: this is a live loader doing git work, and a view's read-set would
 // make every task or conversation write recompute it (C36).
-async function readContext(attemptId: string): Promise<WorkContext | null> {
+//
+// An attempt whose workspace has no git (a scratch dir) is unmeasurable by
+// construction — no branch, no trailers — the same determinate non-value as a
+// gone row: consumers route it to the non-destructive action.
+type ContextRead =
+  { kind: "ok"; ctx: WorkContext } | { kind: "unmeasurable"; reason: string };
+
+async function readContext(attemptId: string): Promise<ContextRead> {
   const attempt = await getAttemptRow(attemptId);
-  if (!attempt) return null;
+  if (!attempt) {
+    return { kind: "unmeasurable", reason: "attempt no longer exists" };
+  }
+  if (!hasCapability(attempt.workspace.kind, "git")) {
+    return {
+      kind: "unmeasurable",
+      reason: `a ${attempt.workspace.kind} workspace has no git`,
+    };
+  }
   const [mainRepoRoot, convIds, pushes] = await Promise.all([
     ensureMainWorktreeRoot(),
     listConversationIdsForAttempt(attemptId),
     listPushesForAttempt(attemptId),
   ]);
-  return {
+  const ctx: WorkContext = {
     worktreePath: attempt.worktreePath,
     mainRepoRoot,
     branchRef: attemptBranchRef(attemptId),
@@ -76,6 +92,7 @@ async function readContext(attemptId: string): Promise<WorkContext | null> {
     since: new Date(attempt.createdAt.getTime() - SINCE_PAD_MS),
     ledgerPushes: pushes.length,
   };
+  return { kind: "ok", ctx };
 }
 
 // The worktree is the cheapest and most current place to read the tips, but an
@@ -138,14 +155,16 @@ interface MeasuredWork extends AttemptWork {
 const workMemo = createSignedMemo<Resolvable<MeasuredWork>>({
   name: "attempt-work",
   signature: async (attemptId) => {
-    const ctx = await readContext(attemptId);
-    if (!ctx) return "no-attempt";
+    const read = await readContext(attemptId);
+    if (read.kind !== "ok") return `unmeasurable:${read.reason}`;
+    const { ctx } = read;
     const { headSha, mainSha } = await probeTips(ctx);
     return attemptWorkEtag(headSha, mainSha, ctx.convIds, ctx.ledgerPushes);
   },
   compute: async (attemptId) => {
-    const ctx = await readContext(attemptId);
-    if (!ctx) return unresolved("attempt no longer exists");
+    const read = await readContext(attemptId);
+    if (read.kind !== "ok") return unresolved(read.reason);
+    const { ctx } = read;
     // ONE heavy slot for the whole logical job: the pending counts and the landed
     // grep together. The probe above was fully ungated.
     return withHeavyReadSlot(async () => {

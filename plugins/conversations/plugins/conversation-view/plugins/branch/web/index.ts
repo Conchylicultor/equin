@@ -8,6 +8,7 @@ export default {
   contributions: [
     Conversation.PromptBar({
       id: "branch",
+      requires: [],
       component: BranchButtons,
       section: "Branch",
       sectionOrder: 1,

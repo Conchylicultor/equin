@@ -1,3 +1,4 @@
+import type { SourceHydration } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getSongChordGrid } from "../shared/endpoints";
 import type { ChordGridRaw } from "./compile";
@@ -8,10 +9,8 @@ import type { ChordGridRaw } from "./compile";
  * for a song that carries no chord grid, so it's skipped in the library's generic
  * collection — and so the chord-grid editor section stays hidden for such songs.
  */
-export async function hydrate(
-  songId: string,
-): Promise<ChordGridRaw | undefined> {
+export async function hydrate(songId: string): Promise<SourceHydration> {
   const row = await fetchEndpoint(getSongChordGrid, { id: songId });
-  if (!row) return undefined;
-  return { text: row.chordText };
+  if (!row) return { kind: "absent" };
+  return { kind: "raw", raw: { text: row.chordText } satisfies ChordGridRaw };
 }

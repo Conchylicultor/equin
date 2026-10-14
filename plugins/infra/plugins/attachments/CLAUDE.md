@@ -100,6 +100,8 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `apps/pages/page-tree`
     - `apps/sonata/library`
     - `apps/sonata/sources/midi`
+    - `apps/sonata/sources/musicxml`
+    - `apps/sonata/transcription`
     - `conversations`
     - `conversations/agents`
     - `page/attachment-block`

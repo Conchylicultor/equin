@@ -1043,6 +1043,13 @@
       "name": "@singularity/plugin-apps-sonata-sources-midi-folders",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/sources/plugins/musicxml": {
+      "name": "@singularity/plugin-apps-sonata-sources-musicxml",
+      "version": "0.0.1",
+      "dependencies": {
+        "fast-xml-parser": "^4.5.0",
+      },
+    },
     "plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar": {
       "name": "@singularity/plugin-apps-sonata-sources-ultimate-guitar",
       "version": "0.0.1",
@@ -1061,6 +1068,10 @@
     },
     "plugins/apps/plugins/sonata/plugins/track-mixer": {
       "name": "@singularity/plugin-apps-sonata-track-mixer",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/transcription": {
+      "name": "@singularity/plugin-apps-sonata-transcription",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/sonata/plugins/transport-bar": {
@@ -2067,6 +2078,18 @@
       "name": "@singularity/plugin-conversations-usage",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/workspace": {
+      "name": "@singularity/plugin-conversations-workspace",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/workspace/plugins/scratch": {
+      "name": "@singularity/plugin-conversations-workspace-scratch",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/workspace/plugins/worktree": {
+      "name": "@singularity/plugin-conversations-workspace-worktree",
+      "version": "0.0.1",
+    },
     "plugins/database": {
       "name": "@singularity/plugin-database",
       "version": "0.0.1",
@@ -2324,6 +2347,10 @@
     },
     "plugins/debug/plugins/reports": {
       "name": "@singularity/plugin-debug-reports",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/scratch-hello": {
+      "name": "@singularity/plugin-debug-scratch-hello",
       "version": "0.0.1",
     },
     "plugins/debug/plugins/sentinel": {
@@ -7041,6 +7068,8 @@
 
     "@singularity/plugin-apps-sonata-sources-midi-folders": ["@singularity/plugin-apps-sonata-sources-midi-folders@workspace:plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/folders"],
 
+    "@singularity/plugin-apps-sonata-sources-musicxml": ["@singularity/plugin-apps-sonata-sources-musicxml@workspace:plugins/apps/plugins/sonata/plugins/sources/plugins/musicxml"],
+
     "@singularity/plugin-apps-sonata-sources-ultimate-guitar": ["@singularity/plugin-apps-sonata-sources-ultimate-guitar@workspace:plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar"],
 
     "@singularity/plugin-apps-sonata-sources-ultimate-guitar-alignment": ["@singularity/plugin-apps-sonata-sources-ultimate-guitar-alignment@workspace:plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment"],
@@ -7050,6 +7079,8 @@
     "@singularity/plugin-apps-sonata-theory": ["@singularity/plugin-apps-sonata-theory@workspace:plugins/apps/plugins/sonata/plugins/theory"],
 
     "@singularity/plugin-apps-sonata-track-mixer": ["@singularity/plugin-apps-sonata-track-mixer@workspace:plugins/apps/plugins/sonata/plugins/track-mixer"],
+
+    "@singularity/plugin-apps-sonata-transcription": ["@singularity/plugin-apps-sonata-transcription@workspace:plugins/apps/plugins/sonata/plugins/transcription"],
 
     "@singularity/plugin-apps-sonata-transport-bar": ["@singularity/plugin-apps-sonata-transport-bar@workspace:plugins/apps/plugins/sonata/plugins/transport-bar"],
 
@@ -7555,6 +7586,12 @@
 
     "@singularity/plugin-conversations-usage": ["@singularity/plugin-conversations-usage@workspace:plugins/conversations/plugins/usage"],
 
+    "@singularity/plugin-conversations-workspace": ["@singularity/plugin-conversations-workspace@workspace:plugins/conversations/plugins/workspace"],
+
+    "@singularity/plugin-conversations-workspace-scratch": ["@singularity/plugin-conversations-workspace-scratch@workspace:plugins/conversations/plugins/workspace/plugins/scratch"],
+
+    "@singularity/plugin-conversations-workspace-worktree": ["@singularity/plugin-conversations-workspace-worktree@workspace:plugins/conversations/plugins/workspace/plugins/worktree"],
+
     "@singularity/plugin-database": ["@singularity/plugin-database@workspace:plugins/database"],
 
     "@singularity/plugin-database-admin": ["@singularity/plugin-database-admin@workspace:plugins/database/plugins/admin"],
@@ -7672,6 +7709,8 @@
     "@singularity/plugin-debug-report-storm": ["@singularity/plugin-debug-report-storm@workspace:plugins/debug/plugins/report-storm"],
 
     "@singularity/plugin-debug-reports": ["@singularity/plugin-debug-reports@workspace:plugins/debug/plugins/reports"],
+
+    "@singularity/plugin-debug-scratch-hello": ["@singularity/plugin-debug-scratch-hello@workspace:plugins/debug/plugins/scratch-hello"],
 
     "@singularity/plugin-debug-sentinel": ["@singularity/plugin-debug-sentinel@workspace:plugins/debug/plugins/sentinel"],
 

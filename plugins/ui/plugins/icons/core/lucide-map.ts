@@ -107,6 +107,7 @@ export const LUCIDE_MAP = {
   "deployed-code": "package",
   description: "file-text",
   "desktop-windows": "monitor",
+  "document-scanner": "scan-text",
   difference: "diff",
   "do-not-disturb-on": "circle-minus",
   "dock-to-left": "panel-left",

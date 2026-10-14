@@ -1,5 +1,5 @@
 import { serveCollection } from "@plugins/network/plugins/live/server";
-import { _tasks, pushes } from "./tables";
+import { _attempts, _tasks, pushes } from "./tables";
 import { attemptRowsServeOptions } from "./attempt-rows";
 import { taskRowsServeOptions } from "./task-rows";
 import {
@@ -15,6 +15,7 @@ import {
   taskRows,
   taskDescriptions,
   attemptRows,
+  attemptWorkspaces,
   pushRows,
   conversationsActive,
   conversationsSystem,
@@ -79,6 +80,12 @@ export const attemptRowsServed = serveCollection(
 // task's, an edge write its task's and every dependent's, an insert is an
 // entrant and a delete an exit.
 export const taskRowsServed = serveCollection(taskRows, taskRowsServeOptions);
+
+// One attempt's workspace by id (`attemptWorkspaces`, lookup-only), over the
+// `attempts` table.
+export const attemptWorkspacesServed = serveCollection(attemptWorkspaces, {
+  from: _attempts,
+});
 
 // One task's `description` by id (`taskDescriptions`, lookup-only: `:rows`
 // alone), over the `tasks` table — a description autosave is that row's

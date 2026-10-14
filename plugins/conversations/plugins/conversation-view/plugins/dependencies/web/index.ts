@@ -8,6 +8,7 @@ export default {
   contributions: [
     Conversation.PromptBar({
       id: "dependencies",
+      requires: [],
       component: DependenciesButton,
       section: "Deps",
       sectionOrder: 0,

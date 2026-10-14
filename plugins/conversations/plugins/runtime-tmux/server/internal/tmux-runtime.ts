@@ -4,6 +4,7 @@ import type {
   RuntimeSignal,
   TerminalMenuChoice,
 } from "@plugins/conversations/server";
+import type { LaunchFragment } from "@plugins/conversations/plugins/workspace/server";
 import {
   sameTerminalMenu,
   TerminalMenuChangedError,
@@ -601,6 +602,11 @@ async function describePanes(
   return out;
 }
 
+// One single-quoted word of the pane's shell command.
+function shellWord(value: string): string {
+  return `'${value.replaceAll("'", `'\\''`)}'`;
+}
+
 export const tmuxRuntime: ConversationRuntime = {
   id: "tmux",
 
@@ -635,7 +641,8 @@ export const tmuxRuntime: ConversationRuntime = {
 
   async create(
     conversationId: string,
-    worktreePath: string,
+    cwd: string,
+    launch: LaunchFragment,
     opts?: {
       prompt?: string;
       model?: ConversationModel;
@@ -688,9 +695,9 @@ export const tmuxRuntime: ConversationRuntime = {
       ? resolveEffortFlag(opts.effort)
       : undefined;
     // One `--settings` object for the whole launch: the thinking mode (if any),
-    // the fixed CLI preferences and the question hooks that touch this conversation's signal file (see
-    // launch-settings.ts). Resume launches through here too, so a resumed
-    // session gets the hooks as well.
+    // the fixed CLI preferences, the question hooks that touch this conversation's signal file (see
+    // launch-settings.ts) and the workspace's fragment. Resume launches through
+    // here too, so a resumed session gets the hooks as well.
     const settings = mergeLaunchSettings(
       opts?.effort ? resolveEffortSettings(opts.effort) : undefined,
       LAUNCH_CLI_SETTINGS,
@@ -698,14 +705,17 @@ export const tmuxRuntime: ConversationRuntime = {
         signalDir: tmuxSignalsDir.ensure(),
         relay: relayHookEntry(),
       }),
+      launch.settings,
     );
     const claudeBase = [
       // Single-quoted: the path is spliced into the pane's shell command.
-      `'${claudeBin.replaceAll("'", `'\\''`)}'`,
+      shellWord(claudeBin),
       cliFlag && `--model ${cliFlag}`,
       effortFlag && `--effort ${effortFlag}`,
       // Single-quoted JSON; settingsFlag throws on a value carrying a quote.
       settingsFlag(settings),
+      // The workspace's own arguments, each its own shell word.
+      ...launch.argv.map(shellWord),
     ]
       .filter(Boolean)
       .join(" ");
@@ -754,7 +764,7 @@ export const tmuxRuntime: ConversationRuntime = {
         "-s",
         conversationId,
         "-c",
-        worktreePath,
+        cwd,
         "-e",
         `SINGULARITY_CONVERSATION_ID=${conversationId}`,
         "-e",

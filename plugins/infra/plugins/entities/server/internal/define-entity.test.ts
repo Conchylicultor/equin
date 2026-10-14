@@ -902,6 +902,23 @@ test("a narrowed jsonb field's column really throws on an out-of-shape read", ()
   expect((err as SqlColumnError).label).toBe("ent_json_decoded.callers");
 });
 
+test("a bare jsonb default carrying a `kind` key is a value, not a marker", () => {
+  // Markers are branded, never recognised by shape: a `{ kind: … }` default
+  // read as one matched no marker arm and built no column at all.
+  const Spec = z.object({ kind: z.literal("worktree") });
+  const ent = defineEntity(
+    "ent_json_kind_default",
+    {
+      id: field(textType, z.string(), ""),
+      spec: field(jsonType<{ kind: "worktree" }>(), Spec, { kind: "worktree" }),
+    },
+    { primaryKey: "id", columns: { spec: { default: { kind: "worktree" } } } },
+  );
+
+  expect(ent.table.spec.hasDefault).toBe(true);
+  expect(ent.table.spec.default).toEqual({ kind: "worktree" });
+});
+
 test("a `z.unknown()` jsonField's column carries NO decoder", () => {
   // The cost claim, as a test — and the design's central one: the schema is the
   // dial. A field whose schema declares nothing keeps a bare `jsonb` column

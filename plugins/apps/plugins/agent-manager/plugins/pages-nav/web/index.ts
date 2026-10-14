@@ -6,6 +6,10 @@ export default {
   description:
     "Pages entry point in the agent manager: a conversation-toolbar toggle that opens the Pages tree as a column beside the conversation.",
   contributions: [
-    Conversation.ActionBar({ id: "pages", component: PagesTreeButton }),
+    Conversation.ActionBar({
+      id: "pages",
+      requires: [],
+      component: PagesTreeButton,
+    }),
   ],
 } satisfies PluginDefinition;

@@ -29,11 +29,24 @@ import type {
 // even when the field carries a wire default (e.g. `worktree` defaults to `""`
 // on the wire but has no DB default). DB defaults are therefore OPT-IN per
 // column via `meta.columns.<key>.default`.
-export type DbDefault<T> =
+//
+// A marker is BRANDED, never recognised by its shape: a bare default is any
+// value of the column's type, and a jsonb value may well carry a `kind` key
+// (`{ kind: "worktree" }`) — read as a marker, it matched no arm and built no
+// column. Only the constructors below can mint the brand.
+const DB_DEFAULT = Symbol("entities.db-default");
+
+export type DbDefault<T> = { readonly [DB_DEFAULT]: true } & (
   | { kind: "literal"; value: T } // .default(value)
   | { kind: "now" } //              .defaultNow()    (timestamp only)
   | { kind: "random" } //           .defaultRandom() (uuid only)
-  | { kind: "sql"; sql: SQL }; //   .default(sql`...`)
+  | { kind: "sql"; sql: SQL } //    .default(sql`...`)
+);
+
+/** Whether a column meta's `default` is a marker rather than a bare value. */
+export function isDbDefault(def: unknown): def is DbDefault<unknown> {
+  return typeof def === "object" && def !== null && DB_DEFAULT in def;
+}
 
 // A deeply-readonly view of `T`. `defineEntity` infers `meta` with a `const`
 // type parameter (so a bare-literal default on a union-typed field can't collapse
@@ -264,13 +277,13 @@ export type EntityRow<E> = E extends { schema: ZodParser<infer T> } ? T : never;
 
 // ─── Default-marker constructors ───────────────────────────────────────────
 export function defaultNow(): DbDefault<never> {
-  return { kind: "now" };
+  return { [DB_DEFAULT]: true, kind: "now" };
 }
 
 export function defaultRandom(): DbDefault<never> {
-  return { kind: "random" };
+  return { [DB_DEFAULT]: true, kind: "random" };
 }
 
 export function sqlDefault<T>(sql: SQL): DbDefault<T> {
-  return { kind: "sql", sql };
+  return { [DB_DEFAULT]: true, kind: "sql", sql };
 }

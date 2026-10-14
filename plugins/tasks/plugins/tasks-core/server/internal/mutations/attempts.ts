@@ -4,6 +4,7 @@ import { attempts } from "../views";
 import { eq } from "drizzle-orm";
 import { withTaskStatusChange } from "../status-scope";
 import type { DbExecutor } from "../status-batch";
+import type { WorkspaceSpec } from "@plugins/conversations/plugins/workspace/core";
 
 export async function deleteAttempt(id: string): Promise<void> {
   const [row] = await db
@@ -21,6 +22,7 @@ export interface CreateAttemptInput {
   id: string;
   taskId: string;
   worktreePath: string;
+  workspace: WorkspaceSpec;
 }
 
 // `exec`: pass the transaction when the attempt must commit together with the

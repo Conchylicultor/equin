@@ -7,6 +7,7 @@ import {
   taskRowsServed,
   taskDescriptionsServed,
   attemptRowsServed,
+  attemptWorkspacesServed,
   pushRowsServed,
   conversationsActiveServed,
   conversationsSystemServed,
@@ -167,6 +168,7 @@ export type {
 } from "./internal/mutations/conversations";
 
 export { insertPush } from "./internal/mutations/pushes";
+export { recordScratchDelivery } from "./internal/mutations/deliveries";
 export type { InsertPushInput } from "./internal/mutations/pushes";
 
 // Event emitted after a push row is inserted. Consumers subscribe via
@@ -237,6 +239,7 @@ export default {
     ...taskRowsServed.declare,
     ...taskDescriptionsServed.declare,
     ...attemptRowsServed.declare,
+    ...attemptWorkspacesServed.declare,
     ...pushRowsServed.declare,
     ...conversationsActiveServed.declare,
     ...conversationsSystemServed.declare,

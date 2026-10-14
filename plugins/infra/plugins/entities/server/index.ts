@@ -9,7 +9,12 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import "@plugins/fields/plugins/server-capabilities-loader/server";
 
 export { defineEntity } from "./internal/define-entity";
-export { defaultNow, defaultRandom, sqlDefault } from "./internal/types";
+export {
+  defaultNow,
+  defaultRandom,
+  sqlDefault,
+  isDbDefault,
+} from "./internal/types";
 export type {
   Entity,
   EntityMeta,

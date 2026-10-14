@@ -1,4 +1,4 @@
-import { type ReactElement, useEffect, useRef } from "react";
+import { type ReactElement, useEffect, useRef, useState } from "react";
 import {
   Pane,
   PaneChrome,
@@ -25,10 +25,16 @@ import {
   PlayerTransport,
 } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import { sonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/core";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { sonataPlayerRoute, songIdKind, songLibrary } from "../core";
 import { Library } from "./slots";
+import { hydrateSources, type PendingSource } from "./hydrate-sources";
 import { SonataLibrarySurface } from "./components/library-surface";
 import { SongTitle } from "./components/song-title-field";
 import { SectionPane } from "./components/section-pane";
@@ -132,8 +138,22 @@ function useSongTitle(
 }
 
 /**
- * Resolve hook: hydrate every registered source's raw for `songId` and gate the
- * pane on the song existing. Lifted out of `useSongLink` so hydration also runs
+ * Resolve hook: gate the pane on the song's row existing. Hydration itself runs
+ * in the surface ({@link useSongHydration}), which can render what it finds.
+ */
+function useSonataPlayerResolve({
+  songId: songIdParam,
+}: {
+  songId: string;
+  bar?: string;
+}): ResolveResult {
+  // `key` upgrades an old bare-uuid link (`/sonata/song/<uuid>`, from before
+  // the `song-` rewrite) so it resolves.
+  return resolveRow(useLiveRow(songLibrary, songIdKind.key(songIdParam)));
+}
+
+/**
+ * Hydrate every registered source's raw for `songId`. Lifted out of `useSongLink` so hydration also runs
  * on direct navigation / reload (a deep-linked `/sonata/song/<id>`), not only on a
  * library click. Source-agnostic: a source with no data for the song returns
  * `undefined` and is skipped.
@@ -143,13 +163,18 @@ function useSongTitle(
  * on the song already loaded — by a direct seek. A malformed bar value is no
  * bar ({@link parseBarParam}); a bar past the song's end clamps to its last bar.
  */
-function useSonataPlayerResolve({
+type SongHydrationState =
+  | { kind: "loading" }
+  | { kind: "pending"; sources: readonly PendingSource[] }
+  | { kind: "ready" };
+
+function useSongHydration({
   songId: songIdParam,
   bar: barParam,
 }: {
   songId: string;
   bar?: string;
-}): ResolveResult {
+}): SongHydrationState {
   // The URL's id as stored: `key` upgrades an old bare-uuid link
   // (`/sonata/song/<uuid>`, from before the `song-` rewrite) so it resolves.
   const songId = songIdKind.key(songIdParam);
@@ -166,6 +191,19 @@ function useSonataPlayerResolve({
   const { content } = useSongDocument();
   const loadedSong = useLibrarySong();
   const loadedSongRef = useLatestRef(loadedSong);
+  // The sources still preparing a song, as the last hydration found them.
+  const [pendingSources, setPendingSources] = useState<{
+    songId: string;
+    sources: readonly PendingSource[];
+  } | null>(null);
+  // Re-hydration is driven by the song's row: every source write goes through
+  // `updateSongMeta`, which stamps `sourcesChangedAt`, so a pending source that
+  // finishes changes the row and this effect runs again. Not known until the
+  // row has settled.
+  const sourcesVersion =
+    song.status === "ready" && song.found
+      ? song.row.sourcesChangedAt.getTime()
+      : undefined;
   const bar = parseBarParam(barParam);
   const barRef = useLatestRef(bar);
   // The (song, bar) the playhead was last placed for — by the load intent armed
@@ -184,17 +222,18 @@ function useSonataPlayerResolve({
       placedForRef.current = placementKey(songId, undefined);
       return;
     }
-    if (!deferredComplete) return;
+    if (!deferredComplete || sourcesVersion === undefined) return;
     let cancelled = false;
     void (async () => {
-      const rawMap: Record<string, unknown> = {};
-      await Promise.all(
-        sources.map(async (s) => {
-          const raw = await s.hydrate(songId);
-          if (raw !== undefined) rawMap[s.sourceId] = raw;
-        }),
-      );
+      const { rawMap, pending } = await hydrateSources(sources, songId);
       if (cancelled) return;
+      // A source has content for this song that is not ready: keep it for the
+      // surface to render and load NOTHING — never a score composed without it.
+      if (pending.length > 0) {
+        setPendingSources({ songId, sources: pending });
+        return;
+      }
+      setPendingSources(null);
       // Open at the URL's bar: armed in the same turn as the load, so the
       // session's content reset — which parks the playhead at the timeline
       // origin otherwise — parks it at the bar instead. The bar's beat is read
@@ -219,6 +258,7 @@ function useSonataPlayerResolve({
     requestSeekOnLoad,
     barRef,
     loadedSongRef,
+    sourcesVersion,
   ]);
 
   // Hydrated exactly when the loaded document is this song: after the load
@@ -240,11 +280,13 @@ function useSonataPlayerResolve({
     placedForRef.current = key;
     if (bar !== undefined) seekTo(barStartBeat(score, bar));
   }, [ready, songId, bar, score, seekTo]);
-  // Not known yet until BOTH the hydration effect above has completed and the
-  // song's row has settled — a loading row is never read as "no such song" (a
-  // not-found flash on a deep link whose hydration beat the read).
-  if (!hydrated) return { status: "pending" };
-  return resolveRow(song);
+  // Not known yet until the hydration above has completed: a loading song is
+  // never shown as empty.
+  if (hydrated) return { kind: "ready" };
+  if (pendingSources?.songId === songId) {
+    return { kind: "pending", sources: pendingSources.sources };
+  }
+  return { kind: "loading" };
 }
 
 /** Identifies where the playhead was placed for: a song, at a bar or its start. */
@@ -265,6 +307,28 @@ function placementKey(songId: string, bar: number | undefined): string {
 function SonataPlayerSurface(): ReactElement {
   const params = sonataPlayerPane.useParams();
   const setParams = sonataPlayerPane.useSetParams();
+  const hydration = useSongHydration(params);
+  if (hydration.kind === "loading") return <Loading />;
+  if (hydration.kind === "pending") {
+    // A source is still preparing this song: show its Body in place of the
+    // player, so an unfinished song is never mistaken for an empty score.
+    return (
+      <PaneChrome pane={sonataPlayerPane}>
+        <Inset pad="lg">
+          <Stack direction="col" gap="lg">
+            {hydration.sources.map(({ sourceId, label, Body }) => (
+              <Stack key={sourceId} direction="col" gap="sm">
+                <Text variant="label" tone="muted">
+                  {label}
+                </Text>
+                <Body songId={songIdKind.key(params.songId)} />
+              </Stack>
+            ))}
+          </Stack>
+        </Inset>
+      </PaneChrome>
+    );
+  }
   return (
     // The display lens lives in the URL's `;view`: the binding wraps the whole
     // chrome, so the header's picker and the body's display both read and

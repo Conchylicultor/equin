@@ -2,6 +2,7 @@ import type {
   ConversationRuntime,
   RuntimeInfo,
 } from "@plugins/conversations/server";
+import type { LaunchFragment } from "@plugins/conversations/plugins/workspace/server";
 
 export const apiRuntime: ConversationRuntime = {
   id: "api",
@@ -22,7 +23,8 @@ export const apiRuntime: ConversationRuntime = {
   },
   async create(
     _conversationId: string,
-    _worktreePath: string,
+    _cwd: string,
+    _launch: LaunchFragment,
     _opts?: { prompt?: string },
   ): Promise<void> {
     throw new Error("api runtime: create() not implemented");

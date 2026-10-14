@@ -1,5 +1,6 @@
 import { isAbsolute } from "node:path";
-import { getAttempt } from "@plugins/tasks/plugins/tasks-core/server";
+import { getAttemptRow } from "@plugins/tasks/plugins/tasks-core/server";
+import { assertCapability } from "@plugins/conversations/plugins/workspace/core";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { resolveCheckoutRoot } from "./checkout-root";
@@ -25,6 +26,10 @@ export async function resolveWorktreePath(id: string): Promise<string | null> {
   if (isAbsolute(id)) {
     return await resolveCheckoutRoot(id);
   }
-  const attempt = await getAttempt(id);
-  return attempt?.worktreePath ?? null;
+  const attempt = await getAttemptRow(id);
+  if (!attempt) return null;
+  // Every /api/code/* read is a git one (tree, diff, commits); a scratch
+  // workspace has no checkout to read, so asking is a caller bug.
+  assertCapability(attempt.workspace.kind, "git", "code-explorer");
+  return attempt.worktreePath;
 }

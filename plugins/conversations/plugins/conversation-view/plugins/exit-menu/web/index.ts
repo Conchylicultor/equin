@@ -11,6 +11,7 @@ export default {
   contributions: [
     PromptEditorSlots.FloatingAction({
       id: "exit-menu",
+      requires: [],
       component: ExitMenuButton,
       alwaysActive: true,
     }),

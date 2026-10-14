@@ -5,16 +5,22 @@ import {
   unresolved,
   type Resolvable,
 } from "@plugins/primitives/plugins/live-state/core";
-import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
+import { assertCapability } from "@plugins/conversations/plugins/workspace/core";
+import { findWorkspaceOfConversation } from "@plugins/conversations/plugins/workspace/server";
 import { editedFiles } from "../../core";
 import type { EditedFile } from "../../core/protocol";
 import { editedFilesMemo, evictEditedFiles } from "./edited-files-cache";
 import { getEditedFiles } from "./get-edited-files";
 import { watchEditedFiles } from "./watch-edited-files";
 
+// A conversation with no git (a scratch workspace) is a caller bug — a
+// surface that reads edited files is gated on the git capability — so it
+// throws rather than reading as "no worktree" or "no changes".
 async function worktreeFor(conversationId: string): Promise<string | null> {
-  const row = await getConversation(conversationId);
-  return row?.worktreePath ?? null;
+  const found = await findWorkspaceOfConversation(conversationId);
+  if (!found.found) return null;
+  assertCapability(found.workspace.spec.kind, "git", "edited-files");
+  return found.workspace.path;
 }
 
 // A conversation whose worktree we cannot resolve — or whose worktree is reaped

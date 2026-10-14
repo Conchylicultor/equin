@@ -12,7 +12,6 @@ import {
 } from "@plugins/database/plugins/derived-updated-at/server";
 import type {
   ColumnDefault,
-  DbDefault,
   DefaultedKeys,
   Entity,
   EntityColumns,
@@ -21,13 +20,7 @@ import type {
   ServerOnlyKeys,
   UpdatedAtMeta,
 } from "./types";
-
-// A bare (non-marker) default value. Markers carry a `kind` discriminant; a
-// bare literal never does (we forbid object literals from masquerading as
-// markers by requiring the exact `kind` keys).
-function isMarker(def: ColumnDefault<unknown>): def is DbDefault<unknown> {
-  return def !== null && typeof def === "object" && "kind" in def;
-}
+import { isDbDefault } from "./types";
 
 // Split a raw field schema into (is the column nullable, the schema for its
 // VALUES). ONE result because the two answers must agree: a decoding storage
@@ -59,7 +52,7 @@ function splitNullability(schema: z.ZodTypeAny): {
 // reachable; `defaultRandom`/`defaultNow` only exist on uuid/timestamp builders
 // and throw loudly at runtime if mis-targeted (guarded below).
 function applyDefault(b: any, def: ColumnDefault<unknown>, key: string): any {
-  if (!isMarker(def)) return b.default(def); // bare value sugar
+  if (!isDbDefault(def)) return b.default(def); // bare value sugar
   switch (def.kind) {
     case "now":
       if (typeof b.defaultNow !== "function") {

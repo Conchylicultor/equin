@@ -6,6 +6,10 @@ export default {
   description:
     "Toolbar button that toggles the task pane (tree + detail) for the conversation's task.",
   contributions: [
-    Conversation.ActionBar({ id: "tasks", component: TasksButton }),
+    Conversation.ActionBar({
+      id: "tasks",
+      requires: [],
+      component: TasksButton,
+    }),
   ],
 } satisfies PluginDefinition;

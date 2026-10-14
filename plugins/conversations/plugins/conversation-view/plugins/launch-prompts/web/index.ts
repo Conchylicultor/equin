@@ -12,6 +12,7 @@ export default {
   contributions: [
     Conversation.PromptBar({
       id: "launch-prompts",
+      requires: [],
       component: LaunchPromptsButton,
       section: "Launch",
       sectionOrder: 2,

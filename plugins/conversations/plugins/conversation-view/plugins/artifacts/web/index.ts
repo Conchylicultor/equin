@@ -18,6 +18,10 @@ export default {
     "Conversation toolbar button listing everything the conversation made, changed or looked at. Owns the ConversationArtifacts.Kind registry each kind of artifact contributes to (a pure extractor over transcript events plus its own section), the aggregation over the already-open jsonl-events subscription, the popover, and the shared row / section / relation-mark chrome every kind renders through. Names no kind.",
   slots: ConversationArtifacts,
   contributions: [
-    Conversation.ActionBar({ id: "artifacts", component: ArtifactsButton }),
+    Conversation.ActionBar({
+      id: "artifacts",
+      requires: [],
+      component: ArtifactsButton,
+    }),
   ],
 } satisfies PluginDefinition;

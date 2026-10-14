@@ -101,6 +101,7 @@ export const ICON_MANIFEST: {
     "difference",
     "do-not-disturb-on",
     "dock-to-left",
+    "document-scanner",
     "donut-large",
     "download",
     "downloading",

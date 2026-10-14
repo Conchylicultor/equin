@@ -249,6 +249,7 @@ so a stray `defineEntity(` outside a schema-glob file is flagged.
     - `defaultNow`
     - `defaultRandom`
     - `defineEntity`
+    - `isDbDefault`
     - `sqlDefault`
 - Core:
   - Uses: `fields.fieldsToZodObject`

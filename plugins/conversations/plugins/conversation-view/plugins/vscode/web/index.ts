@@ -4,5 +4,11 @@ import { VscodeButton } from "./components/vscode-button";
 
 export default {
   description: "Opens the conversation's worktree in VSCode.",
-  contributions: [Conversation.ActionBar({ id: "vscode", component: VscodeButton })],
+  contributions: [
+    Conversation.ActionBar({
+      id: "vscode",
+      requires: [],
+      component: VscodeButton,
+    }),
+  ],
 } satisfies PluginDefinition;

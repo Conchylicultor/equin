@@ -193,6 +193,20 @@ export interface ScoreRecording {
   durationSec: number;
 }
 
+/**
+ * A swing feel: how the score's straight off-beats are PLAYED. Notation stays
+ * straight (every display reads the authored `start`); only the audio layer
+ * applies it, through `swingNotes` at the playback boundary.
+ *
+ * `unit` is the swung note value (8 = swung eighths, 16 = swung sixteenths);
+ * each pair of `unit` notes is played `ratio : 1` (2 = the triplet swing of a
+ * jazz chart, 1 = straight, 3 = a hard dotted-eighth-sixteenth shuffle).
+ */
+export interface Swing {
+  unit: 8 | 16;
+  ratio: number;
+}
+
 /** The canonical in-memory model — the narrow waist. */
 export interface Score {
   meta: {
@@ -201,6 +215,8 @@ export interface Score {
     pickupBeats?: number;
     /** The recording this Score's tempo map is measured on, if any. */
     recording?: ScoreRecording;
+    /** The swing feel the notes are played with; absent = straight. */
+    swing?: Swing;
   };
   /** Parts / instruments. */
   tracks: TrackMeta[];

@@ -39,6 +39,7 @@ export {
   taskRows,
   taskDescriptions,
   attemptRows,
+  attemptWorkspaces,
   pushRows,
   conversationsActive,
   conversationsSystem,

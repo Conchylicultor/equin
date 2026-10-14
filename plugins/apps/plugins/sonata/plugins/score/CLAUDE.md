@@ -77,6 +77,7 @@ Three pure pieces every loop consumer shares, so nobody re-derives the maths:
     - `ScoreRecording`
     - `SectionAnnotation`
     - `SectionData`
+    - `Swing`
     - `TempoEvent`
     - `TempoIndex`
     - `TimeSigEvent`
@@ -126,6 +127,8 @@ Three pure pieces every loop consumer shares, so nobody re-derives the maths:
     - `spellScore`
     - `startTimeline`
     - `subdivideBars`
+    - `swingBeat`
+    - `swingScore`
     - `tonicFifths`
     - `unrollLoop`
 

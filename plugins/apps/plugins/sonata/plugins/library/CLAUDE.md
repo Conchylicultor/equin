@@ -169,11 +169,14 @@ the title — a chord-grid save endpoint physically cannot carry one.
   - Slot contributors:
     - `Library.Source` ← `apps.sonata.sources.chord-grid`
     - `Library.Source` ← `apps.sonata.sources.midi`
+    - `Library.Source` ← `apps.sonata.sources.musicxml`
     - `Library.Source` ← `apps.sonata.sources.ultimate-guitar`
+    - `Library.Source` ← `apps.sonata.transcription`
     - `Library.SongActions` ← `apps.sonata.library`
     - `Library.Fields` ← `apps.sonata.playback-history`
     - `Library.Fields` ← `apps.sonata.sources.midi`
     - `Library.Fields` ← `apps.sonata.sources.midi.folders`
+    - `Library.Fields` ← `apps.sonata.transcription`
     - `sonataLibraryPane.Actions` ← `primitives.pane`
     - `sonataPlayerPane.Actions` ← `apps.sonata.audio.engine`
     - `sonataPlayerPane.Actions` ← `apps.sonata.audio.metronome`
@@ -222,6 +225,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/persistent-draft.useDraft`
     - `primitives/relative-time.formatRelativeTime`
     - `ui/icons.Icon`
+  - Exports (types): `SourceHydration`
   - Exports (values):
     - `Library`
     - `openSongImperative`
@@ -305,9 +309,11 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/sources/midi`
     - `apps/sonata/sources/midi/file-preview`
     - `apps/sonata/sources/midi/folders`
+    - `apps/sonata/sources/musicxml`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/sources/ultimate-guitar/alignment`
     - `apps/sonata/track-mixer`
+    - `apps/sonata/transcription`
     - `apps/sonata/transport-bar`
     - `apps/sonata/transpose`
   - Extended by:
@@ -315,8 +321,10 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/rich/chord-mode` (table `sonata_songs_ext_chord_mode`)
     - `apps/sonata/rich/key-mode` (table `sonata_songs_ext_key_auto_detect`)
     - `apps/sonata/sources/midi` (table `sonata_songs_ext_midi`)
+    - `apps/sonata/sources/musicxml` (table `sonata_songs_ext_musicxml`)
     - `apps/sonata/playback-history` (table `sonata_songs_ext_playback`)
     - `apps/sonata/rich/rhythm-controls` (table `sonata_songs_ext_rhythm`)
+    - `apps/sonata/transcription` (table `sonata_songs_ext_transcription`)
     - `apps/sonata/transpose` (table `sonata_songs_ext_transpose`)
     - `apps/sonata/sources/ultimate-guitar/alignment` (table `sonata_songs_ext_ug_alignment`)
     - `apps/sonata/sources/ultimate-guitar` (table `sonata_songs_ext_ultimate_guitar`)

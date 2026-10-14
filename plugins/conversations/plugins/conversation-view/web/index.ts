@@ -10,6 +10,7 @@ export {
   type ConversationOpener,
 } from "./use-conversation-opener";
 export { ConversationView } from "./components/conversation-view";
+export { useAttemptWorkspaceKind } from "./use-attempt-workspace-kind";
 export { draftToPlainText, isDraftEmpty } from "./prompt-draft-utils";
 export {
   usePromptComposer,

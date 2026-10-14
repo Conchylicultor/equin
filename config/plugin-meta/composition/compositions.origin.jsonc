@@ -1,4 +1,4 @@
-// @hash c72db557f1d9
+// @hash f3a7289a6898
 {
   "manifests": [
     {
@@ -122,7 +122,8 @@
       "category": "app",
       "entryPoints": [
         "apps.sonata.**",
-        "!apps.sonata.sources.midi.file-preview.**"
+        "!apps.sonata.sources.midi.file-preview.**",
+        "!apps.sonata.transcription.**"
       ],
       "selectedContributors": [],
       "extends": [

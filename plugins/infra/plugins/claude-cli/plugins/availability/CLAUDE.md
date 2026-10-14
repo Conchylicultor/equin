@@ -117,6 +117,7 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
 - Cross-plugin:
   - Imported by:
     - `apps/agent-manager/welcome`
+    - `apps/sonata/transcription`
     - `conversations`
     - `conversations/agents`
     - `conversations/model-provider/catalog`

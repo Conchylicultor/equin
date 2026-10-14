@@ -3,10 +3,10 @@ import { z } from "zod";
 /**
  * Why a conversation cannot be resumed right now.
  *
- * - `worktree-missing` — the git checkout the session must run in is gone. The
- *   branch and the on-disk transcript both survive; only the working copy was
- *   reclaimed. Recreating the checkout brings the conversation back, so this is
- *   a repairable condition, never a reason to consider the conversation over.
+ * - `workspace-missing` — the directory the session must run in is gone (a
+ *   worktree's checkout, a scratch workspace's dir). The on-disk transcript
+ *   survives; the message, written by the workspace kind, says how to bring the
+ *   directory back, so this is never a reason to consider the conversation over.
  * - `no-session` — no Claude session id was ever persisted, so there is no
  *   transcript for `claude --resume` to reattach to.
  * - `claude-code-unavailable` — Claude Code is not installed or not signed in
@@ -14,7 +14,7 @@ import { z } from "zod";
  *   message carries the command.
  */
 export const ResumeBlockedReasonSchema = z.enum([
-  "worktree-missing",
+  "workspace-missing",
   "no-session",
   "claude-code-unavailable",
 ]);

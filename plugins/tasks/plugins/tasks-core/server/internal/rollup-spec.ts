@@ -1,6 +1,6 @@
 import { defineRollup } from "@plugins/database/plugins/derived-tables/core";
 import { _attemptConvAgg, _attemptPushAgg } from "./rollup-table";
-import { _conversations, pushes } from "./tables";
+import { _attemptDeliveries, _conversations, pushes } from "./tables";
 
 // Trigger-maintained materialized rollups for `attempts_v`'s two per-attempt
 // aggregates. They hold the SAME aggregated columns the view's former inline
@@ -79,24 +79,37 @@ export const attemptConvAgg = defineRollup({
   ],
 });
 
-// ── attempt_push_agg (the per-attempt push aggregate) ────────────────────────
-// A row exists iff the attempt has ≥1 push. `has_push` is a constant `true`
-// marker — a missing row reads as NULL = "no push".
+// ── attempt_push_agg (the per-attempt LANDED aggregate) ──────────────────────
+// A row exists iff the attempt LANDED its work: a push (the worktree's
+// delivery: a commit on main) or a recorded delivery (`attempt_deliveries`,
+// what a workspace with no git — a scratch dir — hands over instead). Both are
+// facts the row proves, so every arm reading them keeps I6; a scratch attempt
+// never pushes, and without its delivery it could never be `completed`, nor its
+// task `done`. `has_push` is a constant `true` marker — a missing row reads as
+// NULL = "nothing landed"; `min_push_at` is the earliest landing of either
+// kind. (The names predate deliveries; the fact is "landed".)
 export const attemptPushAgg = defineRollup({
   table: _attemptPushAgg,
   key: _attemptPushAgg.attemptId,
   select: (scope) => `
-    SELECT p.attempt_id,
+    SELECT l.attempt_id,
            true AS has_push,
-           min(p.created_at) AS min_push_at
-      FROM pushes p
-     WHERE ${scope("p.attempt_id")}
-     GROUP BY p.attempt_id`,
+           min(l.landed_at) AS min_push_at
+      FROM (SELECT p.attempt_id, p.created_at AS landed_at FROM pushes p
+            UNION ALL
+            SELECT d.attempt_id, d.delivered_at FROM attempt_deliveries d) l
+     WHERE ${scope("l.attempt_id")}
+     GROUP BY l.attempt_id`,
   sources: [
     {
       table: pushes,
       carry: pushes.attemptId,
       reads: [pushes.createdAt],
+    },
+    {
+      table: _attemptDeliveries,
+      carry: _attemptDeliveries.attemptId,
+      reads: [_attemptDeliveries.deliveredAt],
     },
   ],
 });

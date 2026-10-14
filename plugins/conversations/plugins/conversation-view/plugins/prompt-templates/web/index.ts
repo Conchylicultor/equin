@@ -18,6 +18,7 @@ export default {
   contributions: [
     PromptEditorSlots.FloatingAction({
       id: "prompt-templates",
+      requires: [],
       component: FloatingTemplateChips,
     }),
     ConfigV2.WebRegister({ descriptor: promptTemplatesConfig }),

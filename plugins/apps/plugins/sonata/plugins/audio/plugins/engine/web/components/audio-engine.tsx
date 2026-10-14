@@ -2,7 +2,10 @@ import { useEffect, useMemo, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import type { SongSetting } from "@plugins/apps/plugins/sonata/plugins/document/web";
-import type { Score } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import {
+  swingScore,
+  type Score,
+} from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
   SonataAudio,
   type InstrumentVoices,
@@ -464,8 +467,12 @@ export function AudioEngine() {
       if (cancelled) return;
       // Joining the running timeline late (the load wait) drops the notes
       // that would now sound late, rather than bursting them out.
+      // The notes as PERFORMED: a swung score's off-beats delayed
+      // (`swingScore`, the identity when straight). Only the sound swings —
+      // notation, the cursor and the loop bounds stay on the straight grid.
+      const performed = swingScore({ ...scoreRef.current, notes: audibleNotes });
       handle = startScheduling(
-        { notes: audibleNotes, pedalEvents: scoreRef.current.pedalEvents },
+        { notes: performed.notes, pedalEvents: performed.pedalEvents },
         timeline,
         resolveVoices,
         ctx,

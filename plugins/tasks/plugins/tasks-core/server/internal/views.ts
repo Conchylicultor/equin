@@ -107,9 +107,14 @@ export const attempts = pgView("attempts_v").as((qb) => {
   // `dormant` out. views.test.ts asserts the equivalence over the whole status
   // truth table.
   const a = attemptDerived(rollupFacts);
+  // Every column but `workspace`, which is not part of `Attempt` (the
+  // `attempts` collection's row, pinned by C39): it is read on its own, from
+  // the `attemptWorkspaces` lookup or the table.
+  const { workspace: _workspace, ...attemptColumns } =
+    getTableColumns(_attempts);
   return qb
     .select({
-      ...getTableColumns(_attempts),
+      ...attemptColumns,
       status: a.status
         .mapWith(parsed(AttemptStatusSchema, "attempts_v.status"))
         .as("status"),

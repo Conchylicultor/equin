@@ -46,6 +46,8 @@ import {
   DEFAULT_MODEL_CHOICE,
   FALLBACK_MODEL,
 } from "@plugins/conversations/plugins/model-provider/core";
+import { installWorkspaceImpl } from "@plugins/conversations/plugins/workspace/server/testing";
+import { worktreeWorkspace } from "@plugins/conversations/plugins/workspace/plugins/worktree/server/testing";
 
 const MODEL = FALLBACK_MODEL;
 import { launchArmedTask, type IfAlreadyStarted } from "./auto-start-jobs";
@@ -63,6 +65,9 @@ let raceDb: NodePgDatabase;
 setDefaultTimeout(120_000);
 
 beforeAll(async () => {
+  // The commit enqueues the workspace's own job (a worktree's DB fork) through
+  // the registry, which no register phase fills here.
+  installWorkspaceImpl(worktreeWorkspace);
   t = await createTestDb({ prefix: "autolaunch_test" });
   await runMigrations(t.db);
   await installQueueSchema(t.connectionString);
@@ -119,7 +124,11 @@ function prepared(taskId: string): PreparedConversation {
     kind: "user",
     rawPrompt: "do the thing",
     prepromptId: undefined,
-    worktreePath: `/tmp/${attemptId}`,
+    workspace: {
+      attemptId,
+      path: `/tmp/${attemptId}`,
+      spec: { kind: "worktree" },
+    },
     target: { kind: "new", attemptId, taskId },
     create: {
       prompt: "do the thing",

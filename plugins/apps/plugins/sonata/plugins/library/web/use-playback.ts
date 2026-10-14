@@ -3,6 +3,8 @@ import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { useLoadDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Library } from "./slots";
+import { hydrateSources } from "./hydrate-sources";
+import { openSongImperative } from "./open-song";
 
 /**
  * Background playback for the library: play a song in place (no navigation) by
@@ -36,13 +38,13 @@ export function useSonataPlayback(): {
         return;
       }
       void (async () => {
-        const rawMap: Record<string, unknown> = {};
-        await Promise.all(
-          sources.map(async (s) => {
-            const raw = await s.hydrate(song.id);
-            if (raw !== undefined) rawMap[s.sourceId] = raw;
-          }),
-        );
+        const { rawMap, pending } = await hydrateSources(sources, song.id);
+        // A source still preparing this song: open the pane (which renders its
+        // Body) rather than play a score composed without it.
+        if (pending.length > 0) {
+          openSongImperative(song);
+          return;
+        }
         loadDocument({ kind: "library", songId: song.id }, rawMap);
         requestPlayOnLoad();
       })();

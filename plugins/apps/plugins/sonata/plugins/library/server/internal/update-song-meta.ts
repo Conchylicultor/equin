@@ -17,7 +17,7 @@ export interface UpdateSongMetaInput {
  * source persisting an edit syncs the parent row through here (recomputed
  * duration/endBeat, an edited title) rather than poking the table directly.
  *
- * Only the provided fields are written; the change-feed recomputes the live
+ * Only the provided fields are written (plus `sourcesChangedAt`); the change-feed recomputes the live
  * `songs` value, so the gallery (length, title) updates live.
  */
 export async function updateSongMeta(
@@ -28,7 +28,9 @@ export async function updateSongMeta(
   if (input.composer !== undefined) patch.composer = input.composer;
   if (input.durationSec !== undefined) patch.durationSec = input.durationSec;
   if (input.endBeat !== undefined) patch.endBeat = input.endBeat;
-  if (Object.keys(patch).length === 0) return;
+  // Every source write stamps the row, whether or not a field moved: the
+  // player re-hydrates on this (see `songFields.sourcesChangedAt`).
+  patch.sourcesChangedAt = new Date();
 
   await db.update(_songs).set(patch).where(eq(_songs.id, input.id));
 }

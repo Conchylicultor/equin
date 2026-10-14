@@ -1,4 +1,7 @@
-import { defineEntity, defaultNow } from "@plugins/infra/plugins/entities/server";
+import {
+  defineEntity,
+  defaultNow,
+} from "@plugins/infra/plugins/entities/server";
 import { songFields } from "../../core/schemas";
 
 // Physical table — **source-agnostic** generic metadata only. Per-source raw
@@ -18,6 +21,7 @@ const songs = defineEntity("sonata_songs", songFields, {
   columns: {
     // Score-level (composed-timeline) length columns carry no DB default.
     createdAt: { default: defaultNow() },
+    sourcesChangedAt: { default: defaultNow() },
   },
 });
 

@@ -30,6 +30,7 @@ that settles would stop retrying and would render as a permanent answer.
 - Server:
   - Contributes: `resource.declare` "edited-files"
   - Uses:
+    - `conversations/workspace.findWorkspaceOfConversation`
     - `infra/git/checkout-watch.acquireCheckoutWatch`
     - `infra/git/git-read-cache.createSignedMemo`
     - `infra/host/host-read-pool.withHeavyReadSlot`
@@ -38,7 +39,6 @@ that settles would stop retrying and would render as a permanent answer.
     - `primitives/commit-list.parseDiffNumstatZ`
     - `primitives/commit-list.runGit`
     - `primitives/commit-list.WorktreeGoneError`
-    - `tasks/tasks-core.getConversation`
   - Exports (values):
     - `editedFilesServed`
     - `editedFilesSignature`

@@ -368,7 +368,7 @@ export function mergeScores(scores: Score[]): Score {
   if (scores.length === 1) return scores[0]!;
 
   const out = emptyScore();
-  // Take title/key/pickup from the first score that declares each.
+  // Take title/key/pickup/swing from the first score that declares each.
   for (const s of scores) {
     if (out.meta.title === undefined && s.meta.title !== undefined)
       out.meta.title = s.meta.title;
@@ -376,6 +376,8 @@ export function mergeScores(scores: Score[]): Score {
       out.meta.key = s.meta.key;
     if (out.meta.pickupBeats === undefined && s.meta.pickupBeats !== undefined)
       out.meta.pickupBeats = s.meta.pickupBeats;
+    if (out.meta.swing === undefined && s.meta.swing !== undefined)
+      out.meta.swing = s.meta.swing;
   }
   // Tempo / time-sig maps come from the first score that has them — overlaying
   // independent tempo maps is ill-defined, so we don't guess. The recording

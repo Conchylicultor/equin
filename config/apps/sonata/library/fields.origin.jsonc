@@ -1,4 +1,4 @@
-// @hash d88a92a99bd5
+// @hash f8a55d20dfd4
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -9,6 +9,7 @@
   "items": [
     "apps.sonata.playback-history:playback",
     "apps.sonata.sources.midi:midi",
-    "apps.sonata.sources.midi.folders:source-missing"
+    "apps.sonata.sources.midi.folders:source-missing",
+    "apps.sonata.transcription:transcription"
   ]
 }

@@ -19,6 +19,7 @@
     - `apps/pages/page-tree`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/sources/ultimate-guitar/alignment`
+    - `apps/sonata/transcription`
     - `apps/website/improve`
     - `build`
     - `conversations/conversation-view/op-status`

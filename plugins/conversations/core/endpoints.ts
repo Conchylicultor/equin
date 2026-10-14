@@ -2,6 +2,7 @@ import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { ConversationSchema } from "@plugins/tasks/plugins/tasks-core/core";
 import { ModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
+import { WorkspaceSpecSchema } from "@plugins/conversations/plugins/workspace/core";
 
 // --- Body schemas ---
 
@@ -20,6 +21,9 @@ export const CreateConversationBodySchema = z
     // With `forkFromConversationId`: fork from just before this user message (its
     // transcript line uuid, carried by the `user-text` row) rather than the end.
     forkAtMessageUuid: z.string().optional(),
+    // Where a NEW attempt runs (default: a worktree). A scratch spec's input is
+    // validated by its profile when the attempt is created.
+    workspace: WorkspaceSpecSchema.optional(),
   })
   .refine((b) => !b.forkAtMessageUuid || !!b.forkFromConversationId, {
     message: "forkAtMessageUuid requires forkFromConversationId",

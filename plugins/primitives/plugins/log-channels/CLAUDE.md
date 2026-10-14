@@ -198,12 +198,12 @@ count accumulates across drops.
     - `getLogChannels`
     - `MAX_EMIT_LINES`
 - Cross-plugin:
-  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 54 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×12
     - `apps` ×9
     - `infra` ×8
     - `database` ×7
-    - `conversations` ×3
+    - `conversations` ×4
     - `build` ×2
     - `tasks` ×2
     - `backup`

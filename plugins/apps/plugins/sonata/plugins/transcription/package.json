@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-sonata-transcription",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Sonata transcription: the `st` agent toolkit (fetch a video, extract its sheet-music frames, render PDF pages, engrave MusicXML, compare) from the on-demand `sonata-transcription` Python dependency."
+}

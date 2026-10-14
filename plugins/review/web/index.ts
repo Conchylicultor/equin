@@ -14,7 +14,11 @@ export default {
     "Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.",
   contributions: [
     Pane.Register({ pane: convReviewPane }),
-    Conversation.ActionBar({ id: "review", component: ReviewButton }),
+    Conversation.ActionBar({
+      id: "review",
+      requires: ["git"],
+      component: ReviewButton,
+    }),
   ],
   slots: { ...Review, "conv-review": convReviewPane },
 } satisfies PluginDefinition;

@@ -270,27 +270,32 @@ serves them.
     - `useTaskAttempts`
     - `useTaskConversations`
 - Server:
-  - Contributes: 26 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `resource.declare` ×17
+  - Contributes: 27 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `resource.declare` ×18
     - `derived-view` ×4
     - `ids.kind` ×3
     - `derived-table` ×2
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/rank` ×3
-    - `database/sql-projection` ×2
-    - `infra/entities` ×2
-    - `infra/git/git-watcher` ×2
-    - `infra/worktree` ×2
+  - Uses:
+    - `database.db`
     - `database/derived-tables.DerivedTable`
     - `database/derived-views.View`
-    - `database.db`
+    - `database/sql-projection.nullable`
+    - `database/sql-projection.parsed`
     - `ids.IdKinds`
     - `infra/attachments.Attachments`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
     - `infra/events.defineTriggerEvent`
     - `infra/git/git-read-cache.createSignedMemo`
+    - `infra/git/git-watcher.defineRefReaction`
+    - `infra/git/git-watcher.lastKnownMainSha`
     - `infra/host/host-read-pool.withHeavyReadSlot`
+    - `infra/worktree.ensureMainWorktreeRoot`
     - `network/live.serveCollection`
     - `primitives/commit-list.runGit`
+    - `primitives/rank.nextRankUnder`
+    - `primitives/rank.RankExecutor`
+    - `primitives/rank.withRank`
   - DB schema:
     - `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`
@@ -382,6 +387,7 @@ serves them.
     - `pushLanded`
     - `PushSchema`
     - `RECENT_GONE_LIMIT`
+    - `recordScratchDelivery`
     - `removeTaskDependency`
     - `setConversationHibernated`
     - `taskAttachments`
@@ -406,6 +412,7 @@ serves them.
     - `defineTriggerEvent('conversation.statusChanged')`
     - `defineRefReaction('tasks.push-ledger (refs/heads/main)')`
   - Resources:
+    - `attempt-workspaces:rows` (keyed, point)
     - `attempts` (keyed)
     - `attempts:rows` (keyed, point)
     - `conversations-active` (keyed)
@@ -424,23 +431,19 @@ serves them.
     - `tasks` (keyed)
     - `tasks:rows` (keyed, point)
 - Core:
-  - Uses:
-    - `conversations/model-provider.FALLBACK_MODEL`
-    - `conversations/model-provider.StoredModelSchema`
-    - `conversations/terminal-menu.TerminalMenu`
-    - `conversations/terminal-menu.TerminalMenuSchema`
-    - `fields.fieldsToZodObject`
-    - `fields.nullable`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations/workspace` ×3
+    - `fields/text/config` ×3
+    - `conversations/model-provider` ×2
+    - `conversations/terminal-menu` ×2
+    - `fields` ×2
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
     - `fields/json/config.jsonField`
     - `fields/rank/config.rankField`
-    - `fields/text/config.enumTextField`
-    - `fields/text/config.parsedTextField`
-    - `fields/text/config.textField`
     - `infra/entities.entityRef`
-    - `network/live.liveCollection`
     - `network/live/filter.liveText`
+    - `network/live.liveCollection`
     - `primitives/pane.defineRoute`
     - `primitives/rank.RankSchema`
   - Exports (types):
@@ -463,6 +466,7 @@ serves them.
     - `AttemptSchema`
     - `attemptsEntityRef`
     - `AttemptStatusSchema`
+    - `attemptWorkspaces`
     - `BLOCKED_STATUSES`
     - `buildTaskPrompt`
     - `CONVERSATION_TRAILER_KEY`
@@ -494,13 +498,14 @@ serves them.
     - `TaskStatusSchema`
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
-  - Imported by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 63 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×26
     - `tasks` ×14
     - `debug` ×6
     - `active-data` ×5
     - `page` ×3
     - `stats` ×2
+    - `apps/sonata/transcription`
     - `backup/sources/transcripts`
     - `code-explorer`
     - `database/query`

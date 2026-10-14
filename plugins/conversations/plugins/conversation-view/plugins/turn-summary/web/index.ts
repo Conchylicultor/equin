@@ -8,7 +8,11 @@ export default {
   description:
     "Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions.",
   contributions: [
-    Conversation.AbovePromptInput({ id: "turn-summary", component: TurnSummaryCard }),
+    Conversation.AbovePromptInput({
+      id: "turn-summary",
+      requires: [],
+      component: TurnSummaryCard,
+    }),
     ConfigV2.WebRegister({ descriptor: turnSummaryConfig }),
   ],
 } satisfies PluginDefinition;

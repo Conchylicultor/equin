@@ -14,6 +14,7 @@ export interface CollectedEntry {
 
 export const depsEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/chord/plugins/song-index", id: "apps.chord.song-index", loader: () => import("@plugins/apps/plugins/chord/plugins/song-index/deps"), dependsOn: [] },
+  { pluginPath: "apps/plugins/sonata/plugins/transcription", id: "apps.sonata.transcription", loader: () => import("@plugins/apps/plugins/sonata/plugins/transcription/deps"), dependsOn: [] },
   { pluginPath: "infra/plugins/audio-analysis", id: "infra.audio-analysis", loader: () => import("@plugins/infra/plugins/audio-analysis/deps"), dependsOn: [] },
   { pluginPath: "infra/plugins/launcher", id: "infra.launcher", loader: () => import("@plugins/infra/plugins/launcher/deps"), dependsOn: [] },
   { pluginPath: "infra/plugins/safe-fetch/plugins/browser-fetch", id: "infra.safe-fetch.browser-fetch", loader: () => import("@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps"), dependsOn: [] },

@@ -17,6 +17,7 @@ import {
   type Conversation,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
+import { Workspace } from "@plugins/conversations/plugins/workspace/server";
 import { recordReport } from "@plugins/reports/server";
 import { isTransientDbError } from "@plugins/database/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -267,9 +268,21 @@ async function adopt(
   plan: Extract<UpdatePlan, { kind: "adopt" }>,
 ): Promise<void> {
   try {
+    // Never adopt a session whose cwd is not a workspace of a registered kind
+    // (`<root of its kind>/<id>`). Stray sessions started in /tmp or the repo
+    // root are not Singularity attempts; adopting them would synthesize a
+    // phantom attempt row no reaper can ever act on.
+    const workspace = await Workspace.resolvePath(info.worktreePath);
+    if (workspace === "none") return;
     const adopted = await adoptOrphanConversation({
       id,
-      worktreePath: info.worktreePath,
+      workspace: {
+        attemptId: workspace.attemptId,
+        path: info.worktreePath,
+        // A worktree is fully described by its kind; a scratch workspace's
+        // profile and input live only on its attempt row.
+        spec: workspace.kind === "worktree" ? { kind: "worktree" } : null,
+      },
       runtimeId: info.runtime,
       status: plan.status,
       title: plan.title,

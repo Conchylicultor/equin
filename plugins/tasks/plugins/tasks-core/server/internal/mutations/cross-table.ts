@@ -9,11 +9,7 @@ import { listActiveConversations } from "../queries/conversations";
 import { insertConversationRow } from "./conversations";
 import { updateTask } from "./tasks";
 import type { DbExecutor } from "../status-batch";
-import {
-  ensureMainWorktreeRoot,
-  isCanonicalWorktreePath,
-} from "@plugins/infra/plugins/worktree/server";
-import path from "path";
+import type { WorkspaceSpec } from "@plugins/conversations/plugins/workspace/core";
 import { ADOPTED_SPAWNED_BY } from "../../../core/adopted";
 import { taskIdKind } from "@plugins/tasks/plugins/task-ids/core";
 
@@ -51,7 +47,21 @@ export async function dropTaskIfNoActiveSibling(
 
 export interface AdoptOrphanInput {
   id: string;
-  worktreePath: string;
+  /**
+   * The session's workspace, resolved by the caller from its cwd
+   * (conversations/workspace's `Workspace.resolvePath`): `path ===
+   * Workspace.pathFor(kind, attemptId)`, the invariant the rest of the system
+   * relies on (e.g. the "Open app" button). A cwd that is no workspace is not
+   * adopted at all — never handed here. `spec` is what a synthesized attempt
+   * records, or null when the kind cannot be described from the path alone (a
+   * scratch profile lives only on its attempt row): then only an existing
+   * attempt is linked.
+   */
+  workspace: {
+    attemptId: string;
+    path: string;
+    spec: WorkspaceSpec | null;
+  };
   runtimeId: string;
   status: "starting" | "working" | "waiting" | "gone" | "done";
   title?: string | null;
@@ -84,29 +94,19 @@ type AdoptedRow = NonNullable<
 //
 // `input.id` is forced to be the conversation id because the status reconciler matches
 // live tmux sessions to DB rows by id (the tmux session name is fixed once
-// spawned). The attempt id is derived from the worktree basename so that
-// `basename(attempt.worktreePath) === attempt.id` — the invariant the rest of
-// the system relies on (e.g. the "Open app" button).
+// spawned). The attempt id is the one the caller derived from the workspace
+// path (see `AdoptOrphanInput.workspace`).
 
 // Returns the adopted conversation row plus the id of the task this call
 // synthesized (null when the conversation was linked to an existing attempt's
 // task) — the caller stamps the new task's category, which lives in a plugin
 // tasks-core cannot import.
 export async function adoptOrphanConversation(input: AdoptOrphanInput) {
-  // Never adopt a tmux session whose worktree is not a canonical agent worktree
-  // (`<root>/.claude/worktrees/<id>`). Stray sessions started in /tmp or the
-  // repo root are not Singularity attempts; adopting them would synthesize a
-  // phantom attempt row with a non-canonical worktree_path that the
-  // worktree-cleanup reaper can never act on. Returning null = not adopted; the
-  // status reconciler treats this exactly like any other un-adopted orphan and moves on.
-  const repoRoot = await ensureMainWorktreeRoot();
-  if (!isCanonicalWorktreePath(input.worktreePath, repoRoot)) return null;
+  const { attemptId, path: worktreePath, spec } = input.workspace;
 
   let inserted = false;
   let createdTaskId: string | null = null;
   const taskId = taskIdKind.mint();
-  // Derive attempt id from the worktree directory name so basename(worktreePath) === attemptId.
-  const attemptId = path.basename(input.worktreePath);
 
   // The attempt may already exist (e.g. the conversation was originally
   // created on a worktree server, so the attempt row is in the main DB
@@ -117,6 +117,14 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
     .from(_attempts)
     .where(eq(_attempts.id, attemptId))
     .limit(1);
+  const link = existing
+    ? { kind: "existing" as const, taskId: existing.taskId }
+    : spec
+      ? { kind: "new" as const, spec }
+      : null;
+  // Returning null = not adopted; the status reconciler treats this exactly
+  // like any other un-adopted orphan and moves on.
+  if (!link) return null;
 
   const conversationValues = {
     id: input.id,
@@ -129,8 +137,8 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
   };
   await db.transaction(async (tx) => {
     let rowTaskId: string;
-    if (existing) {
-      rowTaskId = existing.taskId;
+    if (link.kind === "existing") {
+      rowTaskId = link.taskId;
     } else {
       const rank = await findNextRankInFolder(null, tx);
       await tx.insert(_tasks).values({
@@ -138,9 +146,12 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
         title: input.title?.trim() || "Untitled",
         rank: rank.toJSON(),
       });
-      await tx
-        .insert(_attempts)
-        .values({ id: attemptId, taskId, worktreePath: input.worktreePath });
+      await tx.insert(_attempts).values({
+        id: attemptId,
+        taskId,
+        worktreePath,
+        workspace: link.spec,
+      });
       rowTaskId = taskId;
     }
     const row = await insertConversationRow(tx, conversationValues, {
@@ -148,7 +159,7 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
     });
     if (!row) return;
     inserted = true;
-    if (!existing) createdTaskId = taskId;
+    if (link.kind === "new") createdTaskId = taskId;
     await input.onAdopted(tx, { conversation: row, taskId: rowTaskId });
   });
   if (!inserted) return null;

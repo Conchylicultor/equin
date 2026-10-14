@@ -17,6 +17,11 @@ import {
   FALLBACK_MODEL,
   StoredModelSchema,
 } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  DEFAULT_WORKSPACE,
+  WorkspaceSpecSchema,
+  type WorkspaceSpec,
+} from "@plugins/conversations/plugins/workspace/core";
 import { ConversationStatusSchema } from "../conversation-status";
 
 // Web-safe field records for the tasks / attempts / task_dependencies / pushes /
@@ -57,9 +62,17 @@ export const taskFields = {
 export const attemptFields = {
   id: textField(),
   taskId: textField(),
+  // The attempt's workspace directory — `<root of its kind>/<id>`. Named for
+  // the worktree, the first kind; every kind honours the same shape.
   worktreePath: textField(),
   createdAt: dateField(),
   updatedAt: dateField(),
+  // Where the attempt's conversations run (conversations/workspace). Rows
+  // written before the column existed are worktrees (the DB default).
+  workspace: jsonField<WorkspaceSpec>({
+    schema: WorkspaceSpecSchema,
+    default: DEFAULT_WORKSPACE,
+  }),
 } satisfies FieldsRecord;
 
 export const taskDependencyFields = {
@@ -77,6 +90,19 @@ export const pushFields = {
   pushId: textField(),
   message: textField(),
   createdAt: dateField(),
+} satisfies FieldsRecord;
+
+// An attempt's DELIVERY that is not a push: a workspace with no git (a scratch
+// dir) records the moment its agent handed its work over. One row per attempt
+// (the first delivery's instant; a later one replaces the summary). With the
+// pushes it is the "landed" fact `attempts_v` reads (rollup-spec.ts) — a fact,
+// never a claimed status (I6).
+export const attemptDeliveryFields = {
+  attemptId: textField(),
+  // Soft attribution to the conversation that delivered (no FK), like pushes.
+  conversationId: textField(),
+  summary: textField(),
+  deliveredAt: dateField(),
 } satisfies FieldsRecord;
 
 export const conversationFields = {

@@ -59,6 +59,7 @@
     - `ConversationView`
     - `draftToPlainText`
     - `isDraftEmpty`
+    - `useAttemptWorkspaceKind`
     - `useConversationOpener`
     - `usePromptComposer`
     - `useRegisterPromptComposer`

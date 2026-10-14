@@ -489,11 +489,11 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `validationIssues`
     - `withOverrideLegend`
 - Cross-plugin:
-  - Imported by: 103 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 104 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×23
     - `debug` ×14
     - `backup` ×13
-    - `conversations` ×12
+    - `conversations` ×13
     - `ui` ×11
     - `auth` ×5
     - `tasks` ×4

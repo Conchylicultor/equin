@@ -5,5 +5,13 @@ import { ForkConversationButtons } from "./components/fork-conversation-buttons"
 export default {
   description:
     "Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.",
-  contributions: [Conversation.PromptBar({ id: "fork-conversation", component: ForkConversationButtons, section: "New", sectionOrder: 1 })],
+  contributions: [
+    Conversation.PromptBar({
+      id: "fork-conversation",
+      requires: [],
+      component: ForkConversationButtons,
+      section: "New",
+      sectionOrder: 1,
+    }),
+  ],
 } satisfies PluginDefinition;

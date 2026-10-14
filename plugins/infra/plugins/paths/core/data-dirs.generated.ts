@@ -24,6 +24,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "conversations/plugins/conversation-view/plugins/rewind", id: "conversations.conversation-view.rewind", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/rewind/data-dirs"), dependsOn: [] },
   { pluginPath: "conversations/plugins/model-provider/plugins/catalog", id: "conversations.model-provider.catalog", loader: () => import("@plugins/conversations/plugins/model-provider/plugins/catalog/data-dirs"), dependsOn: [] },
   { pluginPath: "conversations/plugins/runtime-tmux", id: "conversations.runtime-tmux", loader: () => import("@plugins/conversations/plugins/runtime-tmux/data-dirs"), dependsOn: [] },
+  { pluginPath: "conversations/plugins/workspace/plugins/scratch", id: "conversations.workspace.scratch", loader: () => import("@plugins/conversations/plugins/workspace/plugins/scratch/data-dirs"), dependsOn: [] },
   { pluginPath: "database", id: "database", loader: () => import("@plugins/database/data-dirs"), dependsOn: [] },
   { pluginPath: "database/plugins/embedded", id: "database.embedded", loader: () => import("@plugins/database/plugins/embedded/data-dirs"), dependsOn: [] },
   { pluginPath: "debug", id: "debug", loader: () => import("@plugins/debug/data-dirs"), dependsOn: [] },

@@ -163,7 +163,12 @@ describe('unresolvable worktree — one consistent (unresolved, "no-worktree") p
     const convId = `edited-files-reaped-conv-${stamp}`;
     seededTasks.push(taskId);
     await createTask({ id: taskId, title: "reaped-worktree fixture" });
-    await createAttempt({ id: attemptId, taskId, worktreePath: goneWorktree });
+    await createAttempt({
+      id: attemptId,
+      taskId,
+      worktreePath: goneWorktree,
+      workspace: { kind: "worktree" },
+    });
     await insertConversation({
       id: convId,
       attemptId,

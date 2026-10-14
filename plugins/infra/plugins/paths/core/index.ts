@@ -11,6 +11,7 @@ export {
   WORKTREE_SPEC_FILE,
   CLAUDE_DIR,
   CLAUDE_PROJECTS_DIR,
+  CLAUDE_USER_CONFIG,
   CLAUDE_SESSIONS_DIR,
   isRelease,
   isHostSingleton,

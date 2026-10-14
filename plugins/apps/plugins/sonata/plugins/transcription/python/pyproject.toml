@@ -1,0 +1,22 @@
+# The Sonata transcription toolkit (`st`): yt-dlp to fetch, PyAV + numpy to find
+# and sample the sheet region, pypdfium2 for PDF pages, verovio + resvg-py to
+# engrave MusicXML (pure wheels, no system cairo), pillow to compare. Installed
+# on first use as the `sonata-transcription` dependency, run from the checkout.
+[project]
+name = "sonata-transcription"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = [
+  "yt-dlp",
+  "av",
+  "numpy",
+  "pillow",
+  "pypdfium2",
+  "verovio",
+  "resvg-py",
+]
+
+[tool.uv]
+# Not a package: its source runs from the checkout (PYTHONPATH), never
+# installed into the shared env.
+package = false

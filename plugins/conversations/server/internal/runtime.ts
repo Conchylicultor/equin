@@ -3,6 +3,7 @@ import type { ConversationModel } from "@plugins/conversations/plugins/model-pro
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import { getConversationRuntime } from "@plugins/tasks/plugins/tasks-core/server";
 import type { TerminalMenu } from "@plugins/conversations/plugins/terminal-menu/core";
+import type { LaunchFragment } from "@plugins/conversations/plugins/workspace/server";
 import { resolveConversationTranscriptPaths } from "@plugins/conversations/plugins/transcript-watcher/server";
 import {
   readTurnsFromChain,
@@ -56,9 +57,16 @@ export type RuntimeSignal =
 
 export interface ConversationRuntime {
   readonly id: string;
+  /**
+   * Start a session in `cwd` (the attempt's workspace). `launch` is the
+   * workspace's addition to the CLI launch — appended argv and a settings
+   * fragment the runtime merges into its own; the runtime knows nothing else
+   * about the workspace.
+   */
   create(
     conversationId: string,
-    worktreePath: string,
+    cwd: string,
+    launch: LaunchFragment,
     opts?: {
       prompt?: string;
       model?: ConversationModel;

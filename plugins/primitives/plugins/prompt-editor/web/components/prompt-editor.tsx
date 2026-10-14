@@ -11,6 +11,10 @@ import {
   useTakeMarkdownWith,
 } from "@plugins/primitives/plugins/text-editor/web";
 import { AttachFilesButton } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
+import {
+  workspaceAllows,
+  type WorkspaceKindState,
+} from "@plugins/conversations/plugins/workspace/core";
 import { PromptEditorSlots } from "../slots";
 
 type FloatingActionItem = Parameters<
@@ -35,21 +39,32 @@ export function PromptEditor(props: {
   namespace?: string;
   onError?: (msg: string) => void;
   insertRef?: React.MutableRefObject<((text: string) => void) | null>;
+  /** The conversation's workspace: gates each action's `requires`. */
+  workspace: WorkspaceKindState;
 }) {
+  const { workspace, ...editorProps } = props;
   return (
     <TextEditor
-      {...props}
-      bottomSlot={<ToolbarRow onError={props.onError} />}
+      {...editorProps}
+      bottomSlot={<ToolbarRow onError={props.onError} workspace={workspace} />}
     />
   );
 }
 
 const disabledPartCls = "opacity-50 pointer-events-none select-none";
 
-function ToolbarRow({ onError }: { onError?: (msg: string) => void }) {
+function ToolbarRow({
+  onError,
+  workspace,
+}: {
+  onError?: (msg: string) => void;
+  workspace: WorkspaceKindState;
+}) {
   const [editor] = useLexicalComposerContext();
   const [editable, setEditable] = useState(() => editor.isEditable());
-  const items = PromptEditorSlots.FloatingAction.useContributions();
+  const items = PromptEditorSlots.FloatingAction.useContributions().filter(
+    (i) => workspaceAllows(workspace, i.requires),
+  );
 
   useEffect(() => {
     return editor.registerEditableListener(setEditable);
@@ -76,6 +91,7 @@ function ToolbarRow({ onError }: { onError?: (msg: string) => void }) {
 
   const renderItem = useCallback(
     (item: FloatingActionItem) => {
+      if (!workspaceAllows(workspace, item.requires)) return null;
       const dimmed =
         !editable && !item.alwaysActive ? disabledPartCls : undefined;
       const action = (
@@ -99,7 +115,7 @@ function ToolbarRow({ onError }: { onError?: (msg: string) => void }) {
         </GrowRelay>
       );
     },
-    [editable, insertText, takeDraftWith],
+    [editable, insertText, takeDraftWith, workspace],
   );
 
   const hasAlwaysActive = !editable && items.some((i) => i.alwaysActive);

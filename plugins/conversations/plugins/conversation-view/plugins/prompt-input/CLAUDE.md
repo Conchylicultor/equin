@@ -18,6 +18,7 @@ renders as a pending-turn card in the transcript, never as a restored draft.
     - `conversations.useLiveConversation`
     - `conversations/conversation-view.Conversation`
     - `conversations/conversation-view.isDraftEmpty`
+    - `conversations/conversation-view.useAttemptWorkspaceKind`
     - `conversations/conversation-view.useRegisterPromptComposer`
     - `conversations/conversation-view/pending-turn.sendConversationTurn`
     - `primitives/latest-ref.useLatestRef`

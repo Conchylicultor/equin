@@ -1,10 +1,8 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { recordReport } from "@plugins/reports/server";
-import { getConfig } from "@plugins/config_v2/server";
-import { setupWorktree } from "@plugins/infra/plugins/worktree/server";
-import { spareRefillJob } from "@plugins/infra/plugins/worktree/plugins/spare-pool/server";
-import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
+import { WorkspaceSpecSchema } from "@plugins/conversations/plugins/workspace/core";
+import { Workspace } from "@plugins/conversations/plugins/workspace/server";
 import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { EffortLevelSchema } from "@plugins/conversations/plugins/effort-provider/core";
 import { ClaudeCodeUnavailableError } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
@@ -15,32 +13,33 @@ import { emitDelivered, launchWithHeldTurn } from "./held-turns";
 // enqueue is a committed graphile-worker row, so an interrupted spawn (backend
 // restart mid-checkout, or a crash between `tmux new-session` and the job
 // commit) re-runs when the worker reboots instead of leaving the conversation
-// stuck `starting` with no session. Both steps are idempotent — `setupWorktree`
-// no-ops once the worktree dir exists and `runtime.create` no-ops once a live
-// session exists — which is the precondition that makes durable retry safe.
+// stuck `starting` with no session. Both steps are idempotent — the workspace's
+// `prepare` (`setupWorktree` no-ops once the worktree dir exists) and
+// `runtime.create` (no-ops once a live session exists) — which is the
+// precondition that makes durable retry safe.
 //
-// Kept SEPARATE from `databaseForkJob` and enqueued alongside it: the spawn does
-// NOT depend on the DB fork (the tmux session only launches the `claude` CLI,
-// whose first worktree-DB op happens later at MCP/build time), so the checkout
-// and `pg_restore` run in parallel keyed by the same natural id.
+// Kept SEPARATE from whatever the workspace enqueued on commit (a worktree's
+// `databaseForkJob`): the spawn does not depend on it, so they run in parallel.
 export const spawnConversationJob = defineJob({
   name: "conversations.spawn",
   description:
-    "Creates the git worktree and starts the agent session for a new conversation.",
-  // minutes: `setupWorktree` is a `git worktree add` checkout and
+    "Prepares the workspace (the git worktree) and starts the agent session for a new conversation.",
+  // minutes: preparing a worktree is a `git worktree add` checkout and
   // `runtime.create` opens a tmux session running the `claude` CLI. Nothing
   // shorter than the work bounds either.
   hold: "minutes",
   inProcess:
-    "Both steps are idempotent — `setupWorktree` no-ops once the checkout exists " +
+    "Both steps are idempotent — the workspace's prepare no-ops once the checkout exists " +
     "and `runtime.create` no-ops once a live session exists — so a spawn killed " +
     "by a restart simply re-runs and skips whatever already landed.",
   input: z.object({
     conversationId: z.string(),
     attemptId: z.string(),
     worktreePath: z.string(),
+    // Defaulted for a job enqueued before the field existed: every one of those
+    // was a worktree launch.
+    workspace: WorkspaceSpecSchema.default({ kind: "worktree" }),
     runtimeId: z.string(),
-    needsWorktreeSetup: z.boolean(),
     create: z.object({
       prompt: z.string().optional(),
       model: ConversationModelSchema,
@@ -59,43 +58,24 @@ export const spawnConversationJob = defineJob({
       conversationId,
       attemptId,
       worktreePath,
+      workspace: spec,
       runtimeId,
-      needsWorktreeSetup,
       create,
     },
     ctx: { signal },
   }) => {
+    const at = { attemptId, path: worktreePath, spec };
+    const workspace = Workspace.get(spec.kind);
     // Which step threw, for the report: the checkout and the session start fail
-    // for different reasons and are fixed in different places.
+    // for different reasons and are fixed in different places. ("worktree"
+    // names the workspace's `prepare`, the value stored report rows carry.)
     let step: "worktree" | "runtime" = "worktree";
     try {
-      // `setupWorktree` (git worktree add) MUST precede `runtime.create`: tmux's
-      // `-c <worktreePath>` needs the dir to exist. Both are idempotent, so a
-      // mid-step crash re-runs the whole body safely.
-      if (needsWorktreeSetup) {
-        // A checkout claims the namespace of its own name, so `setupWorktree`
-        // refuses one a composition already holds. The manifest is read through
-        // the config registry (the live view, so a Studio edit counts) here
-        // rather than inside `infra/worktree`, which must stay importable from
-        // the CLI — `config_v2/server` throws at module eval without a worktree
-        // identity.
-        //
-        // `signal` is this dispatch's deadline. It reaches the host-wide
-        // `worktree-mutate` gate and every git child underneath, so a checkout
-        // that overruns stops holding one of the box's three worktree slots
-        // instead of blocking checkouts on every other backend until the process
-        // restarts (the 2026-08-17 shape).
-        const { source } = await setupWorktree(
-          attemptId,
-          worktreePath,
-          new Set(getConfig(compositionsConfig).manifests.map((m) => m.id)),
-          signal,
-        );
-        // A checkout was made — from a spare (the pool is now one short) or
-        // cold (the pool was empty) — so top the pool back up for the next
-        // launch. Off the launch path: the refill is its own background job.
-        if (source !== "existing") await spareRefillJob.enqueue({});
-      }
+      // The workspace's `prepare` (git worktree add) MUST precede
+      // `runtime.create`: tmux's `-c <worktreePath>` needs the dir to exist.
+      // Both are idempotent, so a mid-step crash re-runs the whole body safely.
+      // `signal` is this dispatch's deadline, handed down to the work.
+      await workspace.prepare(at, signal);
       step = "runtime";
       const runtime = Runtime.get(runtimeId);
       // A retry whose earlier attempt already started the session: `create`
@@ -110,7 +90,12 @@ export const spawnConversationJob = defineJob({
           conversationId,
           create.prompt,
           (prompt) =>
-            runtime.create(conversationId, worktreePath, { ...create, prompt }),
+            runtime.create(
+              conversationId,
+              worktreePath,
+              workspace.launch(at, { conversationId }),
+              { ...create, prompt },
+            ),
         );
         if (delivered) await emitDelivered(conversationId, [delivered]);
       }

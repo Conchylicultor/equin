@@ -7,6 +7,7 @@ import {
   ConversationSchema,
 } from "./internal/schema";
 import { AttemptWithConversationsSchema } from "./schemas";
+import { WorkspaceSpecSchema } from "@plugins/conversations/plugins/workspace/core";
 import { tasksEntityRef } from "./entity-refs";
 
 // The `conversations-gone` window's default size (the newest ended
@@ -101,6 +102,17 @@ export const attemptRows = liveCollection("attempts", {
     },
   },
   preload: "boot",
+});
+// One attempt's workspace (conversations/workspace: a worktree, or a scratch
+// dir and its profile) by attempt id — lookup-only, read with
+// `useLiveRow(attemptWorkspaces, attemptId)` by the surfaces that gate on
+// what the workspace offers (the conversation pane's git surfaces). Its own
+// key rather than a field of `attempts`, whose row C39 pins. Served over the
+// `attempts` table in `../server/internal/resources.ts`; the column is written
+// once, at insert.
+export const attemptWorkspaces = liveCollection("attempt-workspaces", {
+  row: z.object({ id: z.string(), workspace: WorkspaceSpecSchema }),
+  id: "id",
 });
 // The `pushes` ledger as a live collection: one row per landed commit sha.
 // Every push surface is attempt-scoped, so it reads ONE attempt's rows —

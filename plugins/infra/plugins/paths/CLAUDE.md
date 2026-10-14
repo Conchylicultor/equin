@@ -284,6 +284,7 @@ run everywhere.
     - `CLAUDE_DIR`
     - `CLAUDE_PROJECTS_DIR`
     - `CLAUDE_SESSIONS_DIR`
+    - `CLAUDE_USER_CONFIG`
     - `DATA_DIR_KINDS`
     - `dataRoot`
     - `defineAppDataDir`
@@ -314,12 +315,12 @@ run everywhere.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
-  - Imported by: 55 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 56 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×10
     - `infra` ×8
     - `build` ×7
+    - `conversations` ×5
     - `backup` ×4
-    - `conversations` ×4
     - `framework` ×4
     - `primitives` ×3
     - `release` ×3

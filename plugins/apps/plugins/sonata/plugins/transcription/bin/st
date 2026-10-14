@@ -1,0 +1,7 @@
+#!/bin/sh
+# The `st` executable. ST_PYTHON is the installed `sonata-transcription` env's
+# python (<ready.dir>/bin/python); the source runs from this checkout.
+set -eu
+here=$(cd "$(dirname "$0")" && pwd)
+: "${ST_PYTHON:?ST_PYTHON must be the sonata-transcription env python: ensureDep(transcriptionDep).dir + /bin/python}"
+PYTHONPATH="$here/../python" PYTHONDONTWRITEBYTECODE=1 exec "$ST_PYTHON" -m singularity_transcribe "$@"

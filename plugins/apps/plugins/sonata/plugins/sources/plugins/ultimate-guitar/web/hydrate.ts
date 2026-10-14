@@ -1,3 +1,4 @@
+import type { SourceHydration } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   appliedAlignment,
@@ -15,19 +16,18 @@ import { getSongUltimateGuitar } from "../shared/endpoints";
  * the row's video — or its best try when none was chosen — and this sheet,
  * whatever its score).
  *
- * Returns `undefined` for a song that carries no UG tab, so it's skipped in the
+ * Returns `absent` for a song that carries no UG tab, so it's skipped in the
  * library's generic collection — and the UG editor section stays hidden for it.
  */
-export async function hydrate(
-  songId: string,
-): Promise<UgSourceRaw | undefined> {
+export async function hydrate(songId: string): Promise<SourceHydration> {
   const [tab, alignment] = await Promise.all([
     fetchEndpoint(getSongUltimateGuitar, { id: songId }),
     fetchEndpoint(getUgAlignment, { id: songId }),
   ]);
-  if (tab === null) return undefined;
-  return {
+  if (tab === null) return { kind: "absent" };
+  const raw: UgSourceRaw = {
     tab,
     alignment: appliedAlignment(alignment, tab.content),
   };
+  return { kind: "raw", raw };
 }

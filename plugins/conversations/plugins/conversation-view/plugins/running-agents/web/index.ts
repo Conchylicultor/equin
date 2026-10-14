@@ -10,6 +10,7 @@ export default {
   contributions: [
     Conversation.AbovePromptInput({
       id: "running-agents",
+      requires: [],
       component: RunningAgentsBand,
     }),
     TranscriptStats.Item({ id: "agents", component: AgentsStat }),

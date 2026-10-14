@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import {
   defineFieldExtensions,
@@ -36,12 +37,27 @@ import type { Song } from "../core";
  *    prerecorded "Most played" ordering is just a named `SortRule[]` over the
  *    `playCount` field (a config sort preset) rather than a bespoke toggle chip.
  */
+/**
+ * What a source knows about a song at open time. `pending` means the source HAS
+ * content for the song but it is not ready yet (e.g. a transcription still
+ * running): the player pane renders `Body` (under `label`) instead of composing
+ * a score, so an unfinished song is never shown as an empty one.
+ */
+export type SourceHydration =
+  | { kind: "raw"; raw: unknown }
+  | { kind: "absent" }
+  | {
+      kind: "pending";
+      label: string;
+      Body: ComponentType<{ songId: string }>;
+    };
+
 export const Library = {
   Source: defineSlot<{
     /** Stable id of the source (matches its `SonataDocument.Source` id / `rawById` key). */
     sourceId: string;
-    /** This source's client raw for `songId`, or `undefined` if it has none. */
-    hydrate: (songId: string) => Promise<unknown | undefined>;
+    /** This source's client raw for `songId`, absent, or pending (see {@link SourceHydration}). */
+    hydrate: (songId: string) => Promise<SourceHydration>;
     /**
      * Optional create affordance for this source, mapped by the library into the
      * data-view `creators` (toolbar "+" menu). Plain data — `onSelect` runs

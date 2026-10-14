@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import type { WorkspaceCapability } from "@plugins/conversations/plugins/workspace/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 
 export interface PromptEditorActionProps {
@@ -12,8 +13,12 @@ export interface PromptEditorActionProps {
 }
 
 export const PromptEditorSlots = {
+  // `requires`: what the conversation's workspace must offer (`[]`: any).
+  // `PromptEditor` shows the action only where it does — push-and-exit never
+  // shows on a scratch conversation. Required, so a new action must say.
   FloatingAction: defineRenderSlot<{
     component: ComponentType<PromptEditorActionProps>;
     alwaysActive?: boolean;
+    requires: readonly WorkspaceCapability[];
   }>(),
 };

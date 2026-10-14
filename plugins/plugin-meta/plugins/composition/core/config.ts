@@ -206,7 +206,9 @@ export const compositionsConfig = defineConfig({
         // Its one negative: the MIDI file preview is Sonata's adapter INTO the
         // file viewer, which a standalone Sonata has no host for — and the file
         // viewer reads checkout files through code-api, which drags the
-        // agent-runtime bundle in.
+        // agent-runtime bundle in. Likewise transcription launches an agent
+        // (a scratch-workspace conversation), which a standalone Sonata has no
+        // runtime for.
         {
           ...app(
             "sonata",
@@ -217,6 +219,7 @@ export const compositionsConfig = defineConfig({
           entryPoints: [
             "apps.sonata.**",
             "!apps.sonata.sources.midi.file-preview.**",
+            "!apps.sonata.transcription.**",
           ],
         },
         app("debug", "apps.debug"),

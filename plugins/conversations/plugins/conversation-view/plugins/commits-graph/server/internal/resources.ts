@@ -7,6 +7,7 @@ import {
 } from "@plugins/primitives/plugins/live-state/core";
 import { refHeadServed } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import { getAttemptRow } from "@plugins/tasks/plugins/tasks-core/server";
+import { assertCapability } from "@plugins/conversations/plugins/workspace/core";
 import {
   probeHeadMain,
   readLandedShas,
@@ -17,10 +18,14 @@ import { graphEtag } from "./etag";
 
 // The attempt's own row (the `attempts` table), never `attempts_v`: this
 // loader does git work, and the view's read-set would make every conversation
-// and push write recompute it (C36).
+// and push write recompute it (C36). An attempt with no git (a scratch
+// workspace) is a caller bug — the chip is gated on the git capability — so it
+// throws rather than reading as "no worktree".
 async function worktreeFor(attemptId: string): Promise<string | null> {
   const row = await getAttemptRow(attemptId);
-  return row?.worktreePath ?? null;
+  if (!row) return null;
+  assertCapability(row.workspace.kind, "git", "commits-graph");
+  return row.worktreePath;
 }
 
 // An attempt outlives its worktree: the row (and the chip subscribed to it) stay

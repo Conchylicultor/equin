@@ -9,7 +9,11 @@ export default {
     "Conversation toolbar button opening a side pane that browses the agent's worktree with the file explorer's <FileBrowser/>, rooted at the checkout (git status from the file explorer's git lens).",
   contributions: [
     Pane.Register({ pane: convFileTreePane }),
-    Conversation.ActionBar({ id: "explorer", component: ConvTreeButton }),
+    Conversation.ActionBar({
+      id: "explorer",
+      requires: ["git"],
+      component: ConvTreeButton,
+    }),
   ],
   slots: { "conv-file-tree": convFileTreePane },
 } satisfies PluginDefinition;

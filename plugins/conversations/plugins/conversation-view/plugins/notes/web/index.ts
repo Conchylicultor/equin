@@ -7,9 +7,14 @@ export default {
   description:
     "Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button.",
   contributions: [
-    Conversation.AbovePromptInput({ id: "notes", component: NotesArea }),
+    Conversation.AbovePromptInput({
+      id: "notes",
+      requires: [],
+      component: NotesArea,
+    }),
     Conversation.PromptBar({
       id: "notes-toggle",
+      requires: [],
       component: NotesToggleButton,
       section: "Notes",
       sectionOrder: -1,

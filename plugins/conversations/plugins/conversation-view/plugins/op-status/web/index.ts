@@ -14,6 +14,7 @@ export default {
   contributions: [
     Conversation.AbovePromptInput({
       id: "op-status",
+      requires: ["build"],
       component: OpStatusBanner,
     }),
     Item.Chips({ id: "op-status", component: OpStatusChip }),

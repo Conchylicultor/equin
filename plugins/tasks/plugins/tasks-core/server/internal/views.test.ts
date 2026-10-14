@@ -641,3 +641,50 @@ describe("the view's computed columns decode to what they claim", () => {
     expect(withNone?.dependencies).toEqual([]);
   });
 });
+
+// ── a scratch attempt's delivery is its landed fact ─────────────────────────
+// A scratch workspace never pushes; its recorded delivery (`attempt_deliveries`)
+// is what the landed rollup reads in a push's place.
+
+async function seedDelivery(attemptId: string, conversationId: string) {
+  await t.db.execute(sql`
+    INSERT INTO attempt_deliveries (attempt_id, conversation_id, summary)
+    VALUES (${attemptId}, ${conversationId}, ${"delivered"})
+  `);
+}
+
+describe("attempt_deliveries — a delivery lands like a push", () => {
+  test("without a delivery, a closed scratch attempt is `closed` and its task not done", async () => {
+    const taskId = await seedTask();
+    const attemptId = await seedAttempt(taskId);
+    await seedConversation(attemptId, "done");
+    expect((await attemptRow(attemptId)).status).toBe("closed");
+    expect((await taskStatus(taskId)).status).not.toBe("done");
+  });
+
+  test("delivered while live: `pushed`, then `completed` once closed, and the task `done`", async () => {
+    const taskId = await seedTask();
+    const attemptId = await seedAttempt(taskId);
+    const conv = await seedConversation(attemptId, "working");
+    await seedDelivery(attemptId, conv);
+    expect((await attemptRow(attemptId)).status).toBe("pushed");
+
+    await t.db.execute(sql`
+      UPDATE conversations SET status = 'done', ended_at = now() WHERE id = ${conv}
+    `);
+    const attempt = await attemptRow(attemptId);
+    expect(attempt.status).toBe("completed");
+    expect(attempt.finishedAt).not.toBeNull();
+    const task = await taskStatus(taskId);
+    expect(task.status).toBe("done");
+    expect(task.finishedAt).not.toBeNull();
+  });
+
+  test("a held task stays held over a delivered attempt", async () => {
+    const taskId = await seedTask({ held: true });
+    const attemptId = await seedAttempt(taskId);
+    const conv = await seedConversation(attemptId, "done");
+    await seedDelivery(attemptId, conv);
+    expect((await taskStatus(taskId)).status).toBe("held");
+  });
+});

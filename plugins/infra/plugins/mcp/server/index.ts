@@ -5,6 +5,8 @@ import { mcpRequest } from "../shared/endpoints";
 export { Mcp } from "./internal/mcp";
 export type {
   McpInstructions,
+  McpScope,
+  McpScopeResolver,
   McpTool,
   McpToolContext,
   McpToolResult,

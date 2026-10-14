@@ -10,6 +10,7 @@
 export type {
   Score,
   ScoreRecording,
+  Swing,
   Note,
   Annotation,
   ChordAnnotation,
@@ -67,6 +68,8 @@ export type { TempoIndex } from "./tempo-index";
 export { buildTempoIndex } from "./tempo-index";
 
 export { resolvePedalSustain, pedalSpans, isPedalDownAt } from "./pedal";
+
+export { swingBeat, swingScore } from "./swing";
 export type { PedalSpan } from "./pedal";
 
 export type { PlaybackPath, PlaybackTimeline } from "./timeline";

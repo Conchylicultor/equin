@@ -107,6 +107,7 @@ Consumers read only the generic aggregate:
     - `apps/deploy`
     - `apps/home`
     - `apps/prototypes`
+    - `apps/sonata/transcription`
     - `build`
     - `config_v2/settings`
     - `conversations`

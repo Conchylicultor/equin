@@ -12,6 +12,7 @@ import {
   defaultNow,
   type DefaultedKeys,
   defineEntity,
+  isDbDefault,
   type Entity,
   type EntityColumns,
   type EntityMeta,
@@ -379,10 +380,9 @@ function literalDefaultOf(
   declared: unknown,
 ): { kind: "literal"; value: unknown } | { kind: "none" } {
   if (declared === undefined) return { kind: "none" };
-  if (typeof declared === "object" && declared !== null && "kind" in declared) {
-    const d = declared as { kind: string; value?: unknown };
-    return d.kind === "literal"
-      ? { kind: "literal", value: d.value }
+  if (isDbDefault(declared)) {
+    return declared.kind === "literal"
+      ? { kind: "literal", value: declared.value }
       : { kind: "none" };
   }
   return { kind: "literal", value: declared };

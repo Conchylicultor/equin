@@ -5,6 +5,9 @@ import { showToast } from "@plugins/shell/plugins/toast/web";
 import type { ResumeOutcome } from "@plugins/conversations/core";
 import { ActionBarView } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import { useConversationById } from "@plugins/conversations/web";
+import { workspaceAllows } from "@plugins/conversations/plugins/workspace/core";
+import { useAttemptWorkspaceKind } from "../use-attempt-workspace-kind";
+import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { Conversation } from "../slots";
 import { conversationPane } from "../panes";
 import { PromptComposerProvider } from "../prompt-composer-context";
@@ -65,6 +68,27 @@ export function ConversationView() {
   }
 
   return (
+    <ConversationBody
+      conversation={conversation}
+      showBottomBar={showBottomBar}
+      hasPromptBar={promptBarItems.length > 0}
+    />
+  );
+}
+
+// The pane body for a loaded conversation. Every slot contribution states what
+// the workspace must offer (`requires`) and renders only where it does.
+function ConversationBody({
+  conversation,
+  showBottomBar,
+  hasPromptBar,
+}: {
+  conversation: ConversationRecord;
+  showBottomBar: boolean;
+  hasPromptBar: boolean;
+}) {
+  const workspace = useAttemptWorkspaceKind(conversation.attemptId);
+  return (
     <>
       <ActiveRelateSync />
       <PaneChrome pane={conversationPane}>
@@ -74,7 +98,7 @@ export function ConversationView() {
               default), so a theme can quiet them without touching the labels'
               hover. */}
           <Bar tier="subpane" className="text-toolbar-foreground">
-            <ActionBarView />
+            <ActionBarView workspace={workspace} />
           </Bar>
           <Clip fill>
             {/* Around the transcript as well as the prompt: the transcript is
@@ -90,16 +114,20 @@ export function ConversationView() {
                         className="mx-auto max-w-reading px-md pt-xs pb-sm"
                       >
                         <Conversation.AbovePromptInput.Render>
-                          {(item) => (
-                            <item.component conversation={conversation} />
-                          )}
+                          {(item) =>
+                            workspaceAllows(workspace, item.requires) ? (
+                              <item.component conversation={conversation} />
+                            ) : null
+                          }
                         </Conversation.AbovePromptInput.Render>
                         <Conversation.PromptInput.Render>
-                          {(item) => (
-                            <item.component conversation={conversation} />
-                          )}
+                          {(item) =>
+                            workspaceAllows(workspace, item.requires) ? (
+                              <item.component conversation={conversation} />
+                            ) : null
+                          }
                         </Conversation.PromptInput.Render>
-                        {promptBarItems.length > 0 && (
+                        {hasPromptBar && (
                           // The footer under the prompt is a row of small pills:
                           // its own `xs` density, one step below the prompt's.
                           <ControlSizeProvider size="xs">
@@ -107,6 +135,11 @@ export function ConversationView() {
                               <Stack direction="row" gap="xs" align="center">
                                 <Conversation.PromptBar.Render>
                                   {(item) => {
+                                    if (
+                                      !workspaceAllows(workspace, item.requires)
+                                    ) {
+                                      return null;
+                                    }
                                     const Component = item.component;
                                     return (
                                       <Component conversation={conversation} />

@@ -7,7 +7,8 @@ import {
   renderInstructions,
 } from "./instructions";
 import type { McpTool, McpToolContext } from "./mcp";
-import { registry } from "./registry";
+import { registry, scopeRegistry } from "./registry";
+import { toolsInScope } from "./scope";
 
 export async function handleMcpRequest(
   req: Request,
@@ -18,12 +19,23 @@ export async function handleMcpRequest(
     return new Response("Missing conversationId", { status: 400 });
   }
 
+  // The conversation's scope: a scratch profile sees exactly its allowlist;
+  // everyone else every tool reserved for no profile.
+  const ctx = { conversationId };
+  const scope = scopeRegistry.resolver
+    ? await scopeRegistry.resolver(ctx)
+    : { kind: "default" as const };
+
   // Server instructions only ride the initialize result, so only initialize
   // pays for rendering them. A throwing contribution fails initialize loudly.
+  // A profile-scoped conversation gets none: the sections describe this app
+  // to its own agents, and a profile's agent carries only its profile's
+  // context.
   const messages = await bodyMessages(req);
-  const instructions = hasInitialize(messages)
-    ? await renderInstructions({ conversationId })
-    : undefined;
+  const instructions =
+    hasInitialize(messages) && scope.kind === "default"
+      ? await renderInstructions(ctx)
+      : undefined;
   // Live description sections likewise render only for the request that lists
   // the tools; a tool call never pays for them.
   const descriptions = hasToolsList(messages)
@@ -38,11 +50,11 @@ export async function handleMcpRequest(
     { instructions },
   );
 
-  // Per-conversation visibility: a tool whose `when` says no is never
-  // registered on this request's server, so it is absent from tools/list and
-  // a call to it is an unknown-tool error. The gates run in parallel.
-  const ctx = { conversationId };
-  const tools = [...registry.values()];
+  // Per-conversation visibility: first the scope, then each tool's own `when`.
+  // A tool either says no to is never registered on this request's server, so
+  // it is absent from tools/list and a call to it is an unknown-tool error. The
+  // gates run in parallel.
+  const tools = toolsInScope(registry, scope);
   const visible = await Promise.all(
     tools.map(async (tool) => (tool.when ? tool.when(ctx) : true)),
   );

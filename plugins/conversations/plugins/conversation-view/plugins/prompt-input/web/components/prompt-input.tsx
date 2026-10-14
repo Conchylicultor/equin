@@ -5,6 +5,7 @@ import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/
 import {
   isDraftEmpty,
   useRegisterPromptComposer,
+  useAttemptWorkspaceKind,
 } from "@plugins/conversations/plugins/conversation-view/web";
 import { useLiveConversation } from "@plugins/conversations/web";
 import { canSendTurn, QUESTION_WAITING_FOR } from "@plugins/conversations/core";
@@ -20,6 +21,7 @@ export function PromptInput({
   conversation: ConversationRecord;
 }) {
   const live = useLiveConversation(conversation);
+  const workspace = useAttemptWorkspaceKind(conversation.attemptId);
   const [draft, setDraft, clearDraft] = useDraft(
     CONVERSATION_PROMPT_DRAFT_KEY,
     "",
@@ -105,6 +107,7 @@ export function PromptInput({
         })
       }
       insertRef={insertRef}
+      workspace={workspace}
     />
   );
 }

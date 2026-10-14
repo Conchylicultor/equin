@@ -32,7 +32,7 @@ commit-diff pane in `commit-detail`, fuzzy path resolution in `file-resolve`.
     - `primitives/commit-list.parseDiffNumstatZ`
     - `primitives/commit-list.parseGitLog`
     - `primitives/commit-list.tryRunGit`
-    - `tasks/tasks-core.getAttempt`
+    - `tasks/tasks-core.getAttemptRow`
     - `tasks/tasks-core.listPushesByPushId`
   - Exports (values):
     - `getRangeFiles`

@@ -41,6 +41,7 @@ The host-global model catalog — which model versions this machine knows, which
   - Resources: `model-provider.catalog` (push, notified)
 - Cross-plugin:
   - Imported by:
+    - `apps/sonata/transcription`
     - `conversations`
     - `conversations/agents`
     - `conversations/summary`
