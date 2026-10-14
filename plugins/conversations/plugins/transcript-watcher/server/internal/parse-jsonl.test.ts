@@ -660,3 +660,66 @@ describe("readJsonlEvents — context compaction", () => {
     expect(events.map((e) => e.kind)).toEqual(["user-text", "compaction"]);
   });
 });
+
+describe("readJsonlEvents — file-history-delta checkpoints", () => {
+  const delta = (trackingPath: string, backupFileName: string | null) => ({
+    type: "file-history-delta",
+    messageId: "m1",
+    snapshotMessageId: "s1",
+    trackingPath,
+    backup: {
+      backupFileName,
+      version: 1,
+      backupTime: TS,
+      realParentDir: "/wt/att-1/research",
+    },
+    timestamp: TS,
+  });
+
+  test("emits a file-checkpoint with the absolute path and whether the file is new", async () => {
+    const path = await writeFixture([
+      delta("research/plan.md", null),
+      delta("research/old.md", "53f20fc5b62ee2aa@v1"),
+    ]);
+    expect(await readJsonlEvents(path)).toEqual([
+      {
+        kind: "file-checkpoint",
+        at: TS,
+        path: "/wt/att-1/research/plan.md",
+        created: true,
+      },
+      {
+        kind: "file-checkpoint",
+        at: TS,
+        path: "/wt/att-1/research/old.md",
+        created: false,
+      },
+    ]);
+  });
+
+  test("keeps an absolute trackingPath (a file outside the worktree) as is", async () => {
+    const path = await writeFixture([
+      {
+        ...delta("/tmp/scratch/data.js", null),
+        backup: { backupFileName: null, realParentDir: "/tmp/scratch" },
+      },
+    ]);
+    expect(await readJsonlEvents(path)).toEqual([
+      {
+        kind: "file-checkpoint",
+        at: TS,
+        path: "/tmp/scratch/data.js",
+        created: true,
+      },
+    ]);
+  });
+
+  test("falls back to unknown when the shape is not understood", async () => {
+    const path = await writeFixture([
+      { type: "file-history-delta", trackingPath: "x.md", timestamp: TS },
+    ]);
+    expect((await readJsonlEvents(path)).map((e) => e.kind)).toEqual([
+      "unknown",
+    ]);
+  });
+});

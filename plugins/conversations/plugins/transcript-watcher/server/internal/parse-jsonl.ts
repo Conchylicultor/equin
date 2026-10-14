@@ -23,6 +23,20 @@ const CompactMetadataSchema = z.object({
   postTokens: z.number().optional(),
 });
 
+/**
+ * A `file-history-delta` line — Claude Code's per-file rewind checkpoint. Only
+ * the fields the checkpoint row reads; a line that does not match falls
+ * through to `kind: "unknown"` (loud, with its raw payload) rather than
+ * rendering a half-understood checkpoint.
+ */
+const FileHistoryDeltaSchema = z.object({
+  trackingPath: z.string().min(1),
+  backup: z.object({
+    backupFileName: z.string().nullable(),
+    realParentDir: z.string().min(1),
+  }),
+});
+
 /** The preamble Claude Code puts before every compact summary — the harness talking, not the summary. */
 const COMPACT_SUMMARY_PREAMBLE =
   /^This session is being continued from a previous conversation[^\n]*\n+(?:Summary:\s*\n)?/;
@@ -700,6 +714,25 @@ async function buildEvents(
       }
       events.push({ kind: "queue-operation", at: ts, operation, content });
       continue;
+    }
+
+    if (type === "file-history-delta") {
+      const delta = FileHistoryDeltaSchema.safeParse(obj);
+      if (delta.success) {
+        const { trackingPath, backup } = delta.data;
+        // `trackingPath` is worktree-relative for files inside the checkout and
+        // absolute outside it; `realParentDir` is always the absolute directory.
+        const name = trackingPath.slice(trackingPath.lastIndexOf("/") + 1);
+        events.push({
+          kind: "file-checkpoint",
+          at: ts,
+          path: trackingPath.startsWith("/")
+            ? trackingPath
+            : `${backup.realParentDir}/${name}`,
+          created: backup.backupFileName === null,
+        });
+        continue;
+      }
     }
 
     events.push({

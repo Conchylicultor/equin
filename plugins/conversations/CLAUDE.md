@@ -240,6 +240,7 @@
           - **`compaction`** — Renders a context compaction as one thin rule across the transcript — Context compacted · 316k → 12k — folding the summary the agent continues from (as markdown), the files it re-read, and the…
           - **`event-counter`** — Displays the total event count in the conversation toolbar.
           - **`fields-card`** — Shared appearance for a headline + truncating summary preview + fold-out key/value field list. Used by the queued task-notification card and the native task-notification row so the two never diverge.
+          - **`file-checkpoint`** — Renders Claude Code's rewind checkpoints (file-history-delta) in the JSONL viewer as one quiet line: the file a rewind would restore, or remove when the agent created it.
           - **`file-path`** — Clickable file path component with RTL ellipsis, copy button, and file-peek pane integration.
           - **`investigate-event`** — Contributes the add-a-renderer row action to every JSONL transcript row whose nearest dispatch fell back (unhandled event kind, tool name, or attachment subtype), launching an agent briefed to…
           - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.

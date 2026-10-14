@@ -1737,6 +1737,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-fields-card",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-checkpoint": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-file-checkpoint",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-file-path",
       "version": "0.0.1",
@@ -7415,6 +7419,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/event-counter"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-fields-card": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-fields-card@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/fields-card"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-file-checkpoint": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-file-checkpoint@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-checkpoint"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-file-path": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-file-path@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path"],
 

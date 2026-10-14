@@ -214,6 +214,17 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     content: z.string().optional(),
   }),
   z.object({
+    // A Claude Code rewind checkpoint: `type: "file-history-delta"`, written
+    // right before the agent first changes a file within a turn, recording the
+    // file's prior state so a rewind can restore it. `created` is true when
+    // the file did not exist yet (its backup is null) — a rewind deletes it.
+    kind: z.literal("file-checkpoint"),
+    at: z.string(),
+    /** Absolute path of the checkpointed file. */
+    path: z.string(),
+    created: z.boolean(),
+  }),
+  z.object({
     kind: z.literal("unknown"),
     at: z.string(),
     type: z.string(),

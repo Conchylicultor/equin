@@ -11837,9 +11837,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JsonlViewer.Overlay`
               - `JsonlViewer.PendingPromptAction`
               - `JsonlViewer.TranscriptEnd`
-            - Slot contributors: 53 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Slot contributors: 54 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `JsonlViewer.ContextRole` ×29
-              - `JsonlViewer.EventRenderer` ×14
+              - `JsonlViewer.EventRenderer` ×15
               - `JsonlViewer.Overlay` ×4
               - `JsonlViewer.EventFilter` ×2
               - `JsonlViewer.PendingPrompt` ×2
@@ -11922,8 +11922,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `eventKey`
               - `jsonlEvents`
           - Cross-plugin:
-            - Imported by: 40 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
-              - `conversations` ×39
+            - Imported by: 41 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `conversations` ×40
               - `tasks/outcome-report`
           - Exemptions:
             - Exempts itself from: `no-db-backed-notify` — `server/internal/jsonl-events-resource.ts` (debt)
@@ -12433,6 +12433,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/attachment/queued-command`
                   - `conversations/conversation-view/jsonl-viewer/task-notification`
+            - **`file-checkpoint`** — Renders Claude Code's rewind checkpoints (file-history-delta) in the JSONL viewer as one quiet line: the file a rewind would restore, or remove when the agent created it.
+              - Web:
+                - Contributes: `JsonlViewer.EventRenderer` "file-checkpoint" → `FileCheckpointRow`
+                - Uses:
+                  - `conversations/conversation-view/jsonl-viewer.EventLine`
+                  - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                  - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
+                  - `primitives/css/rigid.Rigid`
+                  - `primitives/css/yield.yieldClass`
+                  - `ui/icons.Icon`
             - **`file-path`** — Clickable file path component with RTL ellipsis, copy button, and file-peek pane integration.
               - Web:
                 - Uses:
@@ -12458,6 +12468,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`
                   - `conversations/conversation-view/jsonl-viewer/attachment/session-mode`
                   - `conversations/conversation-view/jsonl-viewer/compaction`
+                  - `conversations/conversation-view/jsonl-viewer/file-checkpoint`
                   - `conversations/conversation-view/jsonl-viewer/task-notification`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/read`
@@ -20454,11 +20465,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 157 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 158 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×50
               - `primitives` ×26
               - `page` ×23
-              - `conversations` ×18
+              - `conversations` ×19
               - `apps-core` ×5
               - `debug` ×5
               - `tasks` ×4
@@ -30150,9 +30161,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 112 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×21
-              - `conversations` ×20
+              - `conversations` ×21
               - `primitives` ×18
               - `debug` ×10
               - `page` ×7
@@ -30822,10 +30833,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempted by: `primitives/css/ui-kit` (0 debt)
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `primitives` ×8
               - `apps` ×6
-              - `conversations` ×4
+              - `conversations` ×5
               - `debug` ×4
               - `ui` ×3
               - `history/dialog`
@@ -39045,9 +39056,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Cross-plugin:
-        - Imported by: 306 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 307 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×65
-          - `conversations` ×56
+          - `conversations` ×57
           - `page` ×40
           - `primitives` ×40
           - `fields` ×33
