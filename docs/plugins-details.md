@@ -2996,6 +2996,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `urlSourceConfigFields`
     - **`file-explorer`** — File explorer app.
       - Plugins:
+        - **`attachment-preview`** — An attachment previewed as a side pane through the Files preview (every file-viewer tab, Open with default app, size and age): the attachment/:id pane, homed in Files and opened beside any surface, and the file chip's opener, so clicking an attached file in a prompt opens it there.
+          - Web:
+            - Slots: `attachmentPreviewPane.Actions`
+            - Slot contributors: `attachmentPreviewPane.Actions` ← `primitives.pane`
+            - Contributes:
+              - `Pane.Register` "attachment-preview"
+              - `AttachmentSlots.Opener` "opener"
+            - Uses:
+              - `apps/file-explorer/browser.PreviewPane`
+              - `apps/file-explorer/browser.useHomeDir`
+              - `network/live.useLive`
+              - `primitives/live-state.foldResource`
+              - `primitives/live-state.matchResource`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
+              - `primitives/pane.Pane`
+              - `primitives/pane.useOpenPane`
+              - `primitives/text-editor/paste-images.AttachmentSlots`
+            - Exports (values): `attachmentPreviewPane`
         - **`browser`** — The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — Fields, extra tree columns, RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
           - Web:
             - Slots:
@@ -3058,6 +3078,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FileBrowserSlots`
               - `filesAtPane`
               - `filesHomePane`
+              - `PreviewPane`
               - `useExplorerDir`
               - `useExplorerFolderTarget`
               - `useExplorerLocation`
@@ -3098,6 +3119,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pathChain`
           - Cross-plugin:
             - Imported by:
+              - `apps/file-explorer/attachment-preview`
               - `apps/file-explorer/git`
               - `apps/file-explorer/places`
               - `conversations/conversation-view/explorer`
@@ -20036,8 +20058,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 152 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
-              - `apps` ×47
+            - Imported by: 153 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+              - `apps` ×48
               - `primitives` ×25
               - `page` ×23
               - `conversations` ×17
@@ -20761,7 +20783,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seedAssetMirrorCache`
     - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
       - Server:
-        - Contributes: `resource.declare` "attachments.by-owner"
+        - Contributes:
+          - `resource.declare` "attachments.by-owner"
+          - `resource.declare` "attachments.file"
         - Uses:
           - `database.db`
           - `infra/endpoints.HttpError`
@@ -20780,7 +20804,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `deleteAttachment`
           - `getAttachment`
         - Register: `defineJob('attachments.orphan-sweep')`
-        - Resources: `attachments.by-owner` (push, unbounded: one owner's attachments — the files a person attached to one task or block, a handful, never a growing log)
+        - Resources:
+          - `attachments.by-owner` (push, unbounded: one owner's attachments — the files a person attached to one task or block, a handful, never a growing log)
+          - `attachments.file` (push)
         - Routes:
           - `POST /api/attachments`
           - `GET /api/attachments/:id`
@@ -20795,8 +20821,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/endpoints.dateString`
           - `network/live.liveValue`
-        - Exports (types): `Attachment`
+        - Exports (types):
+          - `Attachment`
+          - `AttachmentFile`
         - Exports (values):
+          - `attachmentFile`
+          - `AttachmentFileSchema`
           - `attachmentsByOwner`
           - `AttachmentSchema`
       - Cross-plugin:
@@ -24658,8 +24688,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 221 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×61
+        - Imported by: 222 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×62
           - `conversations` ×35
           - `tasks` ×26
           - `debug` ×23
@@ -29141,9 +29171,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 112 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×28
-              - `primitives` ×25
+              - `primitives` ×24
               - `page` ×18
               - `conversations` ×7
               - `ui` ×6
@@ -29579,14 +29609,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LinkChipProps`
             - Exports (values): `LinkChip`
           - Cross-plugin:
-            - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md)
+            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/link-chip/REFERENCE.md)
               - `active-data` ×8
               - `apps` ×5
               - `conversations` ×5
               - `debug` ×5
+              - `primitives` ×3
               - `page` ×2
               - `plugin-meta` ×2
-              - `primitives` ×2
               - `build/serve-composition`
         - **`overlay`** — In-flow positioning layout primitive: <Overlay behind above clickThrough> paints full-bleed layers under/over its content within its own box, plus the click-through-toggle idiom.
           - Web:
@@ -29627,8 +29657,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pin`
               - `pinClasses`
           - Cross-plugin:
-            - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
-              - `primitives` ×18
+            - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+              - `primitives` ×17
               - `apps` ×15
               - `page` ×9
               - `conversations` ×7
@@ -30301,8 +30331,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 399 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `primitives` ×102
+            - Imported by: 398 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `primitives` ×101
               - `apps` ×78
               - `conversations` ×52
               - `page` ×25
@@ -31628,6 +31658,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/file-explorer/browser`
           - `primitives/file-viewer`
           - `primitives/file-viewer/media`
+          - `primitives/text-editor/paste-images`
     - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, and useFileText / useFileBytes reading a FileRef's text or raw bytes from the host (infra/host-fs) or a git checkout (code-api).
       - Web:
         - Slots: `FileViewer.Renderer`
@@ -31899,10 +31930,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hoverRevealTargetWithGroupFocus`
           - `useHoverReveal`
       - Cross-plugin:
-        - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
+        - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
           - `apps` ×9
           - `page` ×8
-          - `primitives` ×7
+          - `primitives` ×6
           - `ui` ×4
           - `apps-core/surface/floating`
           - `integrations/youtube`
@@ -31923,9 +31954,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `IconButtonProps`
         - Exports (values): `IconButton`
       - Cross-plugin:
-        - Imported by: 113 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 114 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×42
-          - `primitives` ×19
+          - `primitives` ×20
           - `conversations` ×15
           - `page` ×7
           - `tasks` ×7
@@ -32097,9 +32128,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/text-editor`
     - **`link-gesture`** — The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab. A <button> gets none of this for free, so every navigating control reads it from one place.
       - Cross-plugin:
-        - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `conversations` ×12
-          - `primitives` ×11
+          - `primitives` ×12
           - `apps-core` ×3
           - `page` ×3
           - `apps` ×2
@@ -32220,8 +32251,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 229 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×65
+        - Imported by: 230 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×66
           - `conversations` ×38
           - `ui` ×22
           - `debug` ×20
@@ -32299,8 +32330,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LoadingVariant`
         - Exports (values): `Loading`
       - Cross-plugin:
-        - Imported by: 184 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×61
+        - Imported by: 185 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×62
           - `ui` ×19
           - `primitives` ×17
           - `conversations` ×16
@@ -33261,9 +33292,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 90 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×90
-        - Contributes: 113 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Slot contributors: 91 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×91
+        - Contributes: 114 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountsPane.Actions` "title" → `PaneTitleItem`
           - `agentDetailPane.Actions` "title" → `PaneTitleItem`
@@ -33273,6 +33304,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `allConversationsPane.Actions` "title" → `PaneTitleItem`
           - `app-preview.actions` "title" → `PaneTitleItem`
           - `appleSetupPane.Actions` "title" → `PaneTitleItem`
+          - `attachmentPreviewPane.Actions` "title" → `PaneTitleItem`
           - `attemptPane.Actions` "title" → `PaneTitleItem`
           - `automation-detail.actions` "title" → `PaneTitleItem`
           - `automations.actions` "title" → `PaneTitleItem`
@@ -33488,8 +33520,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceAppId`
           - `useSyncPaneRegistry`
       - Cross-plugin:
-        - Imported by: 168 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×59
+        - Imported by: 169 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×60
           - `conversations` ×29
           - `debug` ×23
           - `active-data` ×10
@@ -33656,6 +33688,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/text-editor.TextEditor`
           - `primitives/text-editor.useInsertMarkdown`
           - `primitives/text-editor.useTakeMarkdownWith`
+          - `primitives/text-editor/paste-images.AttachFilesButton`
         - Exports (types): `PromptEditorActionProps`
         - Exports (values):
           - `PromptEditor`
@@ -34321,6 +34354,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/text-editor.TextEditor`
               - `primitives/text-editor.TextEditorProps`
+              - `primitives/text-editor/paste-images.AttachFilesButton`
               - `ui/icons.Icon`
             - Exports (types):
               - `ComposerAttachButtonProps`
@@ -34390,15 +34424,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `InlineChip.Tag` ← `active-data.task-link`
               - `InlineChip.Tag` ← `primitives.ui-context.element-picker`
             - Uses:
-              - `primitives/css/center.Center`
-              - `primitives/css/inline.Inline`
-              - `primitives/css/pin.Pin`
-              - `primitives/css/ui-kit.cn`
               - `primitives/error-boundary.PluginErrorBoundary`
-              - `primitives/hover-reveal.hoverRevealGroup`
-              - `primitives/hover-reveal.hoverRevealTarget`
               - `primitives/text-editor.registerNodeExtensionSource`
-              - `ui/icons.Icon`
+              - `primitives/text-editor/token-extension/node.TokenFrame`
             - Exports (types):
               - `ChipModelText`
               - `ChipSurface`
@@ -34428,40 +34456,60 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `expandInlineTokenReferents`
               - `InlineTokenReferentSource`
               - `inlineTokensAsText`
-        - **`paste-images`** — Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders them as inline thumbnail chips that open the full-window image viewer.
+        - **`paste-images`** — File paste/drop/pick support for the text editor. Uploads files via the attachments primitive and renders them inline: an image as a thumbnail chip that opens the full-window image viewer, any other file as a file chip; AttachFilesButton is the composer bar's "+" picker.
           - Web:
+            - Slots: `AttachmentSlots.Opener`
+            - Slot contributors: `AttachmentSlots.Opener` ← `apps.file-explorer.attachment-preview`
             - Contributes: `TextEditorSlots.Plugin` → `ImageUploadPlugin`
             - Uses:
               - `infra/attachments.uploadAttachment`
-              - `primitives/css/center.Center`
-              - `primitives/css/pin.Pin`
-              - `primitives/css/ui-kit.cn`
-              - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
+              - `primitives/css/link-chip.LinkChip`
+              - `primitives/file-type.FileTypeIcon`
+              - `primitives/icon-button.IconButton`
+              - `primitives/link-gesture.openInBrowserTab`
               - `primitives/overlay/image-viewer.ViewerThumbnail`
               - `primitives/text-editor.registerNodeExtension`
               - `primitives/text-editor.TextEditorSlots`
-              - `ui/icons.Icon`
+              - `primitives/text-editor/token-extension/node.TokenFrame`
+            - Exports (types):
+              - `AttachedFileRef`
+              - `AttachmentOpener`
             - Exports (values):
+              - `AttachFilesButton`
               - `ATTACHMENT_MARKDOWN_RE`
+              - `AttachmentFileChip`
               - `attachmentMarkdown`
+              - `attachmentRefMarkdown`
+              - `AttachmentSlots`
               - `AttachmentThumbnail`
               - `attachmentUrl`
               - `extractAttachmentIds`
               - `isAttachmentUrl`
+              - `isImageRef`
               - `rewriteAttachmentMarkdown`
           - Core:
             - Uses: `primitives/text-editor/token-extension/node.defineInlineTokenNode`
-            - Exports (types): `ImageFields`
+            - Exports (types):
+              - `FileFields`
+              - `ImageFields`
             - Exports (values):
+              - `ATTACHMENT_FILE_MARKDOWN_RE`
+              - `ATTACHMENT_IMAGE_MARKDOWN_RE`
               - `ATTACHMENT_MARKDOWN_RE`
+              - `attachmentFileMarkdown`
               - `attachmentMarkdown`
+              - `attachmentRefMarkdown`
               - `attachmentUrl`
               - `extractAttachmentIds`
+              - `fileNode`
               - `imageNode`
               - `isAttachmentUrl`
+              - `isImageMime`
+              - `isImageRef`
               - `rewriteAttachmentMarkdown`
           - Cross-plugin:
             - Imported by:
+              - `apps/file-explorer/attachment-preview`
               - `apps/pages/page-tree`
               - `conversations/conversation-view`
               - `page/audio`
@@ -34470,6 +34518,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/image`
               - `page/read-only-view`
               - `page/video`
+              - `primitives/prompt-editor`
+              - `primitives/text-editor/composer`
               - `screenshot/draw-on-app`
               - `tasks/task-description`
               - `tasks/task-draft-form`
@@ -34499,10 +34549,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `matchTokens`
               - `tokenExtension`
           - Plugins:
-            - **`node`** — The inline-token node factory's browser half: TokenPastePlugin, the registry-driven paste that materializes a pasted token as its node and declines an intra-app copy (which already carries the materialized nodes).
+            - **`node`** — The inline-token node factory's browser half: TokenPastePlugin, the registry-driven paste that materializes a pasted token as its node and declines an intra-app copy (which already carries the materialized nodes); and TokenFrame, the editing chrome every decorated token wears in an editable editor (selected as one object with a ring, never its characters; a hover-revealed × removes it).
               - Web:
-                - Uses: `primitives/latest-ref.useLatestRef`
-                - Exports (values): `TokenPastePlugin`
+                - Uses:
+                  - `primitives/css/center.Center`
+                  - `primitives/css/inline.Inline`
+                  - `primitives/css/pin.Pin`
+                  - `primitives/css/ui-kit.cn`
+                  - `primitives/hover-reveal.hoverRevealGroup`
+                  - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
+                  - `primitives/latest-ref.useLatestRef`
+                  - `ui/icons.Icon`
+                - Exports (values):
+                  - `TokenFrame`
+                  - `TokenPastePlugin`
               - Core:
                 - Uses:
                   - `primitives/text-editor/token-extension.brandInlineTokenNode`
@@ -35033,8 +35093,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 246 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×246
+    - Contributes: 247 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×247
     - Uses: 21 symbols — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
       - `reorder/editor` ×5
       - `config_v2` ×3
@@ -35059,8 +35119,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 245 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×245
+    - Contributes: 246 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×246
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -37591,9 +37651,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`task-description`** — Prompt section of the task detail pane: the description editor, the contributed launch options (tasks/launch-options), and the Launch button — everything that feeds the agent's first turn, in one card. Inline file-link parsing routes clicks to the active file-peek context.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Prompt" → `TaskDescription`
-        - Uses: 33 symbols — full list in [`plugins/tasks/plugins/task-description/REFERENCE.md`](../plugins/tasks/plugins/task-description/REFERENCE.md)
+        - Uses: 35 symbols — full list in [`plugins/tasks/plugins/task-description/REFERENCE.md`](../plugins/tasks/plugins/task-description/REFERENCE.md)
+          - `primitives/text-editor/paste-images` ×5
           - `primitives/live-state` ×4
-          - `primitives/text-editor/paste-images` ×3
           - `tasks/task-detail` ×3
           - `network/live` ×2
           - `primitives/css/text` ×2
@@ -38511,11 +38571,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Cross-plugin:
-        - Imported by: 303 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 302 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×63
           - `conversations` ×55
           - `page` ×40
-          - `primitives` ×40
+          - `primitives` ×39
           - `fields` ×33
           - `debug` ×15
           - `ui` ×8

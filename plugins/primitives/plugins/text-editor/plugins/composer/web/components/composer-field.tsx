@@ -14,6 +14,7 @@ import {
   TextEditor,
   type TextEditorProps,
 } from "@plugins/primitives/plugins/text-editor/web";
+import { AttachFilesButton } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 
 /**
  * Every `TextEditor` prop except `bottomSlot`: the composer IS the bottom slot,
@@ -30,7 +31,10 @@ export interface ComposerFieldProps extends Omit<
    * to the editor plus its bar.
    */
   attach?: React.ReactNode;
-  /** Leading half of the bar: icon actions, a {@link ComposerRule}, then pills. */
+  /**
+   * Leading half of the bar, after the composer's own "+" (attach files): icon
+   * actions, a {@link ComposerRule}, then pills.
+   */
   barStart?: React.ReactNode;
   /** Trailing half of the bar, pushed flush right. */
   barEnd?: React.ReactNode;
@@ -47,6 +51,10 @@ export interface ComposerFieldProps extends Omit<
  * imperative `insertRef` insert and the inline chips all keep working exactly as
  * they do in a bare editor; the composer only decides what sits under the prose.
  *
+ * Every composer attaches files: the bar always leads with the "+" picker, and
+ * the whole box takes a paste or a drop — so no prompt field can be the one that
+ * only accepts images.
+ *
  * Every other `TextEditor` prop is forwarded untouched.
  */
 export function ComposerField({
@@ -56,8 +64,6 @@ export function ComposerField({
   ...editor
 }: ComposerFieldProps) {
   const hasAttach = isPresent(attach);
-  const hasBar = isPresent(barStart) || isPresent(barEnd);
-  if (!hasAttach && !hasBar) return <TextEditor {...editor} />;
 
   return (
     <TextEditor
@@ -73,25 +79,27 @@ export function ComposerField({
                 {attach}
               </Cluster>
             )}
-            {hasBar && (
-              // The bar owns its icons' tone the way it owns their density:
-              // every glyph on it — a pill's, an icon button's — sits dimmed
-              // beside the labels, so one control cannot read brighter than
-              // its neighbours because it happens to be a different widget.
-              <Line
-                className={cn(
-                  "gap-xs [&_svg]:opacity-70",
-                  insetClass({ x: "xs", y: "xs" }),
-                )}
-              >
-                {barStart}
-                {/* The empty flexible cell: everything after it sits flush
+            {/* The bar owns its icons' tone the way it owns their density:
+                every glyph on it — a pill's, an icon button's — sits dimmed
+                beside the labels, so one control cannot read brighter than
+                its neighbours because it happens to be a different widget. */}
+            <Line
+              className={cn(
+                "gap-xs [&_svg]:opacity-70",
+                insetClass({ x: "xs", y: "xs" }),
+              )}
+            >
+              <AttachFilesButton
+                disabled={editor.disabled}
+                onError={editor.onError}
+              />
+              {barStart}
+              {/* The empty flexible cell: everything after it sits flush
                     right, in its own track rather than floating over the
                     leading half. */}
-                <Fill />
-                {barEnd}
-              </Line>
-            )}
+              <Fill />
+              {barEnd}
+            </Line>
           </Stack>
         </ControlSizeProvider>
       }

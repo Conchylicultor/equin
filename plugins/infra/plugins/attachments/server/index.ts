@@ -3,6 +3,7 @@ import { handleUpload } from "./internal/handle-upload";
 import { handleGet } from "./internal/handle-get";
 import { handleDelete } from "./internal/handle-delete";
 import { attachmentsByOwnerServed } from "./internal/by-owner";
+import { attachmentFileServed } from "./internal/file";
 import { orphanSweepJob } from "./internal/orphan-sweep";
 import { ensureAttachmentsRoot } from "./internal/paths";
 import {
@@ -24,7 +25,10 @@ export default {
   description:
     "Attachments on disk (UUID-named under ~/.singularity/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.",
   loadBearing: true,
-  contributions: [...attachmentsByOwnerServed.declare],
+  contributions: [
+    ...attachmentsByOwnerServed.declare,
+    ...attachmentFileServed.declare,
+  ],
   httpRoutes: {
     [uploadAttachment.route]: handleUpload,
     [getAttachmentFile.route]: handleGet,

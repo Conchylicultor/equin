@@ -1,12 +1,52 @@
 const ATTACHMENT_URL_RE = /^\/api\/attachments\/([A-Za-z0-9_-]+)$/;
-export const ATTACHMENT_MARKDOWN_RE = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
+
+/**
+ * Any attachment reference in a prompt: an image (`![alt](url)`, drawn as a
+ * thumbnail) or any other file (`[name](url)`, drawn as a file chip). Both
+ * spellings resolve the same way server-side (to `@<disk path>`), so every
+ * consumer that only needs the ids, or strips the refs, reads this one.
+ * Group 1 is the alt / file name, group 2 the url.
+ */
+export const ATTACHMENT_MARKDOWN_RE = /!?\[([^\]]*)\]\(([^)\s]+)\)/g;
+/** An image attachment reference only: `![alt](url)`. */
+export const ATTACHMENT_IMAGE_MARKDOWN_RE = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
+/** A non-image file attachment reference only: `[name](url)`, no leading `!`. */
+export const ATTACHMENT_FILE_MARKDOWN_RE = /(?<!!)\[([^\]]*)\]\(([^)\s]+)\)/g;
 
 export function attachmentUrl(id: string): string {
   return `/api/attachments/${id}`;
 }
 
 export function attachmentMarkdown(id: string, alt = ""): string {
-  return `![${alt}](${attachmentUrl(id)})`;
+  return `![${label(alt)}](${attachmentUrl(id)})`;
+}
+
+/** A non-image file reference: `[name](/api/attachments/<id>)`. */
+export function attachmentFileMarkdown(id: string, filename: string): string {
+  return `[${label(filename)}](${attachmentUrl(id)})`;
+}
+
+/**
+ * The reference an uploaded attachment is written as: an image becomes a
+ * thumbnail, anything else a file chip.
+ */
+export function attachmentRefMarkdown(att: {
+  id: string;
+  filename: string;
+  mime: string;
+}): string {
+  return isImageMime(att.mime)
+    ? attachmentMarkdown(att.id, att.filename)
+    : attachmentFileMarkdown(att.id, att.filename);
+}
+
+export function isImageMime(mime: string): boolean {
+  return mime.startsWith("image/");
+}
+
+/** Whether a {@link ATTACHMENT_MARKDOWN_RE} match is the image spelling. */
+export function isImageRef(match: string): boolean {
+  return match.startsWith("!");
 }
 
 export function isAttachmentUrl(url: string): string | null {
@@ -34,4 +74,9 @@ export function rewriteAttachmentMarkdown(
       return id ? rewrite(id, alt) : whole;
     },
   );
+}
+
+/** A name that cannot close the bracket it sits in, nor span lines. */
+function label(text: string): string {
+  return text.replace(/[[\]\n\r]/g, " ");
 }

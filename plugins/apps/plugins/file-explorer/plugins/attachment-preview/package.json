@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-file-explorer-attachment-preview",
+  "description": "An attachment previewed as a side pane, through the Files preview.",
+  "private": true,
+  "version": "0.0.1"
+}

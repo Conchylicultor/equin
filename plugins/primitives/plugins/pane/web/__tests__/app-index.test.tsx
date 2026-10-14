@@ -7,6 +7,7 @@ import {
   Pane,
   type PaneStore,
   useIndexMatch,
+  usePaneMatch,
 } from "@plugins/primitives/plugins/pane/web";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface } from "../testing";
@@ -42,6 +43,12 @@ function plugin(id: string, panes: AnyPane[]) {
 function IndexProbe({ basePath }: { basePath: string }) {
   const id = useIndexMatch(basePath)?.panes[0]?.pane.id ?? "none";
   return <div data-testid="index">{id}</div>;
+}
+
+/** Prints the surface's matched pane ids, left to right. */
+function MatchProbe() {
+  const ids = usePaneMatch()?.panes.map((e) => e.pane.id) ?? [];
+  return <div data-testid="match">{ids.join(",")}</div>;
 }
 
 let store: PaneStore;
@@ -155,5 +162,66 @@ describe("appIndex", () => {
         </TestSurface>,
       ),
     ).toThrow(/Pane index collision/);
+  });
+});
+
+describe("companion", () => {
+  // One fixture for the block: the registry is rebuilt from each render's
+  // plugins, so the three cases share these panes.
+  const index = Pane.define({
+    route: defineRoute({ id: "cmp-index", segment: "" }),
+    app: appA,
+    appIndex: true,
+    component: () => null,
+  });
+  const companion = Pane.define({
+    route: defineRoute({ id: "cmp-preview", segment: "cmp-preview/:id" }),
+    app: appA,
+    companion: true,
+    useResolve: false,
+    component: () => null,
+  });
+  const plain = Pane.define({
+    route: defineRoute({ id: "cmp-plain", segment: "cmp-plain/:id" }),
+    app: appA,
+    useResolve: false,
+    component: () => null,
+  });
+  const fixture = (): AnyPane[] => [index, companion, plain];
+
+  function renderMatch(panes: AnyPane[], id: string) {
+    return render(
+      <TestSurface
+        store={store}
+        basePath="/app"
+        plugins={[plugin(`cmp-${id}`, panes)]}
+      >
+        <MatchProbe />
+      </TestSurface>,
+    );
+  }
+
+  it("keeps the index pane beside a companion at the route's head", () => {
+    const panes = fixture();
+    store.restoreRoute([{ paneId: "cmp-preview", params: { id: "1" } }]);
+    const view = renderMatch(panes, "head");
+    expect(view.getByTestId("match").textContent).toBe("cmp-index,cmp-preview");
+  });
+
+  it("leaves a companion deeper in the route alone", () => {
+    const panes = fixture();
+    store.restoreRoute([
+      { paneId: "cmp-plain", params: { id: "1" } },
+      { paneId: "cmp-preview", params: { id: "2" } },
+    ]);
+    const view = renderMatch(panes, "deep");
+    expect(view.getByTestId("match").textContent).toBe("cmp-plain,cmp-preview");
+  });
+
+  it("does not add the index beside an ordinary pane", () => {
+    const panes = fixture();
+    store.restoreRoute([{ paneId: "cmp-plain", params: { id: "1" } }]);
+    const view = renderMatch(panes, "plain");
+    expect(view.getByTestId("match").textContent).toBe("cmp-plain");
   });
 });

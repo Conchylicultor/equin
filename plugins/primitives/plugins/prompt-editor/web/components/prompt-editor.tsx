@@ -10,6 +10,7 @@ import {
   useInsertMarkdown,
   useTakeMarkdownWith,
 } from "@plugins/primitives/plugins/text-editor/web";
+import { AttachFilesButton } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { PromptEditorSlots } from "../slots";
 
 type FloatingActionItem = Parameters<
@@ -35,12 +36,17 @@ export function PromptEditor(props: {
   onError?: (msg: string) => void;
   insertRef?: React.MutableRefObject<((text: string) => void) | null>;
 }) {
-  return <TextEditor {...props} bottomSlot={<ToolbarRow />} />;
+  return (
+    <TextEditor
+      {...props}
+      bottomSlot={<ToolbarRow onError={props.onError} />}
+    />
+  );
 }
 
 const disabledPartCls = "opacity-50 pointer-events-none select-none";
 
-function ToolbarRow() {
+function ToolbarRow({ onError }: { onError?: (msg: string) => void }) {
   const [editor] = useLexicalComposerContext();
   const [editable, setEditable] = useState(() => editor.isEditable());
   const items = PromptEditorSlots.FloatingAction.useContributions();
@@ -113,6 +119,8 @@ function ToolbarRow() {
         className="p-composer-actions"
         onMouseDown={focusEditor}
       >
+        {/* The editor's own "+": attach files, like a paste or a drop. */}
+        {editable && <AttachFilesButton onError={onError} />}
         <PromptEditorSlots.FloatingAction.Render>
           {renderItem}
         </PromptEditorSlots.FloatingAction.Render>

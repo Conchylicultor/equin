@@ -11,3 +11,14 @@ export const AttachmentSchema = z.object({
   createdAt: dateString(),
 });
 export type Attachment = z.infer<typeof AttachmentSchema>;
+
+/**
+ * One attachment with where its bytes live on this machine — what a host-file
+ * viewer needs to show it. The path is withheld from every listing (above) and
+ * served only for the one attachment a preview asked for; this is a
+ * single-user instance whose browser already reads host files (`infra/host-fs`).
+ */
+export const AttachmentFileSchema = AttachmentSchema.extend({
+  diskPath: z.string(),
+});
+export type AttachmentFile = z.infer<typeof AttachmentFileSchema>;

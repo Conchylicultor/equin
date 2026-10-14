@@ -33,6 +33,7 @@ pads the whole box (`padComposer`) can drop the row's own inset.
     - `primitives/text-editor.TextEditor`
     - `primitives/text-editor.useInsertMarkdown`
     - `primitives/text-editor.useTakeMarkdownWith`
+    - `primitives/text-editor/paste-images.AttachFilesButton`
   - Exports (types): `PromptEditorActionProps`
   - Exports (values):
     - `PromptEditor`

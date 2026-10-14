@@ -39,17 +39,27 @@ const closeIcon = symbol("close");
  */
 export function PreviewPane({
   path,
+  name: displayName,
   home,
   git,
   onClose,
+  closeLabel = "Close (Esc)",
   endSafeArea,
 }: {
   /** The file, in display form (`~/…`). */
   path: string;
+  /**
+   * What to call the file, when that is not its name on disk — an attachment is
+   * stored as `<uuid>.pdf` but is the `report.pdf` the user attached.
+   */
+  name?: string;
   home: string;
   /** The file's git context, when a lens knows it. */
   git: FileViewerGit | undefined;
-  onClose: () => void;
+  /** Omitted where there is nothing to close to (the pane is the route's root). */
+  onClose?: () => void;
+  /** The Close button's name — it states the host's own shortcut, if any. */
+  closeLabel?: string;
   /** The header sits at the surface's top-right corner (floating action bar). */
   endSafeArea: boolean;
 }): ReactNode {
@@ -59,7 +69,7 @@ export function PreviewPane({
   });
   const openHostFile = useOpenHostFile();
   const inArchive = useIsInArchive(path);
-  const name = baseName(path);
+  const name = displayName ?? baseName(path);
   return (
     <Column
       fill
@@ -103,12 +113,14 @@ export function PreviewPane({
               onClick={() => openHostFile(path)}
             />
           )}
-          <IconButton
-            icon={closeIcon}
-            label="Close (Esc)"
-            variant="ghost"
-            onClick={onClose}
-          />
+          {onClose && (
+            <IconButton
+              icon={closeIcon}
+              label={closeLabel}
+              variant="ghost"
+              onClick={onClose}
+            />
+          )}
         </Bar>
       }
       body={

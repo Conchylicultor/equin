@@ -495,6 +495,10 @@
       "name": "@singularity/plugin-apps-file-explorer",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/file-explorer/plugins/attachment-preview": {
+      "name": "@singularity/plugin-apps-file-explorer-attachment-preview",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/file-explorer/plugins/browser": {
       "name": "@singularity/plugin-apps-file-explorer-browser",
       "version": "0.0.1",
@@ -6772,6 +6776,8 @@
     "@singularity/plugin-apps-events-sources-url-extract": ["@singularity/plugin-apps-events-sources-url-extract@workspace:plugins/apps/plugins/events/plugins/sources/plugins/url-extract"],
 
     "@singularity/plugin-apps-file-explorer": ["@singularity/plugin-apps-file-explorer@workspace:plugins/apps/plugins/file-explorer"],
+
+    "@singularity/plugin-apps-file-explorer-attachment-preview": ["@singularity/plugin-apps-file-explorer-attachment-preview@workspace:plugins/apps/plugins/file-explorer/plugins/attachment-preview"],
 
     "@singularity/plugin-apps-file-explorer-browser": ["@singularity/plugin-apps-file-explorer-browser@workspace:plugins/apps/plugins/file-explorer/plugins/browser"],
 

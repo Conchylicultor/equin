@@ -1,21 +1,8 @@
-import { type LexicalNode, type NodeKey } from "lexical";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import {
-  hoverRevealGroup,
-  hoverRevealTarget,
-} from "@plugins/primitives/plugins/hover-reveal/web";
+import type { LexicalNode, NodeKey } from "lexical";
 import type { InlineTokenNode } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
 import { inlineChipNode, type InlineChipFields } from "../../core";
 import { renderInlineChip } from "./render-inline-chip";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const closeIcon = symbol("close");
+import { TokenFrame } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node/web";
 
 /**
  * The browser half: the SAME family declared in `core/node.ts`, with the chip
@@ -43,11 +30,10 @@ export const InlineChipNode = inlineChipWebNode.Node;
 // composition without the owning chip plugin.
 //
 // Only ever rendered from `decorate()`, i.e. inside a `LexicalComposer`, so it
-// can read the editor context. When the editor is editable it wraps the chip in
-// a generic hover-reveal × removal affordance — every inline chip gets it for
-// free, with zero per-chip wiring. Read surfaces render the chip directly (via
-// linkify/segments), never through this node, so they never get the × (mirrors
-// paste-images' ImageNode).
+// can read the editor context. `TokenFrame` gives it the editing chrome every
+// decorated token wears (selected whole, a hover-revealed ×) — every inline chip
+// gets it with zero per-chip wiring. Read surfaces render the chip directly (via
+// linkify/segments), never through this node, so they never get the ×.
 function InlineChipDecoration({
   text,
   nodeKey,
@@ -55,53 +41,12 @@ function InlineChipDecoration({
   text: string;
   nodeKey: NodeKey;
 }) {
-  const [editor] = useLexicalComposerContext();
-  // Treat the chip as one atomic token: when a selection spans it, Lexical marks
-  // the whole decorator selected — we paint a ring on the entire chip (and
-  // suppress the native text highlight on its label below) so it reads as "the
-  // chip is grabbed as an object", never "its inner characters are selected".
-  const [isSelected] = useLexicalNodeSelection(nodeKey);
   const chip = renderInlineChip(text);
   if (chip === null) return <>{text}</>;
-
-  if (!editor.isEditable()) return chip;
-
   return (
-    <Inline
-      gap="none"
-      className={cn(
-        hoverRevealGroup,
-        "relative align-middle rounded-md",
-        // Never let the browser paint a per-character text highlight inside the
-        // chip; the whole-chip ring below is the only selection affordance.
-        "select-none",
-        isSelected && "ring-2 ring-ring ring-offset-1 ring-offset-background",
-      )}
-      contentEditable={false}
-    >
+    <TokenFrame nodeKey={nodeKey} removeLabel="Remove">
       {chip}
-      <Pin to="top-right" offset="xs" outset>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            editor.update(() => {
-              const node = editor.getEditorState()._nodeMap.get(nodeKey);
-              if (node) (node as LexicalNode).remove();
-            });
-          }}
-          className={cn(
-            hoverRevealTarget,
-            "bg-background/90 border-border text-foreground size-4 rounded-full border",
-          )}
-          aria-label="Remove"
-        >
-          <Center className="size-full">
-            <Icon icon={closeIcon} className="size-3" />
-          </Center>
-        </button>
-      </Pin>
-    </Inline>
+    </TokenFrame>
   );
 }
 

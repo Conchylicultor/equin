@@ -1,5 +1,9 @@
 import { defineInlineTokenNode } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node/core";
-import { attachmentMarkdown, isAttachmentUrl } from "./internal/markdown";
+import {
+  attachmentFileMarkdown,
+  attachmentMarkdown,
+  isAttachmentUrl,
+} from "./internal/markdown";
 
 /**
  * The pasted-attachment-image token family's ONE declaration. Its token is
@@ -12,8 +16,11 @@ import { attachmentMarkdown, isAttachmentUrl } from "./internal/markdown";
 export type ImageFields = { attachmentId: string; alt: string };
 
 /**
- * `textContent: "empty"` — a thumbnail is an object in the line, not characters,
- * and the markdown that describes it is written by the extension's serializer.
+ * `textContent: "token"`, as `inline-chip`'s family and for the same reason: a
+ * prompt editor is a plain-text Lexical editor, whose copy writes ONLY
+ * `text/plain`, built from each node's text content — an empty one dropped the
+ * attachment on copy, and a paste over the selection then deleted it. Emitting
+ * the token lets `TokenPastePlugin` rebuild the node wherever it is pasted.
  */
 export const imageNode = defineInlineTokenNode<ImageFields>({
   type: "paste-image",
@@ -25,5 +32,27 @@ export const imageNode = defineInlineTokenNode<ImageFields>({
     const attachmentId = isAttachmentUrl(match[2]!);
     return attachmentId === null ? null : { attachmentId, alt: match[1] ?? "" };
   },
-  textContent: "empty",
+  textContent: "token",
+});
+
+/** A non-image attached file: its name, and where its bytes are. */
+export type FileFields = { attachmentId: string; filename: string };
+
+/**
+ * The attached-file token family: a link pointing at an attachment —
+ * `[name](/api/attachments/<id>)` — drawn as a file chip. Its pattern carries
+ * no leading `!`, so it never claims an image reference.
+ */
+export const fileNode = defineInlineTokenNode<FileFields>({
+  type: "attached-file",
+  fields: ["attachmentId", "filename"],
+  token: ({ attachmentId, filename }) =>
+    attachmentFileMarkdown(attachmentId, filename),
+  fieldsOf: (match) => {
+    const attachmentId = isAttachmentUrl(match[2]!);
+    return attachmentId === null
+      ? null
+      : { attachmentId, filename: match[1] ?? "" };
+  },
+  textContent: "token",
 });

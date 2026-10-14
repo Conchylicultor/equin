@@ -47,7 +47,9 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
 - Description: Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
 - Load-bearing: yes
 - Server:
-  - Contributes: `resource.declare` "attachments.by-owner"
+  - Contributes:
+    - `resource.declare` "attachments.by-owner"
+    - `resource.declare` "attachments.file"
   - Uses:
     - `database.db`
     - `infra/endpoints.HttpError`
@@ -66,7 +68,9 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `deleteAttachment`
     - `getAttachment`
   - Register: `defineJob('attachments.orphan-sweep')`
-  - Resources: `attachments.by-owner` (push, unbounded: one owner's attachments — the files a person attached to one task or block, a handful, never a growing log)
+  - Resources:
+    - `attachments.by-owner` (push, unbounded: one owner's attachments — the files a person attached to one task or block, a handful, never a growing log)
+    - `attachments.file` (push)
   - Routes:
     - `POST /api/attachments`
     - `GET /api/attachments/:id`
@@ -81,8 +85,12 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
   - Uses:
     - `infra/endpoints.dateString`
     - `network/live.liveValue`
-  - Exports (types): `Attachment`
+  - Exports (types):
+    - `Attachment`
+    - `AttachmentFile`
   - Exports (values):
+    - `attachmentFile`
+    - `AttachmentFileSchema`
     - `attachmentsByOwner`
     - `AttachmentSchema`
 - Cross-plugin:

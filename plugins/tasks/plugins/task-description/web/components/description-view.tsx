@@ -11,8 +11,10 @@ import { useRef, useState } from "react";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import {
   AttachmentThumbnail,
+  AttachmentFileChip,
   ATTACHMENT_MARKDOWN_RE,
   isAttachmentUrl,
+  isImageRef,
 } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -171,14 +173,14 @@ function resolveRawOffset(
 }
 
 // Render the body as plain text + inline widgets (file-links, active-data
-// chips), with attachment image refs replaced by inline thumbnails. We don't
+// chips), with attachment refs replaced by inline thumbnails / file chips. We don't
 // run a full markdown renderer here — task descriptions today are plain text
 // with the occasional pasted image, so this lighter pass keeps the display
 // fast and predictable.
 function DescriptionDisplay({ text }: { text: string }) {
   const segments: Array<
     | { kind: "text"; value: string; start: number }
-    | { kind: "image"; id: string; alt: string; start: number }
+    | { kind: "image" | "file"; id: string; alt: string; start: number }
   > = [];
   let lastIdx = 0;
   const re = new RegExp(ATTACHMENT_MARKDOWN_RE.source, "g");
@@ -193,7 +195,12 @@ function DescriptionDisplay({ text }: { text: string }) {
         start: lastIdx,
       });
     }
-    segments.push({ kind: "image", id, alt: m[1] ?? "", start: m.index });
+    segments.push({
+      kind: isImageRef(m[0]) ? "image" : "file",
+      id,
+      alt: m[1] ?? "",
+      start: m.index,
+    });
     lastIdx = m.index + m[0].length;
   }
   if (lastIdx < text.length) {
@@ -214,7 +221,11 @@ function DescriptionDisplay({ text }: { text: string }) {
           </span>
         ) : (
           <span key={i} data-vstart={seg.start}>
-            <AttachmentThumbnail attachmentId={seg.id} alt={seg.alt} />
+            {seg.kind === "image" ? (
+              <AttachmentThumbnail attachmentId={seg.id} alt={seg.alt} />
+            ) : (
+              <AttachmentFileChip attachmentId={seg.id} filename={seg.alt} />
+            )}
           </span>
         ),
       )}

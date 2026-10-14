@@ -107,6 +107,12 @@ function TabTitleReporter({ tabId }: { tabId: string }) {
   const leaf =
     panes.find((p) => p.pane.titleOwner) ??
     (panes.length > 0 ? panes[panes.length - 1]! : null);
+  // A companion leading the route sits beside the index pane (see
+  // `PaneInternal.companion`), so the page is still the index's: a file
+  // previewed from the home keeps the tab titled "Home".
+  if (leaf && !leaf.pane.titleOwner && panes[0]?.pane.companion) {
+    return <IndexTitleReporter key="index" tabId={tabId} />;
+  }
   if (leaf) {
     return (
       <LeafTitleReporter

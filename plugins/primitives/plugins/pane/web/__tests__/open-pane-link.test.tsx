@@ -249,6 +249,53 @@ describe("openPane.link: the URL is where the plain click goes", () => {
     expect(store.getRoute()).toBe(before);
   });
 
+  it("append with no caller lands after the last pane", () => {
+    const button = mount(
+      [
+        { paneId: "lnk-conv", params: { convId: "7" } },
+        { paneId: "lnk-plain", params: {} },
+      ],
+      (open) => open.link(itemPane, { itemId: "I1" }, { mode: "append" }),
+    );
+    expect(expectLinkMatchesClick(button)).toBe("/lnk/c/7/plain/item/I1");
+  });
+
+  it("append ignores the caller's position", () => {
+    const button = mount(
+      [
+        { paneId: "lnk-conv", params: { convId: "7" } },
+        { paneId: "lnk-plain", params: {} },
+      ],
+      (open) => open.link(itemPane, { itemId: "I1" }, { mode: "append" }),
+      0,
+    );
+    expect(expectLinkMatchesClick(button)).toBe("/lnk/c/7/plain/item/I1");
+  });
+
+  it("append replaces a last pane of the same kind", () => {
+    const button = mount(
+      [
+        { paneId: "lnk-conv", params: { convId: "7" } },
+        { paneId: "lnk-item", params: { itemId: "I1" } },
+      ],
+      (open) => open.link(itemPane, { itemId: "I2" }, { mode: "append" }),
+    );
+    expect(expectLinkMatchesClick(button)).toBe("/lnk/c/7/item/I2");
+  });
+
+  it("append of the pane already last is a no-op", () => {
+    const button = mount(
+      [
+        { paneId: "lnk-conv", params: { convId: "7" } },
+        { paneId: "lnk-item", params: { itemId: "I1" } },
+      ],
+      (open) => open.link(itemPane, { itemId: "I1" }, { mode: "append" }),
+    );
+    const before = store.getRoute();
+    expect(expectLinkMatchesClick(button)).toBe("/lnk/c/7/item/I1");
+    expect(store.getRoute()).toBe(before);
+  });
+
   it("no caller pane: a non-positional open", () => {
     const button = mount(
       [

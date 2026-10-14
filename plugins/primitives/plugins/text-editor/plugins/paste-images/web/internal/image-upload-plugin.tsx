@@ -1,16 +1,12 @@
 import { useEffect } from "react";
-import {
-  $getSelection,
-  $isRangeSelection,
-  $insertNodes,
-  COMMAND_PRIORITY_NORMAL,
-  DROP_COMMAND,
-  PASTE_COMMAND,
-} from "lexical";
+import { COMMAND_PRIORITY_NORMAL, DROP_COMMAND, PASTE_COMMAND } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
-import { $createImageNode } from "./image-node";
+import { attachFiles, filesOf } from "./attach-files";
 
+/**
+ * Paste or drop files into any text editor: each is uploaded as an attachment
+ * and lands at the caret (see {@link attachFiles}).
+ */
 export function ImageUploadPlugin({
   onError,
 }: {
@@ -20,43 +16,18 @@ export function ImageUploadPlugin({
 
   useEffect(() => {
     const handle = (event: ClipboardEvent | DragEvent) => {
-      const data =
-        event instanceof DragEvent ? event.dataTransfer : event.clipboardData;
+      const isDrop = event instanceof DragEvent;
+      const data = isDrop ? event.dataTransfer : event.clipboardData;
       if (!data) return false;
-      const imageItems = Array.from(data.items).filter(
-        (it) => it.kind === "file" && it.type.startsWith("image/"),
-      );
-      if (imageItems.length === 0) return false;
-
-      const items =
-        event instanceof DragEvent
-          ? imageItems
-          : [imageItems.find((it) => it.type === "image/png") ?? imageItems[0]!];
-
+      const files = filesOf(data, isDrop ? "drop" : "paste");
+      if (files.length === 0) return false;
       event.preventDefault();
-      void Promise.all(
-        items.map(async (item) => {
-          const blob = item.getAsFile();
-          if (!blob) return null;
-          const ext = mimeToExt(blob.type);
-          const filename = blob.name && blob.name.length > 0 ? blob.name : `paste.${ext}`;
-          const result = await uploadAttachment(blob, filename, blob.type);
-          return result.id;
-        }),
-      )
-        .then((ids) => {
-          editor.update(() => {
-            const selection = $getSelection();
-            if (!$isRangeSelection(selection)) return;
-            const nodes = ids
-              .filter((id): id is string => typeof id === "string")
-              .map((id) => $createImageNode({ attachmentId: id }));
-            if (nodes.length > 0) $insertNodes(nodes);
-          });
-        })
-        .catch((err) => {
-          onError?.(err instanceof Error ? err.message : String(err));
-        });
+      attachFiles(editor, files).catch((err: unknown) => {
+        // No host to tell: rethrow, so the failure reaches the error reporter
+        // rather than vanishing.
+        if (!onError) throw err;
+        onError(err instanceof Error ? err.message : String(err));
+      });
       return true;
     };
 
@@ -77,19 +48,4 @@ export function ImageUploadPlugin({
   }, [editor, onError]);
 
   return null;
-}
-
-function mimeToExt(mime: string): string {
-  switch (mime) {
-    case "image/png":
-      return "png";
-    case "image/jpeg":
-      return "jpg";
-    case "image/gif":
-      return "gif";
-    case "image/webp":
-      return "webp";
-    default:
-      return "bin";
-  }
 }

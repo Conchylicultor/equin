@@ -7,6 +7,7 @@ import { filesDocumentTheme } from "./internal/theme";
 import { CopyPathAction, ExtractAction } from "./components/row-actions";
 
 export { FileBrowser, type FileBrowserProps } from "./components/file-browser";
+export { PreviewPane } from "./components/preview-pane";
 export { FileBrowserSlots, type ExplorerLensItem } from "./slots";
 export type { ExplorerNavigator } from "./internal/navigator";
 export { useExplorerDir } from "./internal/explorer-dir";

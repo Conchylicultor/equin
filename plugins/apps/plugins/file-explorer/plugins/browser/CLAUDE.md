@@ -66,6 +66,7 @@
     - `FileBrowserSlots`
     - `filesAtPane`
     - `filesHomePane`
+    - `PreviewPane`
     - `useExplorerDir`
     - `useExplorerFolderTarget`
     - `useExplorerLocation`
@@ -106,6 +107,7 @@
     - `pathChain`
 - Cross-plugin:
   - Imported by:
+    - `apps/file-explorer/attachment-preview`
     - `apps/file-explorer/git`
     - `apps/file-explorer/places`
     - `conversations/conversation-view/explorer`

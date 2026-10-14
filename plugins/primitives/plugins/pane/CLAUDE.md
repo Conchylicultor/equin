@@ -320,6 +320,11 @@ Modes:
   a pane that is already to your left therefore duplicates it on your right.
 - `"swap"` — replace the caller's slot in-place (same pane type,
   different params), truncating children.
+- `"append"` — put target after the route's LAST pane, whoever the caller is,
+  and replace that last pane instead when it is the same pane type (so a
+  preview opened again swaps its column rather than stacking). The positional
+  open for global chrome — a popover in the action bar has no caller, so its
+  `push` would rebuild the route instead of opening beside it.
 
 **It is legal everywhere**, unlike the route reads above. Opening a pane is an
 imperative op — the hook returns a callback and reads nothing during render — so
@@ -792,6 +797,21 @@ area at its bare root, which is a legitimate choice (`home`, `studio`).
 `useIndexMatch(basePath)` resolves it; the main-area renderer paints it only for
 a genuinely empty route, and overlay hosts ignore it.
 
+### Companion panes (`companion`)
+
+A pane that accompanies what is on screen rather than being a destination —
+an attached file's preview, opened from a prompt — declares `companion: true`.
+When a companion is the route's HEAD, the surface's match (`usePaneRoute`)
+keeps the app's index pane to its left. So a file chip clicked in the agent
+manager's home composer (`/agents`, an empty route) opens the preview beside
+the home instead of replacing it, and `/agents/attachment/<id>` reloads to the
+same two columns. The URL is untouched: the index pane has none. While a
+companion leads, the tab keeps the index pane's title.
+
+Deeper in a route a companion is an ordinary pane, and a pane opened FROM the
+index (a conversation) still replaces it — the index stays the landing, never a
+column the route carries.
+
 ## Not yet implemented (deferred)
 
 - `keepalive` for heavy panes — switching slots remounts by default.
@@ -807,9 +827,9 @@ See "Open questions" in the design doc.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 90 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×90
-  - Contributes: 113 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 91 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×91
+  - Contributes: 114 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountsPane.Actions` "title" → `PaneTitleItem`
     - `agentDetailPane.Actions` "title" → `PaneTitleItem`
@@ -819,6 +839,7 @@ See "Open questions" in the design doc.
     - `allConversationsPane.Actions` "title" → `PaneTitleItem`
     - `app-preview.actions` "title" → `PaneTitleItem`
     - `appleSetupPane.Actions` "title" → `PaneTitleItem`
+    - `attachmentPreviewPane.Actions` "title" → `PaneTitleItem`
     - `attemptPane.Actions` "title" → `PaneTitleItem`
     - `automation-detail.actions` "title" → `PaneTitleItem`
     - `automations.actions` "title" → `PaneTitleItem`
@@ -1034,8 +1055,8 @@ See "Open questions" in the design doc.
     - `useSurfaceAppId`
     - `useSyncPaneRegistry`
 - Cross-plugin:
-  - Imported by: 168 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×59
+  - Imported by: 169 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×60
     - `conversations` ×29
     - `debug` ×23
     - `active-data` ×10

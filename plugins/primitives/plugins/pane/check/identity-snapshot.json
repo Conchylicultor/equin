@@ -55,6 +55,12 @@
       "parent": "accounts"
     },
     {
+      "paneId": "attachment-preview",
+      "segment": "attachment/:id",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "attempt",
       "segment": "a/:attemptId",
       "appIndex": false,

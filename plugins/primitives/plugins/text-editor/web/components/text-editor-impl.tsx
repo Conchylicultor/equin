@@ -9,6 +9,7 @@ import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { AutoFocusPlugin } from "@lexical/react/LexicalAutoFocusPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { DROP_COMMAND } from "lexical";
 import { buildInitialConfig } from "../internal/lexical-config";
 import { EnterKeyPlugin } from "../internal/enter-key-plugin";
 import { DecoratorNavPlugin } from "@plugins/primitives/plugins/text-editor/plugins/decorator-nav/web";
@@ -190,8 +191,34 @@ function EditorShell({
 
   const minHeight = `${Math.max(minRows, 1) * 1.5}rem`;
 
+  // The whole box is the drop target, not just the editable: a file dropped on
+  // the padding or the bottom bar is dispatched as a drop into the editor, so
+  // whichever editor plugin claims dropped files handles it. A drop on the
+  // editable itself is Lexical's own to dispatch.
+  const [fileDragOver, setFileDragOver] = useState(false);
+
   return (
     <div
+      onDragOver={(e) => {
+        if (disabled || !e.dataTransfer.types.includes("Files")) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+        setFileDragOver(true);
+      }}
+      onDragLeave={(e) => {
+        if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+        setFileDragOver(false);
+      }}
+      onDrop={(e) => {
+        setFileDragOver(false);
+        if (disabled || e.defaultPrevented) return;
+        // Lexical dispatched this one itself: never a second time.
+        if (editor.getRootElement()?.contains(e.target as Node)) return;
+        if (!e.dataTransfer.types.includes("Files")) return;
+        if (editor.dispatchCommand(DROP_COMMAND, e.nativeEvent)) {
+          e.preventDefault();
+        }
+      }}
       // Yields, never grows: the self-contained editor box falls below its
       // content width inside an arbitrary external flex parent.
       // The box is a card: the shape group's card corners, the density
@@ -200,7 +227,7 @@ function EditorShell({
       className={cn(
         yieldClass("x"),
         "focus-border-within w-full rounded-card border p-composer transition-colors",
-        "border-input",
+        fileDragOver ? "border-primary" : "border-input",
         disabled ? "bg-input/50 dark:bg-input/80" : "bg-composer",
       )}
     >

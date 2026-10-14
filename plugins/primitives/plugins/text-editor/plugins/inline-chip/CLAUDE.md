@@ -106,9 +106,11 @@ plugin loaded. Declaring one chip lights the token up on **every** surface with
 no per-chip Lexical wiring. (This is how the element-picker `<ui-context>` chip
 is defined; it owns no Lexical node of its own.)
 
-When the editor is editable, the node wraps the chip in a hover-revealed ×
-removal affordance — every chip gets it for free. Read surfaces render the chip
-through `renderInlineChip`, never through the node, so they never get the ×.
+When the editor is editable, the node wraps the chip in `TokenFrame`
+(`token-extension/node`) — selected as one object with a ring, and a
+hover-revealed × removal affordance — every chip gets it for free, as do the
+attachment nodes. Read surfaces render the chip through `renderInlineChip`,
+never through the node, so they never get the ×.
 
 **The node spec is `core/node.ts`, not the web file.** The browser's twin is
 `inlineChipNode.decorated({…})` (exported as `inlineChipWebNode`, for a second
@@ -168,15 +170,9 @@ rendered chip out of a read surface puts the token back on the clipboard.
     - `InlineChip.Tag` ← `active-data.task-link`
     - `InlineChip.Tag` ← `primitives.ui-context.element-picker`
   - Uses:
-    - `primitives/css/center.Center`
-    - `primitives/css/inline.Inline`
-    - `primitives/css/pin.Pin`
-    - `primitives/css/ui-kit.cn`
     - `primitives/error-boundary.PluginErrorBoundary`
-    - `primitives/hover-reveal.hoverRevealGroup`
-    - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/text-editor.registerNodeExtensionSource`
-    - `ui/icons.Icon`
+    - `primitives/text-editor/token-extension/node.TokenFrame`
   - Exports (types):
     - `ChipModelText`
     - `ChipSurface`

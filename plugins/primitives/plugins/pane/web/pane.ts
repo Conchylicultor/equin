@@ -395,6 +395,16 @@ export interface PaneInternal {
    * task) stays subordinate. Routes with no title owner fall back to the leaf.
    */
   titleOwner: boolean;
+  /**
+   * Declares this pane a COMPANION — it accompanies what is on screen rather
+   * than being a destination of its own (an attached file's preview, opened
+   * from a prompt being composed). At the HEAD of a route it keeps its surface's
+   * index pane on screen to its left, so opening one from an app's bare root
+   * (`/agents`, where the route is empty) lands beside the landing pane instead
+   * of replacing it. Read by {@link usePaneRoute}; the URL is unchanged — the
+   * index pane has none, so a reload resolves the same arrangement.
+   */
+  companion: boolean;
 }
 
 // Populated synchronously via useSyncPaneRegistry (called by MillerColumns).
@@ -1765,6 +1775,24 @@ export function computeOpen(
   });
   const ownParams = extractOwnParams(target, params);
 
+  // append: beside whatever is on screen, wherever the open comes from — the
+  // one positional open global chrome (a popover in the action bar) can make,
+  // since it has no caller to be relative to. A last pane of the same kind is
+  // REPLACED rather than stacked, so opening one attachment after another
+  // keeps one preview column instead of growing a row of them.
+  if (opts.mode === "append") {
+    const last = currentRoute.at(-1);
+    if (
+      last?.paneId === target.id &&
+      sameParams(ownParams, last.params) &&
+      sameOptions(options, last.options)
+    )
+      return unchanged;
+    const head =
+      last?.paneId === target.id ? currentRoute.slice(0, -1) : currentRoute;
+    return to(relativeHead(head, target, params, ownParams, options, hint));
+  }
+
   const callerIndex =
     opts.mode === "root" || callerInstanceId === undefined
       ? -1
@@ -2697,6 +2725,12 @@ type RouteDefineArgs<
    */
   titleOwner?: boolean;
   /**
+   * Declares this pane a COMPANION: at the head of a route it keeps the
+   * surface's index pane beside it. See {@link PaneInternal.companion}.
+   * Defaults to false.
+   */
+  companion?: boolean;
+  /**
    * Default column width in pixels. Read by layout renderers (e.g. Miller
    * columns). The leaf column ignores this and flex-grows. Defaults to 400.
    */
@@ -2771,6 +2805,7 @@ function define(
     title: normalizeTitle(args.title),
     optionDefaults: args.options ?? {},
     titleOwner: args.titleOwner ?? false,
+    companion: args.companion ?? false,
   };
 
   return makePaneObject(internal, route);
@@ -2987,9 +3022,19 @@ export function usePaneRoute(basePath: string): PaneMatch | null {
   const route = useRoute();
   const state = useRouteState();
   const index = useIndexMatch(basePath);
+  // A companion at the route's head keeps the landing pane to its left (see
+  // `PaneInternal.companion`). Memoized so the match identity only changes
+  // when the route or the index does.
+  const withIndex = useMemo(
+    () =>
+      route && index && route.panes[0]?.pane.companion
+        ? { panes: [...index.panes, ...route.panes] }
+        : route,
+    [route, index],
+  );
 
   // A resolved route whose slots all match registered panes → render it.
-  if (route) return route;
+  if (withIndex) return withIndex;
   // The ONLY case that renders the index/landing pane is a GENUINE bare app root:
   // a resolved route with zero slots. Everything else — an unresolved (pending /
   // not-found) URL, or a resolved route whose slots don't resolve yet (a deferred
@@ -3006,7 +3051,13 @@ export function usePaneRoute(basePath: string): PaneMatch | null {
 // The non-positional open logic itself lives on the store (`openPaneImpl`).
 // ---------------------------------------------------------------------------
 
-export type PaneOpenMode = "root" | "push" | "swap";
+/**
+ * `root` starts a fresh route at the target; `push` / `swap` are relative to
+ * the caller pane; `append` puts the target after the route's last pane
+ * whoever the caller is (replacing a last pane of the same kind) — see
+ * {@link computeOpen}.
+ */
+export type PaneOpenMode = "root" | "push" | "swap" | "append";
 
 export function openPane<
   Params = Record<string, string>,

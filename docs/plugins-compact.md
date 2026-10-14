@@ -14,7 +14,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`debug`** [1 sub-plugin] — Debug app.
     - **`deploy`** [test helpers] [exempt] [17 sub-plugins] — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
     - **`events`** [exempt] [22 sub-plugins] — Events — track events from pluggable sources in one database.
-    - **`file-explorer`** [exempt] [4 sub-plugins] — File explorer app.
+    - **`file-explorer`** [exempt] [5 sub-plugins] — File explorer app.
     - **`home`** [3 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
     - **`mail`** [exempt] [12 sub-plugins] — Mail — a Gmail-class client.
     - **`pages`** [exempt] [16 sub-plugins] — Notion-like pages app.
