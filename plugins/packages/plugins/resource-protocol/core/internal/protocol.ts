@@ -1,8 +1,8 @@
 // The live-resource wire protocol's FAILURE vocabulary — one definition both
 // ends compile against. The resource runtime (per-worktree server and central)
 // sends these frames and bodies; the live-state client reads them. A leaf on
-// purpose: the runtime barrel pulls `node:crypto`, so the browser cannot import
-// it, and the runtime must not import the live-state client. The frames
+// purpose: the client must not load the whole runtime to learn its vocabulary,
+// and the runtime must not import the live-state client. The frames
 // themselves (`SubErrorFrame` included) are declared in `./frames`.
 
 import { CONTRACT_VERDICTS, SUB_ERROR_REASONS } from "./frames";

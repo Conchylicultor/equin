@@ -8,7 +8,13 @@ import {
   parseBarrelExports,
   readIfExists,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { resourceDescriptorFactories, resourceRegisterMarkers } from "../core";
+import {
+  resourceDescriptorFactories,
+  resourceRegisterMarkers,
+  resourceServingPrimitives,
+  type ServedCollectionFnNames,
+  type ServedResourceFnNames,
+} from "../core";
 // Type-only NAMESPACE imports: the derivation below needs each barrel's whole
 // module type, and an inline `typeof import("…")` would bypass the boundary
 // system (it is not an import statement the checker can see). `import type * as`
@@ -32,56 +38,11 @@ import type * as LiveServerBarrel from "@plugins/network/plugins/live/server";
 // entry's `barrel`, which is quoted verbatim in scanner error messages ("add it
 // to …") and is otherwise read by nothing, so it rots silently.
 
-/**
- * The minimal structural shape every SERVED resource has — `Resource<T, P>`,
- * its `ExternalResource` extension and `serveValue`'s `ServedValue` (a
- * `Resource` plus `keys` / `declare`) all carry `key`, `mode` and `load`. As in
- * `../core`, the shape is a widening rather than the real type: matching
- * structurally keeps this file out of the runtime's generic-variance business,
- * and over-inclusion is the safe direction (it demands a classification entry,
- * which is a compile error, not silence). A descriptor has no `load`, so a
- * factory never reads as a marker; a served resource does match the descriptor
- * shape (`key` + `schema`), but that filter runs over the `core` barrels only.
- */
-interface ServedResource {
-  key: string;
-  mode: unknown;
-  load: unknown;
-}
-
-/** Every export of `M` that is a function returning a served resource. */
-type RegisterMarkerNames<M> = {
-  [K in keyof M]-?: M[K] extends (...args: never[]) => infer R
-    ? [R] extends [ServedResource]
-      ? K
-      : never
-    : never;
-}[keyof M];
-
-/**
- * A served collection: one call serving every resource a `liveCollection`
- * mints (`serveCollection`) — `rows` always; the window and groups, or (declared
- * `all`) the whole ordered set, unless it is lookup-only. Structural, like
- * {@link ServedResource}.
- */
-interface ServedCollection {
-  rows: ServedResource;
-}
-
-/** Every export of `M` that is a function returning a served collection. */
-type CollectionMarkerNames<M> = {
-  [K in keyof M]-?: M[K] extends (...args: never[]) => infer R
-    ? [R] extends [ServedCollection]
-      ? K
-      : never
-    : never;
-}[keyof M];
-
 type ServingMarkerName =
-  | RegisterMarkerNames<typeof ServerCoreBarrel>
-  | RegisterMarkerNames<typeof QueryResourceServerBarrel>
-  | RegisterMarkerNames<typeof LiveServerBarrel>
-  | CollectionMarkerNames<typeof LiveServerBarrel>;
+  | ServedResourceFnNames<typeof ServerCoreBarrel>
+  | ServedResourceFnNames<typeof QueryResourceServerBarrel>
+  | ServedResourceFnNames<typeof LiveServerBarrel>
+  | ServedCollectionFnNames<typeof LiveServerBarrel>;
 
 type Assert<T extends true> = T;
 
@@ -148,6 +109,7 @@ const check: Check = {
     const entries: [string, { barrel: string }][] = [
       ...Object.entries(resourceDescriptorFactories),
       ...Object.entries(resourceRegisterMarkers),
+      ...Object.entries(resourceServingPrimitives),
     ];
 
     for (const [name, entry] of entries) {

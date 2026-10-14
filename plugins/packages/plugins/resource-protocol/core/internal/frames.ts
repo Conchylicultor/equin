@@ -12,6 +12,8 @@
 // another vocabulary). An edit that changes nothing on the wire (a comment, the
 // order fields are written in) leaves the id where it is.
 
+import { hash53 } from "@plugins/packages/plugins/string-hash/core";
+
 /** Params as they ride the wire: every name → a string. */
 export type WireParams = Record<string, string>;
 
@@ -460,31 +462,12 @@ function canonicalJson(v: unknown): string {
   return JSON.stringify(v);
 }
 
-/**
- * cyrb53: a 53-bit string hash in plain JS (no `node:crypto`, so the browser
- * computes the same id). Not cryptographic — it tells vocabularies apart, it
- * does not defend against a forged one.
- */
-function cyrb53(str: string): string {
-  let h1 = 0xdeadbeef;
-  let h2 = 0x41c6ce57;
-  for (let i = 0; i < str.length; i++) {
-    const ch = str.charCodeAt(i);
-    h1 = Math.imul(h1 ^ ch, 2654435761);
-    h2 = Math.imul(h2 ^ ch, 1597334677);
-  }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
-  h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
-  h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  return (4294967296 * (2097151 & h2) + (h1 >>> 0))
-    .toString(16)
-    .padStart(14, "0");
-}
-
 /** The protocol id of a vocabulary: a hash of its canonical JSON. */
 export function protocolIdOf(vocabulary: unknown): string {
-  return `rp-${cyrb53(canonicalJson(vocabulary))}`;
+  // cyrb53 (`hash53`, seed 0): plain JS, so the browser computes the same id.
+  // Not cryptographic — it tells vocabularies apart, it does not defend
+  // against a forged one.
+  return `rp-${hash53(canonicalJson(vocabulary)).toString(16).padStart(14, "0")}`;
 }
 
 /**

@@ -14,7 +14,7 @@ import {
 } from "@plugins/framework/plugins/resource-runtime/core";
 import { notificationsWsHandler } from "@plugins/framework/plugins/server-core/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import { compileValue } from "../../shared/compile-value";
+import { compileValue } from "../../core/internal/compile-value";
 import { serveValue } from "./serve-value";
 
 const Count = z.object({ n: z.number() });

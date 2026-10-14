@@ -7,6 +7,7 @@ export {
   isResourceVocabularyOwner,
   resourceDescriptorFactories,
   resourceRegisterMarkers,
+  resourceServingPrimitives,
   resourceVocabularyOwnerPaths,
 } from "./vocabulary";
 export { mintsOf } from "./mints";
@@ -19,4 +20,9 @@ export type {
   RegisterMarker,
   RegisterMarkerName,
   ResourceMembership,
+  ServedCollection,
+  ServedCollectionFnNames,
+  ServedResource,
+  ServedResourceFnNames,
+  ServingPrimitive,
 } from "./vocabulary";

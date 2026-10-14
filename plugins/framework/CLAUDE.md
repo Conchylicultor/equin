@@ -11,9 +11,11 @@ The plugin runtime itself — not where features go.
 
 - Description: Umbrella for framework primitives: web plugin SDK, server, central
 - Sub-plugins:
+  - **`browser-server`** — A server that runs in the page — a third host of the unified live API (core: createBrowserServer serves liveValue / liveCollection declarations on a real resource runtime through serveValueOn /…
   - **`central-core`**
   - **`cli`** — The `./singularity` CLI: the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).
   - **`hook-value`** — A React hook carried as a value: the Hook<F> brand, and the two lint rules that keep every binding holding one named use* (the React Compiler recognises hooks by name only and memoizes any other…
+  - **`http-router`** — The one HTTP request router every host mounts: createRequestHandler turns "METHOD /path/:param" route pairs into a (req) => Promise<Response> — literal fast path, then :param matching in…
   - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
   - **`plugin-loader`** — Pure plugin-graph algorithms: topological load-wave partitioning and dependsOn topo-sort, shared by the server/central/web plugin loaders.
   - **`resource-runtime`**

@@ -20,7 +20,7 @@
  */
 
 import { test, expect, describe, mock } from "bun:test";
-import { createHash } from "node:crypto";
+import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 import { z } from "zod";
 import {
   createHarness,
@@ -30,10 +30,9 @@ import {
 } from "./test-support";
 import type { RecordedFrame } from "./test-support";
 
-// The runtime hashes every `revalidate` signature (`normalizeEtag`, SHA1) so the
+// The runtime hashes every `revalidate` signature (`normalizeEtag`, string-hash's `hashHex`) so the
 // wire ETag is opaque and header-safe. Mirror it here to name the expected token.
-const sig = (raw: string): string =>
-  createHash("sha1").update(raw).digest("hex");
+const sig = (raw: string): string => hashHex(raw);
 
 const httpReq = (key: string, ifNoneMatch?: string): Request =>
   new Request(`http://localhost/api/resources/${key}`, {

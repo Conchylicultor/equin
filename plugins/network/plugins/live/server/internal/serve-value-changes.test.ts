@@ -16,7 +16,7 @@ import {
   compileQueryValue,
   compileValue,
   registerValue,
-} from "../../shared/compile-value";
+} from "../../core/internal/compile-value";
 import { serveValue } from "./serve-value";
 
 const Count = z.object({ n: z.number() });

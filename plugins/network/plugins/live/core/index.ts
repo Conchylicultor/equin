@@ -93,6 +93,41 @@ export type {
   LiveWindowDescriptor,
 } from "./internal/live-collection";
 export { LIVE_ROW_KEY, LIVE_ROW_KEY_MAX_BYTES } from "./internal/row-key";
+// The one serving code path every host runs (Bun server, central, a browser
+// server) — `serve-on.ts`. Classified as serving primitives (not factories) by
+// `tooling/resource-vocabulary`.
+export {
+  bindExternalServe,
+  serveCollectionOn,
+  serveValueOn,
+} from "./internal/serve-on";
+export type {
+  ExternalAllCollection,
+  ExternalLookupCollection,
+  ExternalWindowCollection,
+  ExternalNotifiedPagedValue,
+  ExternalNotifiedQueryValue,
+  ExternalNotifiedValue,
+  ExternalSilentPagedValue,
+  ExternalSilentValue,
+  LiveCollectionChange,
+  LiveCollectionChanges,
+  LiveExternalServe,
+  LiveHost,
+  LiveHostSource,
+  LiveHostSources,
+  ServedExternalAll,
+  ServedExternalLookup,
+  ServedExternalResource,
+  ServedExternalWindow,
+  ServedPagedOn,
+  ServedValueOn,
+  ServeExternalAllOptions,
+  ServeExternalLookupOptions,
+  ServeExternalWindowOptions,
+  ServeValueOnOptions,
+} from "./internal/serve-on";
+export type { LiveRuntime } from "./internal/compile-value";
 export type { LiveCutKey } from "./internal/row-key";
 export type {
   LiveColumnFilter,

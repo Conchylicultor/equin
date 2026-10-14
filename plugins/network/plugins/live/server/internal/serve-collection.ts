@@ -10,6 +10,7 @@ import {
 import { filterSql } from "@plugins/network/plugins/live/plugins/filter/server";
 import {
   defineDeferredResource,
+  defineExternalResource,
   defineResource,
   keptSnapshotValue,
   loadResourceByKey,
@@ -68,6 +69,16 @@ import {
   type LiveGroupParams,
   type LiveLookupCollection,
   type LiveWindowParams,
+  type ExternalAllCollection,
+  type ExternalLookupCollection,
+  type ExternalWindowCollection,
+  type LiveCollectionChanges,
+  type ServedExternalAll,
+  type ServedExternalLookup,
+  type ServedExternalWindow,
+  type ServeExternalAllOptions,
+  type ServeExternalLookupOptions,
+  type ServeExternalWindowOptions,
 } from "@plugins/network/plugins/live/core";
 import {
   LiveColumns,
@@ -76,6 +87,12 @@ import {
   type ServedScopedColumns,
 } from "./serve-columns";
 import { exposureFolds } from "./exposure-folds";
+import {
+  compileExternalCollection,
+  type AnyCollection,
+  type AnyExternalCollectionOptions,
+  type AnyServedExternal,
+} from "../../core/internal/serve-on";
 import {
   compileAllSpecs,
   type AllCollectionSpecs,
@@ -287,6 +304,16 @@ export interface ServedAllCollection<Row> {
     ReturnType<typeof ResourceContribution.Declare>,
   ];
 }
+
+/**
+ * An external collection served on the worktree (`source: "external"`, see
+ * core's `serveCollectionOn`): its served resources plus one
+ * `Resource.Declare` per registered resource — spread into the plugin's
+ * `contributions`, as a table-backed collection's.
+ */
+export type DeclaredCollection<S> = S & {
+  declare: ReturnType<typeof ResourceContribution.Declare>[];
+};
 
 /** A lookup-only collection, served: its one minted resource, `${key}:rows`. */
 export interface ServedLookupCollection<Row> {
@@ -1095,6 +1122,38 @@ export function compileCollection<
  */
 export function serveCollection<
   Row,
+  const C extends LiveCollectionChanges = "notified",
+>(
+  collection: ExternalAllCollection<Row>,
+  opts: ServeExternalAllOptions<NoInfer<Row>, C>,
+): DeclaredCollection<ServedExternalAll<Row, C>>;
+export function serveCollection<
+  Row,
+  const C extends LiveCollectionChanges = "notified",
+>(
+  collection: ExternalLookupCollection<Row>,
+  opts: ServeExternalLookupOptions<NoInfer<Row>, C>,
+): DeclaredCollection<ServedExternalLookup<Row, C>>;
+export function serveCollection<
+  Row,
+  F,
+  S extends string,
+  Sc extends boolean,
+  Cn,
+  const C extends LiveCollectionChanges = "notified",
+>(
+  collection: ExternalWindowCollection<Row, F, S, Sc, Cn>,
+  opts: ServeExternalWindowOptions<
+    NoInfer<Row>,
+    NoInfer<F>,
+    NoInfer<S>,
+    NoInfer<Sc>,
+    NoInfer<Cn>,
+    C
+  >,
+): DeclaredCollection<ServedExternalWindow<Row, C>>;
+export function serveCollection<
+  Row,
   F,
   S extends string,
   T extends CollectionSource,
@@ -1132,11 +1191,33 @@ export function serveCollection<
     | LiveAllCollection<Row>,
   served:
     | ServeCollectionOptions<T, Row, J, keyof F & string>
-    | ServeAllCollectionOptions<T, Row, readonly AllJoinSpec[]>,
+    | ServeAllCollectionOptions<T, Row, readonly AllJoinSpec[]>
+    | ServeExternalAllOptions<Row, LiveCollectionChanges>
+    | ServeExternalLookupOptions<Row, LiveCollectionChanges>
+    // The window arm, its scroll / count flags spelled out (the overload's
+    // are inferred per call); the body hands every external form on erased.
+    | ServeExternalWindowOptions<Row, F, S, true, null, LiveCollectionChanges>
+    | ServeExternalWindowOptions<Row, F, S, false, null, LiveCollectionChanges>,
 ):
   | ServedCollection<Row>
   | ServedLookupCollection<Row>
-  | ServedAllCollection<Row> {
+  | ServedAllCollection<Row>
+  | DeclaredCollection<AnyServedExternal> {
+  // An external source (`source: "external"`): the core's one serving code
+  // path on server-core's runtime, bound eagerly, plus its declarations. The
+  // table-backed arm below is untouched by it.
+  if ((served as { source?: unknown }).source !== undefined) {
+    // Erased: the overloads checked the options against the declaration.
+    const external = compileExternalCollection(
+      { defineResource, defineExternalResource },
+      collection as unknown as AnyCollection,
+      served as unknown as AnyExternalCollectionOptions,
+    );
+    return {
+      ...external,
+      declare: external.resources.map((r) => ResourceContribution.Declare(r)),
+    };
+  }
   // First (C4): a collection declared `all` has no window either, so the
   // lookup-only branch below would serve it as `:rows` alone and never
   // register its `key`. Bound eagerly — unless it reaches exposures, whose

@@ -36,6 +36,23 @@ bounded descriptor could not pin its plugin eager. An unrecognised factory
 produces no match and therefore no data, which reads exactly like a plugin that
 declares nothing, so nothing failed.
 
+## Serving primitives: classified, never matched
+
+A `core` barrel may also export a function that SERVES a declaration on a
+runtime its caller passes — `serveValueOn(rt, value, …)` and
+`serveCollectionOn(rt, collection, …)` in `network/live/core`, the one serving
+code path the Bun server, central and a browser server wrap. A served value
+carries `key` + `schema` too, so the factory filter excludes every function
+returning a served shape (`ServedResource`: `key` + `mode` + `load`, which no
+descriptor has), and the same derivation lists those functions in
+`resourceServingPrimitives` (`satisfies Record<ServingPrimitiveName, …>`, both
+directions). A serving primitive mints nothing (the declaration is its
+argument) and is not a register marker (its first argument is a runtime, not a
+descriptor), so no scanner matches it: a host's resources are seen through that
+host's own marker (`serveValue` / `serveCollection`). The `check/` run half
+verifies its `barrel` like every other entry, and its register-marker
+derivation reuses the same `ServedResource` / `ServedCollection` shapes.
+
 ## Consumers
 
 - `plugin-meta/facets/plugins/resources` — the docs facet.
@@ -118,6 +135,11 @@ it, so both scanners throw rather than guess.
     - `RegisterMarker`
     - `RegisterMarkerName`
     - `ResourceMembership`
+    - `ServedCollection`
+    - `ServedCollectionFnNames`
+    - `ServedResource`
+    - `ServedResourceFnNames`
+    - `ServingPrimitive`
   - Exports (values):
     - `isResourceVocabularyOwner`
     - `LIVE_CORE`
@@ -127,6 +149,7 @@ it, so both scanners throw rather than guess.
     - `QUERY_RESOURCE_SERVER`
     - `resourceDescriptorFactories`
     - `resourceRegisterMarkers`
+    - `resourceServingPrimitives`
     - `resourceVocabularyOwnerPaths`
     - `SERVER_CORE`
 - Cross-plugin:

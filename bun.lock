@@ -2773,6 +2773,10 @@
       "name": "@singularity/plugin-framework",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/browser-server": {
+      "name": "@singularity/plugin-framework-browser-server",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/central-core": {
       "name": "@singularity/plugin-framework-central-core",
       "devDependencies": {
@@ -2889,6 +2893,10 @@
     },
     "plugins/framework/plugins/hook-value": {
       "name": "@singularity/plugin-framework-hook-value",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/http-router": {
+      "name": "@singularity/plugin-framework-http-router",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/plugin-id": {
@@ -3860,6 +3868,10 @@
     },
     "plugins/packages/plugins/spawn-priority": {
       "name": "@singularity/plugin-packages-spawn-priority",
+      "version": "0.0.1",
+    },
+    "plugins/packages/plugins/string-hash": {
+      "name": "@singularity/plugin-packages-string-hash",
       "version": "0.0.1",
     },
     "plugins/packages/plugins/wall-clock": {
@@ -7873,6 +7885,8 @@
 
     "@singularity/plugin-framework": ["@singularity/plugin-framework@workspace:plugins/framework"],
 
+    "@singularity/plugin-framework-browser-server": ["@singularity/plugin-framework-browser-server@workspace:plugins/framework/plugins/browser-server"],
+
     "@singularity/plugin-framework-central-core": ["@singularity/plugin-framework-central-core@workspace:plugins/framework/plugins/central-core"],
 
     "@singularity/plugin-framework-cli": ["@singularity/plugin-framework-cli@workspace:plugins/framework/plugins/cli"],
@@ -7922,6 +7936,8 @@
     "@singularity/plugin-framework-cli-upstream": ["@singularity/plugin-framework-cli-upstream@workspace:plugins/framework/plugins/cli/plugins/upstream"],
 
     "@singularity/plugin-framework-hook-value": ["@singularity/plugin-framework-hook-value@workspace:plugins/framework/plugins/hook-value"],
+
+    "@singularity/plugin-framework-http-router": ["@singularity/plugin-framework-http-router@workspace:plugins/framework/plugins/http-router"],
 
     "@singularity/plugin-framework-plugin-id": ["@singularity/plugin-framework-plugin-id@workspace:plugins/framework/plugins/plugin-id"],
 
@@ -8378,6 +8394,8 @@
     "@singularity/plugin-packages-smooth-clock": ["@singularity/plugin-packages-smooth-clock@workspace:plugins/packages/plugins/smooth-clock"],
 
     "@singularity/plugin-packages-spawn-priority": ["@singularity/plugin-packages-spawn-priority@workspace:plugins/packages/plugins/spawn-priority"],
+
+    "@singularity/plugin-packages-string-hash": ["@singularity/plugin-packages-string-hash@workspace:plugins/packages/plugins/string-hash"],
 
     "@singularity/plugin-packages-wall-clock": ["@singularity/plugin-packages-wall-clock@workspace:plugins/packages/plugins/wall-clock"],
 

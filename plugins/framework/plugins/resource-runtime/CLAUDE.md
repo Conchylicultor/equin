@@ -70,13 +70,20 @@ duration, blocking every other loader, every `ws.send` and every HTTP handler. U
 Every injected hook (`ResourceRuntimeOptions`) is JSDoc'd on the type — don't
 restate them here. They are the server/central split: `server-core/core/resources.ts`
 binds all of them (profiler spans, wait attribution, error reporting,
-`Resource.Declare` owner metadata); central calls `createResourceRuntime()` with
-NONE, so every hook must degrade to identity/no-op. `console.error` always fires
+`Resource.Declare` owner metadata); central binds only `snapHash`, so every
+other hook must degrade to identity/no-op. `console.error` always fires
 inside the runtime — `reportError` is additive, never the only report. Wait
 attribution: `research/2026-06-19-global-wait-attribution-instrumentation.md`.
 
-It is **acyclic**: besides `zod` and `bun` types it imports only
+It is **acyclic and host-agnostic**: no `bun`, no `node:*`, no `Bun.*` — the Bun
+server, central and a browser page all host it (the boot epoch is
+`globalThis.crypto.randomUUID()`, ETags are `string-hash`'s `hashHex`, the
+keyed snapshot hash is the injected `snapHash`, default `hash64`; the Bun hosts
+pass `Bun.hash.wyhash`). Its socket is the structural `RuntimeSocket`
+(`send(data: string)`, used as a Map key) — a Bun `ServerWebSocket` satisfies
+it. Besides `zod` it imports only
 `@plugins/packages/plugins/inflight/core` (a leaf) — and the leaves
+`@plugins/packages/plugins/string-hash/core`,
 `@plugins/packages/plugins/canonical-params/core`, the params rule it shares with
 the browser (see *Optional params* above), and
 `@plugins/packages/plugins/resource-protocol/core`, the wire vocabulary: every
@@ -131,10 +138,14 @@ cast that `tsc` cannot see through, so each states its policy as an annotated
 `const scopePolicy: ScopePolicy<P>` first; the `keyed-resource-scope` check is
 the backstop for anything that still slips past.
 
-**D31 — the external window (`ExternalWindowPolicy`).** An external resource's
-truth is outside Postgres, so nothing routes into it — but it may be keyed:
-`defineExternalResource(keyedContract, { loader, membership: { kind: "window",
-limitOf, familyOf? } })` (network/live compiles a paged value's pages to it).
+**D31 — the external window or point set (`ExternalKeyedPolicy` =
+`ExternalWindowPolicy` | `ExternalPointPolicy`).** An
+external resource's truth is outside Postgres, so nothing routes into it — but
+it may be keyed: `defineExternalResource(keyedContract, { loader, membership:
+{ kind: "window", limitOf, familyOf? } })` (network/live compiles a paged
+value's pages to it), or `membership: { kind: "point", idsOf }`
+(`ExternalPointPolicy` / `ExternalPointMembership` — the tuple names an id set through the caller's
+point codec, and the loader reads those rows; it never derives).
 Its change arrives as its own `notify(params)`, a FULL pending that re-reads
 the tuple and diffs it by key against its snapshot (`drainMembershipFull`) —
 so it ships keyed `delta` frames, keeps a per-tuple snapshot, and may be
@@ -142,12 +153,14 @@ seeded (*Seeded derivation*, through `familyOf`), exactly as a routed window.
 It has no `windowIdsOf` (the runtime derives it from the loader — the tuple's
 own read, its ids mapped — for the paths that call one; none does today, a
 scoped pending exists only through routes) and no `orderSignatureOf` (every
-change is FULL). No `routes`, no point set or alias (throws, beside the type).
+change is FULL). No `routes`, no alias (throws, beside the type).
 It may follow external upstreams (`dependsOn`), each change a FULL re-read;
 nothing may cascade OUT of it (D32 — a membership drain cascades nothing), a
 throw in both registration orders. It is never L2-persisted (external and
 bounded). Pinned by `runtime-derive.test.ts` §"an external keyed window" and
-`runtime.test.ts`'s D31 case.
+`runtime.test.ts`'s D31 case; the point arm by `runtime-external-point.test.ts`
+(which also pins a `defineExternalResource` on a runtime with open sockets
+serving the next sub of its key).
 
 A non-keyed entry has no scope policy. A DB-backed one is reached through its
 captured read-set (the legacy router, `applyLegacyFullChange`, FULL — see
@@ -611,8 +624,9 @@ content identity, compared only for equality by every diff path. The
 representation is per-resource, decided statically by `snapEncoderFor`
 (`runtime.ts`):
 
-- **Default (`hashSnapEncoder`)**: a 64-bit wyhash of the row's canonical JSON
-  (+ a length fold) — ~16 B/row instead of a value-sized UTF-16 string Map rebuilt
+- **Default**: a 64-bit hash of the row's canonical JSON — the runtime's
+  `snapHash` option (the Bun hosts: wyhash + a length fold; otherwise
+  `hashSnapEncoder`, the portable `hash64`) — ~16 B/row instead of a value-sized UTF-16 string Map rebuilt
   on every recompute (`research/perfs/2026-07-16-main-paging-victim-investigation-PLAN.md`
   §B1). The accepted trade — a 64-bit collision silently masks one row update, at
   ~n²/2⁶⁵ per pk — is pinned by a collision-injection test in `keyed-diff.test.ts`.
@@ -1068,12 +1082,17 @@ and those plugins' `CLAUDE.md`.
     - `packages/resource-protocol.ResourceRefusal`
     - `packages/resource-protocol.ServerFrame`
     - `packages/semaphore.createSemaphore`
+    - `packages/string-hash.hash64`
+    - `packages/string-hash.hashHex`
   - Exports (types):
     - `AliasMembership`
     - `ChangeSource`
     - `DefineResourceInput`
     - `DependsOnEntry`
     - `DerivedRead`
+    - `ExternalKeyedPolicy`
+    - `ExternalPointMembership`
+    - `ExternalPointPolicy`
     - `ExternalResource`
     - `ExternalWindowMembership`
     - `ExternalWindowPolicy`
@@ -1099,6 +1118,7 @@ and those plugins' `CLAUDE.md`.
     - `Route`
     - `RoutedRecomputeOn`
     - `RoutePlan`
+    - `RuntimeSocket`
     - `ScopedResourceTable`
     - `ScopePolicy`
     - `SeedOutcome`
@@ -1119,6 +1139,7 @@ and those plugins' `CLAUDE.md`.
     - `tableLayoutRequirements`
 - Cross-plugin:
   - Imported by:
+    - `framework/browser-server`
     - `framework/central-core`
     - `framework/server-core`
 - Exemptions:
@@ -1133,7 +1154,7 @@ and those plugins' `CLAUDE.md`.
     - `diffKeyedFull` — Full diff: compare the new array `value` against `prev` (the prior snapshot, or `undefined` on first notify).
     - `diffKeyedScoped` — Scoped diff (Layer 2): `scopedRows` is a PARTIAL array — only the recomputed affected rows.
     - `feedChange` — One base-table change as the change feed delivers it (`routeChange`): to the routed router, then the legacy one.
-    - `hashSnapEncoder`
+    - `hashSnapEncoder` — The portable 64-bit hash encoder: the runtime's default `snapHash`.
     - `identityPlan` — The plan `compileWindowQuery` emits for a single-table window / point set / alias: one identity route `base` on `table`, gating on `cols`, read by every tuple in the membership role.
     - `legacyFull` — The legacy router alone: every non-routed reader of `table` recomputes FULL.
     - `makeClientView`

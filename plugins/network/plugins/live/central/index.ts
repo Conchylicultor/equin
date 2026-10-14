@@ -1,7 +1,7 @@
 import type { CentralPluginDefinition } from "@plugins/framework/plugins/central-core/core";
 
 export { serveValue } from "./internal/serve-value";
-export { sliceRange } from "../shared/key-order";
+export { sliceRange } from "../core/internal/key-order";
 export type {
   CentralServedPagedValue,
   CentralServedQueryValue,

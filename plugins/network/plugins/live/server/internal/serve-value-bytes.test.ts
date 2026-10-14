@@ -13,7 +13,7 @@ import { z } from "zod";
 import { createResourceRuntime } from "@plugins/framework/plugins/resource-runtime/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { parseResourceBytesHeaders } from "@plugins/packages/plugins/resource-protocol/core";
-import { compileValue, registerValue } from "../../shared/compile-value";
+import { compileValue, registerValue } from "../../core/internal/compile-value";
 import { serveValue } from "./serve-value";
 
 let seq = 0;

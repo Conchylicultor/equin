@@ -59,8 +59,8 @@ assetUrl }`. `originTransport` is the page's own server (same-origin
 `SharedWebSocket`, the global `fetch`, plain asset paths) and the default of
 `useTransport()`; `<TransportProvider transport>` (published from
 `web/testing` until the demo scope ships its first caller) points a subtree
-elsewhere —
-an in-browser demo backend (`research/2026-10-12-global-in-app-demo-scope.md`).
+elsewhere — an in-browser backend (`framework/browser-server`'s
+`browserServerTransport`; `research/2026-10-12-global-in-app-demo-scope.md`).
 Every client that resolves its transport through `useTransport()` follows it:
 live-state's `NotificationsProvider` (a scoped pipeline per transport),
 endpoints' `useEndpoint` / `useEndpointMutation` / `useFetchEndpoint`, and asset
@@ -142,6 +142,7 @@ built on them — see
     - `conversations/conversations-view/data-view`
     - `conversations/conversations-view/data-view/history`
     - `debug/logs`
+    - `framework/browser-server`
     - `infra/endpoints`
     - `infra/health`
     - `network/live`

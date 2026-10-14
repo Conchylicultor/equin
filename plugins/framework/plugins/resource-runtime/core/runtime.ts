@@ -1,6 +1,5 @@
-import type { ServerWebSocket } from "bun";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
-import { createHash, randomUUID } from "node:crypto";
+import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
@@ -65,14 +64,26 @@ import {
 //   WS  /ws/notifications  (or /ws/central-notifications)     — single push channel
 // and broadcasts updates when the plugin calls resource.notify().
 //
-// The runtime is acyclic: besides `zod` and `bun` (ServerWebSocket type) it
-// imports only the `packages/…` leaves (globally-allowed utility code, so no
-// cycle — inflight for read-path single-flight coalescing, semaphore for the
-// read-admission gate, zod-parser for the `ZodParser` alias). It declares
-// its own local WsData/WsHandler interfaces
-// (byte-identical to server-core/central-core's types.ts) rather than importing
-// them — importing from either facade would create a cycle. The returned
-// `notificationsWsHandler` is structurally assignable to each facade's WsHandler.
+// The runtime is acyclic and HOST-AGNOSTIC: besides `zod` it imports only the
+// `packages/…` leaves (globally-allowed utility code, so no cycle — inflight for
+// read-path single-flight coalescing, semaphore for the read-admission gate,
+// zod-parser for the `ZodParser` alias, string-hash for ETags and the default
+// snapshot hash). No `bun`, no `node:*`, no `Bun.*`: the Bun server, central
+// and a browser page all host it, each injecting what it does better through
+// `ResourceRuntimeOptions` (the Bun hosts' `snapHash`). It declares its own
+// structural socket (`RuntimeSocket`) and WsData/WsHandler rather than
+// importing the facades' — importing from either facade would create a cycle.
+// The returned `notificationsWsHandler` is structurally assignable to each
+// facade's WsHandler (a Bun `ServerWebSocket` satisfies `RuntimeSocket`).
+
+/**
+ * The socket the runtime talks to: all it ever does with one is `send` a text
+ * frame and use it as a Map key (its identity). A Bun `ServerWebSocket`
+ * satisfies it structurally; so does an in-memory pair end in a browser host.
+ */
+export interface RuntimeSocket {
+  send(data: string): void;
+}
 
 // Local, cycle-free copy of the WS types (see server-core/central-core types.ts).
 export interface WsData {
@@ -80,9 +91,9 @@ export interface WsData {
 }
 
 export interface WsHandler {
-  open(ws: ServerWebSocket<WsData>): void;
-  message(ws: ServerWebSocket<WsData>, msg: string | Buffer): void;
-  close(ws: ServerWebSocket<WsData>, code: number, reason: string): void;
+  open(ws: RuntimeSocket): void;
+  message(ws: RuntimeSocket, msg: string | { toString(): string }): void;
+  close(ws: RuntimeSocket, code: number, reason: string): void;
 }
 
 export type ResourceMode = "push" | "invalidate" | "keyed";
@@ -558,15 +569,31 @@ export interface ExternalWindowMembership<
 }
 
 /**
- * An EXTERNAL resource's keyed arm (D31: an external resource is never ROUTED
- * — its truth is outside Postgres — but it may be keyed): a bounded window
- * whose change arrives as the resource's own `notify(params)`, which re-reads
- * the tuple whole and diffs it by key against its snapshot
+ * The id set of an EXTERNAL keyed point tuple — `KeyedMembership`'s point arm:
+ * `idsOf(params)` decodes the ids the tuple names (pure, synchronous — the
+ * caller's point codec, e.g. network/live's `:rows` decode). The loader at
+ * the tuple reads exactly those rows (an id it cannot find is simply absent).
+ * Every change is the resource's own `notify(params)`, a FULL re-read of the
+ * tuple diffed by key, so nothing else is declared.
+ */
+export interface ExternalPointMembership<
+  P extends ResourceParams = ResourceParams,
+> {
+  kind: "point";
+  idsOf: (params: P) => readonly string[];
+}
+
+/**
+ * An EXTERNAL resource's keyed window arm (D31: an external resource is never
+ * ROUTED — its truth is outside Postgres — but it may be keyed): a bounded
+ * window whose change arrives as the resource's own `notify(params)`, which
+ * re-reads the tuple whole and diffs it by key against its snapshot
  * (`drainMembershipFull`) — keyed `delta` frames, seeded derivation
  * (`familyOf`) and one client cache path, exactly as a routed window has them.
  * No `routes` (nothing routes into it) and no cascade OUT of it (D32: a
  * membership entry has no downstream); it may itself follow external
- * upstreams (`dependsOn`), each change a FULL re-read.
+ * upstreams (`dependsOn`), each change a FULL re-read. Its point twin is
+ * `ExternalPointPolicy`; either is an `ExternalKeyedPolicy`.
  */
 export interface ExternalWindowPolicy<
   P extends ResourceParams = ResourceParams,
@@ -577,6 +604,26 @@ export interface ExternalWindowPolicy<
   reach?: never;
   recomputeOn?: never;
 }
+
+/**
+ * An EXTERNAL resource's keyed point arm: `ExternalWindowPolicy`'s twin over
+ * an id set (`ExternalPointMembership`) — the same FULL re-read on `notify`,
+ * the same keyed deltas, never routed, nothing cascading out. It never
+ * derives (seeded derivation is a window's).
+ */
+export interface ExternalPointPolicy<
+  P extends ResourceParams = ResourceParams,
+> {
+  membership: ExternalPointMembership<P>;
+  routes?: never;
+  scopedMembership?: never;
+  reach?: never;
+  recomputeOn?: never;
+}
+
+/** An EXTERNAL keyed resource's scope: a bounded window or a point set. */
+export type ExternalKeyedPolicy<P extends ResourceParams = ResourceParams> =
+  ExternalWindowPolicy<P> | ExternalPointPolicy<P>;
 
 /**
  * The strict public input to the flat one-arg `defineResource` (the runtime
@@ -1280,7 +1327,7 @@ interface SocketSubRecord {
 }
 
 interface SocketState {
-  ws: ServerWebSocket<WsData>;
+  ws: RuntimeSocket;
   /** key -> paramsKey -> record (subscriptions this socket holds, tagged by tab). */
   subs: Map<string, Map<string, SocketSubRecord>>;
 }
@@ -1292,6 +1339,14 @@ export interface LoadInfo {
 }
 
 export interface ResourceRuntimeOptions {
+  /**
+   * The 64-bit content hash a keyed resource's snapshot retains per row (see
+   * `SnapEncoder` in keyed-diff.ts — entries are only equality-compared, so any
+   * well-mixed 64-bit hash works). Default: the portable `hash64` (plain JS).
+   * The Bun hosts (server, central) pass `Bun.hash.wyhash(json) ^
+   * BigInt(json.length)` — native speed on the delivery hot path.
+   */
+  snapHash?: (json: string) => bigint;
   /**
    * Wrap each loader call. `info.variant` is the canonical params
    * (`paramsKey`, absent for `{}`); `info.scopedIds` is how many ids a scoped
@@ -1655,10 +1710,11 @@ export interface ResourceRuntime {
    * - Two-arg `(contract, serverOpts)` — derives `key`/`schema` AND `preload`
    *   from the shared client descriptor so server and client can't drift,
    *   exactly like `defineResource`'s non-keyed two-arg form.
-   * - Two-arg `(keyedContract, opts & ExternalWindowPolicy)` — a keyed
-   *   bounded window (`ExternalWindowPolicy`): `notify(params)` re-reads the
-   *   tuple and ships its keyed diff, and a sub may be seeded from tuples of
-   *   the same family.
+   * - Two-arg `(keyedContract, opts & ExternalKeyedPolicy)` — a keyed
+   *   bounded window (`ExternalWindowPolicy`) or point set
+   *   (`ExternalPointPolicy`): `notify(params)` re-reads the tuple and ships
+   *   its keyed diff, and a window's sub may be seeded from tuples of the
+   *   same family.
    *
    * Never ROUTED (D31): an external resource's truth is outside Postgres, so
    * no table change routes into it — its own `notify` is how a change arrives.
@@ -1674,7 +1730,7 @@ export interface ResourceRuntime {
     ): ExternalResource<T, P>;
     <T, P extends ResourceParams = ResourceParams>(
       contract: KeyedResourceContract<T, P>,
-      opts: KeyedServerResourceOptions<T, P> & ExternalWindowPolicy<P>,
+      opts: KeyedServerResourceOptions<T, P> & ExternalKeyedPolicy<P>,
     ): ExternalResource<T, P>;
     <T, P extends ResourceParams = ResourceParams>(
       contract: ResourceContract<T, P> & { keyed?: never },
@@ -1938,7 +1994,7 @@ const READ_LOAD_CONCURRENCY = 6;
 // resource is protected regardless of what its signature contains. The client
 // treats the token as opaque, so hashing is transparent to comparison.
 function normalizeEtag(raw: string): string {
-  return createHash("sha1").update(raw).digest("hex");
+  return hashHex(raw);
 }
 
 // The most host ids one reverse route may resolve to in one flush before its
@@ -1969,7 +2025,7 @@ export function createResourceRuntime(
   // same version ⇒ for a non-revalidate resource, no state change since the
   // client's value was produced — the per-pk version counter is its complete
   // change signal. See the version short-circuit in `handleSub`.
-  const bootEpoch = randomUUID();
+  const bootEpoch = globalThis.crypto.randomUUID();
   // Per-key count of version short-circuits (a sub answered `up-to-date` from
   // memory: zero loader runs, zero read-admission slots). Monotonic; surfaced in
   // the `_debug` payload next to notifyStats for live re-validation.
@@ -2005,7 +2061,7 @@ export function createResourceRuntime(
   // independent (no intra-level edges), so a flush runs a level concurrently and
   // barriers between levels to preserve cascade-into-downstream ordering.
   let topoLevels: RegistryEntry[][] = [];
-  const sockets = new Map<ServerWebSocket<WsData>, SocketState>();
+  const sockets = new Map<RuntimeSocket, SocketState>();
   let flushScheduled = false;
   // Single-active-flush mutex. `flushRunning` ⇒ a flush is mid-await; a new
   // flush sets `flushAgain` instead of overlapping, and the live flush re-drains.
@@ -2027,10 +2083,7 @@ export function createResourceRuntime(
       : Math.round(performance.now() - flushPassStartedAt);
   }
   let batchDepth = 0;
-  const heartbeats = new Map<
-    ServerWebSocket<WsData>,
-    ReturnType<typeof setInterval>
-  >();
+  const heartbeats = new Map<RuntimeSocket, ReturnType<typeof setInterval>>();
 
   // --- L4 self-verification (parallel-run instrumentation) ---
   // Per-resource-key notify counters, split by source (hand-`notify()` vs the DB
@@ -2251,7 +2304,7 @@ export function createResourceRuntime(
    * `loader-failed`.
    */
   function refuseSubParams(
-    ws: ServerWebSocket<WsData>,
+    ws: RuntimeSocket,
     entry: RegistryEntry,
     id: number | undefined,
     params: ResourceParams,
@@ -3185,19 +3238,23 @@ export function createResourceRuntime(
       membershipField,
       externalSource,
     );
-    // The external window (`ExternalWindowPolicy`) — never routed: its routes
-    // were refused above. The types allow only this arm; this holds the line
-    // for a cast.
+    // The external keyed arm (`ExternalKeyedPolicy`) — never routed: its
+    // routes were refused above. The types allow only a bounded window or a
+    // point set; this holds the line for a cast.
     if (
       externalSource &&
       membershipField !== null &&
-      (def.membership?.kind !== "window" ||
-        (def.membership as { windowIdsOf?: unknown }).windowIdsOf !==
-          undefined ||
-        def.membership.orderSignatureOf !== undefined)
+      !(
+        (def.membership?.kind === "window" &&
+          (def.membership as { windowIdsOf?: unknown }).windowIdsOf ===
+            undefined &&
+          def.membership.orderSignatureOf === undefined) ||
+        (def.membership?.kind === "point" &&
+          typeof def.membership.idsOf === "function")
+      )
     ) {
       throw new Error(
-        `defineExternalResource: key "${def.key}" — an external keyed entry is a bounded window ({ kind: "window", limitOf, familyOf? }): no point set or alias, and no windowIdsOf / orderSignatureOf (its ids are its own read's, and every change re-reads the tuple whole)`,
+        `defineExternalResource: key "${def.key}" — an external keyed entry is a bounded window ({ kind: "window", limitOf, familyOf? }) or a point set ({ kind: "point", idsOf }): no alias, and no windowIdsOf / orderSignatureOf (a window's ids are its own read's, and every change re-reads the tuple whole)`,
       );
     }
     // Keyed ⇒ membership: the keyed drain is the membership drain; a keyed
@@ -3600,13 +3657,14 @@ export function createResourceRuntime(
   // form that reads key/schema AND `preload` off a shared client descriptor.
   // Never ROUTED (D31): its truth is outside Postgres, so nothing routes into
   // it — `buildEntry` refuses routes a cast let through. Keyed only as a
-  // bounded window from a shared keyed contract (`ExternalWindowPolicy`).
+  // bounded window or a point set from a shared keyed contract
+  // (`ExternalKeyedPolicy`).
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     def: ExternalDefinition<T, P>,
   ): ExternalResource<T, P>;
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     contract: KeyedResourceContract<T, P>,
-    opts: KeyedServerResourceOptions<T, P> & ExternalWindowPolicy<P>,
+    opts: KeyedServerResourceOptions<T, P> & ExternalKeyedPolicy<P>,
   ): ExternalResource<T, P>;
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     contract: ResourceContract<T, P> & { keyed?: never },
@@ -3616,7 +3674,7 @@ export function createResourceRuntime(
     a: ResourceDefinition<T, P> | ResourceContract<T, P>,
     opts?:
       | ServerResourceOptions<T, P>
-      | (KeyedServerResourceOptions<T, P> & ExternalWindowPolicy<P>),
+      | (KeyedServerResourceOptions<T, P> & ExternalKeyedPolicy<P>),
   ): ExternalResource<T, P> {
     const def = opts
       ? contractToDefinition(
@@ -3755,7 +3813,7 @@ export function createResourceRuntime(
   // reading the old vocabulary never share a socket with tabs reading the new
   // one.
   function sendJson<F extends ServerFrame>(
-    ws: ServerWebSocket<WsData>,
+    ws: RuntimeSocket,
     obj: ExactServerFrame<F>,
   ): void {
     try {
@@ -4236,9 +4294,11 @@ export function createResourceRuntime(
   //   are never persisted — retains a 64-bit content hash: same diff semantics
   //   (entries are only equality-compared), ~16 B/row instead of a value-sized
   //   string Map rebuilt on every recompute. Collision trade documented on
-  //   `hashSnapEncoder`.
+  //   `SnapEncoder`.
+  // The hash is the host's (`opts.snapHash`), the portable `hash64` by default.
+  const hashEncoder: SnapEncoder = opts.snapHash ?? hashSnapEncoder;
   function snapEncoderFor(entry: RegistryEntry): SnapEncoder {
-    return isUnboundedWindow(entry) ? retainSnapEncoder : hashSnapEncoder;
+    return isUnboundedWindow(entry) ? retainSnapEncoder : hashEncoder;
   }
 
   // The order-signature fn of a window membership entry, or undefined (point,

@@ -146,6 +146,37 @@ export function registerResourceDescriptor(
     );
   }
   byKey.set(d.key, d);
+  // A key's FIRST registration only: an HMR re-evaluation re-registers the
+  // same logical resource, which a listener already knows.
+  if (!existing) for (const fn of registeredListeners) fn(d);
+}
+
+type DescriptorListener = (d: ResourceDescriptor<unknown>) => void;
+const registeredListeners = new Set<DescriptorListener>();
+
+/**
+ * Every descriptor registered so far, in registration order — for a host that
+ * must answer every key this page can name (a browser server registers a
+ * failing loader for each key nothing serves, so an unserved read is a loader
+ * failure rather than an unknown key). Pair with
+ * {@link onResourceDescriptorRegistered} for the ones a lazy plugin registers
+ * later.
+ */
+export function allResourceDescriptors(): ResourceDescriptor<unknown>[] {
+  return [...byKey.values()];
+}
+
+/**
+ * Calls `fn` with each descriptor whose key is registered from now on (once per
+ * key). Returns the unsubscribe.
+ */
+export function onResourceDescriptorRegistered(
+  fn: DescriptorListener,
+): () => void {
+  registeredListeners.add(fn);
+  return () => {
+    registeredListeners.delete(fn);
+  };
 }
 
 export function resourceDescriptorByKey(

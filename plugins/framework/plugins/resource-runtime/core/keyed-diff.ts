@@ -18,6 +18,8 @@
 // equality) — the runtime guarantees this by deriving the encoder statically
 // from the resource definition.
 
+import { hash64 } from "@plugins/packages/plugins/string-hash/core";
+
 /**
  * One retained snapshot entry for a row: either the row's full canonical JSON
  * (`string`) or a 64-bit content hash of it (`bigint`). Which one an entry
@@ -35,15 +37,20 @@ export type KeyedSnapshot = ReadonlyMap<string, SnapEntry>;
  * -enough encoding works for diffing; the choice is about memory and about the
  * one consumer that needs the bytes back:
  *
- * - `hashSnapEncoder` (the default for keyed resources): retain a 64-bit
- *   wyhash instead of the full JSON string. A snapshot Map shrinks from
+ * - a 64-bit hash (the default for keyed resources): retain a 64-bit content
+ *   hash instead of the full JSON string. Which hash is the runtime's
+ *   `ResourceRuntimeOptions.snapHash` — the Bun hosts inject
+ *   `Bun.hash.wyhash(json) ^ BigInt(json.length)` (native, fast); every other
+ *   host gets `hashSnapEncoder`, the portable `hash64` (plain JS, so a browser
+ *   page can host the runtime). A snapshot Map shrinks from
  *   value-sized (UTF-16 ⇒ ~2 B/char of row JSON, rebuilt and dropped on every
  *   recompute — the delivery-path GC sawtooth) to ~16 B/row. The trade,
  *   explicit: a 64-bit collision makes a genuinely-changed row read as
  *   unchanged — a missed update no self-heal path catches (the diff sees no
  *   change, so no frame and no flushAgain). Birthday-bounded: for a pk with
  *   n rows the probability of ANY collision is ~n²/2⁶⁵ (n=10⁵ ⇒ ~3·10⁻¹⁰);
- *   the length fold below additionally kills every different-length collision.
+ *   the Bun hosts' length fold additionally kills every different-length
+ *   collision.
  * - `retainSnapEncoder`: keep the canonical JSON string — REQUIRED for
  *   `scopedMembership` resources, whose persisted-incremental path
  *   reconstructs the FULL value from the stored snapshot via `JSON.parse`
@@ -52,8 +59,8 @@ export type KeyedSnapshot = ReadonlyMap<string, SnapEntry>;
  */
 export type SnapEncoder = (canonicalJson: string) => SnapEntry;
 
-export const hashSnapEncoder: SnapEncoder = (json) =>
-  Bun.hash.wyhash(json) ^ BigInt(json.length);
+/** The portable 64-bit hash encoder: the runtime's default `snapHash`. */
+export const hashSnapEncoder: SnapEncoder = (json) => hash64(json);
 
 export const retainSnapEncoder: SnapEncoder = (json) => json;
 

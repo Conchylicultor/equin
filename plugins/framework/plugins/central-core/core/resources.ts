@@ -24,15 +24,30 @@ import type {
 // lone auth-state resource uses none of the keyed/scoped/batch machinery.
 export type ResourceParams = RtParams;
 export type ResourceMode = RtMode;
-export type Resource<T, P extends ResourceParams = ResourceParams> = RtResource<T, P>;
-export type ExternalResource<T, P extends ResourceParams = ResourceParams> = RtExternalResource<
+export type Resource<T, P extends ResourceParams = ResourceParams> = RtResource<
   T,
   P
 >;
-export type ResourceDefinition<T, P extends ResourceParams = ResourceParams> = RtDef<T, P>;
-export type DependsOnEntry<P extends ResourceParams = ResourceParams> = RtDep<P>;
+export type ExternalResource<
+  T,
+  P extends ResourceParams = ResourceParams,
+> = RtExternalResource<T, P>;
+export type ResourceDefinition<
+  T,
+  P extends ResourceParams = ResourceParams,
+> = RtDef<T, P>;
+export type DependsOnEntry<P extends ResourceParams = ResourceParams> =
+  RtDep<P>;
 
-const runtime = createResourceRuntime();
-export const { defineResource, defineExternalResource, handleResourceHttp, notificationsWsHandler } =
-  runtime;
+// Native wyhash for keyed snapshots, as the server (the runtime's portable
+// default is plain-JS `hash64`).
+const runtime = createResourceRuntime({
+  snapHash: (json) => Bun.hash.wyhash(json) ^ BigInt(json.length),
+});
+export const {
+  defineResource,
+  defineExternalResource,
+  handleResourceHttp,
+  notificationsWsHandler,
+} = runtime;
 // withNotifyBatch is available from the runtime but central need not export it.

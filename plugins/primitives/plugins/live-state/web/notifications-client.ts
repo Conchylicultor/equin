@@ -755,8 +755,10 @@ export class NotificationsClient {
 
   getChannelStatuses(): ChannelStatuses {
     return {
-      worktree: this.channelStatuses.get(WS_URLS.worktree) ?? "connecting",
-      central: this.channelStatuses.get(WS_URLS.central) ?? "connecting",
+      worktree:
+        this.channelStatuses.get(this.socketUrls.worktree) ?? "connecting",
+      central:
+        this.channelStatuses.get(this.socketUrls.central) ?? "connecting",
       serverFlushOpenMs: { ...this.serverFlushOpenMs },
     };
   }

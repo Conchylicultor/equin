@@ -284,6 +284,10 @@ export function onResourceDelivery(cb: ResourceDeliveryObserver): () => void {
 // in-memory loader that issues no query therefore never waits. See
 // research/2026-06-19-global-live-state-unified-read-path-v2.md (Task 2).
 const runtime = createResourceRuntime({
+  // Native wyhash on the keyed-delta hot path (the runtime's portable default
+  // is plain-JS `hash64`); the length fold kills every different-length
+  // collision.
+  snapHash: (json) => Bun.hash.wyhash(json) ^ BigInt(json.length),
   // The label stays the resource key (one slow-op row per resource, and the key
   // the loader→tables read-set index is built on); WHICH params ran rides as the
   // span's variant, and a scoped refill carries how many ids it read.

@@ -6,24 +6,30 @@ import type {
   KeyedServerResourceOptions,
   Resource,
   ResourceContract,
+  ResourceRuntime,
   ServerResourceOptions,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import {
   LIVE_ROW_KEY,
   LIVE_ROW_KEY_MAX_BYTES,
   type LiveCutKey,
-  type LiveKeyRange,
-  type LivePagedKey,
-  type LivePagedParams,
-  type LivePagedValue,
-  type LivePlainValue,
-  type LiveQueryParams,
-  type LiveQueryValue,
-  type LiveSnapshotBrand,
-  type LiveValue,
-  type LiveValueOrigin,
-} from "@plugins/network/plugins/live/core";
-import { compareRowKeys, inRange } from "./key-order";
+} from "./row-key";
+import type {
+  LiveKeyDirection,
+  LivePagedKey,
+  LivePagedValue,
+  LivePlainValue,
+  LiveQueryValue,
+  LiveSnapshotBrand,
+  LiveValue,
+  LiveValueOrigin,
+} from "./live-value";
+import type {
+  LiveKeyRange,
+  LivePagedParams,
+  LiveQueryParams,
+} from "./query-value";
+import { compareKeyParts, cutParts } from "./key-order";
 
 // The option compilation behind BOTH `serveValue`s — the worktree one
 // (`network/live/server`, on server-core's runtime) and the central one
@@ -383,24 +389,20 @@ export type PagedPageOptions<Item> = KeyedServerResourceOptions<
 > &
   ExternalWindowPolicy<LivePagedParams>;
 
-/** A runtime's two register primitives — server-core's or central-core's. */
-export interface ValueRuntime {
-  defineResource<T, P extends Record<string, string>>(
-    contract: ResourceContract<T, P> & { keyed?: never },
-    opts: ValueOptions<T, P>,
-  ): Resource<T, P>;
-  defineExternalResource<T, P extends Record<string, string>>(
-    contract: ResourceContract<T, P> & { keyed?: never },
-    opts: ValueOptions<T, P>,
-  ): ExternalResource<T, P>;
-  defineExternalResource<T>(
-    contract: KeyedResourceContract<T[], LivePagedParams>,
-    opts: PagedPageOptions<T>,
-  ): ExternalResource<T[], LivePagedParams>;
-}
+/**
+ * The host-facing subset of a `ResourceRuntime` the live API registers on —
+ * server-core's runtime, central-core's, or any other host's (a browser
+ * server): the two register primitives, each host passing its instance (or
+ * its bound functions). Everything `serveValueOn` / `serveCollectionOn`
+ * compiles lands through these two.
+ */
+export type LiveRuntime = Pick<
+  ResourceRuntime,
+  "defineResource" | "defineExternalResource"
+>;
 
 /** A canonical per-tuple key (sorted entries), for the lifecycle pairing. */
-function tupleKey(params: Record<string, string>): string {
+export function tupleKey(params: Record<string, string>): string {
   return JSON.stringify(
     Object.keys(params)
       .sort()
@@ -514,7 +516,9 @@ function loaderOf<T, P extends Record<string, string>>(
 }
 
 /** An item of a page as the wire carries it: its fields and its `$key`. */
-type PagedRow = Record<string, unknown> & { [LIVE_ROW_KEY]: string | null };
+export type PagedRow = Record<string, unknown> & {
+  [LIVE_ROW_KEY]: string | null;
+};
 
 const encoder = new TextEncoder();
 
@@ -545,35 +549,69 @@ export function pageRowsOf(
       `the loader returned ${items.length} items for a page of at most ${range.limit}.`,
     );
   }
+  return mintRowKeys(
+    items as readonly Record<string, unknown>[],
+    (fields, i) => {
+      const itemId = fields[id];
+      if (typeof itemId !== "string") {
+        fail(
+          `item ${i}'s id (${id}) is ${JSON.stringify(itemId)}, not a string.`,
+        );
+      }
+      const parts = key.of(fields);
+      if (
+        !Array.isArray(parts) ||
+        parts.length !== key.order.length ||
+        !parts.every((p) => p === null || typeof p === "string")
+      ) {
+        fail(
+          `paged.key.of(item "${itemId as string}") is ${JSON.stringify(parts)} — ` +
+            `it must be ${key.order.length} text (or null) part(s), one per order entry.`,
+        );
+      }
+      return [...parts, itemId as string];
+    },
+    // The id is the last part, ascending.
+    [...key.order, "asc"],
+    {
+      after: range.after === null ? null : cutParts(range.after),
+      until: range.until === null ? null : cutParts(range.until),
+    },
+    fail,
+  );
+}
+
+/**
+ * Rows in key order, checked and minted their `$key` — the one check behind a
+ * paged value's page ({@link pageRowsOf}) and an external scroll collection's
+ * window (`serve-on.ts`). `keyOf` reads (and checks) a row's full key — its
+ * order parts, the id among them — and `dirs` is one direction per part. The
+ * rows must be in strictly ascending key order (so no key twice) and inside
+ * `(after, until]`; a violation goes to `fail`, which throws. Each row is
+ * handed out with `$key`: the canonical JSON of its key, `null` past
+ * `LIVE_ROW_KEY_MAX_BYTES` (no page can be cut there).
+ */
+export function mintRowKeys(
+  rows: readonly Record<string, unknown>[],
+  keyOf: (row: Record<string, unknown>, index: number) => LiveCutKey,
+  dirs: readonly LiveKeyDirection[],
+  range: { after: LiveCutKey | null; until: LiveCutKey | null },
+  fail: (detail: string) => never,
+): PagedRow[] {
   let previous: LiveCutKey | null = null;
-  return items.map((item, i) => {
-    const fields = item as Record<string, unknown>;
-    const itemId = fields[id];
-    if (typeof itemId !== "string") {
-      fail(
-        `item ${i}'s id (${id}) is ${JSON.stringify(itemId)}, not a string.`,
-      );
-    }
-    const parts = key.of(item);
-    if (
-      !Array.isArray(parts) ||
-      parts.length !== key.order.length ||
-      !parts.every((p) => p === null || typeof p === "string")
-    ) {
-      fail(
-        `paged.key.of(item "${itemId as string}") is ${JSON.stringify(parts)} — ` +
-          `it must be ${key.order.length} text (or null) part(s), one per order entry.`,
-      );
-    }
-    const full: LiveCutKey = [...parts, itemId as string];
-    if (previous !== null && compareRowKeys(previous, full, key.order) >= 0) {
+  return rows.map((row, i) => {
+    const full = keyOf(row, i);
+    if (previous !== null && compareKeyParts(previous, full, dirs) >= 0) {
       fail(
         `the loader's items are not in strictly ascending key order: ` +
           `${JSON.stringify(previous)} then ${JSON.stringify(full)} ` +
           `(a key out of order, or an id twice).`,
       );
     }
-    if (!inRange(full, range, key.order)) {
+    if (
+      (range.after !== null && compareKeyParts(full, range.after, dirs) <= 0) ||
+      (range.until !== null && compareKeyParts(full, range.until, dirs) > 0)
+    ) {
       fail(
         `item ${JSON.stringify(full)} is outside the range asked ` +
           `(after ${JSON.stringify(range.after)}, until ${JSON.stringify(range.until)}).`,
@@ -582,7 +620,7 @@ export function pageRowsOf(
     previous = full;
     const minted = JSON.stringify(full);
     return {
-      ...fields,
+      ...row,
       [LIVE_ROW_KEY]:
         encoder.encode(minted).length > LIVE_ROW_KEY_MAX_BYTES ? null : minted,
     };
@@ -1018,7 +1056,7 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
 }
 
 /** `changes` as the runtime's debug label: its arm and, off `"notified"`, its reason. */
-function freshnessOf(changes: LiveValueChanges): {
+export function freshnessOf(changes: LiveValueChanges): {
   kind: "notified" | "immutable" | "fixed" | "snapshot";
   reason?: string;
 } {
@@ -1184,7 +1222,7 @@ export function registerValue<
   const R extends readonly ExternalServed[] = [],
   C extends LiveValueChanges = "notified",
 >(
-  runtime: ValueRuntime,
+  runtime: LiveRuntime,
   value: LivePlainValue<T, P, O> & SnapshotPairing<C> & BytesPairing<Src>,
   opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, Src, R, C>,
 ): Registered<T, P> {
@@ -1201,7 +1239,7 @@ export function registerQueryValue<
   const R extends readonly ExternalServed[] = [],
   C extends LiveValueChanges = "notified",
 >(
-  runtime: ValueRuntime,
+  runtime: LiveRuntime,
   value: LiveQueryValue<T, Q, QIn, O> & SnapshotPairing<C> & BytesPairing<Src>,
   opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, Src, R, C>,
 ): Registered<T, LiveQueryParams, Q> {
@@ -1223,7 +1261,7 @@ export function registerPagedValue<
   C extends PagedChanges = "notified",
   K extends string = never,
 >(
-  runtime: ValueRuntime,
+  runtime: LiveRuntime,
   value: LivePagedValue<Item, Meta, Q, QIn, O, K>,
   opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R, C>,
 ): RegisteredPaged<Item, Meta, Q> {
@@ -1242,7 +1280,7 @@ export function registerPagedValue<
 
 /** The paged registration, erased (see {@link compilePagedOf}). */
 export function registerPagedOf(
-  runtime: ValueRuntime,
+  runtime: LiveRuntime,
   value: LivePagedValue<unknown, unknown, unknown, unknown, LiveValueOrigin>,
   opts: AnyServeOptions,
 ): RegisteredPaged<unknown, unknown, unknown> {
@@ -1281,7 +1319,7 @@ export interface RegisteredPaged<Item, Meta, Q> {
 
 /** The registration behind every form, erased (see {@link compileValueOf}). */
 export function registerValueOf<T, P extends Record<string, string>, S>(
-  runtime: ValueRuntime,
+  runtime: LiveRuntime,
   value: LiveValue<T, P, LiveValueOrigin>,
   opts: AnyServeOptions,
 ): Registered<T, P, S> {

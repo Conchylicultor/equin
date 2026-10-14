@@ -383,7 +383,7 @@ export type LiveKeyDirection = "asc" | "desc";
  * is the order (the source supplies the precision, as Postgres `::text` does:
  * an instant at a fixed precision, a zero-padded number) — and the framework
  * appends the item's id as the tiebreak (ascending). A `null` part sorts last
- * in either direction. See `shared/key-order.ts`.
+ * in either direction. See `key-order.ts`.
  */
 export interface LivePagedKey<Item> {
   // A method, so a value of any item type is a `LivePagedValue<unknown, …>`.

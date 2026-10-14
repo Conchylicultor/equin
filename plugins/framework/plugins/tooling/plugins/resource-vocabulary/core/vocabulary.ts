@@ -161,14 +161,62 @@ interface MintedDescriptor {
   schema: unknown;
 }
 
-/** Every export of `M` that is a function returning a resource descriptor. */
+/**
+ * The minimal structural shape every SERVED resource has — the runtime's
+ * `Resource<T, P>`, its external extension, a served value (`key`, `mode`,
+ * `load`). A descriptor has no `load`, so a declaration never reads as served.
+ * A served value DOES carry `key` + `schema` too, which is why the factory
+ * filter below excludes anything of this shape: serving a declaration mints
+ * nothing. Widened for the same reason as {@link MintedDescriptor}. Shared with
+ * this plugin's `check/` (the register-marker derivation).
+ */
+export interface ServedResource {
+  key: string;
+  mode: unknown;
+  load: unknown;
+}
+
+/**
+ * A served collection: one call serving every resource a `liveCollection`
+ * mints — `rows` always; the window and groups, or (declared `all`) the whole
+ * ordered set, unless it is lookup-only. Structural, like {@link ServedResource}.
+ */
+export interface ServedCollection {
+  rows: ServedResource;
+}
+
+/** Every export of `M` that is a function returning a served resource. */
+export type ServedResourceFnNames<M> = {
+  [K in keyof M]-?: M[K] extends (...args: never[]) => infer R
+    ? [R] extends [ServedResource]
+      ? K
+      : never
+    : never;
+}[keyof M];
+
+/** Every export of `M` that is a function returning a served collection. */
+export type ServedCollectionFnNames<M> = {
+  [K in keyof M]-?: M[K] extends (...args: never[]) => infer R
+    ? [R] extends [ServedCollection]
+      ? K
+      : never
+    : never;
+}[keyof M];
+
+/**
+ * Every export of `M` that is a function returning a resource descriptor —
+ * and is not a serving call (whose served value also carries `key` +
+ * `schema`, see {@link ServedResource}).
+ */
 type DescriptorFactoryNames<M> = {
   [K in keyof M]-?: M[K] extends (...args: never[]) => infer R
     ? // Non-distributive, so a `Descriptor | undefined` return (the `byKey`
       // lookup `resourceDescriptorByKey`) is correctly excluded rather than
       // matching on its defined arm.
       [R] extends [MintedDescriptor]
-      ? K
+      ? [R] extends [ServedResource]
+        ? never
+        : K
       : never
     : never;
 }[keyof M];
@@ -323,6 +371,37 @@ export const resourceRegisterMarkers = {
 export type RegisterMarkerName = keyof typeof resourceRegisterMarkers;
 
 /**
+ * A host-parametric serving primitive: a `core` export that serves a
+ * declaration on a runtime the CALLER passes (`serveValueOn(rt, value, …)`,
+ * `serveCollectionOn(rt, collection, …)`). It is neither a factory (it mints
+ * nothing — the declaration is an argument) nor a register marker: its first
+ * argument is a runtime, not a descriptor, and a host's resources are seen
+ * through that host's own marker (the Bun server's and central's `serveValue`
+ * / `serveCollection` are thin wrappers over these). Scanners do not match it.
+ */
+export interface ServingPrimitive {
+  /** Barrel the primitive is exported from — verified by this plugin's `check/`. */
+  barrel: string;
+}
+
+/** Every `core`-barrel export returning a served resource or collection. */
+type ServingPrimitiveName =
+  | ServedResourceFnNames<typeof LiveStateBarrel>
+  | ServedResourceFnNames<typeof LiveBarrel>
+  | ServedCollectionFnNames<typeof LiveBarrel>;
+
+/**
+ * Every serving primitive, classified. Derived like the factories:
+ * `satisfies Record<ServingPrimitiveName, …>` fails on a missing entry, and on
+ * a stale one as an excess property — so a serving function added to a `core`
+ * barrel can neither pass as a factory nor go unnoticed.
+ */
+export const resourceServingPrimitives = {
+  serveValueOn: { barrel: LIVE_CORE },
+  serveCollectionOn: { barrel: LIVE_CORE },
+} satisfies Record<ServingPrimitiveName, ServingPrimitive>;
+
+/**
  * Repo-relative directories of the plugins that OWN the vocabulary — derived
  * from the entries' barrels, so it cannot drift from them.
  *
@@ -339,6 +418,7 @@ export const resourceVocabularyOwnerPaths: readonly string[] = [
     [
       ...Object.values(resourceDescriptorFactories),
       ...Object.values(resourceRegisterMarkers),
+      ...Object.values(resourceServingPrimitives),
     ].map((e) =>
       // "@plugins/infra/plugins/query-resource/server" → "plugins/infra/plugins/query-resource"
       e.barrel.replace(/^@plugins\//, "plugins/").replace(/\/[^/]+$/, ""),

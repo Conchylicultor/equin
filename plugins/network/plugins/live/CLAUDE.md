@@ -285,8 +285,66 @@ useLive(graphNodes, { select: countNodes });                          // a slice
     real feed, L2 hooks on: entrant, exit, where-flip, order move, value-only
     and child writes, each with its exact loads and `orderOf` calls; the idle
     `{}` snapshot and its floor persist; the C39 harness).
-  - Hand-written loaders are out of scope for now — keep those on
-    `windowQueryResource` / `defineResource`.
+  - **The external arm — `source: "external"`** (`core/internal/serve-on.ts`'s
+    `serveCollectionOn`, which the Bun `serveCollection` delegates to and any
+    other host — central, a browser server — calls on its own runtime). Rows
+    that live OUTSIDE Postgres (an in-memory list, a demo pack, a provider)
+    are served through the same minted descriptors, so `useLive` reads them
+    unchanged. The source answers each minted resource by hand, over the
+    DECODED question:
+
+    ```ts
+    export const ordersServed = serveCollection(orders, {
+      source: "external",
+      changes: "notified",                    // or { immutable | fixed: { reason } }
+      window: (q) => store.window(q),         // { limit, where?, orderBy, after?, until? } → rows
+      rows: (ids) => store.byIds(ids),        // any order; a missing id is absent
+      groups: (q) => store.groups(q),         // optional — `:groups` is not served without it
+      count: (q) => store.count(q.where),     // exactly when declared `count: true` (tsc)
+      keyText: { total: (n) => pad(n) },      // scroll only: a non-text sort field's `$key` text
+    });
+    ordersServed.notify({ ids: ["o1"] });     // or notify(): every subscribed tuple
+    // contributions: [...ordersServed.declare]
+    // an `all` collection: { source, changes, all: () => rows, rows }
+    // a lookup-only one:   { source, changes, rows }
+    ```
+
+    - **What it compiles to** (all through `defineExternalResource`, never
+      routed — D31): the window is the runtime's external keyed window
+      (`limitOf` / `familyOf` off the collection's own codec, so a scroll
+      page is seeded like a table's); `:rows` the external point arm (`idsOf`
+      the point codec's decode); an `all` set's `key` an external window as
+      wide as the set (its contract is keyed, so it cannot be a plain value);
+      `:groups` and `:count` plain external push values. Bound eagerly; the
+      Bun arm adds one `Resource.Declare` per registered resource.
+    - **Every answer is checked**, a violation a loud loader error naming
+      the key and the field: each row against the row schema (and projected
+      onto exactly its keys, as a table's), a string id, no id twice, at most
+      `q.limit` rows; `rows(ids)` only ids asked; a group's value against its
+      row field, a positive count, count descending, at most `q.limit`; a
+      count a non-negative integer. A scroll window's rows are minted `$key`
+      by the paged value's own check (`mintRowKeys`): each order field's
+      TEXT (a text field is its own; any other sortable field needs
+      `keyText.<field>`, a tsc requirement — its code-point order must be its
+      order, as `key.of` for a paged value), then the id unless the order
+      names it; the rows must be in strictly ascending key order and inside
+      `(q.after, q.until]`. The source owns `where` and the order (it is
+      handed both decoded); only a scroll window's order is checked.
+    - **`notify(change?)`** (`"notified"` only — tsc, and absent at
+      runtime on `{ immutable | fixed }`; never a snapshot): with no change,
+      every subscribed tuple of every minted resource re-reads; with `{ ids
+      }`, a `:rows` tuple re-reads only when its id set holds one of them,
+      while every window, `all`, `:groups` and `:count` tuple still does — a
+      changed row may enter or leave any of them, and only the source could
+      say which. Each re-read is diffed by key (a keyed delta; an unchanged
+      tuple ships an empty one). The subscribed tuples are tracked from the
+      runtime's 0→1 / N→0 hooks, so nothing is re-read for a tuple nobody
+      holds.
+    - **Refused** (tsc where a type tells it apart, and a throw): a
+      contributed, `exposes` or union collection (their rows fold Postgres
+      columns), a `columnScope` collection (throw only), a stray answer for
+      the form (`window` on a lookup, `count` without `count: true`), and an
+      empty `changes` reason. Tests: `core/internal/serve-on.test.ts`.
 - **Read — `useLive(c, query?)`.** The query's SHAPE picks the resource; there is
   one hook for every list read, and a separate hook only where the result has
   different STATES (`useLiveRow`).
@@ -516,7 +574,7 @@ useLive(metricDetails.meta, selector);           // the per-question sibling: Re
   collection (an instant at a fixed precision, `Date#toISOString`; a
   zero-padded number). A number or `Date` part is a tsc error (`LiveCutKey`,
   the type collections cut with). The framework appends the id. The order is
-  `shared/key-order.ts`'s: parts by code point (the cluster's `C` collation),
+  `core/internal/key-order.ts`'s: parts by code point (the cluster's `C` collation),
   each in its direction, `null` LAST either way, then the id ascending.
 - **One page, one tuple** `{ q, limit, after?, until? }` — the question's
   canonical `q`, the page's limit and its cuts (server-minted `$key`s,
@@ -556,7 +614,7 @@ useLive(metricDetails.meta, selector);           // the per-question sibling: Re
   tuple. **`whileSubscribed` runs once per question**, refcounted over every
   page tuple and the meta tuple of it, so a read that splits or releases its
   pages never restarts a source watch. Both are `compilePagedValue`'s
-  (`shared/compile-value.ts`), which the worktree and central `serveValue`
+  (`core/internal/compile-value.ts`), which the worktree and central `serveValue`
   share (`ServedPagedValue` / `CentralServedPagedValue`).
 - **Read options.** With no viewport, `limit` (in `1..maxLimit`, default
   `paged.limit`) is page 0's limit and the step `loadMore()` grows by — a
@@ -774,11 +832,11 @@ step — a collection's `default.limit`, a value's `paged.limit` (or the read's
     random writes, paging and viewport moves — live pages converge, no row twice,
     refills O(changed), a gap-free prefix once all are in view, a head-burst
     splitting past any cap; seeded, `loadMore` loads exactly `step` rows and a
-    merge loads none). For values: `shared/compile-value.test.ts` (each loader
+    merge loads none). For values: `core/internal/compile-value.test.ts` (each loader
     check, `$key` minted and `null` over 1 KiB, the meta sibling, one
     `whileSubscribed` per question, a page compiled to a keyed window — its
     size and family off the codec), `core/internal/row-key.test.ts`,
-    `shared/key-order.test.ts` and
+    `core/internal/key-order.test.ts` and
     `server/internal/serve-paged-value-oracle.test.ts` (an in-memory source
     mutated at random on a real runtime: live pages converge, nothing twice,
     `notify(q)` re-reads only the live pages and reaches each as a keyed
@@ -1186,7 +1244,7 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));  // MANY tuples → on
   - Returns `ServedValue` = the runtime `Resource` + `source` + `changes?` +
     `unbounded?` + `keys` (`[key]`) + `declare` (a 1-tuple — spread it like a
     collection's); a `"notified"` external value adds `notify`. `compileValue` is the same derivation
-    without registering, and `shared/compile-value.ts`'s `registerValue`
+    without registering, and `core/internal/compile-value.ts`'s `registerValue`
     registers it on any runtime (tests use their own).
   - **`throttleMs`** (db, and external `"notified"`): at most one flush per window — the first
     change arms a trailing timer later changes do not re-arm (the runtime's
@@ -1208,7 +1266,7 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));  // MANY tuples → on
     something for as long as a tuple has a subscriber, return what stops it —
     one function, so a start without its stop cannot be written. The external
     arm is handed `notify` for that tuple; the db arm gets `params` only (tsc).
-    Paired in `shared/compile-value.ts` over the runtime's 0→1 / N→0 hooks: an
+    Paired in `core/internal/compile-value.ts` over the runtime's 0→1 / N→0 hooks: an
     async start is awaited on the subscribe path, and a last unsubscribe that
     arrives first runs the stop after the start resolves. A failed start has
     nothing to stop (the runtime reports it). Nothing watches the source between
@@ -1247,8 +1305,26 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));  // MANY tuples → on
   subscribes over the central socket; never preloaded). It is served by
   `network/live/central`'s `serveValue` — external arm only (central has no
   change feed), registered by the central plugin's `resources: [served]`, so no
-  `declare`. Each `serveValue` rejects the other origin's value (tsc). Both
-  compile options through `shared/compile-value.ts`, so they cannot drift.
+  `declare`. Each `serveValue` rejects the other origin's value (tsc).
+- **One serving code path — `serveValueOn(rt, value, opts, { sources })`**
+  (`core/internal/serve-on.ts`, browser-safe). Every host's `serveValue` is a
+  thin wrapper over it: it registers on the host's `LiveRuntime` (the
+  `defineResource` / `defineExternalResource` pair of a `ResourceRuntime`),
+  builds the served object, `notify` by params or by question, a paged
+  value's meta sibling. `sources` is the arms the host serves —
+  `"db+external"` (the Bun server, which adds `declare` and a param'd
+  preload's boot tuples) or `"external"` (central, a browser server): it
+  narrows `opts.source` in the types, and a cast past it throws. The hosts'
+  public overloads are their own, so a call site never sees it. It and
+  `serveCollectionOn` are exported from `network/live/core` for a host that
+  is not a plugin runtime; the resource vocabulary classifies them as serving
+  primitives, not factories. **`bindExternalServe(rt, origin)`** binds both to
+  a runtime as `{ serveValue, serveCollection }` typed by
+  `LiveExternalServe<O>` — the external-arm overloads of the Bun and central
+  wrappers, with the served shapes (`ExternalNotifiedValue`,
+  `ExternalSilentValue`, …; central's `Central*` types alias them) — for a host
+  that hands its caller this surface (`framework/browser-server`'s `serve`
+  callback). A value of the other origin throws.
 - **Read.** `useLive(value, params?)` → `ResourceResult<T>` (it delegates to
   `useResource`, which canonicalizes the params); a `load: "snapshot"` value's
   is `LiveSnapshotResult<T>` — the same plus `refresh()` (its HTTP refetch:
@@ -1315,7 +1391,7 @@ useLive(metricQuery, query);     // ResourceResult<T>; null reads nothing
   `Record<string, string>`. The descriptor is `LiveQueryValue<T, Q, QIn>`
   (`live: "value"`, `params: ["q"]`) carrying its codec as `query`
   (`core/internal/query-value.ts`) — the ONE codec the params gate, `useLive`
-  and the served half (`shared/compile-value.ts`) use.
+  and the served half (`core/internal/compile-value.ts`) use.
 - **The gate is strict.** `q` must be the only key, parse as JSON, pass the
   schema, and re-encode byte-identically (`canonicalJson(parsed) === q`) —
   else `contract-mismatch` (`ResourceContractError`). The equality is what
@@ -1452,7 +1528,7 @@ never add one.
 
 ## Plugin reference
 
-- Description: Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; LiveExposures.Register registers an entity extension's exposed fields (with their cells) for every list whose collection reaches its entity, read by useExposures. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+- Description: Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; LiveExposures.Register registers an entity extension's exposed fields (with their cells) for every list whose collection reaches its entity, read by useExposures. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, a scroll window's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
 - Web:
   - Slots: `LiveExposures.Register`
   - Slot contributors:
@@ -1503,6 +1579,7 @@ never add one.
     - `ColumnOverride`
     - `CompiledPagedValue`
     - `CompiledValue`
+    - `DeclaredCollection`
     - `DefaultScope`
     - `LiveValueSource`
     - `LookupCollectionSpecs`
@@ -1558,6 +1635,14 @@ never add one.
     - `primitives/live-state.WindowSelector`
   - Exports (types):
     - `ContributedColumns`
+    - `ExternalAllCollection`
+    - `ExternalLookupCollection`
+    - `ExternalNotifiedPagedValue`
+    - `ExternalNotifiedQueryValue`
+    - `ExternalNotifiedValue`
+    - `ExternalSilentPagedValue`
+    - `ExternalSilentValue`
+    - `ExternalWindowCollection`
     - `LiveAllCollection`
     - `LiveAllOrder`
     - `LiveAllSpec`
@@ -1572,6 +1657,8 @@ never add one.
     - `LiveBytesTypedParamValueSpec`
     - `LiveCentralValueSpec`
     - `LiveCollection`
+    - `LiveCollectionChange`
+    - `LiveCollectionChanges`
     - `LiveCollectionOf`
     - `LiveCollectionSpec`
     - `LiveColumnFilter`
@@ -1592,6 +1679,7 @@ never add one.
     - `LiveDecodedQuery`
     - `LiveExposedColumns`
     - `LiveExposes`
+    - `LiveExternalServe`
     - `LiveFilterable`
     - `LiveFilterableOf`
     - `LiveGroup`
@@ -1602,6 +1690,9 @@ never add one.
     - `LiveGroupQuery`
     - `LiveGroupsDescriptor`
     - `LiveGroupValue`
+    - `LiveHost`
+    - `LiveHostSource`
+    - `LiveHostSources`
     - `LiveKeyCut`
     - `LiveKeyDirection`
     - `LiveKeyRange`
@@ -1634,6 +1725,7 @@ never add one.
     - `LiveReservedColumn`
     - `LiveRowSchema`
     - `LiveRowsCollection`
+    - `LiveRuntime`
     - `LiveScopedColumns`
     - `LiveSnapshotBrand`
     - `LiveSortDirection`
@@ -1652,8 +1744,19 @@ never add one.
     - `LiveWindowDescriptor`
     - `LiveWindowParams`
     - `ScopedColumnMember`
+    - `ServedExternalAll`
+    - `ServedExternalLookup`
+    - `ServedExternalResource`
+    - `ServedExternalWindow`
+    - `ServedPagedOn`
+    - `ServedValueOn`
+    - `ServeExternalAllOptions`
+    - `ServeExternalLookupOptions`
+    - `ServeExternalWindowOptions`
+    - `ServeValueOnOptions`
     - `WithContributedColumns`
   - Exports (values):
+    - `bindExternalServe`
     - `exposedColumns`
     - `isPointId`
     - `LIVE_COLUMNS_KEY`
@@ -1666,8 +1769,10 @@ never add one.
     - `liveColumns`
     - `liveValue`
     - `scopedLiveColumns`
+    - `serveCollectionOn`
+    - `serveValueOn`
 - Cross-plugin:
-  - Imported by: 220 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 221 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×61
     - `conversations` ×35
     - `tasks` ×26
@@ -1689,6 +1794,7 @@ never add one.
     - `backup/runs-arm`
     - `database/query-deadline`
     - `fields/secret/config`
+    - `framework/browser-server`
     - `integrations/google-maps`
     - `reports`
     - `runs`

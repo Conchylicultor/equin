@@ -38,6 +38,8 @@ import {
   readServingSocket,
 } from "@plugins/infra/plugins/runtime-identity/core";
 import { drainWarmups } from "@plugins/infra/plugins/warmup/server";
+import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
+import { RESOURCE_HTTP_ROUTE } from "@plugins/packages/plugins/resource-protocol/core";
 
 // ── QoS boost (main backend only) ───────────────────────────────
 // Raise the event-loop thread to user-interactive QoS BEFORE any boot work, so
@@ -66,128 +68,51 @@ if (isMain() && boostInteractiveQos()) {
 recordMemoryCheckpoint("boot-start");
 
 // ── Route tables ────────────────────────────────────────────────
-// Flatten plugin routes into lookup tables. Literal routes go in an O(1)
-// map; routes with :param segments are matched linearly in registration
-// order.
-interface ParamRoute<H> {
-  segments: Array<{ literal: string } | { param: string }>;
-  handler: H;
-}
-interface HttpParamRoute extends ParamRoute<HttpHandler> {
-  method: string;
-}
-const literalHttpRoutes: Record<string, HttpHandler> = {};
-const paramHttpRoutes: HttpParamRoute[] = [];
+// Every plugin's HTTP routes go to the shared router (framework/http-router:
+// literal fast path, then :param matching, the no-store default, the logged
+// 500). WebSocket routes stay here: only this host upgrades sockets.
 const wsRoutes: Record<string, WsHandler> = {};
 
-function pathSegments(
-  path: string,
-): Array<{ literal: string } | { param: string }> {
-  return path
-    .split("/")
-    .filter((s) => s.length > 0)
-    .map((s) => (s.startsWith(":") ? { param: s.slice(1) } : { literal: s }));
-}
-
-function registerHttpRoute(key: string, handler: HttpHandler) {
-  const spaceIdx = key.indexOf(" ");
-  const method = key.slice(0, spaceIdx);
-  const path = key.slice(spaceIdx + 1);
-  if (!path.includes("/:")) {
-    literalHttpRoutes[`${method} ${path}`] = handler;
-    return;
-  }
-  paramHttpRoutes.push({ method, segments: pathSegments(path), handler });
-}
-
-function matchSegments<H>(
-  pathname: string,
-  routes: ParamRoute<H>[],
-  filter: (r: ParamRoute<H>) => boolean = () => true,
-): { handler: H; params: Record<string, string> } | null {
-  const parts = pathname.split("/").filter((s) => s.length > 0);
-  for (const route of routes) {
-    if (!filter(route)) continue;
-    if (route.segments.length !== parts.length) continue;
-    const params: Record<string, string> = {};
-    let ok = true;
-    for (let i = 0; i < route.segments.length; i++) {
-      const seg = route.segments[i]!;
-      const part = parts[i]!;
-      if ("literal" in seg) {
-        if (seg.literal !== part) {
-          ok = false;
-          break;
-        }
-      } else {
-        params[seg.param] = decodeURIComponent(part);
-      }
-    }
-    if (ok) return { handler: route.handler, params };
-  }
-  return null;
-}
-
-function populateRoutes(ordered: LoadedServerPlugin[]): void {
+function populateRoutes(
+  ordered: LoadedServerPlugin[],
+): (req: Request) => Promise<Response> {
   const end = profilerStart(
     "routePopulation",
     "routePopulation",
     "Route Population",
   );
+  const httpRoutes: Array<[string, HttpHandler]> = [];
   for (const plugin of ordered) {
-    if (plugin.httpRoutes) {
-      for (const [key, handler] of Object.entries(plugin.httpRoutes)) {
-        registerHttpRoute(key, handler);
-      }
-    }
+    if (plugin.httpRoutes)
+      httpRoutes.push(...Object.entries(plugin.httpRoutes));
     if (plugin.wsRoutes) Object.assign(wsRoutes, plugin.wsRoutes);
   }
-  end();
 
   // Core-owned routes for the live-state primitive.
   wsRoutes["/ws/notifications"] = notificationsWsHandler;
-  registerHttpRoute("GET /api/resources/:key", handleResourceHttp);
-}
+  httpRoutes.push([RESOURCE_HTTP_ROUTE, handleResourceHttp]);
 
-// Default every API response to `cache-control: no-store` unless the handler set
-// its own. The browser HTTP cache storing a live-state body then 304-replaying an
-// old-boot copy is the cache-poisoning wedge class (Fix E, the dispatch-layer
-// floor beneath handleResourceHttp's own explicit `no-store`); media/raw handlers
-// that set their own Cache-Control keep it. Bun's constructed-Response headers are
-// mutable in place (probed), so no clone is needed.
-function withDefaultCacheControl(res: Response): Response {
-  if (!res.headers.has("cache-control"))
-    res.headers.set("cache-control", "no-store");
-  return res;
-}
-
-async function safeHandle(
-  handler: HttpHandler,
-  req: Request,
-  params: Record<string, string>,
-  pathname: string,
-): Promise<Response> {
-  try {
-    return withDefaultCacheControl(await handler(req, params));
-  } catch (err) {
-    const errObj = err instanceof Error ? err : new Error(String(err));
-    // Fail loudly: always emit a durable log line (captured by the gateway into
-    // the per-worktree backend log) BEFORE returning a generic 500. The crash
-    // report below is DB-backed and deduped — and is silently dropped during the
-    // boot window before the reports plugin registers its reporter — so it can't
-    // be the only signal. A 500 with zero log line made this class of bug
-    // invisible.
-    console.error(
-      `[http] ${req.method} ${pathname}: ${errObj.message}`,
-      errObj.stack ?? "",
-    );
-    reportServerError({
-      message: `[http] ${req.method} ${pathname}: ${errObj.message}`,
-      stack: errObj.stack ?? null,
-      errorType: errObj.name,
-    });
-    return Response.json({ error: "Internal server error" }, { status: 500 });
-  }
+  const handle = createRequestHandler({
+    routes: httpRoutes,
+    onError: (errObj, req, pathname) => {
+      // Fail loudly: always emit a durable log line (captured by the gateway into
+      // the per-worktree backend log) BEFORE returning a generic 500. The crash
+      // report below is DB-backed and deduped — and is silently dropped during the
+      // boot window before the reports plugin registers its reporter — so it can't
+      // be the only signal.
+      console.error(
+        `[http] ${req.method} ${pathname}: ${errObj.message}`,
+        errObj.stack ?? "",
+      );
+      reportServerError({
+        message: `[http] ${req.method} ${pathname}: ${errObj.message}`,
+        stack: errObj.stack ?? null,
+        errorType: errObj.name,
+      });
+    },
+  });
+  end();
+  return handle;
 }
 
 // ── Bind socket ─────────────────────────────────────────────────
@@ -204,7 +129,7 @@ async function safeHandle(
 // (runtime-identity's readServingSocket, which also records it for code that
 // must reach this backend over HTTP).
 function bindSocket(ordered: LoadedServerPlugin[]): void {
-  populateRoutes(ordered);
+  const handleHttp = populateRoutes(ordered);
 
   const socketPath = readServingSocket();
 
@@ -235,19 +160,7 @@ function bindSocket(ordered: LoadedServerPlugin[]): void {
         }
       }
 
-      // HTTP routing: literal fast-path, then :param matcher.
-      const literal = literalHttpRoutes[`${req.method} ${url.pathname}`];
-      if (literal) return safeHandle(literal, req, {}, url.pathname);
-
-      const matched = matchSegments(
-        url.pathname,
-        paramHttpRoutes,
-        (r) => (r as HttpParamRoute).method === req.method,
-      );
-      if (matched)
-        return safeHandle(matched.handler, req, matched.params, url.pathname);
-
-      return new Response("Not found", { status: 404 });
+      return handleHttp(req);
     },
     websocket: {
       open(ws) {

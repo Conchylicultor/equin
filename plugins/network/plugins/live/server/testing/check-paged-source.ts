@@ -4,8 +4,8 @@ import type {
   LivePagedPages,
   LiveValueOrigin,
 } from "@plugins/network/plugins/live/core";
-import { pageRowsOf } from "../../shared/compile-value";
-import { compareRowKeys, sliceRange } from "../../shared/key-order";
+import { pageRowsOf } from "../../core/internal/compile-value";
+import { compareRowKeys, sliceRange } from "../../core/internal/key-order";
 
 // A paged value's source against its contract, for the source's own suite:
 // every range a reader can ask — each cut a row key the source holds or held,

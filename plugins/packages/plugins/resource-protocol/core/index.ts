@@ -16,6 +16,7 @@ export type {
   ResourceReadEnvelope,
   SubErrorReason,
 } from "./internal/protocol";
+export { RESOURCE_HTTP_ROUTE } from "./internal/http-route";
 export { DERIVE_MAX_ID, DERIVE_MAX_SOURCES, PROTOCOL } from "./internal/frames";
 export type {
   ClientFrame,

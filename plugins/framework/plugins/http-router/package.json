@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-http-router",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The one HTTP request router every host mounts: createRequestHandler turns \"METHOD /path/:param\" route pairs into a (req) => Promise<Response> — literal fast path, then :param matching in registration order, a default cache-control: no-store, and a logged generic 500 on a throw. A duplicate route key throws at construction."
+}

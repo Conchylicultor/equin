@@ -3,30 +3,30 @@ import {
   defineResource,
   Resource as ResourceContribution,
 } from "@plugins/framework/plugins/server-core/core";
-import type {
-  LivePagedParams,
-  LivePagedPages,
-  LivePagedValue,
-  LivePreloadedParamValue,
-  LiveQueryParams,
-  LiveQueryValue,
-  LiveValue,
-} from "@plugins/network/plugins/live/core";
-import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import {
-  registerPagedOf,
-  registerValueOf,
-  type AnyServeOptions,
-  type BytesPairing,
-  type ExternalServed,
-  type LiveValueChanges,
-  type PagedChanges,
-  type ServedFor,
-  type ServedValueBase,
-  type ServePagedValueOptions,
-  type ServeValueOptions,
-  type SnapshotPairing,
-} from "../../shared/compile-value";
+  type LivePagedParams,
+  type LivePagedPages,
+  type LivePagedValue,
+  type LivePreloadedParamValue,
+  type LiveQueryParams,
+  type LiveQueryValue,
+  type LiveValue,
+  type LiveValueOrigin,
+} from "@plugins/network/plugins/live/core";
+import { serveValueOn } from "../../core/internal/serve-on";
+import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
+import type {
+  AnyServeOptions,
+  BytesPairing,
+  ExternalServed,
+  LiveValueChanges,
+  PagedChanges,
+  ServedFor,
+  ServedValueBase,
+  ServePagedValueOptions,
+  ServeValueOptions,
+  SnapshotPairing,
+} from "../../core/internal/compile-value";
 
 // `serveValue` — the server half of a worktree `liveValue`. It declares WHERE the
 // value's truth lives (`source`) and how to read it (`loader`), never a delivery
@@ -44,8 +44,10 @@ import {
 //   value has `notify(params?)`, and nothing else does — or an immutable,
 //   fixed or snapshot answer, with its reason and no `notify`.
 //
-// The options (`throttleMs`, `recomputeOn`, `whileSubscribed`, `revalidate`, …)
-// compile in `../../shared/compile-value`, shared with the central `serveValue`.
+// The body is the core's `serveValueOn` — the one serving code path every host
+// runs (central and a browser server too) — on server-core's runtime; this
+// wrapper adds only the Bun host's part: the `Resource.Declare` contribution
+// and a param'd preload's boot tuples.
 
 /** A served value: the runtime resource, its key, and its one `Resource.Declare`. */
 export type ServedValue<T, P extends Record<string, string>> = ServedValueBase<
@@ -271,10 +273,11 @@ export function serveValue<T, P extends Record<string, string>>(
   }
   // Erased: the overloads checked the options against the declaration's
   // form, and the compilation dispatches on the declaration itself.
-  const { resource, compiled } = registerValueOf<T, P, unknown>(
+  const served = serveValueOn<T, P, "db+external">(
     { defineResource, defineExternalResource },
-    value,
+    value as LiveValue<T, P, LiveValueOrigin>,
     opts,
+    { sources: "db+external" },
   );
   const enumerate = opts.preloadParams;
   const optional = value.optionalParams;
@@ -298,7 +301,7 @@ export function serveValue<T, P extends Record<string, string>>(
               out.push({
                 params,
                 ok: true,
-                value: await resource.load(params),
+                value: await served.load(params),
               });
             } catch (error) {
               out.push({ params, ok: false, error });
@@ -306,58 +309,23 @@ export function serveValue<T, P extends Record<string, string>>(
           }
           return out;
         };
-  const base = {
-    key: resource.key,
-    mode: resource.mode,
-    schema: resource.schema,
-    ...(resource.preload !== undefined ? { preload: resource.preload } : {}),
-    load: (params: P) => resource.load(params),
-    source: opts.source,
-    ...(compiled.changes !== undefined ? { changes: compiled.changes } : {}),
-    ...(compiled.unbounded !== undefined
-      ? { unbounded: compiled.unbounded }
-      : {}),
-    keys: [value.key],
+  return {
+    ...served,
     declare: [
       ResourceContribution.Declare({
-        key: resource.key,
-        mode: resource.mode,
-        ...(resource.preload !== undefined
-          ? { preload: resource.preload }
-          : {}),
+        key: served.key,
+        mode: served.mode,
+        ...(served.preload !== undefined ? { preload: served.preload } : {}),
         ...(preloadTuples !== undefined ? { preloadTuples } : {}),
       }),
     ] as [ReturnType<typeof ResourceContribution.Declare>],
-  };
-  if ("notify" in resource && compiled.changes === "notified") {
-    const queried = value.query !== undefined;
-    const served: ServedExternalValue<T, P> = {
-      ...base,
-      // Only the params: `affectedIds` is a keyed concept. The runtime
-      // canonicalizes them, so a notify reaches the tuple a read subscribed
-      // however an absent optional param is spelled (`undefined`, `""`, left out).
-      // A query value is notified by its QUESTION, which reaches the one
-      // tuple the codec spells it as.
-      notify: queried
-        ? (query?: unknown) => {
-            for (const tuple of compiled.tuplesOf(query))
-              resource.notify(tuple);
-          }
-        : (params?: P) => resource.notify(params),
-    };
-    return served;
-  }
-  // A fresh object rather than the runtime's own: that one carries a working
-  // `notify` its type merely hides, and a Postgres-backed value is driven by the
-  // change feed alone — so the db arm has no `notify`, at runtime too; nor has
-  // an immutable, fixed or snapshot external value (no change signal).
-  const served: ServedValue<T, P> = base;
-  return served;
+  } as ServedValue<T, P> | ServedExternalValue<T, P>;
 }
 
 /**
  * A paged value: its pages and — declared `paged.meta` — its meta sibling,
- * registered together over one per-question lifecycle (`registerPagedOf`).
+ * registered together over one per-question lifecycle (`serveValueOn`), each
+ * declared.
  */
 function servePaged(
   value: LivePagedValue<unknown, unknown, unknown, unknown>,
@@ -369,42 +337,19 @@ function servePaged(
       `serveValue("${value.key}"): a paged value is never preloaded — no \`preloadParams\`.`,
     );
   }
-  const { resource, compiled, meta } = registerPagedOf(
+  const { meta, ...served } = serveValueOn(
     { defineResource, defineExternalResource },
     value,
     opts,
+    { sources: "db+external" },
   );
-  const declarations = [
-    ResourceContribution.Declare({ key: resource.key, mode: resource.mode }),
-    ...(meta === null
-      ? []
-      : [
-          ResourceContribution.Declare({
-            key: meta.resource.key,
-            mode: meta.resource.mode,
-          }),
-        ]),
-  ];
-  const base: ServedSilentPagedValue<unknown> = {
-    key: resource.key,
-    mode: resource.mode,
-    schema: resource.schema,
-    load: (params: LivePagedParams) => resource.load(params),
-    source: "external",
-    ...(compiled.changes !== undefined ? { changes: compiled.changes } : {}),
-    keys: [value.key, ...(meta === null ? [] : [meta.resource.key])],
-    declare: declarations,
-  };
-  // Only a `"notified"` value is told of a change (see `serveValue`).
-  if (compiled.changes !== "notified") return base;
   return {
-    ...base,
-    notify(query: unknown) {
-      for (const tuple of compiled.tuplesOf(query)) resource.notify(tuple);
-      if (meta === null) return;
-      for (const tuple of meta.compiled.tuplesOf(query)) {
-        meta.resource.notify(tuple);
-      }
-    },
-  };
+    ...served,
+    declare: [
+      ResourceContribution.Declare({ key: served.key, mode: served.mode }),
+      ...(meta === null
+        ? []
+        : [ResourceContribution.Declare({ key: meta.key, mode: meta.mode })]),
+    ],
+  } as ServedPagedValue<unknown, unknown> | ServedSilentPagedValue<unknown>;
 }

@@ -9,6 +9,9 @@ export type {
   ScopePolicy,
   ExternalWindowPolicy,
   ExternalWindowMembership,
+  ExternalPointMembership,
+  ExternalPointPolicy,
+  ExternalKeyedPolicy,
   ResourceContract,
   KeyedResourceContract,
   ServerResourceOptions,
@@ -27,6 +30,7 @@ export type {
   RoutedRecomputeOn,
   WsData,
   WsHandler,
+  RuntimeSocket,
 } from "./runtime";
 export {
   mintReachPlan,

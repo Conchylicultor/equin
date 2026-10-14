@@ -1,10 +1,6 @@
-import type {
-  LiveCutKey,
-  LiveKeyCut,
-  LiveKeyDirection,
-  LiveKeyRange,
-  LivePagedKey,
-} from "@plugins/network/plugins/live/core";
+import type { LiveCutKey } from "./row-key";
+import type { LiveKeyDirection, LivePagedKey } from "./live-value";
+import type { LiveKeyCut, LiveKeyRange } from "./query-value";
 
 // The total order a paged VALUE's items are cut in — the one Postgres gives a
 // collection's window, spelled for a source with no SQL: each item's
@@ -29,7 +25,21 @@ export function compareRowKeys(
   b: LiveRowKeyParts,
   order: readonly LiveKeyDirection[],
 ): number {
-  for (let i = 0; i < order.length; i++) {
+  // The id is the last part, ascending (never NULL).
+  return compareKeyParts(a, b, [...order, "asc"]);
+}
+
+/**
+ * `a` vs `b`, part by part, each in its own direction (`dirs` — one per part,
+ * so a key whose order already names the id, a scroll collection's, compares
+ * as given): code point order, a NULL last either way.
+ */
+export function compareKeyParts(
+  a: LiveRowKeyParts,
+  b: LiveRowKeyParts,
+  dirs: readonly LiveKeyDirection[],
+): number {
+  for (let i = 0; i < dirs.length; i++) {
     const x = a[i] ?? null;
     const y = b[i] ?? null;
     if (x === y) continue;
@@ -37,12 +47,9 @@ export function compareRowKeys(
     if (x === null) return 1;
     if (y === null) return -1;
     const c = compareCodePoints(x, y);
-    return order[i] === "desc" ? -c : c;
+    return dirs[i] === "desc" ? -c : c;
   }
-  return compareCodePoints(
-    a[order.length] as string,
-    b[order.length] as string,
-  );
+  return 0;
 }
 
 /** Two strings by code point — not UTF-16 code unit, which orders an astral character before U+E000–U+FFFF. */

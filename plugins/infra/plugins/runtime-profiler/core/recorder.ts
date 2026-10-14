@@ -1038,12 +1038,23 @@ export function captureFlightWindow(opts: {
   return { atMs, open, completed };
 }
 
+/**
+ * The SINGULARITY_PROFILING kill-switch (`"0"` disables span recording). Read
+ * through `globalThis.process?.env` so the recorder also loads where there is
+ * no `process` (a browser host of the resource runtime): there it is never
+ * disabled.
+ */
+function profilingDisabled(): boolean {
+  return globalThis.process?.env?.SINGULARITY_PROFILING === "0";
+}
+
 // Core write path: update aggregates + slowest ring, attributing to `parent`.
 // `spanId`/`parentId` identify this span RUN and its enclosing entry run (see
 // `nextSpanId`) — the per-instance edge, carried alongside the per-label
 // `parent` snapshot the aggregates group by. `waitMs`/`childMs`/`selfMs` are the
 // entry's decomposition (see module header); leaf spans take the defaults (no
 // waits, no children, all self).
+
 function record(
   kind: SpanKind,
   label: string,
@@ -1058,7 +1069,7 @@ function record(
   waitBands?: WaitBand[],
   rawDetail?: SpanDetail,
 ): void {
-  if (process.env.SINGULARITY_PROFILING === "0") return;
+  if (profilingDisabled()) return;
   // Drop spans produced inside a runWithoutProfiling scope before any aggregate,
   // slowest-ring, or onSlowSpan work — this is what breaks the observability
   // self-feedback loop (see installProfilingSuppressionRuntime).
@@ -1300,7 +1311,7 @@ function capDetail(detail: SpanDetail | undefined): SpanDetail | undefined {
  * unions of ancestors whose own records are NOT suppressed.
  */
 export function chargeWait(layer: string, ms: number): void {
-  if (process.env.SINGULARITY_PROFILING === "0") return;
+  if (profilingDisabled()) return;
   if (suppressionRuntime.suppressed()) return;
   const cur = contextRuntime.current();
   if (!cur) {

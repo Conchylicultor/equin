@@ -57,8 +57,8 @@ import {
   type PagePlan,
   type PageViewport,
 } from "../../shared/page-plan";
-import { registerPagedValue } from "../../shared/compile-value";
-import { compareRowKeys, sliceRange } from "../../shared/key-order";
+import { registerPagedValue } from "../../core/internal/compile-value";
+import { compareRowKeys, sliceRange } from "../../core/internal/key-order";
 import { checkPagedSource } from "../testing/check-paged-source";
 
 const Item = z.object({ id: z.string(), at: z.string().nullable() });

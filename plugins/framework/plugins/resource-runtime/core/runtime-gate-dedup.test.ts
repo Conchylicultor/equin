@@ -15,11 +15,11 @@
  */
 
 import { test, expect, describe } from "bun:test";
-import { createHash } from "node:crypto";
+import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 import { z } from "zod";
 import { createHarness, controllable, tick } from "./test-support";
 
-const sig = (raw: string): string => createHash("sha1").update(raw).digest("hex");
+const sig = (raw: string): string => hashHex(raw);
 
 describe("gate-after-dedup — read-admission inside the single-flight", () => {
   test("N same-pk subs on a parked loader: gate active === 1, one loader run, all acked", async () => {
@@ -102,8 +102,12 @@ describe("gate-after-dedup — read-admission inside the single-flight", () => {
     ctl.release();
     await tick();
 
-    const starterAck = h.frames.find((f) => f.socket === 0 && f.kind === "sub-ack")!;
-    const joinerAck = h.frames.find((f) => f.socket === 1 && f.kind === "sub-ack")!;
+    const starterAck = h.frames.find(
+      (f) => f.socket === 0 && f.kind === "sub-ack",
+    )!;
+    const joinerAck = h.frames.find(
+      (f) => f.socket === 1 && f.kind === "sub-ack",
+    )!;
     expect(starterAck.value).toBe("v1");
     expect(joinerAck.value).toBe("v1"); // one loader run served both
     expect(starterAck.etag).toBe(sig("1"));

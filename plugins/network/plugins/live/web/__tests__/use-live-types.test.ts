@@ -124,7 +124,7 @@ function useTypeChecks(maybe: { viewport: typeof viewport } | undefined) {
   ];
 }
 
-/** A paged value's key, checked by tsc (its serve half: `shared/compile-value.test.ts`). */
+/** A paged value's key, checked by tsc (its serve half: `core/internal/compile-value.test.ts`). */
 function declarationChecks() {
   const key: LivePagedKey<Item> = {
     // @ts-expect-error a key part is exact text (or null), never a number

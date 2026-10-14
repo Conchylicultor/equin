@@ -10,6 +10,7 @@ import {
   handleResourceHttp,
 } from "@plugins/framework/plugins/central-core/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
 import { centralEntries } from "../core/central.generated";
 import {
   computeLoadWaves,
@@ -185,74 +186,19 @@ if (process.ppid !== 1) {
   }, 2000).unref();
 }
 
-interface ParamRoute<H> {
-  segments: Array<{ literal: string } | { param: string }>;
-  handler: H;
-}
-interface HttpParamRoute extends ParamRoute<HttpHandler> {
-  method: string;
-}
-const literalHttpRoutes: Record<string, HttpHandler> = {};
-const paramHttpRoutes: HttpParamRoute[] = [];
+// ── Route tables ────────────────────────────────────────────────
+// Every plugin's HTTP routes go to the shared router (framework/http-router:
+// literal fast path, then :param matching, the no-store default, the logged
+// 500). WebSocket routes stay here: only this host upgrades sockets.
 const wsRoutes: Record<string, WsHandler> = {};
-// Every HTTP route key registered, as written (`"GET /api/auth/state"`) — the
-// source of the routing manifest published once the server is listening.
-const httpRouteKeys: string[] = [];
-
-function pathSegments(
-  path: string,
-): Array<{ literal: string } | { param: string }> {
-  return path
-    .split("/")
-    .filter((s) => s.length > 0)
-    .map((s) => (s.startsWith(":") ? { param: s.slice(1) } : { literal: s }));
-}
-
-function registerHttpRoute(key: string, handler: HttpHandler) {
-  httpRouteKeys.push(key);
-  const spaceIdx = key.indexOf(" ");
-  const method = key.slice(0, spaceIdx);
-  const path = key.slice(spaceIdx + 1);
-  if (!path.includes("/:")) {
-    literalHttpRoutes[`${method} ${path}`] = handler;
-    return;
-  }
-  paramHttpRoutes.push({ method, segments: pathSegments(path), handler });
-}
-
-function matchSegments<H>(
-  pathname: string,
-  routes: ParamRoute<H>[],
-  filter: (r: ParamRoute<H>) => boolean = () => true,
-): { handler: H; params: Record<string, string> } | null {
-  const parts = pathname.split("/").filter((s) => s.length > 0);
-  for (const route of routes) {
-    if (!filter(route)) continue;
-    if (route.segments.length !== parts.length) continue;
-    const params: Record<string, string> = {};
-    let ok = true;
-    for (let i = 0; i < route.segments.length; i++) {
-      const seg = route.segments[i]!;
-      const part = parts[i]!;
-      if ("literal" in seg) {
-        if (seg.literal !== part) {
-          ok = false;
-          break;
-        }
-      } else {
-        params[seg.param] = decodeURIComponent(part);
-      }
-    }
-    if (ok) return { handler: route.handler, params };
-  }
-  return null;
-}
+// Every HTTP route, key as written (`"GET /api/auth/state"`) — the router's
+// input and the source of the routing manifest published once the server is
+// listening.
+const httpRoutes: Array<[string, HttpHandler]> = [];
 
 for (const plugin of ordered) {
   if (plugin.httpRoutes) {
-    for (const [key, handler] of Object.entries(plugin.httpRoutes)) {
-      registerHttpRoute(key, handler);
-    }
+    httpRoutes.push(...Object.entries(plugin.httpRoutes));
   }
   if (plugin.wsRoutes) Object.assign(wsRoutes, plugin.wsRoutes);
 }
@@ -261,47 +207,25 @@ for (const plugin of ordered) {
 // Browsers reach these paths via the gateway's central-routes manifest, which
 // this process publishes below — so they are listed like any plugin route.
 wsRoutes["/ws/central-notifications"] = notificationsWsHandler;
-registerHttpRoute("GET /api/central-resources/:key", handleResourceHttp);
+httpRoutes.push(["GET /api/central-resources/:key", handleResourceHttp]);
 
 // The socket the gateway handed this backend, as `--socket <path>` (with a
 // transition fallback to the old environment variable — see
 // runtime-identity's serving-socket.ts).
 const socketPath = readServingSocket();
 
-// Default every API response to `cache-control: no-store` unless the handler set
-// its own — the dispatch-layer floor beneath handleResourceHttp's own explicit
-// `no-store` that closes the cache-poisoning wedge class on central too (Fix E).
-// Bun's constructed-Response headers are mutable in place (probed), so no clone.
-function withDefaultCacheControl(res: Response): Response {
-  if (!res.headers.has("cache-control"))
-    res.headers.set("cache-control", "no-store");
-  return res;
-}
-
 // Central had no try/catch around handler dispatch — a throw surfaced as Bun's
-// default 500 with no log line. Mirror server-core's `safeHandle` (console.error
-// with method + pathname + stack → generic 500); central has no reportServerError
-// hook, so the console line is the parity floor. Also applies the Cache-Control
-// default so both the success and error responses go through one chokepoint.
-async function safeHandle(
-  handler: HttpHandler,
-  req: Request,
-  params: Record<string, string>,
-  pathname: string,
-): Promise<Response> {
-  try {
-    return withDefaultCacheControl(await handler(req, params));
-  } catch (err) {
-    const errObj = err instanceof Error ? err : new Error(String(err));
+// default 500 with no log line. The shared router's 500 now carries every host;
+// central has no reportServerError hook, so the console line is the parity floor.
+const handleHttp = createRequestHandler({
+  routes: httpRoutes,
+  onError: (errObj, req, pathname) => {
     console.error(
       `[http] ${req.method} ${pathname}: ${errObj.message}`,
       errObj.stack ?? "",
     );
-    return withDefaultCacheControl(
-      Response.json({ error: "Internal server error" }, { status: 500 }),
-    );
-  }
-}
+  },
+});
 
 const server = Bun.serve<WsData>({
   unix: socketPath,
@@ -316,18 +240,7 @@ const server = Bun.serve<WsData>({
       }
     }
 
-    const literal = literalHttpRoutes[`${req.method} ${url.pathname}`];
-    if (literal) return safeHandle(literal, req, {}, url.pathname);
-
-    const matched = matchSegments(
-      url.pathname,
-      paramHttpRoutes,
-      (r) => (r as HttpParamRoute).method === req.method,
-    );
-    if (matched)
-      return safeHandle(matched.handler, req, matched.params, url.pathname);
-
-    return new Response("Not found", { status: 404 });
+    return handleHttp(req);
   },
   websocket: {
     open(ws) {
@@ -346,7 +259,10 @@ const server = Bun.serve<WsData>({
 // them. Written from the route tables above, so the list always matches the
 // code this process runs — whichever checkout last built cannot change it.
 writeCentralRoutesManifest(
-  centralRoutePrefixes(httpRouteKeys, Object.keys(wsRoutes)),
+  centralRoutePrefixes(
+    httpRoutes.map(([key]) => key),
+    Object.keys(wsRoutes),
+  ),
 );
 
 console.log(`Central listening on :${server.port}`);

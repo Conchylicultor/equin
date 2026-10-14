@@ -917,7 +917,7 @@ describe("P8 23b — the deleted spellings are refused at registration", () => {
     ).not.toThrow();
   });
 
-  test("D31: a keyed entry is a membership entry — routed when DB-backed, an external window otherwise; keyed-without-membership throws", () => {
+  test("D31: a keyed entry is a membership entry — routed when DB-backed, an external window or point set otherwise; keyed-without-membership throws", () => {
     const { runtime } = createHarness();
     const noScope = { loader: () => [] };
     expect(() =>
@@ -926,14 +926,21 @@ describe("P8 23b — the deleted spellings are refused at registration", () => {
     ).toThrow(
       /a keyed entry is a membership entry — key "rows" declares no membership/,
     );
-    // The external window: no routes, no point set / alias, no windowIdsOf.
+    // The external keyed arm: a window or a point set — no routes, no alias,
+    // no windowIdsOf, and a point set states its idsOf.
     const ext = (key: string) => ({ ...rowsContract, key });
     expect(() =>
-      runtime.defineExternalResource(ext("ext-point"), {
-        membership: { kind: "point", idsOf: () => [] },
+      runtime.defineExternalResource(ext("ext-point-no-ids"), {
+        membership: { kind: "point" },
         loader: () => [],
       } as never),
     ).toThrow(/an external keyed entry is a bounded window/);
+    expect(
+      runtime.defineExternalResource(ext("ext-point"), {
+        membership: { kind: "point", idsOf: () => [] },
+        loader: () => [],
+      }).mode,
+    ).toBe("keyed");
     expect(() =>
       runtime.defineExternalResource(ext("ext-ids"), {
         membership: {

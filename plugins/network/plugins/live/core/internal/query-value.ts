@@ -12,7 +12,7 @@ import { parseRowKey, type LiveCutKey } from "./row-key";
 // default into the one tuple of the question it defaults to.
 //
 // ONE codec per value, shared by the declaration's params gate, the browser's
-// read (`useLive`) and the served half (`shared/compile-value.ts` decodes the
+// read (`useLive`) and the served half (`compile-value.ts` decodes the
 // tuple for the loader, and encodes `notify(query)`'s), so the three cannot
 // spell a question differently.
 //

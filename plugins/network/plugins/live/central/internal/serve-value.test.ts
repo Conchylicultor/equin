@@ -1,15 +1,15 @@
 /**
  * The central `serveValue`'s `recomputeOn` takes only an EXTERNAL upstream
  * (T15) — the same `ExternalServed` the worktree `serveValue` and
- * `compileValue` take (`../../shared/compile-value.ts`), so the three cannot
+ * `compileValue` take (`../../core/internal/compile-value.ts`), so the three cannot
  * drift. Type-level: the assertions are the `@ts-expect-error`s; the runtime
- * refusal of a cast is pinned in `shared/compile-value.test.ts`.
+ * refusal of a cast is pinned in `core/internal/compile-value.test.ts`.
  */
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import type { ServedValueBase } from "../../shared/compile-value";
+import type { ServedValueBase } from "../../core/internal/compile-value";
 import { serveValue, type CentralServedValue } from "./serve-value";
 
 const Count = z.object({ n: z.number() });
