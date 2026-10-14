@@ -9,7 +9,7 @@ import { SlowOpKindView } from "./components/slow-op-kind-view";
 export default {
   collapsed: true,
   description:
-    "Records slow client operations (page load, element appearance) into the durable slow-op store via the slow-ops client endpoint.",
+    "Records slow client operations (page load, element appearance, and every client latency signal — a live update applied, an optimistic write confirmed — split into its phases) into the durable slow-op store via the slow-ops client endpoint.",
   contributions: [
     ConfigV2.WebRegister({ descriptor: slowOpConfig }),
     Core.Root({ component: SlowOpCollector }),

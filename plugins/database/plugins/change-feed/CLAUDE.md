@@ -246,7 +246,12 @@ the mounted `declare` contributions), and its writes route straight into
   emit is after commit. `latency` is required: `interactive` flushes at once.
 - **Coalescing at the source.** A pending `Map<id, U|D>` (last op wins), flushed
   once per fixed window armed on the first change — a true rate cap, which the
-  runtime's debounce is not. Deletes route before upserts; over
+  runtime's debounce is not. The flush stamps `changedAt` at the flush, not at
+  the first buffered emit: the window is a declared delay, so live-state's
+  `update` latency sample starts when it closes — and counting it would loop,
+  since every produced table is an observability store (a slow `update` of an
+  open Slow Events pane is a `slow_ops` write, whose push is late by the window
+  again). Deletes route before upserts; over
   `PRODUCER_IDS_CAP` ids the flush routes `ids: null`. The timer and every flush
   run in the root async context captured at module eval, so a writer inside
   `runWithoutProfiling` does not hide the `route` span. Each change of a flush

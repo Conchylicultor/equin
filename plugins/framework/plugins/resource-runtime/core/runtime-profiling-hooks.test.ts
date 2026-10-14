@@ -163,7 +163,7 @@ describe("onDelivered frameChars", () => {
     const delivered: Array<{ subscribers: number; frameChars: number }> = [];
     const h = createHarness({
       sockets: 2,
-      onDelivered: (_key, _latencyMs, subscribers, frameChars) => {
+      onDelivered: (_key, { subscribers, frameChars }) => {
         delivered.push({ subscribers, frameChars });
       },
     });

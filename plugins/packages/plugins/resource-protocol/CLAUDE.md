@@ -57,6 +57,17 @@ moved it.
 `DERIVE_MAX_SOURCES` (2) and `DERIVE_MAX_ID` (128) live here too, in the hashed
 data: the client refuses to send more, the runtime refuses to read more.
 
+### Push timing (`timing` on `update` / `delta`)
+
+A pushed frame that a change stands behind carries `timing: { changedAt,
+sentAt, deliverMs }` — the change's wall-clock time, the send's wall-clock
+time, and first notify → send on the server's monotonic clock. One object, so a
+frame can never carry a change time without the send time that splits its
+latency into `server-notice` / `server-deliver` / `transport` / `client-apply`
+(the `update` signal of `primitives/perfs/latency-signal`). A frame no change
+stands behind (catch-up replay, a forced resubscribe's answer) has none, so it
+yields no latency sample by construction.
+
 ## Failure vocabulary (`core/internal/protocol.ts`)
 
 - `SubErrorReason` — `unknown-key` / `unauthorized` / `loader-failed` /

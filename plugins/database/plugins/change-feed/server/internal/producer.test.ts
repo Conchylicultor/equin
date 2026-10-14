@@ -196,7 +196,6 @@ describe("mutate", () => {
   });
 
   test("the window is fixed: armed on the first change, never re-armed", async () => {
-    const t0 = Date.now();
     await items.mutate(
       t.db,
       (q, tb) => q.insert(tb).values({ id: "x", n: 1 }),
@@ -217,10 +216,10 @@ describe("mutate", () => {
     await sleep(WINDOW_MS * 0.7);
     expect(routed).toHaveLength(1);
     expect(sortedIds(routed[0]!)).toEqual(["x", "y"]);
-    // `changedAt` is the earliest buffered emit, not the flush.
+    // `changedAt` is the flush, not the earliest buffered emit: the window is a
+    // declared delay, so measured change → tab latency starts when it closes.
     const at = (routed[0] as { changedAt: number }).changedAt;
-    expect(at).toBeGreaterThanOrEqual(t0);
-    expect(at).toBeLessThanOrEqual(firstDone);
+    expect(at).toBeGreaterThanOrEqual(firstDone + WINDOW_MS * 0.9);
   });
 
   test("an interactive write flushes the whole buffer as soon as it resolves", async () => {

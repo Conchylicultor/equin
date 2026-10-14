@@ -60,9 +60,12 @@ it into `slow_op_callers` once, at the new backend's boot; callers the
 outgoing backend merged into it during that swap window were not copied (a
 few seconds of attribution; the op's counters include them).
 
-Client `element` signals attribute to their route — they pass
-`caller: { kind: "route", label: location.pathname }`, which lands on the op's
-`slow_op_callers` row (`route` · `/agents/c/123` ×N in the detail).
+The client signals are `page-load`, `element` (a resource's mount → first data)
+and every client latency signal of `primitives/perfs/latency-signal` (`update`,
+`confirm`, …; see "Client latency kinds" below). All but `page-load` attribute to
+their route — they pass `caller: { kind: "route", label: location.pathname }`,
+which lands on the op's `slow_op_callers` row (`route` · `/agents/c/123` ×N in
+the detail).
 
 A server span's `detail` lands on the row too: its `variant` merges into
 `variants` (only the top 10 by total time stay named; the rest fold into one
@@ -95,11 +98,11 @@ as "slow" when nothing about that resource is slow. To keep the signal honest
 **without suppressing it**, the `element` signal now carries additive root-cause
 attribution: `useResource` reads `NotificationsClient.getFirstReadyAt()` and, when
 the transport was not ready at mount, reports `transportColdStart` + the
-bring-up `transportWaitMs`. The server charges that wait to a
-`notifications-transport` layer in the durable `waits` (wait-vs-work split, no
-migration) and stamps `transportColdStart` into the report `data`, so the task
-title gains `— transport cold-start` and the description points the fix at
-transport/boot readiness rather than the resource. The full duration still fires
+bring-up wait. The collector sends that wait as the item's
+`waits["notifications-transport"]`, merged into the durable `waits` (wait-vs-work
+split, no migration), and the server stamps `transportColdStart` into the report
+`data`, so the task title gains `— transport cold-start` and the description
+points the fix at transport/boot readiness rather than the resource. The full duration still fires
 and is still recorded — this is *attribution*, not a filter.
 
 ## The client beacon is batched — transport only
@@ -122,7 +125,7 @@ against the backend that was already failing. See
 **Batching is a transport change and nothing else.** No signal is filtered,
 thresholded, deduped or delayed out of existence on the way — every element
 settle that trips today still reaches `recordSlowOp` with the same
-`transportColdStart` / `transportWaitMs` / `caller` / `clientBoot` attribution,
+`transportColdStart` / `waits` / `caller` / `clientBoot` attribution,
 and the section above still holds in full. The only loss the queue can cause is
 its 1000-item cap, and that loss is counted and sent as the batch's `dropped`
 field, which the handler writes to the `slow-ops` log channel — never silently
@@ -130,6 +133,45 @@ discarded.
 
 `recordSlowOp(input)` is `recordSlowOpBatch([input])`, so the server-span hook
 and the client beacon remain ONE funnel with one set of semantics.
+
+## Client latency kinds
+
+`web/components/slow-op-collector.tsx` holds ONE subscriber on
+`clientLatencySink` (`primitives/perfs/latency-signal`) for the whole signal
+vocabulary — it never names `update` or `confirm`. Each sample becomes an item
+through the pure `latencySlowOp` (`web/internal/latency-slow-op.ts`):
+
+| item field | from the sample |
+|---|---|
+| `operationKind` | the signal (`update`, `confirm`) |
+| `operation` | the resource key only, so one resource stays one row |
+| `detail.variant` | the sample's `variant` (a confirm's `mode/edge`), else `canonicalJson(params)` — merged into the row's `variants` |
+| `waits` | the signal's phases (`server-notice` / `server-deliver` / `transport` / `client-apply`; `send-lane` / `retry` / `server-ack` / `confirm-frame`) — merged into the row's durable `waits` |
+| `caller` | the current route |
+| `durationMs` | `totalMs` (measured end − start; the clamped phases can sum to more) |
+
+- **Thresholds** are the `updateMs` (1000, the ledger's calm p95 bar) and
+  `confirmMs` (2000) knobs, picked per signal by `CLIENT_SIGNAL_THRESHOLD` in
+  `core/config.ts` — a `Record` over the signal union, so a new signal does not
+  compile without its knob. They stay **out of `perfFloorMs`**: that floor
+  pre-filters server spans, which no client knob ever judges, so a client knob
+  there would only lower the profiler floor for every server span.
+- **A hidden sample is skipped.** The producer marks a sample `hidden` when the
+  tab is hidden now or was at any point since the sample's start stamp; a
+  throttled tab measures the browser, not the system.
+- **One sample per tab.** Each visible tab reports its own sample of the same
+  change, so a row's count includes every tab; the route caller shows which
+  surface each came from. Documented, not deduplicated.
+- **One trace per (batch, kind).** A stalled change arrives as a burst of samples;
+  `toRecordInputs` (`server/internal/client-record-input.ts`) captures one trace
+  per `operationKind` per batch — the slowest item's — and links every item of
+  that kind to it, so a burst cannot spend the trace engine's global per-minute
+  budget. The same rule now covers `element` and `page-load`.
+- **The report names the dominant layer.** The report payload carries the trip's
+  `waits`; `describeWaits` (`server/internal/wait-layers.ts`) names the largest
+  layer, its share of the trip and a hint from `WAIT_LAYER_HINTS` (keyed by layer
+  name, never by kind), then lists every layer. It applies to every kind that
+  carries waits, server spans included.
 
 ## Slow jobs (the `job` kind)
 
@@ -171,7 +213,7 @@ bar).
 
 ## Plugin reference
 
-- Description: Records slow client operations (page load, element appearance) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates and their callers (one row per op × caller), both written through change producers, plus the slow-op report kind and the live collections the pane reads (slow-ops.ops list, slow-ops.op detail, slow-ops.callers). Subscribes to runtime-profiler slow spans and client signals; files one deduped report per distinct slow operation (investigation task filed on demand).
+- Description: Records slow client operations (page load, element appearance, and every client latency signal — a live update applied, an optimistic write confirmed — split into its phases) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates and their callers (one row per op × caller), both written through change producers, plus the slow-op report kind and the live collections the pane reads (slow-ops.ops list, slow-ops.op detail, slow-ops.callers). Subscribes to runtime-profiler slow spans and client signals; files one deduped report per distinct slow operation (investigation task filed on demand).
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "slow-op"
@@ -242,6 +284,7 @@ bar).
   - Routes: `POST /api/slow-ops/client`
 - Core:
   - Uses:
+    - `config_v2.ConfigValues`
     - `config_v2.defineConfig`
     - `debug/trace/engine.traceListRoute`
     - `fields.FieldsRecord`
@@ -277,6 +320,7 @@ bar).
   - Exports (values):
     - `CallerBreakdownSchema`
     - `CallerRefSchema`
+    - `CLIENT_SIGNAL_THRESHOLD`
     - `loadSeverity`
     - `MAX_CLIENT_SLOW_OP_ITEMS`
     - `OTHER_VARIANT`

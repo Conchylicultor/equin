@@ -16,6 +16,8 @@ const KIND_VARIANT: Record<string, BadgeVariant> = {
   boot: "warning",
   element: "success",
   "page-load": "success",
+  update: "success",
+  confirm: "success",
 };
 
 export function triggerVariant(kind: string): BadgeVariant {

@@ -19,6 +19,7 @@ import {
   DIVERGENCE_REPORT_MISSES,
   markFailed,
   markResolved,
+  markSent,
   OpNoLongerApplies,
   classifyRejection,
   rejectOp,
@@ -55,12 +56,17 @@ function op(
     dispatchGen: extra.dispatchGen ?? 0,
     misses: extra.misses ?? 0,
     divergenceReported: extra.divergenceReported ?? false,
+    dispatchedAt: 0,
+    attempts: 0,
     ...(extra.ackWatermark !== undefined
       ? { ackWatermark: extra.ackWatermark }
       : {}),
     ...(extra.failure !== undefined ? { failure: extra.failure } : {}),
   };
 }
+
+/** The `performance.now()` stamp every test resolve happens at. */
+const ACKED_AT = 1000;
 
 /** Content-based confirmation for the toy domain: "is `n` present as expected?" */
 const isConfirmedBy = (serverData: number[], vars: Vars): boolean =>
@@ -572,6 +578,7 @@ describe("the ordering rule (an ordered fold admits no transitive eviction)", ()
     const retried = resolvePass(
       clearFailure(cur, "failed"),
       "failed",
+      ACKED_AT,
       [1],
       9,
       undefined,
@@ -755,6 +762,7 @@ describe("resolvePass (the resolve edge)", () => {
     const next = resolvePass(
       pending,
       "a",
+      ACKED_AT,
       [1, 2],
       1,
       undefined,
@@ -771,6 +779,7 @@ describe("resolvePass (the resolve edge)", () => {
     const next = resolvePass(
       pending,
       "a",
+      ACKED_AT,
       [1],
       1,
       undefined,
@@ -787,6 +796,7 @@ describe("resolvePass (the resolve edge)", () => {
     const next = resolvePass(
       pending,
       "a",
+      ACKED_AT,
       undefined,
       0,
       undefined,
@@ -812,6 +822,7 @@ describe("resolvePass (the resolve edge)", () => {
     const next = resolvePass(
       pending,
       "a",
+      ACKED_AT,
       undefined,
       0,
       undefined,
@@ -836,6 +847,7 @@ describe("resolvePass (the resolve edge)", () => {
     const next = resolvePass(
       pending,
       "redo",
+      ACKED_AT,
       [1, 9],
       4,
       undefined,
@@ -855,14 +867,32 @@ describe("resolvePass (the resolve edge)", () => {
       op("stuck", { kind: "push", n: 2 }, true, { ackWatermark: "100" }),
       op("b", { kind: "push", n: 3 }),
     ];
-    const next = resolvePass(pending, "b", [1], 1, "500", undefined, content);
+    const next = resolvePass(
+      pending,
+      "b",
+      ACKED_AT,
+      [1],
+      1,
+      "500",
+      undefined,
+      content,
+    );
     expect(ids(next.pending)).toEqual(["stuck", "b"]);
     expect(next.dropped).toEqual([]);
   });
 
   test("stamps the endpoint's ackWatermark on the resolving op", () => {
     const pending = [op("a", { kind: "push", n: 2 })];
-    const next = resolvePass(pending, "a", [1], 1, undefined, "123", content);
+    const next = resolvePass(
+      pending,
+      "a",
+      ACKED_AT,
+      [1],
+      1,
+      undefined,
+      "123",
+      content,
+    );
     expect(next.pending[0]!.ackWatermark).toBe("123");
   });
 
@@ -873,6 +903,7 @@ describe("resolvePass (the resolve edge)", () => {
     const next = resolvePass(
       pending,
       "a",
+      ACKED_AT,
       [1],
       1,
       undefined,
@@ -889,12 +920,12 @@ describe("resolvePass (the resolve edge)", () => {
     ];
     // Snapshot watermark past the just-returned ack ⇒ the cached value already
     // contains this commit — confirmed, regardless of the generation counter.
-    expect(resolvePass(pending, "a", [1, 2], 7, "101", "100").pending).toEqual(
-      [],
-    );
+    expect(
+      resolvePass(pending, "a", ACKED_AT, [1, 2], 7, "101", "100").pending,
+    ).toEqual([]);
     // Watermark at/older than the ack ⇒ kept (the gen stamp is NOT consulted
     // once a token exists — the token is strictly more precise).
-    const kept = resolvePass(pending, "a", [1, 2], 8, "100", "100");
+    const kept = resolvePass(pending, "a", ACKED_AT, [1, 2], 8, "100", "100");
     expect(ids(kept.pending)).toEqual(["a"]);
     expect(kept.pending[0]!.resolved).toBe(true);
   });
@@ -904,7 +935,8 @@ describe("resolvePass (the resolve edge)", () => {
       op("a", { kind: "push", n: 2 }, false, { dispatchGen: 7 }),
     ];
     expect(
-      resolvePass(pending, "a", [1, 2], 8, undefined, undefined).pending,
+      resolvePass(pending, "a", ACKED_AT, [1, 2], 8, undefined, undefined)
+        .pending,
     ).toEqual([]);
   });
 
@@ -912,7 +944,15 @@ describe("resolvePass (the resolve edge)", () => {
     const pending = [
       op("a", { kind: "push", n: 2 }, false, { dispatchGen: 7 }),
     ];
-    const next = resolvePass(pending, "a", [1, 2], 7, undefined, undefined);
+    const next = resolvePass(
+      pending,
+      "a",
+      ACKED_AT,
+      [1, 2],
+      7,
+      undefined,
+      undefined,
+    );
     expect(ids(next.pending)).toEqual(["a"]);
     expect(next.pending[0]!.resolved).toBe(true);
     // ...and the next authoritative push confirms it coarsely.
@@ -924,7 +964,15 @@ describe("resolvePass (the resolve edge)", () => {
       op("a", { kind: "push", n: 2 }, false, { dispatchGen: 1 }),
       op("b", { kind: "push", n: 3 }, false, { dispatchGen: 1 }),
     ];
-    const next = resolvePass(pending, "b", [1], 1, undefined, undefined); // coarse, gen === dispatchGen
+    const next = resolvePass(
+      pending,
+      "b",
+      ACKED_AT,
+      [1],
+      1,
+      undefined,
+      undefined,
+    ); // coarse, gen === dispatchGen
     expect(next.pending.map((o) => [o.opId, o.resolved])).toEqual([
       ["a", false],
       ["b", true],
@@ -936,6 +984,7 @@ describe("resolvePass (the resolve edge)", () => {
     const next = resolvePass(
       pending,
       "missing",
+      ACKED_AT,
       [1],
       5,
       undefined,
@@ -1037,6 +1086,7 @@ describe("stalled reporting (miss counting — report-only, never evicts)", () =
     const next = resolvePass(
       pending,
       "b",
+      ACKED_AT,
       [1],
       1,
       undefined,
@@ -1092,6 +1142,7 @@ describe("exact-ack confirmation (the ackTx registry probe)", () => {
     const contentNext = resolvePass(
       pending,
       "a",
+      ACKED_AT,
       [1],
       1,
       undefined,
@@ -1103,6 +1154,7 @@ describe("exact-ack confirmation (the ackTx registry probe)", () => {
     const coarseNext = resolvePass(
       pending,
       "a",
+      ACKED_AT,
       [1],
       1,
       undefined,
@@ -1115,6 +1167,7 @@ describe("exact-ack confirmation (the ackTx registry probe)", () => {
     const missNext = resolvePass(
       pending,
       "a",
+      ACKED_AT,
       [1],
       1,
       undefined,
@@ -1200,7 +1253,7 @@ describe("markResolved", () => {
       op("a", { kind: "push", n: 2 }),
       op("b", { kind: "push", n: 3 }),
     ];
-    const next = markResolved(pending, "b");
+    const next = markResolved(pending, "b", ACKED_AT);
     expect(next.map((o) => [o.opId, o.resolved])).toEqual([
       ["a", false],
       ["b", true],
@@ -1209,7 +1262,184 @@ describe("markResolved", () => {
 
   test("is a no-op when the opId is absent", () => {
     const pending = [op("a", { kind: "push", n: 2 })];
-    expect(markResolved(pending, "missing")).toEqual(pending);
+    expect(markResolved(pending, "missing", ACKED_AT)).toEqual(pending);
+  });
+});
+
+describe("latency stamps (markSent / markResolved)", () => {
+  test("markSent stamps the first send once, moves the last send, counts attempts", () => {
+    const pending = [
+      op("a", { kind: "push", n: 2 }),
+      op("b", { kind: "push", n: 3 }),
+    ];
+    const once = markSent(pending, "b", 10);
+    expect(once[0]).toBe(pending[0]); // other ops untouched
+    expect(once[1]).toMatchObject({
+      firstSentAt: 10,
+      lastSentAt: 10,
+      attempts: 1,
+    });
+    const twice = markSent(once, "b", 25); // a retry re-sends
+    expect(twice[1]).toMatchObject({
+      firstSentAt: 10,
+      lastSentAt: 25,
+      attempts: 2,
+    });
+    expect(markSent(pending, "missing", 10)).toEqual(pending);
+  });
+
+  test("markResolved stamps ackedAt; a re-resolve (retry) moves it", () => {
+    const pending = [op("a", { kind: "push", n: 2 })];
+    const first = markResolved(pending, "a", 50);
+    expect(first[0]!.ackedAt).toBe(50);
+    expect(markResolved(first, "a", 80)[0]!.ackedAt).toBe(80);
+  });
+
+  test("resolvePass stamps ackedAt on the op it reports confirmed", () => {
+    const pending = [op("a", { kind: "push", n: 2 })];
+    const next = resolvePass(
+      pending,
+      "a",
+      77,
+      [1, 2],
+      1,
+      undefined,
+      undefined,
+      content,
+    );
+    expect(next.confirmed.map((c) => c.op.ackedAt)).toEqual([77]);
+  });
+});
+
+describe("confirmed (the confirm latency signal's input)", () => {
+  const ackOf =
+    (...txids: string[]) =>
+    (txid: string) =>
+      txids.includes(txid);
+  const modes = (r: {
+    confirmed: ReadonlyArray<{ op: PendingOp<Vars>; mode: string }>;
+  }) => r.confirmed.map((c) => [c.op.opId, c.mode]);
+
+  test("push edge: each confirmed op carries the mode that proved it", () => {
+    // Coarse: exact ack, watermark, tokenless.
+    const coarse = confirmPass(
+      [
+        op("ack", { kind: "push", n: 2 }, true, { ackWatermark: "300" }),
+        op("wm", { kind: "push", n: 3 }, true, { ackWatermark: "100" }),
+        op("tokenless", { kind: "push", n: 4 }, true),
+        op("inflight", { kind: "push", n: 5 }),
+      ],
+      [1],
+      "200",
+      undefined,
+      ackOf("300"),
+    );
+    expect(modes(coarse)).toEqual([
+      ["ack", "exact-ack"],
+      ["wm", "watermark"],
+      ["tokenless", "tokenless"],
+    ]);
+    // Content: content and exact ack.
+    const byContent = confirmPass(
+      [
+        op("c", { kind: "push", n: 2 }, true),
+        op("x", { kind: "push", n: 7 }, true, { ackWatermark: "300" }),
+      ],
+      [1, 2],
+      undefined,
+      content,
+      ackOf("300"),
+    );
+    expect(modes(byContent)).toEqual([
+      ["c", "content"],
+      ["x", "exact-ack"],
+    ]);
+  });
+
+  test("denied and denied-silent ops are never in confirmed", () => {
+    // "lost" is causally denied (snapshot 500 past its 100, still lacks 9).
+    const denied = confirmPass(
+      [op("lost", { kind: "push", n: 9 }, true, { ackWatermark: "100" })],
+      [1],
+      "500",
+      content,
+    );
+    expect(ids(denied.dropped)).toEqual(["lost"]);
+    expect(denied.confirmed).toEqual([]);
+    // undo→redo: the undo is denied-silent, only the redo confirms.
+    const selfSuperseded = confirmPass(
+      [
+        op("undo", { kind: "remove", n: 9 }, true, { ackWatermark: "100" }),
+        op("redo", { kind: "push", n: 9 }, true, { ackWatermark: "110" }),
+      ],
+      [1, 9],
+      "500",
+      content,
+    );
+    expect(selfSuperseded.pending).toEqual([]);
+    expect(selfSuperseded.dropped).toEqual([]);
+    expect(modes(selfSuperseded)).toEqual([["redo", "content"]]);
+  });
+
+  test("blocked, pending and unconfirmed ops are never in confirmed; identity results carry none", () => {
+    const pending = [
+      op("a", { kind: "push", n: 9 }, true),
+      op("b", { kind: "push", n: 9 }, true, { ackWatermark: "300" }), // acked but blocked behind a
+      op("c", { kind: "push", n: 3 }),
+    ];
+    const next = ackPass(pending, ackOf("300"), sameN);
+    expect(next.pending).toBe(pending);
+    expect(next.confirmed).toEqual([]);
+  });
+
+  test("resolve edge: exact ack, content, watermark, tokenless", () => {
+    const one = [op("a", { kind: "push", n: 2 }, false, { dispatchGen: 1 })];
+    expect(
+      modes(
+        resolvePass(
+          one,
+          "a",
+          ACKED_AT,
+          [1],
+          1,
+          undefined,
+          "100",
+          content,
+          ackOf("100"),
+        ),
+      ),
+    ).toEqual([["a", "exact-ack"]]);
+    expect(
+      modes(
+        resolvePass(
+          one,
+          "a",
+          ACKED_AT,
+          [1, 2],
+          1,
+          undefined,
+          undefined,
+          content,
+        ),
+      ),
+    ).toEqual([["a", "content"]]);
+    expect(
+      modes(resolvePass(one, "a", ACKED_AT, [1], 1, "200", "100")),
+    ).toEqual([["a", "watermark"]]);
+    expect(
+      modes(resolvePass(one, "a", ACKED_AT, [1], 2, undefined, undefined)),
+    ).toEqual([["a", "tokenless"]]);
+    // Not confirmed on this edge ⇒ nothing.
+    expect(
+      resolvePass(one, "a", ACKED_AT, [1], 1, undefined, undefined).confirmed,
+    ).toEqual([]);
+  });
+
+  test("ack edge: exact ack", () => {
+    const pending = [
+      op("a", { kind: "push", n: 2 }, true, { ackWatermark: "100" }),
+    ];
+    expect(modes(ackPass(pending, ackOf("100")))).toEqual([["a", "exact-ack"]]);
   });
 });
 
@@ -1228,6 +1458,7 @@ describe("integration: chained dispatch + interleaved push + failure", () => {
     pending = resolvePass(
       pending,
       "a",
+      ACKED_AT,
       base,
       0,
       undefined,
@@ -1247,6 +1478,7 @@ describe("integration: chained dispatch + interleaved push + failure", () => {
     pending = resolvePass(
       pending,
       "b",
+      ACKED_AT,
       [1, 2],
       1,
       undefined,
@@ -1274,6 +1506,7 @@ describe("integration: chained dispatch + interleaved push + failure", () => {
     const afterResolve = resolvePass(
       pending,
       "a",
+      ACKED_AT,
       [1, 2],
       6,
       undefined,
@@ -1283,7 +1516,8 @@ describe("integration: chained dispatch + interleaved push + failure", () => {
     expect(afterResolve.pending).toEqual([]);
     // Tokenless coarse consumers get the same outcome via the gen stamp alone.
     expect(
-      resolvePass(pending, "a", [1, 2], 6, undefined, undefined).pending,
+      resolvePass(pending, "a", ACKED_AT, [1, 2], 6, undefined, undefined)
+        .pending,
     ).toEqual([]);
   });
 

@@ -16,6 +16,7 @@ import type {
   PersistedBase as RtPersistedBase,
   SeedOutcome as RtSeedOutcome,
   PersistedValueCheck as RtPersistedValueCheck,
+  ResourceDelivery as RtDelivery,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import {
   recordEntrySpan,
@@ -264,12 +265,9 @@ export function onResourcePush(cb: ResourcePushObserver): () => void {
 // the profiler keeps only an aggregate and the slow-op funnel keeps only the ones
 // over its threshold, so a plugin that wants the whole distribution (p50/p95)
 // registers here. Runs on the flush path: an observer must be O(1) and never throw.
-export type ResourceDeliveryObserver = (
-  key: string,
-  latencyMs: number,
-  subscribers: number,
-  frameChars: number,
-) => void;
+// `info` is the runtime's `ResourceDelivery` (latency, fan-out, frame size, and the
+// change's wall clock when the frame carried `timing`).
+export type ResourceDeliveryObserver = (key: string, info: RtDelivery) => void;
 const deliveryObservers = new Set<ResourceDeliveryObserver>();
 export function onResourceDelivery(cb: ResourceDeliveryObserver): () => void {
   deliveryObservers.add(cb);
@@ -317,14 +315,21 @@ const runtime = createResourceRuntime({
   // Delivery latency as a `push` leaf under the active `flush` entry: enqueue→send
   // time per resource (first-notify staleness window). Attributes to the resource.
   // Fan-out and frame size ride as measures, so a delivery slowed by a wide
-  // fan-out or a huge frame says so on its own slow-op row.
-  onDelivered: (key, latencyMs, subscribers, frameChars) => {
-    recordSpan("push", `deliver:${key}`, latencyMs, {
-      measures: { subscribers, frameChars },
+  // fan-out or a huge frame says so on its own slow-op row. `sinceChangeMs` (the
+  // change's wall clock → send, when the change has one) shows what `latencyMs`
+  // cannot: time the change waited before this thread read its NOTIFY (an open
+  // writing transaction, a stalled serving thread).
+  onDelivered: (key, info) => {
+    recordSpan("push", `deliver:${key}`, info.latencyMs, {
+      measures: {
+        subscribers: info.subscribers,
+        frameChars: info.frameChars,
+        ...(info.changedAt !== undefined
+          ? { sinceChangeMs: Math.max(0, Date.now() - info.changedAt) }
+          : {}),
+      },
     });
-    for (const observer of deliveryObservers) {
-      observer(key, latencyMs, subscribers, frameChars);
-    }
+    for (const observer of deliveryObservers) observer(key, info);
   },
   // Read-admission gate queue-wait, charged to the enclosing `sub` entry (mirrors
   // the DB background query gate's `background-acquire`), so a saturated read cap is visible in

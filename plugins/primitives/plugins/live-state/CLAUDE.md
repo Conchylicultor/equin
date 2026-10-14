@@ -288,6 +288,48 @@ localStorage.setItem("liveState.verboseTrace", "1"); // enable; "0"/remove to di
 Deliberately a localStorage flag, not a `config_v2` setting — a local debug
 switch, not user config.
 
+## Update latency sample (`clientLatencySink`, signal `update`)
+
+Every applied pushed frame a server change stands behind emits one `update`
+sample on `clientLatencySink` (`primitives/perfs/latency-signal`): server change
+→ value written into this tab's cache, split into four phases from the frame's
+`timing` (`{ changedAt, sentAt, deliverMs }`, `packages/resource-protocol`) and
+the tab's own stamps:
+
+| Phase | Computed as |
+|---|---|
+| `server-notice` | `sentAt − deliverMs − changedAt` |
+| `server-deliver` | `deliverMs` |
+| `transport` | `receivedAt − sentAt` — the only phase across two clocks |
+| `client-apply` | `appliedAt − receivedAt` (decode included) |
+
+`totalMs` is `appliedAt − changedAt`, measured, never the phase sum (a clamped
+phase can push the sum past it). Consumers (`debug/slow-ops`,
+`debug/latency-ledger`) subscribe; live-state owns no threshold.
+
+- **The receipt stamp** (`receivedAt`) is taken in the socket's `onmessage`,
+  BEFORE `JSON.parse`, and threaded into `handleServerMessage` (an optional
+  argument defaulting to now, for a frame handed in directly). "Applied" means
+  the cache was written, not that React painted.
+- **Only frames carrying `timing` are timed**: an `update`, or a `delta` the
+  runtime sent because a change happened. Sub-acks, replay answers, a forced
+  resubscribe's answer, invalidates and standalone acks carry none, so a
+  reconnect makes no samples. The protocol type is the gate — no runtime check.
+- **Only an APPLIED delta is timed.** `applyDelta` returns `"applied" |
+  "resubscribed"`; a delta that dead-ends in `forceFullResub` (no base, drifted
+  base) wrote nothing and emits nothing. Its value arrives with the recovery
+  sub-ack, which is timing-less.
+- **Hidden rule.** A sample is `hidden` when the page is hidden now, or was at
+  any instant since `changedAt`: the client stamps `lastHiddenAt` (wall clock)
+  on every `visibilitychange`, so after a return it marks the end of the hidden
+  stretch. Consumers drop hidden samples — a throttled background tab measures
+  the browser.
+- **One sample per tab.** Every tab holding the sub applies the frame and
+  reports its own sample; nothing deduplicates across tabs.
+- **No work while nobody listens** (`clientLatencySink.hasSubscribers()`).
+
+Pinned by `web/__tests__/notifications-update-latency.test.ts`.
+
 ## Scoped pipelines — a subtree talking to another backend
 
 `NotificationsProvider` reads `useTransport()` (`primitives/networking`). Under

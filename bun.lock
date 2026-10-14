@@ -5144,6 +5144,10 @@
       "name": "@singularity/plugin-primitives-perfs-boot-trace",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/perfs/plugins/latency-signal": {
+      "name": "@singularity/plugin-primitives-perfs-latency-signal",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/perfs/plugins/scheduler": {
       "name": "@singularity/plugin-primitives-perfs-scheduler",
       "version": "0.0.1",
@@ -9051,6 +9055,8 @@
     "@singularity/plugin-primitives-perfs": ["@singularity/plugin-primitives-perfs@workspace:plugins/primitives/plugins/perfs"],
 
     "@singularity/plugin-primitives-perfs-boot-trace": ["@singularity/plugin-primitives-perfs-boot-trace@workspace:plugins/primitives/plugins/perfs/plugins/boot-trace"],
+
+    "@singularity/plugin-primitives-perfs-latency-signal": ["@singularity/plugin-primitives-perfs-latency-signal@workspace:plugins/primitives/plugins/perfs/plugins/latency-signal"],
 
     "@singularity/plugin-primitives-perfs-scheduler": ["@singularity/plugin-primitives-perfs-scheduler@workspace:plugins/primitives/plugins/perfs/plugins/scheduler"],
 

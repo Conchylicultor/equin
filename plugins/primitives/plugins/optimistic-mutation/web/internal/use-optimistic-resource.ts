@@ -24,6 +24,11 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
 import {
+  clientLatencySink,
+  splitPhases,
+  type ClientLatencySample,
+} from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
+import {
   optimisticDivergenceReportSink,
   optimisticRejectionSink,
   REJECTION_MESSAGE_MAX,
@@ -35,13 +40,16 @@ import {
   clearFailure,
   confirmPass,
   markFailed,
+  markSent,
   rejectOp,
   replay,
   resolvePass,
+  type ConfirmedOp,
   type OpFailure,
   type PendingOp,
   type ReconcileResult,
 } from "./overlay";
+import { hiddenSince } from "./tab-hidden";
 
 // Canonical params serialization for the ack-edge tuple match — byte-identical
 // to the registries' `paramsKey` (sorted-key JSON), so the subscription fires
@@ -52,6 +60,52 @@ function ackParamsKey(params: Record<string, string> | undefined): string {
   const obj: Record<string, string> = {};
   for (const k of keys) obj[k] = params[k]!;
   return JSON.stringify(obj);
+}
+
+/**
+ * The lifecycle edge an op confirmed on — the second half of a confirm
+ * sample's variant (`<mode>/<edge>`): `push` (a snapshot landed after the
+ * response), `resolve` (the confirming frame beat the response, so
+ * `confirm-frame` is 0), `ack` (a standalone ack frame).
+ */
+type ConfirmEdge = "push" | "resolve" | "ack";
+
+/**
+ * Times one confirmed op as a `confirm` latency sample. Every phase is on the
+ * client's monotonic clock (`performance.now()`), so none carries skew. A
+ * confirmed op was resolved, and a resolved op was sent — a missing stamp is a
+ * lifecycle bug, so it throws rather than emitting a made-up phase.
+ */
+function confirmSample<Vars>(
+  { op, mode }: ConfirmedOp<Vars>,
+  edge: ConfirmEdge,
+  key: string,
+  params: Readonly<Record<string, string>>,
+  confirmedAt: number,
+): Extract<ClientLatencySample, { signal: "confirm" }> {
+  const { dispatchedAt, firstSentAt, lastSentAt, ackedAt } = op;
+  if (
+    firstSentAt === undefined ||
+    lastSentAt === undefined ||
+    ackedAt === undefined
+  )
+    throw new Error(
+      `optimistic-mutation: confirmed op ${op.opId} on ${key} is missing a send/ack stamp`,
+    );
+  return {
+    signal: "confirm",
+    key,
+    params,
+    variant: `${mode}/${edge}`,
+    phases: splitPhases("confirm", {
+      "send-lane": firstSentAt - dispatchedAt,
+      retry: lastSentAt - firstSentAt,
+      "server-ack": ackedAt - lastSentAt,
+      "confirm-frame": confirmedAt - ackedAt,
+    }),
+    totalMs: confirmedAt - dispatchedAt,
+    hidden: hiddenSince(dispatchedAt),
+  };
 }
 
 /**
@@ -446,12 +500,23 @@ function useOptimisticCore<Data, Vars>(
     // The latest-ref handles are stable; only the resource key participates.
     [resource.key],
   );
+  // Every edge's outcomes: the divergence reports, and one `confirm` latency
+  // sample per confirmed op (skipped wholesale when nobody listens).
   const reportOutcomes = useCallback(
-    (next: ReconcileResult<Vars>) => {
+    (next: ReconcileResult<Vars>, edge: ConfirmEdge) => {
       if (next.dropped.length > 0) reportDivergence("superseded", next.dropped);
       if (next.stalled.length > 0) reportDivergence("stalled", next.stalled);
+      if (next.confirmed.length > 0 && clientLatencySink.hasSubscribers()) {
+        const confirmedAt = performance.now();
+        const params = paramsRef.current ?? {};
+        for (const confirmed of next.confirmed)
+          clientLatencySink.emit(
+            confirmSample(confirmed, edge, resource.key, params, confirmedAt),
+          );
+      }
     },
-    [reportDivergence],
+    // The latest-ref handles are stable; only these participate.
+    [reportDivergence, resource.key],
   );
 
   // Exact-ack membership probe against the pipeline's tx-ack registry,
@@ -515,7 +580,7 @@ function useOptimisticCore<Data, Vars>(
         confirmationRef.current,
         hasAck,
       );
-      reportOutcomes(next);
+      reportOutcomes(next, "push");
       // `confirmPass` returns the input BY IDENTITY when nothing changed.
       if (next.pending !== pendingRef.current) commitPending(next.pending);
     });
@@ -536,9 +601,9 @@ function useOptimisticCore<Data, Vars>(
   // fires for it — this registry subscription is its delivery channel. Runs
   // `ackPass` only on a tuple match with ops pending; drops acked resolved ops
   // (unless the ordering rule blocks one behind an older same-target op),
-  // counts no miss, denies nothing — so nothing to report. Value-frame ack
-  // notes fire this too; that second pass is an identity no-op after the cache
-  // edge handled them.
+  // counts no miss, denies nothing — so nothing to report but the confirm
+  // latency of what it dropped. Value-frame ack notes fire this too; that
+  // second pass is an identity no-op after the cache edge handled them.
   useEffect(() => {
     return txAcks.subscribe((key, params) => {
       if (key !== resource.key) return;
@@ -549,10 +614,11 @@ function useOptimisticCore<Data, Vars>(
         hasAck,
         confirmationRef.current?.sameTarget,
       );
+      reportOutcomes(next, "ack");
       // Identity when nothing changed — skip the state write.
       if (next.pending !== pendingRef.current) commitPending(next.pending);
     });
-  }, [resource.key, hasAck, commitPending, txAcks]);
+  }, [resource.key, hasAck, commitPending, reportOutcomes, txAcks]);
 
   const data = useMemo(
     // `applyRef` (stable useLatestRef handle) is read through `.current` at
@@ -575,8 +641,13 @@ function useOptimisticCore<Data, Vars>(
   // mechanism and classification/`failed`/`retry`/`savedAt` stay untouched by it.
   const runMutate = useCallback(
     (opId: string, vars: Vars): Promise<MutateOutcome> => {
+      // The wire departure — here, past the send lane, so a queued op's wait
+      // is its `send-lane` phase and every retry (which re-enters here) moves
+      // `lastSentAt`.
+      commitPending(markSent(pendingRef.current, opId, performance.now()));
       return mutateRef.current(vars).then(
         (res) => {
+          const ackedAt = performance.now();
           // Confirm against what the cache ALREADY holds: the confirming push
           // routinely lands ~1ms before this response (the change-feed pushes at
           // commit; the response waits on the handler's post-commit tail), and it
@@ -594,6 +665,7 @@ function useOptimisticCore<Data, Vars>(
           const next = resolvePass(
             pendingRef.current,
             opId,
+            ackedAt,
             hasAuthoritative ? state?.data : undefined,
             state?.dataUpdateCount ?? 0,
             watermarks.get(resource.key, paramsRef.current),
@@ -604,7 +676,7 @@ function useOptimisticCore<Data, Vars>(
             // noted) before this response — the registry remembers it.
             hasAck,
           );
-          reportOutcomes(next);
+          reportOutcomes(next, "resolve");
           commitPending(next.pending);
           // Stamp "saved" HERE — a persistent state value the sync-status store
           // observes, rather than an effect on a boolean React may coalesce away.
@@ -688,6 +760,8 @@ function useOptimisticCore<Data, Vars>(
           dispatchGen,
           misses: 0,
           divergenceReported: false,
+          dispatchedAt: performance.now(),
+          attempts: 0,
         },
       ]);
       // Onto the tuple's send lane, never straight at the network: this op's

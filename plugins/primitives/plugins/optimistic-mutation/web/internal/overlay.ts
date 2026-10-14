@@ -129,6 +129,36 @@ export interface PendingOp<Vars> {
    * keep accruing, but the op is never reported twice.
    */
   divergenceReported: boolean;
+  /**
+   * Latency stamps (`performance.now()` — the client's own monotonic clock, so
+   * the confirm signal's phases carry no clock skew). `dispatchedAt` is the
+   * overlay append; `firstSentAt` / `lastSentAt` the first and latest wire
+   * departure (`markSent`, at the top of the send — past the send lane), with
+   * `attempts` counting them (a retry re-sends); `ackedAt` the latest 2xx
+   * (`markResolved`). Read ONLY by the hook's confirm-latency sample — no
+   * verdict depends on them.
+   */
+  dispatchedAt: number;
+  firstSentAt?: number;
+  lastSentAt?: number;
+  attempts: number;
+  ackedAt?: number;
+}
+
+/**
+ * What proved an op confirmed — the latency sample's mode tag. `exact-ack`: a
+ * frame's `ackTx` named the op's own commit; `watermark`: a snapshot watermark
+ * strictly past its ack token (coarse); `content`: `isConfirmedBy` accepted the
+ * snapshot; `tokenless`: legacy coarse ("a push landed after resolve /
+ * dispatch") — NOT causal, so its timings do not prove the push carried the
+ * op's commit.
+ */
+export type ConfirmMode = "exact-ack" | "watermark" | "content" | "tokenless";
+
+/** One op that confirmed on an edge, with what confirmed it. */
+export interface ConfirmedOp<Vars> {
+  op: PendingOp<Vars>;
+  mode: ConfirmMode;
 }
 
 /**
@@ -143,11 +173,15 @@ export interface PendingOp<Vars> {
  * - `stalled` — ops that just crossed `DIVERGENCE_REPORT_MISSES` for the first
  *   time. They are STILL IN `pending` (never evicted); the caller reports them
  *   once with `kind: "stalled"`.
+ * - `confirmed` — ops the server absorbed, dropped from the overlay, each with
+ *   the mode that proved it. Not a report: the caller times them (the
+ *   `confirm` latency signal). A `denied-silent` op is in NO list.
  */
 export interface ReconcileResult<Vars> {
   pending: ReadonlyArray<PendingOp<Vars>>;
   dropped: ReadonlyArray<PendingOp<Vars>>;
   stalled: ReadonlyArray<PendingOp<Vars>>;
+  confirmed: ReadonlyArray<ConfirmedOp<Vars>>;
 }
 
 /**
@@ -210,7 +244,8 @@ export interface Confirmation<Data, Vars> {
  * three dropping arms; every other arm KEEPS the op, and only `unconfirmed`
  * counts a miss.
  *
- * - `confirmed` — drop, silently (the server absorbed it).
+ * - `confirmed` — drop into `confirmed`, with the `mode` that proved it (the
+ *   server absorbed it; timed, never reported).
  * - `denied` — drop into `dropped`; the caller reports it as `superseded`.
  * - `denied-silent` — drop, NOT reported: the client superseded its OWN write
  *   (a newer same-target op confirmed on this very pass), so nobody lost a race
@@ -223,12 +258,10 @@ export interface Confirmation<Data, Vars> {
  *   pass, because an older same-target op is still in the fold ahead of it.
  */
 type Verdict =
-  | "confirmed"
-  | "denied"
-  | "denied-silent"
-  | "unconfirmed"
-  | "pending"
-  | "blocked";
+  | { kind: "confirmed"; mode: ConfirmMode }
+  | {
+      kind: "denied" | "denied-silent" | "unconfirmed" | "pending" | "blocked";
+    };
 
 /**
  * What one edge's own evidence says about a single RESOLVED op, in isolation.
@@ -236,7 +269,15 @@ type Verdict =
  * probe, its coarse fallback); the ordering rule and the miss/report
  * bookkeeping are shared and live outside it.
  */
-type Evaluation = "confirmed" | "denied" | "unconfirmed";
+type Evaluation =
+  { kind: "confirmed"; mode: ConfirmMode } | { kind: "denied" | "unconfirmed" };
+
+const UNCONFIRMED = { kind: "unconfirmed" } as const;
+const DENIED = { kind: "denied" } as const;
+const confirmedBy = (mode: ConfirmMode): Evaluation => ({
+  kind: "confirmed",
+  mode,
+});
 
 /**
  * The ordering rule: **an op may not LEAVE the overlay while an older,
@@ -274,7 +315,7 @@ function blockedByOlder<Vars>(
   i: number,
 ): boolean {
   for (let j = 0; j < i; j++) {
-    const older = verdicts[j]!;
+    const older = verdicts[j]!.kind;
     if (older !== "pending" && older !== "unconfirmed" && older !== "blocked")
       continue;
     if (sameTarget(pending[j]!.vars, pending[i]!.vars)) return true;
@@ -332,11 +373,11 @@ function decideVerdicts<Vars>(
       sameTarget !== undefined &&
       blockedByOlder(pending, verdicts, sameTarget, i)
     ) {
-      verdicts.push("blocked");
+      verdicts.push({ kind: "blocked" });
       continue;
     }
     if (!op.resolved) {
-      verdicts.push("pending");
+      verdicts.push({ kind: "pending" });
       continue;
     }
     verdicts.push(evaluate(op));
@@ -365,11 +406,11 @@ function classifySelfSupersession<Vars>(
   sameTarget: (a: Vars, b: Vars) => boolean,
 ): void {
   for (let i = 0; i < verdicts.length; i++) {
-    if (verdicts[i] !== "denied") continue;
+    if (verdicts[i]!.kind !== "denied") continue;
     for (let j = i + 1; j < verdicts.length; j++) {
-      if (verdicts[j] !== "confirmed") continue;
+      if (verdicts[j]!.kind !== "confirmed") continue;
       if (!sameTarget(pending[i]!.vars, pending[j]!.vars)) continue;
-      verdicts[i] = "denied-silent";
+      verdicts[i] = { kind: "denied-silent" };
       break;
     }
   }
@@ -380,7 +421,8 @@ function classifySelfSupersession<Vars>(
  * already-decided `verdicts`, plus the miss/report bookkeeping. It decides
  * nothing itself — every judgement was made in `decideVerdicts`.
  *
- * - `confirmed` / `denied-silent` ⇒ dropped, in NEITHER output list.
+ * - `confirmed` ⇒ dropped into `confirmed` with its mode (timed, not reported).
+ * - `denied-silent` ⇒ dropped, in NO output list.
  * - `denied` ⇒ dropped into `dropped`; the caller reports it as `superseded`.
  * - `pending` / `blocked` ⇒ kept unchanged, and **no miss**. A miss means "a
  *   fresh snapshot arrived and still doesn't reflect the op" — evidence of
@@ -405,12 +447,17 @@ function reconcile<Vars>(
   const kept: PendingOp<Vars>[] = [];
   const dropped: PendingOp<Vars>[] = [];
   const stalled: PendingOp<Vars>[] = [];
+  const confirmed: ConfirmedOp<Vars>[] = [];
   let changed = false;
 
   for (let i = 0; i < pending.length; i++) {
     const op = pending[i]!;
-    switch (verdicts[i]!) {
+    const verdict = verdicts[i]!;
+    switch (verdict.kind) {
       case "confirmed":
+        changed = true;
+        confirmed.push({ op, mode: verdict.mode });
+        continue;
       case "denied-silent":
         changed = true;
         continue;
@@ -442,8 +489,8 @@ function reconcile<Vars>(
   }
 
   return changed
-    ? { pending: kept, dropped, stalled }
-    : { pending, dropped, stalled };
+    ? { pending: kept, dropped, stalled, confirmed }
+    : { pending, dropped, stalled, confirmed };
 }
 
 /**
@@ -499,21 +546,21 @@ export function confirmPass<Data, Vars>(
     // could omit it. Do not read the ordering rule as universal: it is exactly
     // as wide as the `sameTarget` a consumer supplies.
     const verdicts = decideVerdicts<Vars>(pending, undefined, (op) => {
-      if (acked(op)) return "confirmed";
+      if (acked(op)) return confirmedBy("exact-ack");
       if (op.ackWatermark !== undefined) {
         return snapshotWatermark !== undefined &&
           compareTxWatermark(snapshotWatermark, op.ackWatermark) > 0
-          ? "confirmed"
-          : "unconfirmed";
+          ? confirmedBy("watermark")
+          : UNCONFIRMED;
       }
-      return "confirmed"; // legacy tokenless coarse: any post-resolve push confirms
+      return confirmedBy("tokenless"); // legacy tokenless coarse: any post-resolve push confirms
     });
     return reconcile(pending, verdicts, true);
   }
   const { isConfirmedBy, sameTarget } = confirmation;
   const verdicts = decideVerdicts<Vars>(pending, sameTarget, (op) => {
-    if (acked(op)) return "confirmed";
-    if (isConfirmedBy(serverData, op.vars)) return "confirmed";
+    if (acked(op)) return confirmedBy("exact-ack");
+    if (isConfirmedBy(serverData, op.vars)) return confirmedBy("content");
     // Denial is content-mode-only: coarse has no isConfirmedBy to say "the
     // snapshot lacks my effect", so a causally-later snapshot simply confirms.
     // Rule B, strict `>`: the snapshot provably saw this op's commit and still
@@ -524,9 +571,9 @@ export function confirmPass<Data, Vars>(
       op.ackWatermark !== undefined &&
       compareTxWatermark(snapshotWatermark, op.ackWatermark) > 0
     ) {
-      return "denied";
+      return DENIED;
     }
-    return "unconfirmed";
+    return UNCONFIRMED;
   });
   return reconcile(pending, verdicts, true);
 }
@@ -572,6 +619,7 @@ export function confirmPass<Data, Vars>(
 export function resolvePass<Data, Vars>(
   pending: ReadonlyArray<PendingOp<Vars>>,
   opId: string,
+  ackedAt: number,
   serverData: Data | undefined,
   gen: number,
   snapshotWatermark: string | undefined,
@@ -579,33 +627,33 @@ export function resolvePass<Data, Vars>(
   confirmation?: Confirmation<Data, Vars>,
   hasAck?: (txid: string) => boolean,
 ): ReconcileResult<Vars> {
-  const resolved = markResolved(pending, opId, ackWatermark);
+  const resolved = markResolved(pending, opId, ackedAt, ackWatermark);
   const verdicts = decideVerdicts<Vars>(
     resolved,
     confirmation?.sameTarget,
     (op) => {
       // Not the resolving op: this edge holds no new evidence about it, so it
       // keeps its "kept, no miss" non-evaluation semantics.
-      if (op.opId !== opId) return "unconfirmed";
+      if (op.opId !== opId) return UNCONFIRMED;
       // Exact ack (both modes): the delta-before-HTTP-response race — the frame
       // carrying this commit's ackTx landed before its own response, so the
       // registry already remembers it. Checked first: it is strictly more precise
       // than the content/watermark/gen checks below.
       if (op.ackWatermark !== undefined && hasAck?.(op.ackWatermark) === true)
-        return "confirmed";
+        return confirmedBy("exact-ack");
       if (confirmation) {
         return serverData !== undefined &&
           confirmation.isConfirmedBy(serverData, op.vars)
-          ? "confirmed"
-          : "unconfirmed";
+          ? confirmedBy("content")
+          : UNCONFIRMED;
       }
       if (op.ackWatermark !== undefined) {
         return snapshotWatermark !== undefined &&
           compareTxWatermark(snapshotWatermark, op.ackWatermark) > 0
-          ? "confirmed"
-          : "unconfirmed";
+          ? confirmedBy("watermark")
+          : UNCONFIRMED;
       }
-      return gen > op.dispatchGen ? "confirmed" : "unconfirmed";
+      return gen > op.dispatchGen ? confirmedBy("tokenless") : UNCONFIRMED;
     },
   );
   // `countMisses: false` — no new snapshot arrived, so nothing here is evidence
@@ -635,20 +683,22 @@ export function ackPass<Vars>(
 ): ReconcileResult<Vars> {
   const verdicts = decideVerdicts<Vars>(pending, sameTarget, (op) =>
     op.ackWatermark !== undefined && hasAck(op.ackWatermark)
-      ? "confirmed"
-      : "unconfirmed",
+      ? confirmedBy("exact-ack")
+      : UNCONFIRMED,
   );
   return reconcile(pending, verdicts, false);
 }
 
 /**
- * Mark the op with `opId` resolved, stamping its ack token (when the endpoint
- * returned one) and clearing any prior failure — a retried op that just
- * succeeded is no longer failed. Preserves array order. No-op if absent.
+ * Mark the op with `opId` resolved at `ackedAt` (`performance.now()`), stamping
+ * its ack token (when the endpoint returned one) and clearing any prior
+ * failure — a retried op that just succeeded is no longer failed. Preserves
+ * array order. No-op if absent.
  */
 export function markResolved<Vars>(
   pending: ReadonlyArray<PendingOp<Vars>>,
   opId: string,
+  ackedAt: number,
   ackWatermark?: string,
 ): PendingOp<Vars>[] {
   return pending.map((op) => {
@@ -657,9 +707,33 @@ export function markResolved<Vars>(
     return {
       ...rest,
       resolved: true,
+      ackedAt,
       ...(ackWatermark !== undefined ? { ackWatermark } : {}),
     };
   });
+}
+
+/**
+ * Record that the op's `mutate` just left for the wire at `at`
+ * (`performance.now()`): the first send stamps `firstSentAt`, every send
+ * (retries included) moves `lastSentAt` and counts an attempt. Preserves array
+ * order. No-op if absent.
+ */
+export function markSent<Vars>(
+  pending: ReadonlyArray<PendingOp<Vars>>,
+  opId: string,
+  at: number,
+): PendingOp<Vars>[] {
+  return pending.map((op) =>
+    op.opId === opId
+      ? {
+          ...op,
+          firstSentAt: op.firstSentAt ?? at,
+          lastSentAt: at,
+          attempts: op.attempts + 1,
+        }
+      : op,
+  );
 }
 
 /**

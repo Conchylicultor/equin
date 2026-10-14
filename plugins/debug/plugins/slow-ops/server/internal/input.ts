@@ -23,13 +23,15 @@ export interface RecordSlowOpInput {
   source: SlowOpSource;
   // Who issued this operation, when known. The caller-attribution fix: this is
   // what the whole refactor exists to capture. Server spans pass their immediate
-  // enclosing span (a SpanRef); client `element` signals pass their route
-  // ({ kind: "route", label }); page-load passes nothing. Lands on the op's
+  // enclosing span (a SpanRef); client `element` and latency signals pass their
+  // route ({ kind: "route", label }); page-load passes nothing. Lands on the op's
   // `slow_op_callers` row.
   caller?: CallerRef | null;
   // Per-layer wait charged to this entry span (gate/lock → ms), when it waited.
   // Merged per layer into the row's durable `waits` so the wait-vs-work split
-  // survives restart. Only entry spans (loader/http/sub/push) carry it.
+  // survives restart. Server entry spans (loader/http/sub/push) carry it; a
+  // client latency signal carries its phases here, `element` its transport
+  // bring-up.
   waits?: WaitBreakdown;
   // The tripping span's variant (which instance ran — a loader's params) and
   // measures (fan-out, frame size, …). Merged into the row's `variants`
@@ -37,10 +39,10 @@ export interface RecordSlowOpInput {
   detail?: SpanDetail;
   // Additive cold-start attribution (client `element` signal only). When the
   // notifications transport was not ready at resource mount, this duration is
-  // transport time-to-first-data, not resource compute. Threaded into the report
+  // transport time-to-first-data, not resource compute — its size is the
+  // `notifications-transport` entry of `waits`. Threaded into the report
   // `data` (jsonb — no migration) so the report title/description says WHY.
   transportColdStart?: boolean;
-  transportWaitMs?: number;
   // The durable trace captured for this same trip (when the engine admitted
   // one). Stamped into the newest recentSamples entry and the report `data` so
   // the aggregate view and the slow-op task both deep-link the evidence. Null

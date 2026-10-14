@@ -67,8 +67,13 @@ import { routeWithSpan } from "./route-span";
 // (last op wins), flushed once per fixed window armed on the first buffered
 // change and never re-armed — a true rate cap, which the runtime's debounce is
 // not (any flush cycle drains it). The flush routes the deletes, then the
-// upserts; `changedAt` is the earliest buffered emit, so the measured latency
-// includes the window. An `interactive` write flushes the whole buffer as soon
+// upserts; `changedAt` is the FLUSH instant, not the earliest buffered emit:
+// the window is a declared delay, not a slowdown, so change → tab latency
+// (live-state's `update` sample) starts when it closes. Counting it would also
+// feed back: every produced table is an observability store written exactly
+// while something is slow (slow_ops, traces, reports), so a 2 s window read by
+// an open pane would trip the 1 s `update` threshold, whose slow-op is a new
+// write to the table, whose push trips it again — forever. An `interactive` write flushes the whole buffer as soon
 // as its statement resolves (somebody is waiting to see it). Above
 // `PRODUCER_IDS_CAP` distinct ids the flush routes `ids: null` instead — one
 // bounded FULL per reading tuple.
@@ -184,7 +189,6 @@ const testMounts = new Map<string, TestMount>();
 // Each produced table's coalescing buffer.
 interface Buffer {
   pending: Map<string, Op>;
-  firstAt: number | null;
   timer: ReturnType<typeof setTimeout> | null;
 }
 const buffers = new Map<string, Buffer>();
@@ -296,7 +300,7 @@ function emit(
   if (ids.length === 0) return; // the statement changed no row
   let buffer = buffers.get(tableName);
   if (!buffer) {
-    buffer = { pending: new Map(), firstAt: null, timer: null };
+    buffer = { pending: new Map(), timer: null };
     buffers.set(tableName, buffer);
   }
   for (const id of ids) {
@@ -304,7 +308,6 @@ function emit(
     buffer.pending.delete(id);
     buffer.pending.set(id, op);
   }
-  buffer.firstAt ??= Date.now();
   if (coalesce === "none") {
     flush(tableName, route);
     return;
@@ -336,9 +339,8 @@ function flush(tableName: string, route: (change: RoutedChange) => void): void {
   }
   if (buffer.pending.size === 0) return;
   const pending = buffer.pending;
-  const changedAt = buffer.firstAt ?? Date.now();
+  const changedAt = Date.now();
   buffer.pending = new Map();
-  buffer.firstAt = null;
   const changes = changesOf(tableName, pending, changedAt);
   inRoot(() => {
     void runTracked(`change-producer:${tableName}`, () => {

@@ -5,8 +5,8 @@ import {
   type SlowOpClientItem,
 } from "../../shared/endpoints";
 
-// The browser-side queue behind the two client slow-op signals (page-load,
-// element-settle). The collector used to POST once per slow element, so a boot
+// The browser-side queue behind the client slow-op signals (page-load,
+// element-settle, and the client latency signals). The collector used to POST once per slow element, so a boot
 // wave that re-settled 200 resources sent 200 requests — each a DB transaction
 // plus a report upsert — against the backend that was already the thing
 // failing. Queueing collapses that burst into one request per ~250 ms.

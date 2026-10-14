@@ -168,7 +168,7 @@ export async function recordSlowOpBatch(
       thresholdMs,
       source,
       transportColdStart,
-      transportWaitMs,
+      waits,
       traceId,
     } = input;
 
@@ -200,7 +200,9 @@ export async function recordSlowOpBatch(
         thresholdMs,
         // Optional cold-start attribution — surfaced in the report title/desc.
         ...(transportColdStart !== undefined ? { transportColdStart } : {}),
-        ...(transportWaitMs !== undefined ? { transportWaitMs } : {}),
+        // This trip's per-layer split, so the description can name the layer
+        // the time went to (the row's `waits` are cumulative, not this trip's).
+        ...(waits !== undefined ? { waits } : {}),
         // Optional link to the coherent-instant trace captured for this trip.
         ...(traceId !== undefined ? { traceId } : {}),
       },

@@ -31,6 +31,7 @@ export type {
   WsData,
   WsHandler,
   RuntimeSocket,
+  ResourceDelivery,
 } from "./runtime";
 export {
   mintReachPlan,

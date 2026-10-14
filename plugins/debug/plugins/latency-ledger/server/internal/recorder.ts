@@ -169,7 +169,7 @@ function minOf(a: number | null, b: number): number {
 export function startLatencyRecorder(): void {
   if (stops.length > 0) return;
   stops = [
-    onResourceDelivery((_key, latencyMs) => {
+    onResourceDelivery((_key, { latencyMs }) => {
       addSample(accFor(current(Date.now()), "deliver-server"), latencyMs);
     }),
     onHealthSample((sample) => {

@@ -117,6 +117,10 @@ export function resolveSlowThreshold(span: SlowSpan, t: Thresholds): number {
  * while a job is judged on work time — sound in this direction only, since work
  * ≤ wall: a job whose work passes its ceiling necessarily ran at least that
  * long.)
+ *
+ * The client knobs (`pageLoadMs`, `elementMs`, `updateMs`, `confirmMs`) stay
+ * OUT: no server span is ever judged by them, so including one would only
+ * lower the profiler floor for every server span.
  */
 export function perfFloorMs(t: Thresholds): number {
   return Math.min(

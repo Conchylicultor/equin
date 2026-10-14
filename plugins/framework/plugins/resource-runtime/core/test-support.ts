@@ -67,6 +67,8 @@ export interface RecordedFrame {
   watermark?: string;
   /** Mutation-ack attribution: feed-driven value frames and `ack` frames. */
   ackTx?: string[];
+  /** Push timing (`update` / `delta` with a known change time): see `frameTiming`. */
+  timing?: { changedAt: number; sentAt: number; deliverMs: number };
   reason?: string;
   /** `sub-error` on contract-mismatch / unknown-key: skew / same-build / unknown. */
   verdict?: string;

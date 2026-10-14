@@ -3,28 +3,39 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { ClientBootSectionSchema } from "@plugins/debug/plugins/trace/plugins/client-boot/core";
 import { CallerRefSchema, MAX_CLIENT_SLOW_OP_ITEMS } from "../core";
 
-// One client-side slow-op signal (page-load, element-settle). `operationKind`
-// is "page-load" | "element". A client origin has no enclosing server span, so
-// the `element` signal supplies its own caller — the route that issued it
-// ({ kind: "route", label: pathname }) — for caller attribution. The server
-// stamps the worktree; the client only supplies the measurement.
+// The wait layer an `element` settle charges its transport bring-up to: the
+// notifications socket was not ready when the resource mounted.
+export const TRANSPORT_LAYER = "notifications-transport";
+
+// One client-side slow-op signal. `operationKind` is "page-load", "element",
+// or a client latency signal from perfs/latency-signal ("update", "confirm",
+// …) — an open string, so a new signal needs no schema change here. A client
+// origin has no enclosing server span, so every signal but page-load supplies
+// its own caller — the route that issued it ({ kind: "route", label: pathname })
+// — for caller attribution. The server stamps the worktree; the client only
+// supplies the measurement.
 export const SlowOpClientItemSchema = z.object({
   operationKind: z.string(),
   operation: z.string(),
   durationMs: z.number(),
   thresholdMs: z.number(),
   caller: CallerRefSchema.optional(),
-  // Additive, backward-compatible cold-start attribution for the `element`
-  // signal (absent for page-load and older clients). `transportColdStart` marks
-  // that the notifications transport was not ready when the resource mounted;
-  // `transportWaitMs` is the portion of the settle window spent on transport
-  // bring-up. Charged to a `notifications-transport` wait layer + surfaced in
-  // the report so a slow settle reads as transport time-to-first-data, not
-  // resource compute.
+  // Per-layer split of `durationMs` (layer → ms), merged into the row's durable
+  // `waits` exactly like a server span's gate waits. A latency signal sends its
+  // phases here; `element` charges its transport bring-up to
+  // `notifications-transport`.
+  waits: z.record(z.string(), z.number()).optional(),
+  // Which instance of the operation ran, without splitting the row: merged into
+  // the row's `variants` breakdown (a latency signal's params, or a confirm's
+  // `mode/edge`). The `operation` stays a bounded resource key.
+  detail: z.object({ variant: z.string().optional() }).optional(),
+  // Additive, backward-compatible cold-start flag for the `element` signal:
+  // the notifications transport was not ready when the resource mounted, so
+  // the settle reads as transport time-to-first-data, not resource compute.
+  // Kept beside `waits` because it drives the report title.
   transportColdStart: z.boolean().optional(),
-  transportWaitMs: z.number().optional(),
   // Additive, backward-compatible client evidence for the `page-load` signal
-  // (absent for `element` and older clients): the browser's own boot
+  // (absent for the others and older clients): the browser's own boot
   // decomposition (perfs/boot-trace), trimmed by toClientBootSection so the
   // keepalive beacon stays small. The handler threads it into the page-load
   // trigger's detail, where the client-boot trace class validates and persists

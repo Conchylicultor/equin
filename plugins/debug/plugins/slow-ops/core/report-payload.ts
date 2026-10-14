@@ -17,7 +17,14 @@ export const SlowOpReportPayloadSchema = z.object({
   // transport bring-up (time-to-first-data), not this resource's own compute —
   // pointing the investigation at transport/boot readiness, not the resource.
   transportColdStart: z.boolean().optional(),
+  // Pre-`waits` spelling of the cold-start wait, kept so reports filed before
+  // the move still parse and render. New reports carry it as
+  // `waits["notifications-transport"]`.
   transportWaitMs: z.number().optional(),
+  // The tripping occurrence's per-layer split (layer → ms): a server span's gate
+  // waits, a client latency signal's phases, an element's transport bring-up.
+  // The description names its largest layer.
+  waits: z.record(z.string(), z.number()).optional(),
   // The durable trace captured for the trip that filed this report (when the
   // engine admitted one). Stored in the jsonb `data` (no migration) so the
   // slow-op KindView / renderTask can deep-link the coherent-instant evidence.

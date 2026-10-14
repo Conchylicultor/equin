@@ -1,9 +1,13 @@
-// @hash 2d6911826a94
+// @hash 3ad23f52e528
 {
   // Report a slow-op when first content paint takes longer than this (measured client-side in a post-paint frame).
   "pageLoadMs": 2000,
   // Report a slow-op when a live-state resource takes longer than this to settle (mount → first data).
   "elementMs": 1000,
+  // Report a slow-op when a server-side change takes longer than this to reach a visible tab's cache (change → pushed frame applied).
+  "updateMs": 1000,
+  // Report a slow-op when an optimistic write takes longer than this to be confirmed by the server (dispatch → confirmed), in a visible tab.
+  "confirmMs": 2000,
   // Report a slow-op when a server resource loader span exceeds this duration.
   "loaderMs": 2000,
   // Report a slow-op when a server HTTP request span exceeds this duration.

@@ -978,13 +978,15 @@ interface PendingNotify {
    * folded into this pending: the change-feed's `clock_timestamp()` for a DB
    * change, the `notify()` call for an external resource. Set on the first merge
    * and only ever LOWERED afterwards (`Math.min`), so a coalesced pending reports
-   * its oldest change. It rides every value frame so the TAB can measure
-   * change → applied on a clock the serving thread does not own: `enqueuedAt`
+   * its oldest change. It rides every value frame's `timing` (`frameTiming`,
+   * beside the send time and `deliverMs`) so the TAB can measure change →
+   * applied on a clock the serving thread does not own: `enqueuedAt`
    * above is stamped when this thread finally reads the NOTIFY, so a stalled
-   * thread hides its own delay from `onDelivered`. Observability only — nothing
-   * in the runtime reads it back. Comparing it to the tab's `Date.now()` assumes
-   * browser, backend and Postgres share one machine clock (one instance per
-   * user). Absent for synthetic and ack-only pendings and for catch-up replay.
+   * thread hides its own delay from `onDelivered`'s `latencyMs` (which reports
+   * it beside, as `changedAt`). Observability only — no runtime decision reads
+   * it. Comparing it to the tab's `Date.now()` assumes browser, backend and
+   * Postgres share one machine clock (one instance per user). Absent for
+   * synthetic and ack-only pendings and for catch-up replay.
    */
   changedAt?: number;
   /**
@@ -1338,6 +1340,59 @@ export interface LoadInfo {
   scopedIds?: number;
 }
 
+/**
+ * One delivered notify, as `ResourceRuntimeOptions.onDelivered` reports it.
+ * `latencyMs` = first notify → send on this thread's monotonic clock (the "UI is
+ * stale" window as the serving thread sees it); `subscribers` = how many sockets
+ * received the frame; `frameChars` = its serialized size; `changedAt` = the
+ * wall-clock epoch ms of the earliest change folded in (`PendingNotify.changedAt`)
+ * — absent exactly when the frame carried no `timing`.
+ */
+export interface ResourceDelivery {
+  latencyMs: number;
+  subscribers: number;
+  frameChars: number;
+  changedAt?: number;
+}
+
+/**
+ * The `timing` field of a pushed value frame (`update` / `delta`), built at the
+ * moment of send from the pending it drains: present exactly when the pending
+ * knows its change time, so a frame never carries a change time without the send
+ * time and server delay that split its latency into layers. `deliverMs` is the
+ * same first-notify → send quantity `onDelivered` reports.
+ */
+function frameTiming(
+  pending: PendingNotify,
+):
+  | { timing: { changedAt: number; sentAt: number; deliverMs: number } }
+  | Record<string, never> {
+  if (pending.changedAt === undefined) return {};
+  return {
+    timing: {
+      changedAt: pending.changedAt,
+      sentAt: Date.now(),
+      deliverMs: performance.now() - pending.enqueuedAt,
+    },
+  };
+}
+
+/** The `onDelivered` report for a frame just sent from `pending`. */
+function delivery(
+  pending: PendingNotify,
+  subscribers: number,
+  frameChars: number,
+): ResourceDelivery {
+  return {
+    latencyMs: performance.now() - pending.enqueuedAt,
+    subscribers,
+    frameChars,
+    ...(pending.changedAt !== undefined
+      ? { changedAt: pending.changedAt }
+      : {}),
+  };
+}
+
 export interface ResourceRuntimeOptions {
   /**
    * The 64-bit content hash a keyed resource's snapshot retains per row (see
@@ -1396,18 +1451,12 @@ export interface ResourceRuntimeOptions {
    */
   wrapFlush?: (fn: () => Promise<void>) => Promise<void>;
   /**
-   * Report a delivered notify: `latencyMs` = first-notify → send (the
-   * "UI is stale" window), `subscribers` = how many sockets received it. server:
-   * recordSpan("push", `deliver:${key}`, latencyMs); central: omit (no-op). The
-   * leaf `deliver:<key>` span nests under the `flush` entry so latency attributes
-   * to the resource. See the doc above.
+   * Report a delivered notify (see `ResourceDelivery`). server:
+   * recordSpan("push", `deliver:${key}`, info.latencyMs); central: omit (no-op).
+   * The leaf `deliver:<key>` span nests under the `flush` entry so latency
+   * attributes to the resource. See the doc above.
    */
-  onDelivered?: (
-    key: string,
-    latencyMs: number,
-    subscribers: number,
-    frameChars: number,
-  ) => void;
+  onDelivered?: (key: string, info: ResourceDelivery) => void;
   /**
    * Per-key loader stats for the `_debug` endpoint: call count, calls-per-minute,
    * and slowest single call over the current profiling window. server: derived
@@ -2777,6 +2826,8 @@ export function createResourceRuntime(
   // recomputes only — the read paths never pass one). Passed by value like
   // `watermark`, so the no-`revalidate` path keeps its no-await-before-send
   // property (H5a) untouched.
+  // `pending` is the drained notify the frame answers: its `timing` is built
+  // from it at send time (`frameTiming`). Synchronous, so H5a holds as well.
   function sendUpdate(
     entry: RegistryEntry,
     params: ResourceParams,
@@ -2785,7 +2836,7 @@ export function createResourceRuntime(
     subs: SocketState[],
     watermark?: string,
     ackTx?: readonly string[],
-    changedAt?: number,
+    pending?: PendingNotify,
   ): number | Promise<number> {
     const broadcast = (etag?: string): number => {
       const msg = {
@@ -2797,7 +2848,8 @@ export function createResourceRuntime(
         ...(etag !== undefined ? { etag } : {}),
         ...(watermark !== undefined ? { watermark } : {}),
         ...(ackTx !== undefined && ackTx.length > 0 ? { ackTx } : {}),
-        ...(changedAt !== undefined ? { changedAt } : {}),
+        // Stamped inside `broadcast`, after any etag await: `sentAt` is the send.
+        ...(pending !== undefined ? frameTiming(pending) : {}),
       };
       return broadcastJson(subs, msg);
     };
@@ -4658,7 +4710,7 @@ export function createResourceRuntime(
           subs,
           flightWatermark,
           flightAckTx,
-          pendingEntry.changedAt,
+          pendingEntry,
         );
         opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
       } else {
@@ -4679,9 +4731,7 @@ export function createResourceRuntime(
           ...(flightAckTx !== undefined && flightAckTx.length > 0
             ? { ackTx: flightAckTx }
             : {}),
-          ...(pendingEntry.changedAt !== undefined
-            ? { changedAt: pendingEntry.changedAt }
-            : {}),
+          ...frameTiming(pendingEntry),
         };
         frameChars = broadcastJson(subs, msg);
         opts.onPush?.(entry.key, {
@@ -4692,9 +4742,7 @@ export function createResourceRuntime(
       }
       opts.onDelivered?.(
         entry.key,
-        performance.now() - pendingEntry.enqueuedAt,
-        subs.length,
-        frameChars,
+        delivery(pendingEntry, subs.length, frameChars),
       );
     } else if (owns && valueComputed) {
       // Zero subscribers but a value was computed for a snapshot that outlives
@@ -5036,16 +5084,12 @@ export function createResourceRuntime(
           order,
           version,
           ...(ackTx !== undefined ? { ackTx } : {}),
-          ...(pendingEntry.changedAt !== undefined
-            ? { changedAt: pendingEntry.changedAt }
-            : {}),
+          ...frameTiming(pendingEntry),
         };
         const frameChars = broadcastJson(subs, msg);
         opts.onDelivered?.(
           entry.key,
-          performance.now() - pendingEntry.enqueuedAt,
-          subs.length,
-          frameChars,
+          delivery(pendingEntry, subs.length, frameChars),
         );
       }
     } else {
@@ -5455,7 +5499,7 @@ export function createResourceRuntime(
             subs,
             flightWatermark,
             flightAckTx,
-            pendingEntry.changedAt,
+            pendingEntry,
           );
         }
       }
@@ -5466,9 +5510,7 @@ export function createResourceRuntime(
       if (subs.length > 0) {
         opts.onDelivered?.(
           entry.key,
-          performance.now() - pendingEntry.enqueuedAt,
-          subs.length,
-          frameChars,
+          delivery(pendingEntry, subs.length, frameChars),
         );
       }
 

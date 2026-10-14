@@ -160,6 +160,13 @@ const deriveSource = w.object({
  */
 const derivation = w.object({ id: w.string, from: w.array(deriveSource) });
 
+/** Co-produced push timing on an update / delta frame (see `timing` above). */
+const FRAME_TIMING = w.object({
+  changedAt: w.number,
+  sentAt: w.number,
+  deliverMs: w.number,
+});
+
 const s = <const K extends string, const F extends WireFields>(
   kind: K,
   fields: F,
@@ -182,7 +189,13 @@ const c = <const K extends string, const F extends WireFields>(
  * - `watermark` (Rule B′): the xid8 snapshot floor a FULLY reconciling value
  *   was read under — sub-ack, update, full keyed delta; never a scoped delta.
  * - `ackTx`: the source-transaction ids a feed-driven recompute folded in.
- * - `changedAt`: wall-clock epoch ms of the change behind a pushed frame.
+ * - `timing` (update / delta only): when the change behind a pushed frame
+ *   happened and when the frame left — `changedAt` (wall-clock epoch ms of the
+ *   change), `sentAt` (wall-clock epoch ms the frame was sent) and `deliverMs`
+ *   (first notify → send, on the server's monotonic clock). One object so a
+ *   frame cannot carry a change time without the send time that splits its
+ *   latency into server and transport layers. Absent on every frame no change
+ *   stands behind (catch-up replay, a forced resubscribe's answer, …).
  */
 const SERVER_FRAMES = {
   /** Keepalive, carrying how long the server's running flush has been open (0 idle). */
@@ -264,7 +277,7 @@ const SERVER_FRAMES = {
     etag: w.optional(w.string),
     watermark: w.optional(w.string),
     ackTx: w.optional(w.array(w.string)),
-    changedAt: w.optional(w.number),
+    timing: w.optional(FRAME_TIMING),
   }),
   /**
    * A keyed delta. `order` present: the authoritative id order (rebuild);
@@ -279,7 +292,7 @@ const SERVER_FRAMES = {
     version: w.number,
     watermark: w.optional(w.string),
     ackTx: w.optional(w.array(w.string)),
-    changedAt: w.optional(w.number),
+    timing: w.optional(FRAME_TIMING),
   }),
   invalidate: s("invalidate", {
     key: w.string,

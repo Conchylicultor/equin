@@ -26,8 +26,6 @@ export type {
 } from "./use-query-resource";
 export { slowResourceReportSink } from "./slow-resource-reporter";
 export type { SlowResourceInfo } from "./slow-resource-reporter";
-export { updateDelayReportSink } from "./update-delay-reporter";
-export type { UpdateDelayInfo } from "./update-delay-reporter";
 export {
   pendingMountSnapshot,
   subscribePendingMounts,

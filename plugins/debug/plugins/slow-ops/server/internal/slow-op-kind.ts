@@ -6,6 +6,8 @@ import {
   SlowOpReportPayloadSchema,
   type SlowOpReportPayload,
 } from "../../core";
+import { TRANSPORT_LAYER } from "../../shared/endpoints";
+import { describeWaits } from "./wait-layers";
 
 // The slow-op report kind. Dedups per distinct `${operationKind}:${operation}`,
 // so each slow operation gets its own report pointing straight at the offending op
@@ -52,9 +54,10 @@ function renderDescription(row: ReportRow, d: SlowOpReportPayload): string {
   lines.push(`**Latest duration:** ${Math.round(d.durationMs)}ms`);
   lines.push(`**Threshold:** ${d.thresholdMs}ms`);
   if (d.transportColdStart) {
+    const socketMs = d.waits?.[TRANSPORT_LAYER] ?? d.transportWaitMs;
     const waited =
-      d.transportWaitMs !== undefined
-        ? ` (waited ~${Math.round(d.transportWaitMs)}ms for the socket)`
+      socketMs !== undefined
+        ? ` (waited ~${Math.round(socketMs)}ms for the socket)`
         : "";
     lines.push("");
     lines.push(
@@ -65,6 +68,8 @@ function renderDescription(row: ReportRow, d: SlowOpReportPayload): string {
         `still a real regression to fix at the source.)`,
     );
   }
+  const waitLines = describeWaits(d);
+  if (waitLines.length > 0) lines.push("", ...waitLines);
   if (d.traceId) {
     lines.push("");
     lines.push(

@@ -20,7 +20,10 @@ import { mergeKeyedDelta } from "./keyed-delta-merge";
 import { rootWatermarks, type WatermarkRegistry } from "./watermark-registry";
 import { rootTxAcks, type TxAckRegistry } from "./tx-ack-registry";
 import { httpStaleDropReportSink } from "./stale-drop-reporter";
-import { updateDelayReportSink } from "./update-delay-reporter";
+import {
+  clientLatencySink,
+  splitPhases,
+} from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
 import {
   BUILD_GRAPH_HEADER,
   DERIVE_MAX_SOURCES,
@@ -288,6 +291,10 @@ type DerivationFrame = Derivation;
 // frames answering other tabs' requests too: every kind below is gated on a
 // live local sub before it touches the cache (`handleServerMessage`).
 type ServerMsg = ServerFrame;
+/** The co-produced push timing an update / delta frame may carry. */
+type FrameTiming = NonNullable<
+  Extract<ServerMsg, { kind: "update" | "delta" }>["timing"]
+>;
 
 function paramsKey(params: ResourceParams | undefined): string {
   if (!params) return "{}";
@@ -578,7 +585,16 @@ export class NotificationsClient {
   private failingSnapshot: readonly FailingResource[] = [];
   private failingListeners = new Set<() => void>();
   private unsubscribeFromQueryCache: () => void;
-  /** `online` / `visibilitychange` handlers (event-driven retry), removed in `destroy()`. */
+  /**
+   * Wall-clock epoch ms of the last instant this page was hidden (`null`: not
+   * since the client was built). Stamped on every `visibilitychange` — going
+   * hidden and coming back alike, so after a return it is the end of the
+   * hidden stretch. An update sample whose change happened at or before it
+   * spent part of its life in a throttled background tab (`isHiddenSince`).
+   * Per client, and the client is the page's one module singleton.
+   */
+  private lastHiddenAt: number | null = null;
+  /** `online` / `visibilitychange` handlers (event-driven retry + `lastHiddenAt`), removed in `destroy()`. */
   private retryListeners: {
     online: () => void;
     visibility: () => void;
@@ -682,6 +698,7 @@ export class NotificationsClient {
       // and the user coming back to the tab. Only tuples in error are refetched
       // (a healthy read is already live over the socket).
       const visibility = () => {
+        this.lastHiddenAt = Date.now();
         if (document.visibilityState === "visible")
           this.retryFailing("visible");
       };
@@ -1728,6 +1745,9 @@ export class NotificationsClient {
       this.replaySubs(channel);
     };
     channel.ws.onmessage = (ev) => {
+      // Receipt stamp BEFORE the parse: decoding is client work, so it lands
+      // in an update sample's `client-apply` phase, not in `transport`.
+      const receivedAt = Date.now();
       let msg: ServerMsg;
       try {
         msg = JSON.parse(ev.data);
@@ -1737,7 +1757,7 @@ export class NotificationsClient {
         return;
       }
       try {
-        this.handleServerMessage(channel, msg);
+        this.handleServerMessage(channel, msg, receivedAt);
       } catch (err) {
         // A schema.parse failure would otherwise silently leave the cache at
         // its empty default. Re-throw asynchronously so the global browser
@@ -1943,7 +1963,16 @@ export class NotificationsClient {
     this.sendSub(channel, key, params);
   }
 
-  private handleServerMessage(channel: SocketChannel, msg: ServerMsg): void {
+  /**
+   * `receivedAt`: wall-clock epoch ms the frame reached this tab (stamped by
+   * `onmessage` before decoding; defaults to now for a frame handed in
+   * directly). Read only to time an update sample.
+   */
+  private handleServerMessage(
+    channel: SocketChannel,
+    msg: ServerMsg,
+    receivedAt: number = Date.now(),
+  ): void {
     if (msg.kind === "ping") {
       // Server keepalive: never answered (per-tab duplicate `pong`s would be N×
       // writes through the shared socket for nothing). It does carry the server's
@@ -2192,11 +2221,12 @@ export class NotificationsClient {
         msg.watermark,
         msg.kind === "update" ? msg.ackTx : undefined,
       );
-      if (msg.kind === "update") this.reportUpdateDelay(msg.key, msg.changedAt);
+      if (msg.kind === "update")
+        this.reportUpdateLatency(msg.key, msg.params, msg.timing, receivedAt);
       return;
     }
     if (msg.kind === "delta") {
-      this.applyDelta(
+      const outcome = this.applyDelta(
         channel,
         entry,
         msg.key,
@@ -2206,24 +2236,60 @@ export class NotificationsClient {
         msg.watermark,
         msg.ackTx,
       );
-      this.reportUpdateDelay(msg.key, msg.changedAt);
+      // A delta that dead-ended in a forced resubscribe wrote nothing: the
+      // value its change stands behind reaches this tab only with the
+      // recovery sub-ack, which carries no timing.
+      if (outcome === "applied")
+        this.reportUpdateLatency(msg.key, msg.params, msg.timing, receivedAt);
       return;
     }
     // Only remaining case: "invalidate"
     this.applyInvalidate(msg.key, msg.params);
   }
 
-  // Change → applied-in-this-tab delay, for every pushed frame that says when its
-  // change happened. Runs AFTER the cache write, so the value is in the tab's
-  // hands when the clock stops. Only this tab's live subs reach here (the no-sub
-  // gate above), so a background tab reports its own, honestly flagged, delays.
-  private reportUpdateDelay(key: string, changedAt: number | undefined): void {
-    if (changedAt === undefined) return;
-    updateDelayReportSink.emit({
+  /**
+   * The `update` latency sample — server change → value written into THIS
+   * tab's cache — for every applied pushed frame a change stands behind (one
+   * carrying `timing`; every other frame — sub-ack, replay, a forced
+   * resubscribe's answer — has none, so it times nothing). Runs AFTER the cache
+   * write, so the clock stops once the value is in the tab's hands (written,
+   * not painted). Only this tab's live subs reach here (the no-sub gate), so
+   * every tab reports its own samples, a background one flagged `hidden`. No
+   * work at all while nobody listens.
+   */
+  private reportUpdateLatency(
+    key: string,
+    params: ResourceParams,
+    timing: FrameTiming | undefined,
+    receivedAt: number,
+  ): void {
+    if (timing === undefined || !clientLatencySink.hasSubscribers()) return;
+    const appliedAt = Date.now();
+    const { changedAt, sentAt, deliverMs } = timing;
+    clientLatencySink.emit({
+      signal: "update",
       key,
-      delayMs: Date.now() - changedAt,
-      hidden: document.visibilityState === "hidden",
+      params,
+      phases: splitPhases("update", {
+        "server-notice": sentAt - deliverMs - changedAt,
+        "server-deliver": deliverMs,
+        // The one phase across two clocks (server send → browser receipt).
+        transport: receivedAt - sentAt,
+        "client-apply": appliedAt - receivedAt,
+      }),
+      totalMs: appliedAt - changedAt,
+      hidden: this.isHiddenSince(changedAt),
     });
+  }
+
+  /**
+   * The page is hidden now, or was at any instant since `since` (wall-clock
+   * epoch ms): a background tab's timers and frames are throttled, so a span
+   * that overlaps one measures the browser, not the system.
+   */
+  private isHiddenSince(since: number): boolean {
+    if (document.visibilityState === "hidden") return true;
+    return this.lastHiddenAt !== null && this.lastHiddenAt >= since;
   }
 
   private applyUpdate(
@@ -2314,7 +2380,7 @@ export class NotificationsClient {
     order: readonly string[] | undefined,
     watermark?: string,
     ackTx?: readonly string[],
-  ): void {
+  ): "applied" | "resubscribed" {
     const queryKey = queryKeyFor(key, params);
     // Base-presence guard (load-bearing): never apply a delta onto a missing
     // base. If the cache holds no server-vouched value yet, force a fresh full
@@ -2331,7 +2397,7 @@ export class NotificationsClient {
       // sub-ack must APPLY even at the version this very delta already advanced
       // us to (see forceFullResub: etag cleared + baselines reset).
       this.forceFullResub(channel, entry, key, params);
-      return;
+      return "resubscribed";
     }
     const schema = this.reads.get(key)?.schema;
     if (!schema) {
@@ -2375,7 +2441,7 @@ export class NotificationsClient {
       // cleared so it's never told `up-to-date`) and its sub-ack applies even
       // at this delta's own version (baselines reset — see forceFullResub).
       this.forceFullResub(channel, entry, key, params);
-      return;
+      return "resubscribed";
     }
     // Adopt the FULL delta's commit watermark — and note the delta's mutation
     // acks — IMMEDIATELY BEFORE the cache write they describe (same load-bearing
@@ -2393,6 +2459,7 @@ export class NotificationsClient {
     this.queryClient.setQueryData(queryKey, result.rows);
     entry.socketValue = true;
     this.markApplied(entry, key);
+    return "applied";
   }
 
   private applyInvalidate(key: string, params: ResourceParams): void {

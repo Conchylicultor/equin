@@ -3,15 +3,19 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { slowResourceReportSink } from "@plugins/primitives/plugins/live-state/web";
 import { getBootTrace } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
+import { clientLatencySink } from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
 import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
 import { toClientBootSection } from "@plugins/debug/plugins/trace/plugins/client-boot/core";
 import { slowOpConfig } from "../../core";
+import { TRANSPORT_LAYER } from "../../shared/endpoints";
+import { latencySlowOp } from "../internal/latency-slow-op";
 import { enqueueSlowOp } from "../internal/slow-op-queue";
 
-// A Core.Root side-effect component. It owns the two client-side slow-op
-// signals — page-load timing and live-state element settle — and funnels both
-// into the slow-op queue, which debounces and batches them onto the slow-ops
-// client endpoint. Renders nothing.
+// A Core.Root side-effect component. It owns the client-side slow-op signals —
+// page-load timing, live-state element settle, and every client latency signal
+// (perfs/latency-signal: live update, write confirm, …) — and funnels them into
+// the slow-op queue, which debounces and batches them onto the slow-ops client
+// endpoint. Renders nothing.
 export function SlowOpCollector() {
   const cfg = useConfig(slowOpConfig);
 
@@ -81,14 +85,29 @@ export function SlowOpCollector() {
         caller: { kind: "route", label: currentRoutePath() },
         // Additive root-cause attribution: was the notifications transport
         // still coming up when this resource mounted, and how much of the
-        // settle window was transport bring-up? Threads through so the report
-        // says WHY it was slow (transport cold-start vs resource compute).
+        // settle window was transport bring-up? The wait is charged to its own
+        // layer so the report says WHY it was slow (transport cold-start vs
+        // resource compute).
         transportColdStart: info.transportColdStart,
-        transportWaitMs: info.transportWaitMs,
+        ...(info.transportWaitMs > 0
+          ? { waits: { [TRANSPORT_LAYER]: info.transportWaitMs } }
+          : {}),
       });
     });
     return () => slowResourceReportSink.register(null);
   }, []);
+
+  // Client latency signals: one generic subscriber for the whole vocabulary.
+  // It never names a signal — the threshold, layers and variant all come from
+  // the sample and CLIENT_SIGNAL_THRESHOLD (see latencySlowOp).
+  useEffect(
+    () =>
+      clientLatencySink.subscribe((sample) => {
+        const item = latencySlowOp(sample, cfgRef.current, currentRoutePath());
+        if (item) enqueueSlowOp(item);
+      }),
+    [],
+  );
 
   return null;
 }

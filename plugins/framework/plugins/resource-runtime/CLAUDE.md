@@ -971,9 +971,26 @@ The server binds each of these to a profiler span in `server-core/core/resources
   GET is measured even when no loader runs.
 - `wrapMembership(key, fn)` wraps a window's `windowIdsOf` (`runWindowIds`, the one call
   site). It keeps the ids query apart from the value query.
-- `onDelivered(key, latencyMs, subscribers, frameChars)` fires per delivered notify.
-  `frameChars` is the length of the one serialized frame: `broadcastJson` returns it,
-  and `sendUpdate` / `broadcastAckOnly` pass it on.
+- `onDelivered(key, info)` fires per delivered notify, `info` a `ResourceDelivery`:
+  `latencyMs` (first notify → send), `subscribers`, `frameChars` (the length of the
+  one serialized frame: `broadcastJson` returns it, and `sendUpdate` /
+  `broadcastAckOnly` pass it on) and `changedAt` — the pending's earliest change
+  time, present exactly when the frame carried `timing` (below). The server turns
+  it into `deliver:<key>`'s `sinceChangeMs` measure.
+
+**Push timing (`timing` on `update` / `delta`).** A value frame drained from a
+pending that knows its change time (`PendingNotify.changedAt`: the change feed's
+`clock_timestamp()`, or a hand `notify()`'s call time — earliest wins on a merge)
+carries `timing: { changedAt, sentAt, deliverMs }`, built at send by
+`frameTiming(pending)`: `sentAt` the wall clock of the send (inside `sendUpdate`'s
+`broadcast`, after any etag await), `deliverMs` the same first-notify → send span
+`onDelivered` reports. All four value-frame send sites build it the one way —
+`sendUpdate` (first keyed send, non-keyed update), the FULL keyed delta and the
+membership delta. A frame with no change behind it carries none: sub-ack,
+up-to-date, invalidate, ack, catch-up replay and a pre-upgrade NOTIFY (no
+`changedAt`). The tab splits change → applied into server and transport layers
+from it (`perfs/latency-signal`'s `update` signal). Observability only — no
+runtime decision reads it. Pinned by `runtime-frame-timing.test.ts`.
 
 ## Invariant harness (`core/*.test.ts` + `core/test-support.ts`)
 

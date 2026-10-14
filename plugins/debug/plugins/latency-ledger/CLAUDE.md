@@ -23,9 +23,15 @@ ledger keeps **all** of them, as per-minute histograms.
 about: its clock starts when the serving thread finally reads the NOTIFY, so a
 stalled thread hides its own delay. `update-e2e` starts at `clock_timestamp()` in
 the change-feed trigger (or at the `notify()` call for a resource whose truth is
-outside Postgres), rides every value frame as `changedAt`, and is compared to the
-tab's `Date.now()`. Two wall clocks — sound only because browser, backend and
-Postgres share one machine (one instance per user).
+outside Postgres), rides every pushed value frame in its `timing`, and is compared
+to the tab's `Date.now()` once the frame is applied. Two wall clocks — sound only
+because browser, backend and Postgres share one machine (one instance per user).
+
+The browser half reads it as the `update` signal's `totalMs` on
+`clientLatencySink` (`primitives/perfs/latency-signal`), one subscriber among
+several (Debug → Slow Events files the slow ones, split into phases). A delta
+that forced a resubscribe instead of applying emits no sample, so it is not
+counted here either.
 
 "Has its data" is a page-wide count kept by live-state
 (`pending-mount-tracker.ts`): mounted `useResource` reads still waiting for their
@@ -122,7 +128,6 @@ state rather than the previous window's numbers.
     - `infra/endpoints.fetchEndpoint`
     - `primitives/live-state.pendingMountSnapshot`
     - `primitives/live-state.subscribePendingMounts`
-    - `primitives/live-state.updateDelayReportSink`
     - `primitives/log-channels.clientLog`
     - `primitives/pane.currentRoutePath`
 - Server:

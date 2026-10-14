@@ -160,10 +160,10 @@ picks.dispatch(change);                  // the ready arm: data, serverData, err
   see *Exact-ack confirmation* below): nothing to declare, nothing to forget.
 
 - `dispatch(vars)` mints an `opId`, appends `{opId, vars, resolved:false,
-  dispatchGen, misses:0, divergenceReported:false}` to the ordered pending list,
-  and fires `mutate(vars)`. `dispatchGen` is the cache generation
-  (`dataUpdateCount`) at dispatch — tokenless coarse confirmation compares
-  against it. On resolve the op is marked `resolved`, stamped with the endpoint's
+  dispatchGen, misses:0, divergenceReported:false, dispatchedAt, attempts:0}`
+  to the ordered pending list, and fires `mutate(vars)` (on the send lane).
+  `dispatchGen` is the cache generation (`dataUpdateCount`) at dispatch —
+  tokenless coarse confirmation compares against it. On resolve the op is marked `resolved`, stamped with the endpoint's
   `ackWatermark` (when returned), cleared of any prior failure, **and immediately
   re-checked for confirmation**. On reject it **stays in the overlay**
   (never-revert) with a classified `failure` — unless the server PERMANENTLY
@@ -483,12 +483,13 @@ Deciding and partitioning are split, because the blocking test needs each op's
   bookkeeping. It holds no `sameTarget` and no watermark; all the deciding is in
   the loop above.
 
-`ReconcileResult` gains no arm for the two silent verdicts: `dropped` *is* the
-report channel, so `confirmed` and `denied-silent` are simply absent from it.
-Around them sit `replay`, the three edges `confirmPass` / `resolvePass` /
-`ackPass`, and `markResolved` / `markFailed` / `clearFailure`. Every edge returns
-the input `pending` array **by identity** when nothing changed, so the React shell
-skips the state write. Unit-tested in `overlay.test.ts` (`bun test`) — where new
+`ReconcileResult`'s `dropped` *is* the report channel; `confirmed` is the
+timing channel — each confirmed op with the `ConfirmMode` that proved it (the
+`confirmed` verdict carries it), read only by the confirm latency sample (below).
+A `denied-silent` op is in no list. Around them sit `replay`, the three edges
+`confirmPass` / `resolvePass` / `ackPass`, and `markSent` / `markResolved` /
+`markFailed` / `clearFailure`. Every edge returns the input `pending` array **by
+identity** when nothing changed, so the React shell skips the state write. Unit-tested in `overlay.test.ts` (`bun test`) — where new
 lifecycle coverage belongs.
 
 The hook (`web/internal/use-optimistic-resource.ts`) is a thin shell —
@@ -499,8 +500,42 @@ updater cannot yield the report lists without becoming effectful), the cache
 subscription, the reconnect auto-retry subscription, the `savedAt` stamp, and the
 sink emits. Its wiring — `dataUpdateCount` stamp, push-before-resolve ordering,
 keep-rendered failures, `online` auto-retry, registry-watermark denial, send-lane
-ordering — is pinned by `web/__tests__/use-optimistic-resource.test.tsx`
+ordering, one confirm latency sample per edge — is pinned by `web/__tests__/use-optimistic-resource.test.tsx`
 (`./singularity test plugins/primitives/plugins/optimistic-mutation`).
+
+## Confirm latency (the `confirm` client latency signal)
+
+How long an optimistic write takes to be **confirmed** — dispatch → the edge
+that drops it from the overlay — is emitted on `clientLatencySink`
+(`perfs/latency-signal`; consumers: slow-ops, latency-ledger). Design:
+`research/2026-10-13-global-live-latency-in-slow-ops.md`.
+
+- **Stamps live on the op** (`PendingOp`), all `performance.now()` — the
+  client's own monotonic clock, so no phase carries clock skew:
+  `dispatchedAt` (overlay append), `firstSentAt` / `lastSentAt` / `attempts`
+  (`markSent`, called at the top of `runMutate` — past the send lane, so it is
+  the real wire departure, and every retry re-enters there), `ackedAt`
+  (`markResolved`, the latest 2xx). No verdict reads them.
+- **Phases**: `send-lane` = firstSent − dispatched (the head-of-line wait),
+  `retry` = lastSent − firstSent, `server-ack` = acked − lastSent,
+  `confirm-frame` = confirmed − acked (clamped ≥ 0 by `splitPhases`).
+  `totalMs` = confirmed − dispatched. A confirmed op is always resolved, hence
+  sent: a missing stamp throws (`confirmSample`).
+- **Variant** `<mode>/<edge>`. Mode (`ConfirmMode`): `exact-ack`, `watermark`
+  (coarse, snapshot past the token), `content`, `tokenless` — the last is not
+  causal, so its numbers are no proof the push carried the commit. Edge:
+  `push` (the confirming snapshot landed after the response), `resolve` (it beat
+  the response — `confirm-frame` is 0), `ack` (a standalone ack frame; the ack
+  edge calls `reportOutcomes(next, "ack")` like the other two).
+- **Hidden**: tagged when the tab is hidden now or changed visibility at any
+  point since dispatch (`web/internal/tab-hidden.ts` — one side of every
+  visibility change is hidden); consumers exclude it.
+- **Nothing is emitted** for an op that never confirms (denied, denied-silent,
+  rejected, stalled, unmounted while pending) — rejections and stalls already
+  have their own sinks — nor, wholesale, when the sink has no subscriber.
+- **Write paths NOT covered** (no overlay op to time): a detached
+  `enqueueResourceWrite` / `enqueueDetachedWrite`, `useEndpointMutation`
+  invalidates, config_v2 writes, Yjs collab text, `editable-field`.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 

@@ -11,7 +11,7 @@
  * live-state hazard suites).
  */
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
   clientLog: () => {},
@@ -30,6 +30,10 @@ import {
   type LiveStateHarness,
 } from "@plugins/primitives/plugins/live-state/web/testing";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import {
+  clientLatencySink,
+  type ClientLatencySample,
+} from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
 import {
   SyncStatusIndicator,
   SyncStatusProvider,
@@ -1174,5 +1178,249 @@ describe("useOptimisticResource — read forms", () => {
       noteResourceTxAcks(ranks.rows.key, params, ["4242"]);
     });
     expect((await settledOf(result)).pendingOps).toEqual([]);
+  });
+});
+
+describe("useOptimisticResource — confirm latency samples", () => {
+  // Every case reads a key of its own (the tx-ack registry is module-level).
+  const latencyValue = (name: string) =>
+    liveValue(`test.optimistic-mutation.latency-${name}`, { schema: Numbers });
+
+  // The op stamps' clock, driven by hand: phases are then exact differences,
+  // and nothing depends on how long the test really took.
+  let clock = 0;
+  let samples: ClientLatencySample[] = [];
+  let unsubscribe: () => void = () => {};
+  beforeEach(() => {
+    clock = 0;
+    samples = [];
+    vi.spyOn(performance, "now").mockImplementation(() => clock);
+    unsubscribe = clientLatencySink.subscribe((s) => {
+      samples.push(s);
+    });
+  });
+  afterEach(() => {
+    unsubscribe();
+    vi.restoreAllMocks();
+  });
+
+  it("push edge: the confirming snapshot lands after the response", async () => {
+    const value = latencyValue("push");
+    const live = createLiveStateHarness();
+    const { mutate, release } = deferredMutate();
+    const { rows } = await mountRows(live, mutate, {
+      contentBased: true,
+      value,
+    });
+
+    clock = 100;
+    act(() => {
+      rows().dispatch(2); // an idle lane sends at once
+    });
+    clock = 150;
+    await act(async () => {
+      release();
+    });
+    await waitFor(() => expect(rows().saving).toBe(false));
+    expect(samples).toEqual([]); // resolved, not yet confirmed
+
+    clock = 180;
+    act(() => {
+      live.queryClient.setQueryData(queryKeyFor(value.key, undefined), [2]);
+    });
+    expect(samples).toEqual([
+      {
+        signal: "confirm",
+        key: value.key,
+        params: {},
+        variant: "content/push",
+        phases: {
+          "send-lane": 0,
+          retry: 0,
+          "server-ack": 50,
+          "confirm-frame": 30,
+        },
+        totalMs: 80,
+        hidden: false,
+      },
+    ]);
+  });
+
+  it("resolve edge: the confirming snapshot beat the response, so confirm-frame is 0", async () => {
+    const value = latencyValue("resolve");
+    const live = createLiveStateHarness();
+    const { mutate, release } = deferredMutate();
+    const { rows } = await mountRows(live, mutate, {
+      contentBased: true,
+      value,
+    });
+
+    clock = 100;
+    act(() => {
+      rows().dispatch(2);
+    });
+    clock = 120;
+    act(() => {
+      live.queryClient.setQueryData(queryKeyFor(value.key, undefined), [2]);
+    });
+    expect(samples).toEqual([]); // unresolved — the push edge keeps it
+    clock = 150;
+    await act(async () => {
+      release();
+    });
+    await waitFor(() => expect(samples).toHaveLength(1));
+    expect(samples[0]).toMatchObject({
+      variant: "content/resolve",
+      phases: { "server-ack": 50, "confirm-frame": 0 },
+      totalMs: 50,
+    });
+  });
+
+  it("ack edge: a standalone ack frame confirms the op exactly", async () => {
+    const value = latencyValue("ack");
+    const live = createLiveStateHarness();
+    const { mutate, release } = deferredMutate();
+    const { rows } = await mountRows(live, mutate, { value }); // coarse
+
+    clock = 100;
+    act(() => {
+      rows().dispatch(2);
+    });
+    clock = 140;
+    await act(async () => {
+      release({ watermark: "555" });
+    });
+    await waitFor(() => expect(rows().saving).toBe(false));
+    expect(samples).toEqual([]);
+
+    clock = 200;
+    act(() => {
+      noteResourceTxAcks(value.key, undefined, ["555"]);
+    });
+    expect(samples).toHaveLength(1);
+    expect(samples[0]).toMatchObject({
+      variant: "exact-ack/ack",
+      phases: { "server-ack": 40, "confirm-frame": 60 },
+      totalMs: 100,
+    });
+  });
+
+  it("a retry through the reconnect drain lands in the retry phase", async () => {
+    const value = latencyValue("retry");
+    const live = createLiveStateHarness();
+    const mutate = vi
+      .fn<(n: number) => Promise<MutateResult>>()
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValue(undefined);
+    const { rows } = await mountRows(live, mutate, { value });
+
+    clock = 100;
+    await act(async () => {
+      rows().dispatch(2);
+    });
+    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
+    clock = 300;
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+    await waitFor(() => expect(rows().saving).toBe(false));
+    expect(mutate).toHaveBeenCalledTimes(2);
+
+    clock = 360;
+    act(() => {
+      live.queryClient.setQueryData(queryKeyFor(value.key, undefined), [2]);
+    });
+    expect(samples).toHaveLength(1);
+    expect(samples[0]).toMatchObject({
+      variant: "tokenless/push",
+      phases: {
+        "send-lane": 0,
+        retry: 200,
+        "server-ack": 0,
+        "confirm-frame": 60,
+      },
+      totalMs: 260,
+    });
+  });
+
+  it("a queued op's send-lane phase is its wait behind the op ahead of it", async () => {
+    const value = latencyValue("queued");
+    const live = createLiveStateHarness();
+    const { mutate, calls } = queuedMutate();
+    const { rows } = await mountRows(live, mutate, {
+      contentBased: true,
+      value,
+    });
+
+    clock = 100;
+    act(() => {
+      rows().dispatch(2);
+      rows().dispatch(3);
+    });
+    await settleQueues();
+    clock = 200;
+    await act(async () => {
+      calls[0]!.resolve(undefined); // the second op departs now
+    });
+    await waitFor(() => expect(calls).toHaveLength(2));
+    clock = 260;
+    await act(async () => {
+      calls[1]!.resolve(undefined);
+    });
+    await waitFor(() => expect(rows().saving).toBe(false));
+
+    clock = 300;
+    act(() => {
+      live.queryClient.setQueryData(queryKeyFor(value.key, undefined), [2, 3]);
+    });
+    expect(samples.map((s) => s.phases)).toEqual([
+      { "send-lane": 0, retry: 0, "server-ack": 100, "confirm-frame": 100 },
+      { "send-lane": 100, retry: 0, "server-ack": 60, "confirm-frame": 40 },
+    ]);
+  });
+
+  it("a rejected op emits nothing", async () => {
+    const value = latencyValue("rejected");
+    const live = createLiveStateHarness();
+    const mutate = vi.fn(() => Promise.reject(new EndpointError(400, "nope")));
+    const { rows } = await mountRows(live, mutate, { value });
+
+    await act(async () => {
+      rows().dispatch(2);
+    });
+    await waitFor(() => expect(rows().pendingOps).toEqual([]));
+    act(() => {
+      live.queryClient.setQueryData(queryKeyFor(value.key, undefined), [2]);
+    });
+    expect(samples).toEqual([]);
+  });
+
+  // Last: the visibility stamp is page-global, so it would tag any later op
+  // dispatched before it.
+  it("an op the tab was hidden during is tagged hidden", async () => {
+    const value = latencyValue("hidden");
+    const live = createLiveStateHarness();
+    const { mutate, release } = deferredMutate();
+    const { rows } = await mountRows(live, mutate, {
+      contentBased: true,
+      value,
+    });
+
+    clock = 1_000_000;
+    act(() => {
+      rows().dispatch(2);
+    });
+    clock = 1_000_010;
+    document.dispatchEvent(new Event("visibilitychange")); // hidden, then back
+    clock = 1_000_020;
+    await act(async () => {
+      release();
+    });
+    clock = 1_000_030;
+    act(() => {
+      live.queryClient.setQueryData(queryKeyFor(value.key, undefined), [2]);
+    });
+    expect(samples).toHaveLength(1);
+    expect(samples[0]!.hidden).toBe(true);
   });
 });

@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-perfs-latency-signal",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The closed vocabulary of client latency signals (update: a pushed change applied; confirm: an optimistic write confirmed), each a fixed tuple of named phases, as plain data; ClientLatencySample (a union on signal, so a missing or misspelled phase is a tsc error), the clientLatencySink observation sink producers emit into and consumers subscribe to, and splitPhases."
+}
