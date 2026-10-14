@@ -187,7 +187,7 @@ concrete failure modes, all of which the repo has actually hit:
 - **It does not bound.** Expand-all is inherently `O(nodes-with-children)` and, unlike
   `view-order`'s ranks, has no invariant to exploit for a bounded write.
 
-The map is the **only** source. `tree/web/internal/project-rows.ts` resolves a
+The map is the **only** source. `web/internal/hierarchy/project-rows.ts` resolves a
 row's expansion as `expanded?.[id] ?? defaultExpanded ?? false` — there is no
 consumer-supplied accessor left to shadow it, so a collapse simply cannot be
 domain data. See
@@ -273,7 +273,27 @@ the source axis only decides *which data bundle* feeds the body.
 
 A data source can declare itself hierarchical by passing `hierarchy` (a
 `HierarchyConfig<TRow>`) to `<DataView>`. Present → hierarchical views (the
-tree) become selectable; absent → the host drops them from the switcher.
+tree) become selectable, and the **table nests its rows** (see the table
+child's CLAUDE.md, "Nesting"); absent → the host drops the hierarchical views
+from the switcher and the table is flat. The table does not declare
+`hierarchical: true`: it is offered on every source and nests only when a
+hierarchy is present. It says so with `nestsHierarchy: true` on its
+`DataViewContribution`, so over a hierarchical source the host treats it as the
+tree it draws: no fold (`activeSupportsFold`), no flat manual order
+(`activeSupportsManualOrder` — the `RowOrder` contributor is not even mounted),
+and its `filterScope` decides `hideWhenEmpty` (`rootsScoped`).
+
+**One pipeline for every view that nests.** `useHierarchyTree` (web barrel,
+`web/internal/hierarchy/`) is what the tree and the nested table both run:
+`projectRows` (the `ProjectedRow` wrapper, aliases minted) → the view's filter
+under its `filterScope` (`scopeFilterRows`) → a stable global sort (a sort
+within each sibling group, which suspends DnD) → group-by over the roots
+(`partitionIntoSections` + `bucketRowsByRootSection`, every descendant in its
+root's section) → the tree primitive's `TreeModelArgs`, every callback
+alias-aware (an alias id is translated back to its real row before the
+consumer sees it; a just-created row's activation is held until it lands).
+The view hands the result to `useTreeModel` (directly, or through `TreeList`)
+and paints the lines its own way.
 `hierarchy` and `paging` are exclusive on the in-memory origin (a type union,
 both keys optional): a tree over a paged prefix orphans the children whose
 parents are not loaded — the same reason a live `source` refuses `hierarchy`. The
@@ -307,8 +327,9 @@ gallery and tree render that field's cell in their leading slot — `Row.icon`,
 (inside `AvatarPresentationProvider value="tile"`); all leave it out of the body: never the
 title / label pick, never a list subtitle or trailing term, a gallery property
 row, or a tree secondary chip. The gallery's **cover is untouched**; the cover
-stays media. The **table** has no leading slot, so there it is an ordinary
-column.
+stays media. The **flat table** has no leading slot, so there it is an ordinary
+column; the **nested table** (a hierarchical source) has one — the tree head's
+icon slot in its first cell — and renders it there, like the tree.
 
 - **Composition, not replacement.** The field renders **first**, then the view's
   own per-view option (list/gallery `leading`, tree `leadingIcon`) — most of
@@ -453,7 +474,7 @@ exclusion, not a preference:
 
 ```ts
 const rowOrderEnabled =
-  activeSupportsManualOrder &&   // list / table only — gallery/tree have no flat rank axis
+  activeSupportsManualOrder &&   // list / table only — gallery/tree, and a table nesting a hierarchy, have no flat rank axis
   manualOrder == null &&         // a consumer's domain order wins
   props.source == null &&        // a live source is server-sorted ⇒ the client cannot own the order
   aggregate == null;             // an aggregate representative's rank cannot stand for its members
@@ -676,9 +697,11 @@ the grid and break column alignment — so it composes `StickyStack` directly in
 header (or by nothing, under `columnHeader: "first-group"`, which has no header
 row). The tree renders through the shared chrome too, with one `TreeList` per
 section: its ROOTS partition by the group-by field and every descendant follows
-its root's section (see the tree child's CLAUDE.md "Group-by"). It is the one
-view that calls `partitionIntoSections` directly rather than through
-`useDataViewSections`, so it resolves the grouping registry itself.
+its root's section (see the tree child's CLAUDE.md "Group-by"). It and the
+nested table partition through `useHierarchyTree` (see "Hierarchy") rather than
+`useDataViewSections`, which resolves the grouping registry itself; the nested
+table draws each section's slice of the ONE flattened tree as a
+`DataTableGroup`.
 
 ## Aggregating sections (`aggregate`)
 
@@ -2345,7 +2368,7 @@ it):
 | **gallery** | 60 cards | Lane-aware: each windowed row is one measured row of `columns` cards. |
 | **icons** | 120 tiles | Lane-aware like gallery; the lane count is the probe grid's resolved track count. |
 | **tree** | 100 *visible* (expanded) rows | Inside `primitives/tree`'s `TreeList`; below that the recursive render runs byte-for-byte unchanged. Uses `scrollToIndex` for selection reveal. |
-| **table** | 100 rows, **ungrouped only** | Grouped mode is never windowed — it targets bounded, sectioned lists — and uses grid-flow spacers rather than absolute positioning, so the subgrid's column tracks stay aligned. |
+| **table** | 100 rows, **ungrouped only** | Grouped mode is never windowed — it targets bounded, sectioned lists — and uses grid-flow spacers rather than absolute positioning, so the subgrid's column tracks stay aligned. Nested, it windows the *visible* (expanded) lines, keeping the drag source and the selected row mounted. |
 
 Background: `research/2026-06-18-data-view-row-virtualization.md` and
 `research/2026-06-18-tree-view-virtualization.md`.
@@ -2486,6 +2509,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `GroupingPlanContext`
     - `GroupingRegistry`
     - `HierarchyConfig`
+    - `HierarchyTree`
+    - `HierarchyTreeOptions`
     - `ItemActionContribution`
     - `ItemActionProps`
     - `ItemActions`
@@ -2497,6 +2522,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ManualOrderConfig`
     - `MergedDataViewProps`
     - `PartitionOptions`
+    - `ProjectedRow`
     - `RowTone`
     - `SectionBodyProps`
     - `SelectionConfig`
@@ -2550,6 +2576,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useGroupByController`
     - `useGroupingClock`
     - `useGroupingRegistry`
+    - `useHierarchyTree`
     - `useIsChipField`
     - `useItemActionZones`
     - `useLivePagesPaging`
@@ -2732,7 +2759,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
   - **`icons`** — Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
   - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
   - **`map`** — Map view child for the data-view primitive: every row with a location as a pin on a full-bleed map, clustered, with clicking a pin activating its row.
-  - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
+  - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
   - **`tree`** — Tree view child for the data-view primitive: adapts the shared field schema + hierarchy config onto the tree primitive (buildTree, TreeList, RowChrome, RenameInput).
   - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance…
   - **`view-order`** — Per-view-instance manual row order for any DataView: subscribes to the persisted (dataViewId, viewId) ranks, synthesizes a total order, and contributes the resulting ManualOrderConfig back through…

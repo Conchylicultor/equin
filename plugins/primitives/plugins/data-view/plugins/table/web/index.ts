@@ -7,7 +7,7 @@ export type { TableViewOptions } from "../core";
 
 export default {
   description:
-    "Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.",
+    "Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.",
   contributions: [
     DataViewSlots.View({
       type: "table",
@@ -20,6 +20,10 @@ export default {
       // Opts into flat manual-order (rank-based drag reorder); active only when
       // the consumer supplies `manualOrder`.
       supportsManualOrder: true,
+      // Nests its rows over a hierarchical source (NOT `hierarchical`: it stays
+      // offered on flat sources) — the host then applies no fold and no flat
+      // manual order to it, and honours its `filterScope`.
+      nestsHierarchy: true,
     }),
   ],
 } satisfies PluginDefinition;

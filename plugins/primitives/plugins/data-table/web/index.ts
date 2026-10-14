@@ -8,12 +8,14 @@ export type {
   ColumnDef,
   DataTableProps,
   DataTableGroup,
+  DataTablePresentation,
   DataTableRowDecoration,
+  DataTableSelection,
+  DataTableTree,
 } from "./internal/types";
 export type { SortState } from "./internal/use-data-table";
 
 export default {
-  description:
-    "Sortable/filterable flex-layout data table primitive.",
+  description: "Sortable/filterable flex-layout data table primitive.",
   contributions: [],
 } satisfies PluginDefinition;

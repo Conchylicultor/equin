@@ -5,7 +5,6 @@ import {
   type ColumnDef,
   type DataTableGroup,
   type DataTableRowDecoration,
-  type SortState as TableSortState,
 } from "@plugins/primitives/plugins/data-table/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
@@ -27,13 +26,14 @@ import {
   type FieldValue,
   type ItemActionsDescriptor,
   type ManualOrderConfig,
-  type SortRule,
 } from "@plugins/primitives/plugins/data-view/web";
 import {
   RankReorderProvider,
   useRankSortableItem,
 } from "@plugins/primitives/plugins/rank-reorder/web";
 import type { TableViewOptions } from "../../core";
+import { mapPrimary } from "../internal/map-primary";
+import { NestedTableView } from "./nested-table-view";
 
 /** FieldValue → data-table's `string | number | undefined` comparable projection. */
 function coerce(value: FieldValue): string | number | undefined {
@@ -44,18 +44,19 @@ function coerce(value: FieldValue): string | number | undefined {
 }
 
 /**
- * Map the data-view PRIMARY sort rule onto data-table's single-column sort
- * indicator. The primary is the first USER rule — the one a header click cycles
- * (`cyclePrimarySort`); a pinned prefix sorts ahead of it but is not what the
- * headers drive. Secondary rules don't paint a header arrow (the sort popover is
- * the full multi-sort surface); the data-table primitive stays single-sort.
+ * The table view. A hierarchical source nests its rows (`NestedTableView`, the
+ * hierarchy pipeline over the tree model); any other source is the flat table.
+ * Two components, not one with a branch, so each runs only its own hooks.
  */
-function mapPrimary(rules: readonly SortRule[]): TableSortState | null {
-  const p = rules.find((r) => !r.pinned);
-  return p ? { columnId: p.fieldId, direction: p.direction } : null;
+export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
+  return props.hierarchy ? (
+    <NestedTableView {...props} />
+  ) : (
+    <FlatTableView {...props} />
+  );
 }
 
-export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
+function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
   // Documented cast boundary: `options` is `viewOptions.table`, opaque to the host.
   const options = (props.options ?? {}) as TableViewOptions;
   // Resolved unconditionally (hooks rules) BEFORE the early empty-state return.

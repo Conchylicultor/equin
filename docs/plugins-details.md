@@ -20375,9 +20375,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 156 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 157 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×50
-              - `primitives` ×25
+              - `primitives` ×26
               - `page` ×23
               - `conversations` ×18
               - `apps-core` ×5
@@ -30215,10 +30215,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 389 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 390 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×97
               - `conversations` ×62
-              - `primitives` ×50
+              - `primitives` ×51
               - `debug` ×34
               - `ui` ×28
               - `page` ×24
@@ -30667,8 +30667,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 400 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `primitives` ×101
+            - Imported by: 401 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `primitives` ×102
               - `apps` ×80
               - `conversations` ×53
               - `page` ×25
@@ -30809,6 +30809,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.SingleLineProvider`
           - `primitives/dom/element-size.useElementSize`
           - `primitives/link-gesture.activationProps`
+          - `primitives/multi-select.MultiSelectProvider`
+          - `primitives/multi-select.SelectionBar`
+          - `primitives/multi-select.SelectionCheckbox`
           - `primitives/row-actions.RowActions`
           - `primitives/row-actions.rowActionsAnchor`
           - `primitives/virtual-rows.useVirtualRows`
@@ -30816,8 +30819,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `ColumnDef`
           - `DataTableGroup`
+          - `DataTablePresentation`
           - `DataTableProps`
           - `DataTableRowDecoration`
+          - `DataTableSelection`
+          - `DataTableTree`
           - `SortState`
         - Exports (values):
           - `DATA_TABLE_VIRTUALIZE_THRESHOLD`
@@ -30966,6 +30972,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GroupingPlanContext`
           - `GroupingRegistry`
           - `HierarchyConfig`
+          - `HierarchyTree`
+          - `HierarchyTreeOptions`
           - `ItemActionContribution`
           - `ItemActionProps`
           - `ItemActions`
@@ -30977,6 +30985,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ManualOrderConfig`
           - `MergedDataViewProps`
           - `PartitionOptions`
+          - `ProjectedRow`
           - `RowTone`
           - `SectionBodyProps`
           - `SelectionConfig`
@@ -31030,6 +31039,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useGroupByController`
           - `useGroupingClock`
           - `useGroupingRegistry`
+          - `useHierarchyTree`
           - `useIsChipField`
           - `useItemActionZones`
           - `useLivePagesPaging`
@@ -31402,26 +31412,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `MapViewOptions`
           - Core:
             - Exports (types): `MapViewOptions`
-        - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
+        - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
           - Web:
             - Contributes: `DataViewSlots.View` "Table" → `TableView`
-            - Uses: 29 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
-              - `primitives/data-view` ×19
+            - Uses: 49 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
+              - `primitives/data-view` ×23
+              - `primitives/tree` ×11
               - `primitives/data-table` ×6
-              - `primitives/rank-reorder` ×2
+              - `primitives/rank-reorder` ×3
               - `primitives/css/badge.Badge`
               - `primitives/css/inline.Inline`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/icon-button.IconButton`
+              - `ui/icons.Icon`
             - Exports (types): `TableViewOptions`
           - Core:
             - Exports (types): `TableViewOptions`
         - **`tree`** — Tree view child for the data-view primitive: adapts the shared field schema + hierarchy config onto the tree primitive (buildTree, TreeList, RowChrome, RenameInput).
           - Web:
             - Contributes: `DataViewSlots.View` "Tree" → `TreeView`
-            - Uses: 48 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/tree/REFERENCE.md)
-              - `primitives/data-view` ×25
+            - Uses: 44 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/tree/REFERENCE.md)
+              - `primitives/data-view` ×22
               - `primitives/tree` ×9
               - `primitives/css/ui-kit` ×2
-              - `primitives/latest-ref` ×2
               - `primitives/collapsible.ExpandAllButton`
               - `primitives/css/center.Center`
               - `primitives/css/fill.Fill`
@@ -31431,6 +31445,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/sticky.Sticky`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/icon-button.IconButton`
+              - `primitives/latest-ref.useLatestRef`
               - `ui/icons.Icon`
             - Exports (types): `TreeViewOptions`
         - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
@@ -32295,9 +32310,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `IconButtonProps`
         - Exports (values): `IconButton`
       - Cross-plugin:
-        - Imported by: 114 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 115 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×42
-          - `primitives` ×20
+          - `primitives` ×21
           - `conversations` ×15
           - `page` ×7
           - `tasks` ×7
@@ -33110,6 +33125,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations/agents`
           - `page/editor`
+          - `primitives/data-table`
           - `primitives/tree`
     - **`networking`** — WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
       - Web:
@@ -35035,6 +35051,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/page-tree`
           - `page/editor`
           - `primitives/data-view/list`
+          - `primitives/data-view/table`
           - `primitives/data-view/tree`
           - `ui/tree-disclosure`
           - `ui/tree-disclosure/column`
@@ -38947,11 +38964,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Cross-plugin:
-        - Imported by: 305 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 306 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×65
           - `conversations` ×56
           - `page` ×40
-          - `primitives` ×39
+          - `primitives` ×40
           - `fields` ×33
           - `debug` ×15
           - `ui` ×8

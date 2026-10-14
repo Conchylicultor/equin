@@ -1,9 +1,9 @@
 /**
- * Pure unit tests for the tree view's group-by helpers: the buildTree orphan
+ * Pure unit tests for the hierarchical views' group-by helpers: the buildTree orphan
  * rule (`projectedRoots`), the field adaptation onto the projected wrapper
  * (`fieldsForProjected`), and the children-follow-their-root bucketing
  * (`bucketRowsByRootSection`).
- * Run with `bun test plugins/primitives/plugins/data-view/plugins/tree`.
+ * Run with `./singularity test plugins/primitives/plugins/data-view`.
  *
  * No DOM, no React render: all three are pure functions, so these are bun:test
  * (not the jsdom vitest suite). The shared `partitionIntoSections` itself is
@@ -12,11 +12,8 @@
 
 import { describe, expect, test } from "bun:test";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import type {
-  DataViewSection,
-  FieldDef,
-} from "@plugins/primitives/plugins/data-view/core";
-import type { Projected } from "./project-rows";
+import type { DataViewSection, FieldDef } from "../../../core";
+import type { ProjectedRow } from "./project-rows";
 import {
   bucketRowsByRootSection,
   fieldsForProjected,
@@ -32,7 +29,7 @@ function proj(
   id: string,
   parentId: string | null,
   status: string | null = null,
-): Projected<Row> {
+): ProjectedRow<Row> {
   return {
     id,
     parentId,
@@ -46,8 +43,8 @@ function proj(
 /** A hand-built root partition: one section per listed key, holding the given
  *  root rows — the shape `partitionIntoSections` returns. */
 function sectionsOf(
-  ...groups: [key: string, roots: Projected<Row>[]][]
-): DataViewSection<Projected<Row>>[] {
+  ...groups: [key: string, roots: ProjectedRow<Row>[]][]
+): DataViewSection<ProjectedRow<Row>>[] {
   return groups.map(([key, roots]) => ({
     key,
     label: key,

@@ -1,8 +1,5 @@
-import type {
-  DataViewSection,
-  FieldDef,
-} from "@plugins/primitives/plugins/data-view/core";
-import type { Projected } from "./project-rows";
+import type { DataViewSection, FieldDef } from "../../../core";
+import type { ProjectedRow } from "./project-rows";
 
 /**
  * Roots under the same orphan rule as `buildTree`: a row whose `parentId` is
@@ -10,15 +7,15 @@ import type { Projected } from "./project-rows";
  * (Filtering/search can drop a parent while keeping its matching descendant.)
  */
 export function projectedRoots<TRow>(
-  projected: readonly Projected<TRow>[],
-): Projected<TRow>[] {
+  projected: readonly ProjectedRow<TRow>[],
+): ProjectedRow<TRow>[] {
   const ids = new Set(projected.map((p) => p.id));
   return projected.filter((p) => p.parentId === null || !ids.has(p.parentId));
 }
 
 /**
  * Adapt the consumer's fields to the projected row shape so the shared
- * `partitionIntoSections` can run over `Projected<TRow>` roots (whose stable
+ * `partitionIntoSections` can run over `ProjectedRow<TRow>` roots (whose stable
  * key is simply `.id`). Only the members the partition reads are carried —
  * identity/type/options/groupable plus the `value` projection unwrapped to the
  * raw `__row` — so the row-typed render/edit callbacks never need an unsound
@@ -26,7 +23,7 @@ export function projectedRoots<TRow>(
  */
 export function fieldsForProjected<TRow>(
   fields: FieldDef<TRow>[],
-): FieldDef<Projected<TRow>>[] {
+): FieldDef<ProjectedRow<TRow>>[] {
   return fields.map((f) => {
     const value = f.value;
     return {
@@ -35,7 +32,7 @@ export function fieldsForProjected<TRow>(
       type: f.type,
       options: f.options,
       groupable: f.groupable,
-      value: value ? (p: Projected<TRow>) => value(p.__row) : undefined,
+      value: value ? (p: ProjectedRow<TRow>) => value(p.__row) : undefined,
     };
   });
 }
@@ -49,9 +46,9 @@ export function fieldsForProjected<TRow>(
  * by index and preserve the incoming `projected` order.
  */
 export function bucketRowsByRootSection<TRow>(
-  projected: readonly Projected<TRow>[],
-  rootSections: readonly DataViewSection<Projected<TRow>>[],
-): Projected<TRow>[][] {
+  projected: readonly ProjectedRow<TRow>[],
+  rootSections: readonly DataViewSection<ProjectedRow<TRow>>[],
+): ProjectedRow<TRow>[][] {
   const ids = new Set(projected.map((p) => p.id));
   const parentById = new Map(projected.map((p) => [p.id, p.parentId]));
   const sectionByRootId = new Map<string, number>();
@@ -88,7 +85,7 @@ export function bucketRowsByRootSection<TRow>(
     return root;
   };
 
-  const buckets: Projected<TRow>[][] = rootSections.map(() => []);
+  const buckets: ProjectedRow<TRow>[][] = rootSections.map(() => []);
   for (const p of projected) {
     const si = sectionByRootId.get(resolveRoot(p.id));
     // Every climb ends at a projected root and every root sits in exactly one

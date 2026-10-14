@@ -82,6 +82,51 @@ by the guess's error.
 The threshold is exported because a drag-reordering consumer must know whether the
 body windows, to decide whether its `RankReorderProvider` needs `measuringAlways`.
 
+## Presentation: grid or outline
+
+`presentation` (default `"grid"`) is how the table looks. `grid` is the header
+row, a hairline under every row (`border-b border-border/30`), a faint hover
+tint and an accent fill on the selected row — the flat table's markup, byte for
+byte. `outline` is a sidebar's look: no header row (nor first-group labels;
+group headers pin at `stickyHeaderOffset`), no row rules, and each row is the
+tree row's rounded pill — `hover:bg-accent` on a row that is not selected, and
+the `--selected` tier on the selected one (`text-selected-foreground`,
+publishing `--scrim` and `--row-meta` like `Row` / `TreeRowChrome`). Both looks
+live in one `ROW_LOOK` table in `data-table.tsx`.
+
+## Nesting rows (`tree`)
+
+`DataTable` never builds a tree. A caller whose rows nest flattens them itself
+(the tree primitive's `useTreeModel().flat`) and passes the visible lines as
+`data` (or as each group's `rows`), plus `tree: DataTableTree`:
+
+- **`leading(row, cell)`** wraps the first column's cell in the row's tree head
+  (indent, guides, disclosure). Its result is the grid item.
+- **`fullSpan(row)`** draws a line as ONE `col-span-full` band instead of cells
+  (a lazy placeholder child) — no decoration hook, no actions, no checkbox;
+  `null` → an ordinary row. Windowed, the band is still measured.
+- **`containerRef` / `onKeyDown`** — the keyboard host (`useTreeKeyboard`), on
+  the grid, which takes `role="treegrid"` (its cells `role="gridcell"`).
+
+Under `tree` the table keeps `data` in the order given: `useDataTable`'s
+`keepOrder` turns its own sort and filter off (the sort state still paints the
+header arrows; sorting is the caller's, within sibling groups). Everything else
+about a nested row — its drag source and droppables, its gestures, its
+`data-tree-*` / ARIA attributes, its drop zones — arrives through
+`useRowDecoration`, the seam a flat table's drag reorder uses; a decoration's
+`props` are spread last, so they replace the row's own `onClick` / `tabIndex`
+when the caller passes no `rowActivation`. Absent `tree`, nothing changes.
+
+## Checkbox multi-select (`selection`)
+
+`selection: { actions? }` turns on the `multi-select` primitive over the rows:
+the table mounts a `MultiSelectProvider` (the range order is the painted rows'
+keys — a collapsed group's and a full-span line's excluded), a `SelectionBar`
+above the grid, and a `SelectionCheckbox` ahead of each row's first cell —
+inside the tree head when the rows nest, after the disclosure. The checkbox
+reveals on the row's `group/row-actions` hover and stops its own press from
+reaching the row (no activation, no drag start).
+
 ## Windowing + drag reorder compose
 
 `useRowDecoration` (the per-row hook seam that `data-view/table` uses to mount
@@ -116,6 +161,9 @@ body windows, to decide whether its `RankReorderProvider` needs `measuringAlways
     - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/link-gesture.activationProps`
+    - `primitives/multi-select.MultiSelectProvider`
+    - `primitives/multi-select.SelectionBar`
+    - `primitives/multi-select.SelectionCheckbox`
     - `primitives/row-actions.RowActions`
     - `primitives/row-actions.rowActionsAnchor`
     - `primitives/virtual-rows.useVirtualRows`
@@ -123,8 +171,11 @@ body windows, to decide whether its `RankReorderProvider` needs `measuringAlways
   - Exports (types):
     - `ColumnDef`
     - `DataTableGroup`
+    - `DataTablePresentation`
     - `DataTableProps`
     - `DataTableRowDecoration`
+    - `DataTableSelection`
+    - `DataTableTree`
     - `SortState`
   - Exports (values):
     - `DATA_TABLE_VIRTUALIZE_THRESHOLD`

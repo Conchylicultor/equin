@@ -11,18 +11,26 @@ order the tree ships — and honors `ViewState.sort` when a field sort is picked
 
 ## What it is
 
-A thin **adapter**, not a reimplementation. It projects the data-view rows plus
-the data source's `HierarchyConfig` onto the `tree` primitive's `TreeList`,
-reusing `buildTree`, subtree-preserving `filterTree` search, the anchor-only DnD
+A thin **adapter**, not a reimplementation. It runs data-view's shared
+hierarchy pipeline (`useHierarchyTree` — the same one the table runs when its
+source is hierarchical; see data-view's CLAUDE.md, "Hierarchy") and renders the
+result through the `tree` primitive's `TreeList`, reusing `buildTree`,
+subtree-preserving `filterTree` search, the anchor-only DnD
 `resolveDropParent`, and the `RowChrome` / `RenameInput` row primitives. The
 `tree` primitive stays the lower-level building block.
+
+The projection, filter, sort, group-by and alias semantics below are the
+pipeline's, so they hold for the nested table too; what is this view's own is
+the row (`DefaultRow` over `RowChrome`: the label, the chips or aligned
+columns, `options.trailing` / `rowAccent` / `rowMenu`), the hoisted toolbar and
+one `TreeList` per group section.
 
 ## How it works
 
 - **Projection** — each raw `TRow` becomes a `TreeItem`-shaped row
   (`{ id, parentId, rank, expanded, alias, __row }`) via the `HierarchyConfig`
   accessors. A map back to the original row lets `TreeList` callbacks recover the
-  concrete `TRow`. It lives in `web/internal/project-rows.ts` as a **pure**
+  concrete `TRow`. It lives in data-view's `web/internal/hierarchy/project-rows.ts` as a **pure**
   function (the view just memoizes it), so its rank arithmetic — notably the
   alias minting below — is directly testable without mounting the view.
 - **Row label** — the primary field (`FieldDef.primary` → first `text` → first,
@@ -107,7 +115,7 @@ reusing `buildTree`, subtree-preserving `filterTree` search, the anchor-only DnD
   unresolvable / value-less group field renders the exact
   ungrouped path. The pure pieces (orphan-rule roots, field adaptation onto the
   projected wrapper, children-follow-their-root bucketing) live in
-  `web/internal/group-rows.ts`, bun-tested alongside `project-rows`.
+  data-view's `web/internal/hierarchy/group-rows.ts`, bun-tested alongside `project-rows`.
 - **Expand-all, three scopes.** The hoisted whole-view button and `TreeList`'s
   own toolbar button are the same `useFlatExpandAll(rows, setExpanded)`; the
   grouped path only hoists it because each per-section list suppresses its own
@@ -256,11 +264,10 @@ CLAUDE.md ("Row tone").
 - Description: Tree view child for the data-view primitive: adapts the shared field schema + hierarchy config onto the tree primitive (buildTree, TreeList, RowChrome, RenameInput).
 - Web:
   - Contributes: `DataViewSlots.View` "Tree" → `TreeView`
-  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×25
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×22
     - `primitives/tree` ×9
     - `primitives/css/ui-kit` ×2
-    - `primitives/latest-ref` ×2
     - `primitives/collapsible.ExpandAllButton`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
@@ -270,6 +277,7 @@ CLAUDE.md ("Row tone").
     - `primitives/css/sticky.Sticky`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/icon-button.IconButton`
+    - `primitives/latest-ref.useLatestRef`
     - `ui/icons.Icon`
   - Exports (types): `TreeViewOptions`
 

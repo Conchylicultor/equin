@@ -31,8 +31,9 @@ source a derived or unsortable column's header would otherwise persist a rule
 the source refuses, replacing the list with its error. The host's `setSort`
 throws for a field outside the set. Pinned by `web/__tests__/header-sort.test.tsx`.
 
-The table has no leading slot: a field declaring `FieldDef.leading` is an
-ordinary column here (see `data-view/CLAUDE.md`, "Leading field").
+Flat, the table has no leading slot: a field declaring `FieldDef.leading` is an
+ordinary column here (see `data-view/CLAUDE.md`, "Leading field"). Nested, it
+has one (below).
 
 Surface options reach `DataTable` straight through: `viewOptions.table`
 (`TableViewOptions.columnHeader`), `FieldDef.header` (mapped as
@@ -54,6 +55,74 @@ body's anchoring (`KeepAnchorAcross`) alone — the `isPaged` behaviour, not the
 height-keeping one. Drawing them needs a leading full-span row on
 `DataTableGroup` (a `data-table` change).
 
+## Nesting (a hierarchical source)
+
+`TableView` is two components chosen by `props.hierarchy`: `FlatTableView`
+(everything above, unchanged) and `NestedTableView`. The view does **not**
+declare `hierarchical: true` — it is offered on every source and nests only
+when the source has a `hierarchy`; it declares `nestsHierarchy: true`, which
+tells the host to apply no fold and no flat manual order to it there (see
+data-view's CLAUDE.md, "Hierarchy"). A tree is a table with no columns.
+
+**The pipeline** (`components/nested-table-view.tsx`): data-view's
+`useHierarchyTree` (projection with aliases → the filter under its
+`filterScope` → a stable global sort → group-by over the roots, every callback
+alias-aware — shared with the tree view) feeds the tree primitive's
+`useTreeModel`, whose `flat` — the visible lines in paint order — becomes
+`DataTable`'s rows. `DataTable` never builds a tree; it draws the lines it is
+given, in that order (its own sort and filter are off under `tree`). The table
+bypasses `useDataViewSections`: no flat sort, no fold, no aggregate, no paging
+(a hierarchy is never paged) and no flat `manualOrder` (the host withholds both,
+`nestsHierarchy`) — a nested row's order is its rank, moved by the tree's own
+drag.
+
+- **Sort** applies within siblings (the stable global sort `buildTree`
+  re-groups per parent). A header click is the flat table's
+  (`mapPrimary` + `setSort`, secondary rules kept). Any sort suspends the drag.
+- **Search** is the tree's subtree-preserving `filterTree` over the host's
+  `searchAccessor` (else the primary field's text): every match keeps its
+  ancestor chain, forced open.
+- **Rows** are tree rows through `DataTable`'s seams, built from the tree
+  primitive's pieces: `useRowDecoration` calls `useTreeRow` (drag source, the
+  before / after / into droppables, reveal-on-select) and spreads
+  `treeRowGestures` (select — a link click for a link row — open, click-opens),
+  `data-tree-row` / `data-tree-id` / `aria-level` / `aria-expanded`, and draws
+  `TreeDropZones` as the row overlay; `DataTable.tree.leading` wraps the first
+  cell in the tree head (`treeRowIndentStyle` + `TreeLeading`: guides, the
+  `Tree.Disclosure` slot when the row has an icon, else a chevron);
+  `tree.fullSpan` draws a lazy listing's placeholder (`TreeChildPlaceholder`) as
+  one full-span line; `useTreeKeyboard` runs on the grid (`role="treegrid"`),
+  rows focusable exactly when the view has an open gesture.
+- **The leading field** (`FieldDef.leading`) renders in the tree head's icon
+  slot, ahead of `options.leadingIcon`, and is no column.
+- **Trailing cluster**: the item actions (persistent zone in the reserved track,
+  as flat), then the tree's own chrome — fold / unfold the subtree, add a child
+  (`hierarchy.onCreate`). An alias (reference) row has none, no drag, read-only
+  cells and a link glyph; its `data-row-key` is left off (the real row marks it).
+- **Group-by**: the roots partition, every descendant follows its root; each
+  section's slice of the ONE flattened tree is a `DataTableGroup` (not
+  windowed). One `RankReorderDndContext` spans every section, so a drop into
+  another section is refused in `onDragEnd`.
+- **Windowing**: ungrouped, above `DATA_TABLE_VIRTUALIZE_THRESHOLD` visible
+  lines; the drag source and the selected row stay mounted
+  (`keepMountedRowKeys`), the droppables re-measured every frame.
+- **Options** (`TableViewOptions`, read only when nested): `defaultExpanded`,
+  `guides`, `rootId`, `expandOnActivate`, `openOnActivate`, `leadingIcon`,
+  `dragOverlay`; `presentation` applies to both modes.
+
+**`presentation: "grid" | "outline"`** is `DataTable.presentation`: `grid` is
+the header row and ruled rows; `outline` (a sidebar's look) drops the header and
+the rules and draws each row as the tree row's pill (`bg-selected` /
+`--selected-foreground` / `--row-meta`).
+
+Not here yet (the tree view still owns them): the tree view's `trailing`,
+`rowAccent`, `rowMenu`, `labelClassName`, `addLabel` (the root Add), the
+expand-all toolbar (`expandAll`, `toolbarStart`) and the per-group fold toggle;
+`useOptionalRowControls` reads nothing inside a table row. Pinned by
+`web/__tests__/nested-*.test.tsx` (filter scope, row keys, guides and
+presentation, lazy children / open / keys / link rows, leading field, sort
+within siblings and search keeping ancestors).
+
 The view passes nothing for the row inset: `DataTable` rows follow the ambient
 rail unconditionally, which is the same rail the rest of a DataView's bands read —
 see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
@@ -62,15 +131,20 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
 
 ## Plugin reference
 
-- Description: Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
+- Description: Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
 - Web:
   - Contributes: `DataViewSlots.View` "Table" → `TableView`
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×19
+  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×23
+    - `primitives/tree` ×11
     - `primitives/data-table` ×6
-    - `primitives/rank-reorder` ×2
+    - `primitives/rank-reorder` ×3
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/icon-button.IconButton`
+    - `ui/icons.Icon`
   - Exports (types): `TableViewOptions`
 - Core:
   - Exports (types): `TableViewOptions`

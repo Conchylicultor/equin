@@ -22,11 +22,19 @@ import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  MultiSelectProvider,
+  SelectionBar,
+  SelectionCheckbox,
+} from "@plugins/primitives/plugins/multi-select/web";
 import type {
   ColumnDef,
   DataTableGroup,
+  DataTablePresentation,
   DataTableProps,
   DataTableRowDecoration,
+  DataTableSelection,
+  DataTableTree,
 } from "./types";
 import { useDataTable } from "./use-data-table";
 import {
@@ -79,6 +87,36 @@ function composeRefs(
  *  probed real row, then by the first row measured (`useVirtualRows`). */
 const ROW_ESTIMATE = 36;
 
+/**
+ * A row's look per presentation. `grid` is the table's own (a hairline under
+ * every row, a faint hover tint, an accent fill when selected); `outline` is the
+ * tree row's pill, on the tree row's tokens. Each tint co-publishes itself as
+ * `--scrim` (the colour a pinned action cluster's mask paints), and the selected
+ * pill publishes `--row-meta` for its secondary text — the `Row` contract.
+ */
+const ROW_LOOK: Record<
+  DataTablePresentation,
+  { base: string; selected: string }
+> = {
+  grid: {
+    base: "col-span-full grid grid-cols-subgrid items-center border-b border-border/30 text-caption hover:bg-accent/30",
+    selected: "bg-accent",
+  },
+  outline: {
+    base: "col-span-full grid grid-cols-subgrid items-center rounded-md text-caption",
+    selected:
+      "bg-selected text-selected-foreground [--scrim:var(--selected)] [--row-meta:var(--selected-meta-foreground)]",
+  },
+};
+/** The outline pill's hover tint — only on a row that is not selected, so a
+ *  selected row does not hover to a different tone. */
+const OUTLINE_HOVER = "hover:bg-accent hover:[--scrim:var(--accent)]";
+
+/** The selection checkbox's hover reveal: `SelectionCheckbox` reveals on a BARE
+ *  `group-hover`, and a table row's named group is the row-actions anchor. */
+const CHECKBOX_REVEAL =
+  "group-hover/row-actions:opacity-100 group-hover/row-actions:pointer-events-auto";
+
 export function DataTable<TRow>({
   data,
   columns,
@@ -100,6 +138,9 @@ export function DataTable<TRow>({
   stickyHeaderOffset = "0px",
   columnHeader = "row",
   density = "comfortable",
+  presentation = "grid",
+  tree,
+  selection,
 }: DataTableProps<TRow>) {
   const { rows, sortState, toggleSort } = useDataTable(
     data,
@@ -107,6 +148,9 @@ export function DataTable<TRow>({
     filter,
     controlledSort,
     onToggleSort,
+    // A tree's lines arrive in paint order; reordering them would tear
+    // children from their parents.
+    !!tree,
   );
 
   // Measure the sticky column-header row so group headers can stack directly
@@ -123,6 +167,19 @@ export function DataTable<TRow>({
   const hasFooter = groups
     ? groups.some((g) => g.footer != null)
     : footer != null;
+
+  // The rows a checkbox can select, in paint order — the multi-select range
+  // order. A collapsed group paints none; a full-span line is no row.
+  const selectableKeys = selection
+    ? (groups
+        ? groups.flatMap((g) =>
+            g.collapsed ? [] : g.rows.map((row) => ({ row })),
+          )
+        : rows.map((row) => ({ row }))
+      ).flatMap(({ row }, i) =>
+        tree?.fullSpan?.(row) != null ? [] : [rowKey(row, i)],
+      )
+    : [];
 
   if (bodyRowCount === 0 && !hasFooter) {
     return (
@@ -152,7 +209,11 @@ export function DataTable<TRow>({
   // ride. Otherwise it falls back to the header row (see DataTableColumnHeader).
   const firstLabelled = columns.findIndex((col) => !!col.header);
   const leadSpan = firstLabelled === -1 ? columns.length : firstLabelled;
+  // An outline has no column labels at all — neither a header row nor labels
+  // on the first group.
+  const showHeader = presentation === "grid";
   const labelsOnFirstGroup =
+    showHeader &&
     columnHeader === "first-group" &&
     !!groups &&
     groups.length > 0 &&
@@ -213,40 +274,70 @@ export function DataTable<TRow>({
     row: TRow,
     i: number,
     measure?: { ref: (el: Element | null) => void; index: number },
-  ) => (
-    <DataTableRow
-      key={rowKey(row, i)}
-      row={row}
-      index={i}
-      columns={columns}
-      rowKey={rowKey}
-      selectedRowId={selectedRowId}
-      rowActivation={rowActivation}
-      onRowOpen={onRowOpen}
-      rowActions={rowActions}
-      rowPersistentActions={rowPersistentActions}
-      useRowDecoration={useDecorate}
-      measure={measure}
-      rowPad={rowPad}
-    />
-  );
+  ) => {
+    // A tree's full-span line (a lazy placeholder) is no row: no decoration
+    // hook, no cells, no actions — one band across every track.
+    const span = tree?.fullSpan?.(row);
+    if (span != null) {
+      return (
+        <div
+          key={rowKey(row, i)}
+          ref={measure?.ref}
+          data-index={measure?.index}
+          // eslint-disable-next-line layout/no-adhoc-layout -- full-span line spanning the subgrid table's column tracks (a tree's placeholder child)
+          className="col-span-full rail-follow"
+        >
+          {span}
+        </div>
+      );
+    }
+    return (
+      <DataTableRow
+        key={rowKey(row, i)}
+        row={row}
+        index={i}
+        columns={columns}
+        rowKey={rowKey}
+        selectedRowId={selectedRowId}
+        rowActivation={rowActivation}
+        onRowOpen={onRowOpen}
+        rowActions={rowActions}
+        rowPersistentActions={rowPersistentActions}
+        useRowDecoration={useDecorate}
+        measure={measure}
+        rowPad={rowPad}
+        presentation={presentation}
+        tree={tree}
+        selectable={!!selection}
+      />
+    );
+  };
 
   // Group headers pin flush beneath the sticky column header (which itself pins
   // at `stickyHeaderOffset`, below any consumer chrome such as a DataView toolbar).
   // Without a header row (labels on the first group) they pin at the offset.
-  const groupHeaderTop = labelsOnFirstGroup
-    ? stickyHeaderOffset
-    : `calc(${stickyHeaderOffset} + ${stickyOffsetPx(headerHeight)}px)`;
+  const groupHeaderTop =
+    labelsOnFirstGroup || !showHeader
+      ? stickyHeaderOffset
+      : `calc(${stickyHeaderOffset} + ${stickyOffsetPx(headerHeight)}px)`;
 
-  return (
+  const table = (
     <ControlSizeProvider size={controlSize}>
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- subgrid table host: a dynamic gridTemplateColumns grid whose rows are full-span subgrids (no Frame/Grid equivalent) */}
-      <div className="grid gap-x-sm" style={{ gridTemplateColumns: template }}>
+      <div
+        // eslint-disable-next-line layout/no-adhoc-layout -- subgrid table host: a dynamic gridTemplateColumns grid whose rows are full-span subgrids (no Frame/Grid equivalent)
+        className="grid gap-x-sm"
+        style={{ gridTemplateColumns: template }}
+        // Nesting rows make the grid a treegrid, and the grid the keyboard
+        // host: a key on a focused row walks the painted lines.
+        role={tree ? "treegrid" : undefined}
+        ref={tree?.containerRef}
+        onKeyDown={tree?.onKeyDown}
+      >
         {/* The column-header row pins to the scroll viewport at `stickyHeaderOffset`
           (0 by default; a DataView passes its toolbar height so the header stacks
           BELOW the toolbar instead of hiding behind it). `mask` follows the
           embedding surface so rows never show through the pinned bar. */}
-        {labelsOnFirstGroup ? null : (
+        {labelsOnFirstGroup || !showHeader ? null : (
           <Sticky
             as="div"
             ref={headerRef}
@@ -290,6 +381,31 @@ export function DataTable<TRow>({
       </div>
     </ControlSizeProvider>
   );
+  return selection ? (
+    <WithSelection selection={selection} orderedIds={selectableKeys}>
+      {table}
+    </WithSelection>
+  ) : (
+    table
+  );
+}
+
+/** The multi-select provider over the table's rows, with its bar above them. */
+function WithSelection({
+  selection,
+  orderedIds,
+  children,
+}: {
+  selection: DataTableSelection;
+  orderedIds: readonly string[];
+  children: ReactNode;
+}): ReactNode {
+  return (
+    <MultiSelectProvider orderedIds={orderedIds}>
+      <SelectionBar actions={selection.actions} />
+      {children}
+    </MultiSelectProvider>
+  );
 }
 
 /**
@@ -312,6 +428,9 @@ function DataTableRow<TRow>({
   useRowDecoration,
   measure,
   rowPad,
+  presentation,
+  tree,
+  selectable,
 }: {
   row: TRow;
   index: number;
@@ -328,6 +447,10 @@ function DataTableRow<TRow>({
   measure?: { ref: (el: Element | null) => void; index: number };
   /** The row block-padding class, from the table's density. */
   rowPad: "py-row" | "py-row-compact";
+  presentation: DataTablePresentation;
+  tree: DataTableTree<TRow> | undefined;
+  /** Draw the multi-select checkbox ahead of the first cell. */
+  selectable: boolean;
 }): ReactNode {
   const decoration = useRowDecoration(row, index);
   // A row whose activation is a link reads the link gestures: ⌘/middle-click
@@ -347,6 +470,8 @@ function DataTableRow<TRow>({
   // target, so the two refs compose (they were mutually exclusive back when
   // decoration disabled virtualization).
   const rowRef = composeRefs(decorationRef, measure?.ref);
+  const look = ROW_LOOK[presentation];
+  const selected = key === selectedRowId;
   return (
     <div
       ref={rowRef}
@@ -356,7 +481,8 @@ function DataTableRow<TRow>({
       data-row-key={key}
       // eslint-disable-next-line layout/no-adhoc-layout -- CSS subgrid row inheriting the outer grid's column tracks (no Frame/Grid equivalent for subgrid)
       className={cn(
-        "col-span-full grid grid-cols-subgrid items-center border-b border-border/30 text-caption hover:bg-accent/30",
+        look.base,
+        presentation === "outline" && !selected && OUTLINE_HOVER,
         // Same rail as the column header and the group headers — see there.
         rowPad,
         "rail-follow",
@@ -364,7 +490,7 @@ function DataTableRow<TRow>({
         // hosts the decoration overlay (a positioned row with `z-index: auto`
         // lays out and stacks identically, so it is inert on plain rows).
         rowActionsAnchor,
-        key === selectedRowId && "bg-accent",
+        selected && look.selected,
         (rowActivation || onRowOpen) && "cursor-pointer",
         decorationClassName,
       )}
@@ -417,15 +543,37 @@ function DataTableRow<TRow>({
           content. Scoped to the cells only — the trailing rowActions cluster
           keeps its own flow layout. */}
       <SingleLineProvider value={true}>
-        {columns.map((col) => (
-          <AlignedCell key={col.id} align={col.align}>
-            {col.cell
-              ? col.cell(row)
-              : col.value
-                ? String(col.value(row) ?? "")
-                : null}
-          </AlignedCell>
-        ))}
+        {columns.map((col, c) => {
+          const cell = (
+            <AlignedCell
+              key={col.id}
+              align={col.align}
+              role={tree ? "gridcell" : undefined}
+            >
+              {col.cell
+                ? col.cell(row)
+                : col.value
+                  ? String(col.value(row) ?? "")
+                  : null}
+            </AlignedCell>
+          );
+          if (c > 0 || (!tree && !selectable)) return cell;
+          // The first cell carries the row's head: the checkbox ahead of it,
+          // and — when the rows nest — the tree head around both.
+          const head = selectable ? (
+            <Stack key={col.id} direction="row" gap="xs" align="center">
+              <SelectionToggle id={key} />
+              {cell}
+            </Stack>
+          ) : (
+            cell
+          );
+          return tree ? (
+            <Fragment key={col.id}>{tree.leading(row, head)}</Fragment>
+          ) : (
+            head
+          );
+        })}
       </SingleLineProvider>
       {/* `pin={null}`: the cluster stays IN FLOW, in the reserved trailing
           `auto` track. A table column is genuine flow — an overlaying cluster
@@ -457,6 +605,23 @@ function DataTableRow<TRow>({
       </CompactActionsCell>
       {decorationOverlay}
     </div>
+  );
+}
+
+/**
+ * A row's multi-select checkbox. Its own press never reaches the row: a click
+ * would activate the row, a pointer-down start its drag.
+ */
+function SelectionToggle({ id }: { id: string }): ReactNode {
+  return (
+    <Center
+      as="span"
+      axis="both"
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      <SelectionCheckbox id={id} className={CHECKBOX_REVEAL} />
+    </Center>
   );
 }
 
@@ -715,13 +880,16 @@ function alignClass(align: ColumnDef<unknown>["align"]): string | undefined {
  */
 function AlignedCell({
   align,
+  role,
   children,
 }: {
   align: ColumnDef<unknown>["align"];
+  /** `gridcell` inside a treegrid; absent in a flat table. */
+  role?: "gridcell";
   children: ReactNode;
 }) {
   const cell = (
-    <Text as="div" className={alignClass(align)}>
+    <Text as="div" role={role} className={alignClass(align)}>
       {children}
     </Text>
   );

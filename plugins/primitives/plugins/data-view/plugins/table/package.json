@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-primitives-data-view-table",
-  "description": "Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.",
+  "description": "Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.",
   "private": true,
   "version": "0.0.1"
 }

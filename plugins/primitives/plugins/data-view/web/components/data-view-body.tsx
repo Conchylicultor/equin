@@ -452,7 +452,15 @@ function DataViewBodyInner<TRow>(
   // zeroes `query`, and carried through that branch like `visibleFields`.
   // A view that draws no fold lines (the tree) gets no fold at all — applying
   // one would hold its live paging for rows it never set aside.
-  const activeSupportsFold = activeInstance.viewType.supportsFold !== false;
+  // The active view draws THIS source as a tree: a hierarchical view-type, or
+  // one that nests whenever the source has a hierarchy (the table). Nested, a
+  // view has no flat section of rows to fold and no flat rank to drag.
+  const activeNests =
+    hierarchy != null &&
+    (activeInstance.viewType.hierarchical === true ||
+      activeInstance.viewType.nestsHierarchy === true);
+  const activeSupportsFold =
+    activeInstance.viewType.supportsFold !== false && !activeNests;
   const fold = activeSupportsFold ? effectiveFold(activeState) : undefined;
   // Which sections' fold lines are open. Ephemeral on purpose — in memory, keyed
   // by the view it was opened in, so switching views or reloading re-closes
@@ -564,7 +572,7 @@ function DataViewBodyInner<TRow>(
   // body at all (list/table opt in; gallery/tree do not). It says nothing about
   // whether an order is *available* — see `manualOrderActive` below.
   const activeSupportsManualOrder =
-    !!activeInstance.viewType.supportsManualOrder;
+    !!activeInstance.viewType.supportsManualOrder && !activeNests;
   // Whether the sort control applies at all is the SORT CONTROL's own
   // `isApplicable` now (`activeSupportsSort && sortableFields.length > 0`, both
   // published on the controls context) — the host no longer decides which
@@ -784,10 +792,7 @@ function DataViewBodyInner<TRow>(
     fields,
     resolveOperatorSet,
   );
-  const rootsScoped =
-    activeState.filterScope === "roots" &&
-    hierarchy != null &&
-    activeInstance.viewType.hierarchical === true;
+  const rootsScoped = activeState.filterScope === "roots" && activeNests;
   const hasNoRows = useMemo(() => {
     if (!decideEmptiness) return false;
     // A live origin already filtered in SQL — and a sectioned one says how

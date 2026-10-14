@@ -1,7 +1,7 @@
 /**
- * Pure unit tests for the tree view's row projection (`projectRows`) — the
+ * Pure unit tests for the hierarchical views' row projection (`projectRows`) — the
  * alias (reference) rank minting in particular.
- * Run with `bun test plugins/primitives/plugins/data-view/plugins/tree`.
+ * Run with `./singularity test plugins/primitives/plugins/data-view`.
  *
  * No DOM, no React render: the projection and the tree's drop resolution are
  * both pure, so these are bun:test (not the jsdom vitest suite).
@@ -10,7 +10,7 @@
 import { describe, expect, test } from "bun:test";
 import { resolveDropParent } from "@plugins/primitives/plugins/tree/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import type { HierarchyConfig } from "@plugins/primitives/plugins/data-view/core";
+import type { HierarchyConfig } from "../../../core";
 import { projectRows, realNodeId } from "./project-rows";
 
 /**

@@ -76,6 +76,12 @@ export type { LeadingSlotProps } from "./components/leading-slot";
 export { FilterValueInput } from "./components/filter/filter-value-input";
 export { ChipSelectFilterInput } from "./components/filter/chip-select-filter-input";
 export { useFlatRows } from "./internal/use-flat-rows";
+export { useHierarchyTree } from "./internal/hierarchy/use-hierarchy-tree";
+export type {
+  HierarchyTree,
+  HierarchyTreeOptions,
+} from "./internal/hierarchy/use-hierarchy-tree";
+export type { ProjectedRow } from "./internal/hierarchy/project-rows";
 export { makeSortComparator } from "./internal/sort-rows";
 export {
   useDataViewSections,

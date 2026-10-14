@@ -12,6 +12,12 @@ export function useDataTable<TRow>(
   filter: string | undefined,
   controlledSort?: SortState | null,
   onToggleSort?: (columnId: string) => void,
+  /**
+   * The rows are already in their final order (a flattened tree, in paint
+   * order): the sort state still drives the header arrows, but nothing
+   * reorders or filters `data`.
+   */
+  keepOrder = false,
 ) {
   const [internalSort, setInternalSort] = useState<SortState | null>(null);
 
@@ -34,13 +40,12 @@ export function useDataTable<TRow>(
   );
 
   const rows = useMemo(() => {
+    if (keepOrder) return data;
     let result = [...data];
 
     if (filter) {
       const lc = filter.toLowerCase();
-      const valueFns = columns
-        .filter((c) => c.value)
-        .map((c) => c.value!);
+      const valueFns = columns.filter((c) => c.value).map((c) => c.value!);
       result = result.filter((row) =>
         valueFns.some((fn) =>
           String(fn(row) ?? "")
@@ -67,7 +72,7 @@ export function useDataTable<TRow>(
     }
 
     return result;
-  }, [data, columns, filter, sortState]);
+  }, [data, columns, filter, sortState, keepOrder]);
 
   return { rows, sortState, toggleSort };
 }

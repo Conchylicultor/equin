@@ -55,6 +55,15 @@ export interface DataViewContribution extends ViewTypeMeta {
    *  list/table opt IN (`true`); gallery/tree do not. When false the host never
    *  passes `manualOrder` into the view and keeps the Sort control. */
   supportsManualOrder?: boolean;
+  /**
+   * Whether this view NESTS its rows when the source has a `hierarchy` while
+   * staying available on a flat source (the table) — unlike `hierarchical`,
+   * which hides a view-type from flat sources. Over a hierarchical source the
+   * host then treats it as a hierarchical view: no fold and no flat manual order
+   * (a nested row's order is its rank, moved by the tree's own drag), and its
+   * `filterScope` decides `hideWhenEmpty`. Default false.
+   */
+  nestsHierarchy?: boolean;
   /** Under an `overlay` toolbar arrangement, whether this view starts at the
    *  surface's very top-left edge, UNDER the floating band and aside (a map
    *  that is the surface's canvas). Default false: the host insets the view by

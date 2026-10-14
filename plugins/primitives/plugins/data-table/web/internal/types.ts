@@ -1,4 +1,9 @@
-import type { CSSProperties, ReactNode } from "react";
+import type {
+  CSSProperties,
+  KeyboardEvent,
+  ReactNode,
+  RefCallback,
+} from "react";
 import type { ControlSize } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { SortState } from "./use-data-table";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
@@ -83,6 +88,58 @@ export type DataTableColumnHeader = "row" | "first-group";
  * list. The control density is a separate axis ({@link DataTableProps.controlSize}).
  */
 export type DataTableDensity = "comfortable" | "compact";
+
+/**
+ * How the table looks.
+ *
+ * - **`"grid"`** (default) — the column-header row, a hairline under every row,
+ *   a faint hover tint and an accent fill on the selected row.
+ * - **`"outline"`** — a sidebar's look: no header row and no row rules; each
+ *   row is a rounded pill tinted on hover, the selected one in the `--selected`
+ *   tier (its text `--selected-foreground`, its secondary cells
+ *   `--selected-meta-foreground`) — the tree row's tokens, so a table drawn as
+ *   an outline reads like the tree it replaces.
+ */
+export type DataTablePresentation = "grid" | "outline";
+
+/**
+ * Rows that nest. `DataTable` never builds a tree: the caller passes the
+ * already-flattened visible lines as `data` (in paint order — the table keeps
+ * that order and never sorts or filters it) and this prop says how a line
+ * differs from a flat row. The row-level wiring (drag source, drop zones, row
+ * gestures, `data-tree-*` / ARIA attributes) arrives through
+ * `useRowDecoration`, the same per-row seam a flat table's drag reorder uses.
+ */
+export interface DataTableTree<TRow> {
+  /**
+   * Wraps the first column's cell in the row's tree head — indent, guides,
+   * disclosure. The returned node is the grid item, so it should be a box that
+   * lets the cell shrink (`min-w-0`).
+   */
+  leading: (row: TRow, cell: ReactNode) => ReactNode;
+  /**
+   * A line drawn as ONE full-span row instead of cells — an open lazy row's
+   * loading / failed / empty placeholder child. `null` → an ordinary row. A
+   * full-span line takes no decoration, no actions and no selection.
+   */
+  fullSpan?: (row: TRow) => ReactNode | null;
+  /** The keyboard host's ref (`useTreeKeyboard`), attached to the grid. */
+  containerRef?: RefCallback<HTMLElement>;
+  /** The keyboard host's key handler, on the grid (rows are its targets). */
+  onKeyDown?: (e: KeyboardEvent<HTMLElement>) => void;
+}
+
+/**
+ * Checkbox multi-select over the table's rows, through the `multi-select`
+ * primitive: the table mounts its provider (the range order is the rows as
+ * painted), a `SelectionBar` above the rows, and a checkbox ahead of each row's
+ * first cell — inside the tree head when the rows nest.
+ */
+export interface DataTableSelection {
+  /** Bulk-action buttons in the `SelectionBar` (rendered inside the provider,
+   *  so they may call `useMultiSelect()`). */
+  actions?: ReactNode;
+}
 
 export interface DataTableProps<TRow> {
   data: readonly TRow[];
@@ -172,6 +229,16 @@ export interface DataTableProps<TRow> {
   columnHeader?: DataTableColumnHeader;
   /** Row rhythm — see {@link DataTableDensity}. Default `"comfortable"`. */
   density?: DataTableDensity;
+  /** How the table looks — see {@link DataTablePresentation}. Default `"grid"`. */
+  presentation?: DataTablePresentation;
+  /**
+   * Rows that nest — see {@link DataTableTree}. Present → `data` (or each
+   * group's `rows`) is the flattened visible tree, drawn in the order given, and
+   * the grid is a `treegrid`. Absent → a flat table, unchanged.
+   */
+  tree?: DataTableTree<TRow>;
+  /** Checkbox multi-select — see {@link DataTableSelection}. */
+  selection?: DataTableSelection;
 }
 
 /**

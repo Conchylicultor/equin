@@ -1,4 +1,4 @@
-import type { HierarchyConfig } from "@plugins/primitives/plugins/data-view/core";
+import type { HierarchyConfig } from "../../../core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 
 /**
@@ -8,7 +8,7 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
  * `alias` marks a reference node synthesized from `hierarchy.getAliasParents`
  * — the same `__row` rendered as a read-only leaf under an additional parent.
  */
-export type Projected<TRow> = {
+export type ProjectedRow<TRow> = {
   id: string;
   parentId: string | null;
   rank: Rank;
@@ -74,10 +74,10 @@ export function projectRows<TRow>(args: {
   hierarchy: HierarchyConfig<TRow>;
   expanded: Record<string, boolean> | undefined;
   defaultExpanded: boolean | undefined;
-}): { projected: Projected<TRow>[]; originalById: Map<string, TRow> } {
+}): { projected: ProjectedRow<TRow>[]; originalById: Map<string, TRow> } {
   const { rows, rowKey, hierarchy, expanded, defaultExpanded } = args;
   const byId = new Map<string, TRow>();
-  const out: Projected<TRow>[] = [];
+  const out: ProjectedRow<TRow>[] = [];
   // Per-parent max REAL rank, accumulated in the real pass so the alias pass can
   // mint after each host parent's last real child.
   const maxRankByParent = new Map<string, Rank>();
