@@ -20259,8 +20259,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `collectImportGraph`
               - `collectTokenGroupVars`
               - `committedRegistryBundle`
+              - `compositionFilteredRegistries`
               - `compositionRegistryFileName`
               - `compositionRegistryPath`
+              - `compositionRegistryRedirects`
               - `computeEagerTier`
               - `customUtilitiesManifestPath`
               - `dataViewsManifestPath`
@@ -20317,6 +20319,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `renderDataViewsManifest`
               - `renderDetailsDoc`
               - `renderEagerTierManifest`
+              - `renderEmptyCollectedDirRegistry`
               - `renderExemptRuleIds`
               - `renderFieldsEagerManifest`
               - `renderIconManifest`

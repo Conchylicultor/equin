@@ -30,6 +30,23 @@ The child installs the orphan guard, and its ppid is the `release` process. The
 guard is therefore inert unless `release` itself dies — in which case the child
 exiting, and dropping `.build.lock` with it, is exactly right.
 
+## Every compile sees the composition's registries, not the committed ones
+
+`bun build --compile` bundles everything an entrypoint reaches, npm included,
+and some packages cannot be bundled (`playwright-core` requires an uninstalled
+`chromium-bidi`). The committed `<dir>.generated.ts` registries list the whole
+app, so an entrypoint reaching one bundles every plugin's contributions — the
+launcher reaching the unfiltered `deps` registry is how Playwright broke the
+2026-10-14 website release. So every compile resolves each committed registry
+with a filtered sibling (`compositionRegistryRedirects`, codegen) to the
+composition's own, through `registryRedirectPlugin` in
+`shared/entrypoints.ts` — matched on the resolved file, applied to every
+entrypoint, never wired per call site.
+
+The `release:fixed-entrypoints-bundle` check bundles the launcher, pg-start,
+pgbouncer-start and teardown with those registries empty, npm resolved, so what
+no composition can shrink fails at build time rather than at deploy time.
+
 ## `--platform` help text restates the tag list
 
 `PLATFORM_TAGS` lives in `@plugins/release/core`, whose barrel reaches zod, so a

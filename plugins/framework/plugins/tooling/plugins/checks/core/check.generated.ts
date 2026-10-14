@@ -25,6 +25,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "database/plugins/migrations", id: "database.migrations", loader: () => import("@plugins/database/plugins/migrations/check"), dependsOn: ["database/plugins/derived-updated-at", "infra/plugins/namespace", "infra/plugins/paths"] },
   { pluginPath: "debug/plugins/sentinel", id: "debug.sentinel", loader: () => import("@plugins/debug/plugins/sentinel/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli", id: "framework.cli", loader: () => import("@plugins/framework/plugins/cli/check"), dependsOn: [] },
+  { pluginPath: "framework/plugins/cli/plugins/release", id: "framework.cli.release", loader: () => import("@plugins/framework/plugins/cli/plugins/release/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/resource-runtime", id: "framework.resource-runtime", loader: () => import("@plugins/framework/plugins/resource-runtime/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/boundaries", id: "framework.tooling.boundaries", loader: () => import("@plugins/framework/plugins/tooling/plugins/boundaries/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/app-css-utilities-in-sync", id: "framework.tooling.checks.app-css-utilities-in-sync", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/app-css-utilities-in-sync/check"), dependsOn: [] },

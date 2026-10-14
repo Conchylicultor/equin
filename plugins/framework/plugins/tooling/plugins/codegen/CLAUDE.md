@@ -89,8 +89,10 @@ rather than reading as "not preloaded". A factory's own declaration
     - `collectImportGraph`
     - `collectTokenGroupVars`
     - `committedRegistryBundle`
+    - `compositionFilteredRegistries`
     - `compositionRegistryFileName`
     - `compositionRegistryPath`
+    - `compositionRegistryRedirects`
     - `computeEagerTier`
     - `customUtilitiesManifestPath`
     - `dataViewsManifestPath`
@@ -147,6 +149,7 @@ rather than reading as "not preloaded". A factory's own declaration
     - `renderDataViewsManifest`
     - `renderDetailsDoc`
     - `renderEagerTierManifest`
+    - `renderEmptyCollectedDirRegistry`
     - `renderExemptRuleIds`
     - `renderFieldsEagerManifest`
     - `renderIconManifest`

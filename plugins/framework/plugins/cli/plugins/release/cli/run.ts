@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 import {
   REPO_ROOT,
@@ -41,8 +41,15 @@ import { appIconToSvg } from "@plugins/apps-core/plugins/app-icon/core";
 import { runAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/server";
 import {
   compositionRegistryFileName,
+  compositionRegistryRedirects,
   propagateConfigToUser,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  FIXED_ENTRIES,
+  registryRedirectPlugin,
+  SERVER_ENTRY,
+  type RegistryRedirects,
+} from "../shared/entrypoints";
 import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
 import {
   declaredDeps,
@@ -101,15 +108,8 @@ import {
 // PACKED <run-id> — see @plugins/release/plugins/bundles for why it is claimed
 // only after packing, and never by a `--dev` or tauri run.
 
-const SERVER_ENTRY = "plugins/framework/plugins/server-core/bin/index.ts";
-const LAUNCH_ENTRY = "plugins/infra/plugins/launcher/bin/launch.ts";
-const PG_START_ENTRY = "plugins/database/plugins/embedded/scripts/start.ts";
-const PGBOUNCER_START_ENTRY =
-  "plugins/database/plugins/pgbouncer/scripts/start.ts";
-// Tauri-only: the desktop shell runs this on app exit to stop the detached
-// gateway + PG daemons it brought up via `launch`. The web self-extractor has
-// no host process to drive teardown, so it ships no teardown binary.
-const TEARDOWN_ENTRY = "plugins/infra/plugins/launcher/bin/teardown.ts";
+// The compiled entrypoints live in `../shared/entrypoints` (SERVER_ENTRY,
+// FIXED_ENTRIES), which the `release:fixed-entrypoints-bundle` check reads too.
 
 // The cluster sentinel runs its sampler + duress-latch lifecycle on a Bun
 // Worker. `bun --compile` does not trace/embed a `new Worker(new URL(...))`
@@ -358,12 +358,18 @@ async function compile(opts: {
   outfile: string;
   root: string;
   platform: PlatformTag;
+  // Every committed registry → the composition's filtered sibling
+  // (`compositionRegistryRedirects`). Required, and applied to EVERY entrypoint:
+  // which registries an entrypoint reaches is a fact of its import graph, not
+  // something a call site can be trusted to list. The launcher reaching the
+  // unfiltered `deps` registry is how Playwright got into the website release.
+  registries: RegistryRedirects;
   aliasOverride?: { alias: string; target: string };
 }): Promise<void> {
-  const { entry, outfile, root, platform, aliasOverride } = opts;
+  const { entry, outfile, root, platform, registries, aliasOverride } = opts;
   mkdirSync(dirname(outfile), { recursive: true });
 
-  const plugins: Bun.BunPlugin[] = [];
+  const plugins: Bun.BunPlugin[] = [registryRedirectPlugin(registries)];
   if (aliasOverride) {
     const { alias, target } = aliasOverride;
     // Anchor the regex to the exact specifier so no other import is intercepted.
@@ -1084,12 +1090,29 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   // ── 2. Compile entrypoints ───────────────────────────────────────────
   console.log("\n[2/5] Compiling entrypoints (bun build --compile)...");
 
+  // Phase 1 wrote every filtered sibling; a missing one is a codegen bug, and
+  // resolving to a file that is not there must not silently fall back to the
+  // committed (whole-app) registry.
+  const registries: RegistryRedirects = new Map(
+    compositionRegistryRedirects(root, opts.composition).map(
+      ({ committed, filtered }) => {
+        if (!existsSync(filtered)) {
+          throw new Error(
+            `Composition build did not produce ${relative(root, filtered)}.`,
+          );
+        }
+        return [committed, { kind: "file", path: filtered }];
+      },
+    ),
+  );
+
   console.log("  • backend (filtered closure)");
   await compile({
     entry: SERVER_ENTRY,
     outfile: join(out, "server"),
     root,
     platform,
+    registries,
     aliasOverride: {
       alias: "@composition-server-registry",
       target: filteredServerReg,
@@ -1098,35 +1121,39 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
 
   console.log("  • launcher");
   await compile({
-    entry: LAUNCH_ENTRY,
+    entry: FIXED_ENTRIES.launcher,
     outfile: join(out, "launch"),
     root,
     platform,
+    registries,
   });
 
   console.log("  • pg-start");
   await compile({
-    entry: PG_START_ENTRY,
+    entry: FIXED_ENTRIES.pgStart,
     outfile: join(out, "pg", "pg-start"),
     root,
     platform,
+    registries,
   });
 
   console.log("  • pgbouncer-start");
   await compile({
-    entry: PGBOUNCER_START_ENTRY,
+    entry: FIXED_ENTRIES.pgbouncerStart,
     outfile: join(out, "pgbouncer", "pgbouncer-start"),
     root,
     platform,
+    registries,
   });
 
   if (opts.target === "tauri") {
     console.log("  • teardown (desktop exit hook)");
     await compile({
-      entry: TEARDOWN_ENTRY,
+      entry: FIXED_ENTRIES.teardown,
       outfile: join(out, "teardown"),
       root,
       platform,
+      registries,
     });
   }
 

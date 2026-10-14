@@ -653,7 +653,25 @@ export async function renderCollectedDirRegistry(opts: {
 }): Promise<string> {
   const { ctx, def, bundle } = opts;
   const { entries, deps } = await collectEntriesWithDeps(ctx, def.dir, bundle);
-  const exportName = `${identifierForDir(def.dir)}Entries`;
+  return renderRegistry(def.dir, entries, deps);
+}
+
+/**
+ * `<dir>`'s registry for a composition holding no plugin with that folder —
+ * the shape every importer of the registry reads, listing nothing. What a
+ * check bundles in place of the composition-dependent part of an entrypoint,
+ * so it measures the part no composition can shrink.
+ */
+export function renderEmptyCollectedDirRegistry(dir: string): string {
+  return renderRegistry(dir, [], new Map());
+}
+
+function renderRegistry(
+  dir: string,
+  entries: CollectedRawEntry[],
+  deps: Map<string, string[]>,
+): string {
+  const exportName = `${identifierForDir(dir)}Entries`;
 
   const lines: string[] = [];
   lines.push(HEADER);
@@ -746,7 +764,12 @@ export async function generatePluginRegistry(opts: {
 // seam. `prewarm` is release-build-time-only — consumed by the asset-mirror
 // release runner to bake each closure mirror's files into the bundle, never
 // loaded by the served app — but it needs the same closure filtering so a
-// release only pre-warms mirrors in the composition's closure. Central is
+// release only pre-warms mirrors in the composition's closure. `deps` holds the
+// on-demand dependency declarations: a release's compiled launcher reaches that
+// registry (through `infra/deps`' `readyNow`), and each declaration's loader is
+// a dynamic import the bundler follows — so the unfiltered registry pulled every
+// plugin's dependency kinds into every release, Playwright included, whose
+// `chromium-bidi` require fails `bun build --compile` (2026-10-14). Central is
 // dropped per the F1 requirements; check/lint are build-time-only and never
 // loaded into a served app.
 //
@@ -756,7 +779,7 @@ export async function generatePluginRegistry(opts: {
 // a future reclaim sweep would list prewarm files like any other. (Nothing
 // sweeps today — the compose-serve deactivation stage that used to was deleted
 // with the serve fan-out; Phase 5 owns the replacement.)
-const COMPOSITION_RUNTIME_DIRS = new Set(["web", "server", "prewarm"]);
+const COMPOSITION_RUNTIME_DIRS = new Set(["web", "server", "prewarm", "deps"]);
 
 export function collectedDirNamedCompositionRegistryPath(
   def: DiscoveredCollectedDir,
@@ -804,6 +827,39 @@ export function compositionRegistryPath(
   return composition === MAIN_COMPOSITION_ID
     ? collectedDirRegistryPath(def)
     : collectedDirNamedCompositionRegistryPath(def, composition);
+}
+
+/**
+ * For a compiled release of `composition`: each committed registry paired with
+ * the composition's filtered sibling, both absolute. `release` resolves every
+ * import of a committed registry to its sibling, so whatever entrypoint reaches
+ * a registry — by alias, by relative path, through any barrel — bundles the
+ * composition's closure and nothing else, with no per-registry wiring at the
+ * call site. Empty for the main composition, whose registries ARE the committed
+ * files (`compositionRegistryFileName`).
+ */
+export function compositionRegistryRedirects(
+  root: string,
+  composition: string,
+): { committed: string; filtered: string }[] {
+  if (composition === MAIN_COMPOSITION_ID) return [];
+  return compositionFilteredRegistries(root).map(({ def, committed }) => ({
+    committed,
+    filtered: collectedDirNamedCompositionRegistryPath(def, composition),
+  }));
+}
+
+/**
+ * Every collected dir a composition gets a filtered sibling of, with its
+ * committed registry's absolute path — the registries whose contents depend on
+ * the composition, as opposed to the code that imports them.
+ */
+export function compositionFilteredRegistries(
+  root: string,
+): { def: DiscoveredCollectedDir; committed: string }[] {
+  return discoverCollectedDirs(root)
+    .filter((def) => COMPOSITION_RUNTIME_DIRS.has(def.dir))
+    .map((def) => ({ def, committed: collectedDirRegistryPath(def) }));
 }
 
 export async function generateCompositionRegistry(opts: {
