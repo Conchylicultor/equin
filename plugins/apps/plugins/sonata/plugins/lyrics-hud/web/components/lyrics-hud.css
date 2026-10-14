@@ -1,0 +1,96 @@
+/* The lyrics corner: no card. A frosted backing sits behind the words — a heavy
+ * blur and a near-opaque wash of the lane's own ground — so a note passing
+ * under the text disappears, and its edges are feathered (a rectangular fade,
+ * so the corners stay covered too) so it reads as no box at all. The ground and
+ * ink are the look's lane colours, written inline by the component from the
+ * look palette (the corner's `color`, the backing's `background-color`): the roll is theme-independent, so a
+ * theme token would paint a light box on the dark lane. Chord colours are the
+ * chord palette's tokens. */
+
+/* The HUD cluster is pointer-events-none; the corner scrolls and seeks, so it
+ * takes its pointer back. `isolation` gives the backing's z-index:-1 a stacking
+ * context of its own, so it paints behind the words and above the roll. */
+.lyrics-hud {
+  position: relative;
+  isolation: isolate;
+  pointer-events: auto;
+}
+.lyrics-hud-backing {
+  --feather: 1.25rem;
+  position: absolute;
+  inset: calc(-1 * var(--feather));
+  z-index: -1;
+  pointer-events: none;
+  backdrop-filter: blur(16px);
+  /* Only the mask's alpha counts: the ink (any opaque colour) draws the solid
+   * core. */
+  mask-image:
+    linear-gradient(
+      90deg,
+      transparent,
+      currentColor var(--feather),
+      currentColor calc(100% - var(--feather)),
+      transparent
+    ),
+    linear-gradient(
+      transparent,
+      currentColor var(--feather),
+      currentColor calc(100% - var(--feather)),
+      transparent
+    );
+  mask-composite: intersect;
+}
+
+/* Sized by the component to the current line + the next two. */
+.lyrics-hud-scroll {
+  position: relative;
+  transition: height 0.2s;
+}
+
+/* A line (headed by its section's name when it opens one); click to seek.
+ * The words keep their own ink (LyricLineText's Text tone), so the rows other
+ * than the current one recede by opacity: the coming ones a little, the sung
+ * ones more. */
+.lyrics-hud-row {
+  display: block;
+  width: 100%;
+  text-align: start;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.lyrics-hud-row[data-past] {
+  opacity: 0.4;
+}
+.lyrics-hud-row:hover,
+.lyrics-hud-row[data-now] {
+  opacity: 1;
+}
+.lyrics-hud-row:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+.lyrics-hud-section {
+  padding: var(--space-2xs) var(--space-sm) 0;
+  opacity: 0.6;
+}
+.lyrics-hud-line {
+  padding: var(--space-2xs) var(--space-sm);
+  border-inline-start: 2px solid transparent;
+}
+/* The line in progress wears the accent bar the songsheet's does. */
+.lyrics-hud-row[data-now] .lyrics-hud-line {
+  border-inline-start-color: var(--primary);
+}
+/* A chord over the words, in its tile's colour (`--fn`, from
+ * `chordToneStyle`). The one sounding now stays in that colour, bold, on a faint
+ * wash of it — padded by a spread shadow of the same wash so the label does not
+ * move: marked, not shouting. */
+.lyrics-hud-chord {
+  color: var(--fn, var(--chord-outside));
+}
+.lyrics-hud-chord-now {
+  --now-wash: color-mix(in oklab, var(--fn, var(--chord-outside)) 22%, transparent);
+  background: var(--now-wash);
+  box-shadow: 0 0 0 0.15em var(--now-wash);
+  border-radius: var(--radius-sm);
+}

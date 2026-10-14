@@ -7,12 +7,12 @@ import {
 import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import type {
-  LyricAnnotation,
   Score,
   SectionAnnotation,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
   activeLyricChord,
+  groupLyricLines,
   lyricLines,
   sameActiveChord,
   type ActiveChord,
@@ -43,46 +43,6 @@ export interface SongsheetProps {
 
 const EPS = 1e-6;
 
-/** A group of consecutive lines under one section header (or no header). */
-interface LineGroup {
-  /** The section, or null for lines before/outside any section. */
-  section: SectionAnnotation | null;
-  /** Global indices (into the flat `lines` array) of this group's lines. */
-  lines: { line: LyricAnnotation; index: number }[];
-}
-
-/**
- * Group the score's lyric lines under their containing section header, in order.
- * A line's section is the section annotation whose `[start, end]` contains the
- * line's `start`; lines before/outside any section render under no header.
- * Consecutive lines sharing a section collapse into one group so the header
- * prints once — the same annotation, not the same name, so two "A" stanzas in a
- * row keep a header each.
- */
-function groupLines(
-  lines: LyricAnnotation[],
-  sections: SectionAnnotation[],
-): LineGroup[] {
-  const groups: LineGroup[] = [];
-  lines.forEach((line, index) => {
-    // The section containing this line's start (last matching wins, so a later,
-    // tighter section overrides an enclosing one if they ever overlap).
-    let section: SectionAnnotation | null = null;
-    for (const s of sections) {
-      if (s.start <= line.start + EPS && s.end >= line.start - EPS) {
-        section = s;
-      }
-    }
-    const last = groups.at(-1);
-    if (last && last.section === section) {
-      last.lines.push({ line, index });
-    } else {
-      groups.push({ section, lines: [{ line, index }] });
-    }
-  });
-  return groups;
-}
-
 function SongsheetInner({ score }: SongsheetProps) {
   const { seekTo, isPlaying } = useSession();
   const { content } = useSongDocument();
@@ -101,7 +61,10 @@ function SongsheetInner({ score }: SongsheetProps) {
     [score.annotations],
   );
 
-  const groups = useMemo(() => groupLines(lines, sections), [lines, sections]);
+  const groups = useMemo(
+    () => groupLyricLines(lines, sections),
+    [lines, sections],
+  );
 
   // Index of the line whose [start, end) contains the playhead, else -1. Bails
   // out (no re-render) until the playhead crosses into a different line.

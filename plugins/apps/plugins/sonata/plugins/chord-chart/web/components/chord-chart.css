@@ -165,7 +165,11 @@
 /* A chord over the words, in its tile's colour (`--fn`, from
  * `chordToneStyle`), muted; the sounding one in full colour. */
 .chord-chart-lyric-chord {
-  color: color-mix(in srgb, var(--fn, var(--chord-outside)) 75%, var(--muted-foreground));
+  color: color-mix(
+    in srgb,
+    var(--fn, var(--chord-outside)) 75%,
+    var(--muted-foreground)
+  );
 }
 .chord-chart-lyric-chord-now {
   color: var(--fn, var(--chord-outside));

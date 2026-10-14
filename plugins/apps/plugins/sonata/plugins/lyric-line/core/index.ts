@@ -3,5 +3,16 @@
  * lines and the chord sounding over them, pure and framework-free.
  */
 
-export type { ActiveChord } from "./lyric-lines";
-export { activeLyricChord, lyricLines, sameActiveChord } from "./lyric-lines";
+export type {
+  ActiveChord,
+  LyricChordReading,
+  LyricLineGroup,
+} from "./lyric-lines";
+export {
+  activeLyricChord,
+  currentLyricLine,
+  groupLyricLines,
+  lyricChordReadings,
+  lyricLines,
+  sameActiveChord,
+} from "./lyric-lines";

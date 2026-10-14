@@ -81,6 +81,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/sonata/plugins/chord-chart", id: "apps.sonata.chord-chart", loader: () => import("@plugins/apps/plugins/sonata/plugins/chord-chart/server"), dependsOn: ["config_v2"] },
   { pluginPath: "apps/plugins/sonata/plugins/library", id: "apps.sonata.library", loader: () => import("@plugins/apps/plugins/sonata/plugins/library/server"), dependsOn: ["database", "ids", "infra/plugins/attachments", "infra/plugins/endpoints", "infra/plugins/entities", "network/plugins/live"] },
   { pluginPath: "apps/plugins/sonata/plugins/look", id: "apps.sonata.look", loader: () => import("@plugins/apps/plugins/sonata/plugins/look/server"), dependsOn: ["config_v2"] },
+  { pluginPath: "apps/plugins/sonata/plugins/lyrics-hud", id: "apps.sonata.lyrics-hud", loader: () => import("@plugins/apps/plugins/sonata/plugins/lyrics-hud/server"), dependsOn: ["config_v2"] },
   { pluginPath: "apps/plugins/sonata/plugins/notation", id: "apps.sonata.notation", loader: () => import("@plugins/apps/plugins/sonata/plugins/notation/server"), dependsOn: ["config_v2"] },
   { pluginPath: "apps/plugins/sonata/plugins/piano-keyboard", id: "apps.sonata.piano-keyboard", loader: () => import("@plugins/apps/plugins/sonata/plugins/piano-keyboard/server"), dependsOn: ["config_v2"] },
   { pluginPath: "apps/plugins/sonata/plugins/piano-roll/plugins/fx-comets", id: "apps.sonata.piano-roll.fx-comets", loader: () => import("@plugins/apps/plugins/sonata/plugins/piano-roll/plugins/fx-comets/server"), dependsOn: ["config_v2"] },

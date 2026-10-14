@@ -23,6 +23,36 @@ export interface LyricLineTextProps {
   /** Paints a chord name; `active` is true for the sounding one. Omitted, the
    *  chords read in the primary colour, the sounding one stronger and bold. */
   chordStyle?: (chord: LyricChord, active: boolean) => LyricChordStyle;
+  /** The text a chord is printed as. Omitted, its symbol as written. A label
+   *  longer than the symbol (a numeral beside it) pushes the chords after it
+   *  right, so two chords never overprint. */
+  chordLabel?: (chord: LyricChord) => string;
+  /** Type role of both rows: `body` (default) on a reading surface, `caption`
+   *  for a compact one floating over another view. */
+  variant?: "body" | "caption";
+}
+
+function symbolLabel(chord: LyricChord): string {
+  return chord.symbol;
+}
+
+/**
+ * The column each chord is printed at: over its own syllable
+ * (`charOffset`), or — when the label before it runs that far — one column
+ * past that label, so labels never overlap.
+ */
+function chordColumns(
+  labels: readonly string[],
+  chords: readonly LyricChord[],
+) {
+  const columns: number[] = [];
+  let free = 0;
+  chords.forEach((c, i) => {
+    const col = Math.max(c.charOffset, free);
+    columns.push(col);
+    free = col + labels[i]!.length + 1;
+  });
+  return columns;
 }
 
 function defaultChordStyle(_: LyricChord, active: boolean): LyricChordStyle {
@@ -44,19 +74,30 @@ export function LyricLineText({
   lyric,
   activeChord,
   chordStyle = defaultChordStyle,
+  chordLabel = symbolLabel,
+  variant = "body",
 }: LyricLineTextProps) {
   const { text, chords } = lyric.data;
+  const labels = chords.map(chordLabel);
+  const columns = chordColumns(labels, chords);
+  // The chords are placed absolutely, so they add no width of their own: the
+  // row claims the columns its last label runs to, so a chord past the end of
+  // the words widens the line instead of overflowing (and being clipped by) it.
+  const chordsEnd =
+    chords.length === 0 ? 0 : columns.at(-1)! + labels.at(-1)!.length;
   return (
     <Stack gap="none">
       {/* Chord row: monospace baseline; each chord pinned to its column via
           an inline `left: <charOffset>ch` (a computed geometric value, not a
           spacing token). `whitespace-pre` keeps the empty row's height. */}
       <Text
-        variant="body"
+        variant={variant}
         as="div"
         // `relative` is the positioning context the absolutely-placed
         // chords below need.
         className="relative h-[1.5em] whitespace-pre font-mono font-semibold"
+        // A computed column count (one `ch` per printed character).
+        style={{ minWidth: `${chordsEnd}ch` }}
       >
         {chords.length === 0
           ? " "
@@ -68,7 +109,7 @@ export function LyricLineText({
                 <Placed
                   key={i}
                   as="span"
-                  x={{ start: `${c.charOffset}ch` }}
+                  x={{ start: `${columns[i]!}ch` }}
                   y={{ end: 0 }}
                 >
                   <Text
@@ -76,7 +117,7 @@ export function LyricLineText({
                     className={cn("font-mono", paint.className)}
                     style={paint.style}
                   >
-                    {c.symbol}
+                    {labels[i]}
                   </Text>
                 </Placed>
               );
@@ -86,7 +127,7 @@ export function LyricLineText({
       {/* Lyric row: the raw text, leading spaces preserved. An empty line
           renders a non-breaking space so the row keeps its height. */}
       <Text
-        variant="body"
+        variant={variant}
         as="div"
         tone={text.trim().length === 0 ? "muted" : "default"}
         className="whitespace-pre font-mono"

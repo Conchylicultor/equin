@@ -101,6 +101,7 @@ the scope, so the player cannot import the shell).
     - `apps/sonata/chord-chart`
     - `apps/sonata/controls`
     - `apps/sonata/library`
+    - `apps/sonata/lyrics-hud`
     - `apps/sonata/notation`
     - `apps/sonata/piano-roll`
     - `apps/sonata/progress/loop`

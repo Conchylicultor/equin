@@ -5,6 +5,71 @@ export interface RevealOptions {
   behavior?: ScrollBehavior;
   block?: ScrollLogicalPosition;
   inline?: ScrollLogicalPosition;
+  /**
+   * Which scroll containers may move. `"all"` (the default, native
+   * `scrollIntoView`) scrolls every ancestor that has to; `"nearest"` scrolls
+   * only the element's closest scroll container — for a list floating inside a
+   * larger surface (a HUD over a canvas) whose own position must never shift.
+   */
+  scope?: "all" | "nearest";
+}
+
+/** The closest ancestor that scrolls on `axis`, or null. */
+function scrollContainer(el: Element): HTMLElement | null {
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    const { overflowX, overflowY } = getComputedStyle(p);
+    if (/auto|scroll/.test(overflowY) || /auto|scroll/.test(overflowX)) {
+      return p;
+    }
+  }
+  return null;
+}
+
+/** How far `container` scrolls on one axis to put `[start, end)` (in its
+ *  viewport coordinates, `size` long) at `position`. */
+function delta(
+  start: number,
+  end: number,
+  size: number,
+  position: ScrollLogicalPosition,
+): number {
+  switch (position) {
+    case "start":
+      return start;
+    case "end":
+      return end - size;
+    case "center":
+      return (start + end - size) / 2;
+    case "nearest":
+      if (start < 0) return start;
+      if (end > size) return Math.min(start, end - size);
+      return 0;
+  }
+}
+
+function revealInNearest(
+  el: Element,
+  opts: Required<Omit<RevealOptions, "scope">>,
+) {
+  const container = scrollContainer(el);
+  if (!container) return;
+  const box = container.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  container.scrollBy({
+    top: delta(
+      r.top - box.top,
+      r.bottom - box.top,
+      container.clientHeight,
+      opts.block,
+    ),
+    left: delta(
+      r.left - box.left,
+      r.right - box.left,
+      container.clientWidth,
+      opts.inline,
+    ),
+    behavior: opts.behavior,
+  });
 }
 
 /**
@@ -18,11 +83,14 @@ export function revealElement(
   el: Element | null | undefined,
   opts?: RevealOptions,
 ): void {
-  el?.scrollIntoView({
+  if (!el) return;
+  const resolved = {
     behavior: opts?.behavior ?? "auto",
     block: opts?.block ?? "nearest",
     inline: opts?.inline ?? "nearest",
-  });
+  };
+  if (opts?.scope === "nearest") revealInNearest(el, resolved);
+  else el.scrollIntoView(resolved);
 }
 
 /**

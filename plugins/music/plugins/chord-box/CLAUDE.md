@@ -28,6 +28,8 @@
     - `apps/chord/trainer`
     - `apps/chord/vocabulary`
     - `apps/sonata/chord-chart`
+    - `apps/sonata/lyric-line`
+    - `apps/sonata/lyrics-hud`
     - `apps/sonata/rich/readout-keyboard`
     - `apps/sonata/theory`
 - Core:

@@ -814,6 +814,10 @@
       "name": "@singularity/plugin-apps-sonata-lyric-line",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/lyrics-hud": {
+      "name": "@singularity/plugin-apps-sonata-lyrics-hud",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/notation": {
       "name": "@singularity/plugin-apps-sonata-notation",
       "version": "0.0.1",
@@ -6932,6 +6936,8 @@
     "@singularity/plugin-apps-sonata-look": ["@singularity/plugin-apps-sonata-look@workspace:plugins/apps/plugins/sonata/plugins/look"],
 
     "@singularity/plugin-apps-sonata-lyric-line": ["@singularity/plugin-apps-sonata-lyric-line@workspace:plugins/apps/plugins/sonata/plugins/lyric-line"],
+
+    "@singularity/plugin-apps-sonata-lyrics-hud": ["@singularity/plugin-apps-sonata-lyrics-hud@workspace:plugins/apps/plugins/sonata/plugins/lyrics-hud"],
 
     "@singularity/plugin-apps-sonata-notation": ["@singularity/plugin-apps-sonata-notation@workspace:plugins/apps/plugins/sonata/plugins/notation"],
 

@@ -46,6 +46,11 @@ export interface SonataLookStyle {
    *  element and no blend mode: a `mix-blend-mode: multiply` layer would have to
    *  sit ABOVE the canvas to reach the notes, and would then dull them too. */
   laneGrain: string | null;
+  /** The colour text set straight on the lane reads in — the lane is the
+   *  look's, not the theme's, so a theme's foreground can vanish on it (dark
+   *  ink on the dark digital lane). What a HUD drawn on the bare lane (the
+   *  lyrics corner) writes with. */
+  laneInk: string;
   /**
    * The note pen — the falling bars' shader parameters.
    *
@@ -106,6 +111,8 @@ export interface SonataLookStyle {
 const DIGITAL_ROLL: Omit<SonataLookStyle, "keys"> = {
   laneBg: "#262626",
   laneGrain: null,
+  // The grid's white: the one ink the digital stage already draws in.
+  laneInk: "#ffffff",
   pen: {
     sketch: 0,
     marginPx: 0,
@@ -148,6 +155,8 @@ export const SONATA_LOOK_STYLES: Record<SonataLook, SonataLookStyle> = {
   // rect's own opacity absorbs that factor.
   sketch: {
     laneBg: "#f7f2e5",
+    // The graphite the grid rules and drawn keys are inked in.
+    laneInk: "#2c2926",
     laneGrain:
       "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/><feColorMatrix type='saturate' values='0'/></filter><rect width='160' height='160' filter='url(%23g)' opacity='0.13'/></svg>\")",
     pen: {

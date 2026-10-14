@@ -1,0 +1,5 @@
+// @hash 2088090192d3
+{
+  // Show the line being sung and the next two in the corner, chords over the words.
+  "lyrics": false
+}

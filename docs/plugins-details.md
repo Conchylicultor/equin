@@ -5466,16 +5466,58 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `LyricChordStyle`
               - `LyricLineTextProps`
             - Exports (values): `LyricLineText`
+          - Core:
+            - Uses:
+              - `apps/sonata/score.ChordAnnotation`
+              - `apps/sonata/score.ChordData`
+              - `apps/sonata/score.effectiveKeyAt`
+              - `apps/sonata/score.KeySignature`
+              - `apps/sonata/score.LyricAnnotation`
+              - `apps/sonata/score.LyricChord`
+              - `apps/sonata/score.Score`
+              - `apps/sonata/score.SectionAnnotation`
+              - `apps/sonata/theory.tonicPc`
+              - `music/chord-box.rootReading`
+              - `music/chord-box.ScaleDegree`
+            - Exports (types):
+              - `ActiveChord`
+              - `LyricChordReading`
+              - `LyricLineGroup`
+            - Exports (values):
+              - `activeLyricChord`
+              - `currentLyricLine`
+              - `groupLyricLines`
+              - `lyricChordReadings`
+              - `lyricLines`
+              - `sameActiveChord`
           - Cross-plugin:
             - Imported by:
               - `apps/sonata/chord-chart`
+              - `apps/sonata/lyrics-hud`
               - `apps/sonata/songsheet`
-          - Core:
-            - Exports (types): `ActiveChord`
-            - Exports (values):
-              - `activeLyricChord`
-              - `lyricLines`
-              - `sameActiveChord`
+        - **`lyrics-hud`** — Sonata Hud: the song's lyrics in the display's top-right corner, under the key chip — the line being sung and the next two (scroll for the rest, click a line to seek), chords over the words in their degree colours, on a frosted backing that blurs away the notes behind the text. Opt-in from the piano roll's View popover. Server registration of the Sonata lyrics corner config (show lyrics over the piano roll).
+          - Web:
+            - Contributes:
+              - `Sonata.Hud` "lyrics" → `LyricsHud`
+              - `ConfigV2.WebRegister` "config"
+              - `Sonata.ViewOption` "lyrics-hud"
+            - Uses:
+              - `apps/sonata/lyric-line.LyricChordStyle`
+              - `apps/sonata/lyric-line.LyricLineText`
+              - `apps/sonata/player.usePlayerView`
+              - `apps/sonata/rich/chord-label.useChordDisplayMode`
+              - `apps/sonata/session.useCursorSelector`
+              - `apps/sonata/session.useSession`
+              - `apps/sonata/shell.Sonata`
+              - `config_v2.ConfigV2`
+              - `config_v2.useConfig`
+              - `music/chord-box.chordToneStyle`
+              - `primitives/css/scroll.Scroll`
+              - `primitives/css/text.Text`
+              - `primitives/dom/scroll-reveal.revealElement`
+          - Server:
+            - Contributes: `ConfigV2.Register` "config"
+            - Uses: `config_v2.ConfigV2`
         - **`notation`** — Sonata Display: standard staff notation. Engraves the score as a grand staff (treble + bass) with clefs, key/time signatures, barlines, accidentals and rests, following playback with a moving playhead, active-note highlight and auto-scroll. A reading view (no time-axis / pitch-plane capabilities); click a note to seek. Server registration of the notation config (chord-symbol toggle + treble/bass split pitch).
           - Web:
             - Contributes:
@@ -5769,6 +5811,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/chord-chart`
               - `apps/sonata/controls`
               - `apps/sonata/library`
+              - `apps/sonata/lyrics-hud`
               - `apps/sonata/notation`
               - `apps/sonata/piano-roll`
               - `apps/sonata/progress/loop`
@@ -6111,6 +6154,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Imported by:
                   - `apps/sonata/chord-chart`
+                  - `apps/sonata/lyrics-hud`
                   - `apps/sonata/rich/chord-list`
                   - `apps/sonata/rich/chord-overlay`
                   - `apps/sonata/rich/chord-progression`
@@ -6370,6 +6414,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/chord/vocabulary`
+              - `apps/sonata/lyric-line`
               - `apps/sonata/pitch-layout`
               - `apps/sonata/theory`
               - `apps/sonata/voicing`
@@ -6499,8 +6544,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useCursorSelector`
               - `useSession`
           - Cross-plugin:
-            - Imported by: 30 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
-              - `apps` ×30
+            - Imported by: 31 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
+              - `apps` ×31
         - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots.
           - Web:
             - Slots:
@@ -6513,11 +6558,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Sonata.Hud`
               - `Sonata.ViewOption`
               - `Sonata.Section`
-            - Slot contributors: 32 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
+            - Slot contributors: 34 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
               - `Sonata.Section` ×10
-              - `Sonata.ViewOption` ×7
+              - `Sonata.ViewOption` ×8
               - `Sonata.Effect` ×6
-              - `Sonata.Hud` ×3
+              - `Sonata.Hud` ×4
               - `Sonata.TransportOverlay` ×2
               - `Sonata.Home` ← `apps.sonata.library`
               - `Sonata.Overlay` ← `apps.sonata.rich.chord-overlay`
@@ -6550,8 +6595,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `sonataApp`
           - Cross-plugin:
-            - Imported by: 27 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
-              - `apps` ×27
+            - Imported by: 28 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
+              - `apps` ×28
         - **`songsheet`** — Sonata Display: a chord-over-lyrics songsheet. Renders the score's lyric lines with chords printed over each column, grouped by section, highlighting and auto-scrolling the line under the playback cursor. A reading view (no time-axis / pitch-plane capabilities); click a line to seek.
           - Web:
             - Contributes: `SonataPlayer.Display` "Songsheet" → `Songsheet`
@@ -6992,6 +7037,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/chord/vocabulary`
+              - `apps/sonata/lyric-line`
               - `apps/sonata/sources/ultimate-guitar/alignment`
               - `apps/sonata/voicing`
         - **`track-mixer`** — Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track) and registers with the song document as a per-song setting (SonataDocument.SongSetting, settled by a headless observer), so the player waits for it. Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine. Persists per-(song, track) view overrides (color / instrument / muted / hidden / volume) and serves them per song, consumed by the piano-roll, the audio scheduler, and the track-mixer panel.
@@ -9938,8 +9984,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 85 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×85
+    - Slot contributors: 86 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×86
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -10098,8 +10144,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 102 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `apps` ×22
+    - Imported by: 103 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `apps` ×23
       - `debug` ×14
       - `backup` ×13
       - `conversations` ×12
@@ -20077,8 +20123,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 154 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
-              - `apps` ×48
+            - Imported by: 155 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+              - `apps` ×49
               - `primitives` ×25
               - `page` ×23
               - `conversations` ×18
@@ -24451,6 +24497,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/chord/trainer`
           - `apps/chord/vocabulary`
           - `apps/sonata/chord-chart`
+          - `apps/sonata/lyric-line`
+          - `apps/sonata/lyrics-hud`
           - `apps/sonata/rich/readout-keyboard`
           - `apps/sonata/theory`
       - Core:
@@ -29826,9 +29874,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Scroll`
               - `scrollClasses`
           - Cross-plugin:
-            - Imported by: 90 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 91 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×25
-              - `apps` ×18
+              - `apps` ×19
               - `primitives` ×13
               - `debug` ×12
               - `page` ×4
@@ -30096,8 +30144,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 357 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×91
+            - Imported by: 358 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×92
               - `conversations` ×71
               - `primitives` ×40
               - `debug` ×32
@@ -31522,6 +31570,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps-core/tab-bar`
               - `apps/sonata/chord-chart`
+              - `apps/sonata/lyrics-hud`
               - `apps/sonata/songsheet`
               - `apps/sonata/sources/ultimate-guitar`
               - `conversations/conversation-view/jsonl-viewer`
@@ -31534,7 +31583,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/tree`
               - `search/quick-find`
           - Exemptions:
-            - Exempts itself from: `scroll-safety/no-adhoc-scroll-into-view` — `web/internal/use-reveal-on-active.ts` (sanctioned)
+            - Exempts itself from:
+              - `scroll-safety/no-adhoc-scroll-into-view` — `web/internal/use-reveal-on-active.ts` (sanctioned)
+              - `scroll-safety/no-adhoc-scroll-write` — `web/internal/use-reveal-on-active.ts` (sanctioned)
     - **`edit-mode-signal`** — The page-global edit-mode signal — setEditMode / getEditMode / useEditMode — as a leaf primitive whose only import is react. Everything that reorder's edit mode restyles (a bar, a wrapping chip row) reads the signal without importing the reorder feature plugin.
       - Cross-plugin:
         - Imported by:

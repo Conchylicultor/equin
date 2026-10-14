@@ -26,6 +26,7 @@ import { ChordBox, chordToneStyle } from "@plugins/music/plugins/chord-box/web";
 import { useConfig } from "@plugins/config_v2/web";
 import {
   activeLyricChord,
+  lyricChordReadings,
   lyricLines,
   sameActiveChord,
   type ActiveChord,
@@ -164,29 +165,17 @@ function ChordChartInner({ score }: ChordChartProps) {
     return m;
   }, [bars, score, mode]);
 
-  // The chord sounding under each lyric chord's beat (the grid's own chord
-  // annotation there), so a chord over the words wears its tile's colour.
-  // Keyed by the score's own lyric chord reference.
-  const lyricFaces = useMemo(() => {
-    const chords = score.annotations.filter(
-      (a): a is ChordAnnotation => a.type === "chord",
-    );
-    const m = new Map<LyricChord, ChordBoxFace | undefined>();
-    for (const l of lines) {
-      for (const c of l.data.chords) {
-        const chord = chords.find(
-          (a) => a.start <= c.beat + EPS && a.end > c.beat + EPS,
-        );
-        m.set(c, chord === undefined ? undefined : faces.get(chord));
-      }
-    }
-    return m;
-  }, [score.annotations, lines, faces]);
+  // Each lyric chord wears the colour of the chord sounding at its beat — its
+  // tile's colour on this grid.
+  const lyricReadings = useMemo(
+    () => lyricChordReadings(score, lines),
+    [score, lines],
+  );
   const chordStyle = (c: LyricChord, active: boolean): LyricChordStyle => ({
     className: active
       ? "chord-chart-lyric-chord chord-chart-lyric-chord-now font-bold"
       : "chord-chart-lyric-chord font-semibold",
-    style: chordToneStyle(lyricFaces.get(c)?.degree ?? null),
+    style: chordToneStyle(lyricReadings.get(c)?.degree ?? null),
   });
 
   // The lyric line under the playhead (-1 between lines) and the lyric chord

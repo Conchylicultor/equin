@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-sonata-lyrics-hud",
+  "description": "Sonata Hud: the song's lyrics in the display's corner — the line being sung and the next two, chords over the words, on a frosted backing that blurs away the notes behind them.",
+  "private": true,
+  "version": "0.0.1"
+}
