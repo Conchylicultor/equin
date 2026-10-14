@@ -1,13 +1,23 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
+  buildTempoIndex,
   emptyScore,
+  retempoTimeline,
+  songPosition,
+  startTimeline,
+  type LoopCycle,
+  type PlayPosition,
+  type PlaybackTimeline,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import type { TimelineStore } from "@plugins/apps/plugins/sonata/plugins/session/web";
+
+type TimelineState = ReturnType<TimelineStore["get"]>;
 import type {
   InstrumentVoices,
   ScheduledNote,
 } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
-import { RESYNC_LATE_SEC, startScheduling } from "./scheduler";
+import { LATE_DROP_SEC, startScheduling } from "./scheduler";
 
 // A fake audio clock: the test sets `currentTime` and fires the scheduler's
 // wake-up node by hand (`wake`), as the audio thread would at its stop time.
@@ -65,111 +75,202 @@ function song(beats: number): Score {
   };
 }
 
-/** A schedule origin on the song's own pass. */
-const at = (beat: number) => ({ beat, rest: 0 });
-
 function recorder() {
   const played: ScheduledNote[] = [];
+  let offs = 0;
   const voices = {
     schedule: (n: ScheduledNote) => played.push(n),
+    allOff: () => {
+      offs++;
+    },
   } as unknown as InstrumentVoices;
-  return { played, resolve: () => voices };
+  return { played, offs: () => offs, resolve: () => voices };
 }
 
-describe("startScheduling: beatAt", () => {
-  it("is the beat sounding at an audio time", () => {
-    const r = recorder();
-    const h = startScheduling(song(16), at(2), 10, r.resolve, ctx);
-    expect(h.beatAt(10)).toBeCloseTo(2, 9);
-    expect(h.beatAt(11)).toBeCloseTo(4, 9);
-    h.cancel();
-  });
+/** A timeline store the test writes, standing in for the session's. */
+function store() {
+  let state: TimelineState = { kind: "idle" };
+  let generation = 0;
+  const listeners = new Set<() => void>();
+  const set = (next: TimelineState) => {
+    state = next;
+    for (const l of [...listeners]) l();
+  };
+  const timelines: TimelineStore = {
+    get: () => state,
+    subscribe: (l) => {
+      listeners.add(l);
+      return () => listeners.delete(l);
+    },
+  };
+  return {
+    timelines,
+    /** A new path from `from` (a song beat, or a whole position), now. */
+    start(
+      from: number | PlayPosition,
+      cycle: LoopCycle | null = null,
+      bpm = 120,
+    ) {
+      set({
+        kind: "running",
+        generation: ++generation,
+        timeline: startTimeline(
+          typeof from === "number" ? songPosition(from) : from,
+          cycle,
+          tempoAt(bpm),
+          ctx.currentTime,
+        ),
+      });
+    },
+    /** The same path at a new tempo from now. */
+    retempo(bpm: number) {
+      if (state.kind !== "running") throw new Error("not running");
+      set({
+        ...state,
+        timeline: retempoTimeline(
+          state.timeline,
+          tempoAt(bpm),
+          ctx.currentTime,
+        ),
+      });
+    },
+    idle: () => set({ kind: "idle" }),
+    current(): PlaybackTimeline {
+      if (state.kind !== "running") throw new Error("not running");
+      return state.timeline;
+    },
+  };
+}
 
-  it("folds an A–B loop's iterations", () => {
-    const r = recorder();
-    const h = startScheduling(song(16), at(0), 0, r.resolve, ctx, {
-      start: 4,
-      end: 8,
-      rest: 0,
-    });
-    // Head runs 0..8 (4 s), then each iteration is 4 beats (2 s).
-    expect(h.beatAt(4)).toBeCloseTo(0 + 8, 9); // the boundary itself
-    expect(h.beatAt(4.5)).toBeCloseTo(5, 9);
-    expect(h.beatAt(7)).toBeCloseTo(6, 9);
-    h.cancel();
-  });
-});
+const tempoAt = (bpm: number) =>
+  buildTempoIndex({ ...emptyScore(), tempoMap: [{ beat: 0, bpm }] });
 
-describe("startScheduling: resync", () => {
-  it("re-anchors so the given beat sounds at the given time", () => {
+describe("startScheduling", () => {
+  it("places every note where the timeline says, and nothing while idle", () => {
     const r = recorder();
-    const h = startScheduling(song(16), at(0), 0, r.resolve, ctx);
+    const s = store();
+    const h = startScheduling(song(8), s.timelines, r.resolve, ctx);
     runTo(1);
-    // The medium says beat 2.2 at t = 1 (the synth was 100 ms behind).
-    h.resync(2.2, 1);
-    expect(h.beatAt(1)).toBeCloseTo(2.2, 9);
+    expect(r.played).toEqual([]);
+    s.start(2);
     runTo(3);
-    const n3 = r.played.find((n) => n.pitch === 63);
-    expect(n3?.when).toBeCloseTo(1 + 0.4, 9);
+    // Beat 2 sounds at t = 1, then one note every half second.
+    expect(r.played.map((n) => [n.pitch, n.when])).toEqual([
+      [62, 1],
+      [63, 1.5],
+      [64, 2],
+      [65, 2.5],
+      [66, 3],
+    ]);
     h.cancel();
   });
 
-  it("never re-triggers a note when moved back, and drops what a jump forward left far behind", () => {
+  it("restarts on a new path, silencing what rang", () => {
     const r = recorder();
-    const h = startScheduling(song(16), at(0), 0, r.resolve, ctx);
-    runTo(1.02);
-    const before = r.played.map((n) => n.pitch);
-    expect(before).toEqual([60, 61, 62]);
-
-    // Back 60 ms: beat 2 was already handed over — it is not played again.
-    h.resync(1.92, 1.02);
+    const s = store();
+    const h = startScheduling(song(8), s.timelines, r.resolve, ctx);
+    s.start(0);
+    runTo(1);
+    const offs = r.offs();
+    s.start(5);
+    expect(r.offs()).toBe(offs + 1);
     runTo(1.6);
-    const pitches = r.played.map((n) => n.pitch);
-    expect(pitches.filter((p) => p === 62).length).toBe(1);
-
-    // Forward 1.2 beats (600 ms): beat 4 would be 500 ms late → dropped.
-    // Beat 5 still lies ahead and sounds on the new anchor.
-    const t = ctx.currentTime;
-    const beat = h.beatAt(t);
-    h.resync(beat + 1.2, t);
-    runTo(t + 1);
-    expect(r.played.some((n) => n.pitch === 64)).toBe(false);
-    const n5 = r.played.find((n) => n.pitch === 65);
-    expect(n5?.when).toBeGreaterThan(t - RESYNC_LATE_SEC);
+    expect(r.played.map((n) => n.pitch).slice(-2)).toEqual([65, 66]);
+    s.idle();
+    expect(r.offs()).toBe(offs + 2);
+    const n = r.played.length;
+    runTo(5);
+    expect(r.played.length).toBe(n);
     h.cancel();
   });
 
-  it("lands in the loop iteration nearest the current one", () => {
+  it("drops the notes a late join would play late, instead of bursting them", () => {
     const r = recorder();
-    const h = startScheduling(song(16), at(4), 0, r.resolve, ctx, {
-      start: 4,
-      end: 8,
-      rest: 0,
-    });
-    // The head (2 s) and one pass (2 s) in: the second pass, at beat 4.4.
-    runTo(4.2);
-    h.resync(4.5, 4.2);
-    expect(h.beatAt(4.2)).toBeCloseTo(4.5, 9);
-    // The next note (beat 5) follows 0.25 s later — not a whole pass away.
-    runTo(5);
-    const next = r.played.filter((n) => n.when > 4.2 && n.pitch === 65);
-    expect(next[0]?.when).toBeCloseTo(4.45, 9);
+    const s = store();
+    s.start(0);
+    // The scheduler joins 1.02 s in (instruments loading): beats 0 and 1 are
+    // gone; beat 2 (20 ms late) still plays.
+    runTo(1.02);
+    const h = startScheduling(song(8), s.timelines, r.resolve, ctx);
+    expect(r.played.map((n) => n.pitch)).toEqual([62]);
+    expect(LATE_DROP_SEC).toBeGreaterThan(0.02);
+    h.cancel();
+  });
+
+  it("re-times on a tempo change without re-triggering or cutting a note", () => {
+    const r = recorder();
+    const s = store();
+    const h = startScheduling(song(8), s.timelines, r.resolve, ctx);
+    s.start(0);
+    runTo(1.02); // beats 0, 1, 2 handed over
+    const offs = r.offs();
+    s.retempo(60); // a beat a second from here
+    runTo(3);
+    expect(r.offs()).toBe(offs);
+    const pitches = r.played.map((n) => n.pitch);
+    expect(new Set(pitches).size).toBe(pitches.length);
+    // At t = 1.02 the music was at beat 2.04: beat 3 is 0.96 beats on.
+    expect(r.played.find((n) => n.pitch === 63)?.when).toBeCloseTo(1.98, 9);
+    h.cancel();
+  });
+
+  it("stays on the cursor's timeline through a loop and a long speed drag", () => {
+    // The bug this design removes: the sound and the cursor each kept their own
+    // anchor, and every tempo change lost the cursor the time since its last
+    // frame. Now every note must sound exactly where the shared timeline puts
+    // its beat — once per iteration, in order — however many changes land.
+    const r = recorder();
+    const s = store();
+    const h = startScheduling(song(16), s.timelines, r.resolve, ctx);
+    const dispatched: {
+      c: number;
+      when: number;
+      pitch: number;
+      tl: PlaybackTimeline;
+    }[] = [];
+    const schedule = r.resolve().schedule.bind(r.resolve());
+    (r.resolve() as { schedule: (n: ScheduledNote) => void }).schedule = (
+      n,
+    ) => {
+      const tl = s.current();
+      dispatched.push({ c: tl.cAt(n.when), when: n.when, pitch: n.pitch, tl });
+      schedule(n);
+    };
+    s.start(2, { start: 4, end: 8, rest: 0 });
+    let bpm = 120;
+    for (let i = 0; i < 300; i++) {
+      runTo(ctx.currentTime + 0.02 + ((i * 7919) % 17) / 1000);
+      bpm = 50 + ((i * 37) % 120);
+      s.retempo(bpm);
+    }
+    runTo(ctx.currentTime + 1);
+    expect(dispatched.length).toBeGreaterThan(14); // head + 2 loop passes
+    for (const [i, d] of dispatched.entries()) {
+      // The path coordinates are whole beats, one after another: no note is
+      // skipped, doubled or shifted by the changes.
+      expect(d.c).toBeCloseTo(i, 6);
+      // And it sounds where the cursor reaches its beat.
+      expect(d.tl.timeAt(d.c)).toBeCloseTo(d.when, 9);
+      // The head (beats 2–7), then beats 4–7 over and over.
+      expect(d.pitch).toBe(60 + (i < 6 ? 2 + i : 4 + ((i - 6) % 4)));
+    }
     h.cancel();
   });
 });
 
 describe("startScheduling: a loop's rest", () => {
   // Loop [4, 8) with a 2-beat rest: each iteration is [2, 8) — 6 beats, 3 s.
-  const cycle = { start: 4, end: 8, rest: 2 };
+  const cycle: LoopCycle = { start: 4, end: 8, rest: 2 };
 
   it("rests before every repeat, sounding only the body", () => {
     const r = recorder();
-    const h = startScheduling(song(16), at(4), 0, r.resolve, ctx, cycle);
+    const s = store();
+    const h = startScheduling(song(16), s.timelines, r.resolve, ctx);
+    s.start(4, cycle);
     runTo(8);
     // First pass: beats 4..7 at 0, 0.5, 1, 1.5 s. Then 1 s of rest (the
     // span of beats 2..3 stays silent) and the body again from 3 s.
-    const firstNotes = r.played.map((n) => [n.pitch, n.when]);
-    expect(firstNotes.slice(0, 8)).toEqual([
+    expect(r.played.slice(0, 8).map((n) => [n.pitch, n.when])).toEqual([
       [64, 0],
       [65, 0.5],
       [66, 1],
@@ -183,17 +284,12 @@ describe("startScheduling: a loop's rest", () => {
     h.cancel();
   });
 
-  it("resumes a cursor paused inside the rest with the rest's remainder", () => {
+  it("resumes a position paused inside the rest with the rest's remainder", () => {
     const r = recorder();
+    const s = store();
+    const h = startScheduling(song(16), s.timelines, r.resolve, ctx);
     // Paused one beat before A: A sounds 0.5 s after resuming.
-    const h = startScheduling(
-      song(16),
-      { beat: 4, rest: 1 },
-      0,
-      r.resolve,
-      ctx,
-      cycle,
-    );
+    s.start({ beat: 4, rest: 1, repeat: true }, cycle);
     runTo(1);
     expect(r.played[0]).toMatchObject({ pitch: 64 });
     expect(r.played[0]?.when).toBeCloseTo(0.5, 9);
@@ -202,9 +298,11 @@ describe("startScheduling: a loop's rest", () => {
 
   it("sounds the rest's span when asked (the metronome counting through it)", () => {
     const r = recorder();
-    const h = startScheduling(song(16), at(4), 0, r.resolve, ctx, cycle, {
+    const s = store();
+    const h = startScheduling(song(16), s.timelines, r.resolve, ctx, {
       restSounds: true,
     });
+    s.start(4, cycle);
     runTo(4);
     const restClicks = r.played.filter((n) => n.when >= 2 && n.when < 3);
     expect(restClicks.map((n) => n.pitch)).toEqual([62, 63]);

@@ -15,14 +15,16 @@ import {
   currentLine,
   emptyScore,
   nextLine,
-  positionAtTime,
   prevLine,
+  rebaseTimeline,
+  resyncTimeline,
+  retempoTimeline,
   scaleTempo,
   scoreEndBeat,
   scoreStartBeat,
   songPosition,
+  startTimeline,
   subdivideBars,
-  timeOfPosition,
   type LoopCycle,
   type PlayPosition,
   type Score,
@@ -30,6 +32,7 @@ import {
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useCursorApi } from "./cursor-store";
 import { SonataSession } from "./slots";
+import { createTimelineStore, type TimelineStore } from "./timeline-store";
 
 /** Tempo scale clamp — slowest 0× (frozen / 0%) to fastest 4× (quadruple). */
 const MIN_TEMPO_SCALE = 0;
@@ -130,12 +133,12 @@ export interface TransportDriver {
 }
 
 /**
- * Where a scheduler (re)built right now should start, as the session sees it:
- *  - `internal`: no driver — the anchored clock and the cursor are the truth.
- *  - `stalled`: a driver is registered but not advancing — schedule nothing.
+ * Where the transport stands relative to the driver, right now:
+ *  - `internal`: no driver — the timeline on the session's clock is the truth.
+ *  - `stalled`: a driver is registered but not advancing — nothing sounds.
  *  - `advancing`: the driver's medium is at `beat`, now.
  */
-export type DriverReading =
+type DriverReading =
   | { kind: "internal" }
   | { kind: "stalled" }
   | { kind: "advancing"; beat: number };
@@ -146,6 +149,15 @@ export type DriverReading =
  * agree and a seek (a visible YouTube re-buffer) is not worth it.
  */
 const DRIVER_ALIGN_TOLERANCE_SEC = 0.05;
+
+/**
+ * How far (seconds, at the playing tempo) the timeline may slip from a driving
+ * medium before it is re-anchored on it. Below it a slip is inaudible against
+ * a recording; above it a drum hit and a synth note stop sounding like one
+ * event. The cursor shows the medium's own position; the timeline is what the
+ * synth sounds, so this is the only gap between the two, bounded.
+ */
+const DRIFT_TOLERANCE_SEC = 0.04;
 
 /**
  * An A–B practice loop range, in beats. `enabled` gates whether the transport
@@ -163,8 +175,9 @@ export interface LoopRange {
  * one loop (a loop UI pushes them in; a bare session plays neither).
  *
  *  - `rest`: rest one bar (at A's meter) before every repeat, so the next pass
- *    can be seen coming. Real time: the transport, the audio and the metronome
- *    all run it (see {@link SessionValue.loopCycle}).
+ *    can be seen coming. Real time: the playback timeline walks it, so the
+ *    cursor, the audio and the metronome all run it (see
+ *    {@link SessionValue.loopCycle}).
  *  - `ahead`: a display drawing what comes next shows the loop repeating past
  *    B instead of the song's continuation (see `unrollLoop`). Display-only.
  */
@@ -244,30 +257,16 @@ export interface SessionValue {
   /** Playback tempo multiplier (1 = authored tempo). */
   tempoScale: number;
   /**
-   * Monotonic counter bumped on every seek (absolute or relative). Re-anchoring
-   * the transport moves the playback origin without changing `score`, so anchored
-   * consumers that can't read the live anchor ref reactively — notably the audio
-   * scheduler — depend on this to restart from the new cursor. The visual rAF
-   * cursor doesn't need it (it reads the anchor ref every frame).
+   * The playback timeline — THE mapping from the active clock to the music
+   * while something sounds (see `TimelineState`). The cursor is
+   * `timeline.positionAt(now)` on the session's own clock, and every audio
+   * scheduler places its notes at `timeline.timeAt(c)`, so sound and cursor
+   * share one mapping and cannot drift apart. Stable; read it imperatively and
+   * `subscribe` to follow it (it changes every frame of a speed-wheel drag).
    */
-  seekEpoch: number;
-  /**
-   * Bumped whenever the transport's relation to an external driver changes
-   * without a user seek: a driver registers or unregisters, it starts or stops
-   * advancing (a stall, a resume), or the session seeks it on its own (an A–B
-   * loop wrap, re-aligning it to the cursor on play). Anchored consumers (the
-   * audio scheduler) rebuild from {@link readDriver} on it, as they do from
-   * the cursor on {@link seekEpoch}.
-   */
-  syncEpoch: number;
+  timeline: TimelineStore;
   /** Whether a {@link TransportDriver} is registered (it then owns the position). */
   driven: boolean;
-  /**
-   * Where the transport is right now relative to the driver — see
-   * {@link DriverReading}. Stable; reads live state, so call it at the instant
-   * a schedule is (re)built or checked.
-   */
-  readDriver: () => DriverReading;
   /**
    * The active A–B practice loop range (beats), or `null` when no region is
    * set. When `loop.enabled`, the transport rAF wraps from `loop.end` back to
@@ -277,12 +276,12 @@ export interface SessionValue {
    */
   loop: LoopRange | null;
   /**
-   * The loop as the transport cycles it — THE definition every consumer of
-   * "what plays after B" reads (the transport's own fold, the audio and
-   * metronome schedulers, a display unrolling the loop): `null` unless a loop
-   * is enabled, else its bounds plus the rest before each repeat. The rest is
-   * one bar at A's meter when {@link loopOptions}`.rest` is on — and `0` while
-   * a {@link TransportDriver} drives: a medium cannot fold a loop, so its wrap
+   * The loop as playback cycles it — THE definition every consumer of "what
+   * plays after B" reads (the playback timeline the cursor and the audio
+   * schedulers follow, a display unrolling the loop): `null` unless a loop is
+   * enabled, else its bounds plus the rest before each repeat. The rest is one
+   * bar at A's meter when {@link loopOptions}`.rest` is on — and `0` while a
+   * {@link TransportDriver} drives: a medium cannot fold a loop, so its wrap
    * stays a seek back to A and a rest would only freeze the picture against a
    * recording that keeps playing. Identity-stable while its values hold (a
    * tempo change does not mint a new one), so an effect may depend on it.
@@ -456,11 +455,11 @@ export function PlaybackSession({
   // ~60fps transport advance doesn't re-render every `useSession()` consumer.
   const [isPlaying, setIsPlaying] = useState(false);
   const [tempoScale, setTempoScaleState] = useState(1);
-  // Bumped on every seek so the audio scheduler can restart from the new cursor.
-  const [seekEpoch, setSeekEpoch] = useState(0);
-  // A–B practice loop range (beats), or null when unset. The rAF tick reads it
-  // through a ref so the running loop never re-runs its effect when the range
-  // changes (mirroring scoreRef/tempoIndexRef).
+  // The playback timeline every follower reads (the cursor below, the audio
+  // schedulers). The session is its only writer.
+  const [timelineStore] = useState(createTimelineStore);
+  // A–B practice loop range (beats), or null when unset, and how it repeats.
+  // Playback reads them as `loopCycle` (below).
   const [loop, setLoopState] = useState<LoopRange | null>(null);
   const [loopOptions, setLoopOptions] = useState<LoopOptions>(NO_LOOP_OPTIONS);
   // A pending count-in lead-in (metronome), or null. State (not a ref) so the
@@ -471,8 +470,6 @@ export function PlaybackSession({
   // The registered count-in length provider (the metronome), read at play time.
   // Mirrors `clockRef`: a single provider, last registration wins.
   const countInProviderRef = useRef<(() => number) | null>(null);
-  // Bumped on every driver-relation change (see `SessionValue.syncEpoch`).
-  const [syncEpoch, setSyncEpoch] = useState(0);
   // The registered drivers, last on top; `driver` is the top one, as state so
   // the play/pause sync and the subscription follow it.
   const driversRef = useRef<TransportDriver[]>([]);
@@ -489,7 +486,7 @@ export function PlaybackSession({
   );
 
   // Precompute the beat↔seconds index once per score. Both directions are
-  // O(log n) closed-form, so the transport loop and reanchor read a single,
+  // O(log n) closed-form, so the transport loop and the timeline read a single,
   // allocation-free tempo-time source instead of re-sorting the tempo map.
   const tempoIndex = useMemo(() => buildTempoIndex(score), [score]);
   // The UNSCALED index: its seconds are a driver's media seconds, so a driver's
@@ -497,9 +494,9 @@ export function PlaybackSession({
   const mediaIndex = useMemo(() => buildTempoIndex(baseScore), [baseScore]);
   const mediaIndexRef = useLatestRef(mediaIndex);
 
-  // The loop as the transport cycles it (see `SessionValue.loopCycle`). Built
-  // from primitives so its identity survives a tempo change (which re-derives
-  // `score` but never the meter), letting the schedulers depend on it directly.
+  // The loop as playback cycles it (see `SessionValue.loopCycle`). Built from
+  // primitives so its identity survives a tempo change (which re-derives
+  // `score` but never the meter). A new timeline path reads it through the ref.
   const loopStart = loop?.enabled ? loop.start : null;
   const loopEnd = loop?.enabled ? loop.end : null;
   const restBeats =
@@ -539,23 +536,24 @@ export function PlaybackSession({
   );
 
   // --- Transport: a requestAnimationFrame loop (no polling). ----------------
-  // We anchor at the playback clock's time + beat where playback started, then
-  // each frame invert the tempo map: find the beat whose `beatToSeconds` equals
-  // the elapsed seconds. The time source is the pluggable `clockRef` — the audio
-  // engine registers its `AudioContext.currentTime`, so the cursor and the audio
-  // share one clock and never drift. rAF only sets the *render cadence*; it does
-  // not supply the time value (so a backgrounded-then-resumed tab reads the
-  // live clock and lands the cursor exactly where the sound is).
-  // The inversion is closed-form via the tempo index, so each frame is O(log n)
-  // in the tempo-map size — constant cost regardless of how long playback runs.
+  // While playing on the session's own clock, the cursor is the timeline read
+  // at the clock's `now()` each frame. The time source is the pluggable
+  // `clockRef` — the audio engine registers its `AudioContext.currentTime`, the
+  // clock its schedulers place notes on, through the SAME timeline. rAF only
+  // sets the *render cadence*; it does not supply the time value (so a
+  // backgrounded-then-resumed tab reads the live clock and lands the cursor
+  // exactly where the sound is). Each read is O(log n) in the tempo-map size.
   const rafRef = useRef<number | null>(null);
-  const anchorRef = useRef<{
-    startClockSec: number;
-    startScoreSec: number;
-  } | null>(null);
   const clockRef = useRef<TransportClock>(wallClock);
   // Registered clocks, last on top; `clockRef` is the top one (or the wall clock).
   const clocksRef = useRef<TransportClock[]>([]);
+  // The last timeline path's id, minted on every restart.
+  const generationRef = useRef(0);
+  // The loop iteration the cursor was last drawn in, so the tick can flag a
+  // wrap (an iteration change) to the cursor store as a `seek` — making
+  // onset-driven consumers (the piano-roll FX) re-anchor instead of spraying
+  // every note between B and A. Reset with every new path.
+  const loopIterRef = useRef(0);
   // The beat the active driver is known to be at: written every driven frame
   // and on every seek the session sends it. Resuming compares the cursor with
   // it to decide whether the driver must first be sought to the cursor (after a
@@ -564,12 +562,6 @@ export function PlaybackSession({
   // An A–B wrap sought the driver back to A and the medium has not reported a
   // position before B since.
   const wrapPendingRef = useRef(false);
-  // Zero-based A–B loop iteration the cursor is currently in, tracked so the rAF
-  // tick can flag a wrap (iteration change) to the cursor store as a `seek` —
-  // making onset-driven consumers (the piano-roll FX) re-anchor instead of
-  // spraying every note between B and A. Reset to 0 on every (re)anchor, since a
-  // fresh anchor restarts the deterministic loop fold from iteration 0.
-  const loopIterRef = useRef(0);
   // One-shot load intents (auto-play / park-at-beat once the freshly loaded
   // content is composed), consumed by the content-reset effect below. Refs (not
   // state) so arming one never triggers a render.
@@ -577,47 +569,74 @@ export function PlaybackSession({
   const seekOnLoadRef = useRef<((score: Score) => number) | null>(null);
   const scoreRef = useLatestRef(score);
   const tempoIndexRef = useLatestRef(tempoIndex);
-  // Live mirrors so stable callbacks (seek, re-anchor, clock swaps, store
-  // actions) read current values WITHOUT depending on them and re-anchoring.
+  // Live mirrors so stable callbacks (seek, restarts, clock swaps, store
+  // actions) read current values WITHOUT depending on them.
   // The cursor's live value comes from the store via `cursor.getBeat()`.
   const isPlayingRef = useLatestRef(isPlaying);
   const tempoScaleRef = useLatestRef(tempoScale);
 
-  // Anchor the transport at `position` against the active clock's `now()`. Used
-  // at play, on every clock swap, and on seek / tempo change so they all
-  // compose. The anchor's score-time is the position's time on the loop fold
-  // (`timeOfPosition`), so a transport paused inside a loop's rest or repeat
-  // resumes there rather than on the song before A. The audio scheduler
-  // re-anchors in lock-step via its own score-dep effect, so sound stays glued
-  // to the cursor.
-  const reanchor = useCallback((position: PlayPosition) => {
-    const cycle = loopCycleRef.current;
-    const idx = tempoIndexRef.current;
-    const startScoreSec = timeOfPosition(position, cycle, idx);
-    anchorRef.current = {
-      startClockSec: clockRef.current.now(),
-      startScoreSec,
-    };
-    // A fresh anchor restarts the loop fold; the iteration tracker starts at
-    // the anchor's own iteration (a repeat position anchors in the first repeat)
-    // so the next wrap is detected and the resume itself is not mistaken for one.
-    loopIterRef.current = positionAtTime(startScoreSec, cycle, idx).iter;
-  }, []);
+  // Start a new timeline path at `from`, now: it sounds at the active clock's
+  // `now()`, then the music walks on (into the A–B loop, when one is on; a
+  // position inside a loop's rest or repeat resumes there). The one way a path
+  // starts — play, seek, a loop edit, a driver's jump — so every follower
+  // restarts from the same position at the same instant. Not playing: nothing
+  // sounds.
+  const startAt = useCallback(
+    (from: PlayPosition) => {
+      if (!isPlayingRef.current) {
+        timelineStore.set({ kind: "idle" });
+        return;
+      }
+      generationRef.current += 1;
+      loopIterRef.current = 0;
+      timelineStore.set({
+        kind: "running",
+        generation: generationRef.current,
+        timeline: startTimeline(
+          from,
+          loopCycleRef.current,
+          tempoIndexRef.current,
+          clockRef.current.now(),
+        ),
+      });
+    },
+    [timelineStore],
+  );
+
+  // Where the music is right now: the running timeline at the clock's `now()`
+  // — exact, unlike the cursor, which holds the position of the last frame —
+  // or the parked cursor when nothing sounds.
+  const livePosition = useCallback((): PlayPosition => {
+    const state = timelineStore.get();
+    return state.kind === "running"
+      ? state.timeline.positionAt(clockRef.current.now())
+      : cursor.getPosition();
+  }, [timelineStore, cursor]);
 
   const registerClock = useCallback(
     (clock: TransportClock) => {
+      // Carry the running timeline onto the new clock: what sounds now on the
+      // old one sounds now on the new one.
+      const swapTo = (next: TransportClock) => {
+        const prev = clockRef.current;
+        clockRef.current = next;
+        const state = timelineStore.get();
+        if (state.kind !== "running") return;
+        timelineStore.set({
+          ...state,
+          timeline: rebaseTimeline(state.timeline, prev.now(), next.now()),
+        });
+      };
       clocksRef.current = [...clocksRef.current, clock];
-      clockRef.current = clock;
-      if (isPlayingRef.current) reanchor(cursor.getPosition());
+      swapTo(clock);
       return () => {
         clocksRef.current = clocksRef.current.filter((c) => c !== clock);
         const top = clocksRef.current.at(-1) ?? wallClock;
         if (clockRef.current === top) return;
-        clockRef.current = top;
-        if (isPlayingRef.current) reanchor(cursor.getPosition());
+        swapTo(top);
       };
     },
-    [reanchor, cursor],
+    [timelineStore],
   );
 
   // Seek the active driver to `beat` (its media seconds, floored at the
@@ -631,20 +650,17 @@ export function PlaybackSession({
     (d: TransportDriver) => {
       driversRef.current = [...driversRef.current, d];
       setDriver(d);
-      setSyncEpoch((n) => n + 1);
       return () => {
         const wasTop = driversRef.current.at(-1) === d;
         driversRef.current = driversRef.current.filter((x) => x !== d);
         if (!wasTop) return;
         const next = driversRef.current.at(-1) ?? null;
         setDriver(next);
-        setSyncEpoch((n) => n + 1);
-        // Back on the anchored clock: carry on from where the medium was.
-        if (next === null && isPlayingRef.current)
-          reanchor(cursor.getPosition());
+        // Back on the session's clock: carry on from where the music is.
+        if (next === null && isPlayingRef.current) startAt(livePosition());
       };
     },
-    [reanchor, cursor],
+    [startAt, livePosition],
   );
 
   const readDriver = useCallback((): DriverReading => {
@@ -657,6 +673,24 @@ export function PlaybackSession({
       beat: mediaIndexRef.current.secondsToBeat(pos),
     };
   }, []);
+
+  // Start a new path from where the transport stands now: the driver's beat
+  // when one owns the position (nothing while it is stalled — the driven tick
+  // starts one when it advances), else the live beat.
+  const restartHere = useCallback(() => {
+    const reading = readDriver();
+    switch (reading.kind) {
+      case "internal":
+        startAt(livePosition());
+        return;
+      case "stalled":
+        timelineStore.set({ kind: "idle" });
+        return;
+      case "advancing":
+        startAt(songPosition(reading.beat));
+        return;
+    }
+  }, [readDriver, startAt, livePosition, timelineStore]);
 
   const stop = useCallback(() => {
     // Abort any pending count-in too, so Stop during the lead-in cancels it.
@@ -805,15 +839,14 @@ export function PlaybackSession({
     setCountIn(null);
     // Re-base the transport to the new start. When the previous song was
     // already playing, `isPlaying` stays true across the switch, so `play()`
-    // causes no play/pause transition and the rAF loop — still anchored to the
-    // previous song — would clobber the `setBeat(start)` above on its next tick.
-    // Re-anchoring here (and bumping `seekEpoch` so the audio scheduler
-    // restarts from the new cursor) makes every loaded song start from its
-    // start beat, whether or not playback was already running.
+    // causes no play/pause transition and the rAF loop — still on the previous
+    // song's timeline — would clobber the `setBeat(start)` above on its next
+    // tick. Starting a new path here (the audio schedulers restart with it)
+    // makes every loaded song start from its start beat, whether or not
+    // playback was already running.
     if (playOnLoadRef.current) {
       playOnLoadRef.current = false;
-      reanchor(songPosition(start));
-      setSeekEpoch((n) => n + 1);
+      startAt(songPosition(start));
       play();
     } else {
       // Loading/editing new content rewinds the cursor above and stops playback.
@@ -822,12 +855,13 @@ export function PlaybackSession({
     /* eslint-enable react-hooks/set-state-in-effect */
     // Keyed on `contentKey` (the loaded timeline), NOT `score` — so the pitch /
     // voicing / key view-transforms layered over the same timeline don't rewind
-    // or stop playback (they apply live). `play`/`reanchor` are stable.
+    // or stop playback (they apply live). `play`/`startAt` are stable.
     // `contentPending` only defers the reset of new content until it composes.
-  }, [contentKey, contentPending, contentEmpty, cursor, play, reanchor]);
+  }, [contentKey, contentPending, contentEmpty, cursor, play, startAt]);
 
   // Absolute seek — the primitive the progression bar drives. Clamps to the
-  // score span and re-anchors so the audio/cursor stay glued while playing.
+  // score span and, while playing, starts a new path there (sound and cursor
+  // follow the same one).
   // Stable (reads refs internally), so pointer handlers stay correct mid-drag.
   const seekTo = useCallback(
     (beat: number) => {
@@ -844,13 +878,9 @@ export function PlaybackSession({
       // stale). No-op re-render when already null — React bails on the same value.
       setCountIn(null);
       cursor.setBeat(next, { seek: true });
-      reanchor(songPosition(next));
-      // Signal anchored consumers (the audio scheduler) to restart from `next`.
-      // The score is unchanged, so without this the audio would keep playing
-      // from the pre-seek position while only the visual cursor jumps.
-      setSeekEpoch((n) => n + 1);
+      if (isPlayingRef.current) startAt(songPosition(next));
     },
-    [reanchor, cursor, seekDriver],
+    [startAt, cursor, seekDriver],
   );
 
   // Relative seek (keyboard arrows) delegates to the absolute primitive.
@@ -948,8 +978,8 @@ export function PlaybackSession({
             direction < 0
               ? prevLine(grid, here, start)
               : nextLine(grid, here, end);
-          // Move the visual cursor directly — no `seekTo` (no re-anchor / seekEpoch
-          // bump) since playback is suspended. The store write is read back by the
+          // Move the visual cursor directly — no `seekTo` (no new timeline
+          // path) since playback is suspended. The store write is read back by the
           // next step's `cursor.getBeat()` and the final `endScrub` commit. A
           // bar-jump is navigation, not playback — flag it a seek so onset FX
           // don't fire on every step.
@@ -1030,22 +1060,28 @@ export function PlaybackSession({
     });
   }, []);
 
-  // A tempo change rescales `score` (and `tempoIndex`) mid-flight; re-anchor at
-  // the current cursor so the visual transport doesn't jump.
+  // A tempo change (the speed wheel, a driver's rate) re-times the running
+  // timeline from NOW: what sounds at this instant keeps sounding, everything
+  // after it follows the new tempo. Derived from the timeline itself at the
+  // clock's `now()` — never from the cursor, which holds the beat of the last
+  // frame: re-anchoring on that lost the time since the frame on every change,
+  // ~60 times a second during a drag, and the cursor fell behind the sound.
   //
-  // This MUST be a layout effect, not a passive one. `scoreRef`/`tempoIndexRef`
-  // are `useLatestRef`s that flip to the new tempo *during render*, but the
-  // anchor (`anchorRef.startScoreSec`, in score-seconds of the OLD tempo) is only
-  // corrected here. A passive `useEffect` can run a frame AFTER the next rAF
-  // transport tick, leaving that tick to invert new-tempo seconds against an
-  // old-tempo anchor — a beat jump proportional to the absolute song position
-  // (large, very visible, and continuous while the speed wheel is dragged).
-  // A layout effect runs synchronously in the commit phase, before the next
-  // tick, so the anchor and the index the tick reads always agree. (audio
-  // re-anchors via its own score-dep effect.)
+  // A layout effect, so the new timeline is in place in the same commit as the
+  // new `score`, before the next rAF tick reads either; the audio schedulers
+  // are subscribed to the store and re-time in the same call.
   useLayoutEffect(() => {
-    reanchor(cursor.getPosition());
-  }, [score, reanchor, cursor]);
+    const state = timelineStore.get();
+    if (state.kind !== "running") return;
+    timelineStore.set({
+      ...state,
+      timeline: retempoTimeline(
+        state.timeline,
+        tempoIndex,
+        clockRef.current.now(),
+      ),
+    });
+  }, [tempoIndex, timelineStore]);
 
   // 0% speed freezes the transport: pause so neither the cursor nor the audio
   // advances. Stepping the speed back up requires pressing play again.
@@ -1056,7 +1092,7 @@ export function PlaybackSession({
 
   useEffect(() => {
     if (!isPlaying) {
-      anchorRef.current = null;
+      timelineStore.set({ kind: "idle" });
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
@@ -1064,15 +1100,18 @@ export function PlaybackSession({
       return;
     }
 
-    // Anchor against the current cursor + active clock so play/pause/seek compose.
-    reanchor(cursor.getPosition());
+    // Start the path at the cursor (or where the medium is) on the play.
+    restartHere();
 
-    // Driven: the medium owns the position. No anchor arithmetic — read it,
-    // convert it to a beat, and freeze the cursor while it does not advance.
-    // The A–B loop cannot fold a medium seamlessly, so the wrap is a seek.
+    // Driven: the medium owns the position — the cursor shows it, and the
+    // timeline the synth sounds is kept within DRIFT_TOLERANCE_SEC of it. The
+    // A–B loop cannot fold a medium seamlessly, so the wrap is a seek.
     const drivenTick = (d: TransportDriver) => {
       const pos = d.position();
-      if (pos !== null) {
+      if (pos === null) {
+        // Not advancing (buffering, seeking): nothing may sound.
+        timelineStore.set({ kind: "idle" });
+      } else {
         const beat = mediaIndexRef.current.secondsToBeat(pos);
         const endBeat = scoreEndBeat(scoreRef.current);
         // A driven cycle never rests (see `SessionValue.loopCycle`).
@@ -1084,7 +1123,7 @@ export function PlaybackSession({
           seekDriver(d, cycle.start);
           wrapPendingRef.current = true;
           cursor.setBeat(cycle.start, { seek: true });
-          setSyncEpoch((n) => n + 1);
+          startAt(songPosition(cycle.start));
         } else if (beat >= endBeat) {
           cursor.setBeat(endBeat);
           setIsPlaying(false);
@@ -1093,9 +1132,33 @@ export function PlaybackSession({
           wrapPendingRef.current = false;
           driverAtBeatRef.current = beat;
           cursor.setBeat(beat);
+          followDriver(beat);
         }
       }
       rafRef.current = requestAnimationFrame(tick);
+    };
+
+    // Keep the timeline on the medium at `beat`: start it when nothing
+    // sounds yet (the medium just began advancing), re-anchor it when it
+    // slipped past the tolerance (compared in seconds at the PLAYING tempo, so
+    // the tolerance is wall time whatever the speed).
+    const followDriver = (beat: number) => {
+      const state = timelineStore.get();
+      if (state.kind !== "running") {
+        startAt(songPosition(beat));
+        return;
+      }
+      const now = clockRef.current.now();
+      const { timeline } = state;
+      const slip =
+        timeline.tempo.beatToSeconds(timeline.beatOf(timeline.cAt(now))) -
+        timeline.tempo.beatToSeconds(beat);
+      if (Math.abs(slip) > DRIFT_TOLERANCE_SEC) {
+        timelineStore.set({
+          ...state,
+          timeline: resyncTimeline(timeline, beat, now),
+        });
+      }
     };
 
     const tick = () => {
@@ -1104,39 +1167,33 @@ export function PlaybackSession({
         drivenTick(d);
         return;
       }
-      const anchor = anchorRef.current;
-      if (!anchor) return;
-      // Recompute origin seconds + end from the anchor each frame so seeks and
-      // tempo changes (which rewrite the anchor / score) take effect seamlessly.
-      const score = scoreRef.current;
-      const endBeat = scoreEndBeat(score);
-      const idx = tempoIndexRef.current;
-      const rawSeconds =
-        clockRef.current.now() - anchor.startClockSec + anchor.startScoreSec;
+      const state = timelineStore.get();
+      if (state.kind !== "running") return;
+      const { timeline } = state;
+      const c = timeline.cAt(clockRef.current.now());
 
-      // A–B practice loop: fold the monotonic elapsed score-time into the
-      // loop's iterations deterministically (no teardown — the seamless-loop
-      // fix): `positionAtTime` reads the shared `LoopCycle`, so a repeat's rest
-      // is real time here exactly as in the schedulers, which pre-schedule the
-      // same iterations from the same anchor + cycle — the cursor and the sound
-      // wrap together with zero re-sync. A wrap is a change in the fold's
-      // iteration count; on it we flag the cursor write as a `seek` so
+      // A–B loop: the timeline folds the walk into the loop's iterations
+      // itself — a repeat's rest included — and the audio schedulers walk the
+      // same path, so the cursor and the sound wrap together. A wrap is just
+      // an iteration change; on it we flag the cursor write as a `seek` so
       // onset-driven FX re-anchor instead of spraying every note between B and
-      // A. The fold runs BEFORE the song-end stop so a loop ending exactly at
-      // the song end still cycles its tail rather than stopping.
-      const cycle = loopCycleRef.current;
-      if (cycle) {
-        const { position, iter } = positionAtTime(rawSeconds, cycle, idx);
+      // A. A loop ending exactly at the song end cycles its tail rather than
+      // stopping.
+      if (timeline.path.cycle) {
+        const iter = timeline.iterationOf(c);
         const wrapped = iter !== loopIterRef.current;
         loopIterRef.current = iter;
-        cursor.setPosition(position, wrapped ? { seek: true } : undefined);
+        cursor.setPosition(
+          timeline.positionOf(c),
+          wrapped ? { seek: true } : undefined,
+        );
         rafRef.current = requestAnimationFrame(tick);
         return;
       }
 
-      // Invert seconds→beats in closed form (O(log n)) and clamp to the song
-      // end. The index isn't clamped to scoreEndBeat, so we clamp here.
-      const beat = Math.min(endBeat, idx.secondsToBeat(rawSeconds));
+      // The tempo index isn't clamped to scoreEndBeat, so we clamp here.
+      const beat = timeline.beatOf(c);
+      const endBeat = scoreEndBeat(scoreRef.current);
       if (beat >= endBeat) {
         cursor.setBeat(endBeat);
         setIsPlaying(false);
@@ -1153,12 +1210,10 @@ export function PlaybackSession({
         rafRef.current = null;
       }
     };
-    // Re-anchor only on play/stop transitions (and clock swaps, handled in
-    // registerClock) — not on every cursor change; the loop owns the cursor
-    // while playing. `reanchor` and `cursor` are both stable (memoized), and the
-    // `scoreRef` / `tempoIndexRef` latest-value handles have stable identity, so
-    // this effect still only re-runs on the play/stop transition.
-  }, [isPlaying, reanchor, cursor, seekDriver]);
+    // Runs only on play/stop transitions — the loop owns the cursor while
+    // playing. Every other dependency is stable (memoized callbacks, the
+    // store, latest-refs).
+  }, [isPlaying, restartHere, startAt, cursor, seekDriver, timelineStore]);
 
   // --- The driver follows the transport. ------------------------------------
   // `isPlaying` stays the session's intent; the active driver is told. Before
@@ -1177,12 +1232,12 @@ export function PlaybackSession({
         DRIVER_ALIGN_TOLERANCE_SEC
     ) {
       seekDriver(driver, here);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- the seek just sent to an external medium moved the transport's origin; anchored consumers (the audio scheduler) must re-read it, and only this effect knows the seek happened
-      if (isPlaying) setSyncEpoch((n) => n + 1);
+      // The medium jumped: the music restarts from where it now is.
+      if (isPlaying) restartHere();
     }
     if (isPlaying) driver.play();
     else driver.pause();
-  }, [driver, isPlaying, cursor, seekDriver]);
+  }, [driver, isPlaying, cursor, seekDriver, restartHere]);
 
   // A newly active driver is asked for the current tempo, and adopts the rate
   // it takes. Forgotten on its way out, so a later driver is sought afresh.
@@ -1195,8 +1250,9 @@ export function PlaybackSession({
   }, [driver, setTempoScale]);
 
   // --- The transport follows the driver's state. ----------------------------
-  // A stall or a resume bumps `syncEpoch` (the scheduler re-anchors on it). An
-  // external pause — the medium stopped after moving, or failed — stops the
+  // A stall or a resume is followed by the driven tick (the timeline goes
+  // idle while the medium does not advance, and starts again where it
+  // resumes). An external pause — the medium stopped after moving, or failed — stops the
   // transport. The medium never STARTS the transport: a stray advance while the
   // session is stopped (a late play after a quick stop) is paused again, so the
   // session's intent always wins and the two cannot ping-pong.
@@ -1215,9 +1271,6 @@ export function PlaybackSession({
       if (prev === null) return; // the current state, on subscribe: no transition
       const moved = (k: DriverState["kind"] | null) =>
         k === "advancing" || k === "stalled";
-      if ((prev === "advancing") !== (state.kind === "advancing")) {
-        setSyncEpoch((n) => n + 1);
-      }
       if (state.kind === "advancing" && !isPlayingRef.current) {
         driver.pause();
         return;
@@ -1231,18 +1284,13 @@ export function PlaybackSession({
     });
   }, [driver]);
 
-  // Re-anchor when the loop's cycle changes mid-play (bounds moved, toggled, the
-  // rest switched or a driver came / went). The deterministic loop fold is
-  // sensitive to the cycle, so without this a change would snap the cursor to
-  // `rawSeconds mod newCycleLength` instead of continuing from the current
-  // position. Re-anchoring at the live cursor restarts the fold cleanly
-  // from here (iteration reset) — in lockstep with the audio engine, which
-  // rebuilds its schedule from the same cursor on the same change. A *stable*
-  // loop never re-runs this, so a repeated wrap stays anchor-stable and seamless.
-  // Only meaningful while playing; `reanchor`/`cursor` are stable.
+  // A loop edit mid-play (toggled, bounds moved, the rest switched, a driver
+  // come or gone) starts a new path from where the music is now — every
+  // follower walks the new cycle from the same position. A *stable* cycle never
+  // re-runs this, so a repeated wrap stays seamless.
   useEffect(() => {
-    if (isPlayingRef.current) reanchor(cursor.getPosition());
-  }, [loopCycle, reanchor, cursor]);
+    if (isPlayingRef.current) restartHere();
+  }, [loopCycle, restartHere]);
 
   // Stable transport verbs the controls plugin registers as per-surface, focus-
   // scoped keyboard shortcuts (Space / ↑ / ↓ and the ←/→ seek-hold controller).
@@ -1268,10 +1316,8 @@ export function PlaybackSession({
       timelineBeats,
       isPlaying,
       tempoScale,
-      seekEpoch,
-      syncEpoch,
+      timeline: timelineStore,
       driven: driver !== null,
-      readDriver,
       loop,
       loopCycle,
       loopOptions,
@@ -1301,10 +1347,8 @@ export function PlaybackSession({
       timelineBeats,
       isPlaying,
       tempoScale,
-      seekEpoch,
-      syncEpoch,
+      timelineStore,
       driver,
-      readDriver,
       loop,
       loopCycle,
       loopOptions,

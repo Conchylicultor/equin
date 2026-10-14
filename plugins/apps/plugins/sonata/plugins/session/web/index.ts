@@ -11,11 +11,11 @@ export {
   type TransportClock,
   type TransportDriver,
   type DriverState,
-  type DriverReading,
   type LoopRange,
   type LoopOptions,
   type CountInState,
 } from "./session";
+export type { TimelineState, TimelineStore } from "./timeline-store";
 export {
   CursorStoreProvider,
   cursorApiFor,

@@ -7,7 +7,7 @@ Clicks are scheduled on the audio engine's live `AudioContext` (via
 to playback, and they route to `ctx.destination` directly (independent of the
 music master gain) so muting the song keeps the click. The **continuous** track
 is a synthetic click-note list fed through the engine's own `startScheduling`,
-inheriting seamless A–B loop wrap and tempo-retime for free. It carries three
+following the same session timeline — seamless A–B loop wrap and tempo re-timing for free. It carries three
 accent tiers via a `pitch` sentinel — downbeat (accented), main beat, and, when
 the **subdivision** setting is >1, a lighter/quieter tick on each in-between
 subdivision cell (`beatGrid(score, subdivision)`, so 2 = eighths, 3 = triplets,
@@ -37,10 +37,10 @@ is the one place the player shows the BPM; the header carries no BPM label.
     - `sonataPlayerPane.Actions` "metronome" → `MetronomeButton`
     - `Sonata.Hud` "count-in" → `CountInOverlay`
     - `ConfigV2.WebRegister` "sonata.metronome"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/sonata/audio/engine` ×5
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/session` ×4
     - `config_v2` ×3
+    - `apps/sonata/audio/engine` ×2
     - `primitives/css/control-panel` ×2
     - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/shell.Sonata`

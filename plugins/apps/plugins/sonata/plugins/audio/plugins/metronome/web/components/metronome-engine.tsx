@@ -11,10 +11,7 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
   useAudioGraph,
-  scheduleOrigin,
   startScheduling,
-  useDriftCorrection,
-  type ScheduleHandle,
 } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/engine/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { metronomeConfig } from "../../shared/config";
@@ -37,7 +34,8 @@ import { ACCENT_PITCH, CLICK_DURATION_BEATS, NORMAL_PITCH } from "../constants";
  *     begin real playback. No JS timer.
  *  3. **Continuous click track** — when enabled and playing, it feeds a synthetic
  *     click-note list through the engine's `startScheduling` (the SAME scheduler
- *     note playback uses), inheriting seamless A–B loop wrap + tempo retime.
+ *     note playback uses), following the same session timeline — so clicks
+ *     inherit the seamless A–B loop wrap, tempo re-timing and driver following.
  *
  * It uses the engine's live `AudioContext` (via `useAudioGraph`) — never its own —
  * because clicks must align sample-accurately to playback, which is anchored on
@@ -48,49 +46,26 @@ export function MetronomeEngine() {
   const graph = useAudioGraph();
   const ctx = graph?.ctx ?? null;
 
-  const {
-    score,
-    isPlaying,
-    seekEpoch,
-    syncEpoch,
-    readDriver,
-    loopCycle,
-    countIn,
-    registerCountIn,
-    finishCountIn,
-  } = useSession();
+  const { score, timeline, countIn, registerCountIn, finishCountIn } =
+    useSession();
 
   const { continuous, countInBars, volume, accentDownbeat, subdivision } =
     useConfig(metronomeConfig);
 
   // Imperative per-surface cursor facade (stable). The count-in provider reads
-  // the live cursor beat at play time; the rebuild effect reads it at the play
-  // instant — never as a render input — so both go through the stable handle.
+  // the live cursor beat at play time — never as a render input.
   const cursor = useCursorApi();
 
   // Live mirrors read inside effects/callbacks without listing them as deps, so
   // the registered closures + effects stay stable (mirroring the audio engine).
-  const ctxRef = useLatestRef(ctx);
   const scoreRef = useLatestRef(score);
-  const isPlayingRef = useLatestRef(isPlaying);
-  const continuousRef = useLatestRef(continuous);
   const countInBarsRef = useLatestRef(countInBars);
   const volumeRef = useLatestRef(volume);
-
-  // The loop as the transport cycles it (`session.loopCycle`), the SAME cycle
-  // the audio engine schedules — identity-stable while its values hold, so a
-  // repeated wrap at a stable loop never tears down the pre-scheduled
-  // iterations (the seamless-loop behaviour, inherited). The clicks keep
-  // counting through a repeat's rest (`restSounds`): the rest is one bar at A's
-  // meter, so it clicks as a one-bar count-in to every repeat.
 
   // The single click voice, recreated with the AudioContext. Created in the
   // lifecycle effect below (declared first) so the scheduling effects that read
   // it on the same render find it already populated.
   const clickVoicesRef = useRef<InstrumentVoices | null>(null);
-  // The running continuous schedule, shared by the rebuild effect (creates /
-  // cancels it) and the retime effect (re-times its tail on a tempo change).
-  const handleRef = useRef<ScheduleHandle | null>(null);
 
   // --- Click voice lifecycle: one voice per AudioContext. --------------------
   // Routed to `ctx.destination` directly (independent of the music master gain);
@@ -195,7 +170,8 @@ export function MetronomeEngine() {
   // list then. We key the rebuild EFFECT on a cheap signature of the beat
   // structure (`clickNotesKey`) and read the list through a latest-ref, so the
   // schedule rebuilds only on a real beat/accent change — never on a tempo frame
-  // (the retime effect handles tempo). Mirrors the engine's stable-key discipline.
+  // (the scheduler re-times itself off the timeline). Mirrors the engine's
+  // stable-key discipline.
   const clickNotes = useMemo(
     () => buildClickNotes(score, accentDownbeat, subdivision),
     [score, accentDownbeat, subdivision],
@@ -205,25 +181,11 @@ export function MetronomeEngine() {
     score.meta.pickupBeats ?? 0
   }|${scoreEndBeat(score)}|${accentDownbeat}|${subdivision}`;
 
-  // Rebuild effect: anchor on play, schedule the click track upfront, silence on
-  // stop / when continuous is off. Mirrors the audio engine's rebuild effect.
+  // Scheduling effect: while the continuous click is on, the click notes follow
+  // the session timeline (the scheduler starts, re-times, wraps and silences
+  // with it). Mirrors the audio engine's scheduling effect.
   useEffect(() => {
-    if (!ctx || !isPlaying || !continuous) {
-      clickVoicesRef.current?.allOff();
-      return;
-    }
-
-    void ctx.resume();
-
-    // Capture the shared anchor at the play instant (same shape the engine uses):
-    // the cursor on the session's own clock, the medium's position when a
-    // driver owns the transport — and no clicks while it is stalled.
-    const origin = scheduleOrigin(
-      readDriver(),
-      cursor.getPosition(),
-      ctx.currentTime,
-    );
-    if (origin.kind === "stalled") {
+    if (!ctx || !continuous) {
       clickVoicesRef.current?.allOff();
       return;
     }
@@ -234,51 +196,22 @@ export function MetronomeEngine() {
       clickVoicesRef.current ?? undefined;
 
     const handle = startScheduling(
-      { ...scoreRef.current, notes: clickNotesRef.current },
-      origin.from,
-      origin.audioAnchor,
+      { notes: clickNotesRef.current, pedalEvents: [] },
+      timeline,
       resolveVoices,
       ctx,
-      loopCycle,
+      // The clicks keep counting through a repeat's rest: it is one bar at A's
+      // meter, so it clicks as a one-bar count-in to every repeat.
       { restSounds: true },
     );
-    handleRef.current = handle;
 
     return () => {
       handle.cancel();
-      if (handleRef.current === handle) handleRef.current = null;
       clickVoicesRef.current?.allOff();
     };
     // `clickNotesKey` flips only on a real beat-structure/accent change (NOT a
-    // tempo frame); `seekEpoch` re-anchors on a seek; `loopCycle` rebuilds with a
-    // new cycle (a stable wrap leaves it unchanged → seamless). `cursor` is stable.
-    // `syncEpoch` re-anchors on a driver's stall / resume / own seek.
-  }, [
-    ctx,
-    isPlaying,
-    continuous,
-    clickNotesKey,
-    seekEpoch,
-    syncEpoch,
-    loopCycle,
-    cursor,
-    readDriver,
-  ]);
-
-  // Clicks follow a driving recording like the notes do.
-  useDriftCorrection(handleRef, ctx);
-
-  // Retime effect: a tempo drag re-derives `score` ~60×/s but leaves `clickNotes`
-  // stable, so the rebuild effect stays put while this re-times the running
-  // schedule's undispatched tail to the new tempo — no buzz, no cut click. Reads
-  // play/continuous/ctx through refs so it fires only on a tempo/content change.
-  useEffect(() => {
-    if (!isPlayingRef.current || !continuousRef.current) return;
-    const handle = handleRef.current;
-    const liveCtx = ctxRef.current;
-    if (!handle || !liveCtx) return;
-    handle.retime(score, liveCtx.currentTime);
-  }, [score]);
+    // tempo frame); `timeline` and `clickNotesRef` are stable.
+  }, [ctx, continuous, clickNotesKey, timeline, clickNotesRef]);
 
   return null;
 }

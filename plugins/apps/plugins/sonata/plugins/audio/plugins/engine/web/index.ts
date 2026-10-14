@@ -6,20 +6,11 @@ import { AudioProvider } from "./components/audio-provider";
 import { VolumeControl } from "./components/volume-control";
 
 // Shared audio toolkit for sibling per-surface audio effects (the metronome):
-// the live graph handle and the loop-/tempo-aware look-ahead scheduler. Reusing
-// `startScheduling` gives clicks the same seamless A–B loop wrap and tempo-retime
-// behaviour as note playback for free.
+// the live graph handle and the timeline-following look-ahead scheduler.
+// Reusing `startScheduling` gives clicks the same seamless A–B loop wrap,
+// tempo re-timing and driver following as note playback, for free.
 export { useAudioGraph, type AudioGraph } from "./audio-store";
-export { startScheduling } from "./scheduler";
-export type { ScheduleHandle } from "./scheduler";
-// Driver-aware anchoring shared by every scheduler slaved to the transport:
-// where a (re)built schedule starts, and the drift check that keeps it on an
-// external medium (a recording) driving the transport.
-export {
-  scheduleOrigin,
-  useDriftCorrection,
-  type ScheduleOrigin,
-} from "./transport-sync";
+export { startScheduling, type ScheduleHandle } from "./scheduler";
 
 export default {
   description:

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { emptyScore } from "./helpers";
 import { buildTempoIndex } from "./tempo-index";
-import { positionAtTime } from "./loop-cycle";
+import { songPosition } from "./loop-cycle";
+import { startTimeline } from "./timeline";
 import { songAxis, unrollLoop } from "./loop-timeline";
 import type { LoopCycle, Note, Score } from "./types";
 
@@ -61,8 +62,10 @@ describe("unrollLoop", () => {
     const tempo = buildTempoIndex(song);
     // Wherever the transport is, its axis beat sits at the same elapsed time
     // as on the transport, measured from the song's start.
+    const transport = startTimeline(songPosition(0), cycle, tempo, 0);
     for (const raw of [2, 10, 16, 18.5, 22, 27, 30, 35]) {
-      const { position, iter } = positionAtTime(raw, cycle, tempo);
+      const position = transport.positionAt(raw);
+      const iter = transport.iterationOf(transport.cAt(raw));
       const u = axis.timeline.axisBeat(position);
       // On a repeat the cursor sits in the first copy: one cycle per extra
       // iteration has been folded away.

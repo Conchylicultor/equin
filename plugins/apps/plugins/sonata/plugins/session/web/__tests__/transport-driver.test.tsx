@@ -159,6 +159,75 @@ function renderSession(score: Score) {
   };
 }
 
+/** The running timeline's path id (throws when nothing sounds). */
+function generation(s: ReturnType<typeof renderSession>): number {
+  const state = s.session().timeline.get();
+  if (state.kind !== "running") throw new Error("timeline idle");
+  return state.generation;
+}
+
+/** The beat the running timeline sounds at the wall clock's now. */
+function timelineBeat(s: ReturnType<typeof renderSession>): number {
+  const state = s.session().timeline.get();
+  if (state.kind !== "running") throw new Error("timeline idle");
+  return state.timeline.positionAt(performance.now() / 1000).beat;
+}
+
+describe("the playback timeline", () => {
+  /** A clock the test moves by hand. */
+  function manualClock(s: ReturnType<typeof renderSession>) {
+    const clock = { t: 0 };
+    act(() => {
+      s.session().registerClock({ now: () => clock.t });
+    });
+    return clock;
+  }
+
+  it("re-times a tempo change from the change instant, not from the last frame", () => {
+    const s = renderSession(song(16));
+    const clock = manualClock(s);
+    act(() => s.session().seekTo(0));
+    act(() => s.session().play());
+    clock.t = 1;
+    frame();
+    expect(s.beat()).toBeCloseTo(2, 9);
+    // 10 ms after that frame (beat 2.02), slow to half speed: 60 bpm.
+    clock.t = 1.01;
+    act(() => s.session().setTempoScale(0.5));
+    clock.t = 1.5;
+    frame();
+    // 2.02 + 0.49 s at a beat a second. Re-anchoring on the frame's beat (2)
+    // lost the 10 ms: 2.49, and the cursor fell behind the sound.
+    expect(s.beat()).toBeCloseTo(2.51, 9);
+  });
+
+  it("keeps the cursor on the music through a loop and a long speed drag", () => {
+    const s = renderSession(song(16));
+    const clock = manualClock(s);
+    act(() => s.session().setLoop({ start: 0, end: 4, enabled: true }));
+    act(() => s.session().seekTo(0));
+    act(() => s.session().play());
+    let walked = 0; // beats walked, integrated by hand
+    let bpm = 120;
+    for (let i = 0; i < 400; i++) {
+      // A frame, then a tempo change a few ms after it.
+      const toFrame = 0.004 + ((i * 7919) % 11) / 1000;
+      clock.t += toFrame;
+      walked += (toFrame * bpm) / 60;
+      frame();
+      const toChange = 0.002 + ((i * 31) % 9) / 1000;
+      clock.t += toChange;
+      walked += (toChange * bpm) / 60;
+      const scale = 0.25 + ((i * 13) % 20) / 10;
+      bpm = 120 * scale;
+      act(() => s.session().setTempoScale(scale));
+    }
+    frame();
+    expect(walked).toBeGreaterThan(8); // it wrapped
+    expect(s.beat()).toBeCloseTo(walked % 4, 6);
+  });
+});
+
 describe("registerClock", () => {
   it("unregistering the active clock restores the previous one, not the wall clock", () => {
     const s = renderSession(song(16));
@@ -204,19 +273,20 @@ describe("a transport driver", () => {
     frame();
     expect(s.beat()).toBe(6);
 
-    const epoch = s.session().syncEpoch;
+    const before = generation(s);
     d.emit({ kind: "stalled" });
-    expect(s.session().syncEpoch).toBe(epoch + 1);
-    expect(s.session().readDriver()).toEqual({ kind: "stalled" });
     d.media = 5;
     frame();
     expect(s.beat()).toBe(6);
+    // Nothing sounds while the medium does not advance.
+    expect(s.session().timeline.get().kind).toBe("idle");
 
     d.emit({ kind: "advancing" });
-    expect(s.session().syncEpoch).toBe(epoch + 2);
     frame();
     expect(s.beat()).toBe(10);
-    expect(s.session().readDriver()).toEqual({ kind: "advancing", beat: 10 });
+    // The music starts again where the medium resumed.
+    expect(generation(s)).toBeGreaterThan(before);
+    expect(timelineBeat(s)).toBeCloseTo(10, 1);
     expect(s.session().isPlaying).toBe(true);
   });
 
@@ -242,12 +312,15 @@ describe("a transport driver", () => {
     act(() => s.session().setLoop({ start: 4, end: 8, enabled: true }));
     act(() => s.session().play());
     d.emit({ kind: "advancing" });
-    const epoch = s.session().syncEpoch;
+    frame();
+    const before = generation(s);
     d.media = 4.1; // beat 8.2, past B
     frame();
     expect(d.seeks.at(-1)).toBe(2); // A = beat 4 = 2 s
     expect(s.beat()).toBe(4);
-    expect(s.session().syncEpoch).toBe(epoch + 1);
+    // The music restarts at A with the medium.
+    expect(generation(s)).toBe(before + 1);
+    expect(timelineBeat(s)).toBeCloseTo(4, 1);
 
     // The medium has not landed yet: no second wrap.
     const seeks = d.seeks.length;
@@ -335,7 +408,7 @@ describe("a transport driver", () => {
     expect(s.session().isPlaying).toBe(true);
     offA();
     expect(s.session().driven).toBe(false);
-    expect(s.session().readDriver()).toEqual({ kind: "internal" });
+    expect(s.session().timeline.get().kind).toBe("running");
     expect(s.session().isPlaying).toBe(true);
   });
 });

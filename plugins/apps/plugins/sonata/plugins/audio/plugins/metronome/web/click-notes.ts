@@ -34,7 +34,7 @@ const roundBeat = (beat: number): number => Math.round(beat * 1000) / 1000;
  *
  * PURE and tempo-INVARIANT: it reads only beat positions (`bars` / `beatGrid`),
  * which `scaleTempo` never touches — so a tempo drag leaves this list unchanged
- * and the engine's `retime` re-times the clicks without rebuilding them.
+ * and the scheduler re-times the clicks off the timeline without rebuilding them.
  */
 export function buildClickNotes(
   score: Score,

@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { createSmoothClockModel } from "@plugins/packages/plugins/smooth-clock/core";
-import {
-  useCursorApi,
-  useSession,
-} from "@plugins/apps/plugins/sonata/plugins/session/web";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import type { SongSetting } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import type { Score } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
@@ -16,13 +12,12 @@ import {
   useTrackInstrumentMap,
   useTrackVolumeMap,
 } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
-import { startScheduling, type ScheduleHandle } from "../scheduler";
+import { startScheduling } from "../scheduler";
 import {
   DEFAULT_VOLUME,
   useAudioControls,
   useAudioState,
 } from "../audio-store";
-import { scheduleOrigin, useDriftCorrection } from "../transport-sync";
 
 /**
  * One track's channel strip: the track's own fader, and the voices feeding it.
@@ -119,13 +114,12 @@ function parseChannelKey(key: string): Map<string, string> {
  * status line now talk to the engine through the per-surface `audio-store`
  * (provided above both via the `SonataSession.Provider` wrapper slot).
  *
- * On each `isPlaying → true` transition it captures one anchor (`ctx.currentTime`
- * + the cursor beat) and hands it to `startScheduling`, which schedules notes
- * against the Web Audio clock in a bounded look-ahead window (re-arming itself
- * via audio-clock events, never a JS timer / polling) so playback start stays
- * cheap regardless of Score size. Because both the visual rAF cursor and this
- * schedule anchor at the same play instant and derive time from `beatToSeconds`,
- * sound stays locked to the cursor through tempo changes.
+ * It hands the audible notes to `startScheduling`, which follows the session's
+ * playback timeline — the one mapping from the audio clock to the music that
+ * the visual cursor reads too — and schedules notes in a bounded look-ahead
+ * window (re-arming itself via audio-clock events, never a JS timer /
+ * polling), so playback start stays cheap regardless of Score size and sound
+ * stays locked to the cursor through tempo changes, seeks and loops.
  *
  * Instruments and levels are PER-TRACK: there is no global picker here — both
  * the instrument choice and the fader live in the Tracks panel. The engine keeps
@@ -139,44 +133,19 @@ function parseChannelKey(key: string): Map<string, string> {
  * it, in the same gain node, at the same level.
  */
 export function AudioEngine() {
-  const {
-    score,
-    isPlaying,
-    seekEpoch,
-    syncEpoch,
-    readDriver,
-    registerClock,
-    loopCycle,
-  } = useSession();
+  const { score, isPlaying, timeline, registerClock } = useSession();
 
-  // Imperative per-surface cursor facade. Read through a ref inside the
-  // scheduling effect so the effect's deps stay unchanged (the cursor is read
-  // straight at the play instant, NOT a render input — see below). `cursor` is
-  // stable (memoized on the store), so the ref simply mirrors it.
-  const cursor = useCursorApi();
-  const cursorRef = useLatestRef(cursor);
-
-  // Live mirrors read inside effects without listing them as deps. `scoreRef`
-  // gives every effect the latest (tempo-scaled) score even though the rebuild
-  // effect intentionally does NOT depend on `score`; `isPlayingRef` lets the
-  // tempo-keyed retime effect gate on play state without re-firing on play/pause.
+  // The latest (tempo-scaled) score, read by the scheduling effect for its
+  // pedal lane without listing `score` (which changes on every tempo frame).
   const scoreRef = useLatestRef(score);
-  const isPlayingRef = useLatestRef(isPlaying);
-
-  // The loop as the transport cycles it (`session.loopCycle`: bounds + the rest
-  // before each repeat), or null when no loop is enabled. Identity-stable while
-  // its values hold, so the rebuild effect depends on it directly: the schedule
-  // rebuilds when the loop is toggled, its bounds move or its rest changes, and
-  // a repeated wrap at a *stable* cycle never tears down the seamless
-  // pre-scheduled iterations (in `startScheduling`).
 
   // Muted tracks are dropped from the play-list before scheduling. We derive the
   // audible NOTE LIST (not a whole filtered score) keyed on `[score.notes,
   // mutedKey]`: `scaleTempo` preserves the `score.notes` array reference, so this
   // memo's identity is **stable across tempo changes** and only flips on a real
   // note/mute change. That stability is what lets the rebuild effect ignore tempo
-  // churn (tempo is handled by the separate retime effect below) — so dragging the
-  // speed wheel no longer tears down and re-attacks every ringing note.
+  // churn (the scheduler re-times itself off the timeline) — so dragging the
+  // speed wheel never tears down and re-attacks every ringing note.
   //
   // The key, not the Set, is the dep, and the filter rebuilds its set FROM the
   // key: `useMutedTrackIds()` re-mints its Set whenever ANY persisted track-view
@@ -282,10 +251,6 @@ export function AudioEngine() {
   // master, feeding its own voice manager. Two tracks on the same instrument
   // share nothing — that separation is what gives each track a node to fade.
   const channelsRef = useRef<Map<string, TrackChannel>>(new Map());
-  // The currently-running schedule, shared between the rebuild effect (which
-  // creates/cancels it) and the retime effect (which re-times its tail on a
-  // tempo-only change). Nulled on cancel so retime never lands on a dead handle.
-  const handleRef = useRef<ScheduleHandle | null>(null);
 
   // Create the context eagerly on mount; it starts suspended until a gesture.
   useEffect(() => {
@@ -306,26 +271,7 @@ export function AudioEngine() {
     // scheduled against (no drift, correct across tab backgrounding). Stable for
     // the whole session: `ctx.currentTime` is frozen while suspended and only
     // advances after `ctx.resume()` on play — exactly when the cursor reads it.
-    //
-    // Read SMOOTHED: `currentTime` advances once per rendered audio buffer, not
-    // continuously, so successive animation frames read it 0 or 2 steps apart
-    // and the cursor scrolls in jerks. The smooth clock extrapolates on the
-    // wall clock between readings and slews (never jumps) toward each one, so
-    // it stays within a buffer of the audio. While the context is not running
-    // its time is frozen: hand that back raw and forget the fit, so a resume
-    // snaps to the context instead of to a line that ran on without it.
-    const smooth = createSmoothClockModel();
-    const unregisterClock = registerClock({
-      now: () => {
-        if (ctx.state !== "running") {
-          smooth.reset();
-          return ctx.currentTime;
-        }
-        const perfMs = performance.now();
-        smooth.observe(ctx.currentTime, perfMs, 1);
-        return smooth.at(perfMs) ?? ctx.currentTime;
-      },
-    });
+    const unregisterClock = registerClock({ now: () => ctx.currentTime });
 
     // Belt-and-suspenders autoplay-gate unlock: the play button is itself a
     // gesture, but a one-time pointerdown resume covers any other entry point.
@@ -477,132 +423,61 @@ export function AudioEngine() {
     }
   }, [volumeKey, inUseKey]);
 
-  // --- Rebuild effect: anchor on play, schedule upfront, allOff on stop. ------
-  // Re-runs on `seekEpoch` (a seek repositions the origin without changing the
-  // notes), on `audibleNotes` (an edit or mute toggle), and on `inUseKey` (a
-  // track's instrument changed, or a track became audible / silent) — each
-  // legitimately needs the in-flight schedule cancelled (allOff) and rebuilt from
-  // the current cursor. On an instrument change the rebuild is what awaits the
+  // The context starts suspended until a gesture; playing resumes it (the play
+  // button is itself one).
+  useEffect(() => {
+    if (isPlaying) void graph?.ctx.resume();
+  }, [isPlaying, graph]);
+
+  // --- Scheduling effect: follow the timeline with the audible notes. --------
+  // The scheduler follows the session's timeline on its own: it restarts on a
+  // play / seek / loop edit / medium jump, re-times on a tempo change without
+  // cutting a ringing note, and silences on stop. So this effect re-runs only
+  // when the NOTES it schedules change: `audibleNotes` (an edit or mute
+  // toggle) and `inUseKey` (a track's instrument changed, or a track became
+  // audible / silent). On an instrument change the rebuild is what awaits the
   // new instrument's `loaded` promise and gives a clean allOff → dispose →
-  // create → re-attack cutover: the reconcile effect above is declared first, so
-  // React runs this effect's cleanup (allOff) before that one's setup (dispose),
-  // an ordering the instrument wrappers' `disposed` guard explicitly tolerates.
+  // create → re-attack cutover: the reconcile effect above is declared first,
+  // so React runs this effect's cleanup (allOff) before that one's setup
+  // (dispose), an ordering the instrument wrappers' `disposed` guard explicitly
+  // tolerates.
   //
   // `inUseKey` rather than `trackInstrumentMap` itself: that map's identity is
   // re-minted whenever ANY persisted track-view field changes — a fader move
   // included — so listing it here would cut every ringing note each time one
-  // track's level moved. The fingerprint changes only when a track's resolved
-  // instrument, or the audible track set, really does.
-  //
-  // It also deliberately does NOT depend on `score`: a tempo-only change keeps
-  // `audibleNotes` referentially stable, so this effect doesn't run and no ringing
-  // note is cut — the separate retime effect below re-times the tail instead.
-  // Tempo is read live via `scoreRef` so a rebuild that DOES fire still uses the
-  // current tempo. Per-track levels are never read here at all: they live on the
-  // strips' faders, downstream of everything this effect schedules.
+  // track's level moved. Per-track levels are never read here at all: they
+  // live on the strips' faders, downstream of everything this schedules.
   useEffect(() => {
-    const ctx = ctxRef.current;
+    const ctx = graph?.ctx;
     if (!ctx) return;
 
     const channels = [...channelsRef.current.values()];
-
-    if (!isPlaying) {
-      for (const channel of channels) channel.voices.allOff();
-      return;
-    }
-
-    void ctx.resume();
-
-    // Capture the shared anchor synchronously at the play instant. The cursor is
-    // read straight from the store (it's not a render input here) — a seek bumps
-    // `seekEpoch`, re-running this effect so the read reflects the new position.
-    const playAnchor = ctx.currentTime;
-    const cursorAt = cursorRef.current.getPosition();
-
     // Route a track to its own channel strip, reading the ref live so it always
     // reflects the latest reconcile.
     const resolveVoices = (trackId: string): InstrumentVoices | undefined =>
       channelsRef.current.get(trackId)?.voices;
 
-    let handle: ScheduleHandle | null = null;
+    let handle: { cancel(): void } | null = null;
     let cancelled = false;
     void (async () => {
       await Promise.all(channels.map((c) => c.voices.loaded));
       if (cancelled) return;
-      // Where to start. On the session's own clock: the cursor at the play
-      // instant, which the visual transport anchored on too. With a driver (a
-      // recording owns the position): wherever the medium is NOW, after the
-      // load wait — or nothing at all while it is stalled; its resume bumps
-      // `syncEpoch` and rebuilds from there.
-      const reading = readDriver();
-      const origin = scheduleOrigin(
-        reading,
-        cursorAt,
-        reading.kind === "internal" ? playAnchor : ctx.currentTime,
-      );
-      if (origin.kind === "stalled") return;
-      // Compose the play-list score from the live tempo + the (mute-filtered)
-      // audible notes. `score.notes` is reference-stable across tempo changes, so
-      // this object is the only place tempo and notes are joined for scheduling.
+      // Joining the running timeline late (the load wait) drops the notes
+      // that would now sound late, rather than bursting them out.
       handle = startScheduling(
-        { ...scoreRef.current, notes: audibleNotes },
-        origin.from,
-        origin.audioAnchor,
+        { notes: audibleNotes, pedalEvents: scoreRef.current.pedalEvents },
+        timeline,
         resolveVoices,
         ctx,
-        loopCycle,
       );
-      handleRef.current = handle;
     })();
 
     return () => {
       cancelled = true;
       handle?.cancel();
-      if (handleRef.current === handle) handleRef.current = null;
       for (const channel of channels) channel.voices.allOff();
     };
-    // `loopCycle` is in deps so toggling the loop, moving its bounds or
-    // switching its rest rebuilds from the current cursor with the new cycle — a
-    // deliberate edit. A repeated wrap at a stable loop leaves it unchanged, so
-    // the pre-scheduled iterations in `startScheduling` keep playing with no
-    // teardown (the seamless-loop fix).
-    // `syncEpoch` re-anchors on a driver's stall / resume / own seek (an A–B
-    // wrap is one, since a medium cannot fold a loop) and on a driver coming
-    // or going; `readDriver` is stable.
-  }, [
-    isPlaying,
-    audibleNotes,
-    inUseKey,
-    seekEpoch,
-    syncEpoch,
-    loopCycle,
-    readDriver,
-  ]);
-
-  // While a driver owns the transport, keep the running schedule on it: a slip
-  // past ±40 ms re-anchors it without cutting a ringing note.
-  useDriftCorrection(handleRef, graph?.ctx ?? null);
-
-  // --- Retime effect: follow the speed jog-wheel without cutting any note. ----
-  // Keyed on `score` (which changes only via tempo or content). A pure tempo drag
-  // re-derives `score` ~60×/sec but leaves `audibleNotes` stable, so the rebuild
-  // effect stays put while this re-times the running schedule's not-yet-dispatched
-  // tail to the new tempo — leaving every sounding note untouched. We read the
-  // audio clock and cursor beat back-to-back so the audio re-anchors to exactly
-  // where the visual cursor just re-anchored (both derive from `ctx.currentTime`),
-  // staying locked. No-op when paused, when no schedule is running, or on a content
-  // change (the rebuild effect cleared `handleRef`, so this falls through and the
-  // rebuild owns the reschedule).
-  useEffect(() => {
-    if (!isPlayingRef.current) return;
-    const handle = handleRef.current;
-    const ctx = ctxRef.current;
-    if (!handle || !ctx) return;
-    const audioAnchor = ctx.currentTime;
-    // The scheduler re-derives its current position from the audio clock, so it
-    // needs only the new tempo + the re-anchor instant (loop-aware internally).
-    handle.retime(score, audioAnchor);
-  }, [score]);
+  }, [graph, audibleNotes, inUseKey, timeline, scoreRef]);
 
   // Aggregate status: "Loading…" until every live strip's voices are loaded, the
   // error if any failed, "Ready" otherwise. Keyed on `inUseKey` so it

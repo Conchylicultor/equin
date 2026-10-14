@@ -1,9 +1,12 @@
 # engine
 
 Owns the Web Audio graph (one `AudioContext` + master gain) and the playback
-scheduler for the Sonata player. On each `isPlaying → true` transition it
-captures a single anchor (`ctx.currentTime` + the cursor beat) and schedules
-notes against the audio clock in a bounded, timer-free look-ahead window.
+scheduler for the Sonata player. The scheduler keeps **no anchor of its own**:
+it follows the session's playback timeline (`useSession().timeline`, a
+`score/core` `PlaybackTimeline` in a store) — the same mapping from the audio
+clock to the music the visual cursor reads — and places each note at
+`timeline.timeAt(c)` in a bounded, timer-free look-ahead window. Sound and
+cursor therefore cannot drift: there is one mapping, not two kept in step.
 
 ## Engine ↔ control split
 
@@ -98,47 +101,40 @@ raising it again is instant. Folding volume 0 into the audible set would put the
 levels back into the rebuild effect's inputs, which is the one thing this design
 is arranged to prevent.
 
-`startScheduling(score, from, audioAnchor, resolveVoices, ctx, loop, opts)` takes
+`startScheduling({ notes, pedalEvents }, timeline, resolveVoices, ctx, opts)` takes
 a per-track resolver, not a single voice manager, and calls
-`resolveVoices(note.track)?.schedule(note)`. That resolver is now simply
-`channelsRef.current.get(trackId)?.voices` — the scheduler's contract did not
-change when the strips did.
+`resolveVoices(note.track)?.schedule(note)`. That resolver is simply
+`channelsRef.current.get(trackId)?.voices`.
 
-## The A–B loop
+## Following the timeline
 
-`loop` is the session's `loopCycle` (score/core `LoopCycle`: A, B and the rest
-before each repeat) — the same object the transport folds the cursor with, so
-the two agree on every iteration's length by construction. The scheduler lays
-the first pass `[from, B)` and then iterations of `[A - rest, B)` end to end on
-one cumulative-beat path timed through the tempo index: the rest is real time on
-the path (timed by the tempo over the bar it replaces), and only the body's
-notes `[A, B)` sound in it. `from` is the cursor's `{ beat, rest }` — a cursor
-paused inside a rest resumes with the rest's remainder of silence. The
+`startScheduling` subscribes to the session's timeline store and reacts to
+each change by its kind:
+
+- **Same `generation`** (a tempo change, a drift correction against a driving
+  recording, a clock swap) — re-time: the buffered next note is re-placed and
+  the window refilled at once. Notes already handed to an instrument keep their
+  committed time and are never cut (cutting them ~60×/s during a speed-wheel
+  drag is a buzz); the walk resumes from where it is, so nothing re-triggers.
+- **New `generation`** (play, seek, a loop edit, a medium's jump) — silence the
+  strips and walk the new path from its start.
+- **`idle`** (stopped, counting in, a medium not advancing) — silence, arm
+  nothing.
+
+The path is the timeline's: the head `[origin, B)`, then the session's
+`loopCycle` (score/core `LoopCycle`: A, B and the rest before each repeat)
+iteration after iteration, `[A - rest, B)` end to end. A repeat's rest is real
+time on the path and silent: only the body's notes `[A, B)` sound in it. The
 metronome passes `{ restSounds: true }`, so its clicks keep counting through a
-rest like a one-bar count-in to every repeat. The rebuild effect depends on the
-identity-stable `loopCycle` directly: toggling, moving the bounds or switching
-the rest rebuilds; a plain wrap never does.
+rest like a one-bar count-in to every repeat.
 
-## Slaved to a transport driver
+A note due more than `LATE_DROP_SEC` in the past is dropped, never played in a
+burst — what a late join (the instrument-load wait) or a jump skipped over.
 
-When the session has a `TransportDriver` (a recording owns the position), the
-synth stays a look-ahead scheduler on `ctx` — the only sample-accurate clock —
-and only its anchor comes from the driver (`transport-sync.ts`, exported for
-the metronome too):
-
-- **Rebuild.** `scheduleOrigin(readDriver(), cursor, now)` says where a
-  schedule built now starts: the cursor's position on the session's own clock, the
-  driver's beat when it advances, nothing while it is `stalled`. The rebuild
-  effect also keys on `syncEpoch` (a stall, a resume, the session's own
-  driver seeks, a driver coming or going). Driven, the origin is read AFTER the
-  instruments' load wait, since the medium kept moving.
-- **Drift.** `useDriftCorrection` compares, on every cursor write (render
-  cadence, not a timer), `handle.beatAt(ctx.currentTime)` with the driver's
-  beat; past ±40 ms at the playing tempo it calls `handle.resync(beat, now)` —
-  `retime`'s sibling: moves the anchor, never cuts or re-triggers a note, and
-  drops a skipped note only when it would sound more than 80 ms late.
-- The sync offset is not here: it is the driver's (`recording`), so the cursor
-  and the synth move together.
+So the engine's scheduling effect re-runs only when the NOTES change
+(`audibleNotes`, `inUseKey`): play state, seeks, loops, tempo and drivers are
+all the timeline's business. The metronome (`audio/metronome`) feeds its click
+notes through the same scheduler against the same store.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -156,9 +152,7 @@ the metronome too):
     - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/primitives/toolbar-control.hoverExpandHost`
     - `apps/sonata/primitives/toolbar-control.HoverExpandPanel`
-    - `apps/sonata/session.DriverReading`
     - `apps/sonata/session.SonataSession`
-    - `apps/sonata/session.useCursorApi`
     - `apps/sonata/session.useSession`
     - `apps/sonata/track-mixer.useMutedTrackIds`
     - `apps/sonata/track-mixer.useTrackInstrumentMap`
@@ -172,12 +166,9 @@ the metronome too):
   - Exports (types):
     - `AudioGraph`
     - `ScheduleHandle`
-    - `ScheduleOrigin`
   - Exports (values):
-    - `scheduleOrigin`
     - `startScheduling`
     - `useAudioGraph`
-    - `useDriftCorrection`
 - Cross-plugin:
   - Imported by:
     - `apps/sonata/audio/live-play`

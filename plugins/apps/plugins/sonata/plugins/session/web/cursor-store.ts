@@ -57,7 +57,7 @@ export type CursorStore = ScopedStore<CursorState>;
  * re-anchor on a seek instead of firing every onset between the old and new
  * position — navigation must not spray note-strike FX. It's threaded through the
  * subscription callback rather than inferred, because the synchronous store
- * write reaches imperative subscribers BEFORE React commits any `seekEpoch`.
+ * write reaches imperative subscribers before React commits anything.
  *
  * A write early-returns on an unchanged position (unless it's a seek) so the
  * snapshot stays referentially stable while the store hasn't moved — required

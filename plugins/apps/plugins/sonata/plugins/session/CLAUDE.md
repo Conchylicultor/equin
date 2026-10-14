@@ -9,7 +9,7 @@ can mount it (the Sonata app, a file preview) — usually through the player's
 `SessionContent` (`empty | pending | failed | ready{score}`, each carrying a
 `contentKey`) and provides `useSession()`: the tempo-scaled `score`, the
 `timelineBeats`, play state, `tempoScale` (clamped to `[0, 4]`; 0 freezes the
-transport), the A–B `loop`, the `countIn`, `seekEpoch`, `syncEpoch`, and the
+transport), the A–B `loop`, the `countIn`, the playback `timeline`, and the
 stable verbs (play / stop / seek / scrub / loop / count-in / `registerClock` /
 `registerTransportDriver`). The playhead
 lives in the per-surface cursor store (`CursorStoreProvider`, `useCursorApi`,
@@ -27,14 +27,14 @@ argument.
 `loop` is the user's range (`LoopRange`); `loopOptions` (`rest`, `ahead`) are
 the user's repeat preferences, pushed in by the loop UI (`setLoopOptions`; a bare
 session has both off). From them the session derives `loopCycle` — THE
-definition of what plays after B that the tick's fold, the audio and metronome
-schedulers and the piano roll all read: `null` unless a loop is enabled, else
+definition of what plays after B that the playback timeline (so the cursor and
+the audio and metronome schedulers) and the piano roll all read: `null` unless a loop is enabled, else
 `{ start, end, rest }` where `rest` is one bar at A's meter (`barBeatsAt`) when
 the rest option is on. Every repeat iteration is `[A - rest, B)`; during the
 rest the cursor reads `beat = A` with `rest > 0` counting down — score readers
 park on A, and readers of what is BEING PLAYED (lit keys, highlighted
-noteheads) show nothing. `reanchor` anchors at the position's fold time
-(`timeOfPosition`), so a pause inside a rest or a repeat resumes there instead of
+noteheads) show nothing. A new timeline path starts from the whole position
+(`startTimeline`), so a pause inside a rest or a repeat resumes there instead of
 replaying the song before A.
 
 With a transport driver the cycle's rest is `0`: a medium cannot fold, its wrap
@@ -52,6 +52,25 @@ live without rewinding. New content that is `pending` stops the transport at
 once and defers the reset until it composes. Two one-shot load intents ride the
 reset: `requestPlayOnLoad()` (start playing) and `requestSeekOnLoad(beat)` (park
 at `beat`, clamped to the new timeline, instead of the lead-in).
+
+## The playback timeline
+
+`timeline` (a `TimelineStore`: `get()` + `subscribe()`, not React state) holds
+THE mapping from the active clock to the music while something sounds — a
+`score/core` `PlaybackTimeline` (path = start beat + A–B loop; tempo; anchor)
+with a `generation` naming the path, or `idle`. The session is its only
+writer; the cursor and every audio scheduler only read it, so sound and cursor
+cannot drift apart.
+
+- A **new path** (`generation` moves) on play, seek, a loop edit, a content
+  reset that keeps playing, and a driving medium's jump.
+- The **same path re-timed** on a tempo change (`retempoTimeline` at the
+  clock's `now()` — derived from the timeline itself, never from the cursor,
+  which holds the last frame's beat), a drift correction (`resyncTimeline`)
+  and a clock swap (`rebaseTimeline`).
+
+On the session's own clock the cursor is `timeline.beatAt(now)` each frame,
+with a loop iteration change flagged as a `seek` write.
 
 ## Clocks and transport drivers
 
@@ -81,13 +100,12 @@ tempo map, so a driver never knows the tempo scale. While one is registered:
 - the count-in is skipped (it is clicked on the audio clock, which the medium
   does not follow).
 
-`syncEpoch` bumps on every driver-relation change that is not a user seek
-(register / unregister, advancing ↔ not, the session's own driver seeks), and
-`readDriver()` says where a schedule built now starts (`internal` / `stalled` /
-`advancing{beat}`) — anchored consumers rebuild from it on `syncEpoch` as they
-do from the cursor on `seekEpoch` (see `audio/engine`'s `scheduleOrigin`).
-Unregistering the last driver carries on from the cursor on the clock,
-without stopping.
+While driven, the cursor shows the medium's position and the timeline is what
+the synth sounds: the driven tick idles it while the medium does not advance,
+starts it where the medium is when it does, and re-anchors it past
+`DRIFT_TOLERANCE_SEC` (40 ms at the playing tempo) — once, for every scheduler.
+Unregistering the last driver carries on from where the music is, on the
+clock, without stopping.
 
 ## Slots
 

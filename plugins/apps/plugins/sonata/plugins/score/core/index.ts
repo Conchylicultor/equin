@@ -69,16 +69,22 @@ export { buildTempoIndex } from "./tempo-index";
 export { resolvePedalSustain, pedalSpans, isPedalDownAt } from "./pedal";
 export type { PedalSpan } from "./pedal";
 
-export type { LoopWindowSec } from "./loop-fold";
-export { foldLoopTime } from "./loop-fold";
+export type {
+  PlaybackPath,
+  PlaybackTimeline,
+} from "./timeline";
+export {
+  rebaseTimeline,
+  resyncTimeline,
+  retempoTimeline,
+  startTimeline,
+} from "./timeline";
 
 export {
   songPosition,
   samePosition,
   cycleStart,
   barBeatsAt,
-  positionAtTime,
-  timeOfPosition,
 } from "./loop-cycle";
 
 export type { AxisBar, AxisScore } from "./loop-timeline";

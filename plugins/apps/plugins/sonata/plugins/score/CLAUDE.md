@@ -2,16 +2,22 @@
 
 ## The A–B loop cycle and the unrolled axis
 
-Two pure pieces every loop consumer shares, so nobody re-derives the maths:
+Three pure pieces every loop consumer shares, so nobody re-derives the maths:
 
 - `loop-cycle.ts` — `LoopCycle` (`start` = A, `end` = B, `rest` = beats of
   silence before every repeat; types in `types.ts`) and `PlayPosition` (what the
   playback cursor holds: the score `beat`, the `rest` still to go — `beat` is A
   while it is positive — and whether this is a `repeat` pass).
-  `positionAtTime(rawSec, cycle, tempo)` folds the transport's monotonic time
-  into iterations of `[A - rest, B)` (over `foldLoopTime`), and
-  `timeOfPosition` is its inverse for anchoring. `barBeatsAt` gives the rest's
-  one-bar length.
+  `cycleStart` / `cycleBeats` give an iteration `[A - rest, B)`, and
+  `barBeatsAt` the rest's one-bar length.
+- `timeline.ts` — `PlaybackTimeline`, THE mapping between clock time and the
+  music that the playback session owns and the cursor and every audio
+  scheduler follow: a path (the head from where playback started up to B, then
+  the cycle's iterations, rests included) on a monotonic, tempo-invariant
+  coordinate `c`, with `timeAt(c)` / `cAt(t)` and `positionAt(t)` (a rest reads
+  as A with the rest to go). Immutable: `retempoTimeline` / `resyncTimeline` /
+  `rebaseTimeline` derive the next one at an instant, so a tempo change never
+  re-reads a sampled cursor.
 - `loop-timeline.ts` — `unrollLoop(score, cycle)` lays the song out up to B,
   then copy after copy of `[rest][A, B)` on one monotonic AXIS: an ordinary
   `Score` (notes, clipped annotations, pedal, tempo and meter copied per
