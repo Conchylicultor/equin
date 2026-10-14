@@ -120,7 +120,6 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "apps.studio.graph.graph.actions", pluginId: "apps.studio.graph", configName: "graph.actions" },
   { slotId: "apps.studio.shell.sidebar", pluginId: "apps.studio.shell", configName: "sidebar" },
   { slotId: "apps.studio.shell.toolbar", pluginId: "apps.studio.shell", configName: "toolbar" },
-  { slotId: "apps.website.pages.foundations.section", pluginId: "apps.website.pages.foundations", configName: "section" },
   { slotId: "apps.website.pages.guide.section", pluginId: "apps.website.pages.guide", configName: "section" },
   { slotId: "apps.website.pages.story.section", pluginId: "apps.website.pages.story", configName: "section" },
   { slotId: "apps.website.pages.vision.section", pluginId: "apps.website.pages.vision", configName: "section" },

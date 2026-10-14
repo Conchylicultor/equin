@@ -1,0 +1,7 @@
+[data-card="durable"] .du-srv, [data-card="durable"] .du-lit { transition: opacity var(--k-med); }
+[data-card="durable"] :is([data-s="2"], [data-s="3"], [data-s="4"]) .du-old { opacity: .45; }
+[data-card="durable"] :is([data-s="2"], [data-s="3"], [data-s="4"]) .du-old .du-frame,
+[data-card="durable"] [data-s="1"] .du-new .du-frame { stroke-dasharray: 4 3; }
+[data-card="durable"] [data-s="0"] .du-new { opacity: 0; }
+[data-card="durable"] .du-lit { opacity: 0; }
+[data-card="durable"] [data-s="4"] .du-new .du-lit { opacity: 1; }

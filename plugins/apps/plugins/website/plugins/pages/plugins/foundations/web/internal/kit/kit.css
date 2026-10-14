@@ -1,0 +1,162 @@
+/* The card kit (ported from the iceberg prototype's kit.css): tokens (both palettes), the card box, primitive
+   classes, state gating and motion. Every card is drawn with these classes; a card's own CSS file only adds
+   rules scoped by [data-card=<key>].
+
+   The two palettes are the iceberg's fixed illustration palette (sunlit / deep), the same in light and dark
+   mode — see the foundations CLAUDE.md for why the scene declares its own colours. */
+
+/* ---------- tokens ---------- */
+.iceberg-scene {
+  /* the open card's width; the drawing inside is 302 (std) / 482 (wide) px wide (kit.js WIDTH) */
+  --k-card-std: 360px; --k-card-wide: 540px;
+  /* type */
+  --k-fs-sm: 9.5px; --k-fs: 10.5px; --k-fs-lg: 11.5px; --k-w: 500; --k-wb: 600;
+  /* shape (the SVG primitives mirror the radii in kit.js R) */
+  --k-r-sm: 5px; --k-r: 7px; --k-r-lg: 12px; --k-pill: 999px;
+  --k-hair: 1; --k-line-w: 1.2; --k-acc-w: 1.6; --k-bold: 2;
+  /* motion */
+  --k-fast: .2s; --k-med: .35s; --k-draw: .55s; --k-ease: cubic-bezier(.3, .7, .2, 1);
+}
+/* the two palettes: sunlit (above and just under the waterline) and deep */
+.k-sun { --k-bg: #f3f6fb; --k-ink: #3c4858; --k-soft: #ffffff; --k-line: rgba(11,29,51,.08); --k-accent: #2563eb; --k-mute: #8792a2; }
+.k-deep { --k-bg: #10141b; --k-ink: #a9b8ca; --k-soft: #151a23; --k-line: rgba(255,255,255,.09); --k-accent: #3b82f6; --k-mute: #6c7889; }
+
+/* ---------- the card box: the drawing alone (the piece's description above it is its only text) ---------- */
+.iceberg-scene .vz { padding: 12px; border-radius: 10px; background: var(--k-bg); border: 1px solid var(--k-line); cursor: default; }
+.k-root { display: block; position: relative; color: var(--k-ink); font-size: var(--k-fs); text-align: left; white-space: normal; }
+.k-svg { display: block; width: 100%; height: auto; overflow: visible; user-select: none; -webkit-user-select: none; }
+/* a closing card's ghost is a still frame */
+.iceberg-item.ghost .vz *, .iceberg-item.ghost .vz *::before, .iceberg-item.ghost .vz *::after { animation: none !important; transition: none !important; }
+
+/* ---------- state gating (kit.js go): a piece with data-in shows only in its states ---------- */
+.k-root .k-off { display: none !important; }
+/* a piece that just appeared fades in; parts inside it marked k-in follow after their --d */
+.k-enter, .k-enter .k-in { animation: k-in var(--k-med) var(--k-ease) var(--d, 0s) backwards; }
+/* data-still: a piece that appears without fading in (it continues one that just left, like a growing arc) */
+.k-enter[data-still] { animation: none; }
+.k-root[data-running] [data-busy] { pointer-events: none; opacity: .5; }
+
+/* ---------- a piece that changes its look with the state: drawn ONCE, with data-on="<states>" ----------
+   Never draw a plain copy and a lit copy gated by data-in: on a state change the old copy is gone at once and the new
+   one fades in from nothing, so the spot blinks (gallery.html reports it as a swap). .k-sw lights the piece while it is
+   selected (its boxes, titles, icons and links turn accent, a drawn link redraws itself); .k-sw-dim also dims it while
+   it is not; .k-sw-pulse pulses it while it is. Every look change is a transition, so it cross-fades in place. */
+.k-sw .k-box, .k-sw text, .k-sw .k-ic, .k-sw-dim, .k-sw-faint { transition: fill var(--k-med), stroke var(--k-med), stroke-width var(--k-med), opacity var(--k-med); }
+.k-sw.k-sel .k-box { fill: color-mix(in srgb, var(--k-accent) 14%, var(--k-soft)); stroke: var(--k-accent); stroke-width: var(--k-line-w); }
+.k-sw.k-sel .k-t, .k-sw.k-sel .k-tb, .k-sw.k-sel .k-tm { fill: var(--k-accent); }
+.k-sw.k-sel .k-ic { stroke: var(--k-accent); }
+.k-sw.k-sel .k-in { animation: k-in var(--k-med) var(--k-ease) var(--d, 0s) backwards; }
+.k-sw-dim:not(.k-sel) { opacity: .55; }
+.k-sw-faint:not(.k-sel) { opacity: .3; }
+.k-sw-pulse.k-sel { animation: k-pulse 2s ease-in-out infinite; }
+
+/* ---------- controls ---------- */
+.k-root [data-act] { cursor: pointer; }
+.k-root [data-act]:focus { outline: none; }
+.k-root [data-act]:focus-visible { outline: 2px solid var(--k-accent); outline-offset: 2px; border-radius: var(--k-r-sm); }
+.k-btn > rect:first-child { fill: var(--k-soft); stroke: var(--k-accent); stroke-width: var(--k-line-w); transition: fill var(--k-fast); }
+.k-btn:hover > rect:first-child { fill: color-mix(in srgb, var(--k-accent) 16%, var(--k-soft)); }
+.k-chip > rect:first-child { transition: stroke var(--k-fast); }
+.k-chip[data-act]:hover > rect:first-child { stroke: var(--k-accent); }
+.k-chip.k-sel > rect:first-child { fill: var(--k-accent); stroke: var(--k-accent); }
+.k-chip.k-sel > text { fill: var(--k-soft); }
+
+/* ---------- SVG: text ---------- */
+.k-t { fill: var(--k-ink); font-size: var(--k-fs); font-weight: 400; }
+.k-tm { fill: var(--k-ink); font-size: var(--k-fs); font-weight: var(--k-w); }
+.k-tb { fill: var(--k-ink); font-size: var(--k-fs); font-weight: var(--k-wb); }
+.k-tl { fill: var(--k-ink); font-size: var(--k-fs-lg); font-weight: var(--k-wb); }
+.k-ts { fill: var(--k-ink); font-size: var(--k-fs-sm); font-weight: 400; }
+.k-cap { fill: var(--k-ink); font-size: var(--k-fs-sm); font-weight: var(--k-w); letter-spacing: .06em; text-transform: uppercase; opacity: .55; }
+.k-root .k-ta { fill: var(--k-accent); }
+.k-mute { opacity: .55; }
+.k-faint { opacity: .3; }
+
+/* ---------- SVG: shapes ---------- */
+.k-box { fill: var(--k-soft); stroke: var(--k-ink); stroke-width: var(--k-hair); }
+.k-box.k-ghostbox { fill: none; stroke-dasharray: 4 4; opacity: .5; }
+.k-ink { fill: none; stroke: var(--k-ink); stroke-width: var(--k-line-w); }
+.k-acc { fill: none; stroke: var(--k-accent); stroke-width: var(--k-acc-w); }
+.k-accf { fill: var(--k-accent); }
+.k-lit { fill: var(--k-accent); fill-opacity: .14; stroke: var(--k-accent); stroke-width: var(--k-line-w); }
+.k-plug { fill: var(--k-accent); fill-opacity: .07; stroke: var(--k-accent); stroke-width: var(--k-bold); }
+.k-slot { fill: var(--k-accent); fill-opacity: .05; stroke: var(--k-accent); stroke-width: var(--k-line-w); stroke-dasharray: 5 4; }
+.k-code { stroke: var(--k-ink); stroke-width: var(--k-bold); stroke-linecap: round; opacity: .25; fill: none; }
+.k-dash { stroke-dasharray: 4 3; }
+.k-ic { fill: none; stroke: var(--k-ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.k-ic.k-ta { stroke: var(--k-accent); fill: none; }
+/* ---------- THE connector (link): one look per kind at rest, one lit look, one motion ----------
+   At rest: uses (ink) or plugs into (accent, dashed). Lit (its own or its lane's .k-sw is .k-sel, or it is
+   highlighted): accent and heavier. Whenever it appears or lights, it draws itself from its start: a cover in the
+   card's background colour pulls back along it over --k-draw, its arrowhead arrives with the stroke, and a token it
+   sends rides the tip. A link never rises into place like a piece does. */
+.k-link { fill: none; stroke-linecap: round; stroke-linejoin: round; transition: stroke var(--k-med), stroke-width var(--k-med), opacity var(--k-med); }
+.k-uses { stroke: var(--k-ink); stroke-width: var(--k-line-w); }
+.k-plugs { stroke: var(--k-accent); stroke-width: var(--k-acc-w); }
+.k-plugs > path:first-child, .k-legend .k-plugs { stroke-dasharray: 4 3; }
+.k-sw.k-sel .k-link, .k-link.k-sw.k-sel, .k-root .k-link.k-hl { stroke: var(--k-accent); stroke-width: var(--k-acc-w); }
+.k-cover { fill: none; stroke: var(--k-bg); stroke-width: 5; stroke-dasharray: 100 100; stroke-dashoffset: -100; }
+.k-link.k-enter { animation: none; }
+.k-enter .k-cover, .k-sw.k-sel .k-cover, .k-link.k-hl > .k-cover { animation: k-uncover var(--k-draw) ease-out var(--d, 0s) backwards; }
+.k-link.k-hl > .k-in { animation: k-in var(--k-med) var(--k-ease) var(--d, 0s) backwards; }
+.k-spin { transform-box: fill-box; transform-origin: center; animation: k-spin 1s linear infinite; }
+.k-pulse { animation: k-pulse 2s ease-in-out infinite; }
+
+/* ---------- graphs (ctx.highlight): nodes [data-node], edges [data-a][data-b] ---------- */
+[data-node], .k-root [data-a][data-b] { transition: opacity var(--k-fast); }
+.k-edges-hover [data-a][data-b] { opacity: 0; }
+.k-root.k-hov [data-node]:not(.k-near) { opacity: .3; }
+.k-root.k-hov [data-a][data-b].k-hl { opacity: 1; }
+[data-node].k-self > rect:first-child { stroke: var(--k-accent); stroke-width: var(--k-acc-w); }
+
+/* ---------- HTML primitives ---------- */
+.k-hbtn { display: inline-flex; align-items: center; gap: 4px; padding: 0 9px; line-height: 18px; border-radius: var(--k-pill); font-size: var(--k-fs); font-weight: var(--k-wb);
+  border: 1px solid var(--k-accent); background: var(--k-soft); color: var(--k-ink); user-select: none; transition: background var(--k-fast), color var(--k-fast); }
+.k-hbtn:hover { background: color-mix(in srgb, var(--k-accent) 12%, var(--k-soft)); }
+.k-hbtn.k-sel { background: var(--k-accent); color: var(--k-soft); }
+.k-seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: 11px; border: 1px solid color-mix(in srgb, var(--k-ink) 25%, transparent); background: var(--k-soft); }
+.k-sg { display: inline-flex; align-items: center; gap: 4px; padding: 0 9px; line-height: 18px; border-radius: 9px; font-size: var(--k-fs); font-weight: var(--k-wb); user-select: none; transition: background var(--k-fast), color var(--k-fast); }
+.k-sg:hover { background: color-mix(in srgb, var(--k-accent) 12%, transparent); }
+.k-sg.k-sel { background: var(--k-accent); color: var(--k-soft); }
+.k-hchip { display: inline-flex; align-items: center; gap: 4px; padding: 0 7px 0 5px; border-radius: 9px; line-height: 17px; font-weight: var(--k-wb); white-space: nowrap;
+  border: 1px solid var(--k-accent); background: var(--k-soft); transition: background var(--k-fast), color var(--k-fast); }
+.k-hchip.k-sel { background: var(--k-accent); color: var(--k-soft); }
+.k-app { display: flex; flex-direction: column; overflow: hidden; border-radius: var(--k-r); background: var(--k-soft); border: 1px solid color-mix(in srgb, var(--k-ink) 22%, transparent); }
+.k-app-title { display: block; padding: 0 9px; line-height: 20px; font-weight: var(--k-wb); border-bottom: 1px solid color-mix(in srgb, var(--k-ink) 18%, transparent); }
+.k-app-body { display: flex; flex-direction: column; gap: 6px; padding: 9px; min-height: 0; }
+.k-bar { display: block; height: 5px; border-radius: 3px; background: var(--k-ink); opacity: .22; }
+
+/* ---------- motion ---------- */
+@keyframes k-in { from { opacity: 0; transform: translateY(3px); } }
+@keyframes k-uncover { from { stroke-dashoffset: 0; } }
+@keyframes k-spin { to { transform: rotate(360deg); } }
+@keyframes k-pulse { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) {
+  .k-root *, .k-root *::before, .k-root *::after { animation: none !important; transition: none !important; }
+}
+
+/* ---------- HTML card chrome (shared by the HTML cards) ---------- */
+.k-html { display: block; line-height: 1.4; }
+/* the control row above an HTML card's picture: controls, a spacer, a hint */
+.k-ctl { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.k-sp { flex: 1; }
+.k-hint { font-size: var(--k-fs-sm); font-style: italic; opacity: .55; }
+/* a small icon inside HTML text (12-unit viewBox, stroked in the text colour) */
+.vz .k-root svg.k-hic { display: inline-block; width: 11px; height: 11px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+/* the soft, outlined surface an HTML card's content sits in */
+.k-panel { display: block; overflow: hidden; border-radius: var(--k-r); background: var(--k-soft); border: 1px solid color-mix(in srgb, var(--k-ink) 20%, transparent); }
+/* "click here": a ring pulsing out of a control (SVG circle) */
+.k-ring { fill: none; stroke: var(--k-accent); stroke-width: var(--k-acc-w); transform-box: fill-box; transform-origin: center; animation: k-ring 1.8s ease-out infinite; }
+@keyframes k-ring { from { transform: scale(1); opacity: .9; } to { transform: scale(1.9); opacity: 0; } }
+/* SVG marks and text drawn on an accent fill; an invisible hit area that enlarges a small control */
+.k-root .k-tinv { fill: var(--k-soft); }
+.k-inv { fill: none; stroke: var(--k-soft); stroke-width: var(--k-acc-w); stroke-linecap: round; stroke-linejoin: round; }
+.k-hit { fill: transparent; }
+
+/* ---------- entering motion for a piece that appears (both run inside .k-enter, after their --d) ---------- */
+/* a bar filling left to right over --len (a progress bar) */
+.k-enter .k-grow { transform-box: fill-box; transform-origin: left center; animation: k-grow var(--len, 1s) ease-in-out var(--d, 0s) backwards; }
+@keyframes k-grow { from { transform: scaleX(0); } }
+/* a mark falling into place from --fall above (a ball dropping onto a shelf) */
+.k-enter .k-fall { animation: k-fall var(--k-draw) cubic-bezier(.5, 0, 1, 1) var(--d, 0s) backwards; }
+@keyframes k-fall { from { transform: translateY(calc(-1px * var(--fall, 40))); } }

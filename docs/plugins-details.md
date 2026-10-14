@@ -7864,7 +7864,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/pages/vision.visionPane`
                   - `apps/website/shell.Website`
                   - `apps/website/shell.WebsiteBand`
-                  - `primitives/css/badge.Badge`
                   - `primitives/css/card.Card`
                   - `primitives/css/center.Center`
                   - `primitives/css/fill.Fill`
@@ -7954,25 +7953,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `downloadPane`
               - Cross-plugin:
                 - Imported by: `apps/website/pages/apps`
-            - **`foundations`** — The technical foundations page of the equin website: the /website/foundations pane on how equin is built — framework, harness, plugin system (a placeholder heading for now) — its Foundations nav link, and the WebsiteFoundations.Section slot the page is written into.
+            - **`foundations`** — The technical foundations page of the equin website: the /website/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its Foundations nav link.
               - Web:
-                - Slots: `WebsiteFoundations.Section`
                 - Contributes:
                   - `Pane.Register` "website-foundations"
                   - `WebsiteHeader` "foundations" → `FoundationsNavItem`
+                  - `ThemeEngine.SubTheme` "iceberg sea header"
+                  - `ThemeEngine.SubTheme` "iceberg sky header"
                 - Uses:
                   - `apps/website/shell.WebsiteChrome`
                   - `apps/website/shell.WebsiteHeader`
-                  - `apps/website/shell.WebsiteHero`
                   - `apps/website/shell.WebsiteNavLink`
-                  - `apps/website/shell.WebsiteSoon`
+                  - `primitives/dom/auto-scroll.findScrollParent`
+                  - `primitives/dom/auto-scroll.keepInPlace`
+                  - `primitives/dom/auto-scroll.scrollChildIntoView`
+                  - `primitives/dom/element-size.useResizeObserver`
+                  - `primitives/dom/in-view.createInViewWatcher`
+                  - `primitives/dom/in-view.InViewWatcher`
                   - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
                   - `primitives/pane.useOpenPane`
-                  - `primitives/slot-render.defineRenderSlot`
-                - Exports (values):
-                  - `foundationsPane`
-                  - `WebsiteFoundations`
+                  - `primitives/shortcuts.useSurfaceShortcuts`
+                  - `ui/theme-engine.ThemeEngine`
+                - Exports (values): `foundationsPane`
               - Cross-plugin:
                 - Imported by:
                   - `apps/website/landing/layers`
@@ -20123,8 +20126,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 155 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
-              - `apps` ×49
+            - Imported by: 156 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+              - `apps` ×50
               - `primitives` ×25
               - `page` ×23
               - `conversations` ×18
@@ -29170,8 +29173,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Badge`
               - `formatStatusLabel`
           - Cross-plugin:
-            - Imported by: 164 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
-              - `apps` ×39
+            - Imported by: 163 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+              - `apps` ×38
               - `debug` ×34
               - `conversations` ×23
               - `reports` ×11
@@ -31465,6 +31468,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/canvas`
               - `apps/sonata/progress/loop`
               - `apps/sonata/rich/chord-progression`
+              - `apps/website/pages/foundations`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/outline`
@@ -31516,9 +31520,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useElementSize`
               - `useResizeObserver`
           - Cross-plugin:
-            - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
               - `primitives` ×18
-              - `apps` ×6
+              - `apps` ×7
               - `shell` ×2
               - `active-data/go`
               - `apps-core/surface/floating`
@@ -31539,6 +31543,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useInView`
           - Cross-plugin:
             - Imported by:
+              - `apps/website/pages/foundations`
               - `primitives/cursor-pagination`
               - `primitives/data-view`
               - `primitives/dom/auto-scroll`
@@ -34127,9 +34132,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useFocusedSurfaceId`
           - `useSurfaceShortcuts`
       - Cross-plugin:
-        - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
+        - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
           - `primitives` ×11
-          - `apps` ×8
+          - `apps` ×9
           - `apps-core` ×3
           - `reorder/edit-mode`
           - `tasks/task-draft-form`
@@ -34178,8 +34183,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlotItemLayout`
           - `useDispatchOutcome`
       - Cross-plugin:
-        - Imported by: 81 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
-          - `apps` ×26
+        - Imported by: 80 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+          - `apps` ×25
           - `conversations` ×13
           - `primitives` ×13
           - `ui` ×5
@@ -35188,8 +35193,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 247 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×247
+    - Contributes: 246 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×246
     - Uses: 21 symbols — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
       - `reorder/editor` ×5
       - `config_v2` ×3
@@ -35214,8 +35219,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 246 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×246
+    - Contributes: 245 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×245
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -39158,11 +39163,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.SubTheme`
           - `ThemeEngine.FixedTheme`
           - `ThemeEngine.ThemeSource`
-        - Slot contributors: 37 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Slot contributors: 38 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ThemeEngine.TokenGroup` ×16
           - `ThemeEngine.Theme` ×8
           - `ThemeEngine.VariantGroup` ×7
-          - `ThemeEngine.SubTheme` ×3
+          - `ThemeEngine.SubTheme` ×4
           - `ThemeEngine.ThemeSource` ×2
           - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
         - Contributes:
@@ -39262,9 +39267,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TokenGroupFragmentsSchema`
           - `tokenGroupMatchesSearch`
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Imported by: 39 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui` ×26
-          - `apps` ×9
+          - `apps` ×10
           - `apps-core` ×2
           - `reports/theme-resolution`
       - Plugins:

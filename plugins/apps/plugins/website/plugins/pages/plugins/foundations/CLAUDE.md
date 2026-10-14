@@ -1,40 +1,108 @@
 # foundations
 
-The technical foundations page at `/website/foundations` — how equin is built:
-the framework, the harness, the plugin system.
+The technical foundations page at `/website/foundations`: what equin brings on
+top of Claude, drawn as an iceberg — ten layers from the apps at sea level down
+to the loop that built everything above it. Ported from the prototype
+`proto-1790334655-cs0c`, which stays the design reference, at the options
+picked on it: `finish: soft`, `header: sticky`, `split: icon`, `mark: wrench`.
+Re-check the picks (the prototype's options pill) before porting a change.
 
-A placeholder today: the page's heading (the same words as the homepage's first
-layer card, which opens it), then the site's "more details soon" note. It owns
-the `WebsiteFoundations.Section` slot the page will be written into, so writing
-it means adding a plugin, never editing this one — and removing the
-`WebsiteSoon` note from the pane.
+- Every piece is a pill that opens **in place** into a card; 32 of them carry a
+  live drawing (`web/internal/cards/`). The piece under the cursor holds still
+  while its neighbours and the berg glide to where they land (FLIP).
+- A depth gauge (lines of code passed below the surface), a Components /
+  Harness filter under the title, and Expand all (the pill, or `E`).
+- Harness pieces are plain chips like the rest, told apart by the wrench in
+  front of their name (teal on the ice, cyan in the deep); the Harness key
+  carries the same wrench.
+- The site header stays pinned: bare over the top of the sky, frosted once the
+  page moves, in the sky's dark ink over the sky and in light ink once the
+  waterline passes its middle (`icebergSkyHeaderTheme` / `icebergSeaHeaderTheme`,
+  chosen by the scene's `onHeaderOver` and worn through `WebsiteChrome
+  headerTheme` + `headerGlass`). A gauge jump lands a layer below the bar
+  (`scroll-margin-top`).
 
-It puts a Foundations link in the shared site header; the homepage's first
-layer card opens it too.
+## How it is built
+
+React renders the scene's markup ONCE (`components/iceberg-section.tsx`,
+memoised, no props) and then hands the DOM to two imperative owners, exactly as
+the prototype's scripts owned theirs:
+
+- `internal/iceberg/scene.ts` — the berg (one SVG strip per layer, drawn from
+  the layers' measured offsets by `berg.ts` / `geometry.ts`), the sky fitted to
+  exactly one screen of the pane's viewport, the gauge, the filter, Expand all,
+  and open / close with its FLIP glide. Everything scrolls inside the PANE, so
+  reads and writes go through the pane's scroll container (`findScrollParent`,
+  `keepInPlace`, `scrollChildIntoView`), never `window`.
+- `internal/kit/` — the card runtime (`runtime.ts`), its drawing helpers
+  (`draw.ts`, markup strings) and classes (`kit.css`). A card is
+  `defineCard({ states, autoplay, render, mount, actions })`; its markup is
+  rendered once and a state change only flips attributes (`data-in` → shown,
+  `data-on` → lit, `data-at` → a part's own state). Autoplay ticks only cards
+  that are open and on screen; everything a card registers through its `ctx` is
+  disposed when it closes.
+- Every arrow is the kit's ONE connector, `k.link`, with one motion: whenever
+  it appears (`in`) or lights (`lit`, `on`, or a `ctx.fire(shot)`) it draws
+  itself from its start in `--k-draw`, the arrowhead arriving with the stroke,
+  and a token it `send`s rides the tip. Something travelling along a link is
+  that link lighting, never a free-floating dot; `k.dot` is only a looping
+  stream of traffic. Never animate a link in a card's own CSS.
+
+Never let React re-render the scene: a reconciled node mid-glide, or a card's
+markup rebuilt, is exactly the flicker the prototype was designed to avoid.
+
+## Content and copy
+
+`internal/iceberg/data.ts` is the prototype's `data.js`, verbatim; `CARDS` in
+`internal/cards/index.ts` is the closed list of drawings, and a piece names its
+card by key (`CardKey`, derived from the map, so a missing card does not type).
+
+The copy follows the prototype's rules: facts, not slogans — say what the
+feature does and, after "so", its concrete consequence; no aphorisms, "X, not
+Y", punchlines after a colon, rhetorical questions, slogan triads,
+personification or teasers; no tuning numbers. The hero caption is the
+exception, in the author's own voice. A drawing never instructs ("click to…",
+"try it"): its controls must look clickable on their own.
+
+## Colours
+
+The scene's palette is one illustration's fixed palette — a white sky, a sea
+darkening to black, cold ice and the Harness's teal mark — the same in light
+and dark mode, because the picture does not change with the mode. It is
+declared ONCE, as custom properties on `.iceberg` (`components/iceberg.css`),
+plus the kit's two palettes (`k-sun` / `k-deep`, `internal/kit/kit.css`), and
+read through them by everything in the scene — the berg's SVG gradients
+included. This is the website's sanctioned exception to "colour comes from the
+theme" (see the website `CLAUDE.md`); nothing outside `.iceberg` may read these
+variables.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: The technical foundations page of the equin website: the /website/foundations pane on how equin is built — framework, harness, plugin system (a placeholder heading for now) — its Foundations nav link, and the WebsiteFoundations.Section slot the page is written into.
+- Description: The technical foundations page of the equin website: the /website/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its Foundations nav link.
 - Web:
-  - Slots: `WebsiteFoundations.Section`
   - Contributes:
     - `Pane.Register` "website-foundations"
     - `WebsiteHeader` "foundations" → `FoundationsNavItem`
+    - `ThemeEngine.SubTheme` "iceberg sea header"
+    - `ThemeEngine.SubTheme` "iceberg sky header"
   - Uses:
     - `apps/website/shell.WebsiteChrome`
     - `apps/website/shell.WebsiteHeader`
-    - `apps/website/shell.WebsiteHero`
     - `apps/website/shell.WebsiteNavLink`
-    - `apps/website/shell.WebsiteSoon`
+    - `primitives/dom/auto-scroll.findScrollParent`
+    - `primitives/dom/auto-scroll.keepInPlace`
+    - `primitives/dom/auto-scroll.scrollChildIntoView`
+    - `primitives/dom/element-size.useResizeObserver`
+    - `primitives/dom/in-view.createInViewWatcher`
+    - `primitives/dom/in-view.InViewWatcher`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.useOpenPane`
-    - `primitives/slot-render.defineRenderSlot`
-  - Exports (values):
-    - `foundationsPane`
-    - `WebsiteFoundations`
+    - `primitives/shortcuts.useSurfaceShortcuts`
+    - `ui/theme-engine.ThemeEngine`
+  - Exports (values): `foundationsPane`
 - Cross-plugin:
   - Imported by:
     - `apps/website/landing/layers`

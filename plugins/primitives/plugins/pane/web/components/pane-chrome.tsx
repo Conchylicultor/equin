@@ -64,6 +64,21 @@ interface PaneChromeProps {
    * body scrolls. Default false.
    */
   floatingHeader?: boolean;
+  /**
+   * With `floatingHeader`: the theme scope the header wears — for a page whose
+   * own picture runs under the header in another palette than the page (the
+   * website's iceberg: a white sky, then black water), so the header's ink
+   * reads on it. The page may change it as it scrolls. The bar masks with that
+   * theme's background. A scope name, as `<Theme name>` takes it
+   * (`subThemeScope(…)`).
+   */
+  headerTheme?: string;
+  /**
+   * With `floatingHeader`: once content scrolls under it, frost the bar (its
+   * background at 72%, the content blurred) instead of masking it opaque.
+   * Default false.
+   */
+  headerGlass?: boolean;
   children: ReactNode;
 }
 
@@ -85,6 +100,8 @@ export function PaneChrome({
   titleOnly,
   overlay,
   floatingHeader = false,
+  headerTheme,
+  headerGlass = false,
   children,
 }: PaneChromeProps) {
   const chrome = pane._internal.chrome;
@@ -165,7 +182,13 @@ export function PaneChrome({
   );
   const content = <ContentScope>{children}</ContentScope>;
   const scroll = floatingHeader ? (
-    <FloatingHeaderScroll header={header}>{content}</FloatingHeaderScroll>
+    <FloatingHeaderScroll
+      header={header}
+      theme={headerTheme}
+      glass={headerGlass}
+    >
+      {content}
+    </FloatingHeaderScroll>
   ) : (
     <PaneScroll>{content}</PaneScroll>
   );

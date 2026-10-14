@@ -1,0 +1,23 @@
+/* the two servers are drawn once and restyled by the card's state (data-s on the root), never redrawn, so a step
+   only swaps a status word and moves the request stream: the boxes themselves never re-enter */
+[data-card="hotswap"] .hs-srv,
+[data-card="hotswap"] .hs-lit {
+  transition: opacity var(--k-med);
+}
+[data-card="hotswap"] .hs-lit {
+  opacity: 0;
+}
+[data-card="hotswap"] :is([data-s="0"], [data-s="1"]) .hs-old .hs-lit,
+[data-card="hotswap"] :is([data-s="2"], [data-s="3"]) .hs-new .hs-lit {
+  opacity: 1;
+}
+[data-card="hotswap"] [data-s="3"] .hs-old {
+  opacity: 0.45;
+}
+[data-card="hotswap"] [data-s="3"] .hs-old .hs-frame,
+[data-card="hotswap"] [data-s="1"] .hs-new .hs-frame {
+  stroke-dasharray: 4 3;
+}
+[data-card="hotswap"] [data-s="0"] .hs-new {
+  opacity: 0;
+}

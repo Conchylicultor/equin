@@ -6,7 +6,6 @@ import {
 import { appsPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/apps/web";
 import { visionPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/vision/web";
 import { foundationsPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/foundations/web";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
@@ -110,7 +109,6 @@ export function LayersSection() {
         <Stack gap="none">
           <Layer
             title="The technical foundations"
-            badge="More details soon"
             body="A platform (framework, harness, plugin system) to build production-grade applications autonomously. 1M+ lines of code without human review."
             pane={foundationsPane}
           />
@@ -140,13 +138,11 @@ export function LayersSection() {
 
 function Layer({
   title,
-  badge,
   body,
   pane,
   children,
 }: {
   title: string;
-  badge?: string;
   body: string;
   pane: PaneObject;
   children?: ReactNode;
@@ -169,15 +165,7 @@ function Layer({
           <Fill>
             <Stack gap="2xs">
               <Text as="h3" variant="heading" className="tracking-tight">
-                {title}{" "}
-                {badge !== undefined && (
-                  <Badge
-                    shape="pill"
-                    colorClass="border-border text-muted-foreground border font-semibold tracking-wide uppercase"
-                  >
-                    {badge}
-                  </Badge>
-                )}
+                {title}
               </Text>
               <Text as="p" variant="body" tone="muted">
                 {body}

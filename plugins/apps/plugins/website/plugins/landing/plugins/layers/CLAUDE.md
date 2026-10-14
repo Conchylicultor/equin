@@ -27,7 +27,6 @@ a collection plugins contribute to.
     - `apps/website/pages/vision.visionPane`
     - `apps/website/shell.Website`
     - `apps/website/shell.WebsiteBand`
-    - `primitives/css/badge.Badge`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`

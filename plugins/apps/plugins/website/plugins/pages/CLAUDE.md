@@ -9,7 +9,9 @@ Each owns its `/website/<segment>` pane and puts its link in the shared site
 header. The written-later pages also own a `Section` render slot, so their
 content can be added as contributions without touching the page plugin.
 
-The apps gallery and Download are written; the rest are placeholders today:
+The apps gallery, Download and Foundations are written (Foundations is one
+drawn scene, so it renders its iceberg directly and owns no section slot); the
+rest are placeholders today:
 the page's heading (the shell's `WebsiteHero`, the same way every page opens)
 and the shell's `WebsiteSoon` note under it. When a page's sections are written, remove its `WebsiteSoon`.
 
@@ -21,7 +23,7 @@ and the shell's `WebsiteSoon` note under it. When a page's sections are written,
 - Sub-plugins:
   - **`apps`** — The apps gallery of the equin website: the /website/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, coming next), each card's Install and the…
   - **`download`** — The download page of the equin website: the /website/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it…
-  - **`foundations`** — The technical foundations page of the equin website: the /website/foundations pane on how equin is built — framework, harness, plugin system (a placeholder heading for now) — its Foundations nav…
+  - **`foundations`** — The technical foundations page of the equin website: the /website/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop…
   - **`guide`** — The getting-started guide of the equin website: the /website/guide pane on the first tasks, agents and changes once equin is installed (a placeholder heading for now), its Guide nav link, and the…
   - **`story`** — The story page of the equin website: the /website/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into.
   - **`vision`** — The vision page of the equin website: the /website/vision pane on the vision for applications (a placeholder heading for now), its Vision nav link, and the WebsiteVision.Section slot the page is…

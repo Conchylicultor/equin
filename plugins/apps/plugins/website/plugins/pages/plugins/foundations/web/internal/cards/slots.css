@@ -1,0 +1,11 @@
+[data-card="slots"] .sl-yours > rect {
+  transition:
+    fill var(--k-med),
+    opacity var(--k-med),
+    stroke-dasharray var(--k-med);
+}
+[data-card="slots"] .sl-yours:not(.k-sel) > rect {
+  fill: none;
+  stroke-dasharray: 4 4;
+  opacity: 0.5;
+}

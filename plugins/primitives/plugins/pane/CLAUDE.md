@@ -478,6 +478,14 @@ Layout at rest is unchanged. Only for a page designed to show through the header
 (the website's hero glow) — a header above the scroll can never show anything
 behind it. An `overlay` then spans the header too.
 
+`headerTheme` (a theme scope, `subThemeScope(…)`) is the theme the floating
+header wears, for a page whose own picture runs under the header in another
+palette than the page (the website's iceberg: a white sky, then black water).
+The page may change it as it scrolls; the bar masks with that theme's own
+background, which the pane republishes as `--chrome-mask` on the bar.
+`headerGlass` frosts the mask (`<Sticky mask="glass">`: the background at 72%,
+what scrolls under it blurred) instead of painting it opaque.
+
 ### The header slot (`Actions`)
 
 Each pane auto-creates an `Actions` slot other plugins contribute to

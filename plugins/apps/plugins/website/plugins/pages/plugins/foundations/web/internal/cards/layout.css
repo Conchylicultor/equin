@@ -1,0 +1,31 @@
+[data-card="layout"] .ly-app { display: flex; height: 140px; border-radius: var(--k-r); overflow: hidden; background: var(--k-soft);
+  border: 1px solid color-mix(in srgb, var(--k-ink) 25%, transparent); }
+[data-card="layout"] .ly-side { position: relative; flex: none; width: 96px; background: color-mix(in srgb, var(--k-ink) 6%, var(--k-soft)); }
+[data-card="layout"] .ly-main { flex: 1; display: flex; flex-direction: column; gap: 9px; padding: 10px 12px; min-width: 0; }
+[data-card="layout"] .ly-bar { position: relative; display: block; height: 24px; }
+[data-card="layout"] .ly-t, [data-card="layout"] .ly-s { position: absolute; display: flex; align-items: center; border-radius: var(--k-r-sm);
+  transition: left var(--k-draw) var(--k-ease), top var(--k-draw) var(--k-ease), opacity var(--k-med), transform var(--k-med), background .3s, box-shadow .3s, color .3s; }
+[data-card="layout"] .ly-t { top: 0; left: calc(var(--p) * 30px); width: 24px; height: 24px; justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--k-ink) 25%, transparent); background: var(--k-soft); }
+[data-card="layout"] .ly-s { left: 8px; right: 8px; top: calc(10px + var(--p) * 26px); height: 20px; gap: 7px; padding: 0 6px; }
+[data-card="layout"] .ly-s i { display: block; height: 5px; border-radius: 3px; background: currentColor; opacity: .35; }
+[data-card="layout"] .k-root svg.k-hic { width: 12px; height: 12px; }
+[data-card="layout"] .ly-line { display: block; height: 6px; border-radius: 3px; background: var(--k-ink); opacity: .2; }
+[data-card="layout"] .ly-line.big { height: 9px; opacity: .45; width: 45%; }
+/* 1: the last icon to the front */
+[data-card="layout"] [data-s="1"] .ly-t[data-t="down"], [data-card="layout"] [data-s="2"] .ly-t[data-t="down"], [data-card="layout"] [data-s="3"] .ly-t[data-t="down"], [data-card="layout"] [data-s="4"] .ly-t[data-t="down"] { --p: 0 !important; }
+[data-card="layout"] [data-s="1"] .ly-t[data-t="add"], [data-card="layout"] [data-s="2"] .ly-t[data-t="add"], [data-card="layout"] [data-s="3"] .ly-t[data-t="add"], [data-card="layout"] [data-s="4"] .ly-t[data-t="add"] { --p: 1 !important; }
+[data-card="layout"] [data-s="1"] .ly-t[data-t="share"], [data-card="layout"] [data-s="2"] .ly-t[data-t="share"], [data-card="layout"] [data-s="3"] .ly-t[data-t="share"], [data-card="layout"] [data-s="4"] .ly-t[data-t="share"] { --p: 2 !important; }
+[data-card="layout"] [data-s="1"] .ly-t[data-t="filter"], [data-card="layout"] [data-s="2"] .ly-t[data-t="filter"], [data-card="layout"] [data-s="3"] .ly-t[data-t="filter"], [data-card="layout"] [data-s="4"] .ly-t[data-t="filter"] { --p: 3 !important; }
+/* 2: the starred item to the top */
+[data-card="layout"] [data-s="2"] .ly-s[data-t="star"], [data-card="layout"] [data-s="3"] .ly-s[data-t="star"], [data-card="layout"] [data-s="4"] .ly-s[data-t="star"] { --p: 0 !important; }
+[data-card="layout"] [data-s="2"] .ly-s[data-t="home"], [data-card="layout"] [data-s="3"] .ly-s[data-t="home"], [data-card="layout"] [data-s="4"] .ly-s[data-t="home"] { --p: 1 !important; }
+[data-card="layout"] [data-s="2"] .ly-s[data-t="inbox"], [data-card="layout"] [data-s="3"] .ly-s[data-t="inbox"], [data-card="layout"] [data-s="4"] .ly-s[data-t="inbox"] { --p: 2 !important; }
+/* 3: one icon hidden */
+[data-card="layout"] [data-s="3"] .ly-t[data-t="filter"], [data-card="layout"] [data-s="4"] .ly-t[data-t="filter"] { opacity: 0; transform: scale(.4); }
+/* 4: new pieces pop in (hidden until then) */
+[data-card="layout"] .ly-new { opacity: 0; transform: scale(.4); }
+[data-card="layout"] [data-s="4"] .ly-new { opacity: 1; transform: none; }
+/* the piece moving in each state, lifted in the accent colour */
+[data-card="layout"] [data-s="1"] .ly-t[data-t="down"], [data-card="layout"] [data-s="2"] .ly-s[data-t="star"], [data-card="layout"] [data-s="3"] .ly-t[data-t="filter"], [data-card="layout"] [data-s="4"] .ly-new {
+  color: var(--k-accent); border-color: var(--k-accent); background: color-mix(in srgb, var(--k-accent) 14%, var(--k-soft)); box-shadow: 0 4px 10px rgba(0,0,0,.16); }

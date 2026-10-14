@@ -68,6 +68,7 @@ allowlisting a copy.
     - `useInView`
 - Cross-plugin:
   - Imported by:
+    - `apps/website/pages/foundations`
     - `primitives/cursor-pagination`
     - `primitives/data-view`
     - `primitives/dom/auto-scroll`

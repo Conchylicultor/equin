@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { PaneChrome, type AnyPane } from "@plugins/primitives/plugins/pane/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type { SubTheme } from "@plugins/ui/plugins/theme-engine/core";
 import { equinDocumentTheme } from "../internal/theme";
 import { WebsitePage } from "./website-page";
 
@@ -22,13 +23,21 @@ import { WebsitePage } from "./website-page";
  * The header floats over the top of the page (`floatingHeader`): clear while
  * the reader is at the top, so the hero's glow runs up behind the wordmark and
  * the nav as the design draws it, and masked with its rule once the page
- * scrolls under it.
+ * scrolls under it. A page whose own picture runs under the header (the
+ * Foundations iceberg) dresses it for that picture: `headerTheme`, which it may
+ * change as it scrolls, and `headerGlass`, a frosted bar.
  */
 export function WebsiteChrome({
   pane,
+  headerTheme,
+  headerGlass,
   children,
 }: {
   pane: AnyPane;
+  /** The sub-theme the floating header wears (`PaneChrome headerTheme`). */
+  headerTheme?: SubTheme;
+  /** Frost the header once content scrolls under it (`PaneChrome headerGlass`). */
+  headerGlass?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -37,7 +46,12 @@ export function WebsiteChrome({
       surface="canvas"
       className="h-full"
     >
-      <PaneChrome pane={pane} floatingHeader>
+      <PaneChrome
+        pane={pane}
+        floatingHeader
+        headerGlass={headerGlass}
+        headerTheme={headerTheme && subThemeScope(headerTheme)}
+      >
         <WebsitePage>{children}</WebsitePage>
       </PaneChrome>
     </Theme>

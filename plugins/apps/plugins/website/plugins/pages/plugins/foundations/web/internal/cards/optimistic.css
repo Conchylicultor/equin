@@ -1,0 +1,20 @@
+[data-card="optimistic"] .op-head { display: flex; align-items: center; min-height: 20px; margin: 0 0 5px 2px; }
+[data-card="optimistic"] .op-lab { font-weight: 700; }
+[data-card="optimistic"] .op-lab.acc { color: var(--k-accent); }
+[data-card="optimistic"] .op-list + .op-head { margin-top: 10px; }
+[data-card="optimistic"] .op-r { display: flex; align-items: center; gap: 9px; padding: 0 11px; height: 30px; font-size: var(--k-fs-lg); user-select: none; transition: opacity var(--k-fast); }
+[data-card="optimistic"] .op-r + .op-r { border-top: 1px solid color-mix(in srgb, var(--k-ink) 10%, transparent); }
+[data-card="optimistic"] .op-r:hover { background: color-mix(in srgb, var(--k-accent) 6%, transparent); }
+[data-card="optimistic"] .op-ck { position: relative; flex: none; width: 13px; height: 13px; border-radius: 4px; box-sizing: border-box; border: 1.5px solid var(--k-ink); }
+[data-card="optimistic"] .op-r.on .op-ck { background: var(--k-accent); border-color: var(--k-accent); }
+[data-card="optimistic"] .op-r.on .op-ck::after { content: ""; position: absolute; left: 3.5px; top: .5px; width: 3px; height: 7px; border: solid var(--k-soft); border-width: 0 1.6px 1.6px 0; transform: rotate(45deg); }
+[data-card="optimistic"] .op-r.on b { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--k-ink) 50%, transparent); }
+[data-card="optimistic"] .op-r b { flex: 1; min-width: 0; font-weight: var(--k-w); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+[data-card="optimistic"] .op-r.pend { opacity: .55; }
+[data-card="optimistic"] .op-os { display: inline-flex; flex: none; align-items: center; gap: 5px; white-space: nowrap; font-size: var(--k-fs); font-weight: var(--k-wb); }
+[data-card="optimistic"] .op-os > span { display: none; align-items: center; gap: 5px; }
+[data-card="optimistic"] .op-r[data-st=wait] .op-wait, [data-card="optimistic"] .op-r[data-st=saving] .op-saving,
+[data-card="optimistic"] .op-r[data-st=saved] .op-saved { display: inline-flex; animation: k-in var(--k-med) var(--k-ease); }
+[data-card="optimistic"] .op-wait, [data-card="optimistic"] .op-saving { opacity: .75; }
+[data-card="optimistic"] .op-saved { color: var(--k-accent); }
+[data-card="optimistic"] .op-spin { width: 9px; height: 9px; border-radius: 50%; box-sizing: border-box; border: 1.5px solid color-mix(in srgb, var(--k-ink) 30%, transparent); border-top-color: var(--k-accent); animation: k-spin .8s linear infinite; }

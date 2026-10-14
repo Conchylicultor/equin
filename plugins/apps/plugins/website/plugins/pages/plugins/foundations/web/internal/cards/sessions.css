@@ -1,0 +1,26 @@
+[data-card="sessions"] .ss-type {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: ss-type 3.6s var(--k-ease) var(--d, 0s) infinite backwards;
+}
+@keyframes ss-type {
+  0% {
+    transform: scaleX(0);
+    opacity: 1;
+  }
+  45%,
+  82% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 0;
+  }
+}
+[data-card="sessions"] .ss-eq {
+  transition: opacity var(--k-med);
+}
+[data-card="sessions"] .ss-eq.k-sel {
+  opacity: 0.3;
+}

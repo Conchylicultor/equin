@@ -1,0 +1,13 @@
+[data-card="protected"] .pt { display: flex; gap: 8px; }
+[data-card="protected"] .pt-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+[data-card="protected"] .pt-pg { flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 9px 9px 10px; font-size: var(--k-fs); }
+[data-card="protected"] .pt-ttl { font-weight: 700; font-size: var(--k-fs-lg); margin-bottom: 2px; }
+[data-card="protected"] .pt-l { display: block; }
+[data-card="protected"] .pt-card { position: relative; display: flex; flex-direction: column; gap: 3px; padding: 14px 7px 6px; border-radius: var(--k-r-sm); }
+[data-card="protected"] .pt-name { position: absolute; top: 2px; right: 6px; font-size: 8.5px; font-weight: var(--k-wb); opacity: .7; }
+[data-card="protected"] .pt-agent { background: color-mix(in srgb, var(--k-accent) 13%, transparent); }
+[data-card="protected"] .pt-agent .pt-name { color: var(--k-accent); opacity: 1; }
+[data-card="protected"] .pt-human { background: color-mix(in srgb, var(--k-ink) 11%, var(--k-soft)); }
+[data-card="protected"] .pt-agentpage { background: color-mix(in srgb, var(--k-accent) 7%, var(--k-soft)); }
+[data-card="protected"] .pt-who { font-size: var(--k-fs-sm); line-height: 1.35; opacity: .75; }
+[data-card="protected"] .pt-who b { font-weight: var(--k-wb); }

@@ -11,9 +11,10 @@ the claim, show what it looks like, and then get out of the way:
 - [`landing`](plugins/landing/CLAUDE.md) — the homepage's bands: the hero, the
   screenshot, the layers, the story link, the contact block.
 - [`pages`](plugins/pages/CLAUDE.md) — the inner pages: the apps gallery
-  (`/website/apps`), the download page, and the vision, foundations, story and
-  guide pages (`/website/vision`, …), each with its own section slot the page
-  gets written into — placeholders for now.
+  (`/website/apps`), the download page, the foundations iceberg
+  (`/website/foundations`), and the vision, story and guide pages
+  (`/website/vision`, …), each with its own section slot the page gets written
+  into — placeholders for now.
 - [`improve`](plugins/improve/CLAUDE.md) — the header's Improve button: the
   visitor describes a change, watches a scripted replay of what an agent would
   do with it, and can file it as a prefilled GitHub issue. No agent runs here.
@@ -44,6 +45,12 @@ headline, 72px around a section — far above the density ramp's 2rem ceiling), 
 `WebsiteBand` takes as a named `rhythm` declared in the shell's
 `website-band.css`.
 
+The one palette the theme does not carry is the Foundations page's iceberg
+(`pages/foundations`): a drawing whose sunlit sky and black abyss are the
+picture itself, the same in either mode. It declares its palette once, scoped to
+the scene, and documents why there; it is not a precedent for a component's
+colour.
+
 Light/dark is still global — per-scope dark hasn't landed — so the site follows
 the desktop's mode; the dark values are the design and the light ones a readable
 inversion of it.
@@ -73,7 +80,7 @@ everywhere a reader can see it; `Singularity` is only the repository's name.
     - Plugins:
       - **`apps`** — The apps gallery of the equin website: the /website/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, coming next), each card's Install and the…
       - **`download`** — The download page of the equin website: the /website/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it…
-      - **`foundations`** — The technical foundations page of the equin website: the /website/foundations pane on how equin is built — framework, harness, plugin system (a placeholder heading for now) — its Foundations nav…
+      - **`foundations`** — The technical foundations page of the equin website: the /website/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop…
       - **`guide`** — The getting-started guide of the equin website: the /website/guide pane on the first tasks, agents and changes once equin is installed (a placeholder heading for now), its Guide nav link, and the…
       - **`story`** — The story page of the equin website: the /website/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into.
       - **`vision`** — The vision page of the equin website: the /website/vision pane on the vision for applications (a placeholder heading for now), its Vision nav link, and the WebsiteVision.Section slot the page is…

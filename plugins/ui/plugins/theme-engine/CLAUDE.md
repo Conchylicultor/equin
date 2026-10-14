@@ -154,11 +154,11 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `ThemeEngine.SubTheme`
     - `ThemeEngine.FixedTheme`
     - `ThemeEngine.ThemeSource`
-  - Slot contributors: 37 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 38 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `ThemeEngine.TokenGroup` ×16
     - `ThemeEngine.Theme` ×8
     - `ThemeEngine.VariantGroup` ×7
-    - `ThemeEngine.SubTheme` ×3
+    - `ThemeEngine.SubTheme` ×4
     - `ThemeEngine.ThemeSource` ×2
     - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
   - Contributes:
@@ -258,9 +258,9 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `TokenGroupFragmentsSchema`
     - `tokenGroupMatchesSearch`
 - Cross-plugin:
-  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui` ×26
-    - `apps` ×9
+    - `apps` ×10
     - `apps-core` ×2
     - `reports/theme-resolution`
 - Sub-plugins:

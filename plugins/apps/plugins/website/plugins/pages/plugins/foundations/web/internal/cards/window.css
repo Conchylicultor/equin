@@ -1,0 +1,19 @@
+[data-card="window"] .wn { display: flex; gap: 10px; align-items: stretch; user-select: none; -webkit-user-select: none; }
+[data-card="window"] .wn-vp { position: relative; flex: 1; min-width: 0; height: 160px; border-color: color-mix(in srgb, var(--k-ink) 22%, transparent); cursor: ns-resize; overscroll-behavior: contain; }
+[data-card="window"] .wn-rows { display: block; will-change: transform; }
+[data-card="window"] .wn-rw { display: flex; align-items: center; gap: 8px; height: 22px; padding: 0 10px; box-sizing: border-box; white-space: nowrap;
+  border-bottom: 1px solid color-mix(in srgb, var(--k-ink) 9%, transparent); }
+[data-card="window"] .wn-n { width: 72px; flex: none; font: var(--k-wb) var(--k-fs) var(--font-mono, ui-monospace), monospace; color: var(--k-accent); }
+[data-card="window"] .wn-rw .k-bar { opacity: .3; }
+[data-card="window"] .wn-cnt { position: absolute; right: 8px; bottom: 8px; padding: 0 8px; line-height: 18px; border-radius: var(--k-pill); font-weight: 700;
+  background: var(--k-accent); color: var(--k-soft); box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+[data-card="window"] .wn-side { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 74px; }
+[data-card="window"] .wn-lab { font-size: var(--k-fs-sm); text-align: center; line-height: 1.25; }
+[data-card="window"] .wn-trk { position: relative; flex: 1; width: 22px; border-radius: var(--k-r-sm); cursor: ns-resize; touch-action: none;
+  background: repeating-linear-gradient(180deg, color-mix(in srgb, var(--k-ink) 16%, transparent) 0 1.5px, transparent 1.5px 4px); border: 1px solid color-mix(in srgb, var(--k-ink) 22%, transparent); }
+[data-card="window"] .wn-thumb, [data-card="window"] .wn-band { position: absolute; height: 16px; top: calc(var(--x, 0) * (100% - 16px)); }
+[data-card="window"] .wn-thumb { left: -4px; right: -4px; border-radius: 4px; box-sizing: border-box; background: color-mix(in srgb, var(--k-accent) 30%, var(--k-soft)); border: 1.5px solid var(--k-accent); }
+[data-card="window"] .wn-thumb::after { content: ""; position: absolute; left: 7px; right: 7px; top: 5px; height: 3px; border-top: 1px solid var(--k-accent); border-bottom: 1px solid var(--k-accent); }
+[data-card="window"] .wn-band { right: -10px; width: 4px; border-radius: 2px; background: var(--k-accent); }
+[data-card="window"] .wn-vp:focus-visible, [data-card="window"] .wn-trk:focus-visible { outline: 2px solid var(--k-accent); outline-offset: 2px; }
+[data-card="window"] .wn-vp:focus, [data-card="window"] .wn-trk:focus { outline: none; }

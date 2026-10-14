@@ -264,8 +264,8 @@ the outcome too, with no separate code path.
     - `SlotItemLayout`
     - `useDispatchOutcome`
 - Cross-plugin:
-  - Imported by: 81 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×26
+  - Imported by: 80 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×25
     - `conversations` ×13
     - `primitives` ×13
     - `ui` ×5

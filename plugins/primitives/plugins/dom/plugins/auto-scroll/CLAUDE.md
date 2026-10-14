@@ -9,7 +9,9 @@ that wants it. Today that is six roles:
 
 - **stick-to-bottom streaming** — `useStickyScroll` + `JumpToBottomButton`
 - **container-scoped positioning** — `scrollToBottom`, `scrollChildIntoView`
-  (scroll only THIS container; never an ancestor, unlike `scrollIntoView`)
+  (scroll only THIS container; never an ancestor, unlike `scrollIntoView`; it
+  honours the child's CSS `scroll-margin` as `scrollIntoView` does, so a
+  section under a pinned header declares the bar's height once)
 - **gesture edge auto-scroll** — `useEdgeAutoScroll`
 - **scroll kept across a wholesale swap** — `KeepScrollAcross`
 - **the reader's anchor kept across a resize above it** — `KeepAnchorAcross`
@@ -197,6 +199,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `apps/prototypes/canvas`
     - `apps/sonata/progress/loop`
     - `apps/sonata/rich/chord-progression`
+    - `apps/website/pages/foundations`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/outline`

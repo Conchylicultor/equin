@@ -1,0 +1,32 @@
+[data-card="loop"] .lp-arc {
+  fill: none;
+  stroke: var(--k-accent);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+[data-card="loop"] .k-enter .lp-seg {
+  stroke-dasharray: 100 100;
+  animation: lp-draw 0.9s var(--k-ease) backwards;
+}
+[data-card="loop"] .lp-now.k-enter {
+  animation: lp-fade 0.45s var(--k-ease) 0.25s backwards;
+}
+[data-card="loop"] .lp-step > rect {
+  transition: stroke var(--k-med);
+}
+[data-card="loop"] .lp-step.k-sel > rect {
+  stroke: var(--k-accent);
+}
+[data-card="loop"] .lp-app.k-enter {
+  animation: lp-fade 0.6s var(--k-ease) 0.8s backwards;
+}
+@keyframes lp-draw {
+  from {
+    stroke-dashoffset: 100;
+  }
+}
+@keyframes lp-fade {
+  from {
+    opacity: 0;
+  }
+}

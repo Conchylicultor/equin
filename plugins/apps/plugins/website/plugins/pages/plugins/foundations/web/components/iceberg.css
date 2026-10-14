@@ -1,0 +1,650 @@
+/* The iceberg page, ported from the prototype (proto-1790334655-cs0c) at its default options
+   (finish soft · split tint · mark wrench).
+
+   The palette below is the scene's own: a sunlit sky above the waterline and the sea darkening to the abyss,
+   with the Harness pieces as a warm current through the cold ice. It is one illustration's fixed palette — the
+   same in light and dark mode, because the picture does not change with the mode — so it is declared once,
+   here, and read by everything in the scene (the berg's SVG, the pieces, the cards' kit) through these
+   variables. Nothing outside `.iceberg` reads them. */
+.iceberg {
+  /* the drawing's type was set on the browser's default leading, not the site's */
+  line-height: normal;
+  /* identity: the site's azure → cyan */
+  --berg-blue: #2563eb;
+  --berg-blue-2: #3b82f6;
+  --berg-cyan: #22d3ee;
+  --berg-grad: linear-gradient(90deg, var(--berg-blue), var(--berg-cyan));
+  /* the sky */
+  --berg-sky-0: #ffffff;
+  --berg-sky-1: #f3f6fb;
+  --berg-sky-2: #e4ecf8;
+  --berg-glow-a: rgba(37, 99, 235, 0.13);
+  --berg-glow-b: rgba(34, 211, 238, 0.052);
+  --berg-ink: #0b1220;
+  --berg-ink-2: #566275;
+  --berg-shallow-ink: #0b1d33;
+  --berg-shallow-ink-2: #2f4660;
+  /* the sea, waterline to abyss */
+  --berg-sea-0: #3d88c8;
+  --berg-sea-1: #164b8c;
+  --berg-sea-2: #071f45;
+  --berg-sea-3: #020a1a;
+  --berg-abyss: #000000;
+  --berg-deep-ink: #f2f4f7;
+  --berg-muted: #9aa4b2;
+  /* the ice */
+  --berg-ice-top-0: #c9d8ec;
+  --berg-ice-top-1: #ffffff;
+  --berg-ice-top-2: #d6e2f2;
+  --berg-ice-outline: #7fa3d6;
+  --berg-ice-0: #ffffff;
+  --berg-ice-1: #dcebff;
+  --berg-ice-2: #3b82f6;
+  --berg-ice-3: #0b1a33;
+  --berg-rim-0: #ffffff;
+  --berg-rim-1: #9fdcf0;
+  --berg-rim-2: #3b82f6;
+  /* the Harness mark: teal on the ice, cyan in the deep */
+  --berg-teal: #0891b2;
+
+  --svh: 1vh;
+  --fit: 1;
+  position: relative;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+:where(.iceberg) button {
+  font: inherit;
+  color: inherit;
+}
+
+/* The scene runs up behind the site header, which floats over the sky (the scene's top padding keeps the
+   header's room in flow, as the prototype's 60px did for its top bar). */
+.iceberg-scene {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  container-type: inline-size;
+  margin-top: calc(-1 * var(--chrome-pane-h));
+  padding-top: var(--chrome-pane-h);
+  color: var(--berg-deep-ink);
+  /* the fallback at the very edges: the strips paint the real sky and sea */
+  background: linear-gradient(to bottom, var(--berg-sky-0) 50%, var(--berg-abyss) 50%);
+}
+.iceberg-berg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  pointer-events: none;
+}
+/* the berg, one strip per layer: each strip moves and stretches as a GPU transform, never repainted mid-glide */
+.iceberg-berg .iceberg-band {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  display: block;
+  transform-origin: 0 0;
+}
+.iceberg-hero,
+.iceberg-layer,
+.iceberg-foot {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- the hero: the sky (hero + the apps) fills exactly the first screen; --fit shrinks it when short ---------- */
+.iceberg-hero {
+  padding: calc(clamp(20px, calc(7 * var(--svh)), 120px) * var(--fit)) 16px 0;
+  text-align: center;
+  color: var(--berg-ink);
+}
+.iceberg-hero h1 {
+  margin: 0 auto calc(clamp(8px, calc(2 * var(--svh)), 16px) * var(--fit));
+  max-width: 14ch;
+  font-weight: 700;
+  font-size: clamp(44px, 7cqw, 88px);
+  line-height: 1;
+  letter-spacing: -0.05em;
+  color: var(--berg-ink);
+}
+.iceberg-hero h1 em {
+  font-style: normal;
+  background: var(--berg-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.iceberg-hero p {
+  margin: 0 auto;
+  max-width: 54ch;
+  line-height: 1.55;
+  font-size: 17px;
+  color: var(--berg-ink-2);
+}
+.iceberg-dive {
+  margin-top: calc(clamp(10px, calc(3 * var(--svh)), 36px) * var(--fit));
+  font: 500 11px var(--font-mono), monospace;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--berg-ink-2);
+  opacity: 0.8;
+}
+
+/* ---------- the Components / Harness key under the title: each filters to its half ---------- */
+.iceberg-split-key {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: calc(clamp(10px, calc(2.4 * var(--svh)), 22px) * var(--fit));
+}
+.iceberg-split-key button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #3c4858;
+  background: #fff;
+  border: 1px solid rgba(11, 18, 32, 0.1);
+  box-shadow: 0 1px 2px rgba(11, 18, 32, 0.04);
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.iceberg-split-key button:hover {
+  border-color: rgba(37, 99, 235, 0.4);
+}
+.iceberg-split-key button[aria-pressed="true"] {
+  background: var(--berg-ink);
+  color: #fff;
+  border-color: var(--berg-ink);
+}
+/* the key is two plain buttons; Harness carries the same mark its pieces do */
+.iceberg-split-key .iceberg-key-component {
+  display: none;
+}
+.iceberg-split-key .iceberg-key-harness {
+  display: inline-flex;
+  align-items: center;
+  margin-right: -2px;
+  font-style: normal;
+  color: var(--berg-teal);
+}
+.iceberg-split-key button[aria-pressed="true"] .iceberg-key-harness {
+  color: var(--berg-cyan);
+}
+.iceberg-split-key .iceberg-key-harness .iceberg-mark {
+  display: block;
+}
+/* the filter: the other half recedes, but keeps its place in the berg */
+.iceberg-scene[data-focus] .iceberg-item {
+  transition:
+    opacity 0.25s,
+    color 0.2s;
+}
+.iceberg-scene[data-focus="component"] .iceberg-item[data-kind="harness"],
+.iceberg-scene[data-focus="harness"] .iceberg-item[data-kind="component"] {
+  opacity: 0.18;
+}
+
+/* ---------- the layers ---------- */
+.iceberg-layer {
+  /* a jump to a layer lands below the pinned header, not under it */
+  scroll-margin-top: var(--chrome-pane-h);
+  padding: 64px 16px 72px;
+}
+.iceberg-layer-head {
+  margin: 0 auto 28px;
+  max-width: 760px;
+  text-align: center;
+  color: var(--berg-deep-ink);
+}
+.iceberg-layer-head h2 {
+  margin: 10px 0 6px;
+  font-weight: 650;
+  font-size: clamp(26px, 3.4cqw, 40px);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+.iceberg-layer-head p {
+  margin: 0;
+  line-height: 1.5;
+  font-size: 15.5px;
+  color: var(--berg-muted);
+}
+/* the apps: on the sky */
+.iceberg-layer[data-i="0"] {
+  padding-top: calc(clamp(16px, calc(4 * var(--svh)), 64px) * var(--fit));
+  padding-bottom: calc(clamp(18px, calc(4.5 * var(--svh)), 72px) * var(--fit));
+}
+.iceberg-layer[data-i="0"] .iceberg-layer-head {
+  margin-bottom: calc(clamp(12px, calc(2.8 * var(--svh)), 28px) * var(--fit));
+  color: var(--berg-ink);
+}
+.iceberg-layer[data-i="0"] .iceberg-layer-head h2 {
+  font-size: calc(clamp(24px, calc(5 * var(--svh)), 40px) * var(--fit));
+  margin: 6px 0 4px;
+}
+.iceberg-layer[data-i="0"] .iceberg-layer-head p {
+  color: var(--berg-ink-2);
+}
+/* the shallows: just under the waterline */
+.iceberg-layer:not([data-deep]):not([data-i="0"]) .iceberg-layer-head {
+  color: var(--berg-shallow-ink);
+}
+.iceberg-layer:not([data-deep]):not([data-i="0"]) .iceberg-layer-head p {
+  color: var(--berg-shallow-ink-2);
+}
+
+/* ---------- the pieces: pills on their layer's row ---------- */
+.iceberg-pieces {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 auto;
+  max-width: var(--row, none);
+}
+.iceberg-pieces:has(> .iceberg-item.open) {
+  max-width: var(--row-open, none);
+}
+.iceberg-layer[data-i="0"] .iceberg-pieces {
+  gap: calc(8px * var(--fit));
+}
+.iceberg-item {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 8px;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 999px;
+  padding: 0.5em 1.05em;
+  font-weight: 500;
+  font-size: calc(var(--fs, 16px) * (0.9 - var(--i, 0) * 0.03));
+  color: #dfe5ec;
+  background: rgba(9, 14, 24, 0.86);
+  border: 1px solid rgba(120, 170, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  /* the box's change of hands (element ↔ ::after) must be instant: a fading fill shows as a ghost card */
+  transition: color 0.2s;
+}
+.iceberg-item .iceberg-desc,
+.iceberg-item .vz {
+  display: none;
+}
+.iceberg-item[data-w="3"] {
+  color: #fff;
+  font-weight: 600;
+}
+.iceberg-item:not([data-w="3"]) .iceberg-name {
+  display: inline-block;
+}
+/* the weight-3 dot belongs to the name, so it travels with the name when a pill becomes a card */
+.iceberg-item[data-w="3"] .iceberg-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.iceberg-item[data-w="3"] .iceberg-name::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--berg-cyan);
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.8);
+}
+/* (in the deep, the layer's fill and border hold under the pointer: only the name lights up) */
+.iceberg-item:hover {
+  color: #fff;
+}
+.iceberg-layer[data-i="0"] .iceberg-item {
+  font-size: calc(var(--fs, 16px) * 0.9 * max(var(--fit), 0.8));
+  color: #1a2433;
+  background: #fff;
+  border-color: rgba(11, 18, 32, 0.09);
+  box-shadow:
+    0 1px 2px rgba(11, 18, 32, 0.05),
+    0 6px 18px rgba(11, 18, 32, 0.06);
+}
+.iceberg-layer[data-i="0"] .iceberg-item[data-w="3"] {
+  color: var(--berg-ink);
+}
+.iceberg-layer:not([data-deep]) .iceberg-item[data-w="3"] .iceberg-name::before {
+  background: var(--berg-blue-2);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.8);
+}
+.iceberg-layer[data-i="0"] .iceberg-item:hover {
+  border-color: rgba(37, 99, 235, 0.45);
+  background: #fff;
+}
+.iceberg-layer:not([data-deep]):not([data-i="0"]) .iceberg-item {
+  color: #13243a;
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(11, 29, 51, 0.08);
+  box-shadow:
+    0 1px 2px rgba(11, 29, 51, 0.06),
+    0 6px 18px rgba(11, 29, 51, 0.08);
+}
+.iceberg-layer:not([data-deep]):not([data-i="0"]) .iceberg-item[data-w="3"] {
+  color: var(--berg-shallow-ink);
+}
+.iceberg-layer:not([data-deep]):not([data-i="0"]) .iceberg-item:hover {
+  background: #fff;
+  border-color: rgba(37, 99, 235, 0.45);
+}
+
+/* --- the Harness: a plain chip like the rest, with its mark in front of its name (in place of the weight dot) --- */
+.iceberg-mark {
+  display: none;
+  flex: none;
+}
+.iceberg-item[data-kind="harness"] .iceberg-mark {
+  display: inline-block;
+  width: 0.8em;
+  height: 0.8em;
+  margin-right: 6px;
+  vertical-align: -0.05em;
+  color: var(--berg-teal);
+}
+.iceberg-item[data-kind="harness"][data-w="3"] .iceberg-mark {
+  margin-right: 0;
+}
+.iceberg-layer[data-deep] .iceberg-item[data-kind="harness"] .iceberg-mark {
+  color: var(--berg-cyan);
+}
+.iceberg-item[data-kind="harness"][data-w="3"] .iceberg-name::before {
+  display: none;
+}
+
+/* ---------- a piece opens in place, inside the berg ----------
+   The pill grows into a card where it sits; its neighbours reflow around it and the berg is redrawn to fit.
+   Each open card is as wide as its own text wants (--ow): short pieces make small cards, long ones wider, so a
+   layer unfolds into a loose cloud rather than a column of equal tiles. A card with a drawing is the kit's
+   width (data-cw, set by the kit when it mounts). */
+.iceberg-item.open {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  width: var(--ow, auto);
+  max-width: 100%;
+  padding: 12px 15px 14px;
+  border-radius: 16px;
+  font-size: 15px;
+  cursor: zoom-out;
+}
+.iceberg-item.open.has-viz {
+  width: var(--k-card-std);
+}
+.iceberg-item.open.has-viz[data-cw="wide"] {
+  width: var(--k-card-wide);
+}
+.iceberg-item:is(.open, .closing) {
+  position: relative;
+}
+/* An open card draws its box (fill, border, shadow) on ::after, behind its text, so the box can grow out of
+   the pill as one transform — border and shadow included — while the text stays crisp. */
+.iceberg-item:is(.open, .closing) {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  isolation: isolate;
+}
+.iceberg-item:is(.open, .closing)::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: 16px;
+  transform-origin: 0 0;
+  background: var(--cbg);
+  border: 1px solid var(--cline);
+  box-shadow: var(--csh);
+  transition: border-color 0.2s;
+}
+.iceberg-item:is(.open, .closing):hover::after {
+  border-color: rgba(59, 130, 246, 0.5);
+}
+/* a closing card: its box shrinks back into the pill (so it ends pill-round), and its text fades out where it was */
+.iceberg-item.closing::after {
+  border-radius: 999px;
+}
+.iceberg-item.ghost {
+  position: absolute;
+  margin: 0;
+  max-width: none;
+  pointer-events: none;
+  z-index: 1;
+}
+.iceberg-item.ghost::after {
+  display: none;
+}
+.iceberg-item.ghost .iceberg-name {
+  visibility: hidden;
+}
+.iceberg-item.open.ghost .iceberg-desc,
+.iceberg-item.open.ghost .vz {
+  animation: none;
+}
+/* the card's box per layer */
+.iceberg-layer[data-i="0"] {
+  --cbg: #fff;
+  --cline: rgba(11, 18, 32, 0.09);
+  --csh: 0 1px 2px rgba(11, 18, 32, 0.05), 0 6px 18px rgba(11, 18, 32, 0.06);
+}
+.iceberg-layer:not([data-deep]):not([data-i="0"]) {
+  --cbg: rgba(255, 255, 255, 0.9);
+  --cline: rgba(11, 29, 51, 0.08);
+  --csh: 0 1px 2px rgba(11, 29, 51, 0.06), 0 6px 18px rgba(11, 29, 51, 0.08);
+}
+.iceberg-layer[data-deep] {
+  --cbg: rgba(9, 14, 24, 0.86);
+  --cline: rgba(120, 170, 255, 0.12);
+  --csh: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.iceberg-item.open .iceberg-name {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.iceberg-item.open .iceberg-desc {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 400;
+  line-height: 1.5;
+  opacity: 0.72;
+  text-wrap: balance;
+  animation: iceberg-unfold 0.3s ease-out 0.14s both;
+}
+/* the card's box and palette are the kit's (kit.css); the page only unfolds it */
+.iceberg-item.open .vz {
+  display: block;
+  margin-top: 6px;
+  animation: iceberg-unfold 0.32s ease-out 0.16s both;
+}
+@keyframes iceberg-unfold {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+/* on a phone an open card takes the screen's width (its row may be narrower: it overflows both sides evenly) */
+@container (max-width: 640px) {
+  .iceberg-item.open,
+  .iceberg-item.open.has-viz,
+  .iceberg-item.open.has-viz[data-cw="wide"] {
+    flex: none;
+    width: min(420px, calc(100cqw - 32px));
+    max-width: none;
+  }
+}
+
+.iceberg-foot {
+  padding: 90px 16px 140px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 500;
+  background: var(--berg-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------- the depth gauge: a fixed rail, readable over sky and sea ---------- */
+.iceberg-gauge {
+  position: fixed;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  mix-blend-mode: difference;
+  color: #fff;
+}
+.iceberg-readout {
+  margin-bottom: 14px;
+  min-width: 150px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.iceberg-readout b {
+  display: block;
+  font: 600 17px/1.1 var(--font-sans);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.iceberg-readout small {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.7;
+}
+.iceberg-gauge a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+  opacity: 0.35;
+  padding: 3px 0;
+  transition: opacity 0.2s;
+}
+.iceberg-gauge a::before {
+  content: "";
+  width: 8px;
+  height: 1px;
+  background: currentColor;
+  transition: width 0.25s;
+}
+.iceberg-gauge a.on {
+  opacity: 1;
+}
+.iceberg-gauge a.on::before {
+  width: 20px;
+}
+/* A difference blend can't come out light over the mid-blue just under the surface (it caps near a muddy
+   orange). While any line sits in that first water layer, the gauge drops the blend and paints the colours the
+   blend gives elsewhere: ink over the sky, the deep water's cream below it. */
+.iceberg-gauge.plain {
+  mix-blend-mode: normal;
+}
+.iceberg-gauge.plain > * {
+  color: #f6e2bd;
+  text-shadow: 0 1px 2px rgba(2, 10, 26, 0.5);
+}
+.iceberg-gauge.plain > .dry {
+  color: #17110a;
+  text-shadow: none;
+}
+.iceberg-gauge.plain a {
+  opacity: 0.6;
+}
+.iceberg-gauge.plain a.on {
+  opacity: 1;
+}
+@media (max-width: 1000px) {
+  .iceberg-gauge a span {
+    display: none;
+  }
+  .iceberg-gauge {
+    left: 6px;
+  }
+  .iceberg-readout {
+    font-size: 11px;
+    min-width: 0;
+  }
+}
+/* on a phone the readout has no margin to live in: only the ticks stay */
+@media (max-width: 640px) {
+  .iceberg-readout {
+    display: none;
+  }
+  .iceberg-gauge {
+    left: 4px;
+  }
+}
+
+/* ---------- Expand all: a floating pill, readable over the white sky and the black abyss alike ---------- */
+.iceberg-expander {
+  display: inline-flex;
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 7;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px 10px 13px;
+  border-radius: 999px;
+  cursor: pointer;
+  font: 600 13.5px var(--font-sans);
+  color: #f4f4f5;
+  background: rgba(9, 12, 18, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.iceberg .iceberg-expander {
+  color: #f4f4f5;
+}
+.iceberg-expander:hover {
+  border-color: rgba(96, 165, 250, 0.5);
+  box-shadow:
+    0 0 0 4px rgba(37, 99, 235, 0.18),
+    0 8px 28px rgba(0, 0, 0, 0.28);
+}
+.iceberg-expander svg {
+  flex: none;
+  transition: transform 0.25s;
+}
+.iceberg-expander[aria-pressed="true"] svg {
+  transform: rotate(180deg);
+}
+.iceberg-expander kbd {
+  font: 500 11px var(--font-mono), monospace;
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 5px;
+  color: var(--berg-muted);
+}
+@media (max-width: 640px) {
+  .iceberg-expander kbd {
+    display: none;
+  }
+  .iceberg-expander {
+    right: 12px;
+    bottom: 12px;
+  }
+}

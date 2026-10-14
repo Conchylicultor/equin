@@ -59,8 +59,12 @@ export interface StickyProps extends React.HTMLAttributes<HTMLElement> {
    * `<Surface>`'s own color when nested in one) — so an opaque header never
    * becomes a mismatched band in a tinted surface. `className` still composes
    * last, so a caller can override the color for a bespoke case. Defaults off.
+   *
+   * `"glass"` frosts instead: the same `--chrome-mask` at 72%, with the content
+   * under the bar blurred, so what scrolls beneath still tints it (a page whose
+   * content is a picture, not a document — the website's iceberg).
    */
-  mask?: boolean;
+  mask?: boolean | "glass";
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;
   /** Forwarded to the rendered element (mirrors Surface/Card/Row). */
@@ -98,7 +102,9 @@ export function Sticky({
       ref={ref}
       className={cn(
         active && sticky.className,
-        mask && "bg-chrome-mask",
+        mask === true && "bg-chrome-mask",
+        mask === "glass" &&
+          "bg-chrome-mask/72 backdrop-blur-[14px] backdrop-saturate-[1.3]",
         className,
       )}
       style={{ ...(active ? sticky.style : null), ...style }}

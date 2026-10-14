@@ -45,6 +45,9 @@ function alignTarget(
  * Only the axes you pass move: pass `block` to scroll vertically, `inline` to
  * scroll horizontally; omit an axis to leave that scroll offset untouched.
  * Rect-based (not offsetTop), so it is independent of the child's offsetParent.
+ * Honours the child's CSS `scroll-margin`, as native `scrollIntoView` does — so a
+ * section under a pinned header declares `scroll-margin-top` once and every
+ * jump to it lands below the bar.
  */
 export function scrollChildIntoView(
   container: HTMLElement | null | undefined,
@@ -55,13 +58,18 @@ export function scrollChildIntoView(
   const cRect = container.getBoundingClientRect();
   const chRect = child.getBoundingClientRect();
   const to: ScrollToOptions = { behavior: opts?.behavior ?? "auto" };
+  const style =
+    opts?.block || opts?.inline ? getComputedStyle(child) : undefined;
+  const margin = (side: "Top" | "Bottom" | "Left" | "Right") =>
+    parseFloat(style?.[`scrollMargin${side}`] ?? "") || 0;
 
   if (opts?.block) {
-    const childTop = container.scrollTop + (chRect.top - cRect.top);
+    const childTop =
+      container.scrollTop + (chRect.top - cRect.top) - margin("Top");
     const raw = alignTarget(
       container.scrollTop,
       childTop,
-      chRect.height,
+      chRect.height + margin("Top") + margin("Bottom"),
       container.clientHeight,
       opts.block,
     );
@@ -71,11 +79,12 @@ export function scrollChildIntoView(
     );
   }
   if (opts?.inline) {
-    const childLeft = container.scrollLeft + (chRect.left - cRect.left);
+    const childLeft =
+      container.scrollLeft + (chRect.left - cRect.left) - margin("Left");
     const raw = alignTarget(
       container.scrollLeft,
       childLeft,
-      chRect.width,
+      chRect.width + margin("Left") + margin("Right"),
       container.clientWidth,
       opts.inline,
     );
