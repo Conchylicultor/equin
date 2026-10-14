@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { markConversationViewed } from "@plugins/conversations/plugins/hibernation/web";
+import { useMarkConversationViewed } from "@plugins/conversations/plugins/hibernation/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import type { ResumeOutcome } from "@plugins/conversations/core";
 import { ActionBarView } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
@@ -34,6 +34,7 @@ function reportBlockedResume(outcome: ResumeOutcome): void {
 export function ConversationView() {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
+  const markConversationViewed = useMarkConversationViewed();
 
   // Selection signal for idle hibernation: opening (or switching to) a
   // conversation resets its idle timer and transparently resumes it if it was
@@ -47,7 +48,7 @@ export function ConversationView() {
   // so it stays in the list and can be recovered.
   useEffect(() => {
     void markConversationViewed(convId).then(reportBlockedResume);
-  }, [convId]);
+  }, [convId, markConversationViewed]);
 
   const promptBarItems = Conversation.PromptBar.useContributions();
   const promptInputItems = Conversation.PromptInput.useContributions();

@@ -27,6 +27,7 @@ spelling, and a value with none is refused rather than encoded as another.
 - Description: One spelling per live-resource params tuple: canonicalParams drops an undefined param and a "" for a declared-optional one, and canonicalJson spells a structured param (a typed-query value's q) one way — keys sorted at every depth, non-JSON refused. The single rule both ends of the live-state wire apply (the browser's useResource and the resource runtime), so they cannot drift.
 - Cross-plugin:
   - Imported by:
+    - `framework/browser-server/demo`
     - `framework/resource-runtime`
     - `network/live`
 - Core:

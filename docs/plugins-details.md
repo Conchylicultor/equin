@@ -10109,9 +10109,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Slots: `ConfigV2.WebRegister`
     - Slot contributors: 86 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `ConfigV2.WebRegister` ×86
+    - Contributes: `Demo.Resource` "config-v2"
     - Uses:
+      - `framework/browser-server/demo.Demo`
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
+      - `primitives/latest-ref.useLatestRef`
       - `primitives/live-state.combineResources`
       - `primitives/live-state.foldResource`
       - `primitives/live-state.mapResource`
@@ -10290,6 +10293,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `review/code-review`
       - `shell/global-action-bar`
   - Test helpers:
+    - Web: `@plugins/config_v2/web/testing`
+      - `useConfigDemoServe` — Config inside a demo scope (`Demo.Resource`): every web-registered descriptor's code `defaults`, as if the user had configured nothing.
     - Core: `@plugins/config_v2/core/testing`
       - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
   - Plugins:
@@ -11270,7 +11275,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane` ×5
           - `conversations/conversation-view/action-bar.ActionBarView`
           - `conversations/conversation-view/jsonl-viewer.JsonlPane`
-          - `conversations/hibernation.markConversationViewed`
+          - `conversations/hibernation.useMarkConversationViewed`
           - `conversations.useConversationById`
           - `network/live.useLiveRow`
           - `primitives/bar.Bar`
@@ -14072,11 +14077,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `tasks/task-effort`
     - **`hibernation`** — Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation policy: a scheduled idle-kill job, the viewed/resume endpoint, and the global hibernation config.
       - Web:
-        - Contributes: `ConfigV2.WebRegister` "conversation-hibernation"
+        - Contributes:
+          - `ConfigV2.WebRegister` "conversation-hibernation"
+          - `Demo.Route` "POST /api/conversations/:id/viewed"
         - Uses:
           - `config_v2.ConfigV2`
-          - `infra/endpoints.fetchEndpoint`
-        - Exports (values): `markConversationViewed`
+          - `framework/browser-server/demo.Demo`
+          - `infra/endpoints.useFetchEndpoint`
+        - Exports (values): `useMarkConversationViewed`
       - Server:
         - Contributes: `ConfigV2.Register` "conversation-hibernation"
         - Uses:
@@ -19434,6 +19442,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/resource-runtime.createResourceRuntime`
           - `framework/resource-runtime.KeyedResourceContract`
           - `framework/resource-runtime.RuntimeSocket`
+          - `infra/endpoints.unsupportedEndpointResponse`
           - `network/live.bindExternalServe`
           - `network/live.LiveExternalServe`
           - `packages/resource-protocol.RESOURCE_HTTP_ROUTE`
@@ -19448,6 +19457,65 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BrowserServerPeer`
           - `BrowserServerSocket`
         - Exports (values): `createBrowserServer`
+      - Cross-plugin:
+        - Imported by: `framework/browser-server/demo/scope`
+      - Plugins:
+        - **`demo`** — Demo packs (core) and the two slots a plugin answers its own keys in every demo scope through (web): Demo.Resource (a useServe hook returning a browser server serve function) and Demo.Route ([ep.route, implement(ep, handler)]). A leaf: the scope that reads them lives in demo/scope, so a low plugin (config_v2) can contribute without depending on the scope's UI.
+          - Web:
+            - Slots:
+              - `Demo.Resource`
+              - `Demo.Route`
+            - Slot contributors:
+              - `Demo.Resource` ← `config_v2`
+              - `Demo.Route` ← `conversations.hibernation`
+            - Exports (types): `DemoServe`
+            - Exports (values): `Demo`
+          - Core:
+            - Uses:
+              - `packages/canonical-params.canonicalJson`
+              - `packages/canonical-params.canonicalParams`
+            - Exports (types):
+              - `DemoPack`
+              - `DemoPackContext`
+              - `DemoScenario`
+              - `PackEntry`
+              - `PackWindowOptions`
+              - `ServePackOptions`
+            - Exports (values):
+              - `definePack`
+              - `DemoMissingError`
+              - `DemoPackError`
+              - `packAll`
+              - `packRows`
+              - `packValue`
+              - `packWindow`
+              - `servePack`
+          - Cross-plugin:
+            - Imported by:
+              - `config_v2`
+              - `conversations/hibernation`
+              - `framework/browser-server/demo/scope`
+          - Test helpers:
+            - Core: `@plugins/framework/plugins/browser-server/plugins/demo/core/testing`
+              - `definePack` — Declare a pack — lazily: nothing is evaluated until `servePack` loads it, so `ago` is relative to load time, and a pack module costs nothing to import.
+              - `packAll` — Every row of a collection declared `all` (its `key`, and its `:rows`).
+              - `packValue` — A value's answer at one tuple: its params (a typed-query value: its question), exactly as a reader passes them to `useLive`.
+              - Types: `DemoPack`
+          - Plugins:
+            - **`scope`** — <DemoScope scenario>: renders its subtree against a browser server of its own, built once the scenario's pack loads — the pack's recorded answers, every Demo.Resource contribution's serves (a plugin answering its own live keys, e.g. config from code defaults) and every Demo.Route handler. Any other live key fails loader-failed; any other /api request is refused as unsupported with one deduped 'Not available in the demo' toast; a pack that fails to parse, or a key served twice, throws to the error boundary.
+              - Web:
+                - Uses:
+                  - `framework/browser-server.browserServerTransport`
+                  - `framework/browser-server/demo.Demo`
+                  - `framework/browser-server/demo.DemoServe`
+                  - `primitives/live-state.NotificationsProvider`
+                  - `primitives/loading.Loading`
+                  - `primitives/networking.TransportProvider`
+                  - `shell/toast.showToast`
+                - Exports (values): `DemoScope`
+              - Test helpers:
+                - Web: `@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web/testing`
+                  - `DemoScope` — Renders `children` against a browser server of its own, built once the scenario's pack has loaded: the pack's recorded answers, every `Demo.Resource` contribution's serves and every `Demo.Route` handler.
     - **`central-core`**
       - Core:
         - Uses:
@@ -21946,6 +22014,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `EndpointError`
           - `endpointErrorSink`
           - `endpointQueryKey`
+          - `EndpointUnsupportedError`
           - `fetchEndpoint`
           - `getEndpointErrorMessage`
           - `useEndpoint`
@@ -21972,9 +22041,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `implement`
           - `interpolatePath`
           - `isCodec`
+          - `isUnsupportedEndpointBody`
+          - `isUnsupportedEndpointRefusal`
           - `multipart`
+          - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 199 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 200 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×51
           - `conversations` ×26
           - `debug` ×18
@@ -21996,6 +22068,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review` ×2
           - `backup`
           - `database/fork`
+          - `framework/browser-server`
           - `plugin-meta/plugin-health`
           - `release`
           - `screenshot`
@@ -25287,6 +25360,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`canonical-params`** — One spelling per live-resource params tuple: canonicalParams drops an undefined param and a "" for a declared-optional one, and canonicalJson spells a structured param (a typed-query value's q) one way — keys sorted at every depth, non-JSON refused. The single rule both ends of the live-state wire apply (the browser's useResource and the resource runtime), so they cannot drift.
       - Cross-plugin:
         - Imported by:
+          - `framework/browser-server/demo`
           - `framework/resource-runtime`
           - `network/live`
       - Core:
@@ -32497,13 +32571,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SortDirection`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 67 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×32
           - `apps` ×20
           - `page` ×3
           - `apps-core` ×2
           - `conversations` ×2
           - `build/serve-composition`
+          - `config_v2`
           - `debug/slow-ops`
           - `integrations/youtube`
           - `layouts/miller`
@@ -32705,7 +32780,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 230 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 231 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×66
           - `conversations` ×38
           - `ui` ×22
@@ -32718,9 +32793,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×5
           - `auth` ×4
           - `build` ×4
+          - `framework` ×3
           - `review` ×3
           - `config_v2` ×2
-          - `framework` ×2
           - `integrations` ×2
           - `reports` ×2
           - `code-explorer/commit-detail`
@@ -32784,7 +32859,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LoadingVariant`
         - Exports (values): `Loading`
       - Cross-plugin:
-        - Imported by: 186 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 187 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×63
           - `ui` ×19
           - `primitives` ×17
@@ -32804,6 +32879,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `code-explorer/commit-detail`
           - `config_v2/settings`
           - `fields/secret/config`
+          - `framework/browser-server/demo/scope`
           - `history/dialog`
           - `infra/background/catalog`
           - `layouts/route-fallback`
@@ -33256,31 +33332,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SharedWebSocket`
           - `subscribeNetDiag`
           - `subscribeWsStatus`
+          - `TransportProvider`
           - `useReconnectingWebSocket`
           - `useTransport`
           - `wsUrl`
       - Cross-plugin:
-        - Imported by:
-          - `apps/events/event-list`
-          - `apps/pages/page-tree`
-          - `conversations/all-conversations`
-          - `conversations/conversations-view/data-view`
-          - `conversations/conversations-view/data-view/history`
+        - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
+          - `primitives` ×5
+          - `conversations` ×3
+          - `apps` ×2
+          - `framework` ×2
+          - `infra` ×2
+          - `page` ×2
+          - `tasks` ×2
           - `debug/logs`
-          - `framework/browser-server`
-          - `infra/endpoints`
-          - `infra/health`
           - `network/live`
-          - `page/editor`
-          - `page/editor-collab`
-          - `primitives/live-state`
-          - `primitives/log-channels`
-          - `primitives/optimistic-mutation`
-          - `primitives/overlay/image-viewer`
-          - `primitives/terminal`
           - `shell/notifications`
-          - `tasks/task-attachments`
-          - `tasks/tasks-core`
       - Exemptions:
         - Exempts itself from:
           - `no-raw-websocket` — `web/shared-ws.worker.ts`, `web/use-reconnecting-ws.ts` (sanctioned)
@@ -33303,7 +33370,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FakeSharedWorkers` — The browser's SharedWorker registry: one REAL `createSharedWsHost` per worker name (the production worker's logic, in-process), shared by every tab; `make(name)` is the `makeSharedWorker` factory, connecting a fresh `MessageChannel` to that host like the worker's `connect` event.
           - `FakeWebSocket` — A `WebSocketLike` with no network.
           - `FakeWsServer` — A no-network WebSocket server: `connect` is the bound `makeWebSocket` factory; every socket it ever handed out is retained for introspection (`all`), and the currently-OPEN subset (`openSockets`) is derived live from `readyState` so it is the single source of truth for the one-socket invariant.
-          - `TransportProvider` — Points every transport client in `children` at `transport`.
           - Types: `FakeWsServerOptions`, `TabHandle`, `TransportHub`
     - **`optimistic-mutation`** — Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported.
       - Web:
@@ -36006,6 +36072,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes: `Core.Root` → `MutationErrorWatcher`
         - Uses:
+          - `infra/endpoints.EndpointUnsupportedError`
           - `infra/endpoints.getEndpointErrorMessage`
           - `shell/notifications.toast`
     - **`noise-rules`** — Built-in noise classification rules for low-signal crashes (e.g. ResizeObserver loop warnings).
@@ -36976,6 +37043,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2/settings`
           - `conversations/conversation-view`
           - `debug/profiling/ops`
+          - `framework/browser-server/demo/scope`
           - `infra/health`
           - `page/editor`
           - `page/url-paste`

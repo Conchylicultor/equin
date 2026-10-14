@@ -1,4 +1,5 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useCallback } from "react";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { ResumeOutcome } from "@plugins/conversations/core";
 import { markViewed } from "../../shared/endpoints";
 
@@ -9,8 +10,15 @@ import { markViewed } from "../../shared/endpoints";
 // resume is transparent when it works, not when it fails: a silent failure here
 // is how a conversation ends up with no live session (or a session started in
 // the wrong directory) while the UI shows nothing at all.
-export async function markConversationViewed(
+//
+// Bound through `useFetchEndpoint()`, so inside a scoped transport (a demo
+// scope) the request reaches that scope's server, never the page's.
+export function useMarkConversationViewed(): (
   id: string,
-): Promise<ResumeOutcome> {
-  return fetchEndpoint(markViewed, { id });
+) => Promise<ResumeOutcome> {
+  const fetchEndpoint = useFetchEndpoint();
+  return useCallback(
+    (id: string) => fetchEndpoint(markViewed, { id }),
+    [fetchEndpoint],
+  );
 }

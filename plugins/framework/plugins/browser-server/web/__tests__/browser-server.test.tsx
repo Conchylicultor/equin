@@ -31,13 +31,14 @@ import {
   useNotificationsChannelStatuses,
   useResourceContractMismatches,
 } from "@plugins/primitives/plugins/live-state/web";
-import type {
-  Transport,
-  TransportSocket,
+import {
+  TransportProvider,
+  type Transport,
+  type TransportSocket,
 } from "@plugins/primitives/plugins/networking/web";
-import { TransportProvider } from "@plugins/primitives/plugins/networking/web/testing";
 import {
   EndpointError,
+  EndpointUnsupportedError,
   fetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -399,6 +400,7 @@ describe("browser server ⇄ the real live-state client", () => {
     const { transport, server } = setup();
     const opts = { transport, report: false } as const;
     const api = await endpointError(fetchEndpoint(notHere, {}, opts));
+    expect(api).toBeInstanceOf(EndpointUnsupportedError);
     expect(api.status).toBe(409);
     expect(api.body).toEqual({
       reason: "unsupported",

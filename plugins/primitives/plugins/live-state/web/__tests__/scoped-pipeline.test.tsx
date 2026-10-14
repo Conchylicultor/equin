@@ -22,11 +22,11 @@ import {
   useResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { LiveRegistries } from "../notifications-client";
-import type {
-  Transport,
-  TransportSocket,
+import {
+  TransportProvider,
+  type Transport,
+  type TransportSocket,
 } from "@plugins/primitives/plugins/networking/web";
-import { TransportProvider } from "@plugins/primitives/plugins/networking/web/testing";
 import {
   registerResourceDescriptor,
   type ResourceDescriptor,

@@ -191,6 +191,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `EndpointError`
     - `endpointErrorSink`
     - `endpointQueryKey`
+    - `EndpointUnsupportedError`
     - `fetchEndpoint`
     - `getEndpointErrorMessage`
     - `useEndpoint`
@@ -217,9 +218,12 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `implement`
     - `interpolatePath`
     - `isCodec`
+    - `isUnsupportedEndpointBody`
+    - `isUnsupportedEndpointRefusal`
     - `multipart`
+    - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 199 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 200 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×51
     - `conversations` ×26
     - `debug` ×18
@@ -241,6 +245,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `review` ×2
     - `backup`
     - `database/fork`
+    - `framework/browser-server`
     - `plugin-meta/plugin-health`
     - `release`
     - `screenshot`

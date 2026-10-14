@@ -331,9 +331,12 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
   - Slots: `ConfigV2.WebRegister`
   - Slot contributors: 86 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `ConfigV2.WebRegister` ×86
+  - Contributes: `Demo.Resource` "config-v2"
   - Uses:
+    - `framework/browser-server/demo.Demo`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
+    - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.combineResources`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.mapResource`
@@ -512,6 +515,8 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `review/code-review`
     - `shell/global-action-bar`
 - Test helpers:
+  - Web: `@plugins/config_v2/web/testing`
+    - `useConfigDemoServe` — Config inside a demo scope (`Demo.Resource`): every web-registered descriptor's code `defaults`, as if the user had configured nothing.
   - Core: `@plugins/config_v2/core/testing`
     - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
 - Sub-plugins:

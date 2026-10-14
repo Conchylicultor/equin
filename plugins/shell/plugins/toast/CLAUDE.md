@@ -33,6 +33,7 @@
     - `config_v2/settings`
     - `conversations/conversation-view`
     - `debug/profiling/ops`
+    - `framework/browser-server/demo/scope`
     - `infra/health`
     - `page/editor`
     - `page/url-paste`

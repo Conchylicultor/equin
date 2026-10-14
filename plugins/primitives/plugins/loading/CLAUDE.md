@@ -61,7 +61,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `LoadingVariant`
   - Exports (values): `Loading`
 - Cross-plugin:
-  - Imported by: 186 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 187 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×63
     - `ui` ×19
     - `primitives` ×17
@@ -81,6 +81,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `code-explorer/commit-detail`
     - `config_v2/settings`
     - `fields/secret/config`
+    - `framework/browser-server/demo/scope`
     - `history/dialog`
     - `infra/background/catalog`
     - `layouts/route-fallback`

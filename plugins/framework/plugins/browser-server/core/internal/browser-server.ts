@@ -11,6 +11,7 @@ import {
   bindExternalServe,
   type LiveExternalServe,
 } from "@plugins/network/plugins/live/core";
+import { unsupportedEndpointResponse } from "@plugins/infra/plugins/endpoints/core";
 import { RESOURCE_HTTP_ROUTE } from "@plugins/packages/plugins/resource-protocol/core";
 import {
   allResourceDescriptors,
@@ -55,7 +56,7 @@ export interface BrowserServerOptions {
   onError?: (err: Error, req: Request, pathname: string) => void;
   /**
    * The response to a request no route matches. Default: an `/api/…` path is
-   * `409 { reason: "unsupported", method, path }` (the server is real, the
+   * `unsupportedEndpointResponse` (`infra/endpoints`: the server is real, the
    * endpoint is simply not part of this one); any other path a 404 naming it.
    */
   onUnmatched?: (req: Request, pathname: string) => Response;
@@ -96,10 +97,7 @@ function defaultOnError(err: Error, req: Request, pathname: string): void {
 
 function defaultOnUnmatched(req: Request, pathname: string): Response {
   if (pathname === "/api" || pathname.startsWith("/api/")) {
-    return Response.json(
-      { reason: "unsupported", method: req.method, path: pathname },
-      { status: 409 },
-    );
+    return unsupportedEndpointResponse(req.method, pathname);
   }
   return new Response(`Not found: ${pathname}`, { status: 404 });
 }

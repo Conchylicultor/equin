@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-browser-server-demo",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Demo packs for a browser server: definePack(({ ago }) => [packValue, packAll, packRows, packWindow …]) records typed answers to live declarations, parsed with each declaration's schema on load (DemoPackError naming the key and tuple); servePack(pack) turns them into the browser server's serve half — one external serveValue / serveCollection per declaration, `changes: { fixed }`, answering exactly the recorded tuples the client subscribes (canonical params; a window's query at any limit and page cut; :rows from every recorded row; :count) and throwing DemoMissingError for anything else. DemoScenario names a lazily-loaded pack."
+}

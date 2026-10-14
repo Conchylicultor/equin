@@ -268,7 +268,7 @@ would be a loud 404.
 
 | Plugin | Status |
 |---|---|
-| _(filled during implementation)_ | |
+| `conversations/hibernation` (`markConversationViewed` → `useMarkConversationViewed()`, bound through `useFetchEndpoint()`; its demo answer is the `Demo.Route` for `markViewed`) | migrated |
 
 ## Where it lives
 

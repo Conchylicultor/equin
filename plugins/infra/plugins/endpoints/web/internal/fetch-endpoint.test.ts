@@ -1,7 +1,13 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import { z } from "zod";
 import { defineEndpoint } from "../../core/define-endpoint";
-import { EndpointError, fetchEndpoint } from "./fetch-endpoint";
+import { unsupportedEndpointResponse } from "../../core/unsupported";
+import { endpointErrorSink, type EndpointErrorInfo } from "./error-reporter";
+import {
+  EndpointError,
+  EndpointUnsupportedError,
+  fetchEndpoint,
+} from "./fetch-endpoint";
 
 const ping = defineEndpoint({
   route: "POST /api/ping",
@@ -103,6 +109,47 @@ describe("fetchEndpoint retry", () => {
     expect(calls.map(([url, init]) => [url, init.method, init.body])).toEqual([
       ["/api/ping", "POST", '{"n":7}'],
       ["/api/ping", "POST", '{"n":7}'],
+    ]);
+  });
+});
+
+describe("fetchEndpoint unsupported refusal", () => {
+  /** Record what reaches the endpoint error sink while `run` executes. */
+  async function sinkDuring(run: () => Promise<void>) {
+    const emitted: EndpointErrorInfo[] = [];
+    endpointErrorSink.register((info) => emitted.push(info));
+    try {
+      await run();
+    } finally {
+      endpointErrorSink.register(null);
+    }
+    return emitted;
+  }
+
+  test("a host's unsupported refusal throws EndpointUnsupportedError, unreported", async () => {
+    stubFetch([() => unsupportedEndpointResponse("POST", "/api/ping")]);
+    let err: unknown;
+    const emitted = await sinkDuring(async () => {
+      err = await rejection(fetchEndpoint(ping, {}, { body: { n: 1 } }));
+    });
+    expect(err).toBeInstanceOf(EndpointUnsupportedError);
+    expect(err).toMatchObject({
+      status: 409,
+      body: { reason: "unsupported", method: "POST", path: "/api/ping" },
+    });
+    expect(emitted).toEqual([]);
+  });
+
+  test("any other 409 is a plain EndpointError, reported", async () => {
+    stubFetch([() => Response.json({ reason: "conflict" }, { status: 409 })]);
+    let err: unknown;
+    const emitted = await sinkDuring(async () => {
+      err = await rejection(fetchEndpoint(ping, {}, { body: { n: 1 } }));
+    });
+    expect(err).toBeInstanceOf(EndpointError);
+    expect(err).not.toBeInstanceOf(EndpointUnsupportedError);
+    expect(emitted).toEqual([
+      { route: "POST /api/ping", status: 409, body: { reason: "conflict" } },
     ]);
   });
 });

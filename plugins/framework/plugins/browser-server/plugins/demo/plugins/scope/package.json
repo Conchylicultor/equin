@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-browser-server-demo-scope",
+  "version": "0.0.1",
+  "private": true,
+  "description": "<DemoScope scenario>: one browser server per mount, built from the scenario's pack plus every Demo.Resource / Demo.Route contribution, its subtree pointed at it through TransportProvider + NotificationsProvider."
+}

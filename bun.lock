@@ -2820,6 +2820,14 @@
       "name": "@singularity/plugin-framework-browser-server",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/browser-server/plugins/demo": {
+      "name": "@singularity/plugin-framework-browser-server-demo",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/browser-server/plugins/demo/plugins/scope": {
+      "name": "@singularity/plugin-framework-browser-server-demo-scope",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/central-core": {
       "name": "@singularity/plugin-framework-central-core",
       "devDependencies": {
@@ -7949,6 +7957,10 @@
     "@singularity/plugin-framework": ["@singularity/plugin-framework@workspace:plugins/framework"],
 
     "@singularity/plugin-framework-browser-server": ["@singularity/plugin-framework-browser-server@workspace:plugins/framework/plugins/browser-server"],
+
+    "@singularity/plugin-framework-browser-server-demo": ["@singularity/plugin-framework-browser-server-demo@workspace:plugins/framework/plugins/browser-server/plugins/demo"],
+
+    "@singularity/plugin-framework-browser-server-demo-scope": ["@singularity/plugin-framework-browser-server-demo-scope@workspace:plugins/framework/plugins/browser-server/plugins/demo/plugins/scope"],
 
     "@singularity/plugin-framework-central-core": ["@singularity/plugin-framework-central-core@workspace:plugins/framework/plugins/central-core"],
 

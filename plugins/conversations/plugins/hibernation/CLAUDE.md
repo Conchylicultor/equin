@@ -6,11 +6,14 @@
 
 - Description: Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation policy: a scheduled idle-kill job, the viewed/resume endpoint, and the global hibernation config.
 - Web:
-  - Contributes: `ConfigV2.WebRegister` "conversation-hibernation"
+  - Contributes:
+    - `ConfigV2.WebRegister` "conversation-hibernation"
+    - `Demo.Route` "POST /api/conversations/:id/viewed"
   - Uses:
     - `config_v2.ConfigV2`
-    - `infra/endpoints.fetchEndpoint`
-  - Exports (values): `markConversationViewed`
+    - `framework/browser-server/demo.Demo`
+    - `infra/endpoints.useFetchEndpoint`
+  - Exports (values): `useMarkConversationViewed`
 - Server:
   - Contributes: `ConfigV2.Register` "conversation-hibernation"
   - Uses:

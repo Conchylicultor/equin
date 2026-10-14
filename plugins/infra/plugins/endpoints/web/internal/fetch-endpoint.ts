@@ -7,7 +7,11 @@ import {
   type Transport,
 } from "@plugins/primitives/plugins/networking/web";
 import type { EndpointDef } from "../../core";
-import { extractMethod, interpolatePath } from "../../core";
+import {
+  extractMethod,
+  interpolatePath,
+  isUnsupportedEndpointRefusal,
+} from "../../core";
 import { endpointErrorSink } from "./error-reporter";
 
 export class EndpointError extends Error {
@@ -18,6 +22,15 @@ export class EndpointError extends Error {
     super(`HTTP ${status}`);
   }
 }
+
+/**
+ * The host refused the endpoint as one it does not serve
+ * (`unsupportedEndpointResponse` — e.g. a browser server standing in for the
+ * real one). Not a failure of the endpoint: the refusing host already told
+ * the user, so `fetchEndpoint` reports nothing to `endpointErrorSink` and the
+ * mutation-error toast skips it.
+ */
+export class EndpointUnsupportedError extends EndpointError {}
 
 export function getEndpointErrorMessage(error: unknown): string {
   if (error instanceof EndpointError) {
@@ -75,7 +88,8 @@ type FetchOpts<TBody, TQuery> = {
  * - Appends query params if query schema exists
  * - JSON-serializes body for mutation methods
  * - Parses response through responseSchema if provided
- * - Throws EndpointError on non-2xx
+ * - Throws EndpointError on non-2xx (EndpointUnsupportedError, unreported,
+ *   when the host refuses the endpoint as one it does not serve)
  */
 export async function fetchEndpoint<
   Route extends string,
@@ -147,6 +161,9 @@ export async function fetchEndpoint<
         if (!(err instanceof SyntaxError)) throw err;
         // Not JSON — keep the text, which is exactly what HttpError sends.
       }
+    }
+    if (isUnsupportedEndpointRefusal(res.status, errorBody)) {
+      throw new EndpointUnsupportedError(res.status, errorBody);
     }
     if (opts?.report !== false) {
       endpointErrorSink.emit({

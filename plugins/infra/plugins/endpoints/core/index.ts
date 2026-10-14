@@ -7,3 +7,8 @@ export { getRouteSlowThresholdMs } from "./slow-threshold";
 export type { Codec } from "./codec";
 export { blob, multipart, isCodec } from "./codec";
 export { dateString } from "./schemas";
+export {
+  unsupportedEndpointResponse,
+  isUnsupportedEndpointBody,
+  isUnsupportedEndpointRefusal,
+} from "./unsupported";

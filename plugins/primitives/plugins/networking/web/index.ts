@@ -20,7 +20,7 @@ export type {
   MessagePortLike,
   SharedWorkerLike,
 } from "./transport-types";
-export { originTransport, useTransport } from "./transport";
+export { originTransport, TransportProvider, useTransport } from "./transport";
 export type { Transport, TransportSocket } from "./transport";
 export { fetchWithRetry } from "./fetch-with-retry";
 export type { FetchWithRetryOptions } from "./fetch-with-retry";

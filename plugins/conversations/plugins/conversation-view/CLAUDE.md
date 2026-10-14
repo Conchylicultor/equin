@@ -35,7 +35,7 @@
     - `primitives/pane` ×5
     - `conversations/conversation-view/action-bar.ActionBarView`
     - `conversations/conversation-view/jsonl-viewer.JsonlPane`
-    - `conversations/hibernation.markConversationViewed`
+    - `conversations/hibernation.useMarkConversationViewed`
     - `conversations.useConversationById`
     - `network/live.useLiveRow`
     - `primitives/bar.Bar`
