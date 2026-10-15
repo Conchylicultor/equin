@@ -9,3 +9,14 @@ export {
   type BusinessStatus,
 } from "./internal/types";
 export { PlacesApiError } from "./internal/errors";
+export {
+  PHOTO_NAME_PATTERN,
+  OpeningHoursSchema,
+  type OpeningHours,
+  type OpeningPoint,
+  PlacePhotoSchema,
+  type PlacePhoto,
+  PlaceRichDetailsSchema,
+  type PlaceRichDetails,
+} from "./internal/rich-details";
+export { openState, type OpenState } from "./internal/open-state";

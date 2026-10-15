@@ -10,6 +10,7 @@ export { placeIdKind, placeTagIdKind } from "./internal/id-kinds";
 export type { PlaceId, PlaceTagId } from "./internal/id-kinds";
 export { places, placeTags, placeSearch } from "./internal/resources";
 export {
+  MapsNotConfiguredSchema,
   PlaceSearchQuerySchema,
   type PlaceSearchQuery,
   PlaceSearchResultSchema,

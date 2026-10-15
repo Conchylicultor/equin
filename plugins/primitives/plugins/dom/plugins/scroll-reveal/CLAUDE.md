@@ -34,6 +34,7 @@ Extend this primitive rather than hand-rolling `scrollIntoView` again.
 - Cross-plugin:
   - Imported by:
     - `apps-core/tab-bar`
+    - `apps/places/places-map`
     - `apps/sonata/chord-chart`
     - `apps/sonata/lyrics-hud`
     - `apps/sonata/songsheet`

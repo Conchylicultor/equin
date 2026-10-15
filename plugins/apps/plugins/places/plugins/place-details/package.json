@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-places-place-details",
+  "description": "Google's richer details of a saved place — photos, opening hours, rating, price level, phone, website, summary — fetched when its card opens and kept in server memory for a day (never stored), plus the place-photo proxy that keeps the Places key on the server.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -118,16 +118,35 @@ place's own icon (Haiku), else its first tag's nearest icon, else
 
 ## The place card (`web/components/place-card.tsx`)
 
-Hero (scaled drop on the pale main colour; the name, edited in place —
-`PlaceTitleInput`: on a Google place it writes `title`, and blank or Google's
-own name clears it, with "On Google: <name>" under a title; on a custom place
-it renames, blank reverts — "Custom pin — no Google place" + Move for a custom
-place, address, where the icon came from + Regenerate / Pick one) · Want to go / Been (two independent toggle
-chips, each a `tags` PATCH) · tags (path
-tooltip, AUTO for `autoTags`, ×, "+ Tag" picker that replaces the picked
-tag's ancestors) · note (saved on blur) · Google type, saved date · Open in
-Google Maps (`mapsUrl`, else a search pinned to the Google id; a custom
-place's opens at its coordinates) · delete (`confirmDialog`).
+The Poster card (prototype `proto-1791725279-9yramg` at `card=poster`), as tall
+as its content (the `Pin` column is `pointer-events-none`; the card's body
+scrolls, its footer stays):
+
+- **Hero** (`place-hero.tsx`): Google's photos as a scroll-snap strip (1 / n,
+  previous / next on hover, the author credited — Google's terms), else the
+  tag colours' wash with the place's icon as a watermark, or a placeholder
+  while a Google place's details load (never the wash, then a photo). The
+  scaled drop stands on its foot.
+- **Head**: the name, edited in place (`PlaceTitleInput`: on a Google place it
+  writes `title`, and blank or Google's own name clears it, with "On Google:
+  <name>" under a title; on a custom place it renames, blank reverts) —
+  "Custom pin — no Google place" + Move for a custom place — the Google type,
+  rating · count · price, open now (`OpenNowLine`, re-read each minute), or a
+  closure pill.
+- **Body**: Google's summary · Want to go / Been (two independent toggles in
+  their tag's colour, each a `tags` PATCH) · tags (tinted `TagChip`s, path
+  tooltip, ✨ for `autoTags`, ×, "+ Tag" picker that replaces the picked tag's
+  ancestors) · the note slip (saved on blur, `aria-label="Note"`) · facts
+  (`place-facts.tsx`): the week (folding out), address + copy, phone + copy,
+  website, saved date + Google type, the icon's provenance + Regenerate.
+- **Footer**: Open in Google Maps (`mapsUrl`, else a search pinned to the
+  Google id; a custom place's opens at its coordinates) · Directions · delete
+  (`confirmDialog`).
+
+Google's rich facts come from `places/place-details` (`usePlaceDetails`, read
+when the card opens, kept a day on the server, never stored); a custom place
+has none. The wording (open now, the week, compact counts) is pure, in
+`web/internal/place-facts.ts` (tested).
 
 ## Add place (`web/components/add-place.tsx`)
 
@@ -148,7 +167,7 @@ pin*, starts pick mode for a place Google does not know.
   - Contributes:
     - `Pane.Register` "places-map"
     - `GeoMap.Pin` → `SavedPlacePin`
-  - Uses: 69 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 74 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/places/places-core` ×9
     - `primitives/data-view` ×6
     - `primitives/collapsible` ×5
@@ -159,12 +178,14 @@ pin*, starts pick mode for a place Google does not know.
     - `integrations/google-maps` ×2
     - `primitives/css/control-panel` ×2
     - `primitives/css/text` ×2
-    - `primitives/css/toggle-chip` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/pane` ×2
+    - `apps/places/place-details.usePlaceDetails`
     - `primitives/app-shell.AppShellBrand`
+    - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
+    - `primitives/css/clip.clipClasses`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/column.Column`
     - `primitives/css/coords.Placed`
@@ -175,15 +196,19 @@ pin*, starts pick mode for a place Google does not know.
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
+    - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
+    - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/data-view/floating-toolbar.floatingToolbar`
     - `primitives/dom/element-size.useResizeObserver`
+    - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/persistent-draft.useDraft`
+    - `primitives/relative-time.useNow`
     - `primitives/search.SearchInput`
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `ui/icons.Icon`

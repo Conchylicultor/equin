@@ -1853,8 +1853,8 @@ never add one.
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
-  - Imported by: 227 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×66
+  - Imported by: 228 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×67
     - `conversations` ×36
     - `tasks` ×26
     - `debug` ×23

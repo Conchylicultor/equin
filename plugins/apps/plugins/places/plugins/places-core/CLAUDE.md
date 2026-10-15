@@ -164,6 +164,7 @@
     - `isRoleTag`
     - `isTagUnder`
     - `mainColor`
+    - `MapsNotConfiguredSchema`
     - `NEUTRAL_PLACE_COLOR`
     - `placeFields`
     - `placeFlags`
@@ -197,6 +198,7 @@
     - `wouldCycle`
 - Cross-plugin:
   - Imported by:
+    - `apps/places/place-details`
     - `apps/places/places-map`
     - `apps/places/tag-manager`
 

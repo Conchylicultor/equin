@@ -4282,6 +4282,40 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`mapstr-import`** — `./singularity places import-mapstr <export>` — matches a Mapstr export's places to Google places (Text Search, scored by name, distance and area extent; hand decisions via --overrides and the search-place lookup verb) into a reviewable mapstr-matches.json, then with --apply replaces every place and tag with the seed tree and the matched places (Mapstr tags mapped onto seed tags, comments as notes, original save dates), in one transaction.
           - Cli:
             - Uses: `framework/server-core.runExec`
+        - **`place-details`** — Reads Google's rich details of a saved place (usePlaceDetails) for the place card. Serves Google's rich details of a saved place (photos, opening hours, rating, price level, phone, website, summary) as the places.details value — one Enterprise Place Details call per place per day, kept in memory, never stored — and proxies its photos (GET /api/places/photo) so the Places key stays on the server.
+          - Server:
+            - Contributes: `resource.declare` "places.details"
+            - Uses:
+              - `integrations/google-maps.getMapsKey`
+              - `integrations/google-maps/places-api.placePhoto`
+              - `integrations/google-maps/places-api.placeRichDetails`
+              - `network/live.serveValue`
+              - `primitives/log-channels.Log`
+            - Resources: `places.details` (invalidate, fixed)
+            - Routes: `GET /api/places/photo`
+          - Web:
+            - Uses: `network/live.useLive`
+            - Exports (values): `usePlaceDetails`
+          - Core:
+            - Uses:
+              - `apps/places/places-core.MapsNotConfiguredSchema`
+              - `infra/endpoints.blob`
+              - `infra/endpoints.defineEndpoint`
+              - `integrations/google-maps/places-api.PHOTO_NAME_PATTERN`
+              - `integrations/google-maps/places-api.PlaceRichDetailsSchema`
+              - `network/live.liveValue`
+            - Exports (types):
+              - `PlaceDetailsQuery`
+              - `PlaceDetailsResult`
+            - Exports (values):
+              - `PHOTO_WIDTH`
+              - `placeDetails`
+              - `PlaceDetailsQuerySchema`
+              - `PlaceDetailsResultSchema`
+              - `placePhoto`
+              - `placePhotoUrl`
+          - Cross-plugin:
+            - Imported by: `apps/places/places-map`
         - **`places-core`** — Contract layer for the Places app, web half: the live places and tag-tree hooks, the Google Places search read, and the place and tag mutations. Contract layer for the Places app: the places / place_tags entities, the starter tag tree seeded on an empty install, the live places and tags collections, Google Places search and save (auto-tagged from the place's Google types, tagged Want to go), custom places (a named pin with no Google place behind it), the user's own title over Google's name, place and tag CRUD (a deleted tag's children and places move to its parent), the Haiku job that picks each place's Material Symbols icon, and the monthly job that re-fetches each place's Google details (whether it is still open).
           - Web:
             - Contributes:
@@ -4416,6 +4450,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isRoleTag`
               - `isTagUnder`
               - `mainColor`
+              - `MapsNotConfiguredSchema`
               - `NEUTRAL_PLACE_COLOR`
               - `placeFields`
               - `placeFlags`
@@ -4449,6 +4484,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `wouldCycle`
           - Cross-plugin:
             - Imported by:
+              - `apps/places/place-details`
               - `apps/places/places-map`
               - `apps/places/tag-manager`
         - **`places-map`** — The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the Add place search, the selected place's card — plus the saved-place pin: a drop near, a round badge far out with each spot's size beside it.
@@ -4458,7 +4494,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Pane.Register` "places-map"
               - `GeoMap.Pin` → `SavedPlacePin`
-            - Uses: 69 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 74 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `apps/places/places-core` ×9
               - `primitives/data-view` ×6
               - `primitives/collapsible` ×5
@@ -4469,12 +4505,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations/google-maps` ×2
               - `primitives/css/control-panel` ×2
               - `primitives/css/text` ×2
-              - `primitives/css/toggle-chip` ×2
               - `primitives/hover-reveal` ×2
               - `primitives/pane` ×2
+              - `apps/places/place-details.usePlaceDetails`
               - `primitives/app-shell.AppShellBrand`
+              - `primitives/copy-to-clipboard.CopyButton`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
+              - `primitives/css/clip.clipClasses`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/column.Column`
               - `primitives/css/coords.Placed`
@@ -4485,15 +4523,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
+              - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/surface.Surface`
+              - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/data-view/floating-toolbar.floatingToolbar`
               - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/dom/scroll-reveal.revealElement`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `primitives/persistent-draft.useDraft`
+              - `primitives/relative-time.useNow`
               - `primitives/search.SearchInput`
               - `primitives/shortcuts.useSurfaceShortcuts`
               - `ui/icons.Icon`
@@ -22302,8 +22344,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `multipart`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 202 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×52
+        - Imported by: 203 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×53
           - `conversations` ×27
           - `debug` ×18
           - `infra` ×16
@@ -24762,14 +24804,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `setMapsBrowserConfig`
       - Cross-plugin:
         - Imported by:
+          - `apps/places/place-details`
           - `apps/places/places-core`
           - `apps/places/places-map`
           - `map/google`
           - `page/place/google`
       - Plugins:
-        - **`places-api`** — Stateless typed Google Places API (New) client: places:autocomplete, places:searchText and place details, mapped to the neutral PlaceSuggestion / PlaceSnapshot shapes. Takes the API key per call; never touches auth or storage.
+        - **`places-api`** — Stateless typed Google Places API (New) client: places:autocomplete, places:searchText, place details, the separately priced rich details (photos, hours, rating, phone, website, summary) and place photos, mapped to the neutral PlaceSuggestion / PlaceSnapshot shapes. Takes the API key per call; never touches auth or storage.
           - Cross-plugin:
             - Imported by:
+              - `apps/places/place-details`
               - `apps/places/places-core`
               - `page/place/google`
           - Server:
@@ -24779,17 +24823,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `autocomplete`
               - `PLACE_DETAILS_FIELD_MASK`
+              - `PLACE_RICH_DETAILS_FIELD_MASK`
               - `placeDetails`
+              - `placePhoto`
+              - `placeRichDetails`
               - `searchText`
           - Core:
             - Exports (types):
               - `BusinessStatus`
+              - `OpeningHours`
+              - `OpeningPoint`
+              - `OpenState`
               - `PlaceCandidate`
+              - `PlacePhoto`
+              - `PlaceRichDetails`
               - `PlaceSnapshot`
               - `PlaceSuggestion`
             - Exports (values):
               - `BUSINESS_STATUSES`
+              - `OpeningHoursSchema`
+              - `openState`
+              - `PHOTO_NAME_PATTERN`
               - `PlaceCandidateSchema`
+              - `PlacePhotoSchema`
+              - `PlaceRichDetailsSchema`
               - `PlacesApiError`
               - `PlaceSnapshotSchema`
               - `PlaceSuggestionSchema`
@@ -25471,8 +25528,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 227 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×66
+        - Imported by: 228 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×67
           - `conversations` ×36
           - `tasks` ×26
           - `debug` ×23
@@ -29873,8 +29930,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CopyButton`
           - `useCopyToClipboard`
       - Cross-plugin:
-        - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
-          - `apps` ×7
+        - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
+          - `apps` ×8
           - `page` ×4
           - `primitives` ×4
           - `conversations` ×3
@@ -30022,8 +30079,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Clip`
               - `clipClasses`
           - Cross-plugin:
-            - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
-              - `apps` ×17
+            - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+              - `apps` ×18
               - `primitives` ×10
               - `conversations` ×7
               - `debug` ×6
@@ -30632,9 +30689,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `scrollClasses`
               - `useScrollsSideways`
           - Cross-plugin:
-            - Imported by: 92 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 93 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×25
-              - `apps` ×19
+              - `apps` ×20
               - `primitives` ×14
               - `debug` ×12
               - `page` ×4
@@ -32345,6 +32402,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps-core/tab-bar`
+              - `apps/places/places-map`
               - `apps/sonata/chord-chart`
               - `apps/sonata/lyrics-hud`
               - `apps/sonata/songsheet`
@@ -33274,9 +33332,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getLogChannels`
           - `MAX_EMIT_LINES`
       - Cross-plugin:
-        - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `debug` ×12
-          - `apps` ×10
+          - `apps` ×11
           - `infra` ×8
           - `database` ×7
           - `conversations` ×4
@@ -34628,8 +34686,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
-          - `apps` ×22
+        - Imported by: 62 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+          - `apps` ×23
           - `debug` ×12
           - `conversations` ×8
           - `tasks` ×4

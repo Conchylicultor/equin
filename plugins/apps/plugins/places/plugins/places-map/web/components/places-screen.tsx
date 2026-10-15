@@ -289,6 +289,9 @@ function PlacesSurface({
           spanOffset="md"
           layer="float"
           style={{ top: BELOW_TOOLBAR }}
+          // The card hugs its content inside this column: the room below it
+          // is the map's, so clicks there pass through.
+          className="pointer-events-none"
         >
           <PlaceCard
             key={selected.id}

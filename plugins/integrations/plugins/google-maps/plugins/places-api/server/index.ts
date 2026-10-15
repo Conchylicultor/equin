@@ -7,10 +7,15 @@ export {
   type SearchTextBias,
   type SearchTextOptions,
 } from "./internal/search-text";
-export { PLACE_DETAILS_FIELD_MASK } from "./internal/field-mask";
+export { placeRichDetails } from "./internal/rich-details";
+export { placePhoto } from "./internal/photo";
+export {
+  PLACE_DETAILS_FIELD_MASK,
+  PLACE_RICH_DETAILS_FIELD_MASK,
+} from "./internal/field-mask";
 
 export default {
   description:
-    "Stateless typed Google Places API (New) client: places:autocomplete, places:searchText and place details, mapped to the neutral PlaceSuggestion / PlaceSnapshot shapes. Takes the API key per call; never touches auth or storage.",
+    "Stateless typed Google Places API (New) client: places:autocomplete, places:searchText, place details, the separately priced rich details (photos, hours, rating, phone, website, summary) and place photos, mapped to the neutral PlaceSuggestion / PlaceSnapshot shapes. Takes the API key per call; never touches auth or storage.",
   contributions: [],
 } satisfies ServerPluginDefinition;

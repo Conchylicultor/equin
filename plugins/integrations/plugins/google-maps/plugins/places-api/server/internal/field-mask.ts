@@ -33,3 +33,28 @@ export const PLACE_DETAILS_FIELD_MASK = [
   // Pro, like displayName above: adding it does not raise the call's tier.
   "businessStatus",
 ].join(",");
+
+/**
+ * The RICH Place Details field mask — what a place card shows beyond the
+ * snapshot: photos, the regular week (and the place's UTC offset to read it
+ * in), rating and its count, price level, phone, website, Google's summary.
+ *
+ * **Enterprise tier** (with Atmosphere for `editorialSummary`): the most
+ * expensive Place Details SKU, so it is its own call, made only when a card
+ * opens and cached by the caller for a day — never folded into
+ * `PLACE_DETAILS_FIELD_MASK`, which save and the monthly refresh pay for.
+ * Each photo's bytes are a separate Place Photo call on top. Re-check Google's
+ * SKU table before relying on these tiers.
+ */
+export const PLACE_RICH_DETAILS_FIELD_MASK = [
+  "id",
+  "photos",
+  "regularOpeningHours",
+  "utcOffsetMinutes",
+  "rating",
+  "userRatingCount",
+  "priceLevel",
+  "internationalPhoneNumber",
+  "websiteUri",
+  "editorialSummary",
+].join(",");

@@ -12,7 +12,7 @@ The parent plugin reads the key out of auth/central. This plugin is the opposite
 half: the pure transport. Keeping it key-in / typed-value-out means it never
 imports `@plugins/auth/*` and can be reused by any caller that can produce a key.
 
-## The three calls
+## The calls
 
 - `autocomplete(apiKey, input, sessionToken)` →
   `POST /v1/places:autocomplete`, body `{ input, sessionToken }`. A field mask is
@@ -42,6 +42,18 @@ Enterprise-tier ones (`rating`, `userRatingCount`, `regularOpeningHours`,
 `internationalPhoneNumber`, `editorialSummary`) that roughly double the per-call
 price. Adding one later is a one-line change with a known bill attached.
 
+Those richer fields have their own call instead: `placeRichDetails(apiKey,
+placeId)` with `PLACE_RICH_DETAILS_FIELD_MASK` (photos, regular opening hours
+and the place's UTC offset, rating and count, price level, phone, website,
+editorial summary) → `PlaceRichDetails`. Enterprise-priced, so it is never
+merged into `PLACE_DETAILS_FIELD_MASK`; its caller (`places/place-details`)
+makes it when a card opens and keeps the answer a day, never stored (Google's
+terms). `placePhoto(apiKey, name, maxWidthPx)` fetches one photo's bytes
+(`/v1/{name}/media`, key as a header; the name must match
+`PHOTO_NAME_PATTERN`). `openState(hours, utcOffsetMinutes, now)` (core, pure,
+tested) says whether a place is open, closing within the hour or closed, and
+until when, in the place's own clock.
+
 ## Failure
 
 Non-2xx throws `PlacesApiError` carrying Google's own message and `error.status`
@@ -64,9 +76,10 @@ is correct here — do not "fix" it later.
 
 ## Plugin reference
 
-- Description: Stateless typed Google Places API (New) client: places:autocomplete, places:searchText and place details, mapped to the neutral PlaceSuggestion / PlaceSnapshot shapes. Takes the API key per call; never touches auth or storage.
+- Description: Stateless typed Google Places API (New) client: places:autocomplete, places:searchText, place details, the separately priced rich details (photos, hours, rating, phone, website, summary) and place photos, mapped to the neutral PlaceSuggestion / PlaceSnapshot shapes. Takes the API key per call; never touches auth or storage.
 - Cross-plugin:
   - Imported by:
+    - `apps/places/place-details`
     - `apps/places/places-core`
     - `page/place/google`
 - Server:
@@ -76,17 +89,30 @@ is correct here — do not "fix" it later.
   - Exports (values):
     - `autocomplete`
     - `PLACE_DETAILS_FIELD_MASK`
+    - `PLACE_RICH_DETAILS_FIELD_MASK`
     - `placeDetails`
+    - `placePhoto`
+    - `placeRichDetails`
     - `searchText`
 - Core:
   - Exports (types):
     - `BusinessStatus`
+    - `OpeningHours`
+    - `OpeningPoint`
+    - `OpenState`
     - `PlaceCandidate`
+    - `PlacePhoto`
+    - `PlaceRichDetails`
     - `PlaceSnapshot`
     - `PlaceSuggestion`
   - Exports (values):
     - `BUSINESS_STATUSES`
+    - `OpeningHoursSchema`
+    - `openState`
+    - `PHOTO_NAME_PATTERN`
     - `PlaceCandidateSchema`
+    - `PlacePhotoSchema`
+    - `PlaceRichDetailsSchema`
     - `PlacesApiError`
     - `PlaceSnapshotSchema`
     - `PlaceSuggestionSchema`
