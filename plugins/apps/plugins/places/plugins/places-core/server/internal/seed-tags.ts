@@ -1,11 +1,12 @@
-import type { TagRole } from "../../core";
+import type { ChildColorMode, TagRole } from "../../core";
 
-// The tag tree a new Places install starts from: Status › Todo / Done (the
-// role tags every place's status reads), then the everyday categories with
-// their colours, Material Symbols icons and the Google place types that
+// The tag tree a new Places install starts from: the two role tags (Want to
+// go, Been — independent, found by role), then the categories with their
+// colours, Material Symbols icons and the Google place types (Table A) that
 // auto-tag a saved place. `key` is local to the seed — it wires `parent` —
 // while each row's id is minted when seeded. Parents precede children; `rank`
-// is the order among siblings, taken from the order here.
+// is the order among siblings, taken from the order here. A child with no
+// colour inherits its parent's (Price shades its children instead: a ramp).
 
 export interface SeedTag {
   key: string;
@@ -14,207 +15,148 @@ export interface SeedTag {
   icon: string;
   parent?: string;
   color?: string;
-  googleTypes?: string[];
+  childColors?: ChildColorMode;
+  googleTypes?: readonly string[];
 }
 
-export const SEED_TAGS: readonly SeedTag[] = [
-  { key: "status", role: "status", icon: "flag", name: "Status" },
+const SEED = [
   {
-    key: "todo",
-    role: "todo",
+    key: "want",
+    role: "want",
     icon: "bookmark",
-    name: "Todo",
-    parent: "status",
+    name: "Want to go",
     color: "#94a3b8",
   },
   {
-    key: "done",
-    role: "done",
+    key: "been",
+    role: "been",
     icon: "check-circle",
-    name: "Done",
-    parent: "status",
+    name: "Been",
     color: "#22c55e",
   },
 
-  { key: "food", icon: "restaurant", name: "Food & drinks", color: "#f97316" },
+  { key: "food", icon: "restaurant", name: "Food", color: "#f97316" },
   {
-    key: "restaurants",
+    key: "restaurant",
     icon: "restaurant-menu",
-    name: "Restaurants",
+    name: "Restaurant",
     parent: "food",
     googleTypes: ["restaurant"],
   },
   {
-    key: "french",
-    icon: "bakery-dining",
-    name: "French",
-    parent: "restaurants",
-    googleTypes: ["french_restaurant"],
+    key: "bar",
+    icon: "local-bar",
+    name: "Bar",
+    parent: "food",
+    googleTypes: ["bar", "pub", "wine_bar"],
   },
   {
-    key: "italian",
-    icon: "local-pizza",
-    name: "Italian",
-    parent: "restaurants",
-    googleTypes: ["italian_restaurant", "pizza_restaurant"],
+    key: "fast-food",
+    icon: "fastfood",
+    name: "Fast-food",
+    parent: "food",
+    googleTypes: ["fast_food_restaurant"],
   },
   {
-    key: "japanese",
-    icon: "ramen-dining",
-    name: "Japanese",
-    parent: "restaurants",
+    key: "snacks",
+    icon: "local-cafe",
+    name: "Snacks",
+    parent: "food",
+    googleTypes: ["cafe", "coffee_shop", "bakery", "ice_cream_shop"],
+  },
+
+  {
+    key: "museum",
+    icon: "museum",
+    name: "Museum",
+    color: "#3b82f6",
+    googleTypes: ["museum"],
+  },
+  {
+    key: "art",
+    icon: "palette",
+    name: "Art",
+    parent: "museum",
+    googleTypes: ["art_gallery", "art_museum"],
+  },
+  {
+    key: "history",
+    icon: "history-edu",
+    name: "History",
+    parent: "museum",
+    googleTypes: ["history_museum"],
+  },
+  { key: "science", icon: "science", name: "Science", parent: "museum" },
+  { key: "museum-other", icon: "category", name: "Autre", parent: "museum" },
+
+  {
+    key: "attraction",
+    icon: "attractions",
+    name: "Attraction",
+    color: "#14b8a6",
+    googleTypes: ["tourist_attraction", "amusement_park"],
+  },
+  {
+    key: "outdoors",
+    icon: "forest",
+    name: "Extérieur",
+    color: "#16a34a",
+    googleTypes: ["park", "hiking_area", "national_park", "beach"],
+  },
+  {
+    key: "shows",
+    icon: "theater-comedy",
+    name: "Jeux/Shows/Events",
+    color: "#6366f1",
     googleTypes: [
-      "japanese_restaurant",
-      "ramen_restaurant",
-      "sushi_restaurant",
+      "performing_arts_theater",
+      "concert_hall",
+      "movie_theater",
+      "bowling_alley",
     ],
   },
   {
-    key: "chinese",
-    icon: "rice-bowl",
-    name: "Chinese",
-    parent: "restaurants",
-    googleTypes: ["chinese_restaurant"],
-  },
-  {
-    key: "vietnamese",
-    icon: "soup-kitchen",
-    name: "Vietnamese",
-    parent: "restaurants",
-    googleTypes: ["vietnamese_restaurant"],
-  },
-  {
-    key: "coffee",
-    icon: "local-cafe",
-    name: "Coffee",
-    parent: "food",
-    googleTypes: ["cafe", "coffee_shop"],
-  },
-  {
-    key: "bakeries",
-    icon: "breakfast-dining",
-    name: "Bakeries",
-    parent: "food",
-    googleTypes: ["bakery"],
-  },
-  { key: "bars", icon: "local-bar", name: "Bars", parent: "food" },
-  {
-    key: "wine",
-    icon: "wine-bar",
-    name: "Wine bars",
-    parent: "bars",
-    googleTypes: ["wine_bar"],
-  },
-  {
-    key: "cocktails",
+    key: "club",
     icon: "nightlife",
-    name: "Cocktails",
-    parent: "bars",
-    googleTypes: ["cocktail_bar", "bar"],
+    name: "Club",
+    color: "#ec4899",
+    googleTypes: ["night_club"],
   },
+  {
+    key: "shop",
+    icon: "shopping-bag",
+    name: "Shop",
+    color: "#a16207",
+    googleTypes: ["store", "book_store", "shopping_mall"],
+  },
+  { key: "area", icon: "explore", name: "Area", color: "#84cc16" },
+  { key: "plan", icon: "event", name: "Planifier", color: "#a855f7" },
 
   {
-    key: "culture",
-    icon: "account-balance",
-    name: "Culture",
-    color: "#3b82f6",
+    key: "price",
+    icon: "payments",
+    name: "Price",
+    color: "#eab308",
+    childColors: "ramp",
   },
-  {
-    key: "museums",
-    icon: "museum",
-    name: "Museums",
-    parent: "culture",
-    googleTypes: ["museum", "art_gallery"],
-  },
-  {
-    key: "castles",
-    icon: "castle",
-    name: "Castles",
-    parent: "culture",
-    googleTypes: ["castle"],
-  },
-  {
-    key: "temples",
-    icon: "church",
-    name: "Temples & churches",
-    parent: "culture",
-    googleTypes: ["church", "shinto_shrine", "buddhist_temple"],
-  },
-  { key: "streetart", icon: "brush", name: "Street art", parent: "culture" },
-  {
-    key: "music",
-    icon: "music-note",
-    name: "Live music",
-    parent: "culture",
-    googleTypes: ["live_music_venue", "jazz_club"],
-  },
+  { key: "price-40", icon: "euro-symbol", name: "40€", parent: "price" },
+  { key: "price-100", icon: "diamond", name: "100+€", parent: "price" },
 
-  { key: "nature", icon: "forest", name: "Nature", color: "#16a34a" },
   {
-    key: "parks",
-    icon: "park",
-    name: "Parks",
-    parent: "nature",
-    googleTypes: ["park", "botanical_garden"],
+    key: "closed",
+    icon: "block",
+    name: "Permanently closed",
+    color: "#78716c",
   },
-  {
-    key: "hikes",
-    icon: "hiking",
-    name: "Hikes",
-    parent: "nature",
-    googleTypes: ["hiking_area"],
-  },
-  {
-    key: "viewpoints",
-    icon: "landscape",
-    name: "Viewpoints",
-    parent: "nature",
-    googleTypes: ["observation_deck", "scenic_point"],
-  },
-  {
-    key: "beaches",
-    icon: "beach-access",
-    name: "Beaches",
-    parent: "nature",
-    googleTypes: ["beach"],
-  },
+  { key: "track", icon: "directions-run", name: "Track", color: "#1e293b" },
+  { key: "home", icon: "home", name: "Home", color: "#e11d48" },
+  { key: "social", icon: "groups", name: "Social", color: "#0ea5e9" },
+] as const satisfies readonly SeedTag[];
 
-  { key: "shopping", icon: "shopping-bag", name: "Shopping", color: "#a16207" },
-  {
-    key: "books",
-    icon: "menu-book",
-    name: "Bookshops",
-    parent: "shopping",
-    googleTypes: ["book_store"],
-  },
-  {
-    key: "markets",
-    icon: "storefront",
-    name: "Markets",
-    parent: "shopping",
-    googleTypes: ["market", "food_market"],
-  },
+export const SEED_TAGS: readonly SeedTag[] = SEED;
 
-  { key: "trips", icon: "flight", name: "Trips", color: "#a855f7" },
-  {
-    key: "japan27",
-    icon: "travel-explore",
-    name: "Japan 2027",
-    parent: "trips",
-  },
-  { key: "italy", icon: "luggage", name: "Italy summer", parent: "trips" },
-  {
-    key: "loire",
-    icon: "directions-car",
-    name: "Loire weekend",
-    parent: "trips",
-  },
-
-  { key: "kids", icon: "toys", name: "With kids", color: "#ec4899" },
-  { key: "date", icon: "favorite", name: "Date night", color: "#e11d48" },
-
-  { key: "recos", icon: "forum", name: "Recommended by", color: "#eab308" },
-  { key: "alex", icon: "person", name: "Alex", parent: "recos" },
-  { key: "marie", icon: "person", name: "Marie", parent: "recos" },
-  { key: "nyt", icon: "newspaper", name: "NYT 36 Hours", parent: "recos" },
-];
+/**
+ * A seed tag's stable key — how code outside the tree (the Mapstr import) names
+ * a seed tag without matching its display name, which the user may rename.
+ */
+export type SeedTagKey = (typeof SEED)[number]["key"];

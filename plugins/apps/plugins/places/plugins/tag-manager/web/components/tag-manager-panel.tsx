@@ -13,6 +13,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import {
   flattenTagTree,
@@ -60,7 +61,8 @@ export interface TagManagerPanelProps {
  * row per tag in tree order (indented by depth): colour (own or inherited),
  * icon, name (edited in place), parent (never itself or a descendant), the
  * Google types that set it automatically, how many places carry it (nested
- * tags included), and + Child / Delete. Every edit goes straight to the tag
+ * tags included), and Shade children (a parent's colourless children as a
+ * light → deep ramp of its colour) / + Child / Delete. Every edit goes straight to the tag
  * endpoints; the live tag collection brings it back to every surface.
  *
  * The rows are a DataView (the table view) over the flattened tree — sorting
@@ -127,9 +129,13 @@ export function TagManagerPanel({
         label: "Actions",
         header: false,
         cell: (r) => (
-          <TagRowActions tag={r.tag} onAddChild={() => addTag(r.tag.id)} />
+          <TagRowActions
+            tag={r.tag}
+            hasChildren={tags.some((t) => t.parentId === r.tag.id)}
+            onAddChild={() => addTag(r.tag.id)}
+          />
         ),
-        width: "9rem",
+        width: "16rem",
       },
     ],
     [tags, counts, focus, addTag],
@@ -145,8 +151,8 @@ export function TagManagerPanel({
               <Stack gap="2xs">
                 <Text variant="heading">Manage tags</Text>
                 <Text variant="caption" tone="muted">
-                  One tree for everything — categories, status, trips, people. A
-                  tag without its own colour uses its parent&apos;s. Tags with
+                  One tree for everything — Been, Want to go, categories, price.
+                  A tag without its own colour uses its parent&apos;s. Tags with
                   Google types are set automatically on a new place.
                 </Text>
               </Stack>
@@ -232,18 +238,38 @@ function GoogleTypes({ types }: { types: readonly string[] }): ReactNode {
 
 function TagRowActions({
   tag,
+  hasChildren,
   onAddChild,
 }: {
   tag: PlaceTag;
+  /** Shade children is offered on a parent only. */
+  hasChildren: boolean;
   onAddChild: () => Promise<void>;
 }): ReactNode {
   const deleteTag = useDeletePlaceTag();
-  // A tag with a role (status, todo, done) carries the status logic: the
+  const updateTag = useUpdatePlaceTag();
+  // A tag with a role (Been, Want to go) is how the app finds them: the
   // endpoint refuses to delete it, so the action is not offered.
   const deletable = tag.role === null;
+  const ramp = tag.childColors === "ramp";
   return (
     <Line className="gap-2xs">
       <Fill />
+      {hasChildren && (
+        <ToggleChip
+          variant="tinted"
+          active={ramp}
+          title="Colour the children without their own colour as shades of this one, light to deep in their order"
+          onClick={() =>
+            void updateTag.mutateAsync({
+              params: { id: tag.id },
+              body: { childColors: ramp ? null : "ramp" },
+            })
+          }
+        >
+          Shade children
+        </ToggleChip>
+      )}
       <Button variant="ghost" onClick={onAddChild}>
         + Child
       </Button>

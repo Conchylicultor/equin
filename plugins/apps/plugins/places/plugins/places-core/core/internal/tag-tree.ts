@@ -1,15 +1,18 @@
 // Pure helpers over the tag tree. Tags form ONE nested tree; a tag's colour is
-// its own, else its nearest ancestor's. The status branch is ordinary tags too —
-// found by ROLE, never by id: the `status` tag and its `todo` / `done` leaves,
-// one of which every place carries.
+// its own, else a shade of a ramp parent's, else its nearest ancestor's. "Been"
+// and "Want to go" are ordinary root tags too — found by ROLE, never by id or
+// name. They are independent: a place may carry either, both or neither.
 
-/** The roles the status logic finds its tags by; at most one tag holds each. */
-export const TAG_ROLES = ["status", "todo", "done"] as const;
+/** The roles the app finds its tags by; at most one tag holds each. */
+export const TAG_ROLES = ["been", "want"] as const;
 export type TagRole = (typeof TAG_ROLES)[number];
 
-/** A place's status — a semantic value, resolved to a tag through its role. */
-export const PLACE_STATUSES = ["todo", "done"] as const;
-export type PlaceStatus = (typeof PLACE_STATUSES)[number];
+/**
+ * How a parent colours its colourless children. `ramp`: an ordered shade of
+ * the parent's colour by rank, light (first) to deep (last) — a price scale.
+ */
+export const CHILD_COLOR_MODES = ["ramp"] as const;
+export type ChildColorMode = (typeof CHILD_COLOR_MODES)[number];
 
 /** The pin colour of a place none of whose tags has a colour. */
 export const NEUTRAL_PLACE_COLOR = "#94a3b8";
@@ -22,6 +25,7 @@ export interface TagNode {
   readonly rank: number;
   readonly googleTypes: readonly string[];
   readonly role: TagRole | null;
+  readonly childColors: ChildColorMode | null;
 }
 
 interface TagIndex {
@@ -69,15 +73,69 @@ function selfAndAncestors(tagId: string, index: TagIndex): TagNode[] {
   return out;
 }
 
-/** A tag's colour: its own, else its nearest ancestor's; null when none has one. */
+/**
+ * A tag's colour: its own; else, under a `ramp` parent, its shade of the
+ * parent's colour ({@link rampShade}, by its rank among its siblings); else
+ * its nearest ancestor's. Null when no colour reaches it.
+ */
 export function tagColor(
   tagId: string,
   tags: readonly TagNode[],
 ): string | null {
-  for (const tag of selfAndAncestors(tagId, indexOf(tags))) {
+  const index = indexOf(tags);
+  return chainColor(selfAndAncestors(tagId, index), 0, index);
+}
+
+/** The colour of `chain[from]`, where `chain` is a tag and its ancestors, nearest first. */
+function chainColor(
+  chain: readonly TagNode[],
+  from: number,
+  index: TagIndex,
+): string | null {
+  for (let i = from; i < chain.length; i++) {
+    const tag = chain[i]!;
     if (tag.color !== null) return tag.color;
+    const parent = chain[i + 1];
+    if (parent?.childColors !== "ramp") continue;
+    const base = chainColor(chain, i + 1, index);
+    if (base === null) return null;
+    const siblings = index.children.get(parent.id) ?? [];
+    return rampShade(base, siblings.indexOf(tag), siblings.length);
   }
   return null;
+}
+
+/** How far the first of a ramp mixes toward white, and the last toward black. */
+const RAMP_LIGHT = 0.3;
+const RAMP_DEEP = 0.4;
+
+/**
+ * Shade `i` of `n` of `hex` (`#rrggbb`): the first mixed {@link RAMP_LIGHT}
+ * toward white, the last {@link RAMP_DEEP} toward black, the rest evenly
+ * between (through the colour itself); a lone child wears the colour as is.
+ * Computed as hex, not `color-mix`: tag colours are fixed map paint, never
+ * themed.
+ */
+export function rampShade(hex: string, i: number, n: number): string {
+  const rgb = parseHex(hex);
+  if (n <= 1) return hex;
+  const t = i / (n - 1);
+  const amount = -RAMP_LIGHT + t * (RAMP_LIGHT + RAMP_DEEP);
+  const target = amount < 0 ? 255 : 0;
+  const k = Math.abs(amount);
+  return `#${rgb
+    .map((c) =>
+      Math.round(c + (target - c) * k)
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
+}
+
+function parseHex(hex: string): [number, number, number] {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) throw new Error(`Not a #rrggbb colour: ${hex}`);
+  return [parseInt(m[1]!, 16), parseInt(m[2]!, 16), parseInt(m[3]!, 16)];
 }
 
 /** The path from the root to the tag, as tags (root first). Empty for an unknown id. */
@@ -178,58 +236,32 @@ export function tagIdByRole(
   return indexOf(tags).byRole.get(role)?.id;
 }
 
+/** Whether a tag holds a role (Been, Want to go) — drawn apart, never as a pin slice. */
+export function isRoleTag(tagId: string, tags: readonly TagNode[]): boolean {
+  const role = indexOf(tags).byId.get(tagId)?.role;
+  return role !== undefined && role !== null;
+}
+
 /**
- * The `todo` and `done` tag ids. Throws when either role is missing: the seed
- * creates both and neither can be deleted, so a tree without them is broken.
+ * Which of the two independent role tags a place carries. A role no tag holds
+ * reads as not carried.
  */
-export function statusTagIds(tags: readonly TagNode[]): {
-  todo: string;
-  done: string;
-} {
-  const todo = tagIdByRole(tags, "todo");
-  const done = tagIdByRole(tags, "done");
-  if (todo === undefined || done === undefined) {
-    throw new Error("The place tag tree has no todo / done tag");
-  }
-  return { todo, done };
-}
-
-/** Whether a tag belongs to the status branch: a role tag, or under `status`. */
-export function isStatusTag(tagId: string, tags: readonly TagNode[]): boolean {
-  const index = indexOf(tags);
-  const role = index.byId.get(tagId)?.role;
-  if (role !== undefined && role !== null) return true;
-  const status = index.byRole.get("status");
-  return status !== undefined && isTagUnder(tagId, status.id, tags);
-}
-
-/** A place's status: `done` when it carries the done-role tag, else `todo`. */
-export function placeStatus(
+export function placeFlags(
   place: { readonly tags: readonly string[] },
   tags: readonly TagNode[],
-): PlaceStatus {
-  const done = tagIdByRole(tags, "done");
-  return done !== undefined && place.tags.includes(done) ? "done" : "todo";
-}
-
-/** A place's tag ids with its status swapped to `status` (the other removed). */
-export function withPlaceStatus(
-  placeTags: readonly string[],
-  status: PlaceStatus,
-  tags: readonly TagNode[],
-): string[] {
-  const ids = statusTagIds(tags);
-  return [
-    ...placeTags.filter((t) => t !== ids.todo && t !== ids.done),
-    ids[status],
-  ];
+): { been: boolean; want: boolean } {
+  const has = (role: TagRole) => {
+    const id = tagIdByRole(tags, role);
+    return id !== undefined && place.tags.includes(id);
+  };
+  return { been: has("been"), want: has("want") };
 }
 
 /**
- * The distinct colours of a place's non-status tags, in the order the place
+ * The distinct colours of a place's non-role tags, in the order the place
  * holds its tags — the slices of its pin. Empty when none has a colour (the pin
- * then wears {@link NEUTRAL_PLACE_COLOR}, see {@link mainColor}). Status is
- * drawn separately (the done check), never as a slice.
+ * then wears {@link NEUTRAL_PLACE_COLOR}, see {@link mainColor}). Been / Want
+ * to go are drawn separately (Want to go = a solid pin), never as a slice.
  */
 export function ringColors(
   place: { readonly tags: readonly string[] },
@@ -237,7 +269,7 @@ export function ringColors(
 ): string[] {
   const out: string[] = [];
   for (const tagId of place.tags) {
-    if (isStatusTag(tagId, tags)) continue;
+    if (isRoleTag(tagId, tags)) continue;
     const color = tagColor(tagId, tags);
     if (color !== null && !out.includes(color)) out.push(color);
   }

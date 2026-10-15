@@ -3,18 +3,14 @@ import type {
   FieldOption,
 } from "@plugins/primitives/plugins/data-view/web";
 import {
-  placeStatus,
+  placeFlags,
+  placeName,
   type Place,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
+import type { BusinessStatus } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import { PlaceTagChips } from "../components/tag-chip";
 import { TAGS_FIELD_ID } from "./sidebar-filter";
-
-/** The derived status column: `done` when the place carries the done tag. */
-const STATUS_OPTIONS: FieldOption[] = [
-  { value: "todo", label: "Todo", variant: "muted" },
-  { value: "done", label: "Done", variant: "success" },
-];
 
 /**
  * The tag tree as the tags field's options: each tag names its parent, so
@@ -29,19 +25,38 @@ export function tagOptions(tags: readonly PlaceTag[]): FieldOption[] {
   }));
 }
 
+/** Google's business status, as the status field's options (null is "None"). */
+const BUSINESS_STATUS_OPTIONS: FieldOption[] = [
+  { value: "OPERATIONAL", label: "Open", variant: "success" },
+  {
+    value: "CLOSED_TEMPORARILY",
+    label: "Temporarily closed",
+    variant: "warning",
+  },
+  {
+    value: "CLOSED_PERMANENTLY",
+    label: "Permanently closed",
+    variant: "destructive",
+  },
+] satisfies (FieldOption & { value: BusinessStatus })[];
+
 /**
  * What the search box matches a place on — the DataView's `searchAccessor`,
- * and the sidebar's shown count, which must agree with it.
+ * and the sidebar's shown count, which must agree with it. The user's title
+ * AND Google's name: either finds the place.
  */
 export function placeSearchText(p: Place): string {
-  return `${p.name} ${p.address} ${p.note}`;
+  return `${placeName(p)} ${p.name} ${p.address} ${p.note}`;
 }
 
 /**
- * The Places DataView schema. `tags` filters on EVERY tag id the place
- * carries (status included, so the sidebar can include / exclude Todo and
- * Done), and draws the non-status ones as coloured chips; `status` is the
- * same fact as its own groupable column.
+ * The Places DataView schema. `name` is the name the app shows (`placeName`:
+ * the user's title, else Google's or a custom place's). `tags` filters on
+ * EVERY tag id the place carries (Been / Want to go included, so the sidebar
+ * can include / exclude them), and draws the others as coloured chips; `want`
+ * and `been` are the same two facts as their own groupable yes / no columns;
+ * `businessStatus` is Google's word on whether the place is still open (none
+ * for a custom place).
  */
 export function placeFieldDefs(tags: readonly PlaceTag[]): FieldDef<Place>[] {
   return [
@@ -50,7 +65,7 @@ export function placeFieldDefs(tags: readonly PlaceTag[]): FieldDef<Place>[] {
       label: "Name",
       type: "text",
       primary: true,
-      value: (p) => p.name,
+      value: (p) => placeName(p),
       sortable: true,
       filterable: true,
     },
@@ -72,15 +87,35 @@ export function placeFieldDefs(tags: readonly PlaceTag[]): FieldDef<Place>[] {
       filterable: true,
     },
     {
-      id: "status",
-      label: "Status",
-      type: "enum",
-      value: (p) => placeStatus(p, tags),
-      options: STATUS_OPTIONS,
+      id: "want",
+      label: "Want to go",
+      type: "bool",
+      value: (p) => placeFlags(p, tags).want,
       sortable: true,
       filterable: true,
       groupable: true,
       width: "6rem",
+    },
+    {
+      id: "been",
+      label: "Been",
+      type: "bool",
+      value: (p) => placeFlags(p, tags).been,
+      sortable: true,
+      filterable: true,
+      groupable: true,
+      width: "5rem",
+    },
+    {
+      id: "businessStatus",
+      label: "Google status",
+      type: "enum",
+      value: (p) => p.businessStatus,
+      options: BUSINESS_STATUS_OPTIONS,
+      sortable: true,
+      filterable: true,
+      groupable: true,
+      visible: false,
     },
     {
       id: "location",

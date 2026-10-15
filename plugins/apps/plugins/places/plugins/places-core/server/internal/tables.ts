@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { uniqueIndex } from "drizzle-orm/pg-core";
+import { check, uniqueIndex } from "drizzle-orm/pg-core";
 import {
   defineEntity,
   defaultNow,
@@ -20,11 +20,13 @@ const places = defineEntity("places", placeFields, {
       id: false,
       googlePlaceId: true,
       name: true,
+      title: true,
       address: true,
       location: true,
       primaryType: true,
       types: true,
       mapsUrl: true,
+      businessStatus: true,
       icon: true,
       note: true,
       tags: true,
@@ -43,8 +45,15 @@ const places = defineEntity("places", placeFields, {
     updatedAt: { default: defaultNow() },
   },
   indexes: (t) => [
-    // A Google place is saved once; the save's ON CONFLICT targets this.
+    // A Google place is saved once; the save's ON CONFLICT targets this. NULLs
+    // are distinct, so any number of custom places (no Google id) coexist.
     uniqueIndex("places_google_place_id_idx").on(t.googlePlaceId),
+    // A custom place has nothing from Google, and no title over a name that is
+    // already the user's: the wrong pairings have no row.
+    check(
+      "places_custom_no_google",
+      sql`google_place_id IS NOT NULL OR (title IS NULL AND primary_type IS NULL AND maps_url IS NULL AND business_status IS NULL AND types = '[]'::jsonb)`,
+    ),
   ],
 });
 
@@ -56,6 +65,7 @@ const placeTags = defineEntity("place_tags", placeTagFields, {
       name: true,
       parentId: true,
       color: true,
+      childColors: true,
       icon: true,
       googleTypes: true,
       rank: true,
@@ -70,7 +80,7 @@ const placeTags = defineEntity("place_tags", placeTagFields, {
     updatedAt: { default: defaultNow() },
   },
   indexes: (t) => [
-    // At most one tag per role: the status logic resolves todo / done by it.
+    // At most one tag per role: the app resolves Been / Want to go by it.
     uniqueIndex("place_tags_role_idx")
       .on(t.role)
       .where(sql`${t.role} IS NOT NULL`),

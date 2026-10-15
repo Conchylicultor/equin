@@ -7,20 +7,20 @@ import { clusterRing, clusterSizePx, conicSlices } from "../internal/pin-paint";
 
 /** The face and its ink are on the map, not the app: fixed, like a map label. */
 const FACE = "#ffffff";
-const DONE_INK = "#16a34a";
+const BEEN_INK = "#16a34a";
 
 /**
  * Nearby saved places merged into one mark (`GeoMap.Cluster` for
  * `saved-place`): a disc ringed by the colour mix of the places inside (each
  * place one share, split evenly over its colours, heaviest first), a white
- * face with the count, and `✓ n` for how many of them are done. It grows in
+ * face with the count, and `✓ n` for how many of them are Been. It grows in
  * three steps with the count.
  */
 export function SavedPlaceCluster({ pins, count }: MapClusterProps) {
-  const { ring, done } = clusterRing(
+  const { ring, been } = clusterRing(
     pins.map((pin) => {
       const v = readPlaceVisual(pin);
-      return { colors: v.colors, done: v.status === "done" };
+      return { colors: v.colors, been: v.been };
     }),
   );
   const size = clusterSizePx(count);
@@ -28,7 +28,7 @@ export function SavedPlaceCluster({ pins, count }: MapClusterProps) {
     <Center
       as="span"
       role="img"
-      aria-label={`${count} places, ${done} done`}
+      aria-label={`${count} places, ${been} been`}
       className="cursor-pointer rounded-full border-2 border-categorical-foreground p-xs shadow-lg"
       style={{ width: size, height: size, background: conicSlices(ring) }}
     >
@@ -41,9 +41,9 @@ export function SavedPlaceCluster({ pins, count }: MapClusterProps) {
         style={{ backgroundColor: FACE }}
       >
         <Text variant="count">{count}</Text>
-        {done > 0 ? (
-          <Text variant="caption" style={{ color: DONE_INK }}>
-            ✓ {done}
+        {been > 0 ? (
+          <Text variant="caption" style={{ color: BEEN_INK }}>
+            ✓ {been}
           </Text>
         ) : null}
       </Stack>

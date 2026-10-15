@@ -39,7 +39,7 @@ export function SavedPlacePin({ pin, active, tiles }: MapPinProps) {
         x={{ start: 8, size: 14 }}
         y={{ start: 33, size: 6 }}
         decorative
-        className={cn(visual.status === "todo" && "opacity-60")}
+        className={cn(!visual.want && "opacity-60")}
         style={{ background: GROUND_SHADOW }}
       />
       <Layer

@@ -4,16 +4,22 @@ import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { parseSavedSymbolName } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { placeTagIdKind, type PlaceTagId } from "../../core";
 import { _placeTags } from "./tables";
-import { SEED_TAGS } from "./seed-tags";
+import { SEED_TAGS, type SeedTagKey } from "./seed-tags";
+
+/** The seed as rows to insert, and the id each seed key was minted. */
+export interface SeedTagTree {
+  rows: (typeof _placeTags.$inferInsert)[];
+  idByKey: ReadonlyMap<SeedTagKey, PlaceTagId>;
+}
 
 /**
  * The seed as `place_tags` rows: each id minted, `parent` keys resolved to the
  * minted ids, rank = order among siblings in `SEED_TAGS`.
  */
-export function seedTagRows(): (typeof _placeTags.$inferInsert)[] {
+export function seedTagTree(): SeedTagTree {
   const ids = new Map<string, PlaceTagId>();
   const nextRank = new Map<string | null, number>();
-  return SEED_TAGS.map((tag) => {
+  const rows = SEED_TAGS.map((tag) => {
     const id = placeTagIdKind.mint();
     ids.set(tag.key, id);
     let parentId: string | null = null;
@@ -34,11 +40,14 @@ export function seedTagRows(): (typeof _placeTags.$inferInsert)[] {
       parentId,
       role: tag.role ?? null,
       color: tag.color ?? null,
+      childColors: tag.childColors ?? null,
       icon: parseSavedSymbolName(tag.icon),
-      googleTypes: tag.googleTypes ?? [],
+      googleTypes: [...(tag.googleTypes ?? [])],
       rank,
     };
   });
+  // Every SEED_TAGS key is a SeedTagKey: the map was filled from exactly them.
+  return { rows, idByKey: ids as ReadonlyMap<SeedTagKey, PlaceTagId> };
 }
 
 /**
@@ -54,7 +63,7 @@ export function seedTagRows(): (typeof _placeTags.$inferInsert)[] {
 export const seedPlaceTagsWarmup = defineWarmup({
   name: "places.seed-tags",
   description:
-    "Creates the starter tag tree (Status, Food & drinks, Culture, …) when no place tag exists yet.",
+    "Creates the starter tag tree (Want to go, Been, Food, Museum, …) when no place tag exists yet.",
   scope: "worktree",
   run: async () => {
     await db.transaction(async (tx) => {
@@ -64,7 +73,7 @@ export const seedPlaceTagsWarmup = defineWarmup({
       );
       const [row] = await tx.select({ n: count() }).from(_placeTags);
       if ((row?.n ?? 0) > 0) return;
-      await tx.insert(_placeTags).values(seedTagRows());
+      await tx.insert(_placeTags).values(seedTagTree().rows);
     });
   },
 });

@@ -4,6 +4,7 @@ import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web";
 import {
   clusterPinType,
+  type LatLng,
   type MapOverlay,
   type MapPadding,
   type MapPin,
@@ -49,6 +50,12 @@ export interface MapRendererProps {
    * the middle of the uncovered area. All zeros when nothing floats.
    */
   fitPadding: MapPadding;
+  /**
+   * Pick mode: while set, the map asks for a point — the cursor is a
+   * crosshair, and a click on the map itself (not on a pin) reports where it
+   * landed. Absent = a click on the map does nothing.
+   */
+  pick?: (position: LatLng) => void;
 }
 
 /**

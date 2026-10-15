@@ -108,6 +108,7 @@ function GoogleMapCanvas({
   renderCluster,
   focusId,
   fitPadding,
+  pick,
 }: MapRendererProps & { browserKey: string }) {
   // Held in state, not a ref: the tone colours are read off this element, and
   // a ref cannot trigger the render that reads them.
@@ -154,6 +155,18 @@ function GoogleMapCanvas({
           // The app owns fullscreen (the action bar's view option); Google's
           // top-right button would sit under the floating action bar.
           fullscreenControl={false}
+          // Pick mode: a crosshair, and a click on the map (a pin is an
+          // overlay above it, so its click never lands here) reports where.
+          draggableCursor={pick === undefined ? undefined : "crosshair"}
+          onClick={
+            pick === undefined
+              ? undefined
+              : (ev) => {
+                  const at = ev.detail.latLng;
+                  if (at === null) return;
+                  pick({ lat: at.lat, lng: at.lng });
+                }
+          }
         >
           <FitCamera overlays={overlays} fitPadding={fitPadding} />
           <FitControl overlays={overlays} fitPadding={fitPadding} />

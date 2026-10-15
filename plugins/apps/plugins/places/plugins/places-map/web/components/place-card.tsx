@@ -9,7 +9,7 @@ import {
   SectionLabel,
   Text,
 } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import {
   Button,
   Textarea,
@@ -19,11 +19,14 @@ import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imper
 import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
-  isStatusTag,
+  isCustomPlace,
+  isRoleTag,
   isTagUnder,
+  placeName,
+  tagIdByRole,
   type Place,
-  type PlaceStatus,
   type PlaceTag,
+  type TagRole,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
 import {
   useDeletePlace,
@@ -32,6 +35,7 @@ import {
 } from "@plugins/apps/plugins/places/plugins/places-core/web";
 import { placeVisual } from "../internal/place-visual";
 import { paleTint } from "../internal/pin-paint";
+import { TagMark } from "@plugins/apps/plugins/places/plugins/tag-manager/web";
 import { DROP_HEAD_PX, PlaceDropHead } from "./place-drop";
 import { TagChip } from "./tag-chip";
 import { TagPicker } from "./tag-picker";
@@ -39,11 +43,10 @@ import { TagPicker } from "./tag-picker";
 const closeIcon = symbol("close");
 const deleteIcon = symbol("delete");
 const regenerateIcon = symbol("auto-awesome");
+const moveIcon = symbol("open-with");
 
-const STATUS_OPTIONS = [
-  { id: "todo", label: "Todo" },
-  { id: "done", label: "Done" },
-] as const satisfies readonly { id: PlaceStatus; label: string }[];
+/** The card's two independent toggles, in order: Want to go, then Been. */
+const ROLE_TOGGLES: readonly TagRole[] = ["want", "been"];
 
 /** The card's width — the screen also reads it, to keep pins out from under it. */
 export const PLACE_CARD_WIDTH = "340px";
@@ -53,19 +56,27 @@ const HERO_SCALE = 1.9;
 
 /**
  * The selected place, as a floating card on the right of the map: its icon on
- * a colour hero, name and address; the Todo / Done switch; its tags (path as
+ * a colour hero, its name (edited in place — the user's title over Google's
+ * name, which then shows under it; a custom place's own name) and address;
+ * the Want to go and Been toggles
+ * (independent: both, one or none); its tags (path as
  * tooltip, AUTO for the ones its Google type set) with remove and "+ Tag";
- * its note (saved when the field loses focus); its Google Maps link; delete.
+ * its note (saved when the field loses focus); its Google Maps link (a custom
+ * place's opens Maps at its pin); delete. A custom place says so under its
+ * name, with Move (the map takes the next click as its new position).
  * Every edit is one PATCH; the live row brings it back.
  */
 export function PlaceCard({
   place,
   tags,
   onClose,
+  onMovePin,
 }: {
   place: Place;
   tags: readonly PlaceTag[];
   onClose: () => void;
+  /** Ask the map for the custom place's new position (pick mode). */
+  onMovePin: () => void;
 }) {
   const updatePlace = useUpdatePlace();
   const deletePlace = useDeletePlace();
@@ -73,17 +84,13 @@ export function PlaceCard({
   const params = { id: place.id };
   const byId = new Map<string, PlaceTag>(tags.map((t) => [t.id, t]));
   const shownTags = place.tags
-    .filter((id) => !isStatusTag(id, tags))
+    .filter((id) => !isRoleTag(id, tags))
     .map((id) => byId.get(id))
     .filter((t): t is PlaceTag => t !== undefined);
 
   const setTags = (next: string[]) =>
     updatePlace.mutateAsync({ params, body: { tags: next } });
-  const mapsHref =
-    place.mapsUrl ??
-    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-      `${place.name} ${place.address}`,
-    )}`;
+  const name = placeName(place);
 
   return (
     <Surface
@@ -113,10 +120,34 @@ export function PlaceCard({
             </span>
             <Fill>
               <Stack gap="2xs">
-                <Text variant="heading">{place.name}</Text>
-                <Text variant="caption" tone="muted">
-                  {place.address}
-                </Text>
+                <PlaceTitleInput
+                  place={place}
+                  onCommit={(title) =>
+                    updatePlace.mutateAsync({ params, body: { title } })
+                  }
+                />
+                {place.title !== null ? (
+                  <Text variant="caption" tone="faint">
+                    {`On Google: ${place.name}`}
+                  </Text>
+                ) : null}
+                {isCustomPlace(place) ? (
+                  <Cluster gap="xs" align="center">
+                    <Text variant="caption" tone="faint">
+                      Custom pin — no Google place
+                    </Text>
+                    <Button variant="link" aspect="inline" onClick={onMovePin}>
+                      <Icon icon={moveIcon} />
+                      Move
+                    </Button>
+                  </Cluster>
+                ) : null}
+                {place.address !== "" ? (
+                  <Text variant="caption" tone="muted">
+                    {place.address}
+                  </Text>
+                ) : null}
+                <ClosedLine status={place.businessStatus} />
                 <IconLine place={place} ownIcon={visual.ownIcon} />
               </Stack>
             </Fill>
@@ -125,16 +156,29 @@ export function PlaceCard({
         }
         body={
           <Stack gap="lg" className="p-md">
-            <Section label="Status">
-              <SegmentedControl
-                label="Status"
-                options={STATUS_OPTIONS}
-                value={visual.status}
-                onChange={(status) =>
-                  void updatePlace.mutateAsync({ params, body: { status } })
-                }
-              />
-            </Section>
+            <Cluster gap="xs">
+              {ROLE_TOGGLES.map((role) => {
+                const tag = roleTag(role, byId, tags);
+                const on = place.tags.includes(tag.id);
+                return (
+                  <ToggleChip
+                    key={role}
+                    variant="tinted"
+                    active={on}
+                    icon={<TagMark tag={tag} tags={tags} />}
+                    onClick={() =>
+                      void setTags(
+                        on
+                          ? place.tags.filter((id) => id !== tag.id)
+                          : [...place.tags, tag.id],
+                      )
+                    }
+                  >
+                    {tag.name}
+                  </ToggleChip>
+                );
+              })}
+            </Cluster>
             <Section label="Tags">
               <Cluster gap="xs">
                 {shownTags.map((t) => (
@@ -170,6 +214,7 @@ export function PlaceCard({
                 // another place selected, resets the uncontrolled field.
                 key={`${place.id}:${place.note}`}
                 defaultValue={place.note}
+                fitContent
                 placeholder="Why this place? Who told you about it?"
                 aria-label="Note"
                 onBlur={(e) => {
@@ -199,7 +244,9 @@ export function PlaceCard({
             <Line className="gap-xs">
               <Button
                 variant="outline"
-                render={<a href={mapsHref} target="_blank" rel="noreferrer" />}
+                render={
+                  <a href={mapsHref(place)} target="_blank" rel="noreferrer" />
+                }
               >
                 <Icon icon={navIcons.newTab} />
                 Open in Google Maps
@@ -210,7 +257,7 @@ export function PlaceCard({
                 label="Delete place"
                 onClick={() =>
                   void confirmDialog({
-                    title: `Delete “${place.name}”?`,
+                    title: `Delete “${name}”?`,
                     description:
                       "It leaves your map, with its tags and note. Saving it again starts afresh.",
                     confirmLabel: "Delete place",
@@ -229,6 +276,103 @@ export function PlaceCard({
   );
 }
 
+/**
+ * Where "Open in Google Maps" goes: Google's own link for a Google place
+ * (else a search pinned to its id), the pin's coordinates for a custom place —
+ * Google knows no place by its name.
+ */
+function mapsHref(place: Place): string {
+  const search = "https://www.google.com/maps/search/?api=1";
+  const { googlePlaceId } = place;
+  if (googlePlaceId === null) {
+    const { lat, lng } = place.location;
+    return `${search}&query=${lat},${lng}`;
+  }
+  return (
+    place.mapsUrl ??
+    `${search}&query=${encodeURIComponent(
+      `${place.name} ${place.address}`,
+    )}&query_place_id=${encodeURIComponent(googlePlaceId)}`
+  );
+}
+
+/**
+ * The place's name, edited in place — borderless until hovered or focused,
+ * saved on blur or Enter, Escape reverts. On a Google place it is the user's
+ * title: blank, or Google's own name, clears it (Google's name shows again,
+ * and stays up to date). On a custom place it is its name: blank reverts.
+ */
+function PlaceTitleInput({
+  place,
+  onCommit,
+}: {
+  place: Place;
+  onCommit: (title: string | null) => Promise<unknown>;
+}): ReactNode {
+  const shown = placeName(place);
+  const custom = isCustomPlace(place);
+  return (
+    <Textarea
+      // Keyed by the stored name: a rename arriving from elsewhere resets the
+      // uncontrolled field to it.
+      key={shown}
+      defaultValue={shown}
+      placeholder={custom ? "Name this pin" : place.name}
+      aria-label="Place name"
+      // One line that wraps a long name instead of cutting it; Enter saves.
+      rows={1}
+      fitContent
+      className="min-h-0 resize-none border-transparent bg-transparent text-heading shadow-none hover:border-input focus-visible:bg-background"
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.currentTarget.blur();
+        }
+        if (e.key === "Escape") {
+          e.currentTarget.value = shown;
+          e.currentTarget.blur();
+        }
+      }}
+      onBlur={(e) => {
+        const next = e.currentTarget.value.trim();
+        if (next === shown) return;
+        if (custom) {
+          if (next === "") {
+            e.currentTarget.value = shown;
+            return;
+          }
+          void onCommit(next);
+          return;
+        }
+        // Google's own name (or nothing) is no title.
+        const title = next === "" || next === place.name ? null : next;
+        if (title === place.title) {
+          e.currentTarget.value = shown;
+          return;
+        }
+        void onCommit(title);
+      }}
+    />
+  );
+}
+
+/**
+ * The tag holding `role`. The seed creates both role tags and neither can be
+ * deleted, so a tree without one is broken: it throws.
+ */
+function roleTag(
+  role: TagRole,
+  byId: ReadonlyMap<string, PlaceTag>,
+  tags: readonly PlaceTag[],
+): PlaceTag {
+  const id = tagIdByRole(tags, role);
+  const tag = id === undefined ? undefined : byId.get(id);
+  if (tag === undefined) {
+    throw new Error(`The place tag tree has no ${role} role tag`);
+  }
+  return tag;
+}
+
 function Section({
   label,
   children,
@@ -242,6 +386,33 @@ function Section({
       {children}
     </Stack>
   );
+}
+
+/**
+ * Google's word that the place is closed, under its address: permanently in
+ * the destructive tone (its pin is grey too), temporarily muted. Nothing for
+ * an open place, or one Google gives no status for.
+ */
+function ClosedLine({
+  status,
+}: {
+  status: Place["businessStatus"];
+}): ReactNode {
+  if (status === "CLOSED_PERMANENTLY") {
+    return (
+      <Text variant="caption" tone="destructive">
+        Permanently closed
+      </Text>
+    );
+  }
+  if (status === "CLOSED_TEMPORARILY") {
+    return (
+      <Text variant="caption" tone="muted">
+        Temporarily closed
+      </Text>
+    );
+  }
+  return null;
 }
 
 /**

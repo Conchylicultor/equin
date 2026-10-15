@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from "react";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 
 /** How far a press may travel and still be a click — further is a drag (a map pan). */
@@ -66,9 +66,9 @@ export function useClickAway({
     };
   }, [active, region, panel, dismiss]);
 
-  return {
-    claim: () => {
-      claimed.current = true;
-    },
-  };
+  // Stable, so a caller may close over it in a memo.
+  const claim = useCallback(() => {
+    claimed.current = true;
+  }, []);
+  return { claim };
 }

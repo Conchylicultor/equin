@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-places-mapstr-import",
+  "description": "`./singularity places import-mapstr <export>` — matches a Mapstr export's places to Google places (Text Search, scored by name, distance and area extent; hand decisions via --overrides and the search-place lookup verb) into a reviewable mapstr-matches.json, then with --apply replaces every place and tag with the seed tree and the matched places (Mapstr tags mapped onto seed tags, comments as notes, original save dates), in one transaction.",
+  "private": true,
+  "version": "0.0.1"
+}

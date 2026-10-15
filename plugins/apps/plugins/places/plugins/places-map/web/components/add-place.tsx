@@ -24,6 +24,7 @@ import { useDebouncedValue } from "../internal/use-debounced-value";
 
 const addIcon = symbol("add-location-alt");
 const placeIcon = symbol("location-on");
+const customPinIcon = symbol("push-pin");
 
 /** How long typing must pause before a search is asked. */
 const SEARCH_DEBOUNCE_MS = 250;
@@ -31,13 +32,19 @@ const SEARCH_DEBOUNCE_MS = 250;
 /**
  * "Add place": the primary action of the floating toolbar, opening a Google
  * Places search. Picking a result saves it (auto-tagged from its Google
- * types, tagged Todo, its icon picked by Haiku right after) and selects it.
+ * types, tagged Want to go, its icon picked by Haiku right after) and selects
+ * it. "Drop a custom pin" is the way in for a place Google does not know (a
+ * closed venue, a bunker, an event): it hands the typed text over as the
+ * pin's name and the map takes the click.
  */
 export function AddPlaceButton({
   onSaved,
+  onDropCustom,
 }: {
   /** The place just saved — or the one already saved for that Google place. */
   onSaved: (place: Place) => void;
+  /** Start dropping a custom pin, named with what was typed so far. */
+  onDropCustom: (name: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -63,6 +70,10 @@ export function AddPlaceButton({
             setOpen(false);
             onSaved(place);
           }}
+          onDropCustom={(name) => {
+            setOpen(false);
+            onDropCustom(name);
+          }}
         />
       ) : null}
     </ControlPanelPopover>
@@ -71,8 +82,10 @@ export function AddPlaceButton({
 
 function AddPlaceSearch({
   onSaved,
+  onDropCustom,
 }: {
   onSaved: (place: Place) => void;
+  onDropCustom: (name: string) => void;
 }): ReactNode {
   // One autocomplete session per opening: every keystroke's search and the
   // save that ends it share it, so Google bills the round as one session.
@@ -148,6 +161,15 @@ function AddPlaceSearch({
             ),
           )
         )}
+      </ControlPanel.Section>
+      <ControlPanel.Section>
+        <ControlPanel.Row
+          icon={<Icon icon={customPinIcon} />}
+          description="Not on Google (closed, an event, a spot): name it and click the map"
+          onSelect={() => onDropCustom(text.trim())}
+        >
+          Drop a custom pin
+        </ControlPanel.Row>
       </ControlPanel.Section>
     </>
   );

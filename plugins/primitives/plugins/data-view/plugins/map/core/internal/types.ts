@@ -1,4 +1,4 @@
-import type { MapPadding } from "@plugins/map/core";
+import type { LatLng, MapPadding } from "@plugins/map/core";
 
 /**
  * Per-view options for the map view, threaded through
@@ -27,4 +27,9 @@ export interface MapViewOptions<TRow> {
    * what is left and pans a selected pin out from under it. Default none.
    */
   fitPadding?: MapPadding;
+  /**
+   * Pick mode (the map primitive's `pick`): while set, the cursor is a
+   * crosshair and a click on the map reports its position. Absent = off.
+   */
+  pick?: (position: LatLng) => void;
 }

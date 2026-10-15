@@ -5,6 +5,7 @@ export {
   PlaceTagSchema,
   type PlaceTag,
 } from "./internal/schema";
+export { placeName, isCustomPlace } from "./internal/place-name";
 export { placeIdKind, placeTagIdKind } from "./internal/id-kinds";
 export type { PlaceId, PlaceTagId } from "./internal/id-kinds";
 export { places, placeTags, placeSearch } from "./internal/resources";
@@ -20,6 +21,11 @@ export {
   type SavePlaceBody,
   SavePlaceResultSchema,
   type SavePlaceResult,
+  PlacePositionSchema,
+  type PlacePosition,
+  createCustomPlace,
+  CreateCustomPlaceBodySchema,
+  type CreateCustomPlaceBody,
   updatePlace,
   UpdatePlaceBodySchema,
   type UpdatePlaceBody,
@@ -37,10 +43,8 @@ export {
 } from "./internal/endpoints";
 export {
   type TagRole,
-  PLACE_STATUSES,
-  type PlaceStatus,
+  type ChildColorMode,
   tagIdByRole,
-  statusTagIds,
   NEUTRAL_PLACE_COLOR,
   type TagNode,
   tagColor,
@@ -50,9 +54,8 @@ export {
   type TagTreeEntry,
   tagPlaceCounts,
   isTagUnder,
-  isStatusTag,
-  placeStatus,
-  withPlaceStatus,
+  isRoleTag,
+  placeFlags,
   ringColors,
   mainColor,
   autoTagsFor,

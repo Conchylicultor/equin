@@ -1,5 +1,6 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import {
+  createCustomPlace,
   createPlaceTag,
   deletePlace,
   deletePlaceTag,
@@ -9,6 +10,7 @@ import {
   updatePlaceTag,
 } from "../../core";
 import {
+  createCustomPlace as dropCustomPlace,
   deletePlace as removePlace,
   requirePlace,
   savePlace as insertPlace,
@@ -19,6 +21,11 @@ import { generatePlaceIcon } from "./place-icon";
 
 export const handleSavePlace = implement(savePlace, async ({ body }) =>
   insertPlace(body),
+);
+
+export const handleCreateCustomPlace = implement(
+  createCustomPlace,
+  async ({ body }) => dropCustomPlace(body),
 );
 
 export const handleUpdatePlace = implement(

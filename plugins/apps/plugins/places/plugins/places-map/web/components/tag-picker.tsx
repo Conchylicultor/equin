@@ -9,7 +9,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   flattenTagTree,
-  isStatusTag,
+  isRoleTag,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
 import { TagMark } from "@plugins/apps/plugins/places/plugins/tag-manager/web";
@@ -21,8 +21,8 @@ const addIcon = symbol("add");
 const INDENT_PX = 12;
 
 /**
- * "+ Tag" on the place card: a dashed button opening the tag tree (status
- * branch left out — the card has its own Todo / Done switch), with a search
+ * "+ Tag" on the place card: a dashed button opening the tag tree (Been /
+ * Want to go left out — the card has its own toggles for them), with a search
  * that matches names and paths. Tags the place already has are not offered.
  */
 export function TagPicker({
@@ -40,7 +40,7 @@ export function TagPicker({
   const entries = useMemo(
     () =>
       flattenTagTree(tags).filter(
-        ({ tag }) => !isStatusTag(tag.id, tags) && !exclude.includes(tag.id),
+        ({ tag }) => !isRoleTag(tag.id, tags) && !exclude.includes(tag.id),
       ),
     [tags, exclude],
   );

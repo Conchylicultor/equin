@@ -10,10 +10,14 @@ Generic icons (place, location_on, star, store, home) are last resorts.
 Output exactly two lines:
 ICON: <material symbols name>
 ALT: <a second-choice material symbols name>
-No commentary. Never ask for clarification or refuse — if the place is unclear, guess from its type.`;
+No commentary. Never ask for clarification or refuse — if the place is unclear, guess from its type, else from its name.`;
 
 export interface IconPromptInput {
+  /** What the user calls the place (`placeName`). */
   name: string;
+  /** Google's name, when the user's title differs from it; null otherwise. */
+  googleName: string | null;
+  /** Null, with `types` empty, for a custom place (no Google place behind it). */
   primaryType: string | null;
   types: readonly string[];
   address: string;
@@ -21,6 +25,7 @@ export interface IconPromptInput {
 
 export function buildIconPrompt({
   name,
+  googleName,
   primaryType,
   types,
   address,
@@ -30,8 +35,11 @@ export function buildIconPrompt({
 ICON: <material symbols name>
 ALT: <a second-choice material symbols name>`,
     `<place_name>\n${name}\n</place_name>`,
+    ...(googleName === null
+      ? []
+      : [`<google_name>\n${googleName}\n</google_name>`]),
     `<google_primary_type>\n${primaryType ?? "unknown"}\n</google_primary_type>`,
-    `<google_types>\n${types.join(", ")}\n</google_types>`,
-    `<address>\n${address}\n</address>`,
+    `<google_types>\n${types.length === 0 ? "none" : types.join(", ")}\n</google_types>`,
+    `<address>\n${address === "" ? "unknown" : address}\n</address>`,
   ].join("\n\n");
 }

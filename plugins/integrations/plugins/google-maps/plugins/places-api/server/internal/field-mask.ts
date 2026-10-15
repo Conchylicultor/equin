@@ -9,7 +9,8 @@
  * - `id`                                        — IDs Only (free)
  * - `formattedAddress`, `location`, `types`     — Essentials
  * - `displayName`, `googleMapsUri`,
- *   `primaryType`, `primaryTypeDisplayName`     — Pro
+ *   `primaryType`, `primaryTypeDisplayName`,
+ *   `businessStatus`                            — Pro
  * - `rating`, `userRatingCount`,
  *   `regularOpeningHours`,
  *   `internationalPhoneNumber`,
@@ -29,4 +30,6 @@ export const PLACE_DETAILS_FIELD_MASK = [
   "primaryType",
   "types",
   "location",
+  // Pro, like displayName above: adding it does not raise the call's tier.
+  "businessStatus",
 ].join(",");

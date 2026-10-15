@@ -12,7 +12,7 @@ The parent plugin reads the key out of auth/central. This plugin is the opposite
 half: the pure transport. Keeping it key-in / typed-value-out means it never
 imports `@plugins/auth/*` and can be reused by any caller that can produce a key.
 
-## The two calls
+## The three calls
 
 - `autocomplete(apiKey, input, sessionToken)` →
   `POST /v1/places:autocomplete`, body `{ input, sessionToken }`. A field mask is
@@ -20,7 +20,16 @@ imports `@plugins/auth/*` and can be reused by any caller that can produce a key
   "query predictions") are skipped — there is no place to resolve behind them.
 - `placeDetails(apiKey, placeId, sessionToken)` → `GET /v1/places/{placeId}`
   with `X-Goog-FieldMask` (**required** — omitting it is an error) and the
-  session token as a query param.
+  session token as a query param. The token is optional: a call no search led
+  to (the Places app's monthly refresh) is billed on its own.
+- `searchText(apiKey, query, { bias?, maxResults?, languageCode? })` →
+  `POST /v1/places:searchText`, body `{ textQuery, pageSize, languageCode,
+  locationBias }`, returning `PlaceCandidate`s (id, name, lat/lng, types, address, viewport,
+  business status) — for a caller that has a
+  name and an address but no place id (the Places app's Mapstr import). Its
+  field mask (`SEARCH_TEXT_FIELD_MASK`) is **Text Search
+  Pro**, not the free IDs-only SKU: the name and position are what let a caller
+  judge a hit. See `SEARCH_TEXT_FIELD_MASK`'s comment.
 
 **Session tokens**: mint one per search-to-selection round and pass it to both
 calls, so Google bills the pair as a single autocomplete session.
@@ -55,21 +64,29 @@ is correct here — do not "fix" it later.
 
 ## Plugin reference
 
-- Description: Stateless typed Google Places API (New) client: places:autocomplete and place details, mapped to the neutral PlaceSuggestion / PlaceSnapshot shapes. Takes the API key per call; never touches auth or storage.
+- Description: Stateless typed Google Places API (New) client: places:autocomplete, places:searchText and place details, mapped to the neutral PlaceSuggestion / PlaceSnapshot shapes. Takes the API key per call; never touches auth or storage.
 - Cross-plugin:
   - Imported by:
     - `apps/places/places-core`
     - `page/place/google`
 - Server:
+  - Exports (types):
+    - `SearchTextBias`
+    - `SearchTextOptions`
   - Exports (values):
     - `autocomplete`
     - `PLACE_DETAILS_FIELD_MASK`
     - `placeDetails`
+    - `searchText`
 - Core:
   - Exports (types):
+    - `BusinessStatus`
+    - `PlaceCandidate`
     - `PlaceSnapshot`
     - `PlaceSuggestion`
   - Exports (values):
+    - `BUSINESS_STATUSES`
+    - `PlaceCandidateSchema`
     - `PlacesApiError`
     - `PlaceSnapshotSchema`
     - `PlaceSuggestionSchema`

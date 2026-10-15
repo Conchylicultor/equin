@@ -44,6 +44,11 @@ Plain data, no React:
   counts as off-screen and is panned to the uncovered area's middle — re-checked
   when the padding changes, since a card opening with the selection is measured a
   render later. A change of padding never re-frames (the user's map stays put).
+- `pick` (optional `(position: LatLng) => void`) is **pick mode**: while set,
+  the cursor is a crosshair and a click on the map itself — never on a pin —
+  reports where it landed. It is how a caller asks "where?" (Places drops and
+  moves custom pins with it). The overlay change a pick leads to does not
+  re-frame the map: it lands where the user just clicked.
 - `GeoMap.Renderer` — a data slot. **First contribution wins**; zero is a loud
   "no map renderer installed" state. Its contract is `Place.Provider`'s, widened
   to three states: `useReadiness(): "pending" | "ready" | "blocked"`, and
@@ -53,7 +58,7 @@ Plain data, no React:
 - The renderer component receives `MapRendererProps` (`overlays`,
   `renderPin(pin, active)`, `onActivate`, `activeId`, `cluster`,
   `renderCluster(pins)`, `focusId`, `fitPadding` — always set, zeros when
-  nothing floats). **A renderer never styles
+  nothing floats — and the optional `pick`). **A renderer never styles
   a pin**: it places the node that `renderPin` returns. That node is
   `GeoMap.Pin.Dispatch`, already isolated by the slot middleware. A renderer
   owns the camera, and **the camera is the user's**: it frames the overlays

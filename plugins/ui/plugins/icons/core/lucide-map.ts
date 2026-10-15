@@ -257,6 +257,7 @@ export const LUCIDE_MAP = {
   public: "globe",
   "public-off": MATERIAL_ONLY,
   publish: "upload",
+  "push-pin": "pin",
   "queue-music": "list-music",
   "radio-button-unchecked": "circle",
   refresh: "refresh-cw",

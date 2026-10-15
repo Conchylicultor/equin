@@ -12,6 +12,7 @@ import type {
 import type {
   AnyIndexBuilder,
   AnyPgColumn,
+  CheckBuilder,
   PgColumnBuilderBase,
   PgTableWithColumns,
   UpdateDeleteAction,
@@ -186,10 +187,11 @@ export interface EntityMetaBase<F extends FieldsRecord> {
   // empty ⇒ every column is on the wire (unchanged behaviour).
   serverOnly?: readonly (keyof F & string)[];
   // Passthrough to pgTable's 3rd-arg callback; `t` is keyed by JS property
-  // name. Merged with the composite-PK entry inside `defineEntity`.
+  // name. Merged with the composite-PK entry inside `defineEntity`. Indexes
+  // and CHECK constraints (`check(name, sql…)`) — both are table extras.
   indexes?: (
     t: BuildExtraConfigColumns<string, EntityColumns<F>, "pg">,
-  ) => AnyIndexBuilder[];
+  ) => (AnyIndexBuilder | CheckBuilder)[];
 }
 
 // ─── Derived `updatedAt` ───────────────────────────────────────────────────

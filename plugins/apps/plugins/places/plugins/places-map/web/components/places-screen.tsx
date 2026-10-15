@@ -15,14 +15,18 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
-import type {
-  Place,
-  PlaceTag,
+import type { LatLng } from "@plugins/map/core";
+import {
+  placeName,
+  type Place,
+  type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
 import {
+  useCreateCustomPlace,
   useCreatePlaceTag,
   usePlaces,
   usePlaceTags,
+  useUpdatePlace,
 } from "@plugins/apps/plugins/places/plugins/places-core/web";
 import { TagManagerPanel } from "@plugins/apps/plugins/places/plugins/tag-manager/web";
 import { placeFieldDefs, placeSearchText } from "../internal/fields";
@@ -32,6 +36,7 @@ import { SAVED_PLACE_PIN_TYPE, placeVisual } from "../internal/place-visual";
 import { AddPlaceButton } from "./add-place";
 import { PLACE_CARD_WIDTH, PlaceCard } from "./place-card";
 import { PlaceCover, PlaceGlyph } from "./place-glyph";
+import { PinPickBar, dropName, type PinPick } from "./pin-pick-bar";
 import { TagSidebar } from "./tag-sidebar";
 
 /**
@@ -60,7 +65,9 @@ const PAST_CARD = `calc(${spaceLength("md")} * 2 + ${PLACE_CARD_WIDTH})`;
  * view tabs top-left, search / filter / Add place top-right. Selecting a place
  * (a pin, a card, a row) opens its card on the right, and a click anywhere
  * else on the screen (the map, the sidebar, the toolbar) or Esc closes it; Manage tags
- * lays the tag manager over the map.
+ * lays the tag manager over the map. Dropping a custom pin (from Add place) or
+ * moving one (from its card) puts the map in pick mode, with a bar at the
+ * bottom: the next click on the map is where the pin goes.
  *
  * The places and the tag tree are two live reads, and every part of the
  * screen (pins, sidebar counts, card) needs both — so the screen waits for
@@ -90,14 +97,20 @@ function PlacesSurface({
   const [manager, setManager] = useState<{ focusTagId: string | null } | null>(
     null,
   );
+  const [pinPick, setPinPick] = useState<PinPick | null>(null);
   const { mutateAsync: createTag } = useCreatePlaceTag();
+  const { mutateAsync: createCustomPlace } = useCreateCustomPlace();
+  const { mutateAsync: updatePlace } = useUpdatePlace();
 
   const fields = useMemo(() => placeFieldDefs(tags), [tags]);
   const selected =
     selectedId === null ? undefined : places.find((p) => p.id === selectedId);
   // The card and the tag manager share the right side: the manager, while
-  // open, hides the card (the selection is kept and comes back on close).
-  const showCard = selected !== undefined && manager === null;
+  // open, hides the card (the selection is kept and comes back on close). So
+  // does pick mode — its click on the map is the answer, not a click away.
+  const showCard =
+    selected !== undefined && manager === null && pinPick === null;
+
   const { containerRef, probeRef, padding: fitPadding } = useCoveredEdges();
   const cardRef = useRef<HTMLElement>(null);
   const { claim } = useClickAway({
@@ -106,6 +119,33 @@ function PlacesSurface({
     panel: cardRef,
     onDismiss: () => setSelectedId(null),
   });
+
+  // What a click on the map does in pick mode; undefined = not picking (or a
+  // drop with no name yet, which the map must not take).
+  const pick = useMemo((): ((at: LatLng) => void) | undefined => {
+    if (pinPick === null) return undefined;
+    if (pinPick.kind === "move") {
+      const { place } = pinPick;
+      return (at) => {
+        // The click that answered is no click away from the card it reopens.
+        claim();
+        setPinPick(null);
+        setSelectedId(place.id);
+        void updatePlace({ params: { id: place.id }, body: { location: at } });
+      };
+    }
+    const name = dropName(pinPick);
+    if (name === null) return undefined;
+    return (at) => {
+      claim();
+      // Out of pick mode first: a second click must not drop a second pin.
+      setPinPick(null);
+      void createCustomPlace({ body: { name, ...at } }).then((place) => {
+        setSelectedId(place.id);
+      });
+    };
+  }, [pinPick, createCustomPlace, updatePlace, claim]);
+
   useSurfaceShortcuts(
     useMemo(
       () => [
@@ -119,8 +159,16 @@ function PlacesSurface({
           when: () => showCard,
           handler: () => setSelectedId(null),
         },
+        {
+          id: "places.cancel-pin-pick",
+          keys: "Escape",
+          label: "Cancel dropping or moving the pin",
+          priority: 2,
+          when: () => pinPick !== null,
+          handler: () => setPinPick(null),
+        },
       ],
-      [showCard],
+      [showCard, pinPick],
     ),
   );
 
@@ -129,8 +177,9 @@ function PlacesSurface({
       map: {
         pinType: SAVED_PLACE_PIN_TYPE,
         pinData: (p) => placeVisual(p, tags),
-        label: (p) => p.name,
+        label: (p) => placeName(p),
         fitPadding,
+        ...(pick === undefined ? {} : { pick }),
       } satisfies MapViewOptions<Place>,
       gallery: {
         cover: (p: Place) => ({
@@ -142,7 +191,7 @@ function PlacesSurface({
         leading: (p: Place) => <PlaceGlyph visual={placeVisual(p, tags)} />,
       },
     }),
-    [tags, fitPadding],
+    [tags, fitPadding, pick],
   );
 
   const newTag = useCallback(async () => {
@@ -183,7 +232,10 @@ function PlacesSurface({
           />
         }
         actions={
-          <AddPlaceButton onSaved={(place) => setSelectedId(place.id)} />
+          <AddPlaceButton
+            onSaved={(place) => setSelectedId(place.id)}
+            onDropCustom={(name) => setPinPick({ kind: "drop", name })}
+          />
         }
         viewOptions={viewOptions}
         onRowActivate={(p) => {
@@ -230,6 +282,16 @@ function PlacesSurface({
             place={selected}
             tags={tags}
             onClose={() => setSelectedId(null)}
+            onMovePin={() => setPinPick({ kind: "move", place: selected })}
+          />
+        </Pin>
+      ) : null}
+      {pinPick !== null ? (
+        <Pin to="bottom" offset="lg" layer="float">
+          <PinPickBar
+            pick={pinPick}
+            onNameChange={(name) => setPinPick({ kind: "drop", name })}
+            onCancel={() => setPinPick(null)}
           />
         </Pin>
       ) : null}

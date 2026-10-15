@@ -3,7 +3,7 @@
 The Places app's index pane (`/places`, `placesMapPane`): every saved place in
 one full-bleed `DataView`, with every piece of chrome floating on the map.
 Reference UI: prototype `proto-1791725279-9yramg` at its defaults
-(`status=pin-style`, `emoji=material`, `drop=bare`).
+(`status=been-want`, `emoji=material`, `drop=bare`).
 
 ## The screen (`web/components/places-screen.tsx`)
 
@@ -31,13 +31,24 @@ Then `PlacesSurface` renders, inside a `relative h-full` box:
   and nothing portalled outside the screen (the card's own pickers, the delete
   confirm). Esc closes it too (a surface shortcut above the solo surface's
   exit-fullscreen Esc).
+- **Pick mode** (`PinPick`, `web/components/pin-pick-bar.tsx`): Add place ›
+  *Drop a custom pin* (`drop`, named in the bar first — the typed search text
+  seeds the name) or the card's *Move* on a custom place (`move`) hands the
+  map primitive's `pick` to the map view: crosshair cursor, and the next click
+  on the map (not a pin) creates the custom place (`createCustomPlace`) or
+  PATCHes its `location`, then selects it. The bar sits at the bottom with
+  Cancel; Esc cancels too (a surface shortcut above the card's). The card is
+  hidden while picking, and the answering click `claim()`s, so it is never a
+  click away. The map does not re-frame for the new position (the renderer
+  holds framing after a pick).
 
 ## Fields (`web/internal/fields.tsx`)
 
-name (primary) · address · tags (`type: "tags"`, `values` = every tag id incl.
-status, `options` = the tree with `parent`, so the nested operators reach
-descendants; the cell draws the non-status tags as colour chips) · status
-(derived enum todo / done) · location (`data` = the `Location`, hidden from
+name (primary — `placeName`: the user's title, else Google's or a custom
+place's name; search reads the title AND Google's name) · address · tags (`type: "tags"`, `values` = every tag id incl.
+Been / Want to go, `options` = the tree with `parent`, so the nested operators
+reach descendants; the cell draws the non-role tags as colour chips) · want /
+been (derived bools, `placeFlags`; filterable, groupable) · location (`data` = the `Location`, hidden from
 bodies — the map's axis) · note · createdAt ("Saved").
 
 ## The tag sidebar (`web/components/tag-sidebar.tsx`)
@@ -76,33 +87,41 @@ just the header and the map below it is reachable.
 - `SavedPlacePin` — the drop: 30px head (`PlaceDropHead`: a square with three
   round corners turned −45°, 2px white outline, the tag colours as conic slices
   from 45° — one colour solid — and the Material icon, white, 18px, with a soft
-  shadow on multi-colour heads; todo = the same slices under a 78% white veil,
-  icon 17px in the main colour darkened). Ground shadow under the tip; hover
+  shadow on multi-colour heads). SOLID iff the place carries Want to go;
+  otherwise (Been only, or neither) PALE — the same slices under a 78% white
+  veil, icon 17px in the main colour darkened, ground shadow faded. No Been
+  mark on the pin. Ground shadow under the tip; hover
   lifts, active grows from the tip. The `MapLabel` name shows on hover and
   while active — the pin is never told the zoom.
 - `SavedPlaceCluster` — a disc ringed by the colour mix of its places (each
   place one share split over its colours, heaviest first), white face with the
-  count and `✓ n` done; 40 / 48 / 56px by count.
+  count and `✓ n` Been; 40 / 48 / 56px by count.
 
 Paint strings are pure (`web/internal/pin-paint.ts`, tested). `PlaceVisual`
-(`web/internal/place-visual.ts`) resolves colours, status and icon once: the
+(`web/internal/place-visual.ts`) resolves colours, the `want` / `been` flags and icon once: the
 place's own icon (Haiku), else its first tag's nearest icon, else
 `location-on`. A saved-place pin without one throws (a wiring bug).
 
 ## The place card (`web/components/place-card.tsx`)
 
-Hero (scaled drop on the pale main colour, name, address, where the icon came
-from + Regenerate / Pick one) · Todo / Done (`status` PATCH) · tags (path
+Hero (scaled drop on the pale main colour; the name, edited in place —
+`PlaceTitleInput`: on a Google place it writes `title`, and blank or Google's
+own name clears it, with "On Google: <name>" under a title; on a custom place
+it renames, blank reverts — "Custom pin — no Google place" + Move for a custom
+place, address, where the icon came from + Regenerate / Pick one) · Want to go / Been (two independent toggle
+chips, each a `tags` PATCH) · tags (path
 tooltip, AUTO for `autoTags`, ×, "+ Tag" picker that replaces the picked
 tag's ancestors) · note (saved on blur) · Google type, saved date · Open in
-Google Maps (`mapsUrl`, else a search URL) · delete (`confirmDialog`).
+Google Maps (`mapsUrl`, else a search pinned to the Google id; a custom
+place's opens at its coordinates) · delete (`confirmDialog`).
 
 ## Add place (`web/components/add-place.tsx`)
 
 The toolbar's primary action: a popover searching `placeSearch` (debounced
 250ms; one `crypto.randomUUID()` session per opening, passed to the save).
 Picking saves (`savePlace`) and selects the place; `maps-not-configured`
-(search or save) renders `MapsAccessAction`.
+(search or save) renders `MapsAccessAction`. Its last row, *Drop a custom
+pin*, starts pick mode for a place Google does not know.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -116,8 +135,8 @@ Picking saves (`savePlace`) and selects the place; `maps-not-configured`
     - `Pane.Register` "places-map"
     - `GeoMap.Pin` → `SavedPlacePin`
     - `GeoMap.Cluster` → `SavedPlaceCluster`
-  - Uses: 67 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/places/places-core` ×8
+  - Uses: 69 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/places/places-core` ×9
     - `primitives/data-view` ×6
     - `primitives/collapsible` ×5
     - `primitives/css/ui-kit` ×4
@@ -127,6 +146,7 @@ Picking saves (`savePlace`) and selects the place; `maps-not-configured`
     - `integrations/google-maps` ×2
     - `primitives/css/control-panel` ×2
     - `primitives/css/text` ×2
+    - `primitives/css/toggle-chip` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/pane` ×2
     - `primitives/app-shell.AppShellBrand`
@@ -144,7 +164,6 @@ Picking saves (`savePlace`) and selects the place; `maps-not-configured`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
-    - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/data-view/floating-toolbar.floatingToolbar`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/icon-button.IconButton`

@@ -12,13 +12,20 @@ import {
 } from "./sidebar-filter";
 
 function tag(id: string, parentId: string | null): TagNode {
-  return { id, parentId, color: null, rank: 0, googleTypes: [], role: null };
+  return {
+    id,
+    parentId,
+    color: null,
+    rank: 0,
+    googleTypes: [],
+    role: null,
+    childColors: null,
+  };
 }
 
 const TAGS: TagNode[] = [
-  tag("status", null),
-  tag("todo", "status"),
-  tag("done", "status"),
+  tag("want", null),
+  tag("been", null),
   tag("food", null),
   tag("restaurants", "food"),
   tag("italian", "restaurants"),
@@ -93,13 +100,13 @@ test("any = one rule with every id; all = one rule per id", () => {
   const mint = minter();
   const state = {
     include: ["food", "culture"],
-    exclude: ["done"],
+    exclude: ["been"],
     mode: "any" as const,
   };
   const any = applySidebarState(null, state, mint);
   expect(any?.children.map((c) => c.kind === "rule" && c.value)).toEqual([
     ["food", "culture"],
-    ["done"],
+    ["been"],
   ]);
   expect(sidebarState(any)).toEqual(state);
 
@@ -107,7 +114,7 @@ test("any = one rule with every id; all = one rule per id", () => {
   expect(all?.children.map((c) => c.kind === "rule" && c.value)).toEqual([
     ["food"],
     ["culture"],
-    ["done"],
+    ["been"],
   ]);
   expect(sidebarState(all)).toEqual({ ...state, mode: "all" });
 });
@@ -178,11 +185,11 @@ test("withoutSidebarRules keeps the rest, null when nothing is left", () => {
 });
 
 test("removeTag and the partial mark", () => {
-  const s = { include: ["italian"], exclude: ["done"], mode: "any" as const };
+  const s = { include: ["italian"], exclude: ["been"], mode: "any" as const };
   expect(removeTag(s, "italian").include).toEqual([]);
-  expect(removeTag(s, "done").exclude).toEqual([]);
+  expect(removeTag(s, "been").exclude).toEqual([]);
   expect(hasPickedDescendant(s, "food", TAGS)).toBe(true);
-  expect(hasPickedDescendant(s, "status", TAGS)).toBe(true);
+  expect(hasPickedDescendant(s, "restaurants", TAGS)).toBe(true);
   expect(hasPickedDescendant(s, "italian", TAGS)).toBe(false);
   expect(hasPickedDescendant(s, "culture", TAGS)).toBe(false);
 });

@@ -245,6 +245,7 @@ export const ICON_MANIFEST: {
     "public",
     "public-off",
     "publish",
+    "push-pin",
     "queue-music",
     "radio-button-unchecked",
     "refresh",

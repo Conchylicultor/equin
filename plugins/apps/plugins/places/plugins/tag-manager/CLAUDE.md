@@ -18,7 +18,7 @@ A floating card (`Surface level="overlay"`) the map screen
 | Parent | `TagParentSelect`: Top level or any tag but itself and its descendants (`wouldCycle`) |
 | Auto-set from Google types | the tag's `googleTypes` as mono chips, else "manual" (read-only) |
 | Places | `tagPlaceCounts` over every place — nested tags included |
-| (actions) | + Child · Delete (`confirmDialog`; not offered for the status branch, which the endpoint refuses) |
+| (actions) | Shade children (parents only: `childColors: "ramp"` — the colourless children as light → deep shades of its colour, by rank) · + Child · Delete (`confirmDialog`; not offered for the role tags Been / Want to go, which the endpoint refuses) |
 
 Every edit calls the tag endpoint directly (`useUpdatePlaceTag` /
 `useCreatePlaceTag` / `useDeletePlaceTag`); the live `places.tags` collection
@@ -42,7 +42,7 @@ The colour is user data (a stored hex), painted through `style`.
 
 - Description: The Places tag manager: the one tag tree as an editable table (colour, icon, name, parent, Google types, place count, + Child, Delete) on a floating card the map opens; and TagMark, how a tag shows beside its name everywhere (its tinted icon, else a dot of its colour).
 - Web:
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×8
     - `apps/places/places-core` ×3
     - `primitives/data-view` ×3
@@ -56,6 +56,7 @@ The colour is user data (a stored hex), painted through `style`.
     - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
+    - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/icon-picker.IconPicker`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `ui/icons.Icon`

@@ -4,7 +4,7 @@ import { db } from "@plugins/database/server";
 import { runClaudePrint } from "@plugins/infra/plugins/claude-cli/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
-import { placeIdKind } from "../../core";
+import { placeIdKind, placeName } from "../../core";
 import { _places } from "./tables";
 import { buildIconPrompt, SYSTEM_PROMPT } from "./icon-prompt";
 import { parseIconAnswer } from "./parse-icon-answer";
@@ -31,6 +31,7 @@ export async function generatePlaceIcon(
   const [place] = await db
     .select({
       name: _places.name,
+      title: _places.title,
       primaryType: _places.primaryType,
       types: _places.types,
       address: _places.address,
@@ -45,12 +46,16 @@ export async function generatePlaceIcon(
 
   const out = await runClaudePrint({
     tier: "haiku",
-    prompt: buildIconPrompt(place),
+    prompt: buildIconPrompt({
+      ...place,
+      name: placeName(place),
+      googleName: place.title === null ? null : place.name,
+    }),
     system: SYSTEM_PROMPT,
     timeoutMs: 30_000,
     source: {
       name: "places-icon",
-      context: { placeId, name: place.name },
+      context: { placeId, name: placeName(place) },
       correlationId: placeId,
     },
   });
@@ -76,7 +81,7 @@ export async function generatePlaceIcon(
 export const placeIconJob = defineJob({
   name: "places.icon.generate",
   description:
-    "Asks Claude Haiku to pick a Material Symbols map icon for a saved place from its name, Google type and address.",
+    "Asks Claude Haiku to pick a Material Symbols map icon for a saved place from its name (the user's title too), Google type (none for a custom place) and address.",
   // seconds: one Haiku call bounded by its own 30 s timeout.
   hold: "seconds",
   input: z.object({ placeId: z.string() }),

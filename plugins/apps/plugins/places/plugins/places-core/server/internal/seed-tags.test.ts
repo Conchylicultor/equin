@@ -22,3 +22,11 @@ test("every seed icon is an installed Material Symbols name", () => {
   const bad = SEED_TAGS.filter((t) => !isSavedSymbolName(t.icon));
   expect(bad.map((t) => t.icon)).toEqual([]);
 });
+
+test("seed google types are unique per tag and colours are #rrggbb", () => {
+  for (const tag of SEED_TAGS) {
+    const types = tag.googleTypes ?? [];
+    expect(new Set(types).size).toBe(types.length);
+    if (tag.color !== undefined) expect(tag.color).toMatch(/^#[0-9a-f]{6}$/);
+  }
+});

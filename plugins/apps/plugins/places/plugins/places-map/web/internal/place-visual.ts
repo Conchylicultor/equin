@@ -5,15 +5,14 @@ import {
   type IconRef,
 } from "@plugins/ui/plugins/icons/core";
 import {
-  NEUTRAL_PLACE_COLOR,
-  isStatusTag,
-  placeStatus,
+  isRoleTag,
+  placeFlags,
   ringColors,
   tagPath,
   type Place,
-  type PlaceStatus,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
+import { placeColors } from "./pin-paint";
 
 /** The pin type the map view stamps on every saved place (`GeoMap.Pin` / `GeoMap.Cluster` key). */
 export const SAVED_PLACE_PIN_TYPE = "saved-place";
@@ -26,11 +25,18 @@ const fallbackIcon = symbol("location-on");
  * every surface paints the same thing.
  */
 export interface PlaceVisual {
-  /** The distinct colours of its non-status tags; never empty (neutral when none). */
+  /**
+   * The distinct colours of its non-role tags; never empty (neutral when none).
+   * Greyed when Google says it is permanently closed, so every surface draws
+   * it grey.
+   */
   colors: readonly string[];
   /** The first of {@link colors}: the one colour a single-colour surface wears. */
   mainColor: string;
-  status: PlaceStatus;
+  /** Carries Want to go: the pin is drawn solid (else pale). */
+  want: boolean;
+  /** Carries Been: counted by the cluster's `✓ n`, badged on the cover. */
+  been: boolean;
   /**
    * The place's own icon (Haiku's pick), else the icon of its nearest tagged
    * ancestor-or-self among its tags, else a generic location pin.
@@ -43,7 +49,7 @@ export interface PlaceVisual {
 /** The icon of the first tag (or its nearest ancestor) that has one. */
 function tagIcon(place: Place, tags: readonly PlaceTag[]): IconRef | null {
   for (const tagId of place.tags) {
-    if (isStatusTag(tagId, tags)) continue;
+    if (isRoleTag(tagId, tags)) continue;
     const withIcon = tagPath(tagId, tags)
       .reverse()
       .find((t) => t.icon !== null);
@@ -56,15 +62,17 @@ export function placeVisual(
   place: Place,
   tags: readonly PlaceTag[],
 ): PlaceVisual {
-  const ring = ringColors(place, tags);
-  const colors = ring.length > 0 ? ring : [NEUTRAL_PLACE_COLOR];
-  const own = place.icon === null ? null : runtimeSymbol(place.icon);
+  const colors = placeColors(
+    ringColors(place, tags),
+    place.businessStatus === "CLOSED_PERMANENTLY",
+  );
+  const ownIcon = place.icon === null ? null : runtimeSymbol(place.icon);
   return {
     colors,
     mainColor: colors[0]!,
-    status: placeStatus(place, tags),
-    icon: own ?? tagIcon(place, tags) ?? fallbackIcon,
-    ownIcon: own !== null,
+    ...placeFlags(place, tags),
+    icon: ownIcon ?? tagIcon(place, tags) ?? fallbackIcon,
+    ownIcon: ownIcon !== null,
   };
 }
 

@@ -4,7 +4,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
-  isStatusTag,
+  isRoleTag,
   tagPath,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
@@ -69,7 +69,7 @@ export function TagChip({
 }
 
 /**
- * A place's tags as chips (its status tags left out — status has its own
+ * A place's tags as chips (Been / Want to go left out — each has its own
  * column), at most `max` of them then `+n`.
  */
 export function PlaceTagChips({
@@ -83,7 +83,7 @@ export function PlaceTagChips({
 }) {
   const byId = new Map<string, PlaceTag>(tags.map((t) => [t.id, t]));
   const shown = tagIds
-    .filter((id) => !isStatusTag(id, tags))
+    .filter((id) => !isRoleTag(id, tags))
     .map((id) => byId.get(id))
     .filter((t): t is PlaceTag => t !== undefined);
   return (

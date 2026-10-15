@@ -76,6 +76,7 @@ export async function updateTag(
       name: body.name,
       parentId: body.parentId,
       color: body.color,
+      childColors: body.childColors,
       icon: body.icon,
       googleTypes: body.googleTypes,
       rank: body.rank,
@@ -92,7 +93,7 @@ export async function updateTag(
  */
 export async function deleteTag(id: string): Promise<void> {
   const tag = await requireTag(id);
-  // The status logic resolves its tags by role: those are never deleted.
+  // The app resolves Been / Want to go by role: those are never deleted.
   if (tag.role !== null) {
     throw new HttpError(400, `The ${tag.name} tag cannot be deleted`);
   }

@@ -5,7 +5,7 @@ import { defineIdKind, type IdOf } from "@plugins/ids/core";
  *
  * - `place` — a saved place (`places.id`), minted on save.
  * - `ptag` — a tag (`place_tags.id`), minted on create and by the seed alike.
- *   The status tags are found by their `role` column, never by id.
+ *   Been / Want to go are found by their `role` column, never by id.
  */
 export const placeIdKind = defineIdKind({ prefix: "place", label: "Place" });
 

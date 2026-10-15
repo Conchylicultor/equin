@@ -10,6 +10,7 @@ import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import {
   DEFAULT_CLUSTER_RADIUS_PX,
   NO_MAP_PADDING,
+  type LatLng,
   type MapOverlay,
   type MapPadding,
   type MapPin,
@@ -47,6 +48,12 @@ export interface MapViewProps {
    */
   fitPadding?: MapPadding;
   /**
+   * Pick mode: while set, the cursor is a crosshair and a click on the map
+   * (not on a pin) reports its position — how a caller asks "where?" (drop a
+   * pin, move one). Absent = clicking the map does nothing.
+   */
+  pick?: (position: LatLng) => void;
+  /**
    * The host's own words for "nothing to show", floated on a card over the
    * map while there are no overlays — or `null` for a bare map (a host that
    * already says the count elsewhere). The map itself stays mounted either
@@ -74,6 +81,7 @@ export function MapView({
   cluster,
   focusId = null,
   fitPadding = NO_MAP_PADDING,
+  pick,
   empty,
 }: MapViewProps) {
   const renderer = GeoMap.Renderer.useContributions()[0];
@@ -108,6 +116,7 @@ export function MapView({
     renderCluster,
     focusId,
     fitPadding,
+    ...(pick === undefined ? {} : { pick }),
   };
   const notice =
     overlays.length === 0 && empty !== null ? (

@@ -10,12 +10,13 @@ import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { locationField } from "@plugins/fields/plugins/location/core";
+import { BUSINESS_STATUSES } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import {
   parseSavedSymbolName,
   SavedSymbolNameSchema,
 } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { placeIdKind, placeTagIdKind } from "./id-kinds";
-import { TAG_ROLES } from "./tag-tree";
+import { CHILD_COLOR_MODES, TAG_ROLES } from "./tag-tree";
 
 // Web-safe field records for the Places app's two tables — the single source of
 // truth for both the Drizzle pgTable (`defineEntity`, `server/internal/tables.ts`)
@@ -38,13 +39,35 @@ const savedIcon = () =>
 
 /**
  * One saved place: a Google place snapshot (name, address, location, types)
- * plus what the user made of it — tags, note — and the icon Haiku picked.
+ * plus what the user made of it — title, tags, note — and the icon Haiku
+ * picked. Or a CUSTOM place (a pin with no Google place behind it — a closed
+ * venue, a bunker, a one-off event): `googlePlaceId` is null, and so is every
+ * Google-only column (`title`, `primaryType`, `mapsUrl`, `businessStatus`,
+ * `types` empty) — a DB check holds the pair together (`places_custom_no_google`).
+ *
+ * The name the app shows is `placeName(place)`: the user's `title` when set,
+ * else `name`.
  */
 export const placeFields = {
   id: idKindField(placeIdKind),
-  /** Google's place id. Unique: a place is saved once. */
-  googlePlaceId: textField(),
+  /**
+   * Google's place id; null for a custom place. Unique where set: a Google
+   * place is saved once.
+   */
+  googlePlaceId: nullable(textField()),
+  /**
+   * Google's name for a Google place (re-fetched monthly with its details);
+   * the user's own name for a custom place, which has no title.
+   */
   name: textField(),
+  /**
+   * The user's own name for a Google place ("Japantown" for the restaurant
+   * Google calls "Rue Sainte-Anne"), shown instead of Google's; null shows
+   * Google's. Never written by the refresh job. Always null on a custom place,
+   * whose `name` is already the user's.
+   */
+  title: nullable(textField()),
+  /** Google's formatted address; for a custom place, whatever it was saved with ("" when none). */
   address: textField(),
   location: locationField(),
   /** Google's machine type (`cafe`, `park`, …); null when Google gives none. */
@@ -52,10 +75,15 @@ export const placeFields = {
   /** Google's full type list, most specific first — what auto-tagging reads. */
   types: stringList(),
   mapsUrl: nullable(textField()),
+  /**
+   * Whether Google says the place is still in business (`CLOSED_PERMANENTLY`
+   * greys its pin); null when Google gives none. Refreshed monthly.
+   */
+  businessStatus: nullable(enumTextField(BUSINESS_STATUSES)),
   /** One Material Symbols name, picked by Haiku from the place; null until then. */
   icon: savedIcon(),
   note: textField(),
-  /** Tag ids, in the order they were added. Always holds the todo or done tag. */
+  /** Tag ids, in the order they were added (Been / Want to go among them). */
   tags: stringList(),
   /**
    * The subset of `tags` set automatically from the place's Google types (the
@@ -70,7 +98,7 @@ export const placeFields = {
 
 /**
  * One tag of the single nested tag tree. There is no category / label split:
- * Status › Todo / Done are ordinary tags, found by their `role`.
+ * Been and Want to go are ordinary tags, found by their `role`.
  */
 export const placeTagFields = {
   id: idKindField(placeTagIdKind),
@@ -79,15 +107,19 @@ export const placeTagFields = {
   parentId: nullable(textField()),
   /** Hex colour; null inherits the nearest ancestor's (`tagColor`). */
   color: nullable(textField()),
+  /**
+   * How this tag colours its colourless children: `ramp` = an ordered shade of
+   * its colour by rank, light → deep (`tagColor`); null = they inherit it.
+   */
+  childColors: nullable(enumTextField(CHILD_COLOR_MODES)),
   icon: savedIcon(),
   /** Google place types that auto-set this tag on a newly saved place. */
   googleTypes: stringList(),
   /** Order among siblings, ascending. */
   rank: intField(),
   /**
-   * What the status logic finds this tag by (`status`, `todo`, `done`), set by
-   * the seed; null for every other tag. Unique where set, and a tag with a role
-   * cannot be deleted.
+   * What the app finds this tag by (`been`, `want`), set by the seed; null for
+   * every other tag. Unique where set, and a tag with a role cannot be deleted.
    */
   role: nullable(enumTextField(TAG_ROLES)),
   createdAt: dateField(),

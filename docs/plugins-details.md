@@ -4276,7 +4276,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/icons.Icon`
     - **`places`** — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
       - Plugins:
-        - **`places-core`** — Contract layer for the Places app, web half: the live places and tag-tree hooks, the Google Places search read, and the place and tag mutations. Contract layer for the Places app: the places / place_tags entities, the starter tag tree seeded on an empty install, the live places and tags collections, Google Places search and save (auto-tagged from the place's Google types, tagged todo), place and tag CRUD (a deleted tag's children and places move to its parent), and the Haiku job that picks each place's Material Symbols icon.
+        - **`mapstr-import`** — `./singularity places import-mapstr <export>` — matches a Mapstr export's places to Google places (Text Search, scored by name, distance and area extent; hand decisions via --overrides and the search-place lookup verb) into a reviewable mapstr-matches.json, then with --apply replaces every place and tag with the seed tree and the matched places (Mapstr tags mapped onto seed tags, comments as notes, original save dates), in one transaction.
+          - Cli:
+            - Uses: `framework/server-core.runExec`
+        - **`places-core`** — Contract layer for the Places app, web half: the live places and tag-tree hooks, the Google Places search read, and the place and tag mutations. Contract layer for the Places app: the places / place_tags entities, the starter tag tree seeded on an empty install, the live places and tags collections, Google Places search and save (auto-tagged from the place's Google types, tagged Want to go), custom places (a named pin with no Google place behind it), the user's own title over Google's name, place and tag CRUD (a deleted tag's children and places move to its parent), the Haiku job that picks each place's Material Symbols icon, and the monthly job that re-fetches each place's Google details (whether it is still open).
           - Web:
             - Contributes:
               - `IdKinds.Kind` "place"
@@ -4288,6 +4291,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.useLive`
               - `network/live.useLiveRow`
             - Exports (values):
+              - `useCreateCustomPlace`
               - `useCreatePlaceTag`
               - `useDeletePlace`
               - `useDeletePlaceTag`
@@ -4310,6 +4314,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "places.tags.all:rows"
             - Uses:
               - `database.db`
+              - `database.DbExecutor`
               - `ids.IdKinds`
               - `infra/claude-cli.runClaudePrint`
               - `infra/endpoints.HttpError`
@@ -4317,15 +4322,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/entities.defaultNow`
               - `infra/entities.defineEntity`
               - `infra/jobs.defineJob`
+              - `infra/jobs.NonRetryableError`
               - `infra/warmup.defineWarmup`
               - `integrations/google-maps.getMapsKey`
               - `integrations/google-maps/places-api.autocomplete`
               - `integrations/google-maps/places-api.placeDetails`
               - `network/live.serveCollection`
               - `network/live.serveValue`
+              - `primitives/log-channels.Log`
             - DB schema: `plugins/apps/plugins/places/plugins/places-core/server/internal/tables.ts`
+            - Exports (types):
+              - `ImportedPlace`
+              - `InsertPlaceExtras`
+              - `InsertPlaceResult`
+              - `NewPlace`
+              - `SeedTagKey`
+            - Exports (values):
+              - `insertPlace`
+              - `replaceAllPlaces`
             - Register:
               - `defineJob('places.icon.generate')`
+              - `defineJob('places.refresh-details')`
               - `defineWarmup('places.seed-tags')`
             - Resources:
               - `places.places.all` (keyed)
@@ -4335,6 +4352,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `places.tags.all:rows` (keyed, point)
             - Routes:
               - `POST /api/places/places`
+              - `POST /api/places/custom-places`
               - `PATCH /api/places/places/:id`
               - `DELETE /api/places/places/:id`
               - `POST /api/places/places/:id/icon`
@@ -4357,18 +4375,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ids.idKindField`
               - `ids.IdOf`
               - `infra/endpoints.defineEndpoint`
+              - `integrations/google-maps/places-api.BUSINESS_STATUSES`
               - `integrations/google-maps/places-api.PlaceSuggestionSchema`
               - `network/live.liveCollection`
               - `network/live.liveValue`
               - `ui/icons/saved-names.parseSavedSymbolName`
               - `ui/icons/saved-names.SavedSymbolNameSchema`
             - Exports (types):
+              - `ChildColorMode`
+              - `CreateCustomPlaceBody`
               - `CreatePlaceTagBody`
               - `Place`
               - `PlaceId`
+              - `PlacePosition`
               - `PlaceSearchQuery`
               - `PlaceSearchResult`
-              - `PlaceStatus`
               - `PlaceTag`
               - `PlaceTagId`
               - `RegeneratePlaceIconResult`
@@ -4381,24 +4402,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `UpdatePlaceTagBody`
             - Exports (values):
               - `autoTagsFor`
+              - `createCustomPlace`
+              - `CreateCustomPlaceBodySchema`
               - `createPlaceTag`
               - `CreatePlaceTagBodySchema`
               - `deletePlace`
               - `deletePlaceTag`
               - `flattenTagTree`
-              - `isStatusTag`
+              - `isCustomPlace`
+              - `isRoleTag`
               - `isTagUnder`
               - `mainColor`
               - `NEUTRAL_PLACE_COLOR`
-              - `PLACE_STATUSES`
               - `placeFields`
+              - `placeFlags`
               - `placeIdKind`
+              - `placeName`
+              - `PlacePositionSchema`
               - `places`
               - `PlaceSchema`
               - `placeSearch`
               - `PlaceSearchQuerySchema`
               - `PlaceSearchResultSchema`
-              - `placeStatus`
               - `placeTagFields`
               - `placeTagIdKind`
               - `placeTags`
@@ -4409,7 +4434,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `savePlace`
               - `SavePlaceBodySchema`
               - `SavePlaceResultSchema`
-              - `statusTagIds`
               - `tagColor`
               - `tagDescendants`
               - `tagIdByRole`
@@ -4419,7 +4443,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `UpdatePlaceBodySchema`
               - `updatePlaceTag`
               - `UpdatePlaceTagBodySchema`
-              - `withPlaceStatus`
               - `wouldCycle`
           - Cross-plugin:
             - Imported by:
@@ -4433,8 +4456,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "places-map"
               - `GeoMap.Pin` → `SavedPlacePin`
               - `GeoMap.Cluster` → `SavedPlaceCluster`
-            - Uses: 67 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
-              - `apps/places/places-core` ×8
+            - Uses: 69 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+              - `apps/places/places-core` ×9
               - `primitives/data-view` ×6
               - `primitives/collapsible` ×5
               - `primitives/css/ui-kit` ×4
@@ -4444,6 +4467,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations/google-maps` ×2
               - `primitives/css/control-panel` ×2
               - `primitives/css/text` ×2
+              - `primitives/css/toggle-chip` ×2
               - `primitives/hover-reveal` ×2
               - `primitives/pane` ×2
               - `primitives/app-shell.AppShellBrand`
@@ -4461,7 +4485,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/row.Row`
               - `primitives/css/spacing.Stack`
               - `primitives/css/surface.Surface`
-              - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/data-view/floating-toolbar.floatingToolbar`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/icon-button.IconButton`
@@ -4488,7 +4511,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `placesApp`
         - **`tag-manager`** — The Places tag manager: the one tag tree as an editable table (colour, icon, name, parent, Google types, place count, + Child, Delete) on a floating card the map opens; and TagMark, how a tag shows beside its name everywhere (its tinted icon, else a dot of its colour).
           - Web:
-            - Uses: 28 symbols — full list in [`plugins/apps/plugins/places/plugins/tag-manager/REFERENCE.md`](../plugins/apps/plugins/places/plugins/tag-manager/REFERENCE.md)
+            - Uses: 29 symbols — full list in [`plugins/apps/plugins/places/plugins/tag-manager/REFERENCE.md`](../plugins/apps/plugins/places/plugins/tag-manager/REFERENCE.md)
               - `primitives/css/ui-kit` ×8
               - `apps/places/places-core` ×3
               - `primitives/data-view` ×3
@@ -4502,6 +4525,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
+              - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/icon-picker.IconPicker`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `ui/icons.Icon`
@@ -20207,6 +20231,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withNotifyBatch`
       - Cross-plugin:
         - Imported by:
+          - `apps/places/mapstr-import`
           - `infra/audio-analysis`
           - `infra/deps`
           - `infra/jobs/supervised-job`
@@ -24633,21 +24658,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `map/google`
           - `page/place/google`
       - Plugins:
-        - **`places-api`** — Stateless typed Google Places API (New) client: places:autocomplete and place details, mapped to the neutral PlaceSuggestion / PlaceSnapshot shapes. Takes the API key per call; never touches auth or storage.
+        - **`places-api`** — Stateless typed Google Places API (New) client: places:autocomplete, places:searchText and place details, mapped to the neutral PlaceSuggestion / PlaceSnapshot shapes. Takes the API key per call; never touches auth or storage.
           - Cross-plugin:
             - Imported by:
               - `apps/places/places-core`
               - `page/place/google`
           - Server:
+            - Exports (types):
+              - `SearchTextBias`
+              - `SearchTextOptions`
             - Exports (values):
               - `autocomplete`
               - `PLACE_DETAILS_FIELD_MASK`
               - `placeDetails`
+              - `searchText`
           - Core:
             - Exports (types):
+              - `BusinessStatus`
+              - `PlaceCandidate`
               - `PlaceSnapshot`
               - `PlaceSuggestion`
             - Exports (values):
+              - `BUSINESS_STATUSES`
+              - `PlaceCandidateSchema`
               - `PlacesApiError`
               - `PlaceSnapshotSchema`
               - `PlaceSuggestionSchema`
@@ -30828,8 +30861,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SegmentedControl`
               - `ToggleChip`
           - Cross-plugin:
-            - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
-              - `apps` ×19
+            - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+              - `apps` ×20
               - `primitives` ×8
               - `stats` ×5
               - `apps-core` ×3
@@ -33115,9 +33148,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getLogChannels`
           - `MAX_EMIT_LINES`
       - Cross-plugin:
-        - Imported by: 54 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `debug` ×12
-          - `apps` ×9
+          - `apps` ×10
           - `infra` ×8
           - `database` ×7
           - `conversations` ×4

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { PlaceSchema, PlaceTagSchema } from "./schema";
-import { PLACE_STATUSES } from "./tag-tree";
+import { CHILD_COLOR_MODES } from "./tag-tree";
 import { MapsNotConfiguredSchema } from "./maps";
 
 // Place and tag CRUD and the icon re-pick. Every read is live
@@ -18,7 +18,7 @@ export const SavePlaceBodySchema = z.object({
 export type SavePlaceBody = z.infer<typeof SavePlaceBodySchema>;
 
 export const SavePlaceResultSchema = z.discriminatedUnion("kind", [
-  /** Saved: auto-tagged from its Google types, tagged `todo`; its icon follows. */
+  /** Saved: auto-tagged from its Google types, tagged Want to go; its icon follows. */
   z.object({ kind: z.literal("saved"), place: PlaceSchema }),
   /** This Google place was saved before; nothing changed. */
   z.object({ kind: z.literal("already-saved"), place: PlaceSchema }),
@@ -35,16 +35,46 @@ export const savePlace = defineEndpoint({
   slowThresholdMs: 10_000,
 });
 
+/** A point on the map: where a custom place's pin goes. */
+export const PlacePositionSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+});
+export type PlacePosition = z.infer<typeof PlacePositionSchema>;
+
+export const CreateCustomPlaceBodySchema = PlacePositionSchema.extend({
+  /** What the user calls it — a custom place has no other name. */
+  name: z.string().trim().min(1),
+});
+export type CreateCustomPlaceBody = z.infer<typeof CreateCustomPlaceBodySchema>;
+
+/**
+ * Drop a custom place: a pin with no Google place behind it (a closed venue, a
+ * bunker, a one-off event), named by the user, tagged Want to go like a saved
+ * Google place; its icon follows (Haiku, from the name alone).
+ */
+export const createCustomPlace = defineEndpoint({
+  route: "POST /api/places/custom-places",
+  body: CreateCustomPlaceBodySchema,
+  response: PlaceSchema,
+});
+
 export const UpdatePlaceBodySchema = z.object({
+  /**
+   * Rename. On a Google place it is the user's title, shown instead of
+   * Google's name — `null` or blank shows Google's again. On a custom place it
+   * is the place's name, so blank is refused.
+   */
+  title: z.string().nullable().optional(),
+  /** Move a custom place's pin. A Google place stands where Google says: refused. */
+  location: PlacePositionSchema.optional(),
   note: z.string().optional(),
   /**
-   * The place's whole tag list, replacing the stored one. Every id must be a
-   * tag; a list without a todo / done tag keeps the place's current status,
-   * one with both is refused. A tag removed here is removed from `autoTags` too.
+   * The place's whole tag list, replacing the stored one — Been / Want to go
+   * are toggled here like any tag. Every id must be a tag. A tag removed here
+   * is removed from `autoTags` too.
    */
   tags: z.array(z.string()).optional(),
-  /** Set the status: swaps the todo / done tags (applied after `tags`). */
-  status: z.enum(PLACE_STATUSES).optional(),
 });
 export type UpdatePlaceBody = z.infer<typeof UpdatePlaceBodySchema>;
 
@@ -105,6 +135,8 @@ export const UpdatePlaceTagBodySchema = z.object({
   parentId: z.string().nullable().optional(),
   /** `null` inherits the nearest ancestor's colour. */
   color: HexColorSchema.nullable().optional(),
+  /** `ramp` shades the colourless children by rank; `null` lets them inherit. */
+  childColors: z.enum(CHILD_COLOR_MODES).nullable().optional(),
   icon: SavedSymbolNameSchema.nullable().optional(),
   googleTypes: z.array(z.string()).optional(),
   rank: z.number().int().optional(),
@@ -119,8 +151,8 @@ export const updatePlaceTag = defineEndpoint({
 
 /**
  * Delete a tag. Its children move up to its parent, and every place carrying it
- * gets the parent instead (nothing, at the root). A tag with a role (status,
- * todo, done) cannot be deleted.
+ * gets the parent instead (nothing, at the root). A tag with a role (Been,
+ * Want to go) cannot be deleted.
  */
 export const deletePlaceTag = defineEndpoint({
   route: "DELETE /api/places/tags/:id",

@@ -8,6 +8,7 @@ export {
   usePlaceTags,
   usePlaceSearch,
   useSavePlace,
+  useCreateCustomPlace,
   useUpdatePlace,
   useDeletePlace,
   useRegeneratePlaceIcon,

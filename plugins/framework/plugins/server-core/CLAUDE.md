@@ -360,6 +360,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `withNotifyBatch`
 - Cross-plugin:
   - Imported by:
+    - `apps/places/mapstr-import`
     - `infra/audio-analysis`
     - `infra/deps`
     - `infra/jobs/supervised-job`

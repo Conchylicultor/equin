@@ -10,11 +10,17 @@ import { fieldChromeClass } from "./field-chrome";
 
 // `Input`'s multi-line sibling: the same chrome (field-chrome.ts) and the same
 // ambient density for padding and text — only the height is free, growing with
-// `rows` and the user's vertical resize.
+// `rows` and the user's vertical resize. `fitContent` makes it as tall as its
+// text (CSS field-sizing), so a long value is never hidden behind a scrollbar.
 function Textarea({
   className,
+  fitContent = false,
   ...props
-}: React.ComponentProps<"textarea"> & DensityControlled) {
+}: React.ComponentProps<"textarea"> &
+  DensityControlled & {
+    /** Grow with the text instead of scrolling inside `rows` lines. */
+    fitContent?: boolean;
+  }) {
   const density = useControlSize();
   return (
     <textarea
@@ -22,6 +28,7 @@ function Textarea({
       className={cn(
         fieldChromeClass,
         "resize-y",
+        fitContent && "field-sizing-content",
         textareaSizeClassFor(density),
         className,
       )}

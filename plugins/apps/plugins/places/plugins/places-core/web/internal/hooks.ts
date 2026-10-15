@@ -6,6 +6,7 @@ import {
 } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import {
+  createCustomPlace,
   createPlaceTag,
   deletePlace,
   deletePlaceTag,
@@ -57,7 +58,15 @@ export function useSavePlace() {
   return useEndpointMutation(savePlace);
 }
 
-/** PATCH a place's note, tags (whole list) or status. */
+/** Drop a custom place (a named pin, no Google place behind it); its icon follows. */
+export function useCreateCustomPlace() {
+  return useEndpointMutation(createCustomPlace);
+}
+
+/**
+ * PATCH a place: its title (a custom place's name), a custom place's pin
+ * position, its note or its tags (the whole list — Been / Want to go included).
+ */
 export function useUpdatePlace() {
   return useEndpointMutation(updatePlace);
 }

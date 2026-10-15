@@ -4,16 +4,15 @@ import {
   autoTagsFor,
   flattenTagTree,
   tagPlaceCounts,
-  isStatusTag,
+  isRoleTag,
   mainColor,
-  placeStatus,
+  placeFlags,
+  rampShade,
   ringColors,
-  statusTagIds,
   tagIdByRole,
   tagColor,
   tagDescendants,
   tagPath,
-  withPlaceStatus,
   wouldCycle,
   type TagNode,
 } from "./tag-tree";
@@ -30,23 +29,22 @@ function tag(
     rank: 0,
     googleTypes: [],
     role: null,
+    childColors: null,
     ...extra,
   };
 }
 
 const TAGS: TagNode[] = [
-  // Readable ids for legibility; the status logic finds these by role.
-  tag("status", null, { role: "status" }),
-  tag("todo", "status", { color: "#94a3b8", role: "todo" }),
-  tag("done", "status", { color: "#22c55e", rank: 1, role: "done" }),
-  tag("someday", "status", { rank: 2 }),
-  tag("food", null, { color: "#f97316", rank: 1 }),
+  // Readable ids for legibility; the app finds these by role.
+  tag("want", null, { color: "#94a3b8", role: "want" }),
+  tag("been", null, { color: "#22c55e", rank: 1, role: "been" }),
+  tag("food", null, { color: "#f97316", rank: 2 }),
   tag("restaurants", "food", { googleTypes: ["restaurant"] }),
   tag("italian", "restaurants", { googleTypes: ["pizza_restaurant"] }),
   tag("coffee", "food", { rank: 1, googleTypes: ["cafe"] }),
-  tag("culture", null, { color: "#3b82f6", rank: 2 }),
+  tag("culture", null, { color: "#3b82f6", rank: 3 }),
   tag("museums", "culture", { color: "#0000ff", googleTypes: ["museum"] }),
-  tag("kids", null, { rank: 3 }),
+  tag("kids", null, { rank: 4 }),
 ];
 
 test("tagColor is the tag's own colour, else its nearest ancestor's", () => {
@@ -76,35 +74,80 @@ test("helpers survive a cycle in the stored tree", () => {
   expect(tagPath("a", cyclic).map((t) => t.id)).toEqual(["b", "a"]);
 });
 
-test("status tags resolve by role, not id", () => {
-  expect(tagIdByRole(TAGS, "done")).toBe("done");
-  expect(statusTagIds(TAGS)).toEqual({ todo: "todo", done: "done" });
+test("role tags resolve by role, not id; flags are independent", () => {
+  expect(tagIdByRole(TAGS, "been")).toBe("been");
   const renamed = TAGS.map((t) =>
-    t.role === "done" ? { ...t, id: "ptag-1-abc" } : t,
+    t.role === "been" ? { ...t, id: "ptag-1-abc" } : t,
   );
-  expect(placeStatus({ tags: ["ptag-1-abc"] }, renamed)).toBe("done");
-  expect(() => statusTagIds(TAGS.filter((t) => t.role !== "todo"))).toThrow();
+  expect(placeFlags({ tags: ["ptag-1-abc"] }, renamed)).toEqual({
+    been: true,
+    want: false,
+  });
+  expect(placeFlags({ tags: ["food", "want", "been"] }, TAGS)).toEqual({
+    been: true,
+    want: true,
+  });
+  expect(placeFlags({ tags: ["food"] }, TAGS)).toEqual({
+    been: false,
+    want: false,
+  });
+  // A role no tag holds reads as not carried.
+  expect(
+    placeFlags(
+      { tags: ["want"] },
+      TAGS.filter((t) => t.role !== "want"),
+    ),
+  ).toEqual({ been: false, want: false });
+  expect(isRoleTag("want", TAGS)).toBe(true);
+  expect(isRoleTag("been", TAGS)).toBe(true);
+  expect(isRoleTag("food", TAGS)).toBe(false);
+  expect(isRoleTag("nope", TAGS)).toBe(false);
 });
 
-test("status: done wins, else todo; withPlaceStatus swaps it", () => {
-  expect(placeStatus({ tags: ["food", "done"] }, TAGS)).toBe("done");
-  expect(placeStatus({ tags: ["food"] }, TAGS)).toBe("todo");
-  expect(withPlaceStatus(["food", "todo"], "done", TAGS)).toEqual([
-    "food",
-    "done",
-  ]);
-  expect(isStatusTag("todo", TAGS)).toBe(true);
-  expect(isStatusTag("status", TAGS)).toBe(true);
-  expect(isStatusTag("someday", TAGS)).toBe(true);
-  expect(isStatusTag("food", TAGS)).toBe(false);
+test("a ramp parent shades its colourless children light → deep by rank", () => {
+  const ramp: TagNode[] = [
+    tag("price", null, { color: "#eab308", childColors: "ramp" }),
+    tag("p40", "price"),
+    tag("p100", "price", { rank: 2 }),
+    tag("p20", "price", { rank: -1 }),
+    tag("own", "price", { rank: 3, color: "#123456" }),
+    tag("p100-deep", "p100"),
+    tag("plain", null, { color: "#eab308", rank: 1 }),
+    tag("plain-child", "plain"),
+  ];
+  const shades = ["p20", "p40", "p100"].map((id) => tagColor(id, ramp));
+  // Light first, deep last: each darker than the one before.
+  const lum = (hex: string) =>
+    [1, 3, 5].reduce((s, i) => s + parseInt(hex.slice(i, i + 2), 16), 0);
+  expect(lum(shades[0]!)).toBeGreaterThan(lum(shades[1]!));
+  expect(lum(shades[1]!)).toBeGreaterThan(lum(shades[2]!));
+  // A child with its own colour keeps it (and still holds its rank's slot).
+  expect(tagColor("own", ramp)).toBe("#123456");
+  // A grandchild inherits its parent's shade.
+  expect(tagColor("p100-deep", ramp)).toBe(tagColor("p100", ramp));
+  // Without the ramp, children inherit the colour as is.
+  expect(tagColor("plain-child", ramp)).toBe("#eab308");
+  // A colourless ramp parent shades nothing.
+  expect(
+    tagColor("c", [tag("r", null, { childColors: "ramp" }), tag("c", "r")]),
+  ).toBeNull();
 });
 
-test("ringColors: distinct non-status colours in the place's tag order", () => {
-  const place = { tags: ["museums", "italian", "coffee", "kids", "done"] };
+test("rampShade: white-mixed first, black-mixed last, the colour itself alone", () => {
+  expect(rampShade("#eab308", 0, 1)).toBe("#eab308");
+  expect(rampShade("#000000", 0, 2)).toBe("#4d4d4d");
+  expect(rampShade("#ffffff", 1, 2)).toBe("#999999");
+  // The midpoint of an odd ramp leans deep (the ramp is asymmetric).
+  expect(rampShade("#808080", 1, 3)).toBe("#7a7a7a");
+  expect(() => rampShade("red", 0, 2)).toThrow();
+});
+
+test("ringColors: distinct non-role colours in the place's tag order", () => {
+  const place = { tags: ["museums", "italian", "coffee", "kids", "been"] };
   expect(ringColors(place, TAGS)).toEqual(["#0000ff", "#f97316"]);
   expect(mainColor(place, TAGS)).toBe("#0000ff");
-  expect(ringColors({ tags: ["kids", "todo"] }, TAGS)).toEqual([]);
-  expect(mainColor({ tags: ["kids", "todo"] }, TAGS)).toBe(NEUTRAL_PLACE_COLOR);
+  expect(ringColors({ tags: ["kids", "want"] }, TAGS)).toEqual([]);
+  expect(mainColor({ tags: ["kids", "want"] }, TAGS)).toBe(NEUTRAL_PLACE_COLOR);
 });
 
 test("autoTagsFor: every tag naming one of the types, in tree order", () => {
@@ -125,10 +168,8 @@ test("flattenTagTree lists the tree depth-first in rank order with depths", () =
   expect(
     flattenTagTree(TAGS).map(({ tag, depth }) => `${depth}:${tag.id}`),
   ).toEqual([
-    "0:status",
-    "1:todo",
-    "1:done",
-    "1:someday",
+    "0:want",
+    "0:been",
     "0:food",
     "1:restaurants",
     "2:italian",
@@ -142,16 +183,16 @@ test("flattenTagTree lists the tree depth-first in rank order with depths", () =
 test("tagPlaceCounts counts each place once per tag, nested tags included", () => {
   const counts = tagPlaceCounts(
     [
-      { tags: ["italian", "restaurants", "todo"] },
-      { tags: ["coffee", "done"] },
-      { tags: ["museums", "todo"] },
+      { tags: ["italian", "restaurants", "want"] },
+      { tags: ["coffee", "been", "want"] },
+      { tags: ["museums", "want"] },
     ],
     TAGS,
   );
   expect(counts.get("food")).toBe(2);
   expect(counts.get("restaurants")).toBe(1);
   expect(counts.get("italian")).toBe(1);
-  expect(counts.get("status")).toBe(3);
-  expect(counts.get("todo")).toBe(2);
+  expect(counts.get("want")).toBe(3);
+  expect(counts.get("been")).toBe(1);
   expect(counts.get("kids")).toBeUndefined();
 });

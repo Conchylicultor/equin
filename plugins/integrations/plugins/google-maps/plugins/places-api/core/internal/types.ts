@@ -33,6 +33,18 @@ export type PlaceSuggestion = z.infer<typeof PlaceSuggestionSchema>;
  * `PLACE_DETAILS_FIELD_MASK`) and a narrower mask must stay expressible without
  * a schema change.
  */
+/**
+ * Whether a place is still in business, as Google reports it. A closed place
+ * stays a place — Google keeps serving its details.
+ */
+export const BUSINESS_STATUSES = [
+  "OPERATIONAL",
+  "CLOSED_TEMPORARILY",
+  "CLOSED_PERMANENTLY",
+] as const;
+
+export type BusinessStatus = (typeof BUSINESS_STATUSES)[number];
+
 export const PlaceSnapshotSchema = z.object({
   placeId: z.string(),
   /** Display name — the business name, or the street address for a plain address. */
@@ -52,6 +64,34 @@ export const PlaceSnapshotSchema = z.object({
   mapsUrl: z.string().optional(),
   lat: z.number().optional(),
   lng: z.number().optional(),
+  /** Absent when Google gives none (a plain address is no business). */
+  businessStatus: z.enum(BUSINESS_STATUSES).optional(),
 });
 
 export type PlaceSnapshot = z.infer<typeof PlaceSnapshotSchema>;
+
+/**
+ * One hit of a free-text place search (`searchText`): just enough to decide
+ * whether it is the place meant — its id, name, position and Google types (a
+ * hit whose types are all address-like is an address, not a place). Resolve it
+ * with `placeDetails` for the full snapshot.
+ */
+const LatLngSchema = z.object({ lat: z.number(), lng: z.number() });
+
+export const PlaceCandidateSchema = z.object({
+  placeId: z.string(),
+  name: z.string(),
+  lat: z.number(),
+  lng: z.number(),
+  types: z.array(z.string()),
+  /** Full formatted address; absent when Google gives none. */
+  address: z.string().optional(),
+  businessStatus: z.enum(BUSINESS_STATUSES).optional(),
+  /**
+   * The box Google frames the place in — a town's or a park's extent, a few
+   * metres around a shop. Absent when Google gives none.
+   */
+  viewport: z.object({ low: LatLngSchema, high: LatLngSchema }).optional(),
+});
+
+export type PlaceCandidate = z.infer<typeof PlaceCandidateSchema>;
