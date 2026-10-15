@@ -11,7 +11,6 @@ import type {
   HostedToolbar,
   HostedToolbarParts,
 } from "@plugins/primitives/plugins/data-view/core";
-import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
 import type { TreeChildrenState } from "@plugins/primitives/plugins/tree/core";
 import {
   isBrowsable,
@@ -379,6 +378,7 @@ export function FileTree({
         label: "Size",
         type: "number",
         width: "80px",
+        align: "end",
         value: (r) => (r.kind === "dir" ? null : r.size),
         cell: (r) =>
           r.kind === "dir" ? (
@@ -424,20 +424,23 @@ export function FileTree({
     [now, shows, listings, visit],
   );
 
-  const treeOptions = useMemo<TreeViewOptions<EntryRow>>(
+  // A nested outline table (its config row) with its column labels: the
+  // header row of sortable titles, and in a narrow pane Kind, then Modified,
+  // give their room to the names (`dropOrder`).
+  const tableOptions = useMemo(
     () => ({
-      columns: "aligned",
+      header: true,
       guides: true,
       addLabel: null,
-      leadingIcon: (r) => (
+      leadingIcon: (r: EntryRow) => (
         <FileTypeIcon
           name={r.name}
           isDir={r.kind === "dir"}
           className="size-4"
         />
       ),
-      openOnActivate: (r) => r.browsable,
-      labelClassName: (r) =>
+      openOnActivate: (r: EntryRow) => r.browsable,
+      labelClassName: (r: EntryRow) =>
         r.path === openPath ? cn("font-semibold") : undefined,
     }),
     [openPath],
@@ -450,7 +453,7 @@ export function FileTree({
       fieldExtensions={FileBrowserSlots.Fields}
       itemActions={FileBrowserSlots.RowActions}
       rowKey={(r) => r.id}
-      views={["tree"]}
+      views={["table"]}
       storageKey={FILE_TREE_VIEW}
       toolbar={HOSTED}
       density="compact"
@@ -460,7 +463,7 @@ export function FileTree({
       selectedRowId={selectedPath ?? undefined}
       rowActivation={rowActivation}
       onRowOpen={onOpen}
-      viewOptions={{ tree: treeOptions }}
+      viewOptions={{ table: tableOptions }}
       emptyState={emptyState}
     />
   );

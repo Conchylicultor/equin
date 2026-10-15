@@ -7,7 +7,8 @@
       "icon": "settings",
       "icon": "settings",
       "view": {
-        "type": "tree",
+        "type": "table",
+        "presentation": "outline",
         "visibleFields": ["label", "modified", "conflict", "source"],
         "filter": {
           "kind": "group",
@@ -31,7 +32,8 @@
       "icon": "warning",
       "icon": "warning",
       "view": {
-        "type": "tree",
+        "type": "table",
+        "presentation": "outline",
         "filter": {
           "kind": "group",
           "id": "conflicts",
@@ -54,7 +56,8 @@
       "icon": "swap-vert",
       "icon": "swap-vert",
       "view": {
-        "type": "tree",
+        "type": "table",
+        "presentation": "outline",
         "visibleFields": ["label", "modified", "conflict", "source"],
         "filter": {
           "kind": "group",
@@ -78,7 +81,8 @@
       "icon": "table-rows",
       "icon": "table-rows",
       "view": {
-        "type": "tree",
+        "type": "table",
+        "presentation": "outline",
         "filter": {
           "kind": "group",
           "id": "views",

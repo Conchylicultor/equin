@@ -7,7 +7,8 @@
       "icon": "account-tree",
       "icon": "account-tree",
       "view": {
-        "type": "tree",
+        "type": "table",
+        "presentation": "outline",
         "groupBy": "category",
         "visibleFields": ["title", "updatedAt"],
         "filter": {
@@ -33,7 +34,8 @@
       "icon": "play-circle",
       "icon": "play-circle",
       "view": {
-        "type": "tree",
+        "type": "table",
+        "presentation": "outline",
         "filter": {
           "kind": "group",
           "id": "attempted",

@@ -477,7 +477,7 @@ export function RunningAgentsBand({
         rows={rows}
         fields={FIELDS}
         rowKey={(row) => row.key}
-        views={["tree"]}
+        views={["table"]}
         hierarchy={hierarchy}
         density="compact"
         storageKey={RUNNING_AGENTS_VIEW}
@@ -513,7 +513,7 @@ export function RunningAgentsBand({
           <Text tone="muted">No agent matches what you searched for.</Text>
         }
         viewOptions={{
-          tree: {
+          table: {
             // The band exists to show the whole set; a user fold still wins.
             defaultExpanded: true,
             leadingIcon: (row: RunningAgentRow) => (

@@ -14,7 +14,8 @@
       "name": "Tree",
       "icon": "folder",
       "view": {
-        "type": "tree",
+        "type": "table",
+        "presentation": "outline",
         "sort": [{ "fieldId": "folders", "direction": "asc", "pinned": true }]
       }
     }

@@ -51,9 +51,11 @@ const COLLAPSE = "Collapse subtree";
 
 interface RowInfo {
   label: string;
-  /** Where the row's content starts, in px — `marginLeft + paddingLeft`,
-   *  i.e. depth × `--tree-indent` + `--tree-row-pad-start`, however a theme
-   *  splits the indent between the pill and its content. */
+  /** Where the row's label starts, in px from the viewport's left — depth ×
+   *  `--tree-indent` past its siblings', whichever renderer drew the row (a
+   *  `TreeList` row pays its indent on the row box, a nested table's in its
+   *  first cell) and however a theme splits it between the pill and the
+   *  content. */
   pad: number;
   /** One indent level in px — the row's resolved `--tree-indent` (a theme's). */
   indent: number;
@@ -61,25 +63,49 @@ interface RowInfo {
   fold: string | null;
 }
 
-/** Every tree row currently painted, in paint order. */
-const snapshot = (page: Page): Promise<RowInfo[]> =>
-  page.evaluate(() =>
+/**
+ * Every tree row currently painted, in paint order.
+ *
+ * A row's hover cluster mounts when its row is first reached
+ * (`row-actions`), so the survey reaches every row first — a `pointerover`,
+ * as a passing pointer would — and reads the fold once they have rendered.
+ */
+async function snapshot(page: Page): Promise<RowInfo[]> {
+  await page.evaluate(() => {
+    for (const el of document.querySelectorAll(".group\\/tree-row")) {
+      el.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+    }
+  });
+  await page.waitForTimeout(150);
+  return page.evaluate(() =>
     [...document.querySelectorAll<HTMLElement>(".group\\/tree-row")].map(
-      (el) => ({
-        label: (el.textContent ?? "").split("\n")[0]!.trim(),
-        pad:
-          (parseFloat(getComputedStyle(el).marginLeft) || 0) +
-          (parseFloat(getComputedStyle(el).paddingLeft) || 0),
-        indent: parseFloat(
-          getComputedStyle(el).getPropertyValue("--tree-indent"),
-        ),
-        fold:
-          el
-            .querySelector('button[aria-label$="subtree"]')
-            ?.getAttribute("aria-label") ?? null,
-      }),
+      (el) => {
+        const label = (el.textContent ?? "").split("\n")[0]!.trim();
+        // The label's own box: the first text node with content.
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        let x = el.getBoundingClientRect().left;
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+          if ((n.textContent ?? "").trim() === "") continue;
+          const range = document.createRange();
+          range.selectNodeContents(n);
+          x = range.getBoundingClientRect().left;
+          break;
+        }
+        return {
+          label,
+          pad: Math.round(x),
+          indent: parseFloat(
+            getComputedStyle(el).getPropertyValue("--tree-indent"),
+          ),
+          fold:
+            el
+              .querySelector('button[aria-label$="subtree"]')
+              ?.getAttribute("aria-label") ?? null,
+        };
+      },
     ),
   );
+}
 
 /**
  * The rows nested under `rows[i]`: everything after it that is indented deeper,
@@ -203,31 +229,22 @@ await withBrowser(async (h) => {
     JSON.stringify(parents.map((x) => x.fold)),
   );
 
-  // The gate is only correct if "no button" really means "no children". Proven
-  // through the row's own chevron, which predates this work: opening a leaf can
-  // reveal nothing, because there is nothing under it.
+  // The gate is only correct if "no button" really means "no children": a
+  // row without the fold offers no chevron either (the disclosure draws one
+  // only for a row with children).
   const leafIndex = roots.findIndex((x) => x.fold === null);
   if (leafIndex < 0) {
     r.fail("no leaf row to check", "cannot prove the gate is not always-on");
   } else {
     const leafRow = rows.nth(leafIndex);
     await leafRow.hover();
-    await leafRow.getByRole("button", { name: "Expand", exact: true }).click();
-    await page.waitForTimeout(300);
-    const after = await snapshot(page);
     r.eq(
-      `"${roots[leafIndex]!.label}" is genuinely childless — its chevron reveals nothing`,
-      after.length,
-      roots.length,
+      `"${roots[leafIndex]!.label}" is genuinely childless — it offers no chevron`,
+      await leafRow
+        .getByRole("button", { name: "Expand", exact: true })
+        .count(),
+      0,
     );
-    // Leave it as we found it.
-    await leafRow.hover();
-    const collapse = leafRow.getByRole("button", {
-      name: "Collapse",
-      exact: true,
-    });
-    if ((await collapse.count()) > 0) await collapse.click();
-    await page.waitForTimeout(200);
   }
 
   // --- Survey: find a root whose subtree is deeper than one level ------------

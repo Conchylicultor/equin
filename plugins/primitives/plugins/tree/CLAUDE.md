@@ -199,11 +199,24 @@ paints `flat` as `DataTable` rows: `TreeLeading` in the first cell (under
 `treeRowIndentStyle`, so the guides land where they land in a `TreeRowChrome`),
 `useTreeRow` + `treeRowGestures` + `TreeDropZones` through the table's per-row
 decoration hook, `TreeChildPlaceholder` as a full-span line, `useTreeKeyboard`
-on the grid. It publishes the model's context through `TreeListProvider` with a `Row` that
-throws if reached. It does
-**not** publish `RowControls` — a table row's cells are not inside a
-`RowChrome` — so `useOptionalRowControls()` answers `null` there, as in any
-non-tree view.
+on the grid. It publishes the model's context through `TreeListProvider` with
+a `Row` that throws if reached, and each row's `RowControls` through `RowControlsProvider` (the table decoration's
+`provide`), so `useOptionalRowControls()` answers inside a table row too.
+
+The chrome around a row is shared, not re-drawn per renderer:
+
+- **`treeRowTrailing` / `TreeRowActions`** — the row's hover cluster (the
+  consumer's actions, subtree fold, `⋯` menu, add child). `RowChrome` calls the
+  function with the controls it computed; a table row renders the component,
+  which reads the published controls (`useRowControls`, throwing outside a row).
+- **`TreeToolbar`** (start content + expand-all) and **`TreeRootAdd`** (the
+  root "Add") — `TreeList`, the grouped tree view's hoisted chrome and the
+  nested table.
+- **`groupFoldAction(rows, setExpanded)`** — a group header's fold toggle
+  (`null` when the group has nothing to fold, so no empty cluster).
+
+`RowMenuItem` / `RowMenuHelpers` are `core` types, so a view's options type
+(the table's, in its `core`) can name a row menu.
 
 ## Rows are flat; toggles fold through row-fold
 
@@ -257,6 +270,7 @@ lands without motion.
     - `RowChromeMenuHelpers`
     - `RowChromeProps`
     - `RowControls`
+    - `RowMenu`
     - `RowMenuItem`
     - `TreeDisclosureContribution`
     - `TreeDisclosureToggleProps`
@@ -268,12 +282,16 @@ lands without motion.
     - `TreeModel`
     - `TreeModelArgs`
     - `TreeModelContext`
+    - `TreeRowActionsProps`
     - `TreeRowChromeProps`
+    - `TreeToolbarProps`
     - `UseFlatExpandAllReturn`
   - Exports (values):
     - `flatExpandAll`
+    - `groupFoldAction`
     - `RenameInput`
     - `RowChrome`
+    - `RowControlsProvider`
     - `Tree`
     - `TreeChildPlaceholder`
     - `TreeDisclosureToggle`
@@ -281,12 +299,17 @@ lands without motion.
     - `TreeLeading`
     - `TreeList`
     - `TreeListProvider`
+    - `TreeRootAdd`
+    - `TreeRowActions`
     - `TreeRowChrome`
     - `treeRowGestures`
     - `treeRowIndentStyle`
+    - `treeRowTrailing`
+    - `TreeToolbar`
     - `useFlatExpandAll`
     - `useOptionalRowControls`
     - `useOptionalTreeListContext`
+    - `useRowControls`
     - `useTreeKeyboard`
     - `useTreeListContext`
     - `useTreeModel`
@@ -302,6 +325,8 @@ lands without motion.
     - `FlatTreeLine`
     - `KeyboardLine`
     - `LazyChildren`
+    - `RowMenuHelpers`
+    - `RowMenuItem`
     - `TreeChildrenState`
     - `TreeDisclosureProps`
     - `TreeKeyMove`
@@ -321,6 +346,7 @@ lands without motion.
   - Imported by:
     - `apps/pages/page-tree`
     - `page/editor`
+    - `primitives/data-view`
     - `primitives/data-view/list`
     - `primitives/data-view/table`
     - `primitives/data-view/tree`

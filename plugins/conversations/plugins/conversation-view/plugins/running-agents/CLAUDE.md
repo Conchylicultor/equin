@@ -108,7 +108,7 @@ under `prefers-reduced-motion` rather than removed, so the line keeps its shape.
 
 ## The rows are a DataView with a HOSTED toolbar
 
-`views={["tree"]}` with a read-only `hierarchy` (ranks minted from launch
+`views={["table"]}` (a nested table, `presentation: "outline"` in config) with a read-only `hierarchy` (ranks minted from launch
 order, no `onMove`), `toolbar={{ kind: "hosted", frame }}` — no band (a
 search/filter/sort strip over four rows in a small card does nothing); the card
 places the one options trigger the host hands it. Two things to know before
@@ -118,8 +118,8 @@ editing `running-agents-band.tsx`:
   and the open/closed state reach it through a context the band provides around
   the DataView. The frame is module-scope — a new identity per render remounts
   the card.
-- **The last step rides in the label.** A tree row's non-label fields are
-  rigid chips that never shrink, so a sentence there squeezes the task to
+- **The last step rides in the label.** The non-label fields are their own
+  columns, content-sized, so a sentence there would squeeze the task to
   nothing. The label (`TaskLabel`) is the one truncating leaf: task, then the
   muted step, so the step is cut first. Plain inline spans only — a box of its
   own (a `Line`, a chip row) takes the truncation with it. The `lastStep` field

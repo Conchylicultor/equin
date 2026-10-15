@@ -100,10 +100,20 @@ drag.
   rows focusable exactly when the view has an open gesture.
 - **The leading field** (`FieldDef.leading`) renders in the tree head's icon
   slot, ahead of `options.leadingIcon`, and is no column.
+- **Row controls**: the decoration's `provide` wraps the whole row in the tree
+  primitive's `RowControlsProvider`, so a cell or an item action reads
+  `useOptionalRowControls()` inside a table row exactly as inside a `RowChrome`.
 - **Trailing cluster**: the item actions (persistent zone in the reserved track,
-  as flat), then the tree's own chrome — fold / unfold the subtree, add a child
-  (`hierarchy.onCreate`). An alias (reference) row has none, no drag, read-only
-  cells and a link glyph; its `data-row-key` is left off (the real row marks it).
+  as flat), then the tree's own chrome through the tree primitive's
+  `TreeRowActions` — the ONE implementation `RowChrome` uses too: fold / unfold
+  the subtree, the `rowMenu` `⋯`, add a child (`hierarchy.onCreate`). An alias
+  (reference) row has none, no drag, read-only cells and a link glyph; its
+  `data-row-key` is left off (the real row marks it).
+- **Around the rows**: the tree primitive's `TreeToolbar` above them
+  (`expandAll`, `toolbarStart`) and `TreeRootAdd` below (`addLabel`; `null`
+  hides it, absent → "Add" when the hierarchy can create; never under
+  `rootId`); grouped, each group header carries `groupFoldAction` (fold /
+  unfold that group's subtrees) — the same pieces the tree view renders.
 - **Group-by**: the roots partition, every descendant follows its root; each
   section's slice of the ONE flattened tree is a `DataTableGroup` (not
   windowed). One `RankReorderDndContext` spans every section, so a drop into
@@ -113,17 +123,30 @@ drag.
   (`keepMountedRowKeys`), the droppables re-measured every frame.
 - **Options** (`TableViewOptions`, read only when nested): `defaultExpanded`,
   `guides`, `rootId`, `expandOnActivate`, `openOnActivate`, `leadingIcon`,
-  `dragOverlay`; `presentation` applies to both modes.
+  `dragOverlay`, `trailing` (at rest, at the row's end),
+  `rowAccent` (a wash in the row's overlay layer), `rowMenu`, `labelClassName`
+  (on the first column's cell, after the host's `rowTone`), `addLabel`,
+  `expandAll`, `toolbarStart`; `presentation` applies to both modes. That is
+  every tree-view option but `columns`: the tree's `columns: "aligned"` is an
+  outline table with `header: true` (labels over tree rows, columns dropping by
+  `dropOrder` — the file explorer).
 
 **`presentation: "grid" | "outline"`** is `DataTable.presentation`: `grid` is
 the header row and ruled rows; `outline` (a sidebar's look) drops the header and
 the rules and draws each row as the tree row's pill (`bg-selected` /
-`--selected-foreground` / `--row-meta`).
+`--selected-foreground` / `--row-meta`), at the tree row's geometry (see
+`data-table`'s CLAUDE.md).
 
-Not here yet (the tree view still owns them): the tree view's `trailing`,
-`rowAccent`, `rowMenu`, `labelClassName`, `addLabel` (the root Add), the
-expand-all toolbar (`expandAll`, `toolbarStart`) and the per-group fold toggle;
-`useOptionalRowControls` reads nothing inside a table row. Pinned by
+**The label** (the primary field) is the tree row's: data-view's
+`EditableTreeLabel` (select-then-edit, a created row opening straight into its
+editor; shared with the tree view, reading the row's published controls) when
+the field writes back, else its read cell — classed by `rowTone` then
+`labelClassName`. Every other column edits through `FieldCell`'s pencil.
+`trailing` sits at rest at the row's end, after every column (where a tree
+row puts it, after its chips), in the persistent track, clipped past 12rem so
+one row's wide trailing cannot squeeze every row's label. The first column takes the slack
+(`minmax(10rem, 1fr)` unless the field sets a width) and clips a deep row's
+indent at its edge. Pinned by
 `web/__tests__/nested-*.test.tsx` (filter scope, row keys, guides and
 presentation, lazy children / open / keys / link rows, leading field, sort
 within siblings and search keeping ancestors).
@@ -139,16 +162,16 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
 - Description: Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
 - Web:
   - Contributes: `DataViewSlots.View` "Table" → `TableView`
-  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×23
-    - `primitives/tree` ×11
+  - Uses: 59 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×26
+    - `primitives/tree` ×18
     - `primitives/data-table` ×6
     - `primitives/rank-reorder` ×3
     - `primitives/css/badge.Badge`
+    - `primitives/css/clip.Clip`
     - `primitives/css/inline.Inline`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
-    - `primitives/icon-button.IconButton`
     - `ui/icons.Icon`
   - Exports (types): `TableViewOptions`
 - Core:

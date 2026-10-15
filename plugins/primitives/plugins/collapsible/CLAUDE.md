@@ -143,11 +143,11 @@ fold and an unfold (`--path /agents --header Queue`).
     - `useCollapsibleContext`
     - `useExpandAll`
 - Cross-plugin:
-  - Imported by: 48 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 47 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×10
     - `ui` ×9
     - `apps` ×8
-    - `primitives` ×8
+    - `primitives` ×7
     - `plugin-meta` ×4
     - `review` ×3
     - `auth`

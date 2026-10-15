@@ -52,7 +52,11 @@ const SURFACES: Surface[] = [
     name: "explorer",
     path: "/studio/explorer",
     open: async (page) => {
-      await page.locator("[data-view-type='table']").first().click();
+      // By name: the "Tree" view is an (outline) table too.
+      await page
+        .locator("[data-view-type='table']", { hasText: "Table" })
+        .first()
+        .click();
       // Open one root so the nesting is in the picture.
       const parent = page
         .locator("[role='treegrid'] [data-tree-row][aria-expanded='false']")

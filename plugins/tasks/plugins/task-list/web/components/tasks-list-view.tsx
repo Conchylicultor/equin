@@ -32,14 +32,14 @@ export function TasksListView({
           rows={rows}
           {...taskFieldSchema}
           rowKey={(t) => t.id}
-          views={["tree", "list"]}
+          views={["table", "list"]}
           defaultView="tree"
           storageKey={TASKS_LIST_VIEW}
           selectedRowId={selectedId}
           rowActivation={(t) => linkTo(t.id)}
           selection={{}}
           hierarchy={taskHierarchy}
-          viewOptions={{ tree: buildTreeOptions({}), list: {} }}
+          viewOptions={{ table: buildTreeOptions({}), list: {} }}
           itemActions={Tasks.TaskActions}
           emptyState="No tasks yet."
         />

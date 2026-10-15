@@ -4,7 +4,7 @@ import {
   fieldOverrides,
   type HierarchyConfig,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
+import type { RowMenuHelpers } from "@plugins/primitives/plugins/tree/core";
 import { createTask, moveTask } from "@plugins/tasks/core";
 import {
   taskRows,
@@ -104,10 +104,11 @@ export function buildTreeOptions({
 }: {
   readOnly?: boolean;
   defaultExpanded?: boolean;
-}): TreeViewOptions<TaskListItem> {
+}) {
+  // The nested table's options (`viewOptions.table`).
   return {
-    leadingIcon: (t) => <StatusIcon status={t.status} />,
-    labelClassName: (t) =>
+    leadingIcon: (t: TaskListItem) => <StatusIcon status={t.status} />,
+    labelClassName: (t: TaskListItem) =>
       cn(
         t.status === "dropped" &&
           "text-muted-foreground/70 line-through italic",
@@ -122,13 +123,13 @@ export function buildTreeOptions({
     // onCreate.
     rowMenu: readOnly
       ? undefined
-      : ({ addBelow }) => [
+      : ({ addBelow }: RowMenuHelpers) => [
           {
             icon: addIcon,
             label: "Add item below",
             onClick: () => void addBelow(),
           },
         ],
-    dragOverlay: (t) => t.title || "Untitled",
+    dragOverlay: (t: TaskListItem) => t.title || "Untitled",
   };
 }

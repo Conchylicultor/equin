@@ -214,6 +214,16 @@ export function useOptionalRowControls(): RowControls | null {
   return useContext(RowControlsContext);
 }
 
+/** The enclosing tree row's controls, for tree chrome that only ever renders
+ *  inside one (`TreeRowActions`). Throws outside a tree row. */
+export function useRowControls(): RowControls {
+  const controls = useContext(RowControlsContext);
+  if (!controls) {
+    throw new Error("useRowControls: rendered outside a tree row");
+  }
+  return controls;
+}
+
 export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
   const ctx = useTreeListContext<T>();
   const isOpen = node.expanded;

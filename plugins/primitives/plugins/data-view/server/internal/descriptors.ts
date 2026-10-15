@@ -4,6 +4,7 @@ import { getConfig, watchConfig } from "@plugins/config_v2/server";
 import { dataViews } from "../../shared/data-views.generated";
 import { presetsExtraFields } from "../../shared/sort-presets-field";
 import { customColumnsExtraFields } from "../../shared/custom-columns-field";
+import { viewMigrations } from "../../shared/view-migrations";
 
 /**
  * The sibling config fields merged into every per-id `viewsDescriptor` — the
@@ -26,7 +27,10 @@ export const extraFields = {
  * `dataViewId`, independent of the web.
  */
 export const dataViewDescriptors: Map<string, ConfigDescriptor> = new Map(
-  dataViews.map((v) => [v.id, viewsDescriptor(v.id, extraFields)]),
+  dataViews.map((v) => [
+    v.id,
+    viewsDescriptor(v.id, extraFields, viewMigrations),
+  ]),
 );
 
 /**

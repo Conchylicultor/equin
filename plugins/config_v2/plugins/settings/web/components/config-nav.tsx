@@ -19,7 +19,6 @@ import {
   type FieldDef,
   type HierarchyConfig,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
 import { configDetailPane } from "../internal/panes";
 import { pruneConfigTree } from "../internal/prune-config-tree";
 import {
@@ -220,15 +219,15 @@ export function ConfigNav() {
     [modifiedCountOf, conflictOf],
   );
 
-  const treeOptions = useMemo<TreeViewOptions<ConfigNavRow>>(
+  const tableOptions = useMemo(
     () => ({
       expandAll: true,
       defaultExpanded: true,
       // Group / multi-config header rows have no config of their own, so a body
       // click has nothing to open — it was inert. Route it to the chevron
       // instead; `rowActivation` then only ever sees a real config row.
-      expandOnActivate: (r) => !r.registration,
-      trailing: (r) => (
+      expandOnActivate: (r: ConfigNavRow) => !r.registration,
+      trailing: (r: ConfigNavRow) => (
         <ConfigRowBadge
           modifiedCount={modifiedCountOf(r)}
           conflict={conflictOf(r) ?? undefined}
@@ -244,14 +243,14 @@ export function ConfigNav() {
       rows={rows}
       fields={fields}
       rowKey={(r) => r.id}
-      views={["tree"]}
+      views={["table"]}
       storageKey={CONFIG_NAV_VIEW}
       readiness={readiness}
       hierarchy={configHierarchy}
       selectedRowId={selectedRowId}
       rowActivation={handleActivate}
       searchAccessor={(r) => r.searchText}
-      viewOptions={{ tree: treeOptions }}
+      viewOptions={{ table: tableOptions }}
     />
   );
 }

@@ -105,6 +105,30 @@ the `--selected` tier on the selected one (`text-selected-foreground`,
 publishing `--scrim` and `--row-meta` like `Row` / `TreeRowChrome`). Both looks
 live in one `ROW_LOOK` table in `data-table.tsx`.
 
+An outline row takes the tree row's geometry, so a nested outline table reads
+as a `TreeList`: `min-h-tree-row`, `py-xs`, `text-body`, and the pill sits ON
+the rail — the rail is the row's margin, its content padded `--space-xs` inside
+the pill (`OUTLINE_INSET`; nested, only its trailing edge — the tree head pays
+the lead inset inside its indent, as `TreeRowChrome` does), where a grid row
+pays the rail as padding. Its
+revealed action cluster overlays the row's trailing edge (`RowActions`' default
+pin, masked by the row's `--scrim`) instead of reserving a track, as a tree
+row's does — a sidebar's labels keep that width. A persistent cluster still
+takes the track. A decoration may state a row's revealed actions itself
+(`DataTableRowDecoration.actions`, in place of `rowActions(row)`); `null` mounts
+no cluster on that row — a nested row with nothing to offer costs no hover
+cluster (and no mount-time swap of one, which on a windowed list that remounts
+rows read as a render loop).
+
+**An outline with its labels** (`header: true`): the column-header row a file
+listing wants over tree rows. It takes the outline rows' inset and a tree row's
+height, in the muted caption the tree's aligned columns wore (an arrow only on
+the sorted column), a breath under its rule; every column after the first reads
+as meta (`text-caption text-row-meta`). Its columns give way by `dropOrder` in a
+narrow box (`useColumnFit`'s `drop` mode) — it never scrolls sideways. Nested,
+`tree.headerLeading` puts the first label over the rows' labels (a depth-0
+row's lead inset and disclosure slot).
+
 ## Nesting rows (`tree`)
 
 `DataTable` never builds a tree. A caller whose rows nest flattens them itself
@@ -116,6 +140,11 @@ live in one `ROW_LOOK` table in `data-table.tsx`.
 - **`fullSpan(row)`** draws a line as ONE `col-span-full` band instead of cells
   (a lazy placeholder child) — no decoration hook, no actions, no checkbox;
   `null` → an ordinary row. Windowed, the band is still measured.
+- **`pillIndent(row)`** — in `outline`, how far the row's pill starts past
+  the rail (a CSS length: the tree's per-depth `--tree-pill-indent`, which the
+  Pages theme sets). The row's own start margin carries it, so the fill steps
+  in with the depth as a `TreeRowChrome`'s does; the `leading` head then pays
+  only the content's share of its indent.
 - **`containerRef` / `onKeyDown`** — the keyboard host (`useTreeKeyboard`), on
   the grid, which takes `role="treegrid"` (its cells `role="gridcell"`).
 
@@ -126,7 +155,10 @@ about a nested row — its drag source and droppables, its gestures, its
 `data-tree-*` / ARIA attributes, its drop zones — arrives through
 `useRowDecoration`, the seam a flat table's drag reorder uses; a decoration's
 `props` are spread last, so they replace the row's own `onClick` / `tabIndex`
-when the caller passes no `rowActivation`. Absent `tree`, nothing changes.
+when the caller passes no `rowActivation`. Its `provide` wraps everything inside
+the row (cells, action clusters, overlay) in a context of the caller's — the
+nested table publishes the tree row's controls there. It must add no DOM.
+Absent `tree`, nothing changes.
 
 ## Checkbox multi-select (`selection`)
 

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 
 /**
  * The leading slot of an icon-bearing tree row: the row's identity icon plus
@@ -65,3 +66,22 @@ export interface LazyChildren<TRow> {
    *  the tree re-asks only after the state has left `unloaded` and returned. */
   load: (row: TRow) => void;
 }
+
+/** One entry of a tree row's `⋯` menu. */
+export type RowMenuItem = {
+  icon?: IconRef;
+  label: string;
+  onClick: () => void;
+};
+
+/**
+ * What a row-menu builder may call on the row it builds for: insert a sibling
+ * right below it, or a child under it (each opens the row first when needed
+ * and focuses what it made). Data, so a view's options type (in `core`) can
+ * name it — the tree view and the nested table hand the same builder the same
+ * helpers.
+ */
+export type RowMenuHelpers = {
+  addBelow: () => Promise<void>;
+  addChild: () => Promise<void>;
+};

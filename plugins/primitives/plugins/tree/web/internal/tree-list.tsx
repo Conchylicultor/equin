@@ -1,6 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
-import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import { RankReorderDndContext } from "@plugins/primitives/plugins/rank-reorder/web";
 import type { FlatTreeLine, TreeNode } from "../../core";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
@@ -9,20 +7,16 @@ import {
   SelectionBar,
 } from "@plugins/primitives/plugins/multi-select/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import { useRowFold } from "@plugins/primitives/plugins/virtual-rows/plugins/row-fold/web";
 import { KeepScrollAcross } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { TreeListProvider, TreeRowSlot } from "./use-tree-row";
 import { useFlatExpandAll } from "./use-flat-expand-all";
 import { TreeChildPlaceholder } from "./tree-child-placeholder";
+import { TreeRootAdd, TreeToolbar } from "./tree-toolbar";
 import { useTreeKeyboard } from "./use-tree-keyboard";
 import { useTreeModel, type TreeModelArgs } from "./use-tree-model";
 import type { TreeItem } from "./types";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const addIcon = symbol("add");
 
 /** Above this many *visible* (expanded) rows the tree windows its rows via
  * VirtualRows. Below it the same flat lines are drawn whole. Mirrors the list
@@ -167,15 +161,9 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
                 onKeyDown={keyboard.onKeyDown}
               >
                 {hasToolbar && (
-                  // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the sticky toolbar from the tree rows below (no named margin utility)
-                  <Sticky mask className="mb-1">
-                    <Stack
-                      direction="row"
-                      gap="xs"
-                      align="center"
-                      justify="between"
-                    >
-                      <Stack direction="row" gap="xs" align="center">
+                  <TreeToolbar
+                    start={
+                      <>
                         {showSearchInput && (
                           <SearchInput
                             value={searchQuery}
@@ -191,17 +179,14 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
                           />
                         )}
                         {toolbar.start}
-                      </Stack>
-                      <Stack direction="row" gap="xs" align="center">
-                        {showExpandAll && (
-                          <ExpandAllButton
-                            allExpanded={allExpanded}
-                            onToggle={expandAll}
-                          />
-                        )}
-                      </Stack>
-                    </Stack>
-                  </Sticky>
+                      </>
+                    }
+                    expandAll={
+                      showExpandAll
+                        ? { allExpanded, onToggle: expandAll }
+                        : undefined
+                    }
+                  />
                 )}
                 {multiSelect && <SelectionBar actions={multiSelect.actions} />}
                 {/* The rows are `flat` in both modes — one list, so a toggle
@@ -237,15 +222,10 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
                   />
                 )}
                 {showRootAdd && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => void model.createAtRoot(null)}
-                    // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the root Add button from the tree rows above (no named margin utility)
-                    className="text-muted-foreground mt-1 w-fit"
-                  >
-                    <Icon icon={addIcon} className="size-4" />
-                    {addLabel}
-                  </Button>
+                  <TreeRootAdd
+                    label={addLabel}
+                    onAdd={() => void model.createAtRoot(null)}
+                  />
                 )}
               </Stack>
             </KeepScrollAcross>

@@ -8,7 +8,6 @@ import {
   type FieldDef,
   type HierarchyConfig,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Explorer } from "../slots";
 import {
@@ -90,25 +89,23 @@ export function PluginTree({
     [],
   );
 
-  const treeOptions = useMemo<TreeViewOptions<ExplorerRow>>(
+  // Every view is a table; the Tree view is the outline one, and its config
+  // row (not this code) opens the whole tree on first paint and offers
+  // expand-all (`defaultExpanded` / `expandAll`) — the grid Table views stay
+  // collapsed. These code-only options draw on every view.
+  const tableOptions = useMemo(
     () => ({
-      expandAll: true,
-      // The whole tree is expanded on first paint, matching the pre-DataView
-      // behavior. Strictly better than the seed it replaces: that was a lazy
-      // `useState` initializer that never re-seeded, so any node arriving after
-      // the first mount stayed collapsed.
-      defaultExpanded: true,
       // Both slots render a GROUP of contributions with no container of their
       // own — wrap each in a non-wrapping <Inline> so the accents / badges stay a
       // single-line cluster (the group-wrap axis, owned by container choice).
-      rowAccent: (node) => (
+      rowAccent: (node: ExplorerRow) => (
         <Inline gap="2xs">
           <Explorer.TreeRowAccent.Render>
             {(item) => <item.component node={node} />}
           </Explorer.TreeRowAccent.Render>
         </Inline>
       ),
-      trailing: (node) => (
+      trailing: (node: ExplorerRow) => (
         <Inline gap="2xs">
           <Explorer.TreeRowBadge.Render>
             {(item) => <item.component node={node} />}
@@ -124,14 +121,14 @@ export function PluginTree({
       rows={rows}
       fields={fields}
       rowKey={(r) => r.id}
-      views={["tree", "table"]}
+      views={["table"]}
       defaultView="tree"
       storageKey={storageKey}
       hierarchy={hierarchy}
       selectedRowId={selected ?? undefined}
       rowActivation={(r) => linkTo(r.id)}
       searchAccessor={(r) => r.searchText}
-      viewOptions={{ tree: treeOptions }}
+      viewOptions={{ table: tableOptions }}
     />
   );
 }

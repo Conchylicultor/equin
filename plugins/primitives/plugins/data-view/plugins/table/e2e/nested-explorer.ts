@@ -77,8 +77,12 @@ await withBrowser(async (h) => {
     marker: "[data-view-type='table']",
     settleMs: 800,
   });
-  // The explorer's first table-type instance is its "Table" view.
-  await page.locator("[data-view-type='table']").first().click();
+  // The explorer's "Table" view (its "Tree" view is an outline table too, so
+  // the chip is picked by name, not type).
+  await page
+    .locator("[data-view-type='table']", { hasText: "Table" })
+    .first()
+    .click();
   await page
     .locator("[role='treegrid'] [data-tree-row]")
     .first()

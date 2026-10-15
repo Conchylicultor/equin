@@ -1,19 +1,19 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import {
-  useResolveCellEditor,
-  type FieldDef,
-} from "@plugins/primitives/plugins/data-view/web";
 import type { TreeNode } from "@plugins/primitives/plugins/tree/core";
 import {
+  useRowControls,
   useTreeListContext,
-  useTreeRow,
   type TreeItem,
 } from "@plugins/primitives/plugins/tree/web";
+import type { FieldDef } from "../../core";
+import { useResolveCellEditor } from "../cell-editor-slot";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 /**
- * The tree's editable primary-field label. Reuses the shared
+ * The editable primary-field label of a tree row — the tree view's
+ * (`RowChrome`) and the nested table's first column alike: both publish the
+ * row's controls, which it reads (`useRowControls`). Reuses the shared
  * `useResolveCellEditor()` capability (the same per-type editors the table
  * uses) instead of the table's click-to-edit `EditableCell`, because the tree
  * label doubles as the navigation target: it must keep **select-then-edit**
@@ -32,7 +32,7 @@ export function EditableTreeLabel<TNode extends TreeItem>(props: {
 }): ReactNode {
   const { node, row, field, read, className } = props;
   const resolveEditor = useResolveCellEditor();
-  const { shouldAutoFocus, consumeAutoFocus } = useTreeRow(node);
+  const { shouldAutoFocus, consumeAutoFocus } = useRowControls();
   const ctx = useTreeListContext();
   const [editing, setEditing] = useState(false);
   const editingRef = useLatestRef(editing);

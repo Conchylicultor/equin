@@ -1,4 +1,7 @@
-import type { ConfigDescriptor } from "@plugins/config_v2/core";
+import type {
+  ConfigDescriptor,
+  ConfigMigration,
+} from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { viewsDescriptor } from "../../shared";
 
@@ -18,17 +21,19 @@ import { viewsDescriptor } from "../../shared";
  * `extraFields` is an opaque consumer-owned set of sibling config fields (e.g.
  * data-view's `sortPresets`) threaded into every per-id descriptor — view-core
  * never names them. Pass one stable module-constant per runtime so the per-id
- * cache identity holds.
+ * cache identity holds. `migrations` likewise: the consumer's rewrites of its
+ * saved rows, opaque here.
  */
 export function buildViewDescriptors(
   ids: string[],
   extraFields?: FieldsRecord,
+  migrations?: readonly ConfigMigration[],
 ): {
   map: Map<string, ConfigDescriptor>;
   entries: Array<{ id: string; descriptor: ConfigDescriptor }>;
 } {
   const map = new Map<string, ConfigDescriptor>(
-    ids.map((id) => [id, viewsDescriptor(id, extraFields)]),
+    ids.map((id) => [id, viewsDescriptor(id, extraFields, migrations)]),
   );
   const entries = ids.map((id) => ({ id, descriptor: map.get(id)! }));
   return { map, entries };

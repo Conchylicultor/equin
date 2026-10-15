@@ -9,7 +9,8 @@
       // Each sub-agent under the one that spawned it; siblings in launch order,
       // which is how the band reads: the agent started first is at the top.
       "view": {
-        "type": "tree",
+        "type": "table",
+        "presentation": "outline",
         "sort": [],
         "visibleFields": ["description", "type", "tokens", "started"]
       }

@@ -1,5 +1,8 @@
 import { defineConfig } from "@plugins/config_v2/core";
-import type { ConfigDescriptor } from "@plugins/config_v2/core";
+import type {
+  ConfigDescriptor,
+  ConfigMigration,
+} from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
@@ -46,6 +49,7 @@ const cache = new Map<string, ConfigDescriptor>();
 export function viewsDescriptor(
   id: string,
   extraFields?: FieldsRecord,
+  migrations?: readonly ConfigMigration[],
 ): ConfigDescriptor {
   let descriptor = cache.get(id);
   if (!descriptor) {
@@ -56,6 +60,10 @@ export function viewsDescriptor(
       // consumer's plugin) so `useConfig` never throws.
       name: id,
       scope: "app",
+      // Consumer-owned rewrites of the saved rows (opaque here, like
+      // `extraFields`): a stable module-constant per runtime, for the same
+      // cache reason.
+      migrations,
       source: "view",
       // Config is the SINGLE SOURCE OF TRUTH for a surface's views — there is no
       // code synthesis of default view-instances, so a DataView whose config has

@@ -55,10 +55,17 @@ import type { Hook } from "@plugins/framework/plugins/hook-value/core";
  *  on each label cell when the labels ride the first group's header. */
 const HEADER_TEXT_CLASS =
   "text-3xs font-medium uppercase tracking-wider text-muted-foreground";
+/** An outline's header: the muted caption over tree rows (the tree view's
+ *  aligned-columns header), a tree row tall, its rule under it. */
+const OUTLINE_HEADER_CLASS =
+  "min-h-tree-row text-caption-compact font-medium text-faint-foreground";
 
 const arrowDownwardIcon = symbol("arrow-downward");
 const arrowUpwardIcon = symbol("arrow-upward");
 const unfoldMoreIcon = symbol("unfold-more");
+
+/** A decoration without `provide`: the row's content as is. */
+const identity = (content: ReactNode): ReactNode => content;
 
 /** No-op decoration hook so `DataTableRow` always calls a hook unconditionally
  *  (rules-of-hooks), whether or not the consumer supplied `useRowDecoration`. */
@@ -116,7 +123,7 @@ const ROW_LOOK: Record<
   // The hover tint applies only to a row that is not selected, so a selected
   // row does not hover to a different tone.
   outline: {
-    base: "col-span-full grid grid-cols-subgrid items-center rounded-md text-caption",
+    base: "col-span-full grid grid-cols-subgrid items-center rounded-md min-h-tree-row text-body",
     hover: "hover:bg-accent hover:[--scrim:var(--accent)]",
     selected:
       "bg-selected text-selected-foreground [--scrim:var(--selected)] [--row-meta:var(--selected-meta-foreground)]",
@@ -131,6 +138,24 @@ const ROW_HIGHLIGHT: Record<DataTablePresentation, string> = {
 /** The inline inset every subgrid row takes (`rail-follow`'s start side). */
 const RAIL_START =
   "var(--rail-owed-start, var(--rail-start, var(--chrome-pad-x)))";
+const RAIL_END = "var(--rail-owed-end, var(--rail-end, var(--chrome-pad-x)))";
+/**
+ * An outline row is the tree row's pill ON the rail: the rail is its margin
+ * (the pill starts where a `rail-follow` band's content does), and the pill
+ * pads its own content by the tree row's inset — so its label sits where a
+ * `TreeList` row's does.
+ */
+const OUTLINE_INSET: CSSProperties = {
+  marginInline: `${RAIL_START} ${RAIL_END}`,
+  paddingInline: "var(--space-xs)",
+};
+/** A nested outline row: its tree head pays the lead inset itself (the tree
+ *  row's `--tree-row-pad-start`, inside its indent), so the pill pads only its
+ *  trailing edge. */
+const OUTLINE_INSET_NESTED: CSSProperties = {
+  ...OUTLINE_INSET,
+  paddingInline: "0 var(--space-xs)",
+};
 /**
  * The sticky first cell reaches over its row's rail inset on the left and over
  * the column gap on the right (negative margin, paid back as padding), so
@@ -204,6 +229,7 @@ export function DataTable<TRow>({
   columnHeader = "row",
   density = "comfortable",
   presentation = "grid",
+  header,
   tree,
   selection,
 }: DataTableProps<TRow>) {
@@ -214,7 +240,11 @@ export function DataTable<TRow>({
   // table in a card or a popover, keeps squeezing into its box: no pinned
   // column, nothing dropped.
   const sideways = useSidewaysScroll();
-  const hasActionsTrack = !!rowActions || !!rowPersistentActions;
+  // An outline's revealed cluster overlays its row's trailing edge (the tree
+  // row's), so it reserves no track: a sidebar's labels keep the width a hidden
+  // cluster would take. A persistent cluster is painted at rest and needs room.
+  const hasActionsTrack =
+    !!rowPersistentActions || (!!rowActions && presentation === "grid");
   // Destructured: render never reads a member off the hook output (the refs
   // rule flags member access on a value carrying refs).
   const {
@@ -225,7 +255,16 @@ export function DataTable<TRow>({
     containerRef: fitContainerRef,
     gridRef: fitGridRef,
   } = useColumnFit(columns, {
-    enabled: presentation === "grid" && sideways,
+    // A grid table in a sideways-scroll region goes wide; an outline with its
+    // labels drops columns in its box; anything else squeezes.
+    mode:
+      presentation === "grid"
+        ? sideways
+          ? "wide"
+          : "none"
+        : header
+          ? "drop"
+          : "none",
     nested: !!tree,
     hasActionsTrack,
   });
@@ -325,9 +364,11 @@ export function DataTable<TRow>({
   const leadSpan = firstLabelled === -1 ? shownColumns.length : firstLabelled;
   // An outline has no column labels at all — neither a header row nor labels
   // on the first group.
-  const showHeader = presentation === "grid";
+  const showHeader = header ?? presentation === "grid";
+  const outlineHeader = showHeader && presentation === "outline";
   const labelsOnFirstGroup =
     showHeader &&
+    !outlineHeader &&
     columnHeader === "first-group" &&
     !!groups &&
     groups.length > 0 &&
@@ -340,10 +381,11 @@ export function DataTable<TRow>({
       // The fit measures a content-sized column's minimum on its label,
       // which never wraps — so the label is also the narrowest an `auto` track
       // gets. An inline box, so its width is the label's.
+      // An outline's header shows the arrow on the sorted column only.
       const label = (
         <span data-column-id={col.id}>
           {col.header}
-          {sortable && (
+          {sortable && (active || !outlineHeader) && (
             <SortIcon
               active={active}
               direction={active ? sortState!.direction : null}
@@ -351,6 +393,10 @@ export function DataTable<TRow>({
           )}
         </span>
       );
+      const lead =
+        c === 0 && outlineHeader && tree?.headerLeading
+          ? tree.headerLeading(label)
+          : label;
       const cellProps = {
         className: cn(
           cellClassName,
@@ -383,7 +429,7 @@ export function DataTable<TRow>({
           {...cellProps}
           style={pinLead ? NOWRAP : undefined}
         >
-          {label}
+          {lead}
         </Text>
       );
     });
@@ -458,6 +504,7 @@ export function DataTable<TRow>({
         tree={tree}
         selectable={!!selection}
         pinLead={pinLead}
+        metaColumns={outlineHeader}
       />
     );
   };
@@ -538,15 +585,26 @@ export function DataTable<TRow>({
               // eslint-disable-next-line layout/no-adhoc-layout -- sticky header is itself a full-span subgrid row inheriting the host's column tracks
               className={cn(
                 "col-span-full grid grid-cols-subgrid border-b",
-                HEADER_TEXT_CLASS,
                 // Every subgrid row — this header, each data row, each group header —
                 // takes its inline padding from the ambient rail and its block padding
                 // from the row density token. Column alignment holds because they all
                 // read the SAME rail, which is what made the old fixed padding work.
-                rowPad,
-                "rail-follow",
+                // An outline's header takes its rows' inset instead (the pill
+                // on the rail), so its labels sit over theirs.
+                outlineHeader
+                  ? [OUTLINE_HEADER_CLASS, "items-center"]
+                  : [HEADER_TEXT_CLASS, rowPad, "rail-follow"],
               )}
-              style={{ top: stickyHeaderOffset }}
+              style={{
+                top: stickyHeaderOffset,
+                ...(outlineHeader
+                  ? {
+                      ...(tree ? OUTLINE_INSET_NESTED : OUTLINE_INSET),
+                      // A breath under the rule before the first row.
+                      marginBottom: "var(--space-xs)",
+                    }
+                  : undefined),
+              }}
             >
               {headerCells()}
               {hasActionsTrack && <span aria-hidden />}
@@ -649,6 +707,7 @@ function DataTableRow<TRow>({
   tree,
   selectable,
   pinLead,
+  metaColumns,
 }: {
   row: TRow;
   index: number;
@@ -673,6 +732,8 @@ function DataTableRow<TRow>({
   selectable: boolean;
   /** Pin the first cell to the scroller's left edge (grid presentation). */
   pinLead: boolean;
+  /** Draw every column after the first as meta (a labelled outline). */
+  metaColumns: boolean;
 }): ReactNode {
   const decoration = useRowDecoration(row, index);
   // A row whose activation is a link reads the link gestures: ⌘/middle-click
@@ -689,6 +750,13 @@ function DataTableRow<TRow>({
   const decorationStyle = decoration?.style;
   const decorationOverlay = decoration?.overlay;
   const decorationHighlighted = decoration?.highlighted;
+  const decorationProvide = decoration?.provide;
+  // The revealed cluster's content: the decoration's, when it states one.
+  const revealedActions =
+    decoration && "actions" in decoration
+      ? decoration.actions
+      : rowActions?.(row, index);
+  const outline = presentation === "outline";
   // A decorated row in a windowed body is BOTH a drag source and a measurement
   // target, so the two refs compose (they were mutually exclusive back when
   // decoration disabled virtualization).
@@ -708,8 +776,9 @@ function DataTableRow<TRow>({
         look.base,
         !selected && look.hover,
         // Same rail as the column header and the group headers — see there.
-        rowPad,
-        "rail-follow",
+        // An outline row is the tree row's pill instead: its block padding
+        // is the tree row's, its rail a margin (`OUTLINE_INSET`).
+        outline ? "py-xs" : [rowPad, "rail-follow"],
         // Reveals the trailing RowActions cluster; its bundled `relative` also
         // hosts the decoration overlay (a positioned row with `z-index: auto`
         // lays out and stacks identically, so it is inert on plain rows).
@@ -719,7 +788,19 @@ function DataTableRow<TRow>({
         (rowActivation || onRowOpen) && "cursor-pointer",
         decorationClassName,
       )}
-      style={decorationStyle}
+      style={
+        outline
+          ? {
+              ...(tree ? OUTLINE_INSET_NESTED : OUTLINE_INSET),
+              ...(tree?.pillIndent
+                ? {
+                    marginLeft: `calc(${RAIL_START} + ${tree.pillIndent(row)})`,
+                  }
+                : undefined),
+              ...decorationStyle,
+            }
+          : decorationStyle
+      }
       onClick={
         gestures.onClick
           ? (e) => {
@@ -758,7 +839,9 @@ function DataTableRow<TRow>({
       }
       {...decorationProps}
     >
-      {/* A cell is a `<Text as="div">`, so wrapping the row's cells in a
+      {(decorationProvide ?? identity)(
+        <>
+          {/* A cell is a `<Text as="div">`, so wrapping the row's cells in a
           SingleLine context makes each one pick up Text's sanctioned
           `block w-fit max-w-full min-w-0 truncate` leaf recipe (the single home
           of `min-w-0`). As a grid item the cell is blockified and content-sized
@@ -767,51 +850,62 @@ function DataTableRow<TRow>({
           `ColumnDef.width` documents), while `alignClass` still positions the
           content. Scoped to the cells only — the trailing rowActions cluster
           keeps its own flow layout. */}
-      <SingleLineProvider value={true}>
-        {columns.map((col, c) => {
-          const cell = (
-            <AlignedCell
-              key={col.id}
-              align={col.align}
-              role={tree ? "gridcell" : undefined}
-            >
-              {col.cell
-                ? col.cell(row)
-                : col.value
-                  ? String(col.value(row) ?? "")
-                  : null}
-            </AlignedCell>
-          );
-          if (c > 0) return cell;
-          // The first cell carries the row's head: the checkbox ahead of it,
-          // and — when the rows nest — the tree head around both.
-          const head = selectable ? (
-            <Stack key={col.id} direction="row" gap="xs" align="center">
-              <SelectionToggle id={key} />
-              {cell}
-            </Stack>
-          ) : (
-            cell
-          );
-          const lead = tree ? tree.leading(row, head) : head;
-          return pinLead ? (
-            <Sticky
-              key={col.id}
-              as="div"
-              edge="left"
-              layer="base"
-              // eslint-disable-next-line layout/no-adhoc-layout -- the pinned first grid cell must shrink to its track so its label truncates
-              className="min-w-0"
-              style={tree ? NESTED_LEAD_CELL : LEAD_CELL}
-            >
-              {lead}
-            </Sticky>
-          ) : (
-            <Fragment key={col.id}>{lead}</Fragment>
-          );
-        })}
-      </SingleLineProvider>
-      {/* `pin={null}`: the cluster stays IN FLOW, in the reserved trailing
+          <SingleLineProvider value={true}>
+            {columns.map((col, c) => {
+              const cell = (
+                <AlignedCell
+                  key={col.id}
+                  align={col.align}
+                  role={tree ? "gridcell" : undefined}
+                  meta={metaColumns && c > 0}
+                >
+                  {col.cell
+                    ? col.cell(row)
+                    : col.value
+                      ? String(col.value(row) ?? "")
+                      : null}
+                </AlignedCell>
+              );
+              if (c > 0) return cell;
+              // The first cell carries the row's head: the checkbox ahead of it,
+              // and — when the rows nest — the tree head around both.
+              const head = selectable ? (
+                <Stack
+                  key={col.id}
+                  direction="row"
+                  gap="xs"
+                  align="center"
+                  // A flex item of the tree head: it must shrink with the
+                  // track so the cell inside truncates instead of spilling
+                  // over the next column.
+                  // eslint-disable-next-line layout/no-adhoc-layout -- shrinkable box around the checkbox and the truncating first cell
+                  className="min-w-0"
+                >
+                  <SelectionToggle id={key} />
+                  {cell}
+                </Stack>
+              ) : (
+                cell
+              );
+              const lead = tree ? tree.leading(row, head) : head;
+              return pinLead ? (
+                <Sticky
+                  key={col.id}
+                  as="div"
+                  edge="left"
+                  layer="base"
+                  // eslint-disable-next-line layout/no-adhoc-layout -- the pinned first grid cell must shrink to its track so its label truncates
+                  className="min-w-0"
+                  style={tree ? NESTED_LEAD_CELL : LEAD_CELL}
+                >
+                  {lead}
+                </Sticky>
+              ) : (
+                <Fragment key={col.id}>{lead}</Fragment>
+              );
+            })}
+          </SingleLineProvider>
+          {/* `pin={null}`: the cluster stays IN FLOW, in the reserved trailing
           `auto` track. A table column is genuine flow — an overlaying cluster
           would cover the last column's data — and the track is content-sized,
           so the anchor is stable without pinning. The track is as wide as the
@@ -822,24 +916,32 @@ function DataTableRow<TRow>({
           first, hover-revealed at the trailing edge). They cannot be two direct
           children: a subgrid row has no implicit tracks, so the second would be
           clamped into the last track and paint on top of the first. */}
-      <CompactActionsCell compact={rowPad === "py-row-compact"}>
-        {rowPersistentActions ? (
-          <Stack direction="row" gap="none" align="center" justify="end">
-            <RowActions pin={null} alwaysVisible>
-              {rowPersistentActions(row, index)}
-            </RowActions>
-            {rowActions ? (
-              <RowActions pin={null}>{rowActions(row, index)}</RowActions>
+          {outline && revealedActions != null ? (
+            // An outline's revealed cluster overlays the row's trailing edge, as
+            // a tree row's does (pinned, masked by the row's tint) — no track.
+            // A row with no actions mounts no cluster at all.
+            <RowActions>{revealedActions}</RowActions>
+          ) : null}
+          <CompactActionsCell compact={rowPad === "py-row-compact"}>
+            {rowPersistentActions ? (
+              <Stack direction="row" gap="none" align="center" justify="end">
+                <RowActions pin={null} alwaysVisible>
+                  {rowPersistentActions(row, index)}
+                </RowActions>
+                {rowActions && !outline ? (
+                  <RowActions pin={null}>{revealedActions}</RowActions>
+                ) : null}
+              </Stack>
+            ) : rowActions && !outline ? (
+              // eslint-disable-next-line layout/no-adhoc-layout -- placement class for the reserved actions track; RowActions owns everything else about the cluster
+              <RowActions pin={null} className="justify-end">
+                {revealedActions}
+              </RowActions>
             ) : null}
-          </Stack>
-        ) : rowActions ? (
-          // eslint-disable-next-line layout/no-adhoc-layout -- placement class for the reserved actions track; RowActions owns everything else about the cluster
-          <RowActions pin={null} className="justify-end">
-            {rowActions(row, index)}
-          </RowActions>
-        ) : null}
-      </CompactActionsCell>
-      {decorationOverlay}
+          </CompactActionsCell>
+          {decorationOverlay}
+        </>,
+      )}
     </div>
   );
 }
@@ -1191,15 +1293,24 @@ function alignClass(align: ColumnDef<unknown>["align"]): string | undefined {
 function AlignedCell({
   align,
   role,
+  meta = false,
   children,
 }: {
   align: ColumnDef<unknown>["align"];
   /** `gridcell` inside a treegrid; absent in a flat table. */
   role?: "gridcell";
+  /** A secondary column of a labelled outline: the row's meta caption
+   *  (muted, or the selected row's meta colour), as the tree's aligned
+   *  columns wore. */
+  meta?: boolean;
   children: ReactNode;
 }) {
   const cell = (
-    <Text as="div" role={role} className={alignClass(align)}>
+    <Text
+      as="div"
+      role={role}
+      className={cn(alignClass(align), meta && "text-caption text-row-meta")}
+    >
       {children}
     </Text>
   );

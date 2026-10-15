@@ -41,9 +41,10 @@ one `TreeList` per group section.
   column and a tree row, *and* a consumer whose rows are a heterogeneous union can
   render one kind's label as a whole component (e.g. a conversation row) via
   `field.cell`. When the primary field declares `onEdit`/`onEditValues` the label
-  becomes an `EditableTreeLabel` (select-then-edit over the shared
-  `useResolveCellEditor` capability, the same per-type editors the table uses)
-  wrapping that same read node; otherwise it stays a read-only cell.
+  becomes an `EditableTreeLabel` (data-view's web barrel, shared with the
+  nested table: select-then-edit over the shared `useResolveCellEditor`
+  capability, the same per-type editors the table uses) wrapping that same read
+  node; otherwise it stays a read-only cell.
 - **Secondary fields** — the body is no longer label-only. The row renders the
   primary field as the label **plus** the remaining visible fields (the view's
   `visibleFields` minus the primary; **default = all non-primary fields**) as
@@ -266,19 +267,17 @@ CLAUDE.md ("Row tone").
 - Description: Tree view child for the data-view primitive: adapts the shared field schema + hierarchy config onto the tree primitive (buildTree, TreeList, RowChrome, RenameInput).
 - Web:
   - Contributes: `DataViewSlots.View` "Tree" → `TreeView`
-  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×22
-    - `primitives/tree` ×9
-    - `primitives/css/ui-kit` ×2
-    - `primitives/collapsible.ExpandAllButton`
+  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×23
+    - `primitives/tree` ×8
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
+    - `primitives/css/ui-kit.cn`
     - `primitives/dom/element-size.useResizeObserver`
-    - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
     - `ui/icons.Icon`
   - Exports (types): `TreeViewOptions`

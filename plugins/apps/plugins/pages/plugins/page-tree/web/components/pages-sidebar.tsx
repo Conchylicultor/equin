@@ -164,7 +164,7 @@ export function PagesSidebar() {
     const activeLabel = (b: PageRow) =>
       b.id === selectedId ? ACTIVE_LABEL : undefined;
     return {
-      tree: {
+      table: {
         leadingIcon: (b: PageRow) => (
           <PageIcon icon={pageData(b).icon} className="size-4" />
         ),
@@ -250,7 +250,7 @@ export function PagesSidebar() {
           collection={pagesTree}
           extraFields={SIDEBAR_EXTRA_FIELDS}
           rowKey={(b) => b.id}
-          views={["tree", "list"]}
+          views={["table", "list"]}
           storageKey={PAGES_SIDEBAR_VIEW}
           toolbar={SECTIONS}
           searchPlaceholder="Search pages…"

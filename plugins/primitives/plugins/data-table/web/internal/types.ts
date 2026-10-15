@@ -134,6 +134,19 @@ export interface DataTableTree<TRow> {
   containerRef?: RefCallback<HTMLElement>;
   /** The keyboard host's key handler, on the grid (rows are its targets). */
   onKeyDown?: (e: KeyboardEvent<HTMLElement>) => void;
+  /**
+   * Wraps the first column's header label in a depth-0 row's head geometry
+   * (its lead inset and disclosure slot), so the label sits over the rows'
+   * labels. Absent → at the cell's start.
+   */
+  headerLeading?: (label: ReactNode) => ReactNode;
+  /**
+   * How far this row's pill starts past the rail (a CSS length), in `outline`
+   * presentation: a tree whose rows' fills step in with their depth (the
+   * tree's `--tree-pill-indent`). The `leading` head then pays only the rest
+   * of its indent. Ignored in `grid` (a ruled row has no pill to move).
+   */
+  pillIndent?: (row: TRow) => string;
 }
 
 /**
@@ -248,6 +261,17 @@ export interface DataTableProps<TRow> {
   /** How the table looks — see {@link DataTablePresentation}. Default `"grid"`. */
   presentation?: DataTablePresentation;
   /**
+   * Draw the column-header row. Default: yes in `grid`, no in `outline` (a
+   * sidebar's look). An outline that keeps its column labels — a file
+   * listing's Name / Modified / Size over tree rows — passes `true`: its
+   * header then takes the outline rows' inset and geometry, in the muted
+   * caption the tree's aligned columns wore (an arrow only on the sorted
+   * column), and its columns give way by `dropOrder` when the box is narrow
+   * (it never scrolls sideways).
+   */
+  header?: boolean;
+
+  /**
    * Rows that nest — see {@link DataTableTree}. Present → `data` (or each
    * group's `rows`) is the flattened visible tree, drawn in the order given, and
    * the grid is a `treegrid`. Absent → a flat table, unchanged.
@@ -276,4 +300,19 @@ export interface DataTableRowDecoration {
    * presentation's own selected tint, which the sticky first cell follows.
    */
   highlighted?: boolean;
+  /**
+   * Wraps everything drawn INSIDE the row — its cells, its action clusters, its
+   * overlay — so they render under a context the row provides (a nested row's
+   * tree controls, read by `useOptionalRowControls` in a cell or an action).
+   * Must add no DOM: the row's children are its subgrid's grid items.
+   */
+  provide?: (content: ReactNode) => ReactNode;
+  /**
+   * This row's revealed actions, in place of `rowActions(row)`, when the
+   * decoration knows them better (a nested row's, computed from its tree
+   * controls). `null` → the row has none, and no cluster is mounted for it
+   * (an outline row, whose cluster is a pinned overlay, then costs nothing).
+   * Absent → `rowActions(row)`.
+   */
+  actions?: ReactNode;
 }

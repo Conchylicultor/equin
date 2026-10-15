@@ -1,4 +1,9 @@
 import type { ReactNode } from "react";
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import type {
+  RowMenuHelpers,
+  RowMenuItem,
+} from "@plugins/primitives/plugins/tree/core";
 
 /**
  * Per-view options for the table view, passed via
@@ -27,6 +32,14 @@ export interface TableViewOptions<TRow = unknown> {
    * `data-table`'s `DataTablePresentation`.
    */
   presentation?: "grid" | "outline";
+  /**
+   * Draw the column-header row. Default: `grid` yes, `outline` no. An outline
+   * that keeps its column labels over tree rows (a file listing's Name /
+   * Modified / Size — the tree view's `columns: "aligned"`) passes `true`; its
+   * columns then give way by `FieldDef.dropOrder` in a narrow box. See
+   * `data-table`'s `DataTableProps.header`.
+   */
+  header?: boolean;
 
   // --- Nesting (a hierarchical source only) ---
 
@@ -59,4 +72,32 @@ export interface TableViewOptions<TRow = unknown> {
   leadingIcon?: (row: TRow) => ReactNode;
   /** The floating chip's content while a row is dragged. Default: its label. */
   dragOverlay?: (row: TRow) => ReactNode;
+  /**
+   * Persistent content right after the first cell's label (a status badge, a
+   * count) — at rest, unlike `itemActions`, which reveal on hover.
+   */
+  trailing?: (row: TRow) => ReactNode;
+  /**
+   * A full-row wash over the row (a translucent membership tint), in a
+   * primitive-owned `absolute inset-0` layer that composes with the row's
+   * hover / selected tints.
+   */
+  rowAccent?: (row: TRow) => ReactNode;
+  /** The row's `⋯` menu, in its hover cluster. An alias row has none. */
+  rowMenu?: (helpers: RowMenuHelpers, row: TRow) => RowMenuItem[];
+  /**
+   * A per-row class on the first cell's label (done / dropped strikethrough).
+   * Composed after `DataViewProps.rowTone`, so it wins.
+   */
+  labelClassName?: (row: TRow) => ClassName | undefined;
+  /**
+   * The root "Add" button under the rows (a new top-level row, through
+   * `hierarchy.onCreate`). `null` hides it; absent → "Add" when the hierarchy
+   * can create, else none. Never under `rootId`.
+   */
+  addLabel?: string | null;
+  /** The whole-table expand-all toggle in the toolbar row above the rows. */
+  expandAll?: boolean;
+  /** Content on the left of that toolbar row (a surface's own actions). */
+  toolbarStart?: ReactNode;
 }

@@ -72,6 +72,7 @@ export {
 export { useFieldIdentities } from "./internal/use-field-identities";
 export { EditableCell } from "./components/editable-cell";
 export { FieldCell } from "./components/field-cell";
+export { EditableTreeLabel } from "./components/editable-tree-label";
 export type { FieldCellProps } from "./components/field-cell";
 export { MissingDataCellError, readFallback } from "./components/field-cell";
 export { leadingSlot } from "./components/leading-slot";

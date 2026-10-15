@@ -6,7 +6,7 @@
   // "Load-bearing" filter view is a browsing concern and is deliberately absent
   // here — this surface exists to show one composition's closure, tinted.
   "views": [
-    { "id": "tree", "name": "Tree", "icon": "account-tree", "view": { "type": "tree", "visibleFields": ["name"] } },
+    { "id": "tree", "name": "Tree", "icon": "account-tree", "view": { "type": "table", "presentation": "outline", "visibleFields": ["name"], "defaultExpanded": true, "expandAll": true } },
     { "id": "table", "name": "Table", "icon": "table-rows", "view": { "type": "table" } }
   ]
 }

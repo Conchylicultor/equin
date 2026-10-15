@@ -22,6 +22,8 @@ export type {
 export type { ExpandChange } from "./internal/expand";
 export type {
   LazyChildren,
+  RowMenuHelpers,
+  RowMenuItem,
   TreeChildrenState,
   TreeDisclosureProps,
 } from "./types";

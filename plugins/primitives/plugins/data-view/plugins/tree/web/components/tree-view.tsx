@@ -1,5 +1,6 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 import {
+  EditableTreeLabel,
   FieldCell,
   GroupedSections,
   leadingSlot,
@@ -20,35 +21,26 @@ import {
   type ProjectedRow,
   type RowTone,
 } from "@plugins/primitives/plugins/data-view/web";
-import type {
-  ExpandChange,
-  TreeNode,
-} from "@plugins/primitives/plugins/tree/core";
+import type { TreeNode } from "@plugins/primitives/plugins/tree/core";
 import {
-  flatExpandAll,
+  groupFoldAction,
   RowChrome,
   TreeList,
+  TreeRootAdd,
+  TreeToolbar,
   useFlatExpandAll,
   type RowChromeMenuHelpers,
   type RowMenuItem,
 } from "@plugins/primitives/plugins/tree/web";
-import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import type { TreeViewOptions } from "../internal/types";
-import { EditableTreeLabel } from "./editable-tree-label";
 import { AlignedCells, AlignedHeader, useAlignedFit } from "./aligned-columns";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
-const addIcon = symbol("add");
 const linkIcon = symbol("link");
-const unfoldLessIcon = symbol("unfold-less");
-const unfoldMoreIcon = symbol("unfold-more");
 
 /**
  * Default row: render the primary field through the same `data-view.cell`
@@ -225,53 +217,6 @@ function DefaultRow<TRow>(props: {
       ) : null}
       {aligned ? null : trailingNode}
     </RowChrome>
-  );
-}
-
-/**
- * The fold/unfold-this-group toggle a grouped tree hangs off its section
- * headers, handed to `GroupedSections.headerActions` — which wraps it in the
- * header's hover-revealed cluster, so the button costs the header nothing at
- * rest and cannot collapse the section it sits on.
- *
- * A section-scoped fold is well-defined because a section bucket holds whole
- * subtrees: `bucketRowsByRootSection` files every descendant under its ROOT's
- * section, so folding a group never leaves half a subtree in another one.
- *
- * The gate is `flatExpandAll`'s **pure** form, not the `useFlatExpandAll` hook,
- * which is what lets a section with nothing to fold answer `null` — a hook
- * would have to live in a child component, and a child component that renders
- * nothing still hands `GroupedSections` a non-null element to wrap, leaving an
- * empty cluster that spends the header's `gap` and pulls that section's count
- * off the edge its neighbours line up on.
- *
- * A plain `IconButton`, not `collapsible`'s `ExpandAllButton` — the same call
- * the tree's own per-row fold makes, for the same reason: the surrounding
- * `RowActions` declares the `xs` control density its children derive their box
- * from, whereas `ExpandAllButton`'s compact variant is hand-sized for a toolbar.
- * The two folds are one gesture at two scopes, so they read as one glyph.
- *
- * Deliberately NOT gated on `options.expandAll`. That option names the
- * whole-view TOOLBAR button, and a surface that keeps its chrome minimal by
- * omitting it — a narrow sidebar tree like the Pages sidebar's — is exactly
- * the surface this exists for. Gating on it would reproduce the defect
- * the per-row fold was ungated to avoid: an affordance a new tree has to
- * remember to ask for, which the trees that most need it never do.
- */
-function renderSectionExpandAll(
-  rows: readonly ProjectedRow<unknown>[],
-  setExpanded: (changes: readonly ExpandChange[]) => void,
-): ReactNode {
-  const state = flatExpandAll(rows);
-  if (!state.hasExpandable) return null;
-  const collapse = state.allExpanded;
-  return (
-    <IconButton
-      icon={collapse ? unfoldLessIcon : unfoldMoreIcon}
-      label={collapse ? "Collapse group" : "Expand group"}
-      variant="ghost"
-      onClick={() => setExpanded(state.changes(!collapse))}
-    />
   );
 }
 
@@ -479,22 +424,17 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
       <>
         {showToolbar && (
           <div className="rail-follow">
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the sticky toolbar from the sections below (mirrors TreeList's own toolbar) */}
-            <Sticky mask className="mb-1">
-              <Stack direction="row" gap="xs" align="center" justify="between">
-                <Stack direction="row" gap="xs" align="center">
-                  {options.toolbarStart}
-                </Stack>
-                <Stack direction="row" gap="xs" align="center">
-                  {showExpandAll && (
-                    <ExpandAllButton
-                      allExpanded={viewExpandAll.allExpanded}
-                      onToggle={viewExpandAll.toggle}
-                    />
-                  )}
-                </Stack>
-              </Stack>
-            </Sticky>
+            <TreeToolbar
+              start={options.toolbarStart}
+              expandAll={
+                showExpandAll
+                  ? {
+                      allExpanded: viewExpandAll.allExpanded,
+                      onToggle: viewExpandAll.toggle,
+                    }
+                  : undefined
+              }
+            />
           </div>
         )}
         {columnHeader && <div className="rail-follow">{columnHeader}</div>}
@@ -504,7 +444,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
           setSectionCollapsed={props.setSectionCollapsed}
           headerStyle={props.groupHeaders}
           headerActions={(section) =>
-            renderSectionExpandAll(
+            groupFoldAction(
               grouped.rowsBySectionKey.get(section.key!)!,
               setExpanded,
             )
@@ -521,15 +461,10 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
         </GroupedSections>
         {showRootAdd && (
           <div className="rail-follow">
-            <Button
-              variant="ghost"
-              onClick={() => void onCreate({ parentId: null })}
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the root Add button from the sections above (mirrors TreeList's own footer)
-              className="text-muted-foreground mt-1 w-fit"
-            >
-              <Icon icon={addIcon} className="size-4" />
-              {addLabel}
-            </Button>
+            <TreeRootAdd
+              label={addLabel}
+              onAdd={() => void onCreate({ parentId: null })}
+            />
           </div>
         )}
       </>

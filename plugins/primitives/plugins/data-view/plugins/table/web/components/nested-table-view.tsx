@@ -9,11 +9,14 @@ import {
 } from "@plugins/primitives/plugins/data-table/web";
 import {
   DataViewGroupHeader,
+  EditableTreeLabel,
   FieldCell,
   leadingSlot,
   pickLeadingField,
   pickPrimaryField,
+  readFallback,
   resolveBodyFields,
+  rowToneClass,
   useHierarchyTree,
   useItemActionZones,
   useResolveCell,
@@ -24,12 +27,22 @@ import {
   type ItemActionsDescriptor,
   type ProjectedRow,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { FlatTreeLine } from "@plugins/primitives/plugins/tree/core";
+import type {
+  FlatTreeLine,
+  RowMenuHelpers,
+} from "@plugins/primitives/plugins/tree/core";
 import {
+  groupFoldAction,
+  treeRowTrailing,
+  RowControlsProvider,
   TreeChildPlaceholder,
   TreeDropZones,
   TreeLeading,
   TreeListProvider,
+  TreeRootAdd,
+  TreeRowActions,
+  TreeToolbar,
+  useFlatExpandAll,
   treeRowGestures,
   treeRowIndentStyle,
   useTreeKeyboard,
@@ -39,18 +52,18 @@ import {
   type TreeListContextValue,
 } from "@plugins/primitives/plugins/tree/web";
 import { RankReorderDndContext } from "@plugins/primitives/plugins/rank-reorder/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { TableViewOptions } from "../../core";
 import { mapPrimary } from "../internal/map-primary";
 
-const addIcon = symbol("add");
 const linkIcon = symbol("link");
-const unfoldLessIcon = symbol("unfold-less");
-const unfoldMoreIcon = symbol("unfold-more");
+
+/** The widest a row's `trailing` gets before it clips (see its use). */
+const TRAILING_CAP = { maxWidth: "12rem" } as const;
 
 type Row = ProjectedRow<unknown>;
 /** One painted line of the nested table: a row, or a lazy placeholder child. */
@@ -93,10 +106,18 @@ function noRecursiveRow(): never {
 function TreeHead({
   line,
   icon,
+  pillInRow,
   children,
 }: {
   line: NodeLine;
   icon: ReactNode;
+  /**
+   * The row's own box carries the pill's per-depth step (`outline`: the
+   * table moves the row by `DataTableTree.pillIndent`), so the head pays only
+   * the content's share of the indent. Else (a ruled `grid` row) the head
+   * pays all of it.
+   */
+  pillInRow: boolean;
   children: ReactNode;
 }): ReactNode {
   const ctx = useTreeListContext<Row>();
@@ -109,10 +130,16 @@ function TreeHead({
       align="center"
       gap="none"
       // `relative`: the box the guides are placed in. `min-w-0`: the cell, a
-      // truncating leaf, may shrink inside it.
-      // eslint-disable-next-line layout/no-adhoc-layout -- the tree head is the first grid cell's box: the guides' positioning context, shrinkable so the label truncates
-      className="relative min-w-0 gap-tree-row"
-      style={treeRowIndentStyle(depth)}
+      // truncating leaf, may shrink inside it. `overflow-hidden`: a deep row
+      // whose indent outgrows the track is cut at the track's edge instead of
+      // painting over the next column.
+      // eslint-disable-next-line layout/no-adhoc-layout -- the tree head is the first grid cell's box: the guides' positioning context, shrinkable so the label truncates, clipped to its track
+      className="relative min-w-0 overflow-hidden gap-tree-row"
+      style={
+        pillInRow
+          ? { paddingLeft: treeRowIndentStyle(depth).paddingLeft }
+          : treeRowIndentStyle(depth)
+      }
     >
       <TreeLeading
         depth={depth}
@@ -161,8 +188,11 @@ export function NestedTableView(
     ItemActionsDescriptor<unknown> | undefined;
   const resolveCell = useResolveCell();
   const resolveEditor = useResolveCellEditor();
+  // An outline is a tree's look: like a tree row, it reserves no permanent
+  // region for actions (a sidebar's labels keep the width), so the persistent
+  // zone demotes to the hover cluster there.
   const { persistent, revealed } = useItemActionZones(itemActions, {
-    hasPersistentSlot: true,
+    hasPersistentSlot: options.presentation !== "outline",
   });
 
   // Columns follow the view's Properties policy. The leading field (the row's
@@ -216,8 +246,10 @@ export function NestedTableView(
     () => ({ ...model.context, Row: noRecursiveRow }),
     [model.context],
   );
-  const { canReorder, canCreate, subtreeAllExpanded, toggleSubtreeExpanded } =
-    model.context;
+  const { canReorder, canCreate } = model.context;
+  // The toolbar's whole-table expand-all, over the rows in scope — the same
+  // hook `TreeList` runs over its own.
+  const viewExpandAll = useFlatExpandAll(model.scoped, props.setExpanded);
 
   // Grouped: the ROOTS partition into sections and every descendant follows
   // its root (`useHierarchyTree`), so each line's section is its owner row's.
@@ -254,39 +286,69 @@ export function NestedTableView(
     [sectionOf, modelOnDragEnd],
   );
 
-  const modelCreate = model.createAtRoot;
-  const setExpanded = props.setExpanded;
-  // Add-child: open the row (so the new child is not created out of sight),
-  // then create under it — `createAtRoot` selects and focuses what it made.
-  const addChild = useCallback(
-    async (id: string) => {
-      setExpanded([{ id, expanded: true }]);
-      await modelCreate(id);
-    },
-    [setExpanded, modelCreate],
-  );
-
   if (hierarchy.rows.length === 0 && props.emptyState !== undefined) {
     return <>{props.emptyState}</>;
   }
 
-  const columns: ColumnDef<Line>[] = columnFields.map((f) => ({
+  // The label's per-row emphasis: the host's `rowTone`, then the surface's
+  // own class (which wins), on the first cell — as the tree's label.
+  const labelClass = (row: unknown) =>
+    cn(rowToneClass(props.rowTone?.(row)), options.labelClassName?.(row));
+  const columns: ColumnDef<Line>[] = columnFields.map((f, i) => ({
     id: f.id,
     header: f.header === false ? "" : (f.header ?? f.label),
-    width: f.width,
+    // The first column — the tree's label — takes the slack, as a tree row's
+    // label does, floored at the tree's label floor (10rem) so the other
+    // columns cannot squeeze it away; the others are as wide as their content.
+    width: f.width ?? (i === 0 ? "minmax(10rem, 1fr)" : undefined),
     align: f.align,
     dropOrder: f.dropOrder,
     // The host's sortable set: a header click sorts every sibling group.
     sortable: props.sortHeader.sortable.has(f.id),
-    cell: (line: Line) =>
-      line.kind === "node" ? (
+    cell: (line: Line) => {
+      if (line.kind !== "node") return null;
+      const { node } = line;
+      const row = node.__row;
+      if (f !== primaryField) {
+        return (
+          <FieldCell
+            field={node.alias ? readOnlyFields.get(f.id)! : f}
+            row={row}
+            resolveCell={resolveCell}
+            resolveEditor={resolveEditor}
+          />
+        );
+      }
+      // The label: the tree row's own — select-then-edit when the field
+      // writes back (it is the navigation target, so it has no room for a
+      // pencil, and a created row opens straight into it), read-only on an
+      // alias — classed by the row's tone and the surface's label class.
+      const tone = labelClass(row);
+      if (!node.alias && (f.onEdit != null || f.onEditValues != null)) {
+        const value = f.value?.(row);
+        const read = f.cell
+          ? f.cell(row)
+          : (resolveCell(f, value ?? null, row) ?? readFallback(f, value));
+        return (
+          <EditableTreeLabel
+            node={node}
+            row={row}
+            field={f}
+            read={read}
+            className={tone || undefined}
+          />
+        );
+      }
+      const cell = (
         <FieldCell
-          field={line.node.alias ? readOnlyFields.get(f.id)! : f}
-          row={line.node.__row}
+          field={node.alias ? readOnlyFields.get(f.id)! : f}
+          row={row}
           resolveCell={resolveCell}
           resolveEditor={resolveEditor}
         />
-      ) : null,
+      );
+      return tone ? <span className={tone}>{cell}</span> : cell;
+    },
   }));
 
   const tree: DataTableTree<Line> = {
@@ -294,6 +356,7 @@ export function NestedTableView(
       line.kind === "node" ? (
         <TreeHead
           line={line}
+          pillInRow={options.presentation === "outline"}
           icon={leadingSlot({
             field: leadingField,
             row: line.node.__row,
@@ -317,6 +380,23 @@ export function NestedTableView(
       ) : null,
     containerRef: keyboard.containerRef,
     onKeyDown: keyboard.onKeyDown,
+    // The first column's label over the rows' labels: a depth-0 row's lead
+    // inset and disclosure slot (where the tree's aligned header put it).
+    headerLeading: (label) => (
+      <Stack
+        as="span"
+        direction="row"
+        align="center"
+        gap="none"
+        className="gap-tree-row"
+        style={{ paddingLeft: treeRowIndentStyle(0).paddingLeft }}
+      >
+        <span className="size-5" aria-hidden />
+        {label}
+      </Stack>
+    ),
+    // The pill steps in with the depth, as a tree row's (`treeRowIndentStyle`).
+    pillIndent: (line) => `calc(${line.depth} * var(--tree-pill-indent))`,
   };
 
   // Per-row decoration HOOK (called inside DataTable's row component): the
@@ -324,9 +404,19 @@ export function NestedTableView(
   // before / after / into droppables, the reveal), gestures (select, link,
   // open), ARIA and `data-tree-*` attributes, and its drop zones. Only node
   // lines reach it: a placeholder is a full-span line, never a decorated row.
-  function useRowDecoration(line: Line): DataTableRowDecoration | undefined {
+  const windowed =
+    !grouped && model.flat.length > DATA_TABLE_VIRTUALIZE_THRESHOLD;
+  // An outline's top-level rows stand apart as a tree's roots do
+  // (`TreeList`'s `gap-tree-root`; a windowed tree's rows sit flush, as here).
+  const rootGap = options.presentation === "outline" && !windowed;
+  const rowMenu = options.rowMenu;
+  function useRowDecoration(
+    line: Line,
+    index: number,
+  ): DataTableRowDecoration | undefined {
     const node = (line as NodeLine).node;
     const controls = useTreeRow(node);
+    const accent = options.rowAccent?.(node.__row);
     const { childRef, dragSource } = controls;
     // A reference row has no position of its own: never a drag source.
     const draggable = canReorder && !node.alias;
@@ -344,8 +434,26 @@ export function NestedTableView(
       onOpen: controls.open,
       clickOpens: controls.clickOpens,
     });
+    // The row's revealed cluster, from its own controls (`treeRowTrailing`,
+    // the one `RowChrome` uses): `null` when it offers nothing, so no empty
+    // cluster mounts on it. An alias has none.
+    const actions = node.alias
+      ? null
+      : (treeRowTrailing({
+          actions: revealed?.({
+            row: node.__row,
+            hasChildren: node.children.length > 0,
+          }),
+          menu: rowMenu
+            ? (helpers: RowMenuHelpers) => rowMenu(helpers, node.__row)
+            : undefined,
+          childCount: node.children.length,
+          controls,
+          canCreate,
+        }) ?? null);
     return {
       ref,
+      actions,
       props: {
         ...gestures,
         ...(draggable ? dragSource.attributes : {}),
@@ -368,69 +476,91 @@ export function NestedTableView(
         controls.isDragging && "opacity-40",
         controls.isOverChild && "ring-1 ring-primary/40",
       ),
+      // A nested row sits flush on its parent; a root stands apart.
+      style:
+        rootGap && (line as NodeLine).depth === 0 && index > 0
+          ? { marginTop: "var(--tree-root-gap)" }
+          : undefined,
       // A drop onto the row nests under it: the row reads highlighted.
       highlighted: controls.isOverChild,
+      // Everything in the row reads its controls, as inside a `RowChrome`:
+      // the trailing cluster, and any cell or item action asking
+      // `useOptionalRowControls`.
+      provide: (content) => (
+        <RowControlsProvider value={controls}>{content}</RowControlsProvider>
+      ),
       overlay: (
-        <TreeDropZones
-          beforeRef={controls.beforeRef}
-          afterRef={controls.afterRef}
-          isOverBefore={controls.isOverBefore}
-          isOverAfter={controls.isOverAfter}
-        />
+        <>
+          {accent != null && (
+            // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed accent wash painted over the row (RowChrome's own accent layer)
+            <div aria-hidden className="pointer-events-none absolute inset-0">
+              {accent}
+            </div>
+          )}
+          <TreeDropZones
+            beforeRef={controls.beforeRef}
+            afterRef={controls.afterRef}
+            isOverBefore={controls.isOverBefore}
+            isOverAfter={controls.isOverAfter}
+          />
+        </>
       ),
     };
   }
 
   // The trailing cluster: the consumer's item actions, then the tree's own
-  // chrome — fold / unfold the subtree, add a child. A reference row has none.
+  // chrome — fold / unfold the subtree, the row menu, add a child — which is
+  // the tree row's own cluster (`TreeRowActions`, reading the controls the
+  // decoration provides). A reference row has none.
   const nodeOf = (line: Line) =>
     line.kind === "node" && !line.node.alias ? line.node : null;
   const anyChildren = model.flat.some(
     (l) => l.kind === "node" && l.node.children.length > 0,
   );
   const rowActions =
-    revealed || canCreate || anyChildren
+    revealed || canCreate || anyChildren || rowMenu
       ? (line: Line) => {
           const node = nodeOf(line);
           if (!node) return null;
-          const allOpen = subtreeAllExpanded(node.id);
           return (
-            <>
-              {revealed?.({
+            <TreeRowActions
+              actions={revealed?.({
                 row: node.__row,
                 hasChildren: node.children.length > 0,
               })}
-              {node.children.length > 0 && (
-                <IconButton
-                  icon={allOpen ? unfoldLessIcon : unfoldMoreIcon}
-                  label={allOpen ? "Collapse subtree" : "Expand subtree"}
-                  variant="ghost"
-                  onClick={() => toggleSubtreeExpanded(node.id)}
-                />
+              menu={
+                rowMenu ? (helpers) => rowMenu(helpers, node.__row) : undefined
+              }
+              childCount={node.children.length}
+            />
+          );
+        }
+      : undefined;
+  // At rest at the row's end: the surface's `trailing` (a badge, a count —
+  // after every column, where a tree row puts it after its chips), then the
+  // persistent item actions. Capped, so one row's wide trailing cannot take
+  // the label column's room from every row: past the cap it clips.
+  const trailing = options.trailing;
+  const rowPersistentActions =
+    persistent || trailing
+      ? (line: Line) => {
+          const node = nodeOf(line);
+          if (!node) return null;
+          return (
+            <>
+              {trailing && (
+                <Clip axis="x" style={TRAILING_CAP}>
+                  {trailing(node.__row)}
+                </Clip>
               )}
-              {canCreate && (
-                <IconButton
-                  icon={addIcon}
-                  label="Add child"
-                  variant="ghost"
-                  onClick={() => void addChild(node.id)}
-                />
-              )}
+              {persistent?.({
+                row: node.__row,
+                hasChildren: node.children.length > 0,
+              })}
             </>
           );
         }
       : undefined;
-  const rowPersistentActions = persistent
-    ? (line: Line) => {
-        const node = nodeOf(line);
-        return node
-          ? persistent({
-              row: node.__row,
-              hasChildren: node.children.length > 0,
-            })
-          : null;
-      }
-    : undefined;
 
   const shared = {
     columns,
@@ -448,14 +578,25 @@ export function NestedTableView(
     columnHeader: options.columnHeader,
     density: props.density,
     presentation: options.presentation,
+    header: options.header,
     tree,
     selection: props.selection
       ? { actions: props.selection.bulkActions }
       : undefined,
   };
 
-  const windowed =
-    !grouped && model.flat.length > DATA_TABLE_VIRTUALIZE_THRESHOLD;
+  // The tree's chrome around the rows: a toolbar row (expand-all, the
+  // surface's own start content) and the root Add — the tree view's, through
+  // the same components.
+  const showExpandAll = !!options.expandAll && viewExpandAll.hasExpandable;
+  const showToolbar = showExpandAll || options.toolbarStart != null;
+  // An explicit `null` hides the root Add; only an absent option falls back.
+  const addLabel =
+    options.rootId === undefined && canCreate && treeArgs.onCreate
+      ? options.addLabel !== undefined
+        ? options.addLabel
+        : "Add"
+      : null;
 
   const renderTable = (activeId: string | null): ReactNode =>
     grouped ? (
@@ -476,6 +617,12 @@ export function NestedTableView(
                 headerStyle={props.groupHeaders}
                 open={!collapsed}
                 onClick={() => props.setSectionCollapsed?.(key, !collapsed)}
+                // Fold / unfold this group's subtrees (a group holds whole
+                // subtrees: every descendant follows its root).
+                action={groupFoldAction(
+                  grouped.rowsBySectionKey.get(key)!,
+                  props.setExpanded,
+                )}
               />
             ),
           };
@@ -505,7 +652,30 @@ export function NestedTableView(
     >
       {(activeId) => (
         <TreeListProvider value={ctxValue}>
+          {showToolbar && (
+            <div className="rail-follow">
+              <TreeToolbar
+                start={options.toolbarStart}
+                expandAll={
+                  showExpandAll
+                    ? {
+                        allExpanded: viewExpandAll.allExpanded,
+                        onToggle: viewExpandAll.toggle,
+                      }
+                    : undefined
+                }
+              />
+            </div>
+          )}
           {renderTable(activeId)}
+          {addLabel != null && (
+            <div className="rail-follow">
+              <TreeRootAdd
+                label={addLabel}
+                onAdd={() => void model.createAtRoot(null)}
+              />
+            </div>
+          )}
         </TreeListProvider>
       )}
     </RankReorderDndContext>

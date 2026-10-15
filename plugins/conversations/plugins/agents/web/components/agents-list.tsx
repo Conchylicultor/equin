@@ -2,9 +2,9 @@ import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web"
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import type {
-  RowChromeMenuHelpers,
+  RowMenuHelpers,
   RowMenuItem,
-} from "@plugins/primitives/plugins/tree/web";
+} from "@plugins/primitives/plugins/tree/core";
 import {
   AVATAR_COLOR_KEYS,
   DEFAULT_AGENT_AVATAR,
@@ -138,7 +138,7 @@ export function AgentsList({
           },
         ]}
         rowKey={(a) => a.id}
-        views={["tree"]}
+        views={["table"]}
         storageKey={AGENTS_LIST_VIEW}
         selectedRowId={selectedId}
         rowActivation={(a) =>
@@ -161,11 +161,11 @@ export function AgentsList({
         selection={{ bulkActions: <DeleteSelectedAction /> }}
         itemActions={AgentsSlots.AgentActions}
         viewOptions={{
-          tree: {
+          table: {
             // The status dot follows the avatar field in the leading slot; both
             // inherit the DataView body's compact density.
             leadingIcon: (a: Agent) => <AgentStatus agentId={a.id} />,
-            rowMenu: ({ addBelow }: RowChromeMenuHelpers): RowMenuItem[] => [
+            rowMenu: ({ addBelow }: RowMenuHelpers): RowMenuItem[] => [
               {
                 icon: addIcon,
                 label: "Add agent below",

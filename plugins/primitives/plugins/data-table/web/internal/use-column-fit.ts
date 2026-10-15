@@ -26,6 +26,15 @@ interface Room {
   measured: ReadonlyMap<string, number>;
 }
 
+/**
+ * What the fit may do. `wide`: drop columns, then overflow sideways with the
+ * first column pinned (a grid table in a sideways-scroll region). `drop`: drop
+ * columns, never overflow (an outline with its column labels — its box is a
+ * sidebar's or a listing's, which does not scroll sideways). `none`: every
+ * column shows and squeezes (an outline without labels, a table in a card).
+ */
+export type ColumnFitMode = "wide" | "drop" | "none";
+
 export interface ColumnFit<TRow> {
   /**
    * The table goes wide: `enabled` (a grid table in a `SidewaysScroll`
@@ -64,9 +73,9 @@ export interface ColumnFit<TRow> {
  */
 export function useColumnFit<TRow>(
   columns: ColumnDef<TRow>[],
-  opts: { enabled: boolean; nested: boolean; hasActionsTrack: boolean },
+  opts: { mode: ColumnFitMode; nested: boolean; hasActionsTrack: boolean },
 ): ColumnFit<TRow> {
-  const { enabled, nested, hasActionsTrack } = opts;
+  const { mode, nested, hasActionsTrack } = opts;
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const [grid, setGrid] = useState<HTMLElement | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
@@ -84,9 +93,8 @@ export function useColumnFit<TRow>(
       ),
     () => {
       if (!container || !grid) return;
-      // An outline, or a table no scroll host can scroll sideways, never goes
-      // wide.
-      if (!enabled || !sidewaysHost(container)) {
+      // A table no scroll host can scroll sideways never goes wide.
+      if (mode === "none" || (mode === "wide" && !sidewaysHost(container))) {
         setRoom(null);
         return;
       }
@@ -97,7 +105,7 @@ export function useColumnFit<TRow>(
       // DataView root fits the table, so its band can pin), and so does this
       // one: the room is what the scroller shows to the right of the box's
       // start, whichever is narrower.
-      const scroller = scrollerOf(container);
+      const scroller = mode === "wide" ? scrollerOf(container) : null;
       // Both edges in the scroller's UNSCROLLED frame: a sideways scroll
       // moves the box, not the room.
       const visible = scroller
@@ -125,9 +133,13 @@ export function useColumnFit<TRow>(
       const tracks = gridStyle.gridTemplateColumns.split(" ").map(parseFloat);
       const next: Room = {
         available,
+        // The header row's inset: padding, and margin (an outline row sits
+        // on the rail by its margin).
         pad:
           parseFloat(headerStyle.paddingLeft) +
-          parseFloat(headerStyle.paddingRight),
+          parseFloat(headerStyle.paddingRight) +
+          parseFloat(headerStyle.marginLeft) +
+          parseFloat(headerStyle.marginRight),
         gap: parseFloat(gridStyle.columnGap) || 0,
         actions: hasActionsTrack ? (tracks[tracks.length - 1] ?? 0) : 0,
         grid: grid.getBoundingClientRect().width,
@@ -147,7 +159,7 @@ export function useColumnFit<TRow>(
           : next,
       );
     },
-    { deps: [container, grid, enabled, hasActionsTrack, columnIds] },
+    { deps: [container, grid, mode, hasActionsTrack, columnIds] },
   );
 
   const shown = useMemo(() => {
@@ -181,17 +193,21 @@ export function useColumnFit<TRow>(
     return columns.filter((c) => c.dropOrder === undefined || kept.has(c));
   }, [room, columns, nested, hasActionsTrack]);
 
+  // Only a wide table floors its tracks at their labels: that is what lets it
+  // overflow rather than collapse a column. A dropping table squeezes what is
+  // left, as it always did.
+  const wideRoom = mode === "wide" ? room : null;
   const tracks = shown.map((col) =>
-    room
-      ? floorAtLabel(col.width, room.measured.get(col.id))
+    wideRoom
+      ? floorAtLabel(col.width, wideRoom.measured.get(col.id))
       : (col.width ?? "auto"),
   );
 
   return {
-    wide: room !== null,
+    wide: wideRoom !== null,
     shown,
     tracks,
-    overflowing: !!room && room.grid > room.available + 0.5,
+    overflowing: !!wideRoom && wideRoom.grid > wideRoom.available + 0.5,
     containerRef: setContainer,
     gridRef: setGrid,
   };

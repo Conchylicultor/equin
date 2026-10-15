@@ -2,6 +2,7 @@ import { ConfigV2 } from "@plugins/config_v2/server";
 import type { ServerContribution } from "@plugins/framework/plugins/server-core/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { FieldsRecord } from "@plugins/fields/core";
+import type { ConfigMigration } from "@plugins/config_v2/core";
 import { viewsDescriptor } from "../../shared";
 
 /**
@@ -15,14 +16,16 @@ import { viewsDescriptor } from "../../shared";
  * `extraFields` is an opaque consumer-owned set of sibling config fields (e.g.
  * data-view's `sortPresets`) threaded into every descriptor — view-core never
  * names them. A single stable module-constant keeps the per-id cache identity.
+ * `migrations` likewise: the consumer's rewrites of its saved rows.
  */
 export function buildViewConfigRegistrations(
   entries: Array<{ id: string; pluginId: PluginId }>,
   extraFields?: FieldsRecord,
+  migrations?: readonly ConfigMigration[],
 ): ServerContribution[] {
   return entries.map((e) =>
     ConfigV2.Register({
-      descriptor: viewsDescriptor(e.id, extraFields),
+      descriptor: viewsDescriptor(e.id, extraFields, migrations),
       pluginId: e.pluginId,
     }),
   );

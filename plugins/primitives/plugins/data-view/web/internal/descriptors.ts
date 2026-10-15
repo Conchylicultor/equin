@@ -4,6 +4,7 @@ import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { dataViews } from "../../shared/data-views.generated";
 import { presetsExtraFields } from "../../shared/sort-presets-field";
 import { customColumnsExtraFields } from "../../shared/custom-columns-field";
+import { viewMigrations } from "../../shared/view-migrations";
 import type { DataViewId } from "../../core";
 
 /**
@@ -30,9 +31,12 @@ const extraFields = { ...presetsExtraFields, ...customColumnsExtraFields };
 const { map, entries } = buildViewDescriptors(
   dataViews.map((v) => v.id),
   extraFields,
+  viewMigrations,
 );
 
-const pluginIdById = new Map(dataViews.map((v) => [v.id, asPluginId(v.pluginId)]));
+const pluginIdById = new Map(
+  dataViews.map((v) => [v.id, asPluginId(v.pluginId)]),
+);
 
 export const dataViewDescriptors = map;
 export const dataViewDescriptorEntries = entries.map((e) => ({

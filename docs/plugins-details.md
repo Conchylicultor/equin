@@ -20766,9 +20766,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 162 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 161 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×50
-              - `primitives` ×27
+              - `primitives` ×26
               - `page` ×24
               - `conversations` ×19
               - `debug` ×6
@@ -29712,11 +29712,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useCollapsibleContext`
           - `useExpandAll`
       - Cross-plugin:
-        - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+        - Imported by: 47 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
           - `conversations` ×10
           - `ui` ×9
           - `apps` ×8
-          - `primitives` ×8
+          - `primitives` ×7
           - `plugin-meta` ×4
           - `review` ×3
           - `auth`
@@ -29977,9 +29977,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Clip`
               - `clipClasses`
           - Cross-plugin:
-            - Imported by: 54 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+            - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
               - `apps` ×17
-              - `primitives` ×8
+              - `primitives` ×9
               - `conversations` ×7
               - `debug` ×6
               - `page` ×5
@@ -31322,13 +31322,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
-        - Uses: 90 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 93 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×12
           - `primitives/css/ui-kit` ×11
           - `primitives/data-view/view-core` ×8
           - `primitives/live-state` ×5
           - `primitives/css/control-panel` ×4
           - `primitives/slot-render` ×4
+          - `primitives/tree` ×3
           - `config_v2` ×2
           - `primitives/collapsible` ×2
           - `primitives/css/overlay` ×2
@@ -31460,6 +31461,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineFieldExtensions`
           - `defineItemActions`
           - `EditableCell`
+          - `EditableTreeLabel`
           - `FieldCell`
           - `fieldOverrides`
           - `FilterValueInput`
@@ -31874,16 +31876,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
           - Web:
             - Contributes: `DataViewSlots.View` "Table" → `TableView`
-            - Uses: 49 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
-              - `primitives/data-view` ×23
-              - `primitives/tree` ×11
+            - Uses: 59 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
+              - `primitives/data-view` ×26
+              - `primitives/tree` ×18
               - `primitives/data-table` ×6
               - `primitives/rank-reorder` ×3
               - `primitives/css/badge.Badge`
+              - `primitives/css/clip.Clip`
               - `primitives/css/inline.Inline`
               - `primitives/css/spacing.Stack`
               - `primitives/css/ui-kit.cn`
-              - `primitives/icon-button.IconButton`
               - `ui/icons.Icon`
             - Exports (types): `TableViewOptions`
           - Core:
@@ -31891,19 +31893,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`tree`** — Tree view child for the data-view primitive: adapts the shared field schema + hierarchy config onto the tree primitive (buildTree, TreeList, RowChrome, RenameInput).
           - Web:
             - Contributes: `DataViewSlots.View` "Tree" → `TreeView`
-            - Uses: 44 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/tree/REFERENCE.md)
-              - `primitives/data-view` ×22
-              - `primitives/tree` ×9
-              - `primitives/css/ui-kit` ×2
-              - `primitives/collapsible.ExpandAllButton`
+            - Uses: 41 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/tree/REFERENCE.md)
+              - `primitives/data-view` ×23
+              - `primitives/tree` ×8
               - `primitives/css/center.Center`
               - `primitives/css/fill.Fill`
               - `primitives/css/inline.Inline`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/sticky.Sticky`
+              - `primitives/css/ui-kit.cn`
               - `primitives/dom/element-size.useResizeObserver`
-              - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useLatestRef`
               - `ui/icons.Icon`
             - Exports (types): `TreeViewOptions`
@@ -32770,9 +32770,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `IconButtonProps`
         - Exports (values): `IconButton`
       - Cross-plugin:
-        - Imported by: 116 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 114 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×42
-          - `primitives` ×21
+          - `primitives` ×19
           - `conversations` ×16
           - `page` ×7
           - `tasks` ×7
@@ -35453,6 +35453,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RowChromeMenuHelpers`
           - `RowChromeProps`
           - `RowControls`
+          - `RowMenu`
           - `RowMenuItem`
           - `TreeDisclosureContribution`
           - `TreeDisclosureToggleProps`
@@ -35464,12 +35465,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TreeModel`
           - `TreeModelArgs`
           - `TreeModelContext`
+          - `TreeRowActionsProps`
           - `TreeRowChromeProps`
+          - `TreeToolbarProps`
           - `UseFlatExpandAllReturn`
         - Exports (values):
           - `flatExpandAll`
+          - `groupFoldAction`
           - `RenameInput`
           - `RowChrome`
+          - `RowControlsProvider`
           - `Tree`
           - `TreeChildPlaceholder`
           - `TreeDisclosureToggle`
@@ -35477,12 +35482,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TreeLeading`
           - `TreeList`
           - `TreeListProvider`
+          - `TreeRootAdd`
+          - `TreeRowActions`
           - `TreeRowChrome`
           - `treeRowGestures`
           - `treeRowIndentStyle`
+          - `treeRowTrailing`
+          - `TreeToolbar`
           - `useFlatExpandAll`
           - `useOptionalRowControls`
           - `useOptionalTreeListContext`
+          - `useRowControls`
           - `useTreeKeyboard`
           - `useTreeListContext`
           - `useTreeModel`
@@ -35498,6 +35508,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FlatTreeLine`
           - `KeyboardLine`
           - `LazyChildren`
+          - `RowMenuHelpers`
+          - `RowMenuItem`
           - `TreeChildrenState`
           - `TreeDisclosureProps`
           - `TreeKeyMove`
@@ -35517,6 +35529,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/pages/page-tree`
           - `page/editor`
+          - `primitives/data-view`
           - `primitives/data-view/list`
           - `primitives/data-view/table`
           - `primitives/data-view/tree`

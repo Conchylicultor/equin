@@ -9,6 +9,14 @@ export type {
   RowChromeMenuHelpers,
   RowMenuItem,
 } from "./internal/row-chrome";
+export { TreeRowActions, treeRowTrailing } from "./internal/tree-row-actions";
+export type { RowMenu, TreeRowActionsProps } from "./internal/tree-row-actions";
+export {
+  groupFoldAction,
+  TreeRootAdd,
+  TreeToolbar,
+} from "./internal/tree-toolbar";
+export type { TreeToolbarProps } from "./internal/tree-toolbar";
 export { TreeRowChrome } from "./internal/tree-row-chrome";
 export type { TreeRowChromeProps } from "./internal/tree-row-chrome";
 export { TreeLeading } from "./internal/tree-leading";
@@ -37,6 +45,8 @@ export {
   useTreeListContext,
   useOptionalTreeListContext,
   useOptionalRowControls,
+  useRowControls,
+  RowControlsProvider,
 } from "./internal/use-tree-row";
 export type {
   RowControls,

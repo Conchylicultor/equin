@@ -2444,13 +2444,14 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 90 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 93 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×12
     - `primitives/css/ui-kit` ×11
     - `primitives/data-view/view-core` ×8
     - `primitives/live-state` ×5
     - `primitives/css/control-panel` ×4
     - `primitives/slot-render` ×4
+    - `primitives/tree` ×3
     - `config_v2` ×2
     - `primitives/collapsible` ×2
     - `primitives/css/overlay` ×2
@@ -2582,6 +2583,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `defineFieldExtensions`
     - `defineItemActions`
     - `EditableCell`
+    - `EditableTreeLabel`
     - `FieldCell`
     - `fieldOverrides`
     - `FilterValueInput`

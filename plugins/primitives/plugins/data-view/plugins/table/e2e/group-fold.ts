@@ -1,20 +1,22 @@
 /**
- * Verifies the grouped tree view's **per-group fold** — the unfold/fold button a
- * grouped `TreeView` hangs off each section header, beside the count.
+ * Verifies the nested table's **per-group fold** — the unfold/fold button a
+ * grouped hierarchical table hangs off each group header, beside the count
+ * (the tree primitive's `groupFoldAction`, handed to `DataViewGroupHeader`'s
+ * `action`).
  *
  * Separate from the tree primitive's own `subtree-fold.ts` because the two
- * buttons are owned by different plugins: the per-row fold is chrome every tree
- * row gets from `RowChrome`, while this one exists only when a DataView tree is
- * grouped, and is rendered by this plugin through `GroupedSections.headerActions`.
- * A script lives in the plugin it verifies.
+ * buttons sit in different places: the per-row fold is every tree row's
+ * chrome, while this one exists only when a nesting table is grouped. The
+ * reference surface is the tasks list (`--at`, default `/agents/tasks`),
+ * grouped by category.
  *
  * ## The guard that makes this worth a script
  *
- * The section header is ITSELF the section's collapse trigger. So a fold button
- * sitting on it is one stray click away from collapsing the very section it was
- * asked to fold — the whole design rests on `RowActions`' button `Stack`
- * stopping `onClick` and `onPointerDown`. Nothing types that guarantee, so the
- * assertion that the section is still OPEN after the fold is the only thing
+ * The group header is ITSELF the group's collapse trigger. So a fold button
+ * sitting on it is one stray click away from collapsing the very group it was
+ * asked to fold — the design rests on `RowActions`' button `Stack` stopping
+ * `onClick` and `onPointerDown`. Nothing types that guarantee, so the
+ * assertion that the group is still OPEN after the fold is the only thing
  * holding it.
  *
  * The header's cluster is hover-revealed like a row's, so every interaction goes
@@ -22,12 +24,8 @@
  * "visible", so the reveal is asserted from computed opacity + pointer-events.
  *
  * Manual only. Run after `./singularity build`:
- *   ./singularity run plugins/primitives/plugins/data-view/plugins/tree/e2e/group-fold.ts \
- *     --url http://<worktree>.localhost:9000 [--headed]
- *
- * Pass `--url` explicitly: the harness derives its default from
- * `$SINGULARITY_WORKTREE`, which in an agent shell read `singularity` (main),
- * not the worktree this script is checked out in.
+ *   ./singularity run plugins/primitives/plugins/data-view/plugins/table/e2e/group-fold.ts \
+ *     [--at /agents/tasks] [--headed]
  */
 import type { Locator, Page } from "playwright";
 import {
@@ -40,6 +38,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const OUT = arg("out") ?? "/tmp/group-fold";
+const AT = arg("at") ?? "/agents/tasks";
 
 const EXPAND = "Expand group";
 const COLLAPSE = "Collapse group";
@@ -92,7 +91,7 @@ const rowCount = (page: Page): Promise<number> =>
   page.locator(".group\\/tree-row").count();
 
 await withBrowser(async (h) => {
-  const r = report("data-view tree — per-group fold");
+  const r = report("data-view nested table — per-group fold");
   const { page, captured } = await h.session();
 
   // The shed-under-duress log beacon answers 429 while the host duress latch is
@@ -106,20 +105,23 @@ await withBrowser(async (h) => {
     }
   });
 
-  await boot(page, pathUrl("/pages"), {
-    marker: ".group\\/tree-row",
+  await boot(page, pathUrl(AT), {
+    marker: "[role='treegrid'] .group\\/tree-row",
     settleMs: 800,
   });
   await snap(page, OUT, "before");
 
-  // The section header row: the one `GroupedSections` node that carries the
-  // `group/row-actions` reveal (its collapse trigger and its action cluster
-  // both live inside it).
+  // The group header row: the `group/row-actions` node holding the group's
+  // fold (its collapse trigger and its action cluster both live inside it).
+  // The header's cluster is in flow (`pin={null}`), so it is mounted at rest.
   const header = page
-    .locator('[data-ui-owner^="GroupedSections"].group\\/row-actions')
+    .locator("[role='treegrid'] .group\\/row-actions")
+    .filter({
+      has: page.getByRole("button", { name: /^(Expand|Collapse) group$/ }),
+    })
     .first();
   await header.waitFor({ state: "visible", timeout: 30_000 });
-  r.ok("the sidebar tree is grouped (a section header is painted)", true);
+  r.ok("the table is grouped (a group header with a fold is painted)", true);
 
   /** The section's own collapse trigger — the header's `aria-expanded` button. */
   const sectionTrigger = header.locator("button[aria-expanded]").first();
