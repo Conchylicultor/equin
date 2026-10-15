@@ -22,7 +22,7 @@ import {
   slowOpById,
   slowOpCallers,
   type SlowOpCaller,
-  type SlowOpDetail as SlowOpDetailRow,
+  type SlowOp,
   type SlowOpMeasures,
   type SlowOpSample,
   type VariantBreakdown,
@@ -105,7 +105,7 @@ function Section({
   );
 }
 
-function SlowOpBody({ op }: { op: SlowOpDetailRow }): ReactElement {
+function SlowOpBody({ op }: { op: SlowOp }): ReactElement {
   const traceId = op.recentSamples[0]?.traceId;
   const waits = Object.entries(op.waits).sort((a, b) => b[1] - a[1]);
   const variants = [...op.variants].sort((a, b) => b.totalMs - a.totalMs);

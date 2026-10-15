@@ -52,13 +52,13 @@ So:
 - `ExcludeFromFork`, like `slow_ops`.
 
 **`slow_ops`:**
-- Keep `callers` in `slowOpFields`, marked legacy (see Migration); wire reads use `SlowOpDetailSchema` (every column but it) and `SlowOpListRowSchema`.
+- Keep `callers` in `slowOpFields`, marked legacy (see Migration); wire reads use `SlowOpDetailSchema` (every column but it) and `SlowOpListRowSchema`. **Done in the follow-up** ([`2026-10-14-debug-slow-ops-drop-legacy-callers.md`](2026-10-14-debug-slow-ops-drop-legacy-callers.md)): `callers` left `slowOpFields`, and `SlowOpDetailSchema` (then an alias) went with it — the detail reads `SlowOpSchema`.
 - Add v1's two indexes: `(total_ms DESC, id)` and `(last_seen_at DESC, id)`.
 
 **Migration** (one push, per `database/plugins/migrations/CLAUDE.md` § Phased schema migrations):
 - expand: `CREATE TABLE slow_op_callers` plus its indexes; the two `slow_ops` indexes.
 - data migration (`--custom-migration`, idempotent): `INSERT INTO slow_op_callers (…) SELECT … FROM slow_ops, jsonb_array_elements(callers) … ON CONFLICT DO NOTHING`, with `first_seen_at` / `last_seen_at` taken from the op row (the JSON carries no per-caller times). About 36 k rows.
-- ~~contract: `ALTER TABLE slow_ops DROP COLUMN callers`.~~ **Split out (implementation finding).** Migrations apply in the NEW backend's boot while the old one keeps serving (`gateway/CLAUDE.md` hot restart), so a drop in this push would fail the old backend's upserts for the swap window. This push stops reading and writing `callers` (the column stays, with its default, marked legacy in `slowOpFields`); a follow-up push drops it. Callers the old backend merges into the JSON during the swap window (after the backfill ran) are not copied: seconds of caller attribution, counts on `slow_ops` unaffected.
+- ~~contract: `ALTER TABLE slow_ops DROP COLUMN callers`.~~ **Split out (implementation finding).** Migrations apply in the NEW backend's boot while the old one keeps serving (`gateway/CLAUDE.md` hot restart), so a drop in this push would fail the old backend's upserts for the swap window. This push stops reading and writing `callers` (the column stays, with its default, marked legacy in `slowOpFields`); a follow-up push drops it. Callers the old backend merges into the JSON during the swap window (after the backfill ran) are not copied: seconds of caller attribution, counts on `slow_ops` unaffected. **Landed:** the follow-up push's contract drops the column ([`2026-10-14-debug-slow-ops-drop-legacy-callers.md`](2026-10-14-debug-slow-ops-drop-legacy-callers.md)).
 
 ## Write path
 

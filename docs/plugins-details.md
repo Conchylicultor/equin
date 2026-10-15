@@ -17419,12 +17419,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/filter.liveText`
           - `primitives/pane.defineRoute`
         - Exports (types):
-          - `CallerBreakdown`
           - `CallerRef`
           - `MeasureStat`
           - `SlowOp`
           - `SlowOpCaller`
-          - `SlowOpDetail`
           - `SlowOpListRow`
           - `SlowOpMarker`
           - `SlowOpMeasures`
@@ -17432,7 +17430,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlowOpSample`
           - `VariantBreakdown`
         - Exports (values):
-          - `CallerBreakdownSchema`
           - `CallerRefSchema`
           - `CLIENT_SIGNAL_THRESHOLD`
           - `loadSeverity`
@@ -17444,7 +17441,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlowOpCallerSchema`
           - `slowOpConfig`
           - `slowOpDetailRoute`
-          - `SlowOpDetailSchema`
           - `slowOpFields`
           - `SlowOpListRowSchema`
           - `SlowOpMarkerSchema`

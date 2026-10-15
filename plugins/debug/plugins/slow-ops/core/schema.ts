@@ -13,21 +13,10 @@ import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 
-// Per-operation caller attribution: who issued this operation (the immediate
-// enclosing request/loader span), how often, and how slow. The shape of the
-// legacy `callers` column; live callers are `slow_op_callers` rows.
-export const CallerBreakdownSchema = z.object({
-  kind: z.string(),
-  label: z.string(),
-  count: z.number().int(),
-  totalMs: z.number(),
-  maxMs: z.number(),
-});
-export type CallerBreakdown = z.infer<typeof CallerBreakdownSchema>;
-
-// The identity subset of a CallerBreakdown — who issued an operation, before
-// any per-occurrence counts are merged in. A SpanRef (server span parent) is
-// structurally assignable to it; client signals supply { kind: "route", ... }.
+// Who issued an operation (the immediate enclosing request/loader span), before
+// any per-occurrence counts are merged in — the identity the recorder folds
+// into a `slow_op_callers` row. A SpanRef (server span parent) is structurally
+// assignable to it; client signals supply { kind: "route", ... }.
 export const CallerRefSchema = z.object({
   kind: z.string(),
   label: z.string(),
@@ -104,15 +93,6 @@ export const slowOpFields = {
   maxMs: floatField(),
   lastMs: floatField(),
   thresholdMs: floatField(),
-  // LEGACY — no longer read or written. Callers moved to their own table
-  // (`slowOpCallerFields` / `slow_op_callers`, one row per op × caller) so an
-  // op's caller set is never capped or rewritten as one JSON value. The column
-  // stays one push longer only because a hot swap's outgoing backend still
-  // names it in its upsert; the follow-up push drops it. Read no field of it.
-  callers: jsonField<CallerBreakdown[]>({
-    schema: z.array(CallerBreakdownSchema),
-    default: [],
-  }),
   waits: jsonField<WaitBreakdown>({ schema: WaitBreakdownSchema, default: {} }),
   variants: jsonField<VariantBreakdown[]>({
     schema: z.array(VariantBreakdownSchema),
@@ -130,15 +110,11 @@ export const slowOpFields = {
   lastSeenAt: dateField(),
 } satisfies FieldsRecord;
 
-// The full row (every column, the legacy `callers` included) — what the
-// table stores. Wire reads use one of the projections below, never this.
+// The full row — what the table stores, and what the detail pane reads
+// (`slow-ops.op`). Who issued the op is not on it: callers are their own paged
+// collection (`slowOpCallerFields` below).
 export const SlowOpSchema = fieldsToZodObject(slowOpFields);
 export type SlowOp = z.infer<typeof SlowOpSchema>;
-
-// One op as the detail pane reads it (`slow-ops.op`): every column but the
-// legacy `callers` — the callers are their own paged collection.
-export const SlowOpDetailSchema = SlowOpSchema.omit({ callers: true });
-export type SlowOpDetail = z.infer<typeof SlowOpDetailSchema>;
 
 // One op as the ranked list reads it (`slow-ops.ops`): the counters only — no
 // JSON list, so a 100-row window is a few KB. `waitMs` (the summed `waits`)

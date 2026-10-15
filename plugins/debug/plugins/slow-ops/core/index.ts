@@ -1,11 +1,9 @@
 export {
   slowOpFields,
   SlowOpSchema,
-  SlowOpDetailSchema,
   SlowOpListRowSchema,
   slowOpCallerFields,
   SlowOpCallerSchema,
-  CallerBreakdownSchema,
   CallerRefSchema,
   SlowOpSampleSchema,
   VariantBreakdownSchema,
@@ -17,10 +15,8 @@ export {
 } from "./schema";
 export type {
   SlowOp,
-  SlowOpDetail,
   SlowOpListRow,
   SlowOpCaller,
-  CallerBreakdown,
   CallerRef,
   SlowOpSample,
   SlowOpMarker,

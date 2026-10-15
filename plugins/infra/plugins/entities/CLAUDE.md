@@ -29,8 +29,8 @@ export const slowOps = defineEntity(
     operationKind: textField(),
     count:         intField(),
     // The schema is not decoration: it is what decodes the jsonb column, so
-    // `CallerBreakdown[]` is inferred from it rather than declared beside it.
-    callers:       jsonField({ schema: z.array(CallerBreakdownSchema), default: [] }),
+    // `VariantBreakdown[]` is inferred from it rather than declared beside it.
+    variants:      jsonField({ schema: z.array(VariantBreakdownSchema), default: [] }),
     firstSeenAt:   dateField(),
   },
   {

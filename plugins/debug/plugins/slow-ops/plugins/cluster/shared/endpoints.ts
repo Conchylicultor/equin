@@ -13,9 +13,9 @@ import { SlowOpSchema } from "@plugins/debug/plugins/slow-ops/core";
 // A cluster row is exactly what the merged view reads (aggregate.ts) — an
 // explicit pick mirroring handle-cluster.ts's SELECT, so a column added to or
 // dropped from `slow_ops` never changes what the cross-fork parse expects.
-// Selecting nothing else keeps every fork readable whichever schema it is on:
-// one still carrying the legacy `callers` column, one that has dropped it, one
-// older than `variants` / `measures`.
+// Selecting nothing else keeps every fork readable whichever schema it is on —
+// an un-rebuilt fork with columns since dropped, one older than `variants` /
+// `measures`.
 export const ClusterSlowOpSchema = SlowOpSchema.pick({
   id: true,
   worktree: true,

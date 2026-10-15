@@ -9,8 +9,8 @@ import { parsedText, parsedJson } from "@plugins/database/plugins/sql-column/ser
 
 status:  parsedText("status", JobWaitStatusSchema).notNull(),
 //       ^? text column;  select type = z.infer<typeof JobWaitStatusSchema>
-callers: parsedJson("callers", z.array(CallerBreakdownSchema)).notNull(),
-//       ^? jsonb column; select type = CallerBreakdown[]
+variants: parsedJson("variants", z.array(VariantBreakdownSchema)).notNull(),
+//        ^? jsonb column; select type = VariantBreakdown[]
 ```
 
 In both cases the schema in the call is what decodes the column. There is no

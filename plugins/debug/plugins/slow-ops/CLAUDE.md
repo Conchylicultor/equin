@@ -51,14 +51,11 @@ and the detail pages them. `slow_op_callers` names its op by the text key, not
 `slow_ops.id` — the recorder never looks the op up, and the detail's window
 filters text columns (the live filter cannot compare a text operand with a
 `uuid` column). No foreign key: retention ages a caller out on its own
-`last_seen_at`, which is never later than its op's.
-
-**The legacy `callers` column** on `slow_ops` is no longer read or written. It
-outlives this change by one push only because a hot swap's outgoing backend
-still names it in its upsert; the follow-up push drops it. The backfill copied
-it into `slow_op_callers` once, at the new backend's boot; callers the
-outgoing backend merged into it during that swap window were not copied (a
-few seconds of attribution; the op's counters include them).
+`last_seen_at`, which is never later than its op's. Callers used to be a JSON
+`callers` column on `slow_ops`; a one-time backfill copied it into
+`slow_op_callers` and a later push dropped it (callers the outgoing backend
+merged during that one hot-swap window were not copied — seconds of
+attribution; the op's counters include them).
 
 The client signals are `page-load`, `element` (a resource's mount → first data)
 and every client latency signal of `primitives/perfs/latency-signal` (`update`,
@@ -305,12 +302,10 @@ bar).
     - `network/live/filter.liveText`
     - `primitives/pane.defineRoute`
   - Exports (types):
-    - `CallerBreakdown`
     - `CallerRef`
     - `MeasureStat`
     - `SlowOp`
     - `SlowOpCaller`
-    - `SlowOpDetail`
     - `SlowOpListRow`
     - `SlowOpMarker`
     - `SlowOpMeasures`
@@ -318,7 +313,6 @@ bar).
     - `SlowOpSample`
     - `VariantBreakdown`
   - Exports (values):
-    - `CallerBreakdownSchema`
     - `CallerRefSchema`
     - `CLIENT_SIGNAL_THRESHOLD`
     - `loadSeverity`
@@ -330,7 +324,6 @@ bar).
     - `SlowOpCallerSchema`
     - `slowOpConfig`
     - `slowOpDetailRoute`
-    - `SlowOpDetailSchema`
     - `slowOpFields`
     - `SlowOpListRowSchema`
     - `SlowOpMarkerSchema`

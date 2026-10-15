@@ -6,8 +6,8 @@ import {
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   SlowOpCallerSchema,
-  SlowOpDetailSchema,
   SlowOpListRowSchema,
+  SlowOpSchema,
 } from "./schema";
 
 /**
@@ -39,7 +39,7 @@ export const slowOpsList = liveCollection("slow-ops.ops", {
  * 30-day sweep removed).
  */
 export const slowOpById = liveCollection("slow-ops.op", {
-  row: SlowOpDetailSchema,
+  row: SlowOpSchema,
   id: "id",
 });
 
