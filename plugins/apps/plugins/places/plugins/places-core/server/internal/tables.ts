@@ -27,6 +27,7 @@ const places = defineEntity("places", placeFields, {
       types: true,
       mapsUrl: true,
       businessStatus: true,
+      googleLostAt: true,
       icon: true,
       note: true,
       tags: true,
@@ -52,7 +53,7 @@ const places = defineEntity("places", placeFields, {
     // already the user's: the wrong pairings have no row.
     check(
       "places_custom_no_google",
-      sql`google_place_id IS NOT NULL OR (title IS NULL AND primary_type IS NULL AND maps_url IS NULL AND business_status IS NULL AND types = '[]'::jsonb)`,
+      sql`google_place_id IS NOT NULL OR (title IS NULL AND primary_type IS NULL AND maps_url IS NULL AND business_status IS NULL AND google_lost_at IS NULL AND types = '[]'::jsonb)`,
     ),
   ],
 });

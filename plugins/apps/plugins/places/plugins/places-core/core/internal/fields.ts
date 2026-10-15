@@ -80,6 +80,14 @@ export const placeFields = {
    * greys its pin); null when Google gives none. Refreshed monthly.
    */
   businessStatus: nullable(enumTextField(BUSINESS_STATUSES)),
+  /**
+   * Since when Google no longer finds `googlePlaceId` (a refresh answered
+   * NOT_FOUND: the id is obsolete — the place closed, moved, or Google re-keyed
+   * it). The saved snapshot stays as it was last fetched; Google hands over no
+   * successor id, so nothing re-links it automatically. Null while Google still
+   * finds it, and always on a custom place. Cleared by a refresh that succeeds.
+   */
+  googleLostAt: nullable(dateField()),
   /** One Material Symbols name, picked by Haiku from the place; null until then. */
   icon: savedIcon(),
   note: textField(),

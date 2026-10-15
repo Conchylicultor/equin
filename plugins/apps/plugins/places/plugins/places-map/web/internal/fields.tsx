@@ -56,7 +56,8 @@ export function placeSearchText(p: Place): string {
  * can include / exclude them), and draws the others as coloured chips; `want`
  * and `been` are the same two facts as their own groupable yes / no columns;
  * `businessStatus` is Google's word on whether the place is still open (none
- * for a custom place).
+ * for a custom place); `googleLost` whether Google no longer finds the place's
+ * id (its details frozen as last fetched).
  */
 export function placeFieldDefs(tags: readonly PlaceTag[]): FieldDef<Place>[] {
   return [
@@ -112,6 +113,16 @@ export function placeFieldDefs(tags: readonly PlaceTag[]): FieldDef<Place>[] {
       type: "enum",
       value: (p) => p.businessStatus,
       options: BUSINESS_STATUS_OPTIONS,
+      sortable: true,
+      filterable: true,
+      groupable: true,
+      visible: false,
+    },
+    {
+      id: "googleLost",
+      label: "Google link lost",
+      type: "bool",
+      value: (p) => p.googleLostAt !== null,
       sortable: true,
       filterable: true,
       groupable: true,

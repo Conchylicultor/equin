@@ -11,9 +11,14 @@
   Google's name is stored as null).
 - **Custom place** (`isCustomPlace`: `googlePlaceId` null): a pin the user
   named and placed (a closed venue, a bunker, an event). `name` is the user's;
-  `title`, `primaryType`, `mapsUrl`, `businessStatus` are null and `types`
+  `title`, `primaryType`, `mapsUrl`, `businessStatus`, `googleLostAt` are null and `types`
   empty — the `places_custom_no_google` CHECK makes any other pairing
   unwritable. The refresh job skips it; Haiku picks its icon from the name.
+- **Lost Google place** (`googleLostAt` set): the refresh got NOT_FOUND for
+  its `googlePlaceId` — Google retired the id and names no successor. The row
+  keeps its last snapshot and is never re-linked automatically (a successor
+  found by searching is a guess for the user to confirm); a later successful
+  refresh clears it.
 - **Writes**: `insertPlace(NewPlace, extras)` is the one insert, `NewPlace` =
   `{kind:"google", snapshot, title?} | {kind:"custom", name, address, lat,
   lng}` (Save, `POST /api/places/custom-places`, the Mapstr import's

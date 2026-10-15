@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { and, asc, eq, isNotNull, lt } from "drizzle-orm";
+import { and, asc, eq, isNotNull, lt, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import {
   defineJob,
@@ -13,7 +13,12 @@ import {
 import { placeDetails } from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { _places } from "./tables";
-import { REFRESH_BATCH, refreshCutoff, refreshedColumns } from "./refresh";
+import {
+  isPlaceIdObsolete,
+  REFRESH_BATCH,
+  refreshCutoff,
+  refreshedColumns,
+} from "./refresh";
 
 const log = Log.channel("places-refresh");
 
@@ -28,14 +33,20 @@ const log = Log.channel("places-refresh");
  * main's DB, and every worktree re-fetching its fork's copy would bill Google
  * once per worktree.
  *
- * A place Google refuses (`PlacesApiError`) is skipped, keeps its old
- * `fetchedAt` (so next month asks again) and fails the run once the batch is
- * done — loud, without one bad id starving the rest of the batch.
+ * A place whose id Google no longer finds (NOT_FOUND — `isPlaceIdObsolete`) is
+ * an answer, not a fault: it is marked `googleLostAt` (kept from the first
+ * miss), its snapshot left as last fetched, and asked again in 30 days like
+ * any other — the card and the "Google link lost" filter show it. A success
+ * clears the mark.
+ *
+ * Any other refusal (`PlacesApiError`) is skipped, keeps its old `fetchedAt`
+ * (so next month asks again) and fails the run once the batch is done — loud,
+ * without one bad id starving the rest of the batch.
  */
 export const refreshPlacesJob = defineJob({
   name: "places.refresh-details",
   description:
-    "Re-fetches Google Place Details for saved Google places (not custom ones) older than 30 days, updating Google's name for each (never the user's title), whether it is still open, its Google types and its Maps link.",
+    "Re-fetches Google Place Details for saved Google places (not custom ones) older than 30 days, updating Google's name for each (never the user's title), whether it is still open, its Google types and its Maps link — and marking a place whose id Google no longer finds as lost.",
   // Up to REFRESH_BATCH sequential Google calls with no per-call timeout.
   hold: "minutes",
   inProcess:
@@ -77,12 +88,25 @@ export const refreshPlacesJob = defineJob({
 
     const failed: string[] = [];
     let closed = 0;
+    let lost = 0;
     for (const place of stale) {
       let snapshot: PlaceSnapshot;
       try {
         snapshot = await placeDetails(key.key, place.googlePlaceId);
       } catch (err) {
         if (!(err instanceof PlacesApiError)) throw err;
+        if (isPlaceIdObsolete(err)) {
+          lost += 1;
+          const now = new Date();
+          await db
+            .update(_places)
+            .set({
+              googleLostAt: sql`coalesce(${_places.googleLostAt}, ${now})`,
+              fetchedAt: now,
+            })
+            .where(eq(_places.id, place.id));
+          continue;
+        }
         failed.push(`${place.googlePlaceId} (${err.status}: ${err.message})`);
         continue;
       }
@@ -95,7 +119,7 @@ export const refreshPlacesJob = defineJob({
     }
 
     log.publish(
-      `refreshed ${stale.length - failed.length}/${stale.length} place(s); ${closed} permanently closed`,
+      `refreshed ${stale.length - failed.length - lost}/${stale.length} place(s); ${closed} permanently closed; ${lost} no longer found by Google`,
     );
     if (failed.length > 0) {
       throw new NonRetryableError(

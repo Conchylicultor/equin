@@ -148,6 +148,7 @@ export function PlaceCard({
                   </Text>
                 ) : null}
                 <ClosedLine status={place.businessStatus} />
+                <LostLine lostAt={place.googleLostAt} />
                 <IconLine place={place} ownIcon={visual.ownIcon} />
               </Stack>
             </Fill>
@@ -413,6 +414,24 @@ function ClosedLine({
     );
   }
   return null;
+}
+
+/**
+ * Google no longer finds the place's id (the monthly refresh got NOT_FOUND):
+ * what the card shows is the place as Google last described it, and nothing
+ * here updates any more. Nothing while Google still finds it.
+ */
+function LostLine({ lostAt }: { lostAt: Place["googleLostAt"] }): ReactNode {
+  if (lostAt === null) return null;
+  return (
+    <Text variant="caption" tone="destructive">
+      {`Google link lost since ${lostAt.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })} — details as Google last gave them`}
+    </Text>
+  );
 }
 
 /**

@@ -1,4 +1,7 @@
-import type { PlaceSnapshot } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
+import type {
+  PlaceSnapshot,
+  PlacesApiError,
+} from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import type { Place } from "../../core";
 
 /** A place's Google snapshot is re-fetched once it is older than this. */
@@ -25,13 +28,30 @@ export function refreshedColumns(
   snapshot: PlaceSnapshot,
 ): Pick<
   Place,
-  "name" | "businessStatus" | "primaryType" | "types" | "mapsUrl"
+  | "name"
+  | "businessStatus"
+  | "primaryType"
+  | "types"
+  | "mapsUrl"
+  | "googleLostAt"
 > {
   return {
+    // Google found the id again: whatever it lost is found.
+    googleLostAt: null,
     name: snapshot.name,
     businessStatus: snapshot.businessStatus ?? null,
     primaryType: snapshot.primaryType ?? null,
     types: snapshot.types ?? [],
     mapsUrl: snapshot.mapsUrl ?? null,
   };
+}
+
+/**
+ * Whether Google's refusal says the place id is obsolete — Places API (New)
+ * answers NOT_FOUND for an id it no longer knows (the place closed, moved, or
+ * was re-keyed), and names no successor. Any other refusal (a bad key, quota,
+ * a malformed id) is a fault to surface, not a fact about the place.
+ */
+export function isPlaceIdObsolete(err: PlacesApiError): boolean {
+  return err.reason === "NOT_FOUND";
 }
