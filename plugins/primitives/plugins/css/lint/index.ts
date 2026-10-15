@@ -1,5 +1,5 @@
 import noAdhocLayout from "./no-adhoc-layout";
-import noUniversalHas from "./no-universal-has";
+import noUnanchoredHas from "./no-unanchored-has";
 import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 /**
@@ -27,6 +27,6 @@ export default {
   // @plugins/framework/plugins/tooling/plugins/lint/core/class-token-walk.ts.
   classRules: {
     "no-adhoc-layout": noAdhocLayout,
-    "no-universal-has": noUniversalHas,
+    "no-unanchored-has": noUnanchoredHas,
   },
 } satisfies LintContribution;

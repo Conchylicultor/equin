@@ -29891,6 +29891,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/overlay/cursor-menu` (0 debt)
           - `primitives/overlay/floating-action` (0 debt)
           - `primitives/overlay/surface-overlay` (0 debt)
+      - Core:
+        - Exports (types): `UnanchoredHas`
+        - Exports (values): `unanchoredHas`
       - Plugins:
         - **`activity-ring`** — Activity ring around a status dot: <ActivityRing state> draws a spinning arc on a faint track while background work runs and a broken destructive ring when it failed; null renders the child alone with no reserved box. Sized from the ambient ControlSize's status-dot token, so it scales with the dot it wraps.
           - Web:

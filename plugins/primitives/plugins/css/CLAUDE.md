@@ -101,6 +101,9 @@ code is gated immediately, and a genuine one-off escapes per-site via
     - `primitives/overlay/cursor-menu` (0 debt)
     - `primitives/overlay/floating-action` (0 debt)
     - `primitives/overlay/surface-overlay` (0 debt)
+- Core:
+  - Exports (types): `UnanchoredHas`
+  - Exports (values): `unanchoredHas`
 - Sub-plugins:
   - **`activity-ring`** — Activity ring around a status dot: <ActivityRing state> draws a spinning arc on a faint track while background work runs and a broken destructive ring when it failed; null renders the child alone…
   - **`badge`** — The canonical chip primitive and shared chip shell (region-line single-line core, rigid leading icon, truncating label leaf): semantic variant × colorClass coloring, a rect|pill shape axis, size…
