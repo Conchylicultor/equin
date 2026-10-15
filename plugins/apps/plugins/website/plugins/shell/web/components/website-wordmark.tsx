@@ -12,7 +12,10 @@ import { landingPane } from "../panes";
  *
  * It is the `inline` aspect of a button — the text IS the control, with no
  * padded box around it — so the wordmark starts on the header's left edge, the
- * same edge every band below starts on. A padded button would indent it.
+ * same edge every band below starts on. A padded button would indent it. Like
+ * every other control in the header (`WebsiteNavLink`, the GitHub link) it has
+ * no hover box: a fill hugging the type with no padding reads as a smudge, and
+ * the header's controls answer the pointer through the cursor and colour alone.
  *
  * The full stop is the mark: it is the only place on the site where the brand
  * colour appears as identity rather than as an affordance, which is what lets
@@ -25,6 +28,7 @@ export function WebsiteWordmark() {
     <Button
       variant="ghost"
       aspect="inline"
+      className="hover:bg-transparent"
       {...openPane.link(landingPane, {}, { mode: "root" })}
     >
       <WordmarkText />

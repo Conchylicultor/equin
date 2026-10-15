@@ -10,6 +10,12 @@ import { colorPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/color-pale
  * frosted black one — so the nav reads on white ice and black water alike.
  *
  * The same values in both modes: the picture does not change with the mode.
+ *
+ * Each dress is a whole bar's palette, not just its ink: `muted` / `accent` are
+ * the tone a ghost control hovers to on it (`--hover-fill`) and the panel tone
+ * of anything open on it. Left out, they fall through to the site theme's
+ * values for the desktop's mode — near-black under dark mode, which painted a
+ * black box behind the sky's dark wordmark on hover.
  */
 export const icebergSkyHeaderTheme = defineSubTheme({
   id: "iceberg-sky-header",
@@ -22,6 +28,9 @@ export const icebergSkyHeaderTheme = defineSubTheme({
         foreground: "#0b1220",
         mutedForeground: "#3c4858",
         faintForeground: "#566275",
+        muted: "#e8edf4",
+        accent: "#e8edf4",
+        accentForeground: "#0b1220",
         secondary: "#0b1220",
         secondaryForeground: "#ffffff",
       }),
@@ -40,6 +49,9 @@ export const icebergSeaHeaderTheme = defineSubTheme({
         foreground: "#f4f4f5",
         mutedForeground: "#b4b4bd",
         faintForeground: "#8a909c",
+        muted: "#1a1e27",
+        accent: "#1a1e27",
+        accentForeground: "#f4f4f5",
         primaryText: "#60a5fa",
         secondary: "#f4f4f5",
         secondaryForeground: "#000000",
