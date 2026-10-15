@@ -1,4 +1,5 @@
 import { useMemo, type ReactElement } from "react";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import {
@@ -30,11 +31,12 @@ const NO_ENTRIES: LogEntry[] = [];
 export function LogsCatalog({
   worktree,
   selectedId,
-  onOpen,
+  linkTo,
 }: {
   worktree: string;
   selectedId: string | undefined;
-  onOpen: (id: string) => void;
+  /** Where a row goes: a link, so ⌘/middle-click opens the log in a browser tab. */
+  linkTo: (id: string) => LinkTarget;
 }): ReactElement {
   const result = useLive(logsCatalog, { worktree });
   // The DataView renders the loading and failed states (`readiness`); only a
@@ -133,7 +135,7 @@ export function LogsCatalog({
       defaultView="table"
       readiness={result}
       selectedRowId={selectedId}
-      rowActivation={(e) => () => onOpen(e.id)}
+      rowActivation={(e) => linkTo(e.id)}
       emptyState="No logs here."
     />
   );

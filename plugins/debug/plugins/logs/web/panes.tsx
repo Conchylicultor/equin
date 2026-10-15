@@ -76,7 +76,7 @@ function LogsBody(): ReactElement {
           <LogsCatalog
             worktree={worktree}
             selectedId={selected}
-            onOpen={(id) =>
+            linkTo={(id) =>
               openPane.to(logChannelPane, { channel: id }, { mode: "push" })
             }
           />
