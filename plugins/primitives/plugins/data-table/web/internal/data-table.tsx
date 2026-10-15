@@ -390,7 +390,7 @@ export function DataTable<TRow>({
 
   // The first group's header in `first-group` mode: the caller's header node in
   // a cell across the leading tracks, then the remaining columns' label cells in
-  // their own tracks (and the actions track's empty span). renderGroupedBody
+  // their own tracks (and the actions track's empty span). renderGroupHeader
   // makes that group's sticky band the subgrid row these cells sit in.
   const firstGroupLabels: FirstGroupLabels | undefined = labelsOnFirstGroup
     ? {
