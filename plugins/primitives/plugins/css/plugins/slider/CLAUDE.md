@@ -85,6 +85,7 @@ rendered whether or not there is a detent, so that routing never moves.
     - `apps/sonata/audio/engine`
     - `apps/sonata/audio/metronome`
     - `apps/sonata/recording`
+    - `apps/sonata/rich/swing`
     - `apps/sonata/track-mixer`
     - `primitives/overlay/image-viewer`
 

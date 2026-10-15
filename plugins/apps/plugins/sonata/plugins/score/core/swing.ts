@@ -20,7 +20,7 @@
  *
  * Everything is in beats, so it is tempo-invariant (a `retime` keeps it).
  */
-import type { Score, Swing } from "./types";
+import type { Score, Swing, SwingOverride } from "./types";
 
 /** The length in quarter-note beats of one swung pair of `unit` notes. */
 function pairBeats(unit: Swing["unit"]): number {
@@ -62,4 +62,49 @@ export function swingScore(score: Score): Score {
     }),
     pedalEvents: score.pedalEvents.map((p) => ({ ...p, beat: at(p.beat) })),
   };
+}
+
+/** Whether two feels are the same (`undefined` = straight). */
+export function sameSwing(a: Swing | undefined, b: Swing | undefined): boolean {
+  if (!a || !b) return !a && !b;
+  return a.unit === b.unit && Math.abs(a.ratio - b.ratio) < 1e-6;
+}
+
+/**
+ * The Score under a per-song {@link SwingOverride}: a META-only change (notes,
+ * onsets and tempo map untouched — swing is applied at playback by
+ * {@link swingScore}), so a pipeline step running it keeps the playhead valid.
+ * A replaced swing keeps the content's own as `meta.authoredSwing`. Returns
+ * `score` itself when the override is `score`.
+ */
+export function applySwingOverride(
+  score: Score,
+  override: SwingOverride,
+): Score {
+  if (override.kind === "score") return score;
+  const { swing: authored, ...meta } = score.meta;
+  return {
+    ...score,
+    meta: {
+      ...meta,
+      ...(authored ? { authoredSwing: authored } : {}),
+      ...(override.kind === "swing" ? { swing: override.swing } : {}),
+    },
+  };
+}
+
+/**
+ * The override that plays `feel` when `on` (straight otherwise, remembering
+ * `feel` for the next time swing is turned on) over a song whose content marks
+ * `authored`: `score` when it plays exactly the content's own feel, so a song
+ * set back to it follows the score again rather than pinning a copy of it.
+ */
+export function swingOverrideFor(
+  on: boolean,
+  feel: Swing,
+  authored: Swing | undefined,
+): SwingOverride {
+  if (!on) return { kind: "straight", feel };
+  if (sameSwing(feel, authored)) return { kind: "score" };
+  return { kind: "swing", swing: feel };
 }

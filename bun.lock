@@ -1008,6 +1008,10 @@
       "name": "@singularity/plugin-apps-sonata-rich-rhythm-controls",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/rich/plugins/swing": {
+      "name": "@singularity/plugin-apps-sonata-rich-swing",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/score": {
       "name": "@singularity/plugin-apps-sonata-score",
       "version": "0.0.1",
@@ -7083,6 +7087,8 @@
     "@singularity/plugin-apps-sonata-rich-readout-keyboard": ["@singularity/plugin-apps-sonata-rich-readout-keyboard@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/readout-keyboard"],
 
     "@singularity/plugin-apps-sonata-rich-rhythm-controls": ["@singularity/plugin-apps-sonata-rich-rhythm-controls@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls"],
+
+    "@singularity/plugin-apps-sonata-rich-swing": ["@singularity/plugin-apps-sonata-rich-swing@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/swing"],
 
     "@singularity/plugin-apps-sonata-score": ["@singularity/plugin-apps-sonata-score@workspace:plugins/apps/plugins/sonata/plugins/score"],
 

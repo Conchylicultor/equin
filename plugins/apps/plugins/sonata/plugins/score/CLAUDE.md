@@ -85,6 +85,7 @@ Three pure pieces every loop consumer shares, so nobody re-derives the maths:
     - `SectionAnnotation`
     - `SectionData`
     - `Swing`
+    - `SwingOverride`
     - `TempoEvent`
     - `TempoIndex`
     - `TimelineTakeover`
@@ -94,6 +95,7 @@ Three pure pieces every loop consumer shares, so nobody re-derives the maths:
     - `VoicingData`
   - Exports (values):
     - `accidentalGlyph`
+    - `applySwingOverride`
     - `asKeySignature`
     - `barBeatsAt`
     - `barPositionAt`
@@ -127,6 +129,7 @@ Three pure pieces every loop consumer shares, so nobody re-derives the maths:
     - `resyncTimeline`
     - `retempoTimeline`
     - `samePosition`
+    - `sameSwing`
     - `scaleTempo`
     - `scoreEndBeat`
     - `scoreStartBeat`
@@ -137,6 +140,7 @@ Three pure pieces every loop consumer shares, so nobody re-derives the maths:
     - `startTimeline`
     - `subdivideBars`
     - `swingBeat`
+    - `swingOverrideFor`
     - `swingScore`
     - `tonicFifths`
     - `unrollLoop`

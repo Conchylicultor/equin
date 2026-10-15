@@ -1,4 +1,4 @@
-// @hash 1afe9db09161
+// @hash 0c0791d367ee
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,6 +10,7 @@
     "apps.sonata.audio.metronome:count-in",
     "apps.sonata.lyrics-hud:lyrics",
     "apps.sonata.rich.key-chip:key-chip",
+    "apps.sonata.rich.swing:swing-chip",
     "apps.sonata.view-options:view-options"
   ]
 }

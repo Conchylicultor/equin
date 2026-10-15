@@ -163,6 +163,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/sonata/plugins/rich/plugins/key-readout",
   "apps/plugins/sonata/plugins/rich/plugins/readout-keyboard",
   "apps/plugins/sonata/plugins/rich/plugins/rhythm-controls",
+  "apps/plugins/sonata/plugins/rich/plugins/swing",
   "apps/plugins/sonata/plugins/songsheet",
   "apps/plugins/sonata/plugins/sources/plugins/chord-grid",
   "apps/plugins/sonata/plugins/sources/plugins/midi",

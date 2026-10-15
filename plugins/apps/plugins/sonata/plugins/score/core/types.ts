@@ -207,6 +207,17 @@ export interface Swing {
   ratio: number;
 }
 
+/**
+ * A per-song choice over the content's own swing: keep it (`score`), play
+ * straight (`straight`), or play this feel (`swing`). Applied to `meta.swing`
+ * by `applySwingOverride` in the song's score pipeline.
+ */
+export type SwingOverride =
+  | { kind: "score" }
+  /** Straight, remembering the `feel` turning swing back on plays. */
+  | { kind: "straight"; feel: Swing }
+  | { kind: "swing"; swing: Swing };
+
 /** The canonical in-memory model — the narrow waist. */
 export interface Score {
   meta: {
@@ -217,6 +228,13 @@ export interface Score {
     recording?: ScoreRecording;
     /** The swing feel the notes are played with; absent = straight. */
     swing?: Swing;
+    /**
+     * The content's OWN swing feel, kept only when a per-song
+     * {@link SwingOverride} replaced `swing` (see `applySwingOverride`):
+     * display only, so a control can say what the score marks. Absent = the
+     * score's swing is unchanged (read `swing`), or the content marks none.
+     */
+    authoredSwing?: Swing;
   };
   /** Parts / instruments. */
   tracks: TrackMeta[];

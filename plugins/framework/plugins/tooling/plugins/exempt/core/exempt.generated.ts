@@ -31,6 +31,7 @@ export const exemptEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/pages/plugins/page-tree", id: "apps.pages.page-tree", loader: () => import("@plugins/apps/plugins/pages/plugins/page-tree/exempt"), dependsOn: [] },
   { pluginPath: "apps/plugins/sonata/plugins/playback-history", id: "apps.sonata.playback-history", loader: () => import("@plugins/apps/plugins/sonata/plugins/playback-history/exempt"), dependsOn: [] },
   { pluginPath: "apps/plugins/sonata/plugins/rich/plugins/key-mode", id: "apps.sonata.rich.key-mode", loader: () => import("@plugins/apps/plugins/sonata/plugins/rich/plugins/key-mode/exempt"), dependsOn: [] },
+  { pluginPath: "apps/plugins/sonata/plugins/rich/plugins/swing", id: "apps.sonata.rich.swing", loader: () => import("@plugins/apps/plugins/sonata/plugins/rich/plugins/swing/exempt"), dependsOn: [] },
   { pluginPath: "apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar", id: "apps.sonata.sources.ultimate-guitar", loader: () => import("@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/exempt"), dependsOn: [] },
   { pluginPath: "apps/plugins/sonata/plugins/transpose", id: "apps.sonata.transpose", loader: () => import("@plugins/apps/plugins/sonata/plugins/transpose/exempt"), dependsOn: [] },
   { pluginPath: "apps/plugins/studio/plugins/contributions/plugins/tables/plugins/columns", id: "apps.studio.contributions.tables.columns", loader: () => import("@plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/columns/exempt"), dependsOn: [] },

@@ -223,8 +223,8 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `multipart`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 200 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×51
+  - Imported by: 201 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×52
     - `conversations` ×26
     - `debug` ×18
     - `infra` ×16
@@ -259,6 +259,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `apps/pages/page-tree` (0 debt)
     - `apps/sonata/playback-history` (0 debt)
     - `apps/sonata/rich/key-mode` (0 debt)
+    - `apps/sonata/rich/swing` (0 debt)
     - `apps/sonata/transpose` (0 debt)
     - `infra/endpoints` (0 debt)
     - `infra/ndjson-stream` (0 debt)

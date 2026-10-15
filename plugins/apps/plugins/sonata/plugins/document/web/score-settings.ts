@@ -9,6 +9,7 @@ import {
   DEFAULT_CHORD_VOICING,
   type ReVoiceGroove,
 } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
+import type { SwingOverride } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { defineSongSetting, type SongSetting } from "./song-setting";
 import { useSettledSongSettings } from "./loaded-song";
 
@@ -85,12 +86,22 @@ export const grooveSetting = defineSongSetting<RhythmGroove>(
   defaultGroove(),
 );
 
+/**
+ * The swing feel the song plays with (`swing` plugin): the content's own
+ * (`score`), forced straight, or a chosen feel — applied to `meta.swing` as the
+ * pipeline's last, meta-only step. Absent: the content's own.
+ */
+export const swingSetting = defineSongSetting<SwingOverride>("swing", {
+  kind: "score",
+});
+
 /** The settings the score pipeline transforms the content with. */
 export interface ScoreSettings {
   transposeSemitones: number;
   keyAutoDetect: boolean;
   groove: RhythmGroove;
   chordMode: boolean;
+  swing: SwingOverride;
 }
 
 const SCORE_SETTINGS = {
@@ -98,6 +109,7 @@ const SCORE_SETTINGS = {
   keyAutoDetect: keyAutoDetectSetting,
   groove: grooveSetting,
   chordMode: chordModeSetting,
+  swing: swingSetting,
 };
 
 /**

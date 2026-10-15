@@ -1,0 +1,38 @@
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  SonataDocument,
+  swingSetting,
+} from "@plugins/apps/plugins/sonata/plugins/document/web";
+import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import {
+  FeelSection,
+  FeelSummary,
+  FeelSwitch,
+  useFeelAvailable,
+} from "./components/feel-section";
+import { SwingChip } from "./components/swing-chip";
+import { SwingObserver } from "./components/swing-observer";
+
+export default {
+  description:
+    "Per-song swing feel: persists the song's swing override (straight, or a chosen 8ths/16ths feel) and registers it with the song document's score pipeline (SonataDocument.SongSetting, settled by a headless observer). Sonata Section: Feel — on/off in the header, a picture of the swung beats, the unit, the ratio and where the feel comes from. Sonata Hud: a swing chip while the song plays swung.",
+  contributions: [
+    SonataDocument.SongSetting({
+      id: "swing-sync",
+      setting: swingSetting,
+      component: SwingObserver,
+    }),
+    Sonata.Section({
+      id: "feel",
+      label: "Feel",
+      icon: symbol("music-note"),
+      area: "player",
+      component: FeelSection,
+      actions: FeelSwitch,
+      summary: FeelSummary,
+      useAvailable: useFeelAvailable,
+    }),
+    Sonata.Hud({ id: "swing-chip", component: SwingChip }),
+  ],
+} satisfies PluginDefinition;

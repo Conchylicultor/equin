@@ -5258,7 +5258,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/shortcuts.getFocusedSurfaceId`
               - `primitives/shortcuts.targetClaimsKey`
               - `primitives/shortcuts.useSurfaceShortcuts`
-        - **`document`** — Sonata song document: a song's identity (a library song or a file), its sources' raw input and its per-song settings as one per-surface state, composed into a score through the source → merge → transpose → voicing → key → spelling → analyzer → chord-mode pipeline. Defines the SonataDocument.{Source,Analyzer,SongSetting} registries; a file document settles every setting to its default and mounts no observer.
+        - **`document`** — Sonata song document: a song's identity (a library song or a file), its sources' raw input and its per-song settings as one per-surface state, composed into a score through the source → merge → transpose → voicing → key → spelling → analyzer → chord-mode → swing pipeline. Defines the SonataDocument.{Source,Analyzer,SongSetting} registries; a file document settles every setting to its default and mounts no observer.
           - Web:
             - Slots:
               - `SonataDocument.Source`
@@ -5273,6 +5273,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SonataDocument.SongSetting` ← `apps.sonata.rich.chord-mode`
               - `SonataDocument.SongSetting` ← `apps.sonata.rich.key-mode`
               - `SonataDocument.SongSetting` ← `apps.sonata.rich.rhythm-controls`
+              - `SonataDocument.SongSetting` ← `apps.sonata.rich.swing`
               - `SonataDocument.SongSetting` ← `apps.sonata.track-mixer`
               - `SonataDocument.SongSetting` ← `apps.sonata.transpose`
             - Uses:
@@ -5297,6 +5298,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SonataDocument`
               - `SongDocumentProvider`
               - `SongSettingsMount`
+              - `swingSetting`
               - `transposeSetting`
               - `useFailSongSetting`
               - `useHasChords`
@@ -5310,8 +5312,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSongSetting`
               - `useWriteSongSetting`
           - Cross-plugin:
-            - Imported by: 25 plugins — full list in [`plugins/apps/plugins/sonata/plugins/document/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/document/REFERENCE.md)
-              - `apps` ×25
+            - Imported by: 26 plugins — full list in [`plugins/apps/plugins/sonata/plugins/document/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/document/REFERENCE.md)
+              - `apps` ×26
         - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the `sonata.songs` live collection (sortable and filterable by every field an extension exposes on the songs entity). Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
           - Web:
             - Slots:
@@ -5455,6 +5457,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/rich/chord-mode`
               - `apps/sonata/rich/key-mode`
               - `apps/sonata/rich/rhythm-controls`
+              - `apps/sonata/rich/swing`
               - `apps/sonata/sources/chord-grid`
               - `apps/sonata/sources/midi`
               - `apps/sonata/sources/midi/file-preview`
@@ -5473,6 +5476,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/sources/musicxml` (table `library_ext_musicxml`)
               - `apps/sonata/playback-history` (table `library_ext_playback`)
               - `apps/sonata/rich/rhythm-controls` (table `library_ext_rhythm`)
+              - `apps/sonata/rich/swing` (table `library_ext_swing`)
               - `apps/sonata/transcription` (table `library_ext_transcription`)
               - `apps/sonata/transpose` (table `library_ext_transpose`)
               - `apps/sonata/sources/ultimate-guitar/alignment` (table `library_ext_ug_alignment`)
@@ -6450,6 +6454,55 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Routes: `POST /api/sonata/songs/:id/rhythm`
               - Cross-plugin:
                 - Imported by: `apps/sonata/rich/accompaniment`
+            - **`swing`** — Per-song swing feel: persists the song's swing override (straight, or a chosen 8ths/16ths feel) and registers it with the song document's score pipeline (SonataDocument.SongSetting, settled by a headless observer). Sonata Section: Feel — on/off in the header, a picture of the swung beats, the unit, the ratio and where the feel comes from. Sonata Hud: a swing chip while the song plays swung. Owns the sonata_songs_ext_swing side-table: a song's swing override (straight, or a chosen 8ths/16ths feel; no row = the song's own). Serves it as a per-song lookup collection.
+              - Web:
+                - Contributes:
+                  - `SonataDocument.SongSetting` "swing-sync" → `SwingObserver`
+                  - `Sonata.Section` "Feel" → `FeelSection`
+                  - `Sonata.Hud` "swing-chip" → `SwingChip`
+                - Uses: 23 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/swing/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/swing/REFERENCE.md)
+                  - `apps/sonata/document` ×8
+                  - `primitives/css/ui-kit` ×2
+                  - `apps/sonata/session.useSession`
+                  - `apps/sonata/shell.Sonata`
+                  - `infra/endpoints.fetchEndpoint`
+                  - `network/live.useLiveRow`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/slider.Slider`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/switch.Switch`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/toggle-chip.SegmentedControl`
+                  - `primitives/live-state.ResourceErrorInline`
+                  - `primitives/loading.Loading`
+                  - `primitives/overlay/tooltip.WithTooltip`
+              - Server:
+                - Contributes: `resource.declare` "sonata-swing:rows"
+                - Uses:
+                  - `apps/sonata/library._songs`
+                  - `infra/endpoints.implement`
+                  - `infra/entity-extensions.defineExtension`
+                  - `network/live.serveCollection`
+                - DB schema: `plugins/apps/plugins/sonata/plugins/rich/plugins/swing/server/internal/tables.ts`
+                - Entity extension of: `apps/sonata/library` (table `library_ext_swing`)
+                - Exports (values): `songSwing`
+                - Resources: `sonata-swing:rows` (keyed, point)
+                - Routes: `POST /api/sonata/songs/:id/swing`
+              - Exemptions:
+                - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/actions.ts` (sanctioned)
+              - Core:
+                - Exports (types): `SwingStop`
+                - Exports (values):
+                  - `DEFAULT_SWING`
+                  - `MAX_SWING_RATIO`
+                  - `MIN_SWING_RATIO`
+                  - `SWING_STOPS`
+                  - `swingFeelName`
+                  - `swingLabel`
+                  - `swingRatioLabel`
+                  - `swingSplit`
+                  - `swingStopAt`
+                  - `swingUnitLabel`
         - **`score`**
           - Cross-plugin:
             - Imported by:
@@ -6497,6 +6550,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SectionAnnotation`
               - `SectionData`
               - `Swing`
+              - `SwingOverride`
               - `TempoEvent`
               - `TempoIndex`
               - `TimelineTakeover`
@@ -6506,6 +6560,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `VoicingData`
             - Exports (values):
               - `accidentalGlyph`
+              - `applySwingOverride`
               - `asKeySignature`
               - `barBeatsAt`
               - `barPositionAt`
@@ -6539,6 +6594,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resyncTimeline`
               - `retempoTimeline`
               - `samePosition`
+              - `sameSwing`
               - `scaleTempo`
               - `scoreEndBeat`
               - `scoreStartBeat`
@@ -6549,6 +6605,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `startTimeline`
               - `subdivideBars`
               - `swingBeat`
+              - `swingOverrideFor`
               - `swingScore`
               - `tonicFifths`
               - `unrollLoop`
@@ -6593,8 +6650,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useCursorSelector`
               - `useSession`
           - Cross-plugin:
-            - Imported by: 31 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
-              - `apps` ×31
+            - Imported by: 32 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
+              - `apps` ×32
         - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots.
           - Web:
             - Slots:
@@ -6607,11 +6664,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Sonata.Hud`
               - `Sonata.ViewOption`
               - `Sonata.Section`
-            - Slot contributors: 34 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
-              - `Sonata.Section` ×10
+            - Slot contributors: 36 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
+              - `Sonata.Section` ×11
               - `Sonata.ViewOption` ×8
               - `Sonata.Effect` ×6
-              - `Sonata.Hud` ×4
+              - `Sonata.Hud` ×5
               - `Sonata.TransportOverlay` ×2
               - `Sonata.Home` ← `apps.sonata.library`
               - `Sonata.Overlay` ← `apps.sonata.rich.chord-overlay`
@@ -6644,8 +6701,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `sonataApp`
           - Cross-plugin:
-            - Imported by: 28 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
-              - `apps` ×28
+            - Imported by: 29 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
+              - `apps` ×29
         - **`songsheet`** — Sonata Display: a chord-over-lyrics songsheet. Renders the score's lyric lines with chords printed over each column, grouped by section, highlighting and auto-scrolling the line under the playback cursor. A reading view (no time-axis / pitch-plane capabilities); click a line to seek.
           - Web:
             - Contributes: `SonataPlayer.Display` "Songsheet" → `Songsheet`
@@ -22203,8 +22260,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `multipart`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 200 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×51
+        - Imported by: 201 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×52
           - `conversations` ×26
           - `debug` ×18
           - `infra` ×16
@@ -22239,6 +22296,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/page-tree` (0 debt)
           - `apps/sonata/playback-history` (0 debt)
           - `apps/sonata/rich/key-mode` (0 debt)
+          - `apps/sonata/rich/swing` (0 debt)
           - `apps/sonata/transpose` (0 debt)
           - `infra/endpoints` (0 debt)
           - `infra/ndjson-stream` (0 debt)
@@ -22359,8 +22417,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 35 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
-          - `apps` ×15
+        - Imported by: 36 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+          - `apps` ×16
           - `tasks` ×10
           - `conversations` ×6
           - `page` ×3
@@ -25360,8 +25418,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 225 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×65
+        - Imported by: 226 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×66
           - `conversations` ×35
           - `tasks` ×26
           - `debug` ×23
@@ -30114,8 +30172,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 156 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
-              - `apps` ×44
+            - Imported by: 157 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+              - `apps` ×45
               - `primitives` ×30
               - `conversations` ×23
               - `debug` ×15
@@ -30556,6 +30614,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/audio/engine`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/recording`
+              - `apps/sonata/rich/swing`
               - `apps/sonata/track-mixer`
               - `primitives/overlay/image-viewer`
         - **`space-ramp`** — The spacing ramp's one declaration: the closed step set and the literal class each step-keyed @utility family gives each step, generated from app.css so a step that exists in TypeScript but has no @utility behind it is unspellable. Read by every consumer (Stack, Inset, Column, railClass, Sticky, Pin) instead of re-spelling the steps.
@@ -30588,8 +30647,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 390 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×97
+            - Imported by: 391 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×98
               - `conversations` ×62
               - `primitives` ×51
               - `debug` ×34
@@ -30760,6 +30819,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/recording`
               - `apps/sonata/rich/chord-mode`
               - `apps/sonata/rich/rhythm-controls`
+              - `apps/sonata/rich/swing`
               - `apps/website/improve`
               - `config_v2/fields`
               - `debug/queue`
@@ -30785,8 +30845,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 360 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×94
+            - Imported by: 361 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×95
               - `conversations` ×71
               - `primitives` ×40
               - `debug` ×32
@@ -30878,8 +30938,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SegmentedControl`
               - `ToggleChip`
           - Cross-plugin:
-            - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
-              - `apps` ×20
+            - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+              - `apps` ×21
               - `primitives` ×8
               - `stats` ×5
               - `apps-core` ×3
@@ -31043,9 +31103,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidewaysScroll`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 401 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 402 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×102
-              - `apps` ×80
+              - `apps` ×81
               - `conversations` ×53
               - `page` ×25
               - `debug` ×22
@@ -32992,8 +33052,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 233 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×65
+        - Imported by: 234 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×66
           - `conversations` ×39
           - `tasks` ×22
           - `ui` ×22
@@ -33071,8 +33131,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LoadingVariant`
         - Exports (values): `Loading`
       - Cross-plugin:
-        - Imported by: 187 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×63
+        - Imported by: 188 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×64
           - `ui` ×19
           - `primitives` ×17
           - `conversations` ×16
@@ -34011,9 +34071,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TooltipDoc`
               - `WithTooltip`
           - Cross-plugin:
-            - Imported by: 46 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
+            - Imported by: 47 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
               - `primitives` ×15
-              - `apps` ×10
+              - `apps` ×11
               - `page` ×6
               - `conversations` ×5
               - `apps-core` ×3

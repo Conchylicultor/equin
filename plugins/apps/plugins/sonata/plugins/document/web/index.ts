@@ -29,6 +29,7 @@ export {
   transposeSetting,
   keyAutoDetectSetting,
   chordModeSetting,
+  swingSetting,
   defaultGroove,
   grooveSetting,
   type RhythmGroove,
@@ -41,6 +42,6 @@ export {
 
 export default {
   description:
-    "Sonata song document: a song's identity (a library song or a file), its sources' raw input and its per-song settings as one per-surface state, composed into a score through the source → merge → transpose → voicing → key → spelling → analyzer → chord-mode pipeline. Defines the SonataDocument.{Source,Analyzer,SongSetting} registries; a file document settles every setting to its default and mounts no observer.",
+    "Sonata song document: a song's identity (a library song or a file), its sources' raw input and its per-song settings as one per-surface state, composed into a score through the source → merge → transpose → voicing → key → spelling → analyzer → chord-mode → swing pipeline. Defines the SonataDocument.{Source,Analyzer,SongSetting} registries; a file document settles every setting to its default and mounts no observer.",
   slots: { ...SonataDocument },
 } satisfies PluginDefinition;

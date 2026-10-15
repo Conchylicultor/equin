@@ -1,0 +1,15 @@
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { setSwingEndpoint } from "../shared/endpoints";
+import { handleSetSwing } from "./internal/routes";
+import { swingsServed } from "./internal/resource";
+
+export { songSwing } from "./internal/tables";
+
+export default {
+  description:
+    "Owns the sonata_songs_ext_swing side-table: a song's swing override (straight, or a chosen 8ths/16ths feel; no row = the song's own). Serves it as a per-song lookup collection.",
+  httpRoutes: {
+    [setSwingEndpoint.route]: handleSetSwing,
+  },
+  contributions: [...swingsServed.declare],
+} satisfies ServerPluginDefinition;

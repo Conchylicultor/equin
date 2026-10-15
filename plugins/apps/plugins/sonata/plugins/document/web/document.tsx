@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  applySwingOverride,
   emptyScore,
   mergeAnnotations,
   mergeScores,
@@ -202,7 +203,7 @@ function ComposedDocument({ children }: { children: ReactNode }) {
         failure: { error: settings.error, refetch: settings.refetch },
       };
     }
-    const { transposeSemitones, keyAutoDetect, groove, chordMode } =
+    const { transposeSemitones, keyAutoDetect, groove, chordMode, swing } =
       settings.value;
     // Shift the whole song by the per-song transpose offset BEFORE anything else
     // (re-voicing / key inference / spelling / chord analysis all operate on the
@@ -232,7 +233,15 @@ function ComposedDocument({ children }: { children: ReactNode }) {
     // view layer, not the content timeline.
     const derived = analyzers.flatMap((a) => a.analyze(spelled));
     const analyzed = mergeAnnotations(spelled, derived);
-    if (!chordMode) return { kind: "ready", contentKey, score: analyzed };
+    // The per-song swing override is META-only (`meta.swing`, the feel the
+    // audio layer plays the straight notes with), so it is the last step: no
+    // note moves, the timeline is untouched.
+    if (!chordMode)
+      return {
+        kind: "ready",
+        contentKey,
+        score: applySwingOverride(analyzed, swing),
+      };
     // Chord mode: voice EVERY chord annotation — the analyzer-derived ones the
     // MIDI notes just yielded included — onto the Chords / Bass tracks, in one
     // pass so voice-leading stays continuous across authored and detected
@@ -244,7 +253,10 @@ function ComposedDocument({ children }: { children: ReactNode }) {
     return {
       kind: "ready",
       contentKey,
-      score: spellScore(reVoiceChords(analyzed, groove, { include: "all" })),
+      score: applySwingOverride(
+        spellScore(reVoiceChords(analyzed, groove, { include: "all" })),
+        swing,
+      ),
     };
   }, [contentScore, hasContent, analyzers, settings]);
 

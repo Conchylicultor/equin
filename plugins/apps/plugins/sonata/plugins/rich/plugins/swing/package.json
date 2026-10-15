@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-sonata-rich-swing",
+  "description": "Per-song swing feel: the Feel card (on/off, 8ths/16ths, ratio) and the swing HUD chip. Owns the persisted per-song override and syncs it into the song document's score pipeline.",
+  "private": true,
+  "version": "0.0.1"
+}

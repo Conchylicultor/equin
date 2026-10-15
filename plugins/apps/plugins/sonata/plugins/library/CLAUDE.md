@@ -306,6 +306,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/rich/chord-mode`
     - `apps/sonata/rich/key-mode`
     - `apps/sonata/rich/rhythm-controls`
+    - `apps/sonata/rich/swing`
     - `apps/sonata/sources/chord-grid`
     - `apps/sonata/sources/midi`
     - `apps/sonata/sources/midi/file-preview`
@@ -324,6 +325,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/sources/musicxml` (table `library_ext_musicxml`)
     - `apps/sonata/playback-history` (table `library_ext_playback`)
     - `apps/sonata/rich/rhythm-controls` (table `library_ext_rhythm`)
+    - `apps/sonata/rich/swing` (table `library_ext_swing`)
     - `apps/sonata/transcription` (table `library_ext_transcription`)
     - `apps/sonata/transpose` (table `library_ext_transpose`)
     - `apps/sonata/sources/ultimate-guitar/alignment` (table `library_ext_ug_alignment`)

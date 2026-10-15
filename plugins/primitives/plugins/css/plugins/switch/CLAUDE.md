@@ -51,6 +51,7 @@ padding on the track that a flex direction could reinterpret.
     - `apps/sonata/recording`
     - `apps/sonata/rich/chord-mode`
     - `apps/sonata/rich/rhythm-controls`
+    - `apps/sonata/rich/swing`
     - `apps/website/improve`
     - `config_v2/fields`
     - `debug/queue`

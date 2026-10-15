@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { swingBeat, swingScore } from "./swing";
+import {
+  applySwingOverride,
+  swingBeat,
+  swingOverrideFor,
+  swingScore,
+} from "./swing";
 import { emptyScore } from "./helpers";
 import type { Note, Score } from "./types";
 
@@ -79,5 +84,60 @@ describe("swingScore", () => {
       pedalEvents: [{ track: "t", beat: 0.5, down: true }],
     };
     expect(swingScore(s).pedalEvents[0]!.beat).toBeCloseTo(2 / 3);
+  });
+});
+
+describe("applySwingOverride", () => {
+  const authored = { unit: 8, ratio: 2 } as const;
+  const notes = [note(0, 0.5), note(0.5, 0.5)];
+
+  test("score keeps the score itself", () => {
+    const s = scoreWith(notes, { swing: authored });
+    expect(applySwingOverride(s, { kind: "score" })).toBe(s);
+  });
+
+  test("straight drops the swing and keeps the authored one aside", () => {
+    const out = applySwingOverride(scoreWith(notes, { swing: authored }), {
+      kind: "straight",
+      feel: authored,
+    });
+    expect(out.meta.swing).toBeUndefined();
+    expect(out.meta.authoredSwing).toEqual(authored);
+    expect(out.notes).toBe(notes);
+  });
+
+  test("swing replaces the feel; an unmarked song keeps no authored one", () => {
+    const feel = { unit: 16, ratio: 1.5 } as const;
+    const out = applySwingOverride(scoreWith(notes, {}), {
+      kind: "swing",
+      swing: feel,
+    });
+    expect(out.meta.swing).toEqual(feel);
+    expect("authoredSwing" in out.meta).toBe(false);
+  });
+});
+
+describe("swingOverrideFor", () => {
+  const authored = { unit: 8, ratio: 2 } as const;
+  const chosen = { unit: 16, ratio: 1.5 } as const;
+
+  test("playing the score's own feel follows the score", () => {
+    expect(swingOverrideFor(true, { unit: 8, ratio: 2 }, authored)).toEqual({
+      kind: "score",
+    });
+  });
+
+  test("another feel is pinned", () => {
+    expect(swingOverrideFor(true, chosen, authored)).toEqual({
+      kind: "swing",
+      swing: chosen,
+    });
+  });
+
+  test("off remembers the feel to turn back on", () => {
+    expect(swingOverrideFor(false, chosen, authored)).toEqual({
+      kind: "straight",
+      feel: chosen,
+    });
   });
 });

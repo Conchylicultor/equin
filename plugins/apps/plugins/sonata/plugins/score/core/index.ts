@@ -11,6 +11,7 @@ export type {
   Score,
   ScoreRecording,
   Swing,
+  SwingOverride,
   Note,
   Annotation,
   ChordAnnotation,
@@ -69,7 +70,13 @@ export { buildTempoIndex } from "./tempo-index";
 
 export { resolvePedalSustain, pedalSpans, isPedalDownAt } from "./pedal";
 
-export { swingBeat, swingScore } from "./swing";
+export {
+  applySwingOverride,
+  sameSwing,
+  swingBeat,
+  swingOverrideFor,
+  swingScore,
+} from "./swing";
 export type { PedalSpan } from "./pedal";
 
 export type { PlaybackPath, PlaybackTimeline } from "./timeline";

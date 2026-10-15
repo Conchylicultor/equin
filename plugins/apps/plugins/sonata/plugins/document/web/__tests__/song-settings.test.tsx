@@ -397,6 +397,7 @@ describe("the score gate waits on the registered settings, and only on them", ()
         keyAutoDetect: false,
         groove: defaultGroove(),
         chordMode: false,
+        swing: { kind: "score" },
       },
     });
     expect(last(chordMode)).toEqual({ kind: "settled", value: false });
