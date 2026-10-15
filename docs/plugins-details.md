@@ -20417,9 +20417,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`css-vars-supplied`**
             - **`data-migration-dml-only`**
             - **`data-views-in-sync`**
-            - **`durable-signals-accounted`**
-              - Exemptions:
-                - Exempted by: `primitives/log-channels` (0 debt)
             - **`eager-tier-in-sync`**
             - **`fields-eager-in-sync`**
             - **`format-clean`**
@@ -22583,7 +22580,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FileSinkSpec`
           - `JsonlTailResult`
           - `RotateBound`
-          - `SinkConsumer`
           - `TailOptions`
           - `TailResult`
         - Exports (values):
@@ -33162,8 +33158,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/notifications`
           - `stats/cost`
           - `upstream`
-      - Exemptions:
-        - Exempts itself from: `durable-signals-accounted` — `server/internal/log.ts` (sanctioned)
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Web:
         - Slots: `MarkdownEnhancerSlot`

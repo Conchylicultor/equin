@@ -10,10 +10,6 @@ const reapLog = defineLogSink({
   id: "workspace-scratch-reap",
   description:
     "Scratch workspace reaper: every scratch directory removed, and why.",
-  consumer: {
-    kind: "internal",
-    note: "Scratch-workspace reaper prose (conversations/workspace/scratch, daily job): one line per agent scratch dir deleted and why (task dropped/finished > 7 days, or orphaned). Housekeeping record; a failed reap throws in the job, which the jobs plugin surfaces.",
-  },
 });
 
 /**
