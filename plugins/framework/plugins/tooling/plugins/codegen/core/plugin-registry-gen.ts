@@ -20,13 +20,17 @@ import {
   type PluginFolder,
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
-import { assertCompositionName } from "@plugins/plugin-meta/plugins/composition/core";
+import {
+  assertCompositionName,
+  resolveCompositionHome,
+} from "@plugins/plugin-meta/plugins/composition/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import {
   classifyEdges,
   type EdgeGraph,
 } from "@plugins/plugin-meta/plugins/closure/core";
 import { resolveMainComposition } from "./main-bundle";
+import { readDeclaredApps } from "./declared-apps";
 import { readListed, timeSlicer } from "./scan-pacing";
 import { writeGenerated } from "./write-generated";
 
@@ -355,6 +359,10 @@ export interface RegistryGenContext {
   // is no unfiltered registry — every render says which composition it is for,
   // and this is the answer for the committed `<dir>.generated.ts` files.
   mainBundle: Set<PluginId>;
+  // Which composition the committed registries belong to — `singularity`, with
+  // its resolved home app. Resolved (and validated) once here, alongside
+  // `mainBundle`, so every committed render names the same composition.
+  main: RegistryComposition;
   // The repo's file set every scan below enumerates and reads — a check's own
   // run set when a check built this ctx, else listed from git on first use.
   // Lazy because half the callers (composition-closure, config_v2's
@@ -412,6 +420,7 @@ export async function buildRegistryGenContext(
   }
   const tree = await buildBarrelFreeTree(root);
   const graph = classifyEdges(tree);
+  const main = resolveMainComposition(graph, root);
   let listing = repo === undefined ? undefined : Promise.resolve(repo);
   return {
     root,
@@ -420,7 +429,16 @@ export async function buildRegistryGenContext(
     // Throws rather than degrading when main's row is missing or its declared
     // exclusions did not take effect — see `resolveMainComposition`. A registry
     // that contradicts the manifest is worth failing the build for.
-    mainBundle: resolveMainComposition(graph, root).bundle,
+    mainBundle: main.bundle,
+    main: {
+      id: MAIN_COMPOSITION_ID,
+      home: resolveRegistryHome(
+        tree,
+        main.bundle,
+        MAIN_COMPOSITION_ID,
+        main.home,
+      ),
+    },
     repo: () => (listing ??= loadRepoFiles(root)),
     dirScans: new Map(),
   };
@@ -644,6 +662,11 @@ export async function collectEntriesWithDeps(
 export async function renderCollectedDirRegistry(opts: {
   ctx: RegistryGenContext;
   def: DiscoveredCollectedDir;
+  // Which composition this registry belongs to: a `composition`-membership
+  // registry exports it (`composition = { id, home }`), so the runtime knows
+  // what it was deployed as — the web shell's `/` redirect reads `home` from it
+  // with no request. A `checkout` dir belongs to no composition and ignores it.
+  composition: RegistryComposition;
   // REQUIRED: which composition this registry is for — the dot-form PluginId set
   // of its hard closure. Pass `ctx.mainBundle` for the committed
   // `<dir>.generated.ts` files. Required rather than optional because an
@@ -653,7 +676,12 @@ export async function renderCollectedDirRegistry(opts: {
 }): Promise<string> {
   const { ctx, def, bundle } = opts;
   const { entries, deps } = await collectEntriesWithDeps(ctx, def.dir, bundle);
-  return renderRegistry(def.dir, entries, deps);
+  return renderRegistry(
+    def.dir,
+    entries,
+    deps,
+    def.membership === "composition" ? opts.composition : null,
+  );
 }
 
 /**
@@ -662,14 +690,56 @@ export async function renderCollectedDirRegistry(opts: {
  * check bundles in place of the composition-dependent part of an entrypoint,
  * so it measures the part no composition can shrink.
  */
-export function renderEmptyCollectedDirRegistry(dir: string): string {
-  return renderRegistry(dir, [], new Map());
+export function renderEmptyCollectedDirRegistry(
+  dir: string,
+  composition: RegistryComposition,
+): string {
+  return renderRegistry(dir, [], new Map(), composition);
+}
+
+/**
+ * The composition a registry belongs to, as the runtime reads it back from the
+ * registry module's `composition` export.
+ */
+export interface RegistryComposition {
+  id: string;
+  /** The app owning bare `/` — a `defineApp` id; null when the bundle holds no app. */
+  home: string | null;
+}
+
+/**
+ * A composition's manifest `home`, resolved against its bundle — THROWS on any
+ * invalid home (missing, not an app, not bundled), so no build, `--skip-checks`
+ * included, can emit a registry whose `/` lands on the wrong app or none.
+ * `composition-closure` reports the same `resolveCompositionHome` verdict.
+ */
+export function resolveRegistryHome(
+  tree: PluginTree,
+  bundle: ReadonlySet<string>,
+  name: string,
+  home: string,
+): string | null {
+  // Building a composition's registries IS deploying it: something must own `/`.
+  const r = resolveCompositionHome({
+    apps: readDeclaredApps(tree),
+    bundle,
+    home,
+    deployed: true,
+  });
+  if (r.kind === "error") {
+    throw new Error(
+      `Composition "${name}" ${r.message} ` +
+        `(plugins/plugin-meta/plugins/composition/core/config.ts, or the Studio compositions pane).`,
+    );
+  }
+  return r.kind === "app" ? r.appId : null;
 }
 
 function renderRegistry(
   dir: string,
   entries: CollectedRawEntry[],
   deps: Map<string, string[]>,
+  composition: RegistryComposition | null,
 ): string {
   const exportName = `${identifierForDir(dir)}Entries`;
 
@@ -695,6 +765,17 @@ function renderRegistry(
     );
   }
   lines.push("];");
+  if (composition !== null) {
+    lines.push("");
+    lines.push("export interface CompositionIdentity {");
+    lines.push("  id: string;");
+    lines.push("  home: string | null;");
+    lines.push("}");
+    lines.push("");
+    lines.push(
+      `export const composition: CompositionIdentity = { id: ${JSON.stringify(composition.id)}, home: ${JSON.stringify(composition.home)} };`,
+    );
+  }
   lines.push("");
   return lines.join("\n");
 }
@@ -740,6 +821,7 @@ export async function generatePluginRegistry(opts: {
         ctx,
         def,
         bundle: committedRegistryBundle(ctx, def),
+        composition: ctx.main,
       }),
     });
   }
@@ -870,6 +952,8 @@ export async function generateCompositionRegistry(opts: {
    * registry is keyed by name, so no producer can write a checkout-global one.
    */
   name: string;
+  /** The manifest's declared `home`, resolved against `bundle` (throws when invalid). */
+  home: string;
   // Optional prebuilt context so one build shares ONE tree walk across several
   // compositions' registries. Built here when absent so standalone callers work.
   ctx?: RegistryGenContext;
@@ -885,6 +969,10 @@ export async function generateCompositionRegistry(opts: {
   // rather than as a guard at each caller.
   if (opts.name === MAIN_COMPOSITION_ID) return;
   const ctx = opts.ctx ?? (await buildRegistryGenContext(opts.root));
+  const composition: RegistryComposition = {
+    id: opts.name,
+    home: resolveRegistryHome(ctx.tree, opts.bundle, opts.name, opts.home),
+  };
   const defs = await discoverCollectedDirsIn(await ctx.repo());
   for (const def of defs) {
     if (!COMPOSITION_RUNTIME_DIRS.has(def.dir)) continue;
@@ -894,6 +982,7 @@ export async function generateCompositionRegistry(opts: {
         ctx,
         def,
         bundle: opts.bundle,
+        composition,
       }),
     });
   }

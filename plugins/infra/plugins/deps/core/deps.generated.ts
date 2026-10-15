@@ -21,3 +21,10 @@ export const depsEntries: CollectedEntry[] = [
   { pluginPath: "integrations/plugins/youtube", id: "integrations.youtube", loader: () => import("@plugins/integrations/plugins/youtube/deps"), dependsOn: [] },
   { pluginPath: "packages/plugins/signal-origin", id: "packages.signal-origin", loader: () => import("@plugins/packages/plugins/signal-origin/deps"), dependsOn: [] },
 ];
+
+export interface CompositionIdentity {
+  id: string;
+  home: string | null;
+}
+
+export const composition: CompositionIdentity = { id: "singularity", home: "home" };

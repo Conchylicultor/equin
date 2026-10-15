@@ -27,3 +27,10 @@ export const exhibitsEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/section-card", id: "primitives.section-card", loader: () => import("@plugins/primitives/plugins/section-card/exhibits"), dependsOn: [] },
   { pluginPath: "tasks/plugins/task-draft-form", id: "tasks.task-draft-form", loader: () => import("@plugins/tasks/plugins/task-draft-form/exhibits"), dependsOn: [] },
 ];
+
+export interface CompositionIdentity {
+  id: string;
+  home: string | null;
+}
+
+export const composition: CompositionIdentity = { id: "singularity", home: "home" };

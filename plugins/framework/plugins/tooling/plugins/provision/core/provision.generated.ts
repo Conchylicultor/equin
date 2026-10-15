@@ -14,3 +14,10 @@ export interface CollectedEntry {
 
 export const provisionEntries: CollectedEntry[] = [
 ];
+
+export interface CompositionIdentity {
+  id: string;
+  home: string | null;
+}
+
+export const composition: CompositionIdentity = { id: "singularity", home: "home" };

@@ -5,7 +5,6 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  readdirSync,
   realpathSync,
   renameSync,
   rmSync,
@@ -43,6 +42,7 @@ import {
   compositionRegistryFileName,
   compositionRegistryRedirects,
   propagateConfigToUser,
+  readDefineApp,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
   FIXED_ENTRIES,
@@ -234,37 +234,22 @@ function writeDmgBackground(productName: string, outPath: string): void {
 }
 
 /**
- * Statically parse the `iconKey` out of a plugin subtree's `defineApp({...})`
- * call — no barrel import, no React, mirroring the facets static-parse approach.
- *
- * Recurses the entry app's `buildPluginTree` node (and descendants) looking for
- * the shell `core/*.ts` file that holds `defineApp(`, then extracts the
- * `iconKey: "..."` literal from that call's object argument. Distinguishes
+ * The `iconKey` of the first `defineApp({...})` in a plugin subtree (the entry
+ * app's shell), read statically through codegen's `readDefineApp` — the one
+ * `defineApp` parser composition homes resolve through too. Distinguishes
  * "found a `defineApp` but it has no `iconKey`" (a loud Error) from "no
- * `defineApp` anywhere under this app" (returns null so the caller can throw a
+ * `defineApp` anywhere under this app" (null, so the caller can throw a
  * composition-level error).
- *
- * Assumption (documented per plan): exactly one `defineApp(...)` lives in an
- * app's `core/`, and its `iconKey` is a string literal — true for every app
- * shell `core/app.ts` (e.g. `defineApp({ id, basePath, iconKey: "piano" })`).
  */
 function findDefineAppIconKey(node: PluginNode): SymbolName | null {
-  const coreDir = join(node.dir, "core");
-  if (existsSync(coreDir)) {
-    for (const f of readdirSync(coreDir)) {
-      if (!f.endsWith(".ts")) continue;
-      const src = readFileSync(join(coreDir, f), "utf8");
-      const call = src.match(/defineApp\s*\(\s*\{([\s\S]*?)\}\s*\)/);
-      const body = call?.[1];
-      if (body == null) continue;
-      const key = body.match(/iconKey:\s*["']([^"']+)["']/);
-      // `defineApp` types `iconKey` as a SymbolName, so tsc has checked this literal.
-      if (key?.[1] != null) return key[1] as SymbolName;
-      throw new Error(
-        `release: ${join(coreDir, f)} calls defineApp(...) without an iconKey. ` +
-          `Add iconKey: "<material-symbols-name>" so the app is releasable.`,
-      );
-    }
+  const app = readDefineApp(node);
+  if (app) {
+    // `defineApp` types `iconKey` as a SymbolName, so tsc has checked this literal.
+    if (app.iconKey !== null) return app.iconKey as SymbolName;
+    throw new Error(
+      `release: ${app.file} calls defineApp(...) without an iconKey. ` +
+        `Add iconKey: "<material-symbols-name>" so the app is releasable.`,
+    );
   }
   for (const child of node.children) {
     const found = findDefineAppIconKey(child);

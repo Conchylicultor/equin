@@ -70,6 +70,19 @@ Under the conservative opt-in model dependency-closedness is automatic
 *validity* gate, not a closure repair — the historical name is kept for
 continuity with the Plugin Compositions vision.
 
+## `home` — the app that owns `/`
+
+Every DEPLOYED composition (an `app` / `profile` row, or any served row)
+declares `home`, a `defineApp` id; a subsystem lens may leave it empty, but a
+home anyone sets must resolve (via `resolveCompositionHome`, `plugin-meta/composition/core`)
+against the apps its resolved bundle holds — apps are read statically by
+codegen's `readDeclaredApps`. It fails when the bundle holds apps but `home` is
+empty, when `home` names no app, when the named app's shell is not bundled, and
+when a home is declared for a bundle with no app. A pack (no entry points) must
+leave it empty. Registry codegen resolves the same verdict and throws on it, so
+the web registry's `composition.home` (the `/` redirect target) is always one of
+the composition's own apps — never load order.
+
 ## The global exclusions row
 
 `base-exclusions` (`BASE_EXCLUSIONS_ID`) is the one row that says what is in NO

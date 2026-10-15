@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-studio-compositions-home",
+  "description": "Home app section of the Studio composition detail pane: picks the app that owns bare `/` when the composition is deployed, among the apps its bundle holds.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -16,10 +16,10 @@ export {
 } from "./internal/use-active-app";
 export {
   matchAppForPath,
-  defaultApp,
   resolveAppForPath,
   type ResolvedApp,
 } from "./internal/resolve-app";
+export { homeApp, useHomeApp, type HomeApp } from "./internal/home-app";
 export { useCurrentAppId } from "./use-current-app-id";
 export { setFocusedApp, useFocusedAppId } from "./internal/focused-app-store";
 export type { Placement } from "../core";

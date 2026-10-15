@@ -16,3 +16,10 @@ export const viteEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/tooling/plugins/react-compiler", id: "framework.tooling.react-compiler", loader: () => import("@plugins/framework/plugins/tooling/plugins/react-compiler/vite"), dependsOn: [] },
   { pluginPath: "improve/plugins/element-picker", id: "improve.element-picker", loader: () => import("@plugins/improve/plugins/element-picker/vite"), dependsOn: [] },
 ];
+
+export interface CompositionIdentity {
+  id: string;
+  home: string | null;
+}
+
+export const composition: CompositionIdentity = { id: "singularity", home: "home" };

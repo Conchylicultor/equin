@@ -10,6 +10,7 @@ const registry = vi.hoisted(() => ({
     loader: () => Promise<{ default: unknown }>;
     dependsOn: string[];
   }[],
+  composition: { id: "singularity", home: null },
 }));
 vi.mock("@composition-web-registry", () => registry);
 

@@ -148,6 +148,23 @@ Still **intent, never liveness** — `activatedCompositionIds` answers "who did
 someone say should be live", the `composition.json` marker answers "what is". And
 engine-opaque, like `category` / `excludes`: `manifestItemToManifest` drops it.
 
+## `home` — the app owning `/` is the composition's call
+
+`home` is a `defineApp` id: the app bare `/` redirects to (and the app launcher
+opens) when this composition is deployed. Which app is the homepage is a
+property of what is deployed, so no app can claim it in code — `Apps.App` has
+no `default` flag, and there is no first-registered fallback. `""` only for a
+bundle holding no app (subsystems without an app shell, packs).
+
+`resolveCompositionHome` (`core/home.ts`) is the one verdict: the home app, no
+app, or an error (missing / not an app / not in the bundle / home without apps).
+`composition-closure` fails on an error; registry codegen throws on one and
+otherwise bakes `composition = { id, home }` into every composition registry,
+which `App.tsx` hands to `PluginProvider` and apps-core reads via
+`useComposition()` → `useHomeApp()` — at build time, never a request.
+Engine-opaque: `manifestItemToManifest` drops it. Studio edits it in the
+composition detail pane's Home app section (`useManifestActions().setHome`).
+
 ## Studio data: server + web runtimes
 
 Beyond the registry, this plugin ships the **Studio closure data**:
@@ -305,6 +322,8 @@ Run with `./singularity test plugins/plugin-meta/plugins/composition`.
     - `network/live.liveValue`
   - Exports (types):
     - `CompositionData`
+    - `CompositionHome`
+    - `CompositionHomeError`
     - `CompositionManifestItem`
     - `ServeMode`
     - `ServeModeOption`
@@ -321,6 +340,7 @@ Run with `./singularity test plugins/plugin-meta/plugins/composition`.
     - `isServed`
     - `manifestItemToManifest`
     - `RESERVED_COMPOSITION_NAMESPACES`
+    - `resolveCompositionHome`
     - `SERVE_MODE_OPTIONS`
     - `SERVE_MODES`
     - `serveModeLabel`
@@ -334,6 +354,7 @@ Run with `./singularity test plugins/plugin-meta/plugins/composition`.
     - `apps/studio/compositions/contributors`
     - `apps/studio/compositions/draft-actions`
     - `apps/studio/compositions/entry-points`
+    - `apps/studio/compositions/home`
     - `apps/studio/compositions/membership-summary`
     - `apps/studio/compositions/release`
     - `apps/studio/explorer/excluded`

@@ -112,3 +112,10 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "ui/plugins/tokens/plugins/color-palette", id: "ui.tokens.color-palette", loader: () => import("@plugins/ui/plugins/tokens/plugins/color-palette/lint"), dependsOn: [] },
   { pluginPath: "ui/plugins/tokens/plugins/type-scale", id: "ui.tokens.type-scale", loader: () => import("@plugins/ui/plugins/tokens/plugins/type-scale/lint"), dependsOn: [] },
 ];
+
+export interface CompositionIdentity {
+  id: string;
+  home: string | null;
+}
+
+export const composition: CompositionIdentity = { id: "singularity", home: "home" };

@@ -35,7 +35,7 @@ import {
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 import type { BootPluginLoadDetail } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 import { report } from "@plugins/reports/web";
-import { webEntries } from "@composition-web-registry";
+import { composition, webEntries } from "@composition-web-registry";
 import { PluginLoadErrors } from "./components/plugin-load-errors";
 import { BootScreen } from "./components/boot-screen";
 import {
@@ -383,7 +383,7 @@ export default function App() {
         <PluginLoadErrors errors={state.coreErrors} />
       )}
       <NotificationsProvider>
-        <PluginProvider registry={registry}>
+        <PluginProvider registry={registry} composition={composition}>
           <RootRenderer />
         </PluginProvider>
       </NotificationsProvider>

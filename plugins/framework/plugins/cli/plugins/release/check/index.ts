@@ -38,7 +38,11 @@ const fixedEntrypointsBundleCheck: Check = {
         committed,
         {
           kind: "contents",
-          contents: renderEmptyCollectedDirRegistry(def.dir),
+          // A composition holding nothing has no app to land on.
+          contents: renderEmptyCollectedDirRegistry(def.dir, {
+            id: "release-check-empty",
+            home: null,
+          }),
         },
       ]),
     );

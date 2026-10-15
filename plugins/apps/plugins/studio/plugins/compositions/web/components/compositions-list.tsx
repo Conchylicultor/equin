@@ -173,6 +173,19 @@ function CompositionsDataView({
         filterable: true,
       },
       {
+        // The app bare `/` lands on when this composition is deployed — edited
+        // in the detail pane's Home app section.
+        id: "home",
+        label: "Home",
+        type: "text",
+        value: (it) => it.home,
+        cell: (it) =>
+          it.home ? (
+            <span className="text-muted-foreground">{it.home}</span>
+          ) : null,
+        sortable: true,
+      },
+      {
         id: "entryCount",
         label: "Entry points",
         type: "int",

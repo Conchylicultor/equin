@@ -9,8 +9,9 @@ never draw their own header (the shell places it; see
   `icon`; the Equin mark (`/icon.svg`) outside any app. Each app keeps its
   identity at the top-left; the button is the same launcher everywhere. It is
   wrapped in [`HoverPopover`](../../../primitives/plugins/overlay/plugins/hover-popover/CLAUDE.md).
-  Click (link gestures: ⌘/middle-click opens it in a new browser tab) → the app gallery, i.e.
-  the `Apps.App` entry flagged `default` via `defaultApp()` — never named.
+  Click (link gestures: ⌘/middle-click opens it in a new browser tab) → the
+  deployed composition's home app via `useHomeApp()` — declared by the
+  composition manifest's `home`, never named here (on main, the app gallery).
   Hover / ArrowDown → every other `Apps.App` entry, in rail order, as the
   `icons` DataView at `density="compact"` (four tiles a row in the `picker`
   popover) — the same view and the same fields as Home's gallery, so the two
@@ -43,7 +44,7 @@ never draw their own header (the shell places it; see
 
 ## Plugin reference
 
-- Description: The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the app gallery (the default Apps.App entry), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. In solo (fullscreen) mode, a surface that draws no brand gets the launcher floating at the top-left, revealed as the pointer nears the corner.
+- Description: The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. In solo (fullscreen) mode, a surface that draws no brand gets the launcher floating at the top-left, revealed as the pointer nears the corner.
 - Web:
   - Contributes:
     - `AppShell.Brand` "Brand" → `AppBrand`

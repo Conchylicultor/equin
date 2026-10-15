@@ -105,3 +105,10 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "ui/plugins/icons", id: "ui.icons", loader: () => import("@plugins/ui/plugins/icons/check"), dependsOn: [] },
   { pluginPath: "ui/plugins/tokens/plugins/type-scale", id: "ui.tokens.type-scale", loader: () => import("@plugins/ui/plugins/tokens/plugins/type-scale/check"), dependsOn: [] },
 ];
+
+export interface CompositionIdentity {
+  id: string;
+  home: string | null;
+}
+
+export const composition: CompositionIdentity = { id: "singularity", home: "home" };

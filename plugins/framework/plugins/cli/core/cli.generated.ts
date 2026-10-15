@@ -39,3 +39,10 @@ export const cliEntries: CollectedEntry[] = [
   { pluginPath: "plugin-meta/plugins/relocate", id: "plugin-meta.relocate", loader: () => import("@plugins/plugin-meta/plugins/relocate/cli"), dependsOn: [] },
   { pluginPath: "toolchain", id: "toolchain", loader: () => import("@plugins/toolchain/cli"), dependsOn: [] },
 ];
+
+export interface CompositionIdentity {
+  id: string;
+  home: string | null;
+}
+
+export const composition: CompositionIdentity = { id: "singularity", home: "home" };

@@ -446,6 +446,7 @@ function bundleFixture(): {
     // it is on the ctx so every consumer shares one classify pass.
     graph: classifyEdges(tree),
     mainBundle: new Set(nodes.map((n) => n.id)),
+    main: { id: "singularity", home: "alpha" },
     repo: () => Promise.resolve(repo),
     dirScans: new Map(),
   };
@@ -466,6 +467,7 @@ test("a bundle carrying every id renders every entry, with its deps", async () =
     ctx,
     def,
     bundle: ctx.mainBundle,
+    composition: ctx.main,
   });
 
   expect(rendered).toContain('id: "alpha"');
@@ -474,6 +476,26 @@ test("a bundle carrying every id renders every entry, with its deps", async () =
   expect(rendered).toMatch(/id: "gamma".*dependsOn: \[\]/);
   // Exactly one emitted entry per plugin — no duplicates, nothing dropped.
   expect(rendered.match(/^ {2}\{ pluginPath:/gm)).toHaveLength(3);
+});
+
+test("a composition registry names its composition; a checkout one names none", async () => {
+  const { ctx, def } = bundleFixture();
+  const rendered = await renderCollectedDirRegistry({
+    ctx,
+    def,
+    bundle: ctx.mainBundle,
+    composition: { id: "website", home: "website" },
+  });
+  expect(rendered).toContain(
+    'export const composition: CompositionIdentity = { id: "website", home: "website" };',
+  );
+  const checkout = await renderCollectedDirRegistry({
+    ctx,
+    def: { ...def, membership: "checkout" },
+    bundle: ctx.mainBundle,
+    composition: ctx.main,
+  });
+  expect(checkout).not.toContain("export const composition");
 });
 
 test("the committed bundle is main's closure for a composition dir, every plugin for a checkout dir", () => {
@@ -500,11 +522,13 @@ test("a bundle missing one id differs by exactly that entry, and prunes the dep 
     ctx,
     def,
     bundle: ctx.mainBundle,
+    composition: ctx.main,
   });
   const withoutAlpha = await renderCollectedDirRegistry({
     ctx,
     def,
     bundle: new Set([...ctx.mainBundle].filter((id) => id !== "alpha")),
+    composition: ctx.main,
   });
 
   expect(withoutAlpha).not.toContain('id: "alpha"');

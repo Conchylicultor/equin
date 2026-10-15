@@ -383,6 +383,7 @@ describe("the scan over a file set", () => {
       tree,
       graph: classifyEdges(tree),
       mainBundle: new Set(nodes.map((n) => n.id)),
+      main: { id: "singularity", home: null },
       repo: () => Promise.resolve(repo),
       dirScans: new Map(),
     };

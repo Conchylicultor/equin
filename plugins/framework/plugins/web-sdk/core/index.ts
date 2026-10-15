@@ -9,10 +9,11 @@ export type {
 } from "./sealed-component";
 export {
   PluginProvider,
+  useComposition,
   useRawContributions,
   SLOT_READ_TIMING_PREFIX,
 } from "./context";
-export type { SlotReadDetail } from "./context";
+export type { CompositionIdentity, SlotReadDetail } from "./context";
 export { createPluginRegistry } from "./registry";
 export type { PluginRegistry } from "./registry";
 export type {

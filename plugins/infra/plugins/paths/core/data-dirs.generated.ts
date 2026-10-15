@@ -57,3 +57,10 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "reports/plugins/outbox", id: "reports.outbox", loader: () => import("@plugins/reports/plugins/outbox/data-dirs"), dependsOn: [] },
   { pluginPath: "stats/plugins/cost", id: "stats.cost", loader: () => import("@plugins/stats/plugins/cost/data-dirs"), dependsOn: [] },
 ];
+
+export interface CompositionIdentity {
+  id: string;
+  home: string | null;
+}
+
+export const composition: CompositionIdentity = { id: "singularity", home: "home" };

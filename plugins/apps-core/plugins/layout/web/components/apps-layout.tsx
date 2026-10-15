@@ -24,7 +24,7 @@ import {
   Apps,
   useActiveApp,
   usePathname,
-  defaultApp,
+  useHomeApp,
   matchAppForPath,
 } from "@plugins/apps-core/web";
 import {
@@ -46,9 +46,8 @@ import { resolveUnmatchedUrl } from "../internal/unmatched-url";
  * entry belonged to.
  *
  * Preserving is safe here because this redirect only fires on bare `/`, where
- * `bootTabs` already resolved `urlAppId` through the `seedAppId` →
- * `defaultApp(apps)` fallback (`use-tabs.tsx:247-248`) — the very app
- * `defaultPath` points at. So the preserved `appId` already agrees with the
+ * `bootTabs` already resolved `urlAppId` through its `seedAppId` — the
+ * composition's home app (`useHomeApp`) — the very app `homePath` points at. So the preserved `appId` already agrees with the
  * post-redirect URL, and the preserved route is `[]`/pending (an unmatched URL
  * seeds no resolved route). Nothing stale survives the rewrite.
  */
@@ -115,28 +114,29 @@ export function AppsLayout() {
   // (theme/rail) legitimately follows the focused tab via `activeApp`; URL
   // adjudication legitimately follows the URL — kept apart.
   const urlMatchedId = matchAppForPath(pathname, apps)?.id;
-  const fallbackApp = defaultApp(apps);
-  const defaultPath = fallbackApp?.app.basePath;
+  const home = useHomeApp();
+  const homeEntry = home.kind === "app" ? home.app : undefined;
+  const homePath = homeEntry?.app.basePath;
 
   // ONE rule decides both the redirect and what the tabs area paints, so the two
   // can never disagree (see `resolveUnmatchedUrl` for the full case table).
   const outcome = resolveUnmatchedUrl({
     matched: !!urlMatchedId,
-    hasDefault: !!defaultPath,
+    home: home.kind,
     isBareRoot: pathname === "/",
     deferredComplete,
     anyAppShellLoadError,
   });
 
-  // Canonicalize bare `/` to the default app (the one declaring `default: true`,
-  // else the only/first registered app). This is the ONLY raw `replaceState`
+  // Canonicalize bare `/` to the composition's home app — the one its manifest
+  // declares, never whichever app registered first. This is the ONLY raw `replaceState`
   // redirect in the app, and it is DESTRUCTIVE — it overwrites the address bar —
   // so it fires ONLY where there is nothing to destroy. A non-bare unmatched
   // path is a broken link, not a path to canonicalize: it keeps its URL and gets
   // the not-found surface below.
   useEffect(() => {
-    if (outcome === "redirect") redirectTo(defaultPath!);
-  }, [outcome, defaultPath]);
+    if (outcome === "redirect") redirectTo(homePath!);
+  }, [outcome, homePath]);
 
   const basePath = activeApp?.app.basePath ?? "";
 
@@ -169,11 +169,15 @@ export function AppsLayout() {
           <div className="min-h-0 min-w-0 flex-1">
             {outcome === "load-error" ? (
               <AppLoadErrorSurface />
+            ) : outcome === "home-missing" ? (
+              <HomeMissingSurface
+                id={home.kind === "unregistered" ? home.id : ""}
+              />
             ) : outcome === "not-found" ? (
               <NoSuchRouteSurface
                 pathname={pathname}
-                defaultPath={defaultPath}
-                defaultName={fallbackApp?.app.name}
+                homePath={homePath}
+                homeName={homeEntry?.app.name}
               />
             ) : outcome === "loading" ? (
               <Center className="size-full">
@@ -215,6 +219,30 @@ function AppLoadErrorSurface() {
 }
 
 /**
+ * Shown at bare `/` when the composition's declared home app never registered
+ * although every shell loaded healthy — a broken invariant (`composition-closure`
+ * proves the home is in the bundle). Named, never papered over by landing on
+ * some other app.
+ */
+function HomeMissingSurface({ id }: { id: string }) {
+  return (
+    <Center className="size-full">
+      <Stack gap="sm" align="center" className="max-w-md">
+        <Stack gap="2xs" align="center">
+          <Text variant="heading">The home app is missing</Text>
+          <Text variant="body" tone="muted">
+            This deployment's home app did not register.
+          </Text>
+        </Stack>
+        <Badge mono title={id}>
+          {id}
+        </Badge>
+      </Stack>
+    </Center>
+  );
+}
+
+/**
  * Shown when the URL matches no registered app and the tier has settled healthy
  * — i.e. no app will ever own this path. The address bar is deliberately left
  * intact: this replaces a silent `replaceState` to the homepage, whose whole
@@ -229,12 +257,12 @@ function AppLoadErrorSurface() {
  */
 function NoSuchRouteSurface({
   pathname,
-  defaultPath,
-  defaultName,
+  homePath,
+  homeName,
 }: {
   pathname: string;
-  defaultPath: string | undefined;
-  defaultName: string | undefined;
+  homePath: string | undefined;
+  homeName: string | undefined;
 }) {
   return (
     <Center className="size-full">
@@ -249,9 +277,9 @@ function NoSuchRouteSurface({
         <Badge mono title={pathname}>
           {pathname}
         </Badge>
-        {defaultPath ? (
-          <Button variant="outline" {...appLinkProps(defaultPath)}>
-            Go to {defaultName ?? "the home app"}
+        {homePath ? (
+          <Button variant="outline" {...appLinkProps(homePath)}>
+            Go to {homeName ?? "the home app"}
           </Button>
         ) : null}
       </Stack>

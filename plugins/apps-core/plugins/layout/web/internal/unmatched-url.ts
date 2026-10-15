@@ -12,9 +12,12 @@
  * its `/agents` prefix landing on the homepage with no explanation). It gets an
  * error surface instead, with the URL preserved.
  *
- *  - matched app OR no default app         ⇒ nothing to canonicalize; render.
- *  - bare `/`                              ⇒ redirect immediately (nothing to
+ *  - matched app OR no home (no app at all) ⇒ nothing to canonicalize; render.
+ *  - bare `/`, home registered             ⇒ redirect immediately (nothing to
  *                                            destroy; keeps cold-start instant).
+ *  - bare `/`, home NOT registered         ⇒ loading until the tier settles,
+ *                                            then app-load error (a shell failed)
+ *                                            or home-missing — NEVER another app.
  *  - non-bare, deferred tier NOT settled   ⇒ loading (an app shell owning this
  *                                            URL may still register).
  *  - non-bare, settled, an app shell failed⇒ app-load error (the app is broken,
@@ -31,13 +34,15 @@ export type UnmatchedUrlOutcome =
   /** Unmatched because an app shell failed to load. */
   | "load-error"
   /** Unmatched, settled, healthy — no app owns this URL. */
-  | "not-found";
+  | "not-found"
+  /** Bare root, settled, healthy, yet the composition's home app never registered. */
+  | "home-missing";
 
 export function resolveUnmatchedUrl(opts: {
   /** An app's `path` prefix owns the current URL (`matchAppForPath` resolved). */
   matched: boolean;
-  /** A default app exists to canonicalize to. */
-  hasDefault: boolean;
+  /** The composition's home app: registered, absent (no app), or declared but unregistered. */
+  home: "app" | "none" | "unregistered";
   /** The current pathname is the bare root `/`. */
   isBareRoot: boolean;
   /** The deferred plugin tier has fully settled. */
@@ -45,9 +50,9 @@ export function resolveUnmatchedUrl(opts: {
   /** Any app shell under `apps/plugins/` failed to load (coarse by design). */
   anyAppShellLoadError: boolean;
 }): UnmatchedUrlOutcome {
-  if (opts.matched || !opts.hasDefault) return "render";
-  if (opts.isBareRoot) return "redirect";
+  if (opts.matched || opts.home === "none") return "render";
+  if (opts.isBareRoot && opts.home === "app") return "redirect";
   if (!opts.deferredComplete) return "loading";
   if (opts.anyAppShellLoadError) return "load-error";
-  return "not-found";
+  return opts.isBareRoot ? "home-missing" : "not-found";
 }

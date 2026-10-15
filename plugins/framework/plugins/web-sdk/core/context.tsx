@@ -95,6 +95,38 @@ export function useRawContributions(
 }
 
 /**
+ * The composition this page was deployed as — the `composition` export of the
+ * web registry it booted from (`@composition-web-registry`), baked in by
+ * codegen at build time, so reading it never waits on a request.
+ */
+export interface CompositionIdentity {
+  /** The composition id (`singularity` for the checkout's own app). */
+  id: string;
+  /**
+   * The app owning bare `/` (and the app launcher's click) — a `defineApp` id
+   * the composition's manifest declares and `composition-closure` proved is in
+   * its bundle; null when the bundle holds no app.
+   */
+  home: string | null;
+}
+
+const CompositionContext = createContext<CompositionIdentity | null>(null);
+
+/**
+ * The deployed composition's identity. Throws outside a `PluginProvider` given
+ * one — a surface that needs the homepage must never guess it.
+ */
+export function useComposition(): CompositionIdentity {
+  const composition = useContext(CompositionContext);
+  if (!composition) {
+    throw new Error(
+      "useComposition() needs a PluginProvider given the `composition` its web registry exports",
+    );
+  }
+  return composition;
+}
+
+/**
  * Provides the plugin registry to the tree. Two forms:
  *
  * - `registry` — the boot path: `App` creates the registry once and appends
@@ -105,12 +137,23 @@ export function useRawContributions(
  *   prop's identity changes.
  */
 export function PluginProvider(
-  props: { children: ReactNode } & (
-    | { registry: PluginRegistry; plugins?: never }
-    | { plugins: LoadedPlugin[]; registry?: never }
-  ),
+  props: { children: ReactNode } &
+    // The boot path always knows what it was deployed as.
+    (
+      | {
+          registry: PluginRegistry;
+          composition: CompositionIdentity;
+          plugins?: never;
+        }
+      // Tests and standalone mounts provide one only when what they render reads it.
+      | {
+          plugins: LoadedPlugin[];
+          composition?: CompositionIdentity;
+          registry?: never;
+        }
+    ),
 ) {
-  const { children } = props;
+  const { children, composition = null } = props;
   const plugins = "plugins" in props ? props.plugins : undefined;
   // Created once: the registry is the ONE object the tree reads for the
   // provider's lifetime.
@@ -132,7 +175,9 @@ export function PluginProvider(
 
   return (
     <PluginRegistryContext.Provider value={reader}>
-      {children}
+      <CompositionContext.Provider value={composition}>
+        {children}
+      </CompositionContext.Provider>
     </PluginRegistryContext.Provider>
   );
 }

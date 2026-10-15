@@ -64,8 +64,6 @@ export interface AppEntry {
   brandName?: ComponentType;
   component: ComponentType;
   onClick?: () => void;
-  /** Marks this app as the fallback when the URL matches no app and on initial boot. */
-  default?: boolean;
   /** Optional overlay rendered on the app's rail icon (e.g. an attention
    * dot). Painted at the icon's top-right corner; render `null` when there's
    * nothing to surface so the corner stays empty. */

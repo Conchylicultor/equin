@@ -106,6 +106,7 @@ are no per-interaction round-trips.
     - `CompositionDetail.Section` ← `apps.studio.compositions.contributors`
     - `CompositionDetail.Section` ← `apps.studio.compositions.draft-actions`
     - `CompositionDetail.Section` ← `apps.studio.compositions.entry-points`
+    - `CompositionDetail.Section` ← `apps.studio.compositions.home`
     - `CompositionDetail.Section` ← `apps.studio.compositions.membership-summary`
     - `CompositionDetail.Section` ← `apps.studio.compositions.release`
     - `item-actions` ← `apps.studio.compositions`
@@ -154,6 +155,7 @@ are no per-interaction round-trips.
     - `apps/studio/compositions/contributors`
     - `apps/studio/compositions/draft-actions`
     - `apps/studio/compositions/entry-points`
+    - `apps/studio/compositions/home`
     - `apps/studio/compositions/membership-summary`
     - `apps/studio/compositions/release`
 - Sub-plugins:
@@ -161,6 +163,7 @@ are no per-interaction round-trips.
   - **`contributors`** — Contributor selection section in the composition detail pane: toggle the available frontier with per-chip impact cost.
   - **`draft-actions`** — Draft persistence section in the composition detail pane: editable name plus Save / Delete / Clear.
   - **`entry-points`** — Entry-point editor section in the composition detail pane: the draft's entry plugins, with add / remove.
+  - **`home`** — Home app section of the Studio composition detail pane: picks the app that owns bare `/` when the composition is deployed, among the apps its bundle holds.
   - **`membership-summary`** — Bundle-size summary section in the composition detail pane: plugin counts per membership state.
   - **`release`** — Release sections of the Studio composition detail pane (target picker + Run, and this composition's run history), plus the run-detail pane hosting the info / logs / artifact sections.
 

@@ -28,15 +28,15 @@ rather than reading as "not preloaded". A factory's own declaration
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 81 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 82 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/plugin-id` ×12
     - `plugin-meta/parse-utils` ×12
     - `config_v2` ×11
     - `plugin-meta/barrel-import` ×6
+    - `plugin-meta/composition` ×5
     - `plugin-meta/facets` ×5
     - `framework/tooling/resource-vocabulary` ×4
     - `plugin-meta/closure` ×4
-    - `plugin-meta/composition` ×4
     - `plugin-meta/plugin-tree` ×4
     - `framework/slot-declaration` ×3
     - `config_v2/ledger` ×2
@@ -55,6 +55,7 @@ rather than reading as "not preloaded". A factory's own declaration
     - `AuthoredOverrideSeedResult`
     - `CodegenStep`
     - `CollectedRawEntry`
+    - `DeclaredApp`
     - `DiscoveredCollectedDir`
     - `EagerTierResult`
     - `GenerateDocsOptions`
@@ -68,6 +69,7 @@ rather than reading as "not preloaded". A factory's own declaration
     - `RampDecl`
     - `RegenCodegenOptions`
     - `RegistryCodegenResult`
+    - `RegistryComposition`
     - `RegistryGenContext`
     - `ReorderableSlotEntry`
     - `WatchedSlotHit`
@@ -137,6 +139,8 @@ rather than reading as "not preloaded". A factory's own declaration
     - `preBarrelManifests`
     - `propagateConfigToUser`
     - `readCompositionManifestsFromDisk`
+    - `readDeclaredApps`
+    - `readDefineApp`
     - `readEffectiveConfigFromDisk`
     - `readGitLayerConfig`
     - `regenerateManifestCodegen`
@@ -163,6 +167,7 @@ rather than reading as "not preloaded". A factory's own declaration
     - `resolveMainComposition`
     - `resolveOriginAnnotations`
     - `resolveOriginDefaults`
+    - `resolveRegistryHome`
     - `seedAuthoredOverrides`
     - `setDefaultOriginAnnotations`
     - `setDefaultOriginAnnotationsPreparer`

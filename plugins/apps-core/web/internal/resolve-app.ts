@@ -23,17 +23,6 @@ export function matchAppForPath(
   return sorted.find((entry) => appMatchesPath(entry.app.basePath, pathname));
 }
 
-/**
- * The fallback app for routes that match no registered app and for initial boot:
- * the app that declared `default: true`, else the first registered app. Returns
- * undefined only when no apps are registered. Generic over contributions — the
- * apps core never names a specific contributor; an app opts in via its own
- * `Apps.App({ default: true })`.
- */
-export function defaultApp(apps: readonly ActiveApp[]): ActiveApp | undefined {
-  return apps.find((a) => a.default) ?? apps[0];
-}
-
 export interface ResolvedApp {
   app: ActiveApp;
   /** App-local route path (base path stripped) to feed `parseUrl`. */

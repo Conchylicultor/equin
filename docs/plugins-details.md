@@ -7492,6 +7492,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CompositionDetail.Section` ← `apps.studio.compositions.contributors`
               - `CompositionDetail.Section` ← `apps.studio.compositions.draft-actions`
               - `CompositionDetail.Section` ← `apps.studio.compositions.entry-points`
+              - `CompositionDetail.Section` ← `apps.studio.compositions.home`
               - `CompositionDetail.Section` ← `apps.studio.compositions.membership-summary`
               - `CompositionDetail.Section` ← `apps.studio.compositions.release`
               - `item-actions` ← `apps.studio.compositions`
@@ -7540,6 +7541,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/studio/compositions/contributors`
               - `apps/studio/compositions/draft-actions`
               - `apps/studio/compositions/entry-points`
+              - `apps/studio/compositions/home`
               - `apps/studio/compositions/membership-summary`
               - `apps/studio/compositions/release`
           - Plugins:
@@ -7612,6 +7614,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/overlay/popover.InlinePopover`
                   - `primitives/search.SearchInput`
                   - `ui/icons.Icon`
+            - **`home`** — Home app section of the Studio composition detail pane: picks the app that owns bare `/` when the composition is deployed, among the apps its bundle holds.
+              - Web:
+                - Contributes: `CompositionDetail.Section` "Home app" → `HomeSection`
+                - Uses:
+                  - `apps-core.AppEntry`
+                  - `apps-core.Apps`
+                  - `apps/studio/compositions.CompositionDetail`
+                  - `plugin-meta/composition.useActiveMembership`
+                  - `plugin-meta/composition.useManifestActions`
+                  - `plugin-meta/composition.useManifestItems`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Select`
+                  - `primitives/css/ui-kit.SelectContent`
+                  - `primitives/css/ui-kit.SelectItem`
+                  - `primitives/css/ui-kit.SelectTrigger`
+                  - `primitives/css/ui-kit.SelectValue`
             - **`membership-summary`** — Bundle-size summary section in the composition detail pane: plugin counts per membership state.
               - Web:
                 - Contributes: `CompositionDetail.Section` "Summary" → `MembershipSummarySection`
@@ -8408,6 +8427,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (types):
       - `ActiveApp`
       - `AppEntry`
+      - `HomeApp`
       - `OverlayContribution`
       - `Placement`
       - `RailFramingContribution`
@@ -8416,17 +8436,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `TabBarContribution`
     - Exports (values):
       - `Apps`
-      - `defaultApp`
+      - `homeApp`
       - `matchAppForPath`
       - `resolveAppForPath`
       - `setFocusedApp`
       - `useActiveApp`
       - `useCurrentAppId`
       - `useFocusedAppId`
+      - `useHomeApp`
       - `usePathname`
   - Cross-plugin:
-    - Imported by: 39 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
-      - `apps` ×19
+    - Imported by: 40 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+      - `apps` ×20
       - `apps-core` ×11
       - `ui` ×5
       - `config_v2` ×2
@@ -8472,7 +8493,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `APP_TILE_PALETTE`
           - `appIcon`
           - `appIconToSvg`
-    - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the app gallery (the default Apps.App entry), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. In solo (fullscreen) mode, a surface that draws no brand gets the launcher floating at the top-left, revealed as the pointer nears the corner.
+    - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. In solo (fullscreen) mode, a surface that draws no brand gets the launcher floating at the top-left, revealed as the pointer nears the corner.
       - Web:
         - Contributes:
           - `AppShell.Brand` "Brand" → `AppBrand`
@@ -20654,15 +20675,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `TYPE_CHECK_WORKER_UNITS`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 81 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 82 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `framework/plugin-id` ×12
               - `plugin-meta/parse-utils` ×12
               - `config_v2` ×11
               - `plugin-meta/barrel-import` ×6
+              - `plugin-meta/composition` ×5
               - `plugin-meta/facets` ×5
               - `framework/tooling/resource-vocabulary` ×4
               - `plugin-meta/closure` ×4
-              - `plugin-meta/composition` ×4
               - `plugin-meta/plugin-tree` ×4
               - `framework/slot-declaration` ×3
               - `config_v2/ledger` ×2
@@ -20681,6 +20702,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AuthoredOverrideSeedResult`
               - `CodegenStep`
               - `CollectedRawEntry`
+              - `DeclaredApp`
               - `DiscoveredCollectedDir`
               - `EagerTierResult`
               - `GenerateDocsOptions`
@@ -20694,6 +20716,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RampDecl`
               - `RegenCodegenOptions`
               - `RegistryCodegenResult`
+              - `RegistryComposition`
               - `RegistryGenContext`
               - `ReorderableSlotEntry`
               - `WatchedSlotHit`
@@ -20763,6 +20786,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `preBarrelManifests`
               - `propagateConfigToUser`
               - `readCompositionManifestsFromDisk`
+              - `readDeclaredApps`
+              - `readDefineApp`
               - `readEffectiveConfigFromDisk`
               - `readGitLayerConfig`
               - `regenerateManifestCodegen`
@@ -20789,6 +20814,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resolveMainComposition`
               - `resolveOriginAnnotations`
               - `resolveOriginDefaults`
+              - `resolveRegistryHome`
               - `seedAuthoredOverrides`
               - `setDefaultOriginAnnotations`
               - `setDefaultOriginAnnotationsPreparer`
@@ -21278,6 +21304,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/slot-declaration.slotIdFor`
           - `framework/tooling/collected-dir.defineCollectedDir`
         - Exports (types):
+          - `CompositionIdentity`
           - `Contribution`
           - `DeferredLoadState`
           - `DocMeta`
@@ -21311,6 +21338,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `slots`
           - `subscribeDeferredLoadState`
           - `UNSAFE_unsealSlotComponent`
+          - `useComposition`
           - `useDeferredLoadComplete`
           - `useFailedPluginPaths`
           - `useHasLoadErrorUnder`
@@ -28490,6 +28518,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.liveValue`
         - Exports (types):
           - `CompositionData`
+          - `CompositionHome`
+          - `CompositionHomeError`
           - `CompositionManifestItem`
           - `ServeMode`
           - `ServeModeOption`
@@ -28506,6 +28536,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isServed`
           - `manifestItemToManifest`
           - `RESERVED_COMPOSITION_NAMESPACES`
+          - `resolveCompositionHome`
           - `SERVE_MODE_OPTIONS`
           - `SERVE_MODES`
           - `serveModeLabel`
@@ -28519,6 +28550,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/studio/compositions/contributors`
           - `apps/studio/compositions/draft-actions`
           - `apps/studio/compositions/entry-points`
+          - `apps/studio/compositions/home`
           - `apps/studio/compositions/membership-summary`
           - `apps/studio/compositions/release`
           - `apps/studio/explorer/excluded`
@@ -30769,8 +30801,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 391 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×98
+            - Imported by: 392 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×99
               - `conversations` ×63
               - `primitives` ×50
               - `debug` ×34
@@ -30966,8 +30998,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 362 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×95
+            - Imported by: 363 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×96
               - `conversations` ×72
               - `primitives` ×40
               - `debug` ×32
@@ -31224,9 +31256,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidewaysScroll`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 401 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 402 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×101
-              - `apps` ×81
+              - `apps` ×82
               - `conversations` ×53
               - `page` ×25
               - `debug` ×22

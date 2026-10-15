@@ -78,6 +78,7 @@ const check: Check = {
           // `singularity` composition's closure, or every plugin for a
           // `checkout`-membership dir.
           bundle: committedRegistryBundle(ctx, def),
+          composition: ctx.main,
         }),
       });
       if (actual === expected) continue;

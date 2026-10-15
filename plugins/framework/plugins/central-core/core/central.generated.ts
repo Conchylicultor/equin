@@ -24,3 +24,10 @@ export const centralEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/secrets", id: "infra.secrets", loader: () => import("@plugins/infra/plugins/secrets/central"), dependsOn: [] },
   { pluginPath: "network/plugins/live", id: "network.live", loader: () => import("@plugins/network/plugins/live/central"), dependsOn: [] },
 ];
+
+export interface CompositionIdentity {
+  id: string;
+  home: string | null;
+}
+
+export const composition: CompositionIdentity = { id: "singularity", home: "home" };

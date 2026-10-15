@@ -499,7 +499,12 @@ export async function prepareCompositionSources(opts: {
       // `compositionFleetSource` does a per-file `import(registryFile)`, so a
       // registry written lazily per dist would be read for a composition whose
       // turn had not come.
-      await generateCompositionRegistry({ root, bundle, name: composition });
+      await generateCompositionRegistry({
+        root,
+        bundle,
+        name: composition,
+        home: item.home,
+      });
       hooks.log(
         `Composition "${composition}": ${bundle.size} plugins in closure.`,
       );

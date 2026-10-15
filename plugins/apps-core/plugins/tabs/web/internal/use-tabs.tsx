@@ -24,10 +24,11 @@ import {
 import { setFocusedSurfaceId } from "@plugins/primitives/plugins/shortcuts/web";
 import { getNavigationType } from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
 import { type Placement } from "@plugins/apps-core/core";
+import { useComposition } from "@plugins/framework/plugins/web-sdk/core";
 import {
   Apps,
   useActiveApp,
-  defaultApp,
+  homeApp,
   resolveAppForPath,
   setFocusedApp,
 } from "@plugins/apps-core/web";
@@ -310,6 +311,12 @@ function sameParams(
   );
 }
 
+/** The composition's home app when it is registered, else undefined. */
+function registeredHome(apps: AppList, homeId: string | null) {
+  const home = homeApp(apps, homeId);
+  return home.kind === "app" ? home.app : undefined;
+}
+
 export function bootTabs(
   apps: AppList,
   seedAppId: string,
@@ -436,13 +443,16 @@ export function bootTabs(
 export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   const apps = Apps.App.useContributions();
   const initialApp = useActiveApp();
+  // The composition's declared home app id — fixed for the page's lifetime
+  // (baked into the web registry), so read once and used in callbacks directly.
+  const { home: homeId } = useComposition();
 
   // Stable refs so callbacks read the latest apps without re-creating.
   const appsRef = useLatestRef(apps);
 
   const [{ tabs: initialTabs, focusedTabId: initialFocus, mode: initialMode }] =
     useState(() =>
-      bootTabs(apps, initialApp?.id ?? defaultApp(apps)?.id ?? ""),
+      bootTabs(apps, initialApp?.id ?? registeredHome(apps, homeId)?.id ?? ""),
     );
   const [tabs, setTabs] = useState<Tab[]>(initialTabs);
   const [focusedTabId, setFocusedTabId] = useState<string>(initialFocus);
@@ -844,10 +854,10 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       setTabTitle(tabId, undefined);
 
       if (remaining.length === 0) {
-        // Never allow zero tabs — seed a fresh default-app tab and focus it.
-        // Bail if no apps are registered (nothing to seed; the surface stays
-        // empty, which is the only sane outcome with an empty registry).
-        const seedApp = defaultApp(appsRef.current);
+        // Never allow zero tabs — seed a fresh home-app tab and focus it.
+        // Bail when the home is not registered (no app at all, or its shell
+        // failed: nothing to seed, and never another app in its place).
+        const seedApp = registeredHome(appsRef.current, homeId);
         if (!seedApp) return;
         const seedId = crypto.randomUUID();
         const store = createPaneStore({ live: false });
@@ -882,7 +892,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       }
       persist();
     },
-    [activate, persist, setTabTitle],
+    [activate, persist, setTabTitle, homeId],
   );
 
   // Reorder the open-tab set: move `activeId` to `overId`'s position. Pure array

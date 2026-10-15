@@ -277,8 +277,8 @@ to reconcile them; they never needed reconciling.
     - `Text`
     - `textVariantClass`
 - Cross-plugin:
-  - Imported by: 362 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×95
+  - Imported by: 363 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×96
     - `conversations` ×72
     - `primitives` ×40
     - `debug` ×32

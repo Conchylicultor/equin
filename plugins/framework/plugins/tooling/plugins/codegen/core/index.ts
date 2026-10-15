@@ -45,14 +45,21 @@ export {
   parseNamedCompositionRegistryFileName,
   renderCollectedDirRegistry,
   renderEmptyCollectedDirRegistry,
+  resolveRegistryHome,
   buildRegistryGenContext,
   standardPluginDirs,
   standardPluginDirsFromSnapshot,
   standardPluginDirsIn,
   type CollectedRawEntry,
   type DiscoveredCollectedDir,
+  type RegistryComposition,
   type RegistryGenContext,
 } from "./plugin-registry-gen";
+export {
+  readDeclaredApps,
+  readDefineApp,
+  type DeclaredApp,
+} from "./declared-apps";
 
 export {
   computeEagerTier,

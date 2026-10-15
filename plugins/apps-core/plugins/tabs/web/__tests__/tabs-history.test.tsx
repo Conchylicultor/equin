@@ -47,7 +47,7 @@ class MemoryStorage implements Storage {
   }
 }
 
-// Two fake bare-root apps (pages is the default). `icon` is never rendered here,
+// Two fake bare-root apps (pages is the composition's home). `icon` is never rendered here,
 // so a `never` cast keeps the fixture honest without a real AppIcon.
 const appsPlugin = {
   id: "tabs-history-test-apps",
@@ -56,7 +56,6 @@ const appsPlugin = {
     Apps.App({
       app: { id: "pages", name: "Pages", basePath: "/pages", iconKey: "home" },
       component: () => null,
-      default: true,
       icon: {} as never,
     }),
     Apps.App({
@@ -67,13 +66,16 @@ const appsPlugin = {
   ],
 } as unknown as LoadedPlugin;
 
+// The deployed composition's home — what a bare `/` and a last-closed tab seed.
+const composition = { id: "test", home: "pages" };
+
 // Latest TabsApi via renderHook's live `result` ref, so post-`act` reads see
 // fresh state without reassigning module state during render.
 let hook!: { current: TabsApi };
 function mount() {
   const { result } = renderHook(() => useTabs(), {
     wrapper: ({ children }) => (
-      <PluginProvider plugins={[appsPlugin]}>
+      <PluginProvider plugins={[appsPlugin]} composition={composition}>
         <TabsProvider>{children}</TabsProvider>
       </PluginProvider>
     ),

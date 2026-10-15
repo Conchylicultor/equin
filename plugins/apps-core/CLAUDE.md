@@ -67,6 +67,7 @@ keeps reading the old location until then.
   - Exports (types):
     - `ActiveApp`
     - `AppEntry`
+    - `HomeApp`
     - `OverlayContribution`
     - `Placement`
     - `RailFramingContribution`
@@ -75,17 +76,18 @@ keeps reading the old location until then.
     - `TabBarContribution`
   - Exports (values):
     - `Apps`
-    - `defaultApp`
+    - `homeApp`
     - `matchAppForPath`
     - `resolveAppForPath`
     - `setFocusedApp`
     - `useActiveApp`
     - `useCurrentAppId`
     - `useFocusedAppId`
+    - `useHomeApp`
     - `usePathname`
 - Cross-plugin:
-  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×19
+  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×20
     - `apps-core` ×11
     - `ui` ×5
     - `config_v2` ×2
@@ -105,7 +107,7 @@ keeps reading the old location until then.
     - `getFocusedAppId`
 - Sub-plugins:
   - **`app-icon`** — Canonical, serializable app-icon descriptor (a Material Symbols glyph now, image variant later), drawn by the icons primitive.
-  - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the app gallery (the default Apps.App entry), hover or ArrowDown for a grid of every other…
+  - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of…
   - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.
   - **`app-rail-framing`** — App-rail framing region (rail / hidden). Contributes its variant-region host into Apps.RailFraming.
   - **`app-usage`** — Records per-app usage from the browser — a launch whenever the focused app changes to another, active time while the app is focused, the page visible, the window focused and the user not idle for 5…

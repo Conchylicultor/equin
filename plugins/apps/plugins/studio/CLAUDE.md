@@ -16,6 +16,7 @@ future home of the plugin marketplace.
       - **`contributors`** — Contributor selection section in the composition detail pane: toggle the available frontier with per-chip impact cost.
       - **`draft-actions`** — Draft persistence section in the composition detail pane: editable name plus Save / Delete / Clear.
       - **`entry-points`** — Entry-point editor section in the composition detail pane: the draft's entry plugins, with add / remove.
+      - **`home`** — Home app section of the Studio composition detail pane: picks the app that owns bare `/` when the composition is deployed, among the apps its bundle holds.
       - **`membership-summary`** — Bundle-size summary section in the composition detail pane: plugin counts per membership state.
       - **`release`** — Release sections of the Studio composition detail pane (target picker + Run, and this composition's run history), plus the run-detail pane hosting the info / logs / artifact sections.
         - Plugins:

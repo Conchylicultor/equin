@@ -9,7 +9,7 @@ import { resolveUnmatchedUrl } from "../internal/unmatched-url";
 describe("resolveUnmatchedUrl", () => {
   const base = {
     matched: false,
-    hasDefault: true,
+    home: "app" as const,
     isBareRoot: false,
     deferredComplete: true,
     anyAppShellLoadError: false,
@@ -19,21 +19,42 @@ describe("resolveUnmatchedUrl", () => {
     expect(resolveUnmatchedUrl({ ...base, matched: true })).toBe("render");
   });
 
-  it("no default app ⇒ nothing to canonicalize to", () => {
-    expect(resolveUnmatchedUrl({ ...base, hasDefault: false })).toBe("render");
+  it("no home app (the composition holds none) ⇒ nothing to canonicalize to", () => {
+    expect(resolveUnmatchedUrl({ ...base, home: "none" })).toBe("render");
+  });
+
+  it("an unregistered home never redirects: wait, then name the failure", () => {
+    const root = { ...base, isBareRoot: true, home: "unregistered" as const };
+    expect(resolveUnmatchedUrl({ ...root, deferredComplete: false })).toBe(
+      "loading",
+    );
+    expect(resolveUnmatchedUrl({ ...root, anyAppShellLoadError: true })).toBe(
+      "load-error",
+    );
+    expect(resolveUnmatchedUrl(root)).toBe("home-missing");
   });
 
   it("bare root redirects immediately, regardless of load state", () => {
     expect(
-      resolveUnmatchedUrl({ ...base, isBareRoot: true, deferredComplete: false }),
+      resolveUnmatchedUrl({
+        ...base,
+        isBareRoot: true,
+        deferredComplete: false,
+      }),
     ).toBe("redirect");
     expect(
-      resolveUnmatchedUrl({ ...base, isBareRoot: true, anyAppShellLoadError: true }),
+      resolveUnmatchedUrl({
+        ...base,
+        isBareRoot: true,
+        anyAppShellLoadError: true,
+      }),
     ).toBe("redirect");
   });
 
   it("unmatched + still loading ⇒ wait (an app shell may still register)", () => {
-    expect(resolveUnmatchedUrl({ ...base, deferredComplete: false })).toBe("loading");
+    expect(resolveUnmatchedUrl({ ...base, deferredComplete: false })).toBe(
+      "loading",
+    );
   });
 
   it("unmatched + settled + a shell failed to load ⇒ app-load error", () => {

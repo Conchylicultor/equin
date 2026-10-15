@@ -182,6 +182,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/studio/plugins/compositions/plugins/contributors",
   "apps/plugins/studio/plugins/compositions/plugins/draft-actions",
   "apps/plugins/studio/plugins/compositions/plugins/entry-points",
+  "apps/plugins/studio/plugins/compositions/plugins/home",
   "apps/plugins/studio/plugins/compositions/plugins/membership-summary",
   "apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-artifact",
   "apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-info",

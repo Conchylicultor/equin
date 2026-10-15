@@ -182,6 +182,16 @@ test("every seed carries `serve` (default off) and the mapper drops it", () => {
   }
 });
 
+test("every seed carries `home` and the mapper drops it", () => {
+  for (const s of seeds) {
+    expect(typeof s.home).toBe("string");
+    expect("home" in manifestItemToManifest(s)).toBe(false);
+  }
+  // The homepage is the composition's call, never load order.
+  expect(byName("singularity").home).toBe("home");
+  expect(byName("website").home).toBe("website");
+});
+
 test("the self-improvement pack holds exactly the self-improvement set", () => {
   const pack = manifestItemToManifest(byName("self-improvement"));
   expect([...pack.selectedContributors].map(String).sort()).toEqual(

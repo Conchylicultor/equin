@@ -1,6 +1,7 @@
 import {
   buildRegistryGenContext,
   readCompositionManifestsFromDisk,
+  readDeclaredApps,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
   expandEntrySeeds,
@@ -20,6 +21,7 @@ import {
   assertCompositionId,
   isServed,
   manifestItemToManifest,
+  resolveCompositionHome,
 } from "@plugins/plugin-meta/plugins/composition/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
@@ -36,7 +38,7 @@ const fail = (message: string, hint?: string): CheckResult => ({
 const check: Check = {
   id: "composition-closure",
   description:
-    "Every declared composition is valid: unique name, all entry/contributor ids resolve, the reserved `singularity` and `base-exclusions` rows are well-formed, every declared exclusion actually took effect, no negative is dead everywhere, each selected contributor is a genuine load-bearing soft option (no redundant selections), and every `excludes` bundle stays disjoint from the composition's hard closure (self-containment guard).",
+    "Every declared composition is valid: unique name, all entry/contributor ids resolve, the reserved `singularity` and `base-exclusions` rows are well-formed, every declared exclusion actually took effect, no negative is dead everywhere, each selected contributor is a genuine load-bearing soft option (no redundant selections), every `excludes` bundle stays disjoint from the composition's hard closure (self-containment guard), and every deployable composition's `home` is an app its bundle holds.",
   async run() {
     const root = await getWorktreeRoot();
     // The barrel-free faceted tree AND its classified edge graph, taken from the
@@ -480,6 +482,49 @@ const check: Check = {
             `"${item.name}" declares it must stay disjoint from "${ref}" (self-containment), but "${offender}" is pulled into its bundle. Remove the dependency, or drop "${ref}" from this composition's \`excludes\`. Inclusion path for "${offender}":\n    ${trail}`,
           );
         }
+      }
+    }
+
+    // 6b. Every composition declares the app that owns bare `/` — its `home` —
+    //     and that app is a real `defineApp` whose shell this bundle holds. The
+    //     homepage is a property of what is deployed, never of load order: a
+    //     stray app reaching the bundle cannot take `/`, and a home that left
+    //     the bundle fails here instead of redirecting to whatever registered
+    //     first. Same `resolveCompositionHome` verdict registry codegen bakes
+    //     into the web registry (and throws on). Required for deployed rows
+    //     only (products and served rows); a pack (no entry points) is never
+    //     deployed on its own, so it has no home to declare.
+    const declaredApps = readDeclaredApps(tree);
+    for (const item of items) {
+      const homeHint =
+        "Set the composition's `home` to the `defineApp` id of the app that owns `/` (plugins/plugin-meta/plugins/composition/core/config.ts, or the Studio compositions pane).";
+      if (item.entryPoints.length === 0) {
+        if (item.home !== "") {
+          return fail(
+            `composition "${item.name}" has no entry points (a pack) but declares \`home: "${item.home}"\``,
+            "A pack is never deployed on its own — clear its `home`.",
+          );
+        }
+        continue;
+      }
+      const bundle = resolveComposition(
+        graph,
+        flattenManifest(manifestItemToManifest(item), manifests),
+      ).bundle;
+      const home = resolveCompositionHome({
+        apps: declaredApps,
+        bundle,
+        home: item.home,
+        // The products (app / profile rows) and anything served are deployed;
+        // a subsystem is an inspection lens — its home is optional, but checked
+        // when set. (Building any composition requires one: codegen passes true.)
+        deployed:
+          item.category === "app" ||
+          item.category === "profile" ||
+          isServed(item.serve),
+      });
+      if (home.kind === "error") {
+        return fail(`composition "${item.name}" ${home.message}`, homeHint);
       }
     }
 

@@ -1126,6 +1126,10 @@
       "name": "@singularity/plugin-apps-studio-compositions-entry-points",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/studio/plugins/compositions/plugins/home": {
+      "name": "@singularity/plugin-apps-studio-compositions-home",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/studio/plugins/compositions/plugins/membership-summary": {
       "name": "@singularity/plugin-apps-studio-compositions-membership-summary",
       "version": "0.0.1",
@@ -7151,6 +7155,8 @@
     "@singularity/plugin-apps-studio-compositions-draft-actions": ["@singularity/plugin-apps-studio-compositions-draft-actions@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/draft-actions"],
 
     "@singularity/plugin-apps-studio-compositions-entry-points": ["@singularity/plugin-apps-studio-compositions-entry-points@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/entry-points"],
+
+    "@singularity/plugin-apps-studio-compositions-home": ["@singularity/plugin-apps-studio-compositions-home@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/home"],
 
     "@singularity/plugin-apps-studio-compositions-membership-summary": ["@singularity/plugin-apps-studio-compositions-membership-summary@workspace:plugins/apps/plugins/studio/plugins/compositions/plugins/membership-summary"],
 

@@ -1,4 +1,4 @@
-// @hash b4e4faf5af0a
+// @hash 1b33a669bf08
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -9,7 +9,9 @@
 {
   // Reading order for the composition detail pane, top to bottom: identify and
   // name the draft first, then what it resolves to (summary), then the two
-  // editors that change it, then the closure it produces, and finally what you
+  // editors that change it, then which of its apps owns `/` once deployed (it
+  // picks among the bundle those editors produce), then the closure it
+  // produces, and finally what you
   // do with it — the unified Build & serve section (serve it live or ship a
   // release) and its run history. The generated origin sorts alphabetically —
   // this is the deliberate order.
@@ -18,6 +20,7 @@
     "apps.studio.compositions.membership-summary:membership-summary",
     "apps.studio.compositions.contributors:contributors",
     "apps.studio.compositions.entry-points:entry-points",
+    "apps.studio.compositions.home:home",
     "apps.studio.compositions.closure-tree:closure-tree",
     "apps.studio.compositions.release:release",
     "apps.studio.compositions.release:release-history"

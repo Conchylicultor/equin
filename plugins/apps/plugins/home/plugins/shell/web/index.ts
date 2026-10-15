@@ -19,7 +19,6 @@ export default {
       app: homeApp,
       icon: appIcon(symbol("home")),
       component: HomeLayout,
-      default: true,
     }),
     // The launcher's theme, selected for the home app in
     // `config/ui/theme-engine/@app/home/theme.jsonc`.

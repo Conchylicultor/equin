@@ -23,7 +23,6 @@ const appsPlugin = {
     Apps.App({
       app: { id: "pages", name: "Pages", basePath: "/pages", iconKey: "home" },
       component: () => null,
-      default: true,
       icon: {} as never,
     }),
     Apps.App({
@@ -33,6 +32,9 @@ const appsPlugin = {
     }),
   ],
 } as unknown as LoadedPlugin;
+
+// The deployed composition's home — what a bare `/` and a last-closed tab seed.
+const composition = { id: "test", home: "pages" };
 
 const seen: (string | undefined)[] = [];
 function Reader() {
@@ -56,7 +58,7 @@ afterEach(() => {
 describe("useActiveApp at boot", () => {
   it("renders the URL's app once, though the focused app is published after mount", () => {
     render(
-      <PluginProvider plugins={[appsPlugin]}>
+      <PluginProvider plugins={[appsPlugin]} composition={composition}>
         <Reader />
         <TabsProvider>
           <Reader />
@@ -70,7 +72,7 @@ describe("useActiveApp at boot", () => {
 
   it("does not re-render on an in-app navigation that keeps the app", () => {
     render(
-      <PluginProvider plugins={[appsPlugin]}>
+      <PluginProvider plugins={[appsPlugin]} composition={composition}>
         <TabsProvider>
           <Reader />
         </TabsProvider>

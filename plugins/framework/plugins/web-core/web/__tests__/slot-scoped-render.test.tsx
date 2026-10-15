@@ -41,7 +41,10 @@ function mount() {
   }
   // `pass` only exists to re-render both readers from outside the registry.
   const tree = (pass: number) => (
-    <PluginProvider registry={registry}>
+    <PluginProvider
+      registry={registry}
+      composition={{ id: "test", home: null }}
+    >
       <ReaderA key={`a${pass}`} />
       <ReaderB key={`b${pass}`} />
     </PluginProvider>

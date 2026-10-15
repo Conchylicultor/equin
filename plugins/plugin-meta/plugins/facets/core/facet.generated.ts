@@ -24,3 +24,10 @@ export const facetEntries: CollectedEntry[] = [
   { pluginPath: "plugin-meta/plugins/facets/plugins/slots", id: "plugin-meta.facets.slots", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/slots/facet"), dependsOn: [] },
   { pluginPath: "plugin-meta/plugins/facets/plugins/structure", id: "plugin-meta.facets.structure", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/structure/facet"), dependsOn: [] },
 ];
+
+export interface CompositionIdentity {
+  id: string;
+  home: string | null;
+}
+
+export const composition: CompositionIdentity = { id: "singularity", home: "home" };

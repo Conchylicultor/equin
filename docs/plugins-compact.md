@@ -22,13 +22,13 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`prototypes`** [11 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
     - **`settings`** [4 sub-plugins] — Settings app.
     - **`sonata`** [test helpers] [exempt] [78 sub-plugins] — Sonata — extensible piano and music app.
-    - **`studio`** [exempt] [26 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.
+    - **`studio`** [exempt] [27 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.
     - **`website`** [15 sub-plugins] — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the…
 
 - **`apps-core`** [load-bearing] [test helpers] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
   - Plugins:
     - **`app-icon`** — Canonical, serializable app-icon descriptor (a Material Symbols glyph now, image variant later), drawn by the icons primitive.
-    - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the app gallery (the default Apps.App entry), hover or ArrowDown for a grid of every other…
+    - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of…
     - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.
     - **`app-rail-framing`** — App-rail framing region (rail / hidden). Contributes its variant-region host into Apps.RailFraming.
       - Plugins:

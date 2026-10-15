@@ -79,6 +79,16 @@ export const compositionsConfig = defineConfig({
           options: [...SERVE_MODE_OPTIONS],
           default: "off",
         }),
+        // WHICH app owns bare `/` (and the app launcher's click) when this
+        // composition is deployed: a `defineApp` id. A property of what is
+        // deployed, not of any app's code — no app can claim the homepage. `""`
+        // for a composition with no app, and allowed for a never-deployed lens
+        // (subsystems, packs) even when its bundle reaches one.
+        // `composition-closure` (via `resolveCompositionHome`) rejects a home
+        // that is missing, not an app, or outside the bundle; codegen bakes the
+        // resolved value into the composition's web registry. Engine-opaque —
+        // `manifestItemToManifest` DROPS it.
+        home: textField({ label: "Home app" }),
       },
       default: [
         // ── The main app ────────────────────────────────────────────────────────
@@ -118,6 +128,8 @@ export const compositionsConfig = defineConfig({
           extends: [] as string[],
           excludes: [] as string[],
           serve: "off",
+          // Main lands on the app gallery.
+          home: "home",
         },
 
         // ── The global exclusions ───────────────────────────────────────────────
@@ -161,6 +173,7 @@ export const compositionsConfig = defineConfig({
           extends: [] as string[],
           excludes: [] as string[],
           serve: "off",
+          home: "",
         },
 
         // ── Profiles: the agent-manager worked example (full vs. lean) ──────────
@@ -176,6 +189,7 @@ export const compositionsConfig = defineConfig({
           extends: ["self-improvement", "served-baseline"],
           excludes: [] as string[],
           serve: "off",
+          home: "agent-manager",
         },
         {
           id: "agent-manager-lean",
@@ -186,6 +200,7 @@ export const compositionsConfig = defineConfig({
           extends: ["served-baseline"],
           excludes: [] as string[],
           serve: "off",
+          home: "agent-manager",
         },
 
         // ── Apps: lean baseline (entry only) for every other top-level app ──────
@@ -294,6 +309,7 @@ export const compositionsConfig = defineConfig({
           extends: ["conversations", "tasks-domain"],
           excludes: [] as string[],
           serve: "off",
+          home: "",
         },
         subsystem("page-editor", ["page"]),
         subsystem("fields", ["fields"]),
@@ -475,6 +491,8 @@ function app(
     extends: ["served-baseline", ...extraExtends],
     excludes,
     serve: "off",
+    // An app row's name IS its `defineApp` id — the app it ships is its home.
+    home: name,
   };
 }
 
@@ -489,6 +507,7 @@ function subsystem(name: string, entries: string[]) {
     extends: [] as string[],
     excludes: [] as string[],
     serve: "off",
+    home: "",
   };
 }
 
@@ -503,5 +522,6 @@ function pack(name: string, contributors: string[]) {
     extends: [] as string[],
     excludes: [] as string[],
     serve: "off",
+    home: "",
   };
 }

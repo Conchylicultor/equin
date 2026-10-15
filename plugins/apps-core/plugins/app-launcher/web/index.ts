@@ -8,7 +8,7 @@ export { appFields } from "./components/app-fields";
 
 export default {
   description:
-    "The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the app gallery (the default Apps.App entry), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. In solo (fullscreen) mode, a surface that draws no brand gets the launcher floating at the top-left, revealed as the pointer nears the corner.",
+    "The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. In solo (fullscreen) mode, a surface that draws no brand gets the launcher floating at the top-left, revealed as the pointer nears the corner.",
   contributions: [
     AppShell.Brand({ component: AppBrand }),
     Apps.Overlay({ id: "floating-launcher", component: FloatingAppLauncher }),

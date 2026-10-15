@@ -66,6 +66,8 @@ export interface MainComposition {
    * without it) — which is the seed-vs-cascade distinction the docs annotate.
    */
   negated: Set<PluginId>;
+  /** The row's declared `home` (unresolved — `resolveRegistryHome` validates it). */
+  home: string;
 }
 
 /**
@@ -118,7 +120,11 @@ export function resolveMainComposition(
   // The negated set comes off the SAME resolution that produced the bundle,
   // never from a re-parse of the patterns somewhere else — that is how a doc
   // marker would start disagreeing with the registry it annotates.
-  return { bundle: resolved.bundle, negated: resolved.negatedTargets };
+  return {
+    bundle: resolved.bundle,
+    negated: resolved.negatedTargets,
+    home: mainItem.home,
+  };
 }
 
 /** {@link resolveMainComposition} from a tree, for the callers that hold one and

@@ -1,4 +1,4 @@
-// @hash b4e4faf5af0a
+// @hash 1b33a669bf08
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -11,6 +11,7 @@
     "apps.studio.compositions.contributors:contributors",
     "apps.studio.compositions.draft-actions:draft-actions",
     "apps.studio.compositions.entry-points:entry-points",
+    "apps.studio.compositions.home:home",
     "apps.studio.compositions.membership-summary:membership-summary",
     "apps.studio.compositions.release:release",
     "apps.studio.compositions.release:release-history"

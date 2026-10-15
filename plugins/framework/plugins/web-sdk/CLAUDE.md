@@ -318,6 +318,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `framework/slot-declaration.slotIdFor`
     - `framework/tooling/collected-dir.defineCollectedDir`
   - Exports (types):
+    - `CompositionIdentity`
     - `Contribution`
     - `DeferredLoadState`
     - `DocMeta`
@@ -351,6 +352,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `slots`
     - `subscribeDeferredLoadState`
     - `UNSAFE_unsealSlotComponent`
+    - `useComposition`
     - `useDeferredLoadComplete`
     - `useFailedPluginPaths`
     - `useHasLoadErrorUnder`

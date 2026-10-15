@@ -479,3 +479,10 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "ui/plugins/variant-region", id: "ui.variant-region", loader: () => import("@plugins/ui/plugins/variant-region/server"), dependsOn: ["config_v2"] },
   { pluginPath: "upstream", id: "upstream", loader: () => import("@plugins/upstream/server"), dependsOn: ["infra/plugins/jobs", "infra/plugins/spawn", "primitives/plugins/log-channels", "reports", "tasks/plugins/automations", "tasks/plugins/task-category", "ui/plugins/icons"] },
 ];
+
+export interface CompositionIdentity {
+  id: string;
+  home: string | null;
+}
+
+export const composition: CompositionIdentity = { id: "singularity", home: "home" };

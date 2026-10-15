@@ -107,6 +107,16 @@ export interface ManifestActions {
    * and this is the loud boundary under them.
    */
   setServeMode(id: string, mode: string): void;
+  /**
+   * Set the `home` app (a `defineApp` id; `""` = none) on the item with the
+   * given `id`, preserving every other field. Engine-opaque like `serve`; read
+   * by codegen when the composition is built (it becomes the deployed `/`) and
+   * validated by `composition-closure`.
+   *
+   * **Throws for the two committed-source rows**, exactly like `save`: codegen
+   * reads their home off the git layer, so a stored edit would be inert.
+   */
+  setHome(id: string, home: string): void;
 }
 
 export function useManifestActions(): ManifestActions {
@@ -156,6 +166,9 @@ export function useManifestActions(): ManifestActions {
           excludes: [] as string[],
           // New drafts are not served; pick a mode via the Studio control.
           serve: "off",
+          // No home until one is picked in Studio — `composition-closure` refuses
+          // a bundle with apps but no home, so the gap is loud, not load order.
+          home: "",
           ...fields,
         };
         next = [...items, newItem];
@@ -206,5 +219,21 @@ export function useManifestActions(): ManifestActions {
     [items, setConfig],
   );
 
-  return { save, remove, setServeMode };
+  const setHome = useCallback(
+    (id: string, home: string) => {
+      if (isCommittedSourceComposition(id)) {
+        throw new Error(
+          `Cannot set the home of the "${id}" composition at runtime — codegen reads the committed config, ` +
+            `so a stored edit would be silently inert. Edit plugins/plugin-meta/plugins/composition/core/config.ts and rebuild.`,
+        );
+      }
+      setConfig(
+        "manifests",
+        items.map((item) => (item.id === id ? { ...item, home } : item)),
+      );
+    },
+    [items, setConfig],
+  );
+
+  return { save, remove, setServeMode, setHome };
 }

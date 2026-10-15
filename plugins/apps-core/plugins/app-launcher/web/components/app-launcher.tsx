@@ -3,7 +3,7 @@ import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import {
   Apps,
-  defaultApp,
+  useHomeApp,
   useActiveApp,
   type ActiveApp,
 } from "@plugins/apps-core/web";
@@ -108,9 +108,9 @@ function LauncherMark({
 }
 
 /**
- * The launcher: the current app's mark as an icon button. A click goes to the app
- * gallery — the `Apps.App` entry flagged `default`, found generically, never
- * named — and hovering it (or ArrowDown) reveals every other installed app as
+ * The launcher: the current app's mark as an icon button. A click goes to the
+ * deployed composition's home app (`useHomeApp` — declared by the composition's
+ * manifest, never named here; on main, the app gallery) — and hovering it (or ArrowDown) reveals every other installed app as
  * the compact icons DataView (the tile Home draws), the current one marked as
  * the selected row. Picking a tile switches app exactly as the rail does
  * (`useActivateApp`).
@@ -120,13 +120,13 @@ function LauncherMark({
  * the same from every app — and the same as the action bar's popovers.
  */
 export function AppLauncher({ form }: { form: AppShellBrandForm }) {
-  const apps = Apps.App.useContributions();
-  const gallery = defaultApp(apps);
+  const home = useHomeApp();
+  const gallery = home.kind === "app" ? home.app : undefined;
   const launchable = useLaunchableApps(gallery?.id);
   const active = useActiveApp();
   const activeId = active?.id;
   const activate = useActivateApp();
-  // No app registered: nothing to launch, and no gallery to go to.
+  // No home app registered: nothing to launch, and nowhere to go.
   if (!gallery) return null;
   const galleryLink = appLinkProps(gallery.app.basePath);
 
