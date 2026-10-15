@@ -425,6 +425,7 @@ remote is built here.
 - Server:
   - Contributes:
     - `ids.kind` "release"
+    - `taskCategory` "release"
     - `resource.declare` "release.candidate"
     - `resource.declare` "release.history"
     - `resource.declare` "release.history:groups"
@@ -432,7 +433,7 @@ remote is built here.
     - `resource.declare` "release.previews"
     - `resource.declare` "release.run-logs"
     - `resource.declare` "release.runs:rows"
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `release/bundles` ×6
     - `infra/jobs/supervised-job` ×3
     - `ids` ×2
@@ -447,6 +448,7 @@ remote is built here.
     - `infra/git/git-watcher.refHeadServed`
     - `infra/spawn/daemon.defineDaemon`
     - `primitives/log-channels.defineLogSink`
+    - `tasks/task-category.TaskCategory`
   - DB schema: `plugins/release/server/internal/tables.ts`
   - Exports (types):
     - `ReleaseEnded`
@@ -509,7 +511,9 @@ remote is built here.
     - `PlatformTagSchema`
     - `previewEndpoint`
     - `PreviewSchema`
+    - `RELEASE_CATEGORY_ID`
     - `RELEASE_LOG_CHANNEL`
+    - `RELEASE_RUN_KIND`
     - `RELEASE_TARGETS`
     - `releaseCandidate`
     - `ReleaseCandidateSchema`

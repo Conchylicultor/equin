@@ -53,7 +53,8 @@ region is the `model-call` sub-plugin's section and **`runs` names no LLM**.
     - `EventSourceDetail.Section` "Runs" → `SourceRunsSection`
     - `Pane.Register` "event-source-run"
     - `FieldPresentation.Register` "entity:event_source_runs"
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `DataViewSlots.CollectionItemAction` "events.source-runs:investigate" → `CollectionInvestigate`
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/events/sources` ×6
     - `primitives/data-view` ×6
     - `primitives/pane` ×6
@@ -66,6 +67,7 @@ region is the `model-call` sub-plugin's section and **`runs` names no LLM**.
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/text.Text`
     - `primitives/detail-sections.defineDetailSections`
+    - `primitives/launch/investigate.Investigate`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`

@@ -78,10 +78,12 @@ quiet absence of a predicate.
   - Contributes:
     - `Runs.Kind` "release"
     - `FieldPresentation.Register` "arm:runs:release"
+    - `DataViewSlots.CollectionItemAction` "runs:investigate:release" → `CollectionInvestigate`
   - Uses:
     - `apps/studio/compositions/release.releaseDetailPane`
     - `network/live.FieldPresentation`
     - `primitives/css/badge.Badge`
+    - `runs.investigateRuns`
     - `runs.Runs`
 - Server:
   - Uses:
@@ -97,10 +99,10 @@ quiet absence of a predicate.
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
     - `network/live.liveArm`
+    - `release.RELEASE_RUN_KIND`
+    - `release.ReleaseRun`
     - `runs.runs`
-  - Exports (values):
-    - `RELEASE_RUN_KIND`
-    - `releaseRunArm`
+  - Exports (values): `releaseRunArm`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --muted-foreground`
 

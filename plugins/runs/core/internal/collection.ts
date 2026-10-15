@@ -112,3 +112,16 @@ export type RunRow =
 export function runRowKey(ref: { kind: string; id: string }): string {
   return armKeyCodec(ref.kind).encode(ref.id);
 }
+
+/**
+ * The task subject (`tasks/task-subject`) a run's investigation is filed
+ * about — the ONE spelling, so the merged list, the run's own detail pane and
+ * any other surface investigating the same run reach the same task. Takes the
+ * pair, like `runRowKey`.
+ */
+export function runSubject(ref: { kind: string; id: string }): {
+  kind: string;
+  id: string;
+} {
+  return { kind: `run:${ref.kind}`, id: ref.id };
+}

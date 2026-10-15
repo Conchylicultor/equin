@@ -50,12 +50,10 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `Pane.Register` "report-detail"
     - `Pane.Register` "reports"
     - `DebugApp.Sidebar` "Reports"
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×5
     - `primitives/data-view` ×4
-    - `primitives/css/ui-kit` ×2
     - `reports` ×2
-    - `apps-core/tabs.appLinkProps`
     - `apps/debug/shell.DebugApp`
     - `build.useStaleFrontend`
     - `network/live.useLiveRow`
@@ -65,12 +63,12 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/launch.LaunchAgentPopover`
+    - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/launch/investigate.InvestigateAction`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
     - `primitives/scope/tab-id.getTabId`
-    - `ui/icons.Icon`
   - Exports (values):
     - `reportDetailPane`
     - `reportsPane`
@@ -81,7 +79,6 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
-    - `ui/tokens/density --space-xs`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`

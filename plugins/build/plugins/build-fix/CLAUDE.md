@@ -12,11 +12,7 @@
     - `infra/endpoints.useEndpoint`
     - `network/live.LiveRowResult`
     - `network/live.useLiveRow`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/launch.LaunchAgentPopover`
-    - `ui/icons.Icon`
-- Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
+    - `primitives/launch/investigate.InvestigateAction`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/components/build-fix-section.tsx` (debt)
 

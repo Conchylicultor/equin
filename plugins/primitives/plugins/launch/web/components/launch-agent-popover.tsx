@@ -16,6 +16,7 @@ import {
   type LaunchOptionValues,
 } from "@plugins/tasks/plugins/launch-options/web";
 import { type LaunchTaskResponse } from "@plugins/tasks/core";
+import type { TaskSubject } from "@plugins/tasks/plugins/task-subject/core";
 import { useClaudeCodeLaunchBlock } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { useTaskLaunch } from "./use-task-launch";
@@ -42,7 +43,15 @@ export type LaunchToggle = {
  * always files a task, so a launch that must not mint one uses `LaunchControl`.
  */
 export type LaunchAgentRequest = { prompt: string } & (
-  { taskId: string } | { categoryId: string }
+  | { taskId: string }
+  | {
+      categoryId: string;
+      /**
+       * The record the new task is ABOUT (a failed run). Its live task, when
+       * it has one, is reused instead of filing another (`tasks/task-subject`).
+       */
+      subject?: TaskSubject;
+    }
 );
 
 /** Everything the user has entered and not launched yet. */
@@ -166,7 +175,7 @@ export function LaunchAgentForm({
       picked,
       "taskId" in req
         ? { id: req.taskId }
-        : { title, categoryId: req.categoryId },
+        : { title, categoryId: req.categoryId, subject: req.subject },
     );
     clearDraft();
     onSubmitted?.(result);

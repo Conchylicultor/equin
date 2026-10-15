@@ -10,6 +10,8 @@ export { RunDuration } from "./components/run-duration";
 export { useRun } from "./internal/use-run";
 export { formatDuration } from "./internal/format";
 export { RUNS_VIEW } from "./internal/view-id";
+export { investigateRuns } from "./internal/investigate";
+export type { RunInvestigation } from "./internal/investigate";
 
 export default {
   description:

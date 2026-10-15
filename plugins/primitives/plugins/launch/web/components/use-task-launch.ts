@@ -11,10 +11,11 @@ import {
   type LaunchOptionValues,
 } from "@plugins/tasks/plugins/launch-options/web";
 import { launchTask, type LaunchTaskResponse } from "@plugins/tasks/core";
+import type { TaskSubject } from "@plugins/tasks/plugins/task-subject/core";
 
 /** The task a launch runs: one that exists, or a new one filed under a category. */
 export type TaskLaunchTarget =
-  { id: string } | { title: string; categoryId: string };
+  { id: string } | { title: string; categoryId: string; subject?: TaskSubject };
 
 export interface UseTaskLaunchOptions {
   /** Whether a launch that started also OPENS its conversation. Default `false`. */

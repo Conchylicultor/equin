@@ -108,23 +108,18 @@ Consumers read only the generic aggregate:
     - `task-categories:rows` (keyed, point)
     - `task-category.registry` (push, fixed)
 - Cross-plugin:
-  - Imported by:
-    - `apps/deploy`
-    - `apps/home`
-    - `apps/prototypes`
-    - `apps/sonata/transcription`
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×5
+    - `tasks` ×4
+    - `conversations` ×2
+    - `page` ×2
+    - `backup`
     - `build`
     - `config_v2/settings`
-    - `conversations`
-    - `conversations/agents`
+    - `debug/background/investigate`
     - `improve`
     - `infra/deps/updates`
-    - `page/annotations/todo/task-link`
-    - `page/prompt/link`
-    - `tasks`
-    - `tasks/automations`
-    - `tasks/reports-investigation`
-    - `tasks/task-dependencies`
+    - `release`
     - `toolchain`
     - `upstream`
 - Core:

@@ -10,8 +10,14 @@ import type { LoadingVariant } from "@plugins/primitives/plugins/loading/web";
 import type {
   DataViewId,
   DataViewRenderProps,
+  ItemActionProps,
   ManualOrderConfig,
 } from "../core";
+import type { FieldsRecord } from "@plugins/fields/core";
+import type {
+  LiveArm,
+  LiveRowsCollection,
+} from "@plugins/network/plugins/live/core";
 import type { ControlPanelSize } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import type { DataViewControlsContextValue } from "./components/controls/controls-context";
 import { defineFieldExtensions } from "./internal/field-extensions";
@@ -218,6 +224,42 @@ export interface GlobalRowOrderContribution {
   order?: number;
 }
 
+/**
+ * Who a collection item action is registered for: a collection (every list of
+ * it), or one arm of a union (every list of the union — the action sees every
+ * row, and answers `null` for another arm's).
+ */
+export type CollectionItemActionOwner =
+  LiveRowsCollection<unknown> | LiveArm<unknown, FieldsRecord, string>;
+
+/**
+ * A row action declared ONCE beside a collection and drawn by EVERY DataView
+ * listing it (a live `source` over it, or in-memory rows declaring it as their
+ * `collection`) — in the hover cluster, after the list's own `itemActions`.
+ * The list names no action and the action names no list: the twin of
+ * `FieldPresentation.Register` for row actions. A component that has nothing
+ * to offer for a row returns `null`.
+ */
+export interface CollectionItemActionContribution {
+  /** Stable id (React key + doc identity). */
+  id: string;
+  owner: CollectionItemActionOwner;
+  component: ComponentType<ItemActionProps<unknown>>;
+}
+
+/** The collection key a collection item action's owner lists under. */
+export function collectionItemActionKey(
+  owner: CollectionItemActionOwner,
+): string {
+  if (!("kind" in owner)) return owner.key;
+  if (owner.owner.kind !== "arm") {
+    throw new Error(
+      `collection item action: a column-set owner must be a union arm, got "${owner.owner.kind}"`,
+    );
+  }
+  return owner.owner.collection;
+}
+
 export const DataViewSlots = {
   View: defineSlot<DataViewContribution>({
     docLabel: (p) => p.title,
@@ -256,6 +298,12 @@ export const DataViewSlots = {
    *  metadata to build its trigger and mounts only the open panel. */
   Control: defineSlot<DataViewControlContribution>({
     docLabel: (p) => p.label,
+  }),
+  /** Row actions a collection (or a union's arm) declares once, drawn by every
+   *  DataView listing it — see `CollectionItemActionContribution`. Plain data
+   *  slot: the host keeps the contributions its collection owns. */
+  CollectionItemAction: defineSlot<CollectionItemActionContribution>({
+    docLabel: (p) => `${collectionItemActionKey(p.owner)}:${p.id}`,
   }),
   /** Per-type table cell. Contribute `{ match, component }`, plus the optional
    *  self-description `chip: true` when the cell renders a `Badge` rather than a

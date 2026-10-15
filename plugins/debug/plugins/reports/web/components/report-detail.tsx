@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
@@ -14,19 +13,9 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import {
-  Button,
-  ControlSizeProvider,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
-import { appLinkProps } from "@plugins/apps-core/plugins/tabs/web";
-import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
-import { taskDetailRoute } from "@plugins/tasks/plugins/tasks-core/core";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { InvestigateAction } from "@plugins/primitives/plugins/launch/plugins/investigate/web";
 import { reportDetailPane } from "../panes";
-import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const autoFixHighIcon = symbol("auto-fix-high");
 
 export function ReportDetail() {
   const { reportId } = reportDetailPane.useParams();
@@ -208,49 +197,23 @@ function TimeField({ label, date }: { label: string; date: Date }) {
 }
 
 function Investigate({ report }: { report: Report }) {
-  // The task investigate() linked, held until the live row carries it: the row
-  // routes after the server's write resolves, so without it a second click in
-  // between would launch a second agent. The row wins once it agrees.
-  const [linkedTaskId, setLinkedTaskId] = useState<string | null>(null);
-  const linked = report.taskId ?? linkedTaskId;
-  if (linked != null) {
-    const taskId = linked;
-    return (
-      <Stack align="start" gap="none">
-        <Button
-          variant="outline"
-          {...appLinkProps(taskDetailRoute.link(agentManagerApp, { taskId }))}
-          className="gap-xs"
-        >
-          <Icon icon={navIcons.expand} className="size-4" />
-          View task
-        </Button>
-      </Stack>
-    );
-  }
-
+  // A report owns its own report → task link (`report.taskId`, written by
+  // `investigate()`), so the action runs in link mode: View task once linked.
   return (
     <Stack align="start" gap="none">
-      <LaunchAgentPopover
+      <InvestigateAction
+        presentation="button"
+        noun="report"
+        linkedTaskId={report.taskId}
         draftKey={`report-investigate:${report.id}`}
-        trigger={
-          <Button variant="default" className="gap-xs">
-            <Icon icon={autoFixHighIcon} className="size-4" />
-            Launch an agent to investigate
-          </Button>
-        }
-        title="Investigate this report"
         description={
           <>
             {report.kind}: {report.message}
           </>
         }
         placeholder="Extra context (optional) — e.g. what you were doing, expected behaviour…"
-        align="start"
-        getRequest={async (userText) => {
+        resolve={async (userText) => {
           const { taskId } = await investigate(report.id);
-          // Show "View task" now, before the linked row arrives.
-          setLinkedTaskId(taskId);
           const parts: string[] = [];
           parts.push(`## Report (${report.kind})\n`);
           parts.push(`**Source:** ${report.source}`);

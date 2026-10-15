@@ -592,7 +592,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ui/tokens/font-family` ×4
     - `ui/tokens/scrollbar --scrollbar-color`
   - Imported by: 404 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×101
+    - `primitives` ×102
     - `apps` ×82
     - `conversations` ×53
     - `page` ×25
@@ -602,7 +602,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps-core` ×13
     - `fields` ×12
     - `plugin-meta` ×9
-    - `build` ×6
+    - `build` ×5
     - `review` ×5
     - `auth` ×4
     - `reorder` ×4

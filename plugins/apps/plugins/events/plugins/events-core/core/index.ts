@@ -85,3 +85,4 @@ export {
   eventRunIdKind,
 } from "./internal/id-kinds";
 export type { EventSourceId, EventId, EventRunId } from "./internal/id-kinds";
+export { EVENTS_CATEGORY_ID } from "./internal/task-category";

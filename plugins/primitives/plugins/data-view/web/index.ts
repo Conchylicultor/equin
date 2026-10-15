@@ -59,6 +59,8 @@ export type {
   DataViewControlSummary,
   GlobalRowOrderProps,
   GlobalRowOrderContribution,
+  CollectionItemActionContribution,
+  CollectionItemActionOwner,
 } from "./slots";
 export { getDataViewDescriptor } from "./internal/descriptors";
 export { useDataViewControls } from "./components/controls/controls-context";

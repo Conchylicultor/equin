@@ -44,7 +44,33 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
 
 ## Plugin reference
 
-- Description: Background activity catalog, browser half: the live read of one entry across both halves of the catalog, the countdown to its next run, and the catalog list (a DataView grouped by kind, with status, trigger in words, next and last run) and entry detail (scope, declaring plugin, recent runs, Run now) components — mounted as panes by Debug → Background activity. Background activity catalog: defineBackgroundKind registers a provider (a mechanism that runs things on its own: jobs, warm-ups, timers) that lists its entries with trigger, scope and latest run, its recent runs and an optional Run now; the catalog merges every provider into the pushed background.catalog value (throttled), serves background.recent-runs per entry and POST /api/background/run-now, fills event-triggered entries' event names from contributed BackgroundTriggerSource annotations, and names no provider. Background activity catalog, central half: defineBackgroundKind registers a provider for what the machine-wide central runtime runs on its own, merged into the pushed background.central-catalog value (every entry scope central) with background.central-recent-runs per entry.
+- Description: Background activity catalog, browser half: the live read of one entry across both halves of the catalog, the countdown to its next run, and the catalog list (a DataView grouped by kind, with status, trigger in words, next and last run) and entry detail (scope, declaring plugin, recent runs with a row-action slot the mounting app fills, Run now) components — mounted as panes by Debug → Background activity. Background activity catalog: defineBackgroundKind registers a provider (a mechanism that runs things on its own: jobs, warm-ups, timers) that lists its entries with trigger, scope and latest run, its recent runs and an optional Run now; the catalog merges every provider into the pushed background.catalog value (throttled), serves background.recent-runs per entry and POST /api/background/run-now, fills event-triggered entries' event names from contributed BackgroundTriggerSource annotations, and names no provider. Background activity catalog, central half: defineBackgroundKind registers a provider for what the machine-wide central runtime runs on its own, merged into the pushed background.central-catalog value (every entry scope central) with background.central-recent-runs per entry.
+- Web:
+  - Slots: `RecentRunActions`
+  - Slot contributors: `RecentRunActions` ← `debug.background.investigate`
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×5
+    - `primitives/data-view` ×4
+    - `infra/endpoints` ×2
+    - `primitives/css/status-dot` ×2
+    - `primitives/css/ui-kit` ×2
+    - `primitives/relative-time` ×2
+    - `network/live.useLive`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/rigid.rigidClass`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/loading.Loading`
+    - `runs/run-outcome.RUN_OUTCOME_META`
+  - Exports (types): `EntryRun`
+  - Exports (values):
+    - `BackgroundView`
+    - `EntryDetail`
+    - `NextRun`
+    - `RecentRunActions`
+    - `useBackgroundEntry`
 - Server:
   - Contributes:
     - `resource.declare` "background.catalog"
@@ -64,28 +90,6 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
     - `background.catalog` (push, notified)
     - `background.recent-runs` (push, notified)
   - Routes: `POST /api/background/run-now`
-- Web:
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×5
-    - `primitives/data-view` ×3
-    - `infra/endpoints` ×2
-    - `primitives/css/status-dot` ×2
-    - `primitives/css/ui-kit` ×2
-    - `primitives/relative-time` ×2
-    - `network/live.useLive`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/line.Line`
-    - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/rigid.rigidClass`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.Text`
-    - `primitives/loading.Loading`
-    - `runs/run-outcome.RUN_OUTCOME_META`
-  - Exports (values):
-    - `BackgroundView`
-    - `EntryDetail`
-    - `NextRun`
-    - `useBackgroundEntry`
 - Central:
   - Uses: `network/live.serveValue`
   - Exports (types):
@@ -133,6 +137,7 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `debug/background`
+    - `debug/background/investigate`
     - `debug/queue`
     - `infra/background/timer`
     - `infra/events`

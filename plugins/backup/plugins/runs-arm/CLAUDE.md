@@ -151,6 +151,7 @@ compiler — a real follow-up, and a bigger change than it looks.
   - Contributes:
     - `Runs.Kind` "backup"
     - `FieldPresentation.Register` "arm:runs:backup"
+    - `DataViewSlots.CollectionItemAction` "runs:investigate:backup" → `CollectionInvestigate`
     - `BackupRunDetail.Section` "Archive"
     - `BackupRunDetail.Section` "Sources" → `BackupSourcesSection`
     - `BackupRunDetail.Section` "Targets" → `BackupTargetsSection`
@@ -165,6 +166,7 @@ compiler — a real follow-up, and a bigger change than it looks.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `runs.investigateRuns`
     - `runs.Runs`
     - `ui/icons.Icon`
 - Server:

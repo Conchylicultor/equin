@@ -1,15 +1,13 @@
 import type { ReactElement } from "react";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
+import { InvestigateAction } from "@plugins/primitives/plugins/launch/plugins/investigate/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { DEPLOY_CATEGORY_ID } from "@plugins/apps/plugins/deploy/core";
 import {
   DEPLOY_LOG_CHANNEL,
   type DeployRunRecord,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-
-const bugReportIcon = symbol("bug-report");
+import { DEPLOY_RUN_KIND } from "@plugins/apps/plugins/deploy/plugins/deployments/plugins/runs-arm/core";
+import { runSubject } from "@plugins/runs/core";
 
 /**
  * How this run died, in the same honest words the live failure notice uses: a
@@ -91,24 +89,16 @@ export function InvestigateFailureAction({
 }: ItemActionProps<DeployRunRecord>): ReactElement | null {
   if (row.status !== "failed") return null;
 
+  // The same subject the merged runs list files a failed deploy under, so the
+  // two reach one task.
   return (
-    <LaunchAgentPopover
-      draftKey={`deploy-investigate:${row.id}`}
-      align="end"
-      title="Investigate this failure"
+    <InvestigateAction
+      presentation="row-action"
+      noun={row.verb}
+      subject={runSubject({ kind: DEPLOY_RUN_KIND, id: row.id })}
+      categoryId={DEPLOY_CATEGORY_ID}
       description={`Launch an agent briefed on this failed ${row.verb} of ${row.compositionId} — the CLI's own message, the run's identity, and where the transcript is.`}
-      placeholder="Optional — what you already suspect, or what to check first…"
-      trigger={
-        <IconButton
-          icon={bugReportIcon}
-          label="Investigate failure"
-          tooltip={`Launch an agent to investigate this failed ${row.verb}`}
-        />
-      }
-      getRequest={(userText) => ({
-        prompt: brief(row, userText),
-        categoryId: DEPLOY_CATEGORY_ID,
-      })}
+      brief={(userText) => brief(row, userText)}
     />
   );
 }

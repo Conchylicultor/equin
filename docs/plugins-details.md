@@ -1884,10 +1884,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes: `DeployRunItemActions` "investigate-failure" → `InvestigateFailureAction`
                 - Uses:
                   - `apps/deploy/deploy-history.DeployRunItemActions`
-                  - `primitives/icon-button.IconButton`
-                  - `primitives/launch.LaunchAgentPopover`
-              - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
+                  - `primitives/launch/investigate.InvestigateAction`
         - **`deployments`** — Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./singularity deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a live history window — the record that survives the restart the live view does not. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
           - Web:
             - Slots:
@@ -2074,10 +2071,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `Runs.Kind` "deploy"
                   - `FieldPresentation.Register` "arm:runs:deploy"
+                  - `DataViewSlots.CollectionItemAction` "runs:investigate:deploy" → `CollectionInvestigate`
                 - Uses:
                   - `apps/deploy/deployments.deploymentDetailPane`
                   - `network/live.FieldPresentation`
                   - `primitives/css/badge.Badge`
+                  - `runs.investigateRuns`
                   - `runs.Runs`
               - Server:
                 - Uses:
@@ -2190,6 +2189,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/deployments`
               - `apps/deploy/remote-deploy`
               - `apps/deploy/ssh-setup`
+          - Exemptions:
+            - Exempts itself from: `investigate:failures-registered` — `shared/resources.ts` (sanctioned)
           - Shared:
             - Exports (types):
               - `ServerHealthRow`
@@ -2608,6 +2609,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ids.kind` "evrun"
               - `ids.kind` "evs"
               - `ids.kind` "evt"
+              - `taskCategory` "events"
               - `resource.declare` "events.run-events"
               - `resource.declare` "events.source-runs"
               - `resource.declare` "events.source-runs:groups"
@@ -2623,6 +2625,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/entities.defineEntity`
               - `network/live.serveCollection`
               - `network/live.serveValue`
+              - `tasks/task-category.TaskCategory`
             - DB schema: `plugins/apps/plugins/events/plugins/events-core/server/internal/tables.ts`
             - Exports (types):
               - `EventSourceType`
@@ -2725,6 +2728,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `eventFields`
               - `eventIdKind`
               - `eventRunIdKind`
+              - `EVENTS_CATEGORY_ID`
               - `EventSchema`
               - `eventsEntityRef`
               - `eventSourceFields`
@@ -3069,7 +3073,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `EventSourceDetail.Section` "Runs" → `SourceRunsSection`
                       - `Pane.Register` "event-source-run"
                       - `FieldPresentation.Register` "entity:event_source_runs"
-                    - Uses: 31 symbols — full list in [`plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/REFERENCE.md`](../plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/REFERENCE.md)
+                      - `DataViewSlots.CollectionItemAction` "events.source-runs:investigate" → `CollectionInvestigate`
+                    - Uses: 32 symbols — full list in [`plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/REFERENCE.md`](../plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/REFERENCE.md)
                       - `apps/events/sources` ×6
                       - `primitives/data-view` ×6
                       - `primitives/pane` ×6
@@ -3082,6 +3087,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/placeholder.Placeholder`
                       - `primitives/css/text.Text`
                       - `primitives/detail-sections.defineDetailSections`
+                      - `primitives/launch/investigate.Investigate`
                       - `primitives/loading.Loading`
                       - `primitives/relative-time.RelativeTime`
                       - `ui/icons.Icon`
@@ -8493,7 +8499,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Pane.Register` "release-detail"
                   - `CompositionDetail.Section` "Build & serve" → `ReleaseSection`
                   - `CompositionDetail.Section` "Release history" → `ReleaseHistorySection`
-                - Uses: 25 symbols — full list in [`plugins/apps/plugins/studio/plugins/compositions/plugins/release/REFERENCE.md`](../plugins/apps/plugins/studio/plugins/compositions/plugins/release/REFERENCE.md)
+                  - `DataViewSlots.CollectionItemAction` "release.history:investigate" → `CollectionInvestigate`
+                - Uses: 26 symbols — full list in [`plugins/apps/plugins/studio/plugins/compositions/plugins/release/REFERENCE.md`](../plugins/apps/plugins/studio/plugins/compositions/plugins/release/REFERENCE.md)
                   - `primitives/data-view` ×4
                   - `primitives/pane` ×3
                   - `build/serve-composition` ×2
@@ -8510,6 +8517,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/toggle-chip.ToggleChip`
                   - `primitives/css/ui-kit.Button`
                   - `primitives/detail-sections.defineDetailSections`
+                  - `primitives/launch/investigate.Investigate`
                   - `primitives/live-state.matchResource`
                   - `primitives/relative-time.RelativeTime`
                   - `ui/icons.Icon`
@@ -10073,13 +10081,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: 32 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `apps-core` ×9
-          - `debug` ×8
           - `apps` ×7
+          - `debug` ×7
+          - `primitives` ×2
           - `shell` ×2
           - `active-data/song`
           - `build`
           - `config_v2/config-link`
-          - `primitives/metrics`
           - `tasks/worktree-identity`
           - `ui/theme-engine/quick-theme`
     - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the :root token layer, and useAppSettingsScope — the app:<id> config scope per-app theme settings (variants) are read in: the nearest app theme boundary's (a pane's home app), else the focused app's.
@@ -10509,6 +10517,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Server:
     - Contributes:
       - `ConfigV2.Register` "config"
+      - `taskCategory` "backup"
       - `report-kind` "backup-incomplete"
     - Uses:
       - `config_v2.ConfigV2`
@@ -10521,6 +10530,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/log-channels.Log`
       - `reports.recordReport`
       - `reports.ReportKind`
+      - `tasks/task-category.TaskCategory`
     - DB schema: `plugins/backup/server/internal/tables.ts`
     - Exports (types): `BackupIncompletePayload`
     - Exports (values):
@@ -10543,6 +10553,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `BackupSourceSkipped`
       - `BackupTargetResult`
     - Exports (values):
+      - `BACKUP_CATEGORY_ID`
       - `BACKUP_RUN_KIND`
       - `backupRoute`
       - `backupRunRoute`
@@ -10579,6 +10590,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Runs.Kind` "backup"
           - `FieldPresentation.Register` "arm:runs:backup"
+          - `DataViewSlots.CollectionItemAction` "runs:investigate:backup" → `CollectionInvestigate`
           - `BackupRunDetail.Section` "Archive"
           - `BackupRunDetail.Section` "Sources" → `BackupSourcesSection`
           - `BackupRunDetail.Section` "Targets" → `BackupTargetsSection`
@@ -10593,6 +10605,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
+          - `runs.investigateRuns`
           - `runs.Runs`
           - `ui/icons.Icon`
       - Server:
@@ -10979,11 +10992,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.useEndpoint`
           - `network/live.LiveRowResult`
           - `network/live.useLiveRow`
-          - `primitives/css/ui-kit.Button`
-          - `primitives/launch.LaunchAgentPopover`
-          - `ui/icons.Icon`
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
+          - `primitives/launch/investigate.InvestigateAction`
       - Exemptions:
         - Exempts itself from: `live/no-endpoint-read` — `web/components/build-fix-section.tsx` (debt)
     - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
@@ -11284,12 +11293,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Runs.Kind` "build"
           - `Runs.Leading` → `BuildRunLeading`
           - `FieldPresentation.Register` "arm:runs:build"
+          - `DataViewSlots.CollectionItemAction` "runs:investigate:build" → `CollectionInvestigate`
         - Uses:
           - `build.buildDetailPane`
           - `build/build-status.BuildStatusChip`
           - `build/build-status.BuildStatusDot`
           - `network/live.FieldPresentation`
           - `primitives/css/badge.Badge`
+          - `runs.investigateRuns`
           - `runs.Runs`
       - Server:
         - Uses:
@@ -17137,12 +17148,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `quotedRelationsIn`
   - Cross-plugin:
     - Uses tokens: `ui/tokens/shape --spacing`
-    - Imported by: 112 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 113 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×32
       - `page` ×15
       - `conversations` ×12
       - `infra` ×12
-      - `tasks` ×9
+      - `tasks` ×10
       - `debug` ×6
       - `active-data` ×5
       - `primitives` ×4
@@ -17882,6 +17893,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `backgroundEntryPane`
       - Cross-plugin:
         - Imported by: `debug/queue`
+      - Plugins:
+        - **`investigate`** — The Investigate action on every failed run in a background entry's Recent runs: launches an agent briefed on the run (its error verbatim, the entry's description, declaring plugin and facts, and where to dig), filed under the Background category and about that run, so the row turns into View task. The Background task category: the category a failed background run's investigation is filed under.
+          - Web:
+            - Contributes: `RecentRunActions` "investigate" → `InvestigateRun`
+            - Uses:
+              - `infra/background/catalog.RecentRunActions`
+              - `primitives/launch/investigate.InvestigateAction`
+          - Server:
+            - Contributes: `taskCategory` "background"
+            - Uses: `tasks/task-category.TaskCategory`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/shape --spacing`
+          - Core:
+            - Exports (values): `BACKGROUND_CATEGORY_ID`
     - **`boot-budget`** — Boot-budget report renderer: a one-line Debug → Reports summary for the boot-budget kind, plus the per-phase budget config registration. Boot-budget monitor: a cheap per-worktree scheduled job that reads the post-boot profile once and files a deduped boot-budget report per server boot hook (onReadyBlocking / onReady / onAllReady) or warmup span whose wall-time exceeds its per-phase budget, so a heavy boot hook is loud immediately instead of invisible-until-threshold.
       - Web:
         - Contributes:
@@ -19610,12 +19635,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Pane.Register` "report-detail"
           - `Pane.Register` "reports"
           - `DebugApp.Sidebar` "Reports"
-        - Uses: 29 symbols — full list in [`plugins/debug/plugins/reports/REFERENCE.md`](../plugins/debug/plugins/reports/REFERENCE.md)
+        - Uses: 26 symbols — full list in [`plugins/debug/plugins/reports/REFERENCE.md`](../plugins/debug/plugins/reports/REFERENCE.md)
           - `primitives/pane` ×5
           - `primitives/data-view` ×4
-          - `primitives/css/ui-kit` ×2
           - `reports` ×2
-          - `apps-core/tabs.appLinkProps`
           - `apps/debug/shell.DebugApp`
           - `build.useStaleFrontend`
           - `network/live.useLiveRow`
@@ -19625,12 +19648,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
-          - `primitives/launch.LaunchAgentPopover`
+          - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/launch/investigate.InvestigateAction`
           - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `primitives/relative-time.RelativeTime`
           - `primitives/scope/tab-id.getTabId`
-          - `ui/icons.Icon`
         - Exports (values):
           - `reportDetailPane`
           - `reportsPane`
@@ -19641,7 +19664,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
-          - `ui/tokens/density --space-xs`
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
@@ -22174,10 +22196,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 40 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 41 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×13
+              - `tasks` ×5
               - `infra` ×4
-              - `tasks` ×4
               - `debug` ×3
               - `conversations` ×2
               - `fields` ×2
@@ -23447,9 +23469,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 162 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 163 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×50
-              - `primitives` ×25
+              - `primitives` ×26
               - `page` ×24
               - `conversations` ×20
               - `debug` ×7
@@ -24354,7 +24376,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
     - **`background`** — Umbrella for what the app runs on its own: the catalog every background mechanism reports into, and the page that lists it.
       - Plugins:
-        - **`catalog`** — Background activity catalog, browser half: the live read of one entry across both halves of the catalog, the countdown to its next run, and the catalog list (a DataView grouped by kind, with status, trigger in words, next and last run) and entry detail (scope, declaring plugin, recent runs, Run now) components — mounted as panes by Debug → Background activity. Background activity catalog: defineBackgroundKind registers a provider (a mechanism that runs things on its own: jobs, warm-ups, timers) that lists its entries with trigger, scope and latest run, its recent runs and an optional Run now; the catalog merges every provider into the pushed background.catalog value (throttled), serves background.recent-runs per entry and POST /api/background/run-now, fills event-triggered entries' event names from contributed BackgroundTriggerSource annotations, and names no provider. Background activity catalog, central half: defineBackgroundKind registers a provider for what the machine-wide central runtime runs on its own, merged into the pushed background.central-catalog value (every entry scope central) with background.central-recent-runs per entry.
+        - **`catalog`** — Background activity catalog, browser half: the live read of one entry across both halves of the catalog, the countdown to its next run, and the catalog list (a DataView grouped by kind, with status, trigger in words, next and last run) and entry detail (scope, declaring plugin, recent runs with a row-action slot the mounting app fills, Run now) components — mounted as panes by Debug → Background activity. Background activity catalog: defineBackgroundKind registers a provider (a mechanism that runs things on its own: jobs, warm-ups, timers) that lists its entries with trigger, scope and latest run, its recent runs and an optional Run now; the catalog merges every provider into the pushed background.catalog value (throttled), serves background.recent-runs per entry and POST /api/background/run-now, fills event-triggered entries' event names from contributed BackgroundTriggerSource annotations, and names no provider. Background activity catalog, central half: defineBackgroundKind registers a provider for what the machine-wide central runtime runs on its own, merged into the pushed background.central-catalog value (every entry scope central) with background.central-recent-runs per entry.
+          - Web:
+            - Slots: `RecentRunActions`
+            - Slot contributors: `RecentRunActions` ← `debug.background.investigate`
+            - Uses: 26 symbols — full list in [`plugins/infra/plugins/background/plugins/catalog/REFERENCE.md`](../plugins/infra/plugins/background/plugins/catalog/REFERENCE.md)
+              - `primitives/live-state` ×5
+              - `primitives/data-view` ×4
+              - `infra/endpoints` ×2
+              - `primitives/css/status-dot` ×2
+              - `primitives/css/ui-kit` ×2
+              - `primitives/relative-time` ×2
+              - `network/live.useLive`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/loading.Loading`
+              - `runs/run-outcome.RUN_OUTCOME_META`
+            - Exports (types): `EntryRun`
+            - Exports (values):
+              - `BackgroundView`
+              - `EntryDetail`
+              - `NextRun`
+              - `RecentRunActions`
+              - `useBackgroundEntry`
           - Server:
             - Contributes:
               - `resource.declare` "background.catalog"
@@ -24374,28 +24422,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `background.catalog` (push, notified)
               - `background.recent-runs` (push, notified)
             - Routes: `POST /api/background/run-now`
-          - Web:
-            - Uses: 25 symbols — full list in [`plugins/infra/plugins/background/plugins/catalog/REFERENCE.md`](../plugins/infra/plugins/background/plugins/catalog/REFERENCE.md)
-              - `primitives/live-state` ×5
-              - `primitives/data-view` ×3
-              - `infra/endpoints` ×2
-              - `primitives/css/status-dot` ×2
-              - `primitives/css/ui-kit` ×2
-              - `primitives/relative-time` ×2
-              - `network/live.useLive`
-              - `primitives/css/fill.Fill`
-              - `primitives/css/line.Line`
-              - `primitives/css/placeholder.Placeholder`
-              - `primitives/css/rigid.rigidClass`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `primitives/loading.Loading`
-              - `runs/run-outcome.RUN_OUTCOME_META`
-            - Exports (values):
-              - `BackgroundView`
-              - `EntryDetail`
-              - `NextRun`
-              - `useBackgroundEntry`
           - Central:
             - Uses: `network/live.serveValue`
             - Exports (types):
@@ -24443,6 +24469,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --spacing`
             - Imported by:
               - `debug/background`
+              - `debug/background/investigate`
               - `debug/queue`
               - `infra/background/timer`
               - `infra/events`
@@ -24632,7 +24659,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/sidequest-autopilot`
           - `tasks/task-title`
       - Exemptions:
-        - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
+        - Exempts itself from:
+          - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+          - `investigate:failures-registered` — `core/resources.ts` (sanctioned)
       - Plugins:
         - **`availability`** — Claude Code availability, shown: the health report's Claude Code row (critical while the CLI is missing or signed out, with the install / sign-in commands and Check again), useClaudeCodeLaunchBlock() for launch controls to disable themselves with the fix, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the user's Claude Code CLI is installed and signed in (`claude --version` + `claude auth status --json`, under the agent panes' host env), serves it as the claude-code-status push resource and POST /api/claude-code/recheck, and gives every launch path assertClaudeCodeReady() and requireClaudeBin() — so an agent that cannot run is refused up front with the fix, never started as `command not found`. onClaudeCodeProbed hands every fresh answer to work keyed off the installed CLI's version.
           - Web:
@@ -25179,9 +25208,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 36 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+        - Imported by: 37 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
           - `apps` ×16
-          - `tasks` ×10
+          - `tasks` ×11
           - `conversations` ×6
           - `page` ×3
           - `plugin-meta/plugin-health`
@@ -25291,7 +25320,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build`
           - `improve`
       - Exemptions:
-        - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
+        - Exempts itself from:
+          - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+          - `investigate:failures-registered` — `core/resources.ts` (sanctioned)
     - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
       - Web:
         - Slots: `eventsTestPane.Actions`
@@ -28299,10 +28330,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 229 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 230 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×67
           - `conversations` ×36
-          - `tasks` ×26
+          - `tasks` ×27
           - `debug` ×24
           - `active-data` ×12
           - `infra` ×11
@@ -34837,7 +34868,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
             - Imported by: 404 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `primitives` ×101
+              - `primitives` ×102
               - `apps` ×82
               - `conversations` ×53
               - `page` ×25
@@ -34847,7 +34878,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core` ×13
               - `fields` ×12
               - `plugin-meta` ×9
-              - `build` ×6
+              - `build` ×5
               - `review` ×5
               - `auth` ×4
               - `reorder` ×4
@@ -35029,16 +35060,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.RowOrder`
           - `DataViewSlots.Setting`
           - `DataViewSlots.Control`
+          - `DataViewSlots.CollectionItemAction`
           - `DataViewSlots.Cell`
           - `DataViewSlots.CellEditor`
           - `DataViewSlots.Filter`
           - `DataViewSlots.ValueCodec`
           - `DataViewSlots.Grouping`
           - `DataViewSlots.ColumnConfig`
-        - Slot contributors: 40 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Slot contributors: 46 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `DataViewSlots.Cell` ×10
           - `DataViewSlots.Filter` ×7
           - `DataViewSlots.CellEditor` ×6
+          - `DataViewSlots.CollectionItemAction` ×6
           - `DataViewSlots.View` ×5
           - `DataViewSlots.Grouping` ×3
           - `DataViewSlots.ValueCodec` ×3
@@ -35099,6 +35132,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `CellContributionMeta`
           - `CellEditorProps`
+          - `CollectionItemActionContribution`
+          - `CollectionItemActionOwner`
           - `ColumnConfigDerive`
           - `ColumnConfigProps`
           - `CreateOption`
@@ -35393,12 +35428,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-semibold`
-        - Imported by: 91 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 92 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×30
           - `apps` ×22
           - `debug` ×12
+          - `primitives` ×8
           - `conversations` ×7
-          - `primitives` ×7
           - `tasks` ×4
           - `infra` ×2
           - `apps-core/app-launcher`
@@ -36704,8 +36739,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: 114 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×42
-          - `primitives` ×19
+          - `apps` ×41
+          - `primitives` ×20
           - `conversations` ×16
           - `page` ×7
           - `tasks` ×7
@@ -36867,17 +36902,60 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
-        - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/launch/REFERENCE.md`](../plugins/primitives/plugins/launch/REFERENCE.md)
-          - `conversations` ×6
-          - `apps` ×4
-          - `tasks` ×3
-          - `page` ×2
+        - Imported by:
           - `active-data/task`
-          - `build/build-fix`
+          - `apps/agent-manager/welcome`
+          - `apps/home/app-cards`
+          - `apps/prototypes/gallery`
           - `config_v2/settings/conflict-agent`
-          - `debug/reports`
+          - `conversations/conversation-view/branch`
+          - `conversations/conversation-view/fork-conversation`
+          - `conversations/conversation-view/fork-session`
+          - `conversations/conversation-view/jsonl-viewer/investigate-event`
+          - `conversations/conversation-view/rewind`
+          - `conversations/conversations-view`
+          - `page/annotations/todo/task-link`
+          - `page/prompt/block`
+          - `primitives/launch/investigate`
           - `reports/launch-fix`
           - `screenshot`
+          - `tasks/attempt-view`
+          - `tasks/task-description`
+          - `tasks/task-list`
+      - Plugins:
+        - **`investigate`** — The one 'launch an agent to investigate this failure' affordance: <InvestigateAction> — a fixed icon, label and popover, briefed by the caller, filed about the failed record (tasks/task-subject) so a second launch reuses its task and the action turns into View task.
+          - Web:
+            - Uses:
+              - `apps-core/tabs.appLinkProps`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/data-view.DataViewSlots`
+              - `primitives/data-view.ItemActionProps`
+              - `primitives/icon-button.IconButton`
+              - `primitives/launch.LaunchAgentPopover`
+              - `primitives/live-state.ResourceErrorInline`
+              - `tasks/task-subject.useSubjectTask`
+              - `ui/icons.Icon`
+            - Exports (types):
+              - `InvestigateActionProps`
+              - `InvestigateLinkProps`
+              - `InvestigatePresentation`
+              - `InvestigateRegistration`
+              - `InvestigateSubjectProps`
+            - Exports (values):
+              - `Investigate`
+              - `InvestigateAction`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/density --space-xs`
+              - `ui/tokens/shape --spacing`
+            - Imported by:
+              - `apps/deploy/deploy-history/investigate-failure`
+              - `apps/events/sources/source-detail/runs`
+              - `apps/studio/compositions/release`
+              - `build/build-fix`
+              - `debug/background/investigate`
+              - `debug/reports`
+              - `runs`
     - **`lazy-component`** — Pairs React.lazy with its own Suspense boundary so a heavy component is code-split off the eager plugin-boot wave, loading on first mount instead.
       - Web:
         - Uses: `primitives/loading.Loading`
@@ -37024,14 +37102,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 236 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 237 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×66
           - `conversations` ×40
           - `tasks` ×22
           - `ui` ×22
           - `debug` ×21
           - `page` ×12
-          - `primitives` ×9
+          - `primitives` ×10
           - `active-data` ×7
           - `infra` ×6
           - `plugin-meta` ×5
@@ -40058,6 +40136,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Server:
     - Contributes:
       - `ids.kind` "release"
+      - `taskCategory` "release"
       - `resource.declare` "release.candidate"
       - `resource.declare` "release.history"
       - `resource.declare` "release.history:groups"
@@ -40065,7 +40144,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resource.declare` "release.previews"
       - `resource.declare` "release.run-logs"
       - `resource.declare` "release.runs:rows"
-    - Uses: 26 symbols — full list in [`plugins/release/REFERENCE.md`](../plugins/release/REFERENCE.md)
+    - Uses: 27 symbols — full list in [`plugins/release/REFERENCE.md`](../plugins/release/REFERENCE.md)
       - `release/bundles` ×6
       - `infra/jobs/supervised-job` ×3
       - `ids` ×2
@@ -40080,6 +40159,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/git/git-watcher.refHeadServed`
       - `infra/spawn/daemon.defineDaemon`
       - `primitives/log-channels.defineLogSink`
+      - `tasks/task-category.TaskCategory`
     - DB schema: `plugins/release/server/internal/tables.ts`
     - Exports (types):
       - `ReleaseEnded`
@@ -40142,7 +40222,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `PlatformTagSchema`
       - `previewEndpoint`
       - `PreviewSchema`
+      - `RELEASE_CATEGORY_ID`
       - `RELEASE_LOG_CHANNEL`
+      - `RELEASE_RUN_KIND`
       - `RELEASE_TARGETS`
       - `releaseCandidate`
       - `ReleaseCandidateSchema`
@@ -40211,10 +40293,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Runs.Kind` "release"
           - `FieldPresentation.Register` "arm:runs:release"
+          - `DataViewSlots.CollectionItemAction` "runs:investigate:release" → `CollectionInvestigate`
         - Uses:
           - `apps/studio/compositions/release.releaseDetailPane`
           - `network/live.FieldPresentation`
           - `primitives/css/badge.Badge`
+          - `runs.investigateRuns`
           - `runs.Runs`
       - Server:
         - Uses:
@@ -40230,10 +40314,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/text/config.enumTextField`
           - `fields/text/config.textField`
           - `network/live.liveArm`
+          - `release.RELEASE_RUN_KIND`
+          - `release.ReleaseRun`
           - `runs.runs`
-        - Exports (values):
-          - `RELEASE_RUN_KIND`
-          - `releaseRunArm`
+        - Exports (values): `releaseRunArm`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`source-checkout`** — The private, detached git checkout a release of committed code builds from: acquire one pinned to a commit (held by a kernel flock for the owning process's life), dispose of it, and sweep the checkouts whose owner died. DB-free so the release CLI can import it.
@@ -40254,8 +40338,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 241 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×241
+    - Contributes: 242 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×242
     - Uses: 21 symbols — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
       - `reorder/editor` ×5
       - `config_v2` ×3
@@ -40280,8 +40364,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 240 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×240
+    - Contributes: 241 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×241
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -41277,6 +41361,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/data-view.DataViewDensity`
       - `primitives/data-view.defineDataView`
       - `primitives/data-view.liveDataSource`
+      - `primitives/launch/investigate.Investigate`
       - `primitives/pane.useOpenPane`
       - `primitives/relative-time.RelativeTime`
       - `primitives/relative-time.useNow`
@@ -41284,11 +41369,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `runs/run-outcome.RunOutcomeChip`
       - `runs/run-outcome.RunOutcomeDot`
     - Exports (types):
+      - `RunInvestigation`
       - `RunKindContribution`
       - `RunRowProps`
       - `RunsDataViewProps`
     - Exports (values):
       - `formatDuration`
+      - `investigateRuns`
       - `RunDuration`
       - `Runs`
       - `RUNS_VIEW`
@@ -41330,6 +41417,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `runRowKey`
       - `RunRowSchema`
       - `runs`
+      - `runSubject`
   - Cross-plugin:
     - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - Imported by:
@@ -42253,8 +42341,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`tasks`** — Nested tasks with attempts linking to conversations.
   - Server:
     - Contributes: `resource.declare` "tasks.repo-info"
-    - Uses: 42 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
+    - Uses: 45 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
       - `tasks/tasks-core` ×16
+      - `tasks/task-subject` ×3
       - `conversations` ×2
       - `infra/claude-cli/availability` ×2
       - `infra/endpoints` ×2
@@ -42313,6 +42402,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/endpoints.dateString`
       - `infra/endpoints.defineEndpoint`
       - `network/live.liveValue`
+      - `tasks/task-subject.TaskSubjectSchema`
       - `tasks/tasks-core.ConversationSchema`
     - Exports (types):
       - `AddDependencyBody`
@@ -43088,23 +43178,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `task-categories:rows` (keyed, point)
           - `task-category.registry` (push, fixed)
       - Cross-plugin:
-        - Imported by:
-          - `apps/deploy`
-          - `apps/home`
-          - `apps/prototypes`
-          - `apps/sonata/transcription`
+        - Imported by: 22 plugins — full list in [`plugins/tasks/plugins/task-category/REFERENCE.md`](../plugins/tasks/plugins/task-category/REFERENCE.md)
+          - `apps` ×5
+          - `tasks` ×4
+          - `conversations` ×2
+          - `page` ×2
+          - `backup`
           - `build`
           - `config_v2/settings`
-          - `conversations`
-          - `conversations/agents`
+          - `debug/background/investigate`
           - `improve`
           - `infra/deps/updates`
-          - `page/annotations/todo/task-link`
-          - `page/prompt/link`
-          - `tasks`
-          - `tasks/automations`
-          - `tasks/reports-investigation`
-          - `tasks/task-dependencies`
+          - `release`
           - `toolchain`
           - `upstream`
       - Core:
@@ -43673,6 +43758,41 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-graph`
           - `tasks/task-header`
           - `tasks/task-list`
+    - **`task-subject`** — Reads back the live task about a subject — the record a task was launched about (useSubjectTask). Owns the tasks_ext_subject side-table: the record a task is about (a failed build run, a job run — a caller-named kind and id), so a launch about a subject that already has a live task reuses it, and a surface reads that task back live by subject.
+      - Server:
+        - Contributes: `resource.declare` "task-subject.by-subject"
+        - Uses:
+          - `database.db`
+          - `infra/entity-extensions.defineExtension`
+          - `network/live.serveValue`
+          - `tasks/tasks-core._tasks`
+        - DB schema: `plugins/tasks/plugins/task-subject/server/internal/tables.ts`
+        - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_subject`)
+        - Exports (values):
+          - `findSubjectTask`
+          - `setTaskSubject`
+          - `tasksSubject`
+          - `withSubjectLock`
+        - Resources: `task-subject.by-subject` (push)
+      - Web:
+        - Uses: `network/live.useLive`
+        - Exports (values): `useSubjectTask`
+      - Core:
+        - Uses:
+          - `fields/text/config.textField`
+          - `infra/entity-extensions.defineExtensionShape`
+          - `network/live.liveValue`
+        - Exports (types):
+          - `SubjectTask`
+          - `TaskSubject`
+        - Exports (values):
+          - `subjectTask`
+          - `TaskSubjectSchema`
+          - `taskSubjectShape`
+      - Cross-plugin:
+        - Imported by:
+          - `primitives/launch/investigate`
+          - `tasks`
     - **`task-title`** — Reads a task's Haiku-made short title (at most three words) with useTaskShortTitle; a row is current only while its sourceTitle equals the task's title. Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip. One Haiku call reads the full description and makes both the title and a ≤3-word short title (stored in the tasks_ext_short_title side-table); a title set by hand gets its short title from the same call on tasks.titleChanged, and recently active tasks are backfilled.
       - Server:
         - Contributes:
@@ -44039,9 +44159,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 64 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 65 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×26
-          - `tasks` ×15
+          - `tasks` ×16
           - `debug` ×6
           - `active-data` ×5
           - `page` ×3
@@ -44069,6 +44189,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-title` (table `tasks-core_ext_short_title`)
           - `tasks/sidequest-autopilot` (table `tasks-core_ext_sidequest_triage`)
           - `tasks/task-source-url` (table `tasks-core_ext_source_url`)
+          - `tasks/task-subject` (table `tasks-core_ext_subject`)
           - `tasks/task-track` (table `tasks-core_ext_track`)
           - `conversations/conversation-view/turn-summary` (table `tasks-core_ext_turn_summary`)
           - `conversations/usage` (table `tasks-core_ext_usage`)
@@ -44180,21 +44301,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 309 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 308 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×65
           - `conversations` ×59
           - `page` ×41
-          - `primitives` ×39
+          - `primitives` ×40
           - `fields` ×33
-          - `debug` ×15
+          - `debug` ×14
           - `ui` ×8
           - `tasks` ×7
           - `apps-core` ×6
           - `active-data` ×4
-          - `build` ×4
           - `plugin-meta` ×4
           - `reorder` ×4
           - `review` ×4
+          - `build` ×3
           - `auth` ×2
           - `backup` ×2
           - `config_v2` ×2
@@ -45328,8 +45449,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 311 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
-              - `primitives` ×64
+            - Tokens used by: 312 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+              - `primitives` ×65
               - `apps` ×63
               - `conversations` ×47
               - `debug` ×25
@@ -45616,11 +45737,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
             - Tokens used by: 653 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `apps` ×136
-              - `primitives` ×122
+              - `apps` ×135
+              - `primitives` ×123
               - `conversations` ×101
               - `page` ×46
-              - `debug` ×36
+              - `debug` ×37
               - `ui` ×34
               - `framework` ×21
               - `infra` ×19
@@ -45630,9 +45751,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core` ×13
               - `packages` ×7
               - `stats` ×6
-              - `build` ×5
               - `review` ×5
               - `active-data` ×4
+              - `build` ×4
               - `database` ×4
               - `integrations` ×4
               - `reorder` ×4

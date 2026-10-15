@@ -1,10 +1,9 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   useLiveRow,
   type LiveRowResult,
 } from "@plugins/network/plugins/live/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
+import { InvestigateAction } from "@plugins/primitives/plugins/launch/plugins/investigate/web";
 import {
   BUILD_CATEGORY_ID,
   type BuildRun,
@@ -12,10 +11,8 @@ import {
 } from "@plugins/build/core";
 import { buildStatusOf } from "@plugins/build/plugins/build-status/core";
 import { getBuildRunLogs } from "@plugins/build/plugins/build-logs/core";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const autoFixHighIcon = symbol("auto-fix-high");
+import { BUILD_RUN_KIND } from "@plugins/build/plugins/run-ledger/core";
+import { runSubject } from "@plugins/runs/core";
 
 /**
  * The run, by id: loading (or failed), then found or determinately absent (`found: false`
@@ -84,21 +81,17 @@ function BuildFixButton({ runId, run }: { runId: string; run: BuildRun }) {
   const logsResult = useEndpoint(getBuildRunLogs, { id: runId });
   const logs = logsResult.data;
 
+  // The same subject the merged runs list files a failed build under, so the
+  // two reach one task.
   return (
-    <LaunchAgentPopover
-      draftKey={`build-fix:${runId}`}
-      trigger={
-        <Button variant="destructive">
-          <Icon icon={autoFixHighIcon} className="size-4" />
-          Launch agent to investigate
-        </Button>
-      }
-      title="Investigate build failure"
-      description="Launch an agent to diagnose and fix the failing build."
+    <InvestigateAction
+      presentation="button"
+      noun="build"
+      subject={runSubject({ kind: BUILD_RUN_KIND, id: runId })}
+      categoryId={BUILD_CATEGORY_ID}
+      description="Launch an agent to diagnose and fix the failing build — briefed with the build's info and the failed steps' output."
       placeholder="Extra context (optional) — e.g. what changed, suspected cause…"
-      align="start"
-      width="3xl"
-      getRequest={(userText) => {
+      brief={(userText) => {
         const failedSteps = logs?.steps.filter((s) => !s.success) ?? [];
         const errorText = failedSteps
           .map((s) => {
@@ -112,8 +105,7 @@ function BuildFixButton({ runId, run }: { runId: string; run: BuildRun }) {
         if (errorText) parts.push(`Build output:\n\n${errorText}`);
         if (userText.trim())
           parts.push(`Additional context: ${userText.trim()}`);
-
-        return { prompt: parts.join("\n\n"), categoryId: BUILD_CATEGORY_ID };
+        return parts.join("\n\n");
       }}
     />
   );

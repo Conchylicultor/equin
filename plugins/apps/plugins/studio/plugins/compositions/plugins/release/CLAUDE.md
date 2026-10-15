@@ -77,7 +77,8 @@ top-level and untouched by this; only the Studio UI lives here.
     - `Pane.Register` "release-detail"
     - `CompositionDetail.Section` "Build & serve" → `ReleaseSection`
     - `CompositionDetail.Section` "Release history" → `ReleaseHistorySection`
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `DataViewSlots.CollectionItemAction` "release.history:investigate" → `CollectionInvestigate`
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×4
     - `primitives/pane` ×3
     - `build/serve-composition` ×2
@@ -94,6 +95,7 @@ top-level and untouched by this; only the Studio UI lives here.
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
     - `primitives/detail-sections.defineDetailSections`
+    - `primitives/launch/investigate.Investigate`
     - `primitives/live-state.matchResource`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`

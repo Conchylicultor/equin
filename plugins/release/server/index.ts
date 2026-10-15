@@ -19,6 +19,8 @@ import {
 import { releaseCandidateServed } from "./internal/candidate-resource";
 import { releasePreviewsServed } from "./internal/preview-state-resource";
 import { IdKinds } from "@plugins/ids/server";
+import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
+import { RELEASE_CATEGORY_ID } from "../core/task-category";
 import { releaseRunIdKind } from "@plugins/release/plugins/bundles/core";
 export { _releaseRuns } from "./internal/tables";
 export { enqueueRelease } from "./internal/enqueue-release";
@@ -40,6 +42,7 @@ export default {
   register: [releaseJob, releasePreviewDaemon],
   contributions: [
     IdKinds.Kind({ kind: releaseRunIdKind }),
+    TaskCategory({ id: RELEASE_CATEGORY_ID, label: "Release", order: 15 }),
     ...releaseRunsServed.declare,
     ...releaseHistoryServed.declare,
     ...releaseCandidateServed.declare,

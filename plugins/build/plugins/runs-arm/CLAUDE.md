@@ -108,12 +108,14 @@ quiet absence of a predicate.
     - `Runs.Kind` "build"
     - `Runs.Leading` → `BuildRunLeading`
     - `FieldPresentation.Register` "arm:runs:build"
+    - `DataViewSlots.CollectionItemAction` "runs:investigate:build" → `CollectionInvestigate`
   - Uses:
     - `build.buildDetailPane`
     - `build/build-status.BuildStatusChip`
     - `build/build-status.BuildStatusDot`
     - `network/live.FieldPresentation`
     - `primitives/css/badge.Badge`
+    - `runs.investigateRuns`
     - `runs.Runs`
 - Server:
   - Uses:

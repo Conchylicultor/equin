@@ -188,6 +188,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `ids.kind` "evrun"
     - `ids.kind` "evs"
     - `ids.kind` "evt"
+    - `taskCategory` "events"
     - `resource.declare` "events.run-events"
     - `resource.declare` "events.source-runs"
     - `resource.declare` "events.source-runs:groups"
@@ -203,6 +204,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `infra/entities.defineEntity`
     - `network/live.serveCollection`
     - `network/live.serveValue`
+    - `tasks/task-category.TaskCategory`
   - DB schema: `plugins/apps/plugins/events/plugins/events-core/server/internal/tables.ts`
   - Exports (types):
     - `EventSourceType`
@@ -305,6 +307,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `eventFields`
     - `eventIdKind`
     - `eventRunIdKind`
+    - `EVENTS_CATEGORY_ID`
     - `EventSchema`
     - `eventsEntityRef`
     - `eventSourceFields`

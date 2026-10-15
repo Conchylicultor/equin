@@ -256,21 +256,21 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
   - Uses tokens:
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --spacing`
-  - Imported by: 309 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 308 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×65
     - `conversations` ×59
     - `page` ×41
-    - `primitives` ×39
+    - `primitives` ×40
     - `fields` ×33
-    - `debug` ×15
+    - `debug` ×14
     - `ui` ×8
     - `tasks` ×7
     - `apps-core` ×6
     - `active-data` ×4
-    - `build` ×4
     - `plugin-meta` ×4
     - `reorder` ×4
     - `review` ×4
+    - `build` ×3
     - `auth` ×2
     - `backup` ×2
     - `config_v2` ×2

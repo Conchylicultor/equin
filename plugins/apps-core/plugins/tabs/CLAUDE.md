@@ -197,13 +197,13 @@ same browser tab from finding the blob. Both call sites are marked for removal.
 - Cross-plugin:
   - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core` ×9
-    - `debug` ×8
     - `apps` ×7
+    - `debug` ×7
+    - `primitives` ×2
     - `shell` ×2
     - `active-data/song`
     - `build`
     - `config_v2/config-link`
-    - `primitives/metrics`
     - `tasks/worktree-identity`
     - `ui/theme-engine/quick-theme`
 

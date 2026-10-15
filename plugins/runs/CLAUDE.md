@@ -153,6 +153,7 @@ row, or on a failed re-read the row as last seen).
     - `primitives/data-view.DataViewDensity`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.liveDataSource`
+    - `primitives/launch/investigate.Investigate`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `primitives/relative-time.useNow`
@@ -160,11 +161,13 @@ row, or on a failed re-read the row as last seen).
     - `runs/run-outcome.RunOutcomeChip`
     - `runs/run-outcome.RunOutcomeDot`
   - Exports (types):
+    - `RunInvestigation`
     - `RunKindContribution`
     - `RunRowProps`
     - `RunsDataViewProps`
   - Exports (values):
     - `formatDuration`
+    - `investigateRuns`
     - `RunDuration`
     - `Runs`
     - `RUNS_VIEW`
@@ -206,6 +209,7 @@ row, or on a failed re-read the row as last seen).
     - `runRowKey`
     - `RunRowSchema`
     - `runs`
+    - `runSubject`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --muted-foreground`
   - Imported by:

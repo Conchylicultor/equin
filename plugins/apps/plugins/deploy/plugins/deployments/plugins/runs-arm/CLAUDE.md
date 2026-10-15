@@ -81,10 +81,12 @@ windows recompute FULL). A subquery over an undeclared table cannot be written
   - Contributes:
     - `Runs.Kind` "deploy"
     - `FieldPresentation.Register` "arm:runs:deploy"
+    - `DataViewSlots.CollectionItemAction` "runs:investigate:deploy" → `CollectionInvestigate`
   - Uses:
     - `apps/deploy/deployments.deploymentDetailPane`
     - `network/live.FieldPresentation`
     - `primitives/css/badge.Badge`
+    - `runs.investigateRuns`
     - `runs.Runs`
 - Server:
   - Uses:

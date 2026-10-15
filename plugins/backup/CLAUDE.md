@@ -147,6 +147,7 @@ row with a rising count and a new source starting to fail mints its own.
 - Server:
   - Contributes:
     - `ConfigV2.Register` "config"
+    - `taskCategory` "backup"
     - `report-kind` "backup-incomplete"
   - Uses:
     - `config_v2.ConfigV2`
@@ -159,6 +160,7 @@ row with a rising count and a new source starting to fail mints its own.
     - `primitives/log-channels.Log`
     - `reports.recordReport`
     - `reports.ReportKind`
+    - `tasks/task-category.TaskCategory`
   - DB schema: `plugins/backup/server/internal/tables.ts`
   - Exports (types): `BackupIncompletePayload`
   - Exports (values):
@@ -181,6 +183,7 @@ row with a rising count and a new source starting to fail mints its own.
     - `BackupSourceSkipped`
     - `BackupTargetResult`
   - Exports (values):
+    - `BACKUP_CATEGORY_ID`
     - `BACKUP_RUN_KIND`
     - `backupRoute`
     - `backupRunRoute`

@@ -22,6 +22,7 @@ export const exemptEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/deploy/plugins/analytics/plugins/collect", id: "apps.deploy.analytics.collect", loader: () => import("@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/exempt"), dependsOn: [] },
   { pluginPath: "apps/plugins/deploy/plugins/analytics/plugins/dashboard", id: "apps.deploy.analytics.dashboard", loader: () => import("@plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/exempt"), dependsOn: [] },
   { pluginPath: "apps/plugins/deploy/plugins/deployments", id: "apps.deploy.deployments", loader: () => import("@plugins/apps/plugins/deploy/plugins/deployments/exempt"), dependsOn: [] },
+  { pluginPath: "apps/plugins/deploy/plugins/health", id: "apps.deploy.health", loader: () => import("@plugins/apps/plugins/deploy/plugins/health/exempt"), dependsOn: [] },
   { pluginPath: "apps/plugins/events/plugins/events-core", id: "apps.events.events-core", loader: () => import("@plugins/apps/plugins/events/plugins/events-core/exempt"), dependsOn: [] },
   { pluginPath: "apps/plugins/file-explorer/plugins/browser", id: "apps.file-explorer.browser", loader: () => import("@plugins/apps/plugins/file-explorer/plugins/browser/exempt"), dependsOn: [] },
   { pluginPath: "apps/plugins/file-explorer/plugins/git", id: "apps.file-explorer.git", loader: () => import("@plugins/apps/plugins/file-explorer/plugins/git/exempt"), dependsOn: [] },

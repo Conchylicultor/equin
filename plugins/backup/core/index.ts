@@ -1,4 +1,5 @@
 export { BACKUP_RUN_KIND } from "./kind";
+export { BACKUP_CATEGORY_ID } from "./task-category";
 export { backupRoute, backupRunRoute } from "./routes";
 export { backupSourceWentIn } from "./source-report";
 export type {

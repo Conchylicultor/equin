@@ -502,9 +502,9 @@ serves them.
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 64 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 65 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×26
-    - `tasks` ×15
+    - `tasks` ×16
     - `debug` ×6
     - `active-data` ×5
     - `page` ×3
@@ -532,6 +532,7 @@ serves them.
     - `tasks/task-title` (table `tasks-core_ext_short_title`)
     - `tasks/sidequest-autopilot` (table `tasks-core_ext_sidequest_triage`)
     - `tasks/task-source-url` (table `tasks-core_ext_source_url`)
+    - `tasks/task-subject` (table `tasks-core_ext_subject`)
     - `tasks/task-track` (table `tasks-core_ext_track`)
     - `conversations/conversation-view/turn-summary` (table `tasks-core_ext_turn_summary`)
     - `conversations/usage` (table `tasks-core_ext_usage`)

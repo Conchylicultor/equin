@@ -2429,16 +2429,18 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.RowOrder`
     - `DataViewSlots.Setting`
     - `DataViewSlots.Control`
+    - `DataViewSlots.CollectionItemAction`
     - `DataViewSlots.Cell`
     - `DataViewSlots.CellEditor`
     - `DataViewSlots.Filter`
     - `DataViewSlots.ValueCodec`
     - `DataViewSlots.Grouping`
     - `DataViewSlots.ColumnConfig`
-  - Slot contributors: 40 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 46 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `DataViewSlots.Cell` ×10
     - `DataViewSlots.Filter` ×7
     - `DataViewSlots.CellEditor` ×6
+    - `DataViewSlots.CollectionItemAction` ×6
     - `DataViewSlots.View` ×5
     - `DataViewSlots.Grouping` ×3
     - `DataViewSlots.ValueCodec` ×3
@@ -2499,6 +2501,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
   - Exports (types):
     - `CellContributionMeta`
     - `CellEditorProps`
+    - `CollectionItemActionContribution`
+    - `CollectionItemActionOwner`
     - `ColumnConfigDerive`
     - `ColumnConfigProps`
     - `CreateOption`
@@ -2793,12 +2797,12 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`
-  - Imported by: 91 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 92 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×30
     - `apps` ×22
     - `debug` ×12
+    - `primitives` ×8
     - `conversations` ×7
-    - `primitives` ×7
     - `tasks` ×4
     - `infra` ×2
     - `apps-core/app-launcher`

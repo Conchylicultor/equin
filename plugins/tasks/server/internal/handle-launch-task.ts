@@ -1,5 +1,10 @@
 import { createTask, getTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
+import {
+  findSubjectTask,
+  setTaskSubject,
+  withSubjectLock,
+} from "@plugins/tasks/plugins/task-subject/server";
 import { resolveLaunchOptions } from "@plugins/tasks/plugins/launch-options/server";
 import { launchTaskNow } from "@plugins/conversations/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
@@ -41,14 +46,30 @@ export const handleLaunchTask = implement(launchTask, async ({ body }) => {
     if (!existing) throw new HttpError(400, `task ${body.task.id} not found`);
     taskId = existing.id;
   } else {
-    const task = await createTask({
-      title: body.task.title,
-      titleAuto: true,
-      description: body.prompt,
-      author: "user",
-    });
-    await setTaskCategory(task.id, body.task.categoryId);
-    taskId = task.id;
+    const { title, categoryId, subject } = body.task;
+    const file = async (): Promise<string> => {
+      const task = await createTask({
+        title,
+        titleAuto: true,
+        description: body.prompt,
+        author: "user",
+      });
+      await setTaskCategory(task.id, categoryId);
+      return task.id;
+    };
+    // About a subject: its live task is THE task — a second Investigate on
+    // the same failed run starts a fresh attempt under it rather than filing a
+    // duplicate. Held under the subject's lock, so two launches at once file
+    // one task.
+    taskId = subject
+      ? await withSubjectLock(subject, async () => {
+          const existing = await findSubjectTask(subject);
+          if (existing) return existing;
+          const id = await file();
+          await setTaskSubject(id, subject);
+          return id;
+        })
+      : await file();
   }
 
   for (const { entry, value } of resolved) {

@@ -28,11 +28,11 @@
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --radius-chip-compact`
   - Tokens used by: 653 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×136
-    - `primitives` ×122
+    - `apps` ×135
+    - `primitives` ×123
     - `conversations` ×101
     - `page` ×46
-    - `debug` ×36
+    - `debug` ×37
     - `ui` ×34
     - `framework` ×21
     - `infra` ×19
@@ -42,9 +42,9 @@
     - `apps-core` ×13
     - `packages` ×7
     - `stats` ×6
-    - `build` ×5
     - `review` ×5
     - `active-data` ×4
+    - `build` ×4
     - `database` ×4
     - `integrations` ×4
     - `reorder` ×4

@@ -62,6 +62,7 @@ export type ExemptableRuleId =
   | "install-sink/no-laundered-peek"
   | "install-sink/no-render-phase-peek"
   | "intersection-observer-safety/no-raw-intersection-observer"
+  | "investigate:failures-registered"
   | "jobs:no-raw-addjob"
   | "jobs:no-raw-addjob:task-literal"
   | "layout/no-adhoc-layout"

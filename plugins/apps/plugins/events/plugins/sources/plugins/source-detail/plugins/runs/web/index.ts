@@ -4,6 +4,7 @@ import { EventSourceDetail } from "@plugins/apps/plugins/events/plugins/sources/
 import { SourceRunsSection } from "./components/runs-section";
 import { eventSourceRunPane } from "./panes";
 import { runPresentation } from "./internal/presentation";
+import { investigateSourceRuns } from "./internal/investigate";
 import { RunActions, EventSourceRunDetail } from "./slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -25,6 +26,8 @@ export default {
     }),
     Pane.Register({ pane: eventSourceRunPane }),
     runPresentation,
+    // A failed run's Investigate action, in every list of the ledger.
+    investigateSourceRuns,
   ],
   slots: {
     itemActions: RunActions,

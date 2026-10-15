@@ -17,6 +17,7 @@ import {
   type FieldExtensionsDescriptor,
   type FieldGrouping,
   type FilterGroup,
+  type ItemActionsDescriptor,
   type LiveDataSource,
   type ManualOrderConfig,
   type DataViewFoldLines,
@@ -45,6 +46,7 @@ import {
 } from "../internal/use-sort-controller";
 import { useGroupingRegistry } from "../grouping-slot";
 import { useLiveSource, type SourceView } from "../internal/live-source";
+import { useCollectionItemActions } from "../internal/collection-item-actions";
 import {
   checkFieldColumns,
   liveColumnScopeOf,
@@ -402,6 +404,13 @@ function DataViewBodyInner<TRow>(
     }
     return (rowId: string) => parents.has(rowId);
   }, [rows, hierarchy]);
+
+  // The list's own row actions plus every one its collection declares
+  // (`DataViewSlots.CollectionItemAction`) — one set to the views.
+  const allItemActions = useCollectionItemActions(
+    (props.source?.collection ?? props.collection)?.key,
+    itemActions as ItemActionsDescriptor<unknown> | undefined,
+  );
 
   const activeViewId = activeInstance.instance.id;
   // Re-merge the bundle's code-supplied `viewOptions[type]` UNDER the instance
@@ -1124,7 +1133,7 @@ function DataViewBodyInner<TRow>(
           placeholders: flatPlaceholders ?? undefined,
           emptyState,
           itemActions:
-            itemActions as DataViewRenderProps<unknown>["itemActions"],
+            allItemActions as DataViewRenderProps<unknown>["itemActions"],
           hasChildren,
           creators,
           // The surface's own declaration, straight off the chrome (the ONE

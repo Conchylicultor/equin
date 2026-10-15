@@ -117,6 +117,8 @@ verdict is loading, and the SSH-setup card seeds open.
     - `apps/deploy/deployments`
     - `apps/deploy/remote-deploy`
     - `apps/deploy/ssh-setup`
+- Exemptions:
+  - Exempts itself from: `investigate:failures-registered` — `shared/resources.ts` (sanctioned)
 - Shared:
   - Exports (types):
     - `ServerHealthRow`

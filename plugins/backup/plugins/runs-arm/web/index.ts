@@ -1,5 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Runs } from "@plugins/runs/web";
+import { Runs, investigateRuns } from "@plugins/runs/web";
+import { BACKUP_CATEGORY_ID } from "@plugins/backup/core";
 import { BackupRunDetail, backupRunPane } from "@plugins/backup/web";
 import { backupRunArm } from "../core";
 import {
@@ -29,6 +30,16 @@ export default {
     // Its fields' cells; the fields — under their "Backup" band — are the
     // arm's (`backupRunArm`, core).
     backupRunPresentation,
+    // A failed backup's Investigate action, in every list of runs.
+    investigateRuns(backupRunArm, {
+      noun: "backup",
+      categoryId: BACKUP_CATEGORY_ID,
+      whereToDig: (run) => [
+        `the ledger row, with its manifest (per-source outcome) and per-target results: \`select * from backup_runs where id = '${run.id}'\` via \`query_db\` on the main database;`,
+        "the backup run-detail pane (Backup → this run) renders the same sources and targets, with each target's repair path;",
+        "the assembly runs out of process as the supervised `backup.run` job — its own run history is under Debug → Background → backup.run, and its failure report under Debug → Reports.",
+      ],
+    }),
     // A one-line section: no `component`, so the host paints one static row
     // with no chevron and nothing to expand. How big the archive came out is
     // the first question asked of a finished backup — a nightly archive that

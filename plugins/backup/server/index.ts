@@ -1,6 +1,8 @@
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ConfigV2 } from "@plugins/config_v2/server";
+import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
+import { BACKUP_CATEGORY_ID } from "../core/task-category";
 import { backupConfig } from "../shared/config";
 import { runBackup } from "../shared/endpoints";
 import { backupRunJob } from "./internal/backup-job";
@@ -21,6 +23,7 @@ export default {
   },
   contributions: [
     ConfigV2.Register({ descriptor: backupConfig }),
+    TaskCategory({ id: BACKUP_CATEGORY_ID, label: "Backup", order: 14 }),
     // The kind has to exist on MAIN's backend, which is what drains the outbox
     // the child writes into — the child itself only writes a file. Registering
     // it here (rather than in the child alone) is what makes the drain able to

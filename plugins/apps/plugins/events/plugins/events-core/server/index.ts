@@ -23,6 +23,8 @@ import {
   runEventsServed,
 } from "./internal/resources";
 import { IdKinds } from "@plugins/ids/server";
+import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
+import { EVENTS_CATEGORY_ID } from "../core/internal/task-category";
 import { eventSourceIdKind, eventIdKind, eventRunIdKind } from "../core";
 
 // The physical tables, the source-type registry, the repo functions, and the
@@ -89,6 +91,7 @@ export default {
     IdKinds.Kind({ kind: eventSourceIdKind }),
     IdKinds.Kind({ kind: eventIdKind }),
     IdKinds.Kind({ kind: eventRunIdKind }),
+    TaskCategory({ id: EVENTS_CATEGORY_ID, label: "Events", order: 17 }),
     ...eventSourcesServed.declare,
     ...eventSourceRunsServed.declare,
     ...runEventsServed.declare,

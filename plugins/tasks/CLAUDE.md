@@ -7,8 +7,9 @@
 - Description: Nested tasks with attempts linking to conversations.
 - Server:
   - Contributes: `resource.declare` "tasks.repo-info"
-  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×16
+    - `tasks/task-subject` ×3
     - `conversations` ×2
     - `infra/claude-cli/availability` ×2
     - `infra/endpoints` ×2
@@ -67,6 +68,7 @@
     - `infra/endpoints.dateString`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `tasks/task-subject.TaskSubjectSchema`
     - `tasks/tasks-core.ConversationSchema`
   - Exports (types):
     - `AddDependencyBody`
@@ -155,6 +157,7 @@
   - **`task-preprompt`** — Per-task preprompt picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is prepended to the agent's first user turn on launch. Owns…
   - **`task-source-url`** — Reads back the page a task was filed from, by attempt (useAttemptSourceUrl). Owns the tasks_ext_source_url side-table: the page a task was filed from (the draft form's Attach page URL), stored as…
   - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
+  - **`task-subject`** — Reads back the live task about a subject — the record a task was launched about (useSubjectTask). Owns the tasks_ext_subject side-table: the record a task is about (a failed build run, a job run — a…
   - **`task-title`** — Reads a task's Haiku-made short title (at most three words) with useTaskShortTitle; a row is current only while its sourceTitle equals the task's title. Haiku-backed task title generation. Upgrades…
   - **`task-track`** — Per-task track (main | sidequest): the track badge, the clickable Track control the task detail header renders to switch it, and the exposed `track` field of every list whose rows reach a task (the…
   - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side…

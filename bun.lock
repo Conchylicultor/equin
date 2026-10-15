@@ -2235,6 +2235,10 @@
       "name": "@singularity/plugin-debug-background",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/background/plugins/investigate": {
+      "name": "@singularity/plugin-debug-background-investigate",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/boot-budget": {
       "name": "@singularity/plugin-debug-boot-budget",
       "version": "0.0.1",
@@ -5034,6 +5038,10 @@
       "name": "@singularity/plugin-primitives-launch",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/launch/plugins/investigate": {
+      "name": "@singularity/plugin-primitives-launch-investigate",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/lazy-component": {
       "name": "@singularity/plugin-primitives-lazy-component",
       "version": "0.0.1",
@@ -5759,6 +5767,10 @@
     },
     "plugins/tasks/plugins/task-status": {
       "name": "@singularity/plugin-tasks-task-status",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/task-subject": {
+      "name": "@singularity/plugin-tasks-task-subject",
       "version": "0.0.1",
     },
     "plugins/tasks/plugins/task-title": {
@@ -7711,6 +7723,8 @@
 
     "@singularity/plugin-debug-background": ["@singularity/plugin-debug-background@workspace:plugins/debug/plugins/background"],
 
+    "@singularity/plugin-debug-background-investigate": ["@singularity/plugin-debug-background-investigate@workspace:plugins/debug/plugins/background/plugins/investigate"],
+
     "@singularity/plugin-debug-boot-budget": ["@singularity/plugin-debug-boot-budget@workspace:plugins/debug/plugins/boot-budget"],
 
     "@singularity/plugin-debug-boot-events": ["@singularity/plugin-debug-boot-events@workspace:plugins/debug/plugins/boot-events"],
@@ -9029,6 +9043,8 @@
 
     "@singularity/plugin-primitives-launch": ["@singularity/plugin-primitives-launch@workspace:plugins/primitives/plugins/launch"],
 
+    "@singularity/plugin-primitives-launch-investigate": ["@singularity/plugin-primitives-launch-investigate@workspace:plugins/primitives/plugins/launch/plugins/investigate"],
+
     "@singularity/plugin-primitives-lazy-component": ["@singularity/plugin-primitives-lazy-component@workspace:plugins/primitives/plugins/lazy-component"],
 
     "@singularity/plugin-primitives-link-gesture": ["@singularity/plugin-primitives-link-gesture@workspace:plugins/primitives/plugins/link-gesture"],
@@ -9360,6 +9376,8 @@
     "@singularity/plugin-tasks-task-source-url": ["@singularity/plugin-tasks-task-source-url@workspace:plugins/tasks/plugins/task-source-url"],
 
     "@singularity/plugin-tasks-task-status": ["@singularity/plugin-tasks-task-status@workspace:plugins/tasks/plugins/task-status"],
+
+    "@singularity/plugin-tasks-task-subject": ["@singularity/plugin-tasks-task-subject@workspace:plugins/tasks/plugins/task-subject"],
 
     "@singularity/plugin-tasks-task-title": ["@singularity/plugin-tasks-task-title@workspace:plugins/tasks/plugins/task-title"],
 

@@ -1,5 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Runs } from "@plugins/runs/web";
+import { Runs, investigateRuns } from "@plugins/runs/web";
+import {
+  RELEASE_CATEGORY_ID,
+  RELEASE_LOG_CHANNEL,
+} from "@plugins/release/core";
 import { releaseDetailPane } from "@plugins/apps/plugins/studio/plugins/compositions/plugins/release/web";
 import { releaseRunArm } from "../core";
 import { releaseRunPresentation } from "./internal/presentation";
@@ -19,5 +23,15 @@ export default {
     // Its fields' cells; the fields — under their "Release" band — are the
     // arm's (`releaseRunArm`, core).
     releaseRunPresentation,
+    // A failed release's Investigate action, in every list of runs.
+    investigateRuns(releaseRunArm, {
+      noun: "release",
+      categoryId: RELEASE_CATEGORY_ID,
+      whereToDig: (run) => [
+        `the release transcript: the \`${RELEASE_LOG_CHANNEL}\` log channel, and the Studio release run-detail pane (this run), which shows its output;`,
+        `the ledger row: \`select * from release_runs where id = '${run.id}'\` via \`query_db\`;`,
+        "`./singularity release` is the engine — a failed bundle is the CLI's verdict, so a wrong one is a CLI or code bug, not a UI one.",
+      ],
+    }),
   ],
 } satisfies PluginDefinition;

@@ -4,6 +4,7 @@ import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   DataView,
   defineDataView,
+  defineItemActions,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -32,6 +33,19 @@ import { EntryStatusDot } from "./entry-status-dot";
 const RECENT_RUNS_VIEW = defineDataView("infra.background.recent-runs");
 
 const NO_RUNS: BackgroundRun[] = [];
+
+/** A recent run, with the entry it is a run of (what its row actions read). */
+export interface EntryRun {
+  entry: BackgroundEntry;
+  run: BackgroundRun;
+}
+
+/**
+ * The recent-runs list's row actions. The catalog contributes none: it is infra
+ * every backend depends on, so an action reaching higher layers (an
+ * Investigate filing a task) is contributed by the app that mounts the list.
+ */
+export const RecentRunActions = defineItemActions<EntryRun>();
 
 const WHEN = new Intl.DateTimeFormat(undefined, {
   month: "short",
@@ -108,27 +122,31 @@ function RecentRunsList({
     error: () => false,
     ready: (d) => !d.tracked,
   });
-  const rows = foldResource(result, {
+  const runs = foldResource(result, {
     loading: () => NO_RUNS,
     error: () => NO_RUNS,
     ready: (d) => (d.tracked ? d.runs : NO_RUNS),
   });
+  const rows = useMemo(
+    () => runs.map((run): EntryRun => ({ entry, run })),
+    [runs, entry],
+  );
 
-  const fields = useMemo<FieldDef<BackgroundRun>[]>(
+  const fields = useMemo<FieldDef<EntryRun>[]>(
     () => [
       {
         id: "startedAt",
         label: "Started",
         type: "date",
         primary: true,
-        value: (r) => new Date(r.startedAt),
+        value: (r) => new Date(r.run.startedAt),
         sortable: true,
       },
       {
         id: "outcome",
         label: "Outcome",
         type: "enum",
-        value: (r) => r.outcome,
+        value: (r) => r.run.outcome,
         options: (["running", "succeeded", "failed", "suspended"] as const).map(
           (value) => ({ value, label: ENTRY_STATUS_LABEL[value] }),
         ),
@@ -152,10 +170,11 @@ function RecentRunsList({
     );
   }
   return (
-    <DataView<BackgroundRun>
+    <DataView<EntryRun>
       rows={rows}
       fields={fields}
-      rowKey={(r) => r.startedAt}
+      rowKey={(r) => r.run.startedAt}
+      itemActions={RecentRunActions}
       views={["list"]}
       storageKey={RECENT_RUNS_VIEW}
       readiness={result}
@@ -163,8 +182,8 @@ function RecentRunsList({
       toolbar={RECENT_RUNS_TOOLBAR}
       viewOptions={{
         list: {
-          leading: (r: BackgroundRun) => <EntryStatusDot status={r.outcome} />,
-          renderRow: (r: BackgroundRun) => <RunRowBody run={r} />,
+          leading: (r: EntryRun) => <EntryStatusDot status={r.run.outcome} />,
+          renderRow: (r: EntryRun) => <RunRowBody run={r.run} />,
         },
       }}
       emptyState={
