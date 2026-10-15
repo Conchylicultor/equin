@@ -501,9 +501,9 @@ serves them.
     - `TaskStatusSchema`
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
-  - Imported by: 63 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 64 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×26
-    - `tasks` ×14
+    - `tasks` ×15
     - `debug` ×6
     - `active-data` ×5
     - `page` ×3

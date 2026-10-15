@@ -7,8 +7,8 @@
 - Description: Nested tasks with attempts linking to conversations.
 - Server:
   - Contributes: `resource.declare` "tasks.repo-info"
-  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/tasks-core` ×15
+  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×16
     - `conversations` ×2
     - `infra/claude-cli/availability` ×2
     - `infra/endpoints` ×2

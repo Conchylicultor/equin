@@ -51,9 +51,18 @@ function BoundOptionRow({
             refetch={binding.refetch}
           />
         ),
-        ready: ({ value, onChange }) => (
-          <Control value={value} onChange={onChange} />
-        ),
+        ready: ({ value, onChange, disabledReason }) =>
+          disabledReason === undefined ? (
+            <Control value={value} onChange={onChange} />
+          ) : (
+            // A disabled control swallows pointer events, so the tooltip
+            // anchors on a wrapper.
+            <WithTooltip content={disabledReason}>
+              <span>
+                <Control value={value} onChange={onChange} disabled />
+              </span>
+            </WithTooltip>
+          ),
       })}
     </Stack>
   );

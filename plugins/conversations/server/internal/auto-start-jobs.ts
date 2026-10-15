@@ -76,10 +76,12 @@ export async function launchArmedTask(
 
   // Queue only: a manual start raced in before our claim. Returning commits
   // the consumed marker, as before: the task already has its launch, just not
-  // ours.
+  // ours. Only a `retained` attempt (the user has not finished with it) counts:
+  // a closed attempt is a past run, and re-arming a task whose runs are all
+  // closed asks for another one — skipping it would silently eat the marker.
   if (
     opts.ifAlreadyStarted === "skip" &&
-    (await listAttemptsForTask(taskId, tx)).length > 0
+    (await listAttemptsForTask(taskId, tx)).some((a) => a.retained)
   ) {
     return false;
   }

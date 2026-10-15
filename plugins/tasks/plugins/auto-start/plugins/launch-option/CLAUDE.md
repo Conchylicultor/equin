@@ -16,10 +16,13 @@ A sub-plugin rather than part of `auto-start` itself: applying the option means
     - `conversations/model-provider.ModelSelect`
     - `conversations/model-provider.useVisibleModels`
     - `network/live.mapRow`
+    - `primitives/live-state.combineResources`
+    - `primitives/live-state.mapResource`
     - `primitives/text-editor/composer/picker-pill.PickerPill`
     - `tasks.setAutoStart`
     - `tasks/auto-start.useTaskAutoStart`
     - `tasks/launch-options.TaskLaunch`
+    - `tasks/tasks-core.useTaskAttempts`
 - Server:
   - Contributes: `taskLaunchServer` "auto-start"
   - Uses:

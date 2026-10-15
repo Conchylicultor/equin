@@ -32939,11 +32939,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 232 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 233 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×65
           - `conversations` ×39
+          - `tasks` ×22
           - `ui` ×22
-          - `tasks` ×21
           - `debug` ×20
           - `page` ×12
           - `primitives` ×9
@@ -37511,8 +37511,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`tasks`** — Nested tasks with attempts linking to conversations.
   - Server:
     - Contributes: `resource.declare` "tasks.repo-info"
-    - Uses: 41 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
-      - `tasks/tasks-core` ×15
+    - Uses: 42 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
+      - `tasks/tasks-core` ×16
       - `conversations` ×2
       - `infra/claude-cli/availability` ×2
       - `infra/endpoints` ×2
@@ -37789,10 +37789,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/model-provider.ModelSelect`
               - `conversations/model-provider.useVisibleModels`
               - `network/live.mapRow`
+              - `primitives/live-state.combineResources`
+              - `primitives/live-state.mapResource`
               - `primitives/text-editor/composer/picker-pill.PickerPill`
               - `tasks.setAutoStart`
               - `tasks/auto-start.useTaskAutoStart`
               - `tasks/launch-options.TaskLaunch`
+              - `tasks/tasks-core.useTaskAttempts`
           - Server:
             - Contributes: `taskLaunchServer` "auto-start"
             - Uses:
@@ -39152,9 +39155,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskStatusSchema`
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
-        - Imported by: 63 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 64 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×26
-          - `tasks` ×14
+          - `tasks` ×15
           - `debug` ×6
           - `active-data` ×5
           - `page` ×3

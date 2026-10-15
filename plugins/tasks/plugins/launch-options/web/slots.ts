@@ -29,6 +29,13 @@ export interface LaunchControlProps<V> {
 export type LaunchBinding<V> = ResourceResult<{
   value: V;
   onChange: (next: V) => void;
+  /**
+   * Why the task's current state makes this option unchangeable, in a
+   * sentence. Present ⇒ the host renders the control disabled with this as
+   * its tooltip — so a pick the server would refuse (or silently drop) is
+   * never offered, and the user is told why.
+   */
+  disabledReason?: string;
 }>;
 
 /**
