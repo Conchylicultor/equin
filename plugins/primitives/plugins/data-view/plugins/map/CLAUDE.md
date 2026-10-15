@@ -68,6 +68,9 @@ which decides which one draws on top).
   marks; `{ kind: "spots", radiusPx?, nearZoom? }` keeps every pin drawn —
   far out as compact centred marks with each spot's size beside its lead
   (Places). `false` draws every pin on its own.
+- `cameraKey?` — remember the camera on this device under this key (the map
+  primitive's `cameraKey`): it opens where the user left it, framing the pins
+  only on a first visit. Places passes `"places.map"`.
 - `rank?(row)` — the row's importance (`MapPin.rank`): draws above lower ranks
   where pins overlap and leads its spot. Default 0.
 

@@ -4,6 +4,7 @@ import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web";
 import {
   clusterPinType,
+  type CameraView,
   type LatLng,
   type MapCrowd,
   type MapOverlay,
@@ -64,6 +65,19 @@ export interface MapRendererProps {
    * landed. Absent = a click on the map does nothing.
    */
   pick?: (position: LatLng) => void;
+  /**
+   * Where the camera opens — a view the user left, restored. Read once, at
+   * mount: when set, the renderer opens there and never makes its one framing
+   * of the overlays (the Fit control still frames on demand). Absent: the
+   * camera frames the overlays the first time there are any.
+   */
+  initialCamera?: CameraView;
+  /**
+   * The camera came to rest (a pan, a zoom, a fit or a flight ended), while
+   * the map has overlays — so an empty map's world view is never reported as
+   * where the user left it.
+   */
+  onCameraRest?: (view: CameraView) => void;
 }
 
 /**

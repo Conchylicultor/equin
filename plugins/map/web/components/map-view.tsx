@@ -1,15 +1,21 @@
-import type { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import {
+  readDraft,
+  writeDraft,
+  type DraftOptions,
+} from "@plugins/primitives/plugins/persistent-draft/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import {
   NO_MAP_PADDING,
   resolveCrowd,
+  type CameraView,
   type LatLng,
   type MapCrowdRequest,
   type MapOverlay,
@@ -56,6 +62,13 @@ export interface MapViewProps {
    */
   pick?: (position: LatLng) => void;
   /**
+   * Remembers the camera on this device under this key: the map opens where
+   * the user last left it (centre and zoom), and frames the overlays only on
+   * a first visit. Name one key per map the user thinks of as one place
+   * (`"places.map"`). Absent: every visit frames the overlays.
+   */
+  cameraKey?: string;
+  /**
    * The host's own words for "nothing to show", floated on a card over the
    * map while there are no overlays — or `null` for a bare map (a host that
    * already says the count elsewhere). The map itself stays mounted either
@@ -66,6 +79,52 @@ export interface MapViewProps {
 }
 
 function ignoreActivate(): void {}
+
+/** A remembered camera outlives a draft's week: where the user left a map stays theirs. */
+const CAMERA_DRAFT: DraftOptions = { ttl: Number.POSITIVE_INFINITY };
+
+function cameraDraftKey(cameraKey: string): string {
+  return `map.camera:${cameraKey}`;
+}
+
+/** Stored bytes are untrusted (an older shape, a hand edit): only a real view restores. */
+function isCameraView(v: unknown): v is CameraView {
+  if (typeof v !== "object" || v === null) return false;
+  const { center, zoom } = v as Partial<CameraView>;
+  return (
+    typeof zoom === "number" &&
+    Number.isFinite(zoom) &&
+    typeof center === "object" &&
+    center !== null &&
+    Number.isFinite(center.lat) &&
+    Number.isFinite(center.lng)
+  );
+}
+
+/**
+ * The remembered camera for `cameraKey`: the view to open at (read once, at
+ * mount — a later write must not move a mounted map) and the writer of each
+ * view the camera rests at. Nothing without a key.
+ */
+function useRememberedCamera(cameraKey: string | undefined): {
+  initialCamera: CameraView | null;
+  onCameraRest: ((view: CameraView) => void) | undefined;
+} {
+  const [initialCamera] = useState(() => {
+    if (cameraKey === undefined) return null;
+    const stored = readDraft<unknown>(cameraDraftKey(cameraKey), CAMERA_DRAFT);
+    return isCameraView(stored) ? stored : null;
+  });
+  const onCameraRest = useMemo(
+    () =>
+      cameraKey === undefined
+        ? undefined
+        : (view: CameraView) =>
+            writeDraft(cameraDraftKey(cameraKey), view, CAMERA_DRAFT),
+    [cameraKey],
+  );
+  return { initialCamera, onCameraRest };
+}
 
 /**
  * The map host. Fills its parent: the caller owns the size.
@@ -84,9 +143,11 @@ export function MapView({
   focusId = null,
   fitPadding = NO_MAP_PADDING,
   pick,
+  cameraKey,
   empty,
 }: MapViewProps) {
   const renderer = GeoMap.Renderer.useContributions()[0];
+  const { initialCamera, onCameraRest } = useRememberedCamera(cameraKey);
 
   if (renderer === undefined) {
     return (
@@ -116,6 +177,8 @@ export function MapView({
     focusId,
     fitPadding,
     ...(pick === undefined ? {} : { pick }),
+    ...(initialCamera === null ? {} : { initialCamera }),
+    ...(onCameraRest === undefined ? {} : { onCameraRest }),
   };
   const notice =
     overlays.length === 0 && empty !== null ? (

@@ -59,6 +59,12 @@ Plain data, no React:
   reports where it landed. It is how a caller asks "where?" (Places drops and
   moves custom pins with it). The overlay change a pick leads to does not
   re-frame the map: it lands where the user just clicked.
+- `cameraKey` (optional) remembers the camera on this device
+  (`persistent-draft`, no expiry): the map opens at the centre and zoom the
+  user left it at, and frames the overlays only on a first visit. The
+  renderer gets it as `initialCamera` (read once, at mount; it then skips its
+  one framing) and reports each resting view through `onCameraRest` — only
+  while there are overlays, so an empty map's world view is never remembered.
 - `GeoMap.Renderer` — a data slot. **First contribution wins**; zero is a loud
   "no map renderer installed" state. Its contract is `Place.Provider`'s, widened
   to three states: `useReadiness(): "pending" | "ready" | "blocked"`, and
@@ -116,6 +122,9 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/loading.Loading`
+    - `primitives/persistent-draft.DraftOptions`
+    - `primitives/persistent-draft.readDraft`
+    - `primitives/persistent-draft.writeDraft`
     - `primitives/slot-render.defineDispatchSlot`
     - `primitives/slot-render.renderIsolated`
   - Exports (types):

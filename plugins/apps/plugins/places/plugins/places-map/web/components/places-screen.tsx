@@ -190,6 +190,9 @@ function PlacesSurface({
         crowd: { kind: "spots" },
         rank: (p) => (placeFlags(p, tags).want ? 1 : 0),
         fitPadding,
+        // The map opens where the user left it, as Google Maps does; only a
+        // first visit frames every place (which, worldwide, is the globe).
+        cameraKey: "places.map",
         ...(pick === undefined ? {} : { pick }),
       } satisfies MapViewOptions<Place>,
       gallery: {

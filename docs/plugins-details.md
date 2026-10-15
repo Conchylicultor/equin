@@ -25158,6 +25158,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/css/text.Text`
       - `primitives/css/ui-kit.cn`
       - `primitives/loading.Loading`
+      - `primitives/persistent-draft.DraftOptions`
+      - `primitives/persistent-draft.readDraft`
+      - `primitives/persistent-draft.writeDraft`
       - `primitives/slot-render.defineDispatchSlot`
       - `primitives/slot-render.renderIsolated`
     - Exports (types):
@@ -34566,10 +34569,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `yieldToMain`
     - **`persistent-draft`** — Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency.
       - Cross-plugin:
-        - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/persistent-draft/REFERENCE.md`](../plugins/primitives/plugins/persistent-draft/REFERENCE.md)
+        - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/persistent-draft/REFERENCE.md`](../plugins/primitives/plugins/persistent-draft/REFERENCE.md)
           - `apps` ×9
           - `primitives` ×7
           - `conversations` ×5
+          - `map`
           - `page/editor`
           - `tasks/task-draft-form`
       - Web:

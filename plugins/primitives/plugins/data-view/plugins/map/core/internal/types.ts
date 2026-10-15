@@ -41,4 +41,10 @@ export interface MapViewOptions<TRow> {
    * crosshair and a click on the map reports its position. Absent = off.
    */
   pick?: (position: LatLng) => void;
+  /**
+   * Remember the camera on this device under this key (the map primitive's
+   * `cameraKey`): the map opens where the user left it, and frames its pins
+   * only on a first visit. Absent = every visit frames the pins.
+   */
+  cameraKey?: string;
 }

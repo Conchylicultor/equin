@@ -39,6 +39,9 @@ The only map-vendor code in the repo. Everything else draws maps through
   per animation frame along the core's `flyPath`, fractional zoom switched on
   for the flight only, since a raster map otherwise snaps to whole zooms; a
   press, wheel or drag stops it). Both target `frameView` → core `viewFor`.
+  With an `initialCamera` (a remembered view) the map opens there and
+  `FitCamera` is not mounted; `ReportCameraRest` reports Google's `idle`
+  (the camera at rest) through `onCameraRest`.
 - **Pick mode** (`pick`): `draggableCursor: "crosshair"` and the map's own
   `click` (a pin stops its own clicks, so a pin click never lands there). The
   camera frames once, so a pin dropped or moved where the user clicked never

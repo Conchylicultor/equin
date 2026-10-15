@@ -111,6 +111,8 @@ function GoogleMapCanvas({
   focusId,
   fitPadding,
   pick,
+  initialCamera,
+  onCameraRest,
 }: MapRendererProps & { browserKey: string }) {
   // Held in state, not a ref: the tone colours are read off this element, and
   // a ref cannot trigger the render that reads them.
@@ -126,16 +128,7 @@ function GoogleMapCanvas({
     return <MapErrorCard reason={{ kind: "load", detail: loadError }} />;
   }
 
-  const initial = cameraFor(overlayPositions(overlays));
-  const center =
-    initial.kind === "point"
-      ? initial.center
-      : initial.kind === "bounds"
-        ? {
-            lat: (initial.bounds.south + initial.bounds.north) / 2,
-            lng: (initial.bounds.west + initial.bounds.east) / 2,
-          }
-        : { lat: 0, lng: 0 };
+  const opening = initialCamera ?? roughView(overlays);
 
   return (
     <div ref={setHost} className="size-full">
@@ -148,8 +141,8 @@ function GoogleMapCanvas({
         <GoogleMap
           styles={BASEMAP_STYLES}
           colorScheme={GOOGLE_COLOR_SCHEME[GOOGLE_TILES]}
-          defaultCenter={center}
-          defaultZoom={initial.kind === "point" ? initial.zoom : 2}
+          defaultCenter={opening.center}
+          defaultZoom={opening.zoom}
           // The wheel always zooms the map (no "Use ⌘ + scroll" hint), even
           // when the map sits inside a scrolling page.
           gestureHandling="greedy"
@@ -172,7 +165,16 @@ function GoogleMapCanvas({
                 }
           }
         >
-          <FitCamera overlays={overlays} fitPadding={fitPadding} />
+          {/* A restored camera is where the user left the map: no framing. */}
+          {initialCamera === undefined ? (
+            <FitCamera overlays={overlays} fitPadding={fitPadding} />
+          ) : null}
+          {onCameraRest === undefined ? null : (
+            <ReportCameraRest
+              hasOverlays={overlays.length > 0}
+              onCameraRest={onCameraRest}
+            />
+          )}
           <FitControl overlays={overlays} fitPadding={fitPadding} />
           <FocusCamera
             overlays={overlays}
@@ -219,6 +221,63 @@ function GoogleMapCanvas({
       </APIProvider>
     </div>
   );
+}
+
+/**
+ * Where the map stands before `FitCamera` frames the overlays: their rough
+ * middle — a point at its own zoom, a box at a world zoom — so the map does
+ * not first paint at 0,0.
+ */
+function roughView(overlays: readonly MapOverlay[]): CameraView {
+  const camera = cameraFor(overlayPositions(overlays));
+  switch (camera.kind) {
+    case "point":
+      return { center: camera.center, zoom: camera.zoom };
+    case "bounds":
+      return {
+        center: {
+          lat: (camera.bounds.south + camera.bounds.north) / 2,
+          lng: (camera.bounds.west + camera.bounds.east) / 2,
+        },
+        zoom: 2,
+      };
+    case "none":
+      return { center: { lat: 0, lng: 0 }, zoom: 2 };
+  }
+}
+
+/**
+ * Reports the camera each time it comes to rest (Google's `idle`: after a
+ * pan, a zoom, a fit or a flight settles) — only while there are overlays, so
+ * an empty map's world view is never taken for where the user left it.
+ */
+function ReportCameraRest({
+  hasOverlays,
+  onCameraRest,
+}: {
+  hasOverlays: boolean;
+  onCameraRest: (view: CameraView) => void;
+}) {
+  const map = useMap();
+  const report = useLatestRef(onCameraRest);
+  const active = useLatestRef(hasOverlays);
+
+  useEffect(() => {
+    if (map === null) return;
+    const listener = map.addListener("idle", () => {
+      if (!active.current) return;
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+      if (center === undefined || zoom === undefined) return;
+      report.current({
+        center: { lat: center.lat(), lng: center.lng() },
+        zoom,
+      });
+    });
+    return () => listener.remove();
+  }, [map, report, active]);
+
+  return null;
 }
 
 /**

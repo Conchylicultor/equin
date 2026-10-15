@@ -140,6 +140,9 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
         focusId={selected}
         fitPadding={options.fitPadding}
         {...(options.pick === undefined ? {} : { pick: options.pick })}
+        {...(options.cameraKey === undefined
+          ? {}
+          : { cameraKey: options.cameraKey })}
         onActivate={onActivate}
         empty={
           // The surface's empty state speaks for an empty LIST. A list the
