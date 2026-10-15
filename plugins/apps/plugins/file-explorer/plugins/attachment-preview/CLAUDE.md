@@ -22,6 +22,7 @@
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.useOpenPane`
+    - `primitives/pane.useReservesFloatingBar`
     - `primitives/text-editor/paste-images.AttachmentSlots`
   - Exports (values): `attachmentPreviewPane`
 

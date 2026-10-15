@@ -1071,7 +1071,10 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     if (typeof window === "undefined") return;
     const route = currentSlots();
     const idx = route.findIndex((s) => s.instanceId === instanceId);
-    if (idx <= 0) return;
+    // The route's head has nothing to close to — unless it is a companion,
+    // which sits beside the app's index pane: closing it empties the route,
+    // and the bare root shows that landing pane alone again.
+    if (idx < 0 || (idx === 0 && !internal.companion)) return;
     const newRoute = route.slice(0, idx);
     const replace = !internal.chrome.history;
     setRoute(newRoute, replace);
@@ -2182,7 +2185,11 @@ export interface PaneObject<
   unwrap(instanceId: number): void;
   /** Detach from ancestors and make this pane the root of a fresh route. */
   promote(instanceId: number): void;
-  /** Hook: returns a bound close function for the current instance, or null if root/not in route. */
+  /**
+   * Hook: returns a bound close function for the current instance, or null if
+   * root/not in route. A companion at the route's head is not "root" while its
+   * app's index pane is shown to its left — closing it returns to that pane.
+   */
   useClose: Hook<() => (() => void) | null>;
   /**
    * Hook: "go up to my parent", for a layout that paints this pane alone
@@ -2393,12 +2400,21 @@ function makePaneObject(
     const store = usePaneStore();
     const instanceId = useContext(PaneInstanceContext);
     const route = useRouteSlots();
+    const match = useContext(PaneMatchContext);
     return useMemo(() => {
       if (instanceId === undefined) return null;
       const idx = route.findIndex((s) => s.instanceId === instanceId);
-      if (idx <= 0) return null;
+      if (idx < 0) return null;
+      // A companion at the route's head is closable while the surface shows
+      // a pane to its left (its app's index pane) — that is where it goes.
+      if (idx === 0) {
+        if (!internal.companion) return null;
+        const shownAt =
+          match?.panes.findIndex((e) => e.instanceId === instanceId) ?? -1;
+        if (shownAt <= 0) return null;
+      }
       return () => store.close(internal, instanceId);
-    }, [store, instanceId, route]);
+    }, [store, instanceId, route, match]);
   }
 
   function useBack(): (() => void) | null {

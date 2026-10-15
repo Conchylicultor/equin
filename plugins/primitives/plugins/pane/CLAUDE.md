@@ -814,7 +814,8 @@ keeps the app's index pane to its left. So a file chip clicked in the agent
 manager's home composer (`/agents`, an empty route) opens the preview beside
 the home instead of replacing it, and `/agents/attachment/<id>` reloads to the
 same two columns. The URL is untouched: the index pane has none. While a
-companion leads, the tab keeps the index pane's title.
+companion leads, the tab keeps the index pane's title, and `useClose()` is not
+null: closing it empties the route, back to the index pane alone.
 
 Deeper in a route a companion is an ordinary pane, and a pane opened FROM the
 index (a conversation) still replaces it — the index stays the landing, never a

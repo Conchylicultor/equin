@@ -3,6 +3,7 @@ import {
   Pane,
   defineRoute,
   useOpenPane,
+  useReservesFloatingBar,
 } from "@plugins/primitives/plugins/pane/web";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/shell/core";
@@ -58,6 +59,7 @@ function AttachmentPreview(): ReactNode {
   const file = useLive(attachmentFile, { id });
   const home = useHomeDir();
   const close = attachmentPreviewPane.useClose();
+  const endSafeArea = useReservesFloatingBar();
   if (home.kind === "pending") return <Loading />;
   if (home.kind === "failed") {
     return (
@@ -88,7 +90,7 @@ function AttachmentPreview(): ReactNode {
         git={undefined}
         onClose={close ?? undefined}
         closeLabel="Close"
-        endSafeArea={false}
+        endSafeArea={endSafeArea}
       />
     ),
   });
