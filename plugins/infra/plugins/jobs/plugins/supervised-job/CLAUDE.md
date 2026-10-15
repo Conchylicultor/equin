@@ -570,7 +570,9 @@ is already restarted by the time it is called.
   `.jsonl` sink.
 - **On disk**: newest 50 run sets per kind per worktree, trimmed when the next
   run of that kind starts. `defineRetention` does not apply — it is a nightly
-  DELETE over a _table_, and these are files.
+  DELETE over a _table_, and these are files. The trim waits out an in-flight watcher
+  subscribe (`pruneOutsideWatcherStart`): kqueue fails the whole subscribe on
+  an entry deleted mid-walk.
 - **Residual**: one run's transcript file is bounded only by that run. It is a
   kernel fd the child owns; capping it mid-run would race the writer.
 

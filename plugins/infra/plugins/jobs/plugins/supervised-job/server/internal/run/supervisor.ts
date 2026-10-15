@@ -385,6 +385,28 @@ async function syncWatcher(): Promise<void> {
   }
 }
 
+/**
+ * Delete from the runs dir only while no watcher subscribe is walking it.
+ *
+ * The kqueue backend (`writesWhileOpen`) subscribes by listing the dir and then
+ * opening every entry it listed; a file deleted between the two fails the
+ * WHOLE subscribe with `error watching <runs>: No such file or directory`. The
+ * prune is the only thing in this process that deletes there, and another
+ * kind's run starting at the same instant pruned under a live subscribe
+ * (2026-10-15: backup and worktree-cleanup.reap-stale, both scheduled at
+ * 03:00). Not retried after the fact instead: a failed parcel subscribe leaves
+ * its half-opened entries — and the cached listing still naming the deleted
+ * file — on the shared backend, so the retry would fail the same way.
+ *
+ * `prune` is synchronous, and no `await` separates the loop's exit from it, so
+ * no subscribe can start in between. A start that failed is its own caller's
+ * error, not this one's — hence `allSettled`.
+ */
+async function pruneOutsideWatcherStart(prune: () => void): Promise<void> {
+  while (watcherStarting !== null) await Promise.allSettled([watcherStarting]);
+  prune();
+}
+
 async function onArtifactEvents(
   events: readonly { path: string }[],
 ): Promise<void> {
@@ -586,7 +608,9 @@ export async function startSupervisedRun(
     // Cap this kind's artifacts now that the newest set exists — the same
     // "writing a new set trims the old ones" rule the build and release prunes
     // follow, so there is no sweeper to schedule and nothing to forget.
-    pruneWorktreeRunArtifacts(worktree, kind.id);
+    await pruneOutsideWatcherStart(() =>
+      pruneWorktreeRunArtifacts(worktree, kind.id),
+    );
 
     await kind.spec.setPid(opts.runId, pid);
     track(kind, opts.runId, pid);
