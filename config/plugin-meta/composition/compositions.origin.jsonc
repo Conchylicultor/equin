@@ -1,4 +1,4 @@
-// @hash f3a7289a6898
+// @hash e36da68122ac
 {
   "manifests": [
     {
@@ -378,6 +378,7 @@
         "ui.tokens.sidebar-palette.**",
         "ui.tokens.shadow.**",
         "ui.tokens.chart.**",
+        "ui.tokens.categorical.**",
         "primitives.dom.overscroll-hint.**",
         "ui.icons.sprites.**",
         "ui.tokens.icons.**"

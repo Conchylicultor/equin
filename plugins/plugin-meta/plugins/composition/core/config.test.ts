@@ -148,6 +148,15 @@ test("served-baseline forces the overscroll hint", () => {
   expect(baseline.entryPoints).toContain("primitives.dom.overscroll-hint.**");
 });
 
+test("served-baseline forces the categorical token group", () => {
+  // Every coloured Avatar paints from `--categorical-*`, which only the
+  // categorical group's web half registers — and nothing imports it, so a
+  // served bundle drops it and those avatars render blank (equin.ai shipped
+  // that way — the apps gallery's tiles were empty squares).
+  const baseline = byName("served-baseline");
+  expect(baseline.entryPoints).toContain("ui.tokens.categorical.**");
+});
+
 test("every seed carries `excludes` and each ref resolves to a real bundle", () => {
   const names = new Set(seeds.map((s) => s.name));
   for (const s of seeds) {

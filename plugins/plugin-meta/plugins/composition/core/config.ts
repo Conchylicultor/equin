@@ -350,6 +350,11 @@ export const compositionsConfig = defineConfig({
           // it. equin.ai shipped that way — the hero's wash, its headline
           // gradient and the developers' dot all read `--chart-1`.
           "ui.tokens.chart",
+          // `--categorical-*`: every coloured Avatar (the tile, the badge, the
+          // gradient tile) paints from these slots, and `primitives.avatar`
+          // never imports the web half that registers them. equin.ai shipped
+          // that way — the apps gallery's tiles rendered as blank squares.
+          "ui.tokens.categorical",
           // The app's own rubber-band, installed from Core.Root and imported by
           // nobody — the same dead-end shape as the toast host and reorder. Left
           // out, a served app falls back to the browser's native bounce, which
