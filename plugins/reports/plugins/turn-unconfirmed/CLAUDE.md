@@ -46,7 +46,7 @@ bell would re-alert every 10 minutes for one known problem.
 
 ## Plugin reference
 
-- Description: Turn-unconfirmed report kind's Debug → Reports summary view: the one-line preview + elapsed + conversation id for a sent turn that was POSTed and acked but never confirmed in the transcript. The report itself is filed by the conversations pending-turn state machine via the reports web report() API — no collector needed here. Turn-unconfirmed report kind: validates unconfirmed-turn payloads (a sent turn POSTed and acked but never confirmed in the transcript within the confirmation window), fingerprints by conversation id (repeats on one conversation collapse onto one row), and renders an investigation task. Re-arms periodically (6h) since a conversation that keeps dropping turns is a recurring warning, not a one-shot crash.
+- Description: Retired turn-unconfirmed report kind's Debug → Reports summary view, kept so existing rows still render: the one-line preview + elapsed + conversation id for a sent turn the browser's old pending-turn store never found in the transcript. Nothing files it any more — the turn ledger's server-side kinds replace it. Retired turn-unconfirmed report kind, kept registered so existing rows still validate, render and can be investigated (an investigated report is never swept): a sent turn the browser's old pending-turn store never found in the transcript within 90 s. Nothing files it any more — the turn ledger's turn-merged / turn-unverified / turn-input-not-empty kinds (conversations/turn-ledger) replace it. Fingerprints by conversation id; re-arms every 6h.
 - Web:
   - Contributes: `Reports.KindView` → `TurnUnconfirmedKindView`
   - Uses:

@@ -72,35 +72,35 @@ render (`reports/turn-unconfirmed`).
 
 ## Plugin reference
 
-- Description: The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted|held → queued/sent, failed-post, unconfirmed) that runs the turn's registered TurnDelivery, verifies delivery against the transcript (normalized-text match), reports a conversation as working from the instant a turn is sent (useOptimisticConversationStatus), files a report when an accepted turn never lands, and renders the per-record PendingTurnCard. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery; the jsonl-viewer drives reconcilePendingTurns on every events change. Contributes the turn-send-safety lint rule. No slot contributions.
+- Description: The single entry point for sending a turn from the browser (sendConversationTurn: mints the turn's ledger id, shows its echo at once, then runs its delivery), and the view of the server's turn ledger (conversations/turn-ledger): usePendingTurns merges a conversation's live ledger rows with this tab's sends whose row has not arrived, PendingTurnCard renders each by state (echo while held or being typed, a warning when the CLI merged it with leftover text, Retry + Copy to draft when it failed), and useOptimisticConversationStatus reads a conversation as working from the instant a turn is sent. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery. Contributes the turn-send-safety lint rule.
 - Web:
   - Uses:
     - `conversations/conversation-view/user-message.UserMessageCard`
     - `conversations/conversation-view/user-message.UserMessageText`
-    - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
+    - `network/live.useLive`
     - `primitives/css/bouncing-dots.BouncingDots`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
-    - `primitives/scope/tab-id.getTabId`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/sync-status.useReportSync`
-    - `reports.report`
+    - `shell/toast.showToast`
   - Exports (types):
+    - `PendingTurn`
     - `PendingTurnState`
     - `TurnDelivery`
-    - `TurnDeliveryResult`
     - `TurnSend`
   - Exports (values):
-    - `defineTurnDelivery`
-    - `dismissPendingTurn`
     - `PendingTurnCard`
-    - `reconcilePendingTurns`
     - `sendConversationTurn`
     - `useOptimisticConversationStatus`
     - `usePendingTurns`
+    - `useTurnSendInFlight`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
@@ -109,7 +109,6 @@ render (`reports/turn-unconfirmed`).
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
-    - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
   - Imported by:

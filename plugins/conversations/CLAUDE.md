@@ -39,8 +39,9 @@
     - `report-kind` "claude-code-unavailable-at-spawn"
     - `report-kind` "conversation-spawn-failed"
     - `report-kind` "held-turn-undelivered"
-  - Uses: 65 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/tasks-core` ×28
+  - Uses: 74 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×27
+    - `conversations/turn-ledger` ×10
     - `conversations/transcript-watcher` ×7
     - `conversations/workspace` ×3
     - `infra/claude-cli/availability` ×3
@@ -61,9 +62,7 @@
     - `tasks/task-preprompt.getTaskPreprompt`
   - DB schema:
     - `plugins/conversations/server/internal/tables-created-event.ts`
-    - `plugins/conversations/server/internal/tables-held-turns.ts`
     - `plugins/conversations/server/internal/tables-turn-completed-event.ts`
-    - `plugins/conversations/server/internal/tables-user-turn-sent-event.ts`
   - Exports (types):
     - `ConversationCreatedPayload`
     - `ConversationRuntime`
@@ -74,12 +73,14 @@
     - `QuestionHoldSource`
     - `RuntimeInfo`
     - `RuntimeSignal`
+    - `SubmitOutcome`
+    - `SubmitVerdict`
     - `TerminalMenuChoice`
     - `Turn`
-    - `UserTurnSentPayload`
+    - `TurnSubmission`
+    - `TypedTurn`
   - Exports (values):
     - `afterTurn`
-    - `answerPrompt`
     - `answerTerminalMenu`
     - `conversationCreated`
     - `conversationTurnCompleted`
@@ -88,6 +89,7 @@
     - `ensureResumed`
     - `flushInteractivePrompt`
     - `getConversationRow`
+    - `InputNotEmptyError`
     - `interruptConversation`
     - `launchTaskNow`
     - `maybeLaunchTaskJob`
@@ -99,9 +101,8 @@
     - `resumeConversation`
     - `rewindConversationAt`
     - `Runtime`
-    - `sendTurn`
+    - `submitTurn`
     - `TranscriptCutError`
-    - `userTurnSent`
   - Register:
     - `defineJob('tasks.maybe-launch')`
     - `defineJob('tasks.maybe-launch-on-status')`
@@ -111,7 +112,6 @@
     - `defineJob('conversations.deliver-held-turns')`
     - `defineTriggerEvent('conversation.created')`
     - `defineTriggerEvent('conversation.turn-completed')`
-    - `defineTriggerEvent('conversation.userTurnSent')`
     - `defineJob('conversations.status-sweep')`
   - Routes:
     - `GET /api/conversations`
@@ -120,12 +120,16 @@
     - `DELETE /api/conversations`
     - `POST /api/conversations/:id/turn`
     - `POST /api/conversations/:id/stop`
+    - `POST /api/conversations/:id/turns/:turnId/retry`
+    - `POST /api/conversations/:id/turns/:turnId/withdraw`
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
 - Core:
   - Uses:
     - `config_v2.defineConfig`
     - `conversations/model-provider.ModelChoiceSchema`
+    - `conversations/turn-ledger.turnIdKind`
+    - `conversations/turn-ledger.TurnStateSchema`
     - `conversations/workspace.WorkspaceSpecSchema`
     - `fields/bool/config.boolField`
     - `fields/int/config.intField`
@@ -171,10 +175,12 @@
     - `QUESTION_WAITING_FOR`
     - `ResumeBlockedReasonSchema`
     - `ResumeOutcomeSchema`
+    - `retryConversationTurn`
     - `RewindOutcomeSchema`
     - `RewindPreviewSchema`
     - `RewindRefusalSchema`
     - `stopConversation`
+    - `withdrawConversationTurn`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 65 plugins — full list in [REFERENCE.md](./REFERENCE.md)
@@ -188,9 +194,7 @@
     - `page/annotations/agent-notes/agent-page`
   - Endpoint callers: `transcript-api`
 - Exemptions:
-  - Exempts itself from:
-    - `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts`, `server/internal/tables-user-turn-sent-event.ts` (debt)
-    - `ids:pk-declared` — `server/internal/tables-held-turns.ts` (debt)
+  - Exempts itself from: `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts` (debt)
 - Sub-plugins:
   - **`agents`** — Named agent definitions that launch conversations.
   - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the…
@@ -271,7 +275,7 @@
       - **`notes`** — Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
       - **`op-status`** — Banner above the prompt input showing the worktree's in-flight op (build / push / check / test / e2e) from the op-store in-flight collection: the wait it is parked in (reason, requeue cycle, its own…
       - **`open-app`** — Opens the conversation's namespace (`http://<id>.localhost:9000`) on the page its task was filed from when one was attached (else `/`) — in a new browser tab by default, or framed in a pane beside…
-      - **`pending-turn`** [exempt] — The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted|held →…
+      - **`pending-turn`** [exempt] — The single entry point for sending a turn from the browser (sendConversationTurn: mints the turn's ledger id, shows its echo at once, then runs its delivery), and the view of the server's turn…
       - **`pin`** — Pin / unpin button beside the conversation title in the pane header — the same queue pin as the sidebar Queue row's, lifting the conversation's task group into the Pinned section.
       - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.
       - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked…
@@ -317,6 +321,7 @@
   - **`transcript-api`** — Agent API: GET /api/conversations/:id/transcript returns the ordered on-disk JSONL paths of a conversation's Claude session chain.
   - **`transcript-retention`** — Keeps retained conversations' Claude session JSONL alive by refreshing their mtime daily — active rows plus every conversation of a held task — so Claude Code's cleanupPeriodDays sweep never deletes…
   - **`transcript-watcher`** — Foreign-session report renderer: a one-line Debug, Reports summary for the conversation-foreign-session kind — which conversation holds a session id that belongs to another, and how it was seen.…
+  - **`turn-ledger`** [exempt] — Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent…
   - **`usage`** — Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side. Per-conversation usage — cost…
   - **`workspace`** [test helpers] — Agent workspaces — where a conversation runs (a git worktree, or a scratch directory): the WorkspaceImpl contract and the per-kind registry the conversation lifecycle calls through (path, commit…
     - Plugins:

@@ -266,10 +266,10 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `quotedRelationsIn`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 113 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 114 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×32
     - `page` ×15
-    - `conversations` ×12
+    - `conversations` ×13
     - `infra` ×12
     - `tasks` ×10
     - `debug` ×6

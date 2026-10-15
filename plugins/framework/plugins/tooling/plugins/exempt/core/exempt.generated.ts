@@ -60,6 +60,7 @@ export const exemptEntries: CollectedEntry[] = [
   { pluginPath: "conversations/plugins/conversation-view/plugins/pending-turn", id: "conversations.conversation-view.pending-turn", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/pending-turn/exempt"), dependsOn: [] },
   { pluginPath: "conversations/plugins/conversation-view/plugins/push-and-exit", id: "conversations.conversation-view.push-and-exit", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/exempt"), dependsOn: [] },
   { pluginPath: "conversations/plugins/runtime-tmux", id: "conversations.runtime-tmux", loader: () => import("@plugins/conversations/plugins/runtime-tmux/exempt"), dependsOn: [] },
+  { pluginPath: "conversations/plugins/turn-ledger", id: "conversations.turn-ledger", loader: () => import("@plugins/conversations/plugins/turn-ledger/exempt"), dependsOn: [] },
   { pluginPath: "database/plugins/connection", id: "database.connection", loader: () => import("@plugins/database/plugins/connection/exempt"), dependsOn: [] },
   { pluginPath: "database/plugins/migrations", id: "database.migrations", loader: () => import("@plugins/database/plugins/migrations/exempt"), dependsOn: [] },
   { pluginPath: "database/plugins/sql-column", id: "database.sql-column", loader: () => import("@plugins/database/plugins/sql-column/exempt"), dependsOn: [] },

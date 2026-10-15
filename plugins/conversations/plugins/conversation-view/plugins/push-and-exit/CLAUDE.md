@@ -9,10 +9,10 @@
   - Contributes:
     - `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
     - `ConfigV2.WebRegister` "config"
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations/conversation-view/pending-turn` ×3
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/endpoints` ×3
     - `config_v2` ×2
+    - `conversations/conversation-view/pending-turn` ×2
     - `conversations/conversation-view` ×2
     - `conversations` ×2
     - `primitives/css/ui-kit` ×2
@@ -25,7 +25,6 @@
     - `primitives/prompt-editor.PromptEditorSlots`
     - `shell/notifications.toast`
     - `ui/icons.Icon`
-  - Exports (values): `pushAndExitDelivery`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses:
@@ -33,8 +32,9 @@
     - `config_v2.getConfig`
     - `conversations.afterTurn`
     - `conversations.deleteConversation`
-    - `conversations.sendTurn`
+    - `conversations.submitTurn`
     - `conversations/conversation-view/drop-and-exit.dropTaskOnExit`
+    - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/jobs.defineJob`
     - `infra/mcp.Mcp`

@@ -12038,8 +12038,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "claude-code-unavailable-at-spawn"
       - `report-kind` "conversation-spawn-failed"
       - `report-kind` "held-turn-undelivered"
-    - Uses: 65 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `tasks/tasks-core` ×28
+    - Uses: 74 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `tasks/tasks-core` ×27
+      - `conversations/turn-ledger` ×10
       - `conversations/transcript-watcher` ×7
       - `conversations/workspace` ×3
       - `infra/claude-cli/availability` ×3
@@ -12060,9 +12061,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/task-preprompt.getTaskPreprompt`
     - DB schema:
       - `plugins/conversations/server/internal/tables-created-event.ts`
-      - `plugins/conversations/server/internal/tables-held-turns.ts`
       - `plugins/conversations/server/internal/tables-turn-completed-event.ts`
-      - `plugins/conversations/server/internal/tables-user-turn-sent-event.ts`
     - Exports (types):
       - `ConversationCreatedPayload`
       - `ConversationRuntime`
@@ -12073,12 +12072,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `QuestionHoldSource`
       - `RuntimeInfo`
       - `RuntimeSignal`
+      - `SubmitOutcome`
+      - `SubmitVerdict`
       - `TerminalMenuChoice`
       - `Turn`
-      - `UserTurnSentPayload`
+      - `TurnSubmission`
+      - `TypedTurn`
     - Exports (values):
       - `afterTurn`
-      - `answerPrompt`
       - `answerTerminalMenu`
       - `conversationCreated`
       - `conversationTurnCompleted`
@@ -12087,6 +12088,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ensureResumed`
       - `flushInteractivePrompt`
       - `getConversationRow`
+      - `InputNotEmptyError`
       - `interruptConversation`
       - `launchTaskNow`
       - `maybeLaunchTaskJob`
@@ -12098,9 +12100,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resumeConversation`
       - `rewindConversationAt`
       - `Runtime`
-      - `sendTurn`
+      - `submitTurn`
       - `TranscriptCutError`
-      - `userTurnSent`
     - Register:
       - `defineJob('tasks.maybe-launch')`
       - `defineJob('tasks.maybe-launch-on-status')`
@@ -12110,7 +12111,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `defineJob('conversations.deliver-held-turns')`
       - `defineTriggerEvent('conversation.created')`
       - `defineTriggerEvent('conversation.turn-completed')`
-      - `defineTriggerEvent('conversation.userTurnSent')`
       - `defineJob('conversations.status-sweep')`
     - Routes:
       - `GET /api/conversations`
@@ -12119,12 +12119,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `DELETE /api/conversations`
       - `POST /api/conversations/:id/turn`
       - `POST /api/conversations/:id/stop`
+      - `POST /api/conversations/:id/turns/:turnId/retry`
+      - `POST /api/conversations/:id/turns/:turnId/withdraw`
       - `GET /api/conversations/:id/turns`
       - `POST /api/conversations/:id/close`
   - Core:
     - Uses:
       - `config_v2.defineConfig`
       - `conversations/model-provider.ModelChoiceSchema`
+      - `conversations/turn-ledger.turnIdKind`
+      - `conversations/turn-ledger.TurnStateSchema`
       - `conversations/workspace.WorkspaceSpecSchema`
       - `fields/bool/config.boolField`
       - `fields/int/config.intField`
@@ -12170,10 +12174,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `QUESTION_WAITING_FOR`
       - `ResumeBlockedReasonSchema`
       - `ResumeOutcomeSchema`
+      - `retryConversationTurn`
       - `RewindOutcomeSchema`
       - `RewindPreviewSchema`
       - `RewindRefusalSchema`
       - `stopConversation`
+      - `withdrawConversationTurn`
   - Cross-plugin:
     - Uses tokens: `ui/tokens/shape --spacing`
     - Imported by: 65 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
@@ -12187,9 +12193,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `page/annotations/agent-notes/agent-page`
     - Endpoint callers: `transcript-api`
   - Exemptions:
-    - Exempts itself from:
-      - `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts`, `server/internal/tables-user-turn-sent-event.ts` (debt)
-      - `ids:pk-declared` — `server/internal/tables-held-turns.ts` (debt)
+    - Exempts itself from: `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts` (debt)
   - Plugins:
     - **`agents`** — Named agent definitions that launch conversations.
       - Web:
@@ -13484,10 +13488,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 39 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Uses: 41 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `conversations/conversation-view/jsonl-viewer/row-actions` ×4
               - `primitives/collapsible` ×4
               - `conversations/conversation-view/pending-turn` ×3
+              - `primitives/live-state` ×3
               - `primitives/css/ui-kit` ×2
               - `primitives/dom/auto-scroll` ×2
               - `primitives/relative-time` ×2
@@ -13504,7 +13509,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/sticky.Sticky`
               - `primitives/css/text.Text`
               - `primitives/dom/scroll-reveal.revealElement`
-              - `primitives/live-state.ResourceView`
               - `primitives/loading.Loading`
               - `primitives/overlay/image-viewer.ImageGallery`
               - `primitives/overlay/popover.InlinePopover`
@@ -14835,15 +14839,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-                    - Uses: 35 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
+                    - Uses: 34 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
                       - `primitives/css/ui-kit` ×9
                       - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
                       - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
-                      - `conversations/conversation-view/pending-turn` ×2
                       - `infra/endpoints` ×2
                       - `primitives/css/selection-indicator` ×2
                       - `primitives/persistent-draft` ×2
                       - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                      - `conversations/conversation-view/pending-turn.sendConversationTurn`
                       - `conversations/conversation-view/rewind.useGoBackToMessage`
                       - `conversations/conversation-view.conversationPane`
                       - `network/live.useLive`
@@ -14865,12 +14869,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `answerDraftScope`
                       - `AnswerForm`
                       - `AnswerHereButton`
-                      - `answerQuestionDelivery`
                       - `QuestionCard`
                   - Server:
                     - Uses:
-                      - `conversations.answerPrompt`
                       - `conversations.flushInteractivePrompt`
+                      - `conversations.submitTurn`
+                      - `infra/endpoints.HttpError`
                       - `infra/endpoints.implement`
                       - `tasks/tasks-core.updateConversation`
                     - Routes:
@@ -15578,35 +15582,35 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
-        - **`pending-turn`** — The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted|held → queued/sent, failed-post, unconfirmed) that runs the turn's registered TurnDelivery, verifies delivery against the transcript (normalized-text match), reports a conversation as working from the instant a turn is sent (useOptimisticConversationStatus), files a report when an accepted turn never lands, and renders the per-record PendingTurnCard. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery; the jsonl-viewer drives reconcilePendingTurns on every events change. Contributes the turn-send-safety lint rule. No slot contributions.
+        - **`pending-turn`** — The single entry point for sending a turn from the browser (sendConversationTurn: mints the turn's ledger id, shows its echo at once, then runs its delivery), and the view of the server's turn ledger (conversations/turn-ledger): usePendingTurns merges a conversation's live ledger rows with this tab's sends whose row has not arrived, PendingTurnCard renders each by state (echo while held or being typed, a warning when the CLI merged it with leftover text, Retry + Copy to draft when it failed), and useOptimisticConversationStatus reads a conversation as working from the instant a turn is sent. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery. Contributes the turn-send-safety lint rule.
           - Web:
             - Uses:
               - `conversations/conversation-view/user-message.UserMessageCard`
               - `conversations/conversation-view/user-message.UserMessageText`
-              - `infra/endpoints.EndpointError`
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.getEndpointErrorMessage`
+              - `network/live.useLive`
               - `primitives/css/bouncing-dots.BouncingDots`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
-              - `primitives/scope/tab-id.getTabId`
+              - `primitives/live-state.foldResource`
+              - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceResult`
               - `primitives/sync-status.useReportSync`
-              - `reports.report`
+              - `shell/toast.showToast`
             - Exports (types):
+              - `PendingTurn`
               - `PendingTurnState`
               - `TurnDelivery`
-              - `TurnDeliveryResult`
               - `TurnSend`
             - Exports (values):
-              - `defineTurnDelivery`
-              - `dismissPendingTurn`
               - `PendingTurnCard`
-              - `reconcilePendingTurns`
               - `sendConversationTurn`
               - `useOptimisticConversationStatus`
               - `usePendingTurns`
+              - `useTurnSendInFlight`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --destructive`
@@ -15615,7 +15619,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-md`
               - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xs`
-              - `ui/tokens/shadow --shadow`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
             - Imported by:
@@ -15713,10 +15716,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
               - `ConfigV2.WebRegister` "config"
-            - Uses: 23 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md)
-              - `conversations/conversation-view/pending-turn` ×3
+            - Uses: 22 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md)
               - `infra/endpoints` ×3
               - `config_v2` ×2
+              - `conversations/conversation-view/pending-turn` ×2
               - `conversations/conversation-view` ×2
               - `conversations` ×2
               - `primitives/css/ui-kit` ×2
@@ -15729,7 +15732,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/prompt-editor.PromptEditorSlots`
               - `shell/notifications.toast`
               - `ui/icons.Icon`
-            - Exports (values): `pushAndExitDelivery`
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses:
@@ -15737,8 +15739,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2.getConfig`
               - `conversations.afterTurn`
               - `conversations.deleteConversation`
-              - `conversations.sendTurn`
+              - `conversations.submitTurn`
               - `conversations/conversation-view/drop-and-exit.dropTaskOnExit`
+              - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `infra/jobs.defineJob`
               - `infra/mcp.Mcp`
@@ -16772,8 +16775,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
       - Server:
         - Uses:
+          - `conversations.InputNotEmptyError`
           - `conversations.Runtime`
           - `conversations/question-relay.relayHookEntry`
+          - `conversations/turn-ledger.promptSubmitHookEntry`
+          - `conversations/turn-ledger.recordPromptHookLaunch`
           - `infra/claude-cli/availability.requireClaudeBin`
           - `infra/file-watcher.defineFileWatcher`
           - `infra/file-watcher.FileChangeEvent`
@@ -17056,6 +17062,97 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unwrapRelayEnvelopes`
           - `userPromptText`
           - `wrapPreprompt`
+    - **`turn-ledger`** — Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent, its state moved only by applyTurnEvent's pure transition), the accept that holds a turn while its conversation starts, the prompt-submit mailbox (each agent's UserPromptSubmit hook drops the submitted prompt in a file; a watcher matches it to the oldest unconfirmed turn and deletes it), the turn-ledger.turns live collection, the conversation.userTurnSent event (emitted once the CLI confirmed a user's turn), the turn-merged / turn-unverified / turn-input-not-empty report kinds and a 7-day retention sweep of settled rows.
+      - Web:
+        - Contributes: `IdKinds.Kind` "turn"
+        - Uses: `ids.IdKinds`
+      - Server:
+        - Contributes:
+          - `ids.kind` "turn"
+          - `resource.declare` "turn-ledger.turns"
+          - `resource.declare` "turn-ledger.turns:groups"
+          - `resource.declare` "turn-ledger.turns:rows"
+          - `report-kind` "turn-input-not-empty"
+          - `report-kind` "turn-merged"
+          - `report-kind` "turn-unverified"
+        - Uses:
+          - `database.db`
+          - `database/derived-updated-at.deriveUpdatedAt`
+          - `database/sql-column.parsedText`
+          - `ids.idColumn`
+          - `ids.IdKinds`
+          - `infra/events.defineTriggerEvent`
+          - `infra/file-watcher.defineFileWatcher`
+          - `infra/file-watcher.FileWatcher`
+          - `infra/retention.defineRetention`
+          - `network/live.serveCollection`
+          - `reports.recordReport`
+          - `reports.ReportKind`
+          - `reports.ReportRow`
+          - `tasks/tasks-core._conversations`
+          - `tasks/tasks-core.getConversation`
+        - DB schema:
+          - `plugins/conversations/plugins/turn-ledger/server/internal/tables-user-turn-sent-event.ts`
+          - `plugins/conversations/plugins/turn-ledger/server/internal/tables.ts`
+        - Exports (types):
+          - `AcceptOutcome`
+          - `NewTurn`
+          - `PromptSubmitHookEntry`
+          - `TurnEvent`
+          - `TurnRow`
+          - `UserTurnSentPayload`
+        - Exports (values):
+          - `acceptTurn`
+          - `applyTurnEvent`
+          - `getTurn`
+          - `hasHeldTurns`
+          - `hasPromptHook`
+          - `holdIfStarting`
+          - `listHeldTurns`
+          - `promptSubmitHookEntry`
+          - `recordPromptHookLaunch`
+          - `reportInputNotEmpty`
+          - `returnTurnByText`
+          - `userTurnSent`
+        - Register:
+          - `defineFileWatcher('turn-ledger.prompt-submits')`
+          - `defineJob('retention.conversation_turns')`
+          - `defineTriggerEvent('conversation.userTurnSent')`
+        - Resources:
+          - `turn-ledger.turns` (keyed, window)
+          - `turn-ledger.turns:groups` (push)
+          - `turn-ledger.turns:rows` (keyed, point)
+      - Core:
+        - Uses:
+          - `fields.fieldsToZodObject`
+          - `fields.nullable`
+          - `fields/bool/config.boolField`
+          - `fields/date/config.dateField`
+          - `fields/text/config.parsedTextField`
+          - `fields/text/config.textField`
+          - `ids.defineIdKind`
+          - `ids.IdOf`
+          - `network/live.liveCollection`
+        - Exports (types):
+          - `LedgerTurn`
+          - `TurnId`
+          - `TurnKind`
+          - `TurnState`
+        - Exports (values):
+          - `conversationTurns`
+          - `LedgerTurnSchema`
+          - `RETRYABLE_TURN_STATES`
+          - `SETTLED_TURN_STATES`
+          - `turnIdKind`
+          - `TurnKindSchema`
+          - `TurnStateSchema`
+      - Cross-plugin:
+        - Imported by:
+          - `conversations`
+          - `conversations/runtime-tmux`
+          - `tasks/task-title`
+      - Exemptions:
+        - Exempts itself from: `ids:pk-declared` — `server/internal/tables-user-turn-sent-event.ts` (debt)
     - **`usage`** — Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side. Per-conversation usage — cost, tokens and launched sub-agents — counted incrementally from the transcripts (the anchored session chain plus every sub-agent), stored in conversations_ext_usage and exposed to every conversation list (LiveColumns.Expose).
       - Web:
         - Contributes: `FieldPresentation.Register` "exposure:conversations_ext_usage"
@@ -17200,10 +17297,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `quotedRelationsIn`
   - Cross-plugin:
     - Uses tokens: `ui/tokens/shape --spacing`
-    - Imported by: 113 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 114 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×32
       - `page` ×15
-      - `conversations` ×12
+      - `conversations` ×13
       - `infra` ×12
       - `tasks` ×10
       - `debug` ×6
@@ -17494,6 +17591,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/agents`
           - `conversations/conversation-category`
           - `conversations/conversations-view/grouped`
+          - `conversations/turn-ledger`
           - `database`
           - `database/migrations`
           - `debug/profiling/op-log/op-store`
@@ -17816,9 +17914,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 29 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+        - Imported by: 30 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
           - `apps` ×5
-          - `conversations` ×4
+          - `conversations` ×5
           - `fields` ×4
           - `infra` ×4
           - `debug` ×2
@@ -20705,7 +20803,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×26
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 90 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 91 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×48
       - `apps` ×12
       - `infra` ×5
@@ -20713,11 +20811,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `page` ×3
       - `tasks` ×3
       - `build` ×2
+      - `conversations` ×2
       - `primitives` ×2
       - `release` ×2
       - `backup/runs-arm`
       - `config_v2`
-      - `conversations/summary`
       - `history/engine`
       - `ids`
       - `network/live`
@@ -20857,10 +20955,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 30 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 31 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `debug` ×13
               - `apps` ×6
-              - `conversations` ×2
+              - `conversations` ×3
               - `release` ×2
               - `tasks` ×2
               - `apps-core/surface/floating`
@@ -20998,13 +21096,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 34 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+            - Imported by: 35 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
               - `apps` ×9
               - `infra` ×5
               - `debug` ×4
               - `page` ×4
+              - `conversations` ×3
               - `tasks` ×3
-              - `conversations` ×2
               - `build`
               - `history/engine`
               - `plugin-meta/plugin-health`
@@ -22252,12 +22350,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 55 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 56 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×17
+              - `conversations` ×5
               - `infra` ×5
               - `page` ×5
               - `tasks` ×5
-              - `conversations` ×4
               - `debug` ×4
               - `apps-core` ×2
               - `build` ×2
@@ -23526,11 +23624,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 163 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 164 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×50
               - `primitives` ×26
               - `page` ×24
-              - `conversations` ×20
+              - `conversations` ×21
               - `debug` ×7
               - `apps-core` ×5
               - `tasks` ×5
@@ -24138,8 +24236,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Slots:
       - `IdKinds.Kind`
       - `IdKinds.Presenter`
-    - Slot contributors: 35 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `IdKinds.Kind` ×26
+    - Slot contributors: 36 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `IdKinds.Kind` ×27
       - `IdKinds.Presenter` ×9
     - Exports (types):
       - `IdPresenter`
@@ -24192,9 +24290,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `storedIdSchema`
   - Cross-plugin:
     - Uses tokens: `ui/tokens/shape --spacing`
-    - Imported by: 31 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+    - Imported by: 32 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
       - `apps` ×10
-      - `conversations` ×4
+      - `conversations` ×5
       - `primitives` ×3
       - `build` ×2
       - `page` ×2
@@ -25368,9 +25466,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggerRowSchema`
           - `TriggersPayloadSchema`
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
+        - Imported by: 29 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
           - `apps` ×7
-          - `conversations` ×6
+          - `conversations` ×7
           - `tasks` ×6
           - `page` ×4
           - `infra` ×3
@@ -25546,10 +25644,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope.
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 26 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+        - Imported by: 27 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+          - `conversations` ×6
           - `debug` ×6
           - `infra` ×6
-          - `conversations` ×5
           - `apps` ×2
           - `build`
           - `config_v2`
@@ -26934,6 +27032,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/events/refresh`
           - `apps/pages/agent-origin`
           - `conversations/question-relay`
+          - `conversations/turn-ledger`
           - `debug/boot-profile`
           - `debug/latency-ledger`
           - `debug/profiling/op-log/op-store`
@@ -28408,9 +28507,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 232 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 234 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×68
-          - `conversations` ×36
+          - `conversations` ×38
           - `tasks` ×27
           - `debug` ×24
           - `active-data` ×12
@@ -28645,6 +28744,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types): `Inflight`
         - Exports (values): `createInflight`
+    - **`keyed-mutex`** — Keyed FIFO mutex: createKeyedMutex().run(key, fn) runs fn once every earlier run for the same key has settled, in arrival order, while different keys run concurrently; a key's entry is dropped the moment its queue drains.
+      - Core:
+        - Exports (types): `KeyedMutex`
+        - Exports (values): `createKeyedMutex`
     - **`macrotask-yield`** — Macrotask yield: yieldMacrotask() resolves on a later event-loop turn (scheduler.yield, else setImmediate, else setTimeout 0), so due timers and I/O callbacks run first — which a microtask yield never allows; createTurnQueue() gives concurrent callers one turn each, in call order.
       - Cross-plugin:
         - Imported by:
@@ -37174,9 +37277,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 238 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 239 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×67
-          - `conversations` ×40
+          - `conversations` ×41
           - `tasks` ×22
           - `ui` ×22
           - `debug` ×21
@@ -39033,7 +39136,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`tab-id`** — Stable per-tab id (sessionStorage-backed) for crash/notification attribution.
           - Cross-plugin:
             - Imported by:
-              - `conversations/conversation-view/pending-turn`
               - `debug/reports`
               - `primitives/live-state`
               - `primitives/scope/app-instance`
@@ -41100,7 +41202,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `themeResolutionFingerprint`
           - `ThemeResolutionPayloadSchema`
-    - **`turn-unconfirmed`** — Turn-unconfirmed report kind's Debug → Reports summary view: the one-line preview + elapsed + conversation id for a sent turn that was POSTed and acked but never confirmed in the transcript. The report itself is filed by the conversations pending-turn state machine via the reports web report() API — no collector needed here. Turn-unconfirmed report kind: validates unconfirmed-turn payloads (a sent turn POSTed and acked but never confirmed in the transcript within the confirmation window), fingerprints by conversation id (repeats on one conversation collapse onto one row), and renders an investigation task. Re-arms periodically (6h) since a conversation that keeps dropping turns is a recurring warning, not a one-shot crash.
+    - **`turn-unconfirmed`** — Retired turn-unconfirmed report kind's Debug → Reports summary view, kept so existing rows still render: the one-line preview + elapsed + conversation id for a sent turn the browser's old pending-turn store never found in the transcript. Nothing files it any more — the turn ledger's server-side kinds replace it. Retired turn-unconfirmed report kind, kept registered so existing rows still validate, render and can be investigated (an investigated report is never swept): a sent turn the browser's old pending-turn store never found in the transcript within 90 s. Nothing files it any more — the turn ledger's turn-merged / turn-unverified / turn-input-not-empty kinds (conversations/turn-ledger) replace it. Fingerprints by conversation id; re-arms every 6h.
       - Web:
         - Contributes: `Reports.KindView` → `TurnUnconfirmedKindView`
         - Uses:
@@ -42052,6 +42154,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/serve-composition`
           - `config_v2/settings`
           - `conversations/conversation-view`
+          - `conversations/conversation-view/pending-turn`
           - `debug/profiling/ops`
           - `framework/browser-server/demo/scope`
           - `infra/health`
@@ -43878,7 +43981,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `trigger` "task-title.short-on-title-changed"
         - Uses:
           - `conversations.conversationCreated`
-          - `conversations.userTurnSent`
+          - `conversations/turn-ledger.userTurnSent`
           - `database.db`
           - `infra/claude-cli.runClaudePrint`
           - `infra/entity-extensions.defineExtension`
@@ -44234,8 +44337,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 65 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×26
+        - Imported by: 66 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×27
           - `tasks` ×16
           - `debug` ×6
           - `active-data` ×5
@@ -45774,16 +45877,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 63 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 62 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×22
               - `primitives` ×17
               - `framework` ×4
               - `ui` ×4
               - `apps-core` ×3
               - `page` ×3
-              - `conversations` ×2
               - `screenshot` ×2
               - `tasks` ×2
+              - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `database/derived-tables`
               - `map`
               - `plugin-meta/plugin-tree`

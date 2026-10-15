@@ -198,10 +198,15 @@ removes settled rows (accepted, merged, returned, withdrawn).
     - `turn-ledger.turns:rows` (keyed, point)
 - Core:
   - Uses:
+    - `fields.fieldsToZodObject`
+    - `fields.nullable`
+    - `fields/bool/config.boolField`
+    - `fields/date/config.dateField`
+    - `fields/text/config.parsedTextField`
+    - `fields/text/config.textField`
     - `ids.defineIdKind`
     - `ids.IdOf`
     - `network/live.liveCollection`
-    - `network/live/filter.liveText`
   - Exports (types):
     - `LedgerTurn`
     - `TurnId`

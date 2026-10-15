@@ -37,6 +37,7 @@
     - `build/serve-composition`
     - `config_v2/settings`
     - `conversations/conversation-view`
+    - `conversations/conversation-view/pending-turn`
     - `debug/profiling/ops`
     - `framework/browser-server/demo/scope`
     - `infra/health`
