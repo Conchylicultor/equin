@@ -2,9 +2,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 // A fixed width: jsdom lays nothing out, so the real observer would report 0
 // and the chart would never draw its svg.
-vi.mock("@plugins/primitives/plugins/dom/plugins/element-size/web", () => ({
-  useElementSize: () => [() => {}, { width: 600, height: 240 }],
-}));
+vi.mock(
+  "@plugins/primitives/plugins/dom/plugins/element-size/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    useElementSize: () => [() => {}, { width: 600, height: 240 }],
+  }),
+);
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ChartBucket, ChartSeries } from "../../core";

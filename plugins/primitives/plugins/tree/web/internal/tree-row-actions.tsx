@@ -12,7 +12,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { RowMenuHelpers, RowMenuItem } from "../../core";
 import {
   useRowControls,
-  useTreeListContext,
+  useTreeContext,
   type RowControls,
 } from "./use-tree-row";
 
@@ -40,9 +40,10 @@ export interface TreeRowActionsProps {
  * `undefined` when there is nothing to show, so a host can skip its cluster
  * (an empty one would still spend its gap).
  *
- * The ONE implementation: `RowChrome` calls it with the controls it computed,
- * and `TreeRowActions` (a table's nested row) with the controls the row
- * publishes — so the two cannot disagree on what a row offers or in what order.
+ * The ONE implementation: the nested table's row decoration calls it with the
+ * controls it computed (so a row with nothing to offer mounts no cluster), and
+ * `TreeRowActions` with the controls the row publishes — so the two cannot
+ * disagree on what a row offers or in what order.
  */
 export function treeRowTrailing({
   actions,
@@ -150,6 +151,6 @@ export function treeRowTrailing({
  */
 export function TreeRowActions(props: TreeRowActionsProps): ReactNode {
   const controls = useRowControls();
-  const { canCreate } = useTreeListContext();
+  const { canCreate } = useTreeContext();
   return treeRowTrailing({ ...props, controls, canCreate }) ?? null;
 }

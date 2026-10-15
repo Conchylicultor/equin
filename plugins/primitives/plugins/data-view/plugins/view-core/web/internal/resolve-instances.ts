@@ -22,8 +22,7 @@ export interface ResolvedViewInstance<T extends ViewTypeMeta = ViewTypeMeta> {
  *     removed source id; the row stays in config, it just isn't rendered until
  *     its source returns — mirroring the orphan view-type hazard below), or
  *   - no view-type is registered for `view.type` (an *orphan* row — a renamed /
- *     removed view-type id, same documented hazard as reorder node-type ids), or
- *   - the view-type is hierarchical but the entry's source has no hierarchy.
+ *     removed view-type id, same documented hazard as reorder node-type ids).
  *
  * The entry's `views` whitelist is deliberately NOT applied here — it gates
  * the add menu only, never authored rows (matching the single-source `views`
@@ -45,7 +44,6 @@ export function buildInstanceFromRow<T extends ViewTypeMeta>(
   if (!entry) return null;
   const viewType = entry.contributions.find((c) => c.type === row.view.type);
   if (!viewType) return null;
-  if (viewType.hierarchical && !entry.hasHierarchy) return null;
   const instance: ViewInstance = {
     id: row.id,
     name: row.name,

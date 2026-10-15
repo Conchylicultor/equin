@@ -54,5 +54,5 @@ const BOARD_VIEW_TYPE: SealContributions<ViewTypeMeta> = {
 
 /** The one source every board view binds to (stable: the model memoizes on it). */
 export const BOARD_VIEW_ENTRIES: ViewSourceEntry[] = [
-  { contributions: [BOARD_VIEW_TYPE], hasHierarchy: false },
+  { contributions: [BOARD_VIEW_TYPE] },
 ];

@@ -39,7 +39,7 @@ export interface ViewsConfigHandle {
    * (loading, ready, or failed while a last-known value is still shown).
    */
   failure: { error: ResourceError; refetch: () => Promise<void> } | null;
-  /** Resolved, ordered instances (fail-soft skip of orphan / hierarchical rows). */
+  /** Resolved, ordered instances (fail-soft skip of orphan rows). */
   instances: ResolvedViewInstance[];
   /** The RAW `view` value for one instance (the variant blob `{ type, ...opts }`),
    *  read straight off the config row (NOT the merged code+config options). For a

@@ -265,7 +265,7 @@ export interface DataTableProps<TRow> {
    * sidebar's look). An outline that keeps its column labels — a file
    * listing's Name / Modified / Size over tree rows — passes `true`: its
    * header then takes the outline rows' inset and geometry, in the muted
-   * caption the tree's aligned columns wore (an arrow only on the sorted
+   * caption (an arrow only on the sorted
    * column), and its columns give way by `dropOrder` when the box is narrow
    * (it never scrolls sideways).
    */

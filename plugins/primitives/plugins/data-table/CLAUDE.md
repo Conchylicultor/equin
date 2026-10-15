@@ -106,7 +106,7 @@ publishing `--scrim` and `--row-meta` like `Row` / `TreeRowChrome`). Both looks
 live in one `ROW_LOOK` table in `data-table.tsx`.
 
 An outline row takes the tree row's geometry, so a nested outline table reads
-as a `TreeList`: `min-h-tree-row`, `py-xs`, `text-body`, and the pill sits ON
+as a tree: `min-h-tree-row`, `py-xs`, `text-body`, and the pill sits ON
 the rail — the rail is the row's margin, its content padded `--space-xs` inside
 the pill (`OUTLINE_INSET`; nested, only its trailing edge — the tree head pays
 the lead inset inside its indent, as `TreeRowChrome` does), where a grid row
@@ -122,8 +122,7 @@ rows read as a render loop).
 
 **An outline with its labels** (`header: true`): the column-header row a file
 listing wants over tree rows. It takes the outline rows' inset and a tree row's
-height, in the muted caption the tree's aligned columns wore (an arrow only on
-the sorted column), a breath under its rule; every column after the first reads
+height, in a muted caption (an arrow only on the sorted column), a breath under its rule; every column after the first reads
 as meta (`text-caption text-row-meta`). Its columns give way by `dropOrder` in a
 narrow box (`useColumnFit`'s `drop` mode) — it never scrolls sideways. Nested,
 `tree.headerLeading` puts the first label over the rows' labels (a depth-0
@@ -185,8 +184,7 @@ spill past its border), and because it crosses portals the right way.
 - **Fit.** `useColumnFit` (`web/internal/use-column-fit.ts`) decides which
   columns show. A column whose `ColumnDef.dropOrder` is set gives way, lowest
   first, until the first column keeps its minimum — `fitAlignedColumns`
-  (`core`, the tree's aligned-column fit, moved here unchanged and shared with
-  `data-view/tree`). A column without one never drops; the first column never
+  (`core`). A column without one never drops; the first column never
   does. Minimums come from the track (`trackMin`, `core`): a length is itself,
   `minmax(a, b)` is `a`, a content- or space-sized track is its header label,
   measured once per column id while shown and kept while dropped (so the fit

@@ -96,7 +96,7 @@ export const densityGroup = defineTokenGroup("density", {
     default: "calc(var(--tree-indent) / 2)",
     label: "Tree guide offset",
   },
-  // The gap between a tree's top-level rows (`TreeList`'s root stack).
+  // The gap between a tree's top-level rows.
   // Default = the `2xs` step it always had; `0px` packs root rows like
   // nested ones.
   treeRootGap: { default: "var(--space-2xs)", label: "Tree root row gap" },

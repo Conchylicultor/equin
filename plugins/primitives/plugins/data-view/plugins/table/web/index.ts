@@ -20,9 +20,8 @@ export default {
       // Opts into flat manual-order (rank-based drag reorder); active only when
       // the consumer supplies `manualOrder`.
       supportsManualOrder: true,
-      // Nests its rows over a hierarchical source (NOT `hierarchical`: it stays
-      // offered on flat sources) — the host then applies no fold and no flat
-      // manual order to it, and honours its `filterScope`.
+      // Nests its rows over a hierarchical source — the host then applies no
+      // fold and no flat manual order to it, and honours its `filterScope`.
       nestsHierarchy: true,
     }),
   ],

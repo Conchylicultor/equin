@@ -3,7 +3,7 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { TreeNode } from "@plugins/primitives/plugins/tree/core";
 import {
   useRowControls,
-  useTreeListContext,
+  useTreeContext,
   type TreeItem,
 } from "@plugins/primitives/plugins/tree/web";
 import type { FieldDef } from "../../core";
@@ -33,7 +33,7 @@ export function EditableTreeLabel<TNode extends TreeItem>(props: {
   const { node, row, field, read, className } = props;
   const resolveEditor = useResolveCellEditor();
   const { shouldAutoFocus, consumeAutoFocus } = useRowControls();
-  const ctx = useTreeListContext();
+  const ctx = useTreeContext();
   const [editing, setEditing] = useState(false);
   const editingRef = useLatestRef(editing);
 

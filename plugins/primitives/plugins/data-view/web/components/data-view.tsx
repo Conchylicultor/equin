@@ -57,11 +57,10 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
   // The single-source path is ONE implicit source entry (`id`/`title`
   // undefined): every config row (all source-less) resolves through it, and the
   // add menu stays the flat single-group fast path.
-  const hasHierarchy = !!props.hierarchy;
   const { views, viewOptions } = props;
   const entries = useMemo<ViewSourceEntry<DataViewContribution>[]>(
-    () => [{ contributions, hasHierarchy, views, viewOptions }],
-    [contributions, hasHierarchy, views, viewOptions],
+    () => [{ contributions, views, viewOptions }],
+    [contributions, views, viewOptions],
   );
   const viewModel = useDataViewModel(
     props.storageKey,

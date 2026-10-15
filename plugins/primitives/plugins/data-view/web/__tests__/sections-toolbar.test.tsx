@@ -68,11 +68,12 @@ const listView = DataViewSlots.View({
   icon: symbol("list"),
   component: RowsView,
 }) as unknown as ViewType;
-const treeView = DataViewSlots.View({
-  type: "tree",
-  title: "Tree",
+/** A view that nests its rows over the hierarchical source (as the table does). */
+const nestedView = DataViewSlots.View({
+  type: "nested",
+  title: "Nested",
   icon: symbol("list"),
-  hierarchical: true,
+  nestsHierarchy: true,
   component: RowsView,
 }) as unknown as ViewType;
 
@@ -81,7 +82,7 @@ const plugin = {
   description: "sections toolbar fixture",
   contributions: [
     listView,
-    treeView,
+    nestedView,
     DataViewSlots.Filter({
       match: "tag",
       domain: "text",
@@ -135,9 +136,9 @@ function instance(spec: InstanceSpec) {
       name: spec.name,
       icon: LIST_ICON,
       pickedIcon: null,
-      type: spec.tree ? "tree" : "list",
+      type: spec.tree ? "nested" : "list",
     },
-    viewType: spec.tree ? treeView : listView,
+    viewType: spec.tree ? nestedView : listView,
   };
 }
 

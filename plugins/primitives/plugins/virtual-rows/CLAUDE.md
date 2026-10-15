@@ -41,7 +41,7 @@
 
 ## Plugin reference
 
-- Description: Self-discovering windowed row renderer (@tanstack/react-virtual): renders only the rows intersecting the host's scroll viewport (+overscan) inside a full-height sizer, discovering the scroll container at runtime. Shared by data-view's flat/tree views.
+- Description: Self-discovering windowed row renderer (@tanstack/react-virtual): renders only the rows intersecting the host's scroll viewport (+overscan) inside a full-height sizer, discovering the scroll container at runtime. Shared by data-view's list / gallery / icons views and data-table.
 - Web:
   - Uses:
     - `primitives/css/coords.Placed`
@@ -64,7 +64,6 @@
     - `primitives/data-view/icons`
     - `primitives/data-view/list`
     - `primitives/icon-picker`
-    - `primitives/tree`
 - Sub-plugins:
   - **`row-fold`** — Disclosure motion for flat lists: useRowFold — given the rows and the open keys they were flattened under, rows a disclosure reveals grow in, rows it hides fold out (kept drawn until gone) and the…
 

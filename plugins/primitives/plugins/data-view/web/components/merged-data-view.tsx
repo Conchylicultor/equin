@@ -54,15 +54,11 @@ interface MergedDataViewBaseProps<THostProps> {
   aside?: ReactNode;
 }
 
-/** One dev-warn per (storageKey, source) — the mismatch is static, so once. */
-const warnedHierarchyMismatch = new Set<string>();
-
 /**
  * Multi-source DataView host: ONE surface (one `storageKey` → one config file →
  * one `EditableViewSwitcher`) whose view-instances each bind to a contributed
  * **source** via the config row's `source` key. The view model resolves every
- * row up front from the contributions' STATIC metadata (`views`,
- * `hasHierarchy`); only the ACTIVE instance's source component mounts — its
+ * row up front from the contributions' STATIC metadata (`views`); only the ACTIVE instance's source component mounts — its
  * data hooks run, it calls `render(bundle)`, and the bundle feeds the shared
  * `DataViewBody`. Switching sources remounts the body (`key={source.id}`), so
  * per-source subscriptions restart cleanly.
@@ -104,7 +100,6 @@ export function MergedDataView<THostProps>(
         title: c.title,
         icon: c.icon,
         contributions,
-        hasHierarchy: c.hasHierarchy ?? false,
         views: c.views,
       })),
     [sourceContribs, contributions],
@@ -153,7 +148,6 @@ export function MergedDataView<THostProps>(
                 activeInstance={activeInstance}
                 chrome={chrome}
                 sourceId={activeSource.id}
-                declaredHasHierarchy={activeSource.hasHierarchy ?? false}
                 bundle={bundle as unknown as DataViewSourceBundle<unknown>}
               />
             ),
@@ -176,34 +170,10 @@ function MergedSourceBody(props: {
   activeInstance: ResolvedViewInstance<DataViewContribution>;
   chrome: DataViewShellChrome;
   sourceId: string;
-  declaredHasHierarchy: boolean;
   bundle: DataViewSourceBundle<unknown>;
 }): ReactNode {
-  const {
-    storageKey,
-    viewModel,
-    activeInstance,
-    chrome,
-    sourceId,
-    declaredHasHierarchy,
-    bundle,
-  } = props;
-  // The static `hasHierarchy` metadata drove the model's hierarchical gate; if
-  // the bundle disagrees (declared without a `hierarchy`, or vice versa), tree
-  // instances are either wrongly offered or wrongly hidden — surface it loudly
-  // in dev, once per (surface, source).
-  if (import.meta.env.DEV && !!bundle.hierarchy !== declaredHasHierarchy) {
-    const key = `${storageKey}:${sourceId}`;
-    if (!warnedHierarchyMismatch.has(key)) {
-      warnedHierarchyMismatch.add(key);
-      console.warn(
-        `[data-view] MergedDataView(${storageKey}) source "${sourceId}": ` +
-          `contribution declares hasHierarchy=${String(declaredHasHierarchy)} ` +
-          `but its bundle ${bundle.hierarchy ? "carries" : "lacks"} a ` +
-          `\`hierarchy\` — align the static metadata with the bundle.`,
-      );
-    }
-  }
+  const { storageKey, viewModel, activeInstance, chrome, sourceId, bundle } =
+    props;
   return (
     <DataViewBody<unknown>
       key={sourceId}

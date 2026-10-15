@@ -2,7 +2,6 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { IdKinds } from "@plugins/ids/web";
 import { viewIdKind } from "../core";
 
-export { buildInstanceFromRow } from "./internal/resolve-instances";
 export type { ResolvedViewInstance } from "./internal/resolve-instances";
 export { useViewsConfig } from "./internal/use-views-config";
 export type { ViewsConfigHandle } from "./internal/use-views-config";

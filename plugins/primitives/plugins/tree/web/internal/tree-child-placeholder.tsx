@@ -21,7 +21,7 @@ export function TreeChildPlaceholder({
   placeholder: ChildPlaceholder;
   /** The depth of the CHILD row (parent depth + 1). */
   depth: number;
-  /** Draw the indent guides its sibling rows draw (`TreeListProps.guides`). */
+  /** Draw the indent guides its sibling rows draw (`TreeModelArgs.guides`). */
   guides?: boolean;
 }): ReactNode {
   return (

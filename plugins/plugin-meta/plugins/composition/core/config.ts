@@ -424,7 +424,6 @@ export const compositionsConfig = defineConfig({
           "primitives.data-view.gallery",
           "primitives.data-view.table",
           "primitives.data-view.list",
-          "primitives.data-view.tree",
           "fields.bool.table",
           "fields.color.table",
           "fields.date.table",

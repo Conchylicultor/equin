@@ -57,7 +57,7 @@ export type TreeRowChromeProps = {
   /**
    * Leading control rendered between the chevron block and the label (e.g. the
    * multi-select checkbox). Hover-reveal scoping is the leading node's own
-   * concern (RowChrome passes a `group-hover/tree-row` className into it) — this
+   * concern (pass it a `group-hover/tree-row` className) — this
    * slot only reserves layout space.
    */
   leading?: ReactNode;
@@ -74,26 +74,26 @@ export type TreeRowChromeProps = {
   /** Editable wrappers attach the scroll + child-drop ref here. */
   rowRef?: Ref<HTMLDivElement>;
   /**
-   * Whole-row drag source props (Notion-style: no grip handle). The editable
-   * RowChrome spreads dnd-kit's draggable `attributes`/`listeners` onto the row
-   * so the entire row is the drag source. Read-only trees omit them.
+   * Whole-row drag source props (Notion-style: no grip handle): dnd-kit's
+   * draggable `attributes`/`listeners`, spread onto the row so the entire row
+   * is the drag source. A read-only row omits them.
    */
   dragAttributes?: DraggableAttributes;
   dragListeners?: DraggableSyntheticListeners;
   /**
    * Draw indent guides: one hairline per ancestor level in the row's indent
-   * (`TreeGuides`). Default false — a tree opts in (`TreeListProps.guides`).
+   * (`TreeGuides`). Default false — a tree opts in (`TreeModelArgs.guides`).
    */
   guides?: boolean;
 };
 
 /**
  * Pure presentational tree-row chrome: indentation, a fixed row height, and a
- * reserved chevron slot. No hooks, no context, no dnd-kit *logic* — the
- * editable RowChrome computes the drag source via dnd-kit and passes the
- * resulting `dragAttributes`/`dragListeners` in for this component to spread
- * onto the row (read-only trees, e.g. config nav, omit them). Both render
- * through it so every tree row in the app shares one height invariant.
+ * reserved chevron slot. No hooks, no context, no dnd-kit *logic* — a caller
+ * that makes the row draggable passes dnd-kit's `dragAttributes` /
+ * `dragListeners` in for this component to spread onto the row. The list
+ * view's tree-shaped rows (`rowChrome: "tree"`) render through it, sharing the
+ * tree row's height invariant with the nested table's outline rows.
  *
  * Deliberately NOT built on the generic `Row` primitive: tree rows need a
  * NAMED group (`group/tree-row`) to scope the chevron/actions hover-reveal to

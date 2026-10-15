@@ -189,7 +189,7 @@ async function updateTaskOn(
   }
   // No destination force-expand on a re-file, for the same reason as in
   // `createTask`: the tree opens a collapsed drop target itself
-  // (`TreeList.onDragEnd`). The destination folder's row is not written at all,
+  // (`useTreeModel`'s `onDragEnd`). The destination folder's row is not written at all,
   // so its `updatedAt` (derived per `touchedBy` in `tables.ts`) cannot move.
   const [row] = await exec
     .select()

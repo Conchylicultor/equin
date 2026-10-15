@@ -31,7 +31,7 @@ Design: [`research/2026-07-29-global-agent-origin-provenance-for-pages.md`](../.
   TTL keeps the marked set in single digits.
 - **The Scratch section is the exposed field + config-authored filters.**
   The options are labelled after the sections (**Private** / **Scratch**);
-  `config/apps/pages/page-tree/pages-sidebar.jsonc` authors two tree views of
+  `config/apps/pages/page-tree/pages-sidebar.jsonc` authors two nested table views of
   the `sections`-chrome sidebar over it — `pages` ("Private", `origin is user`)
   and `scratch` ("Scratch", `origin is agent`, `hideWhenEmpty`) — both with
   `filterScope: "roots"`. Every page lands in exactly one section. The root

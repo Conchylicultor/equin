@@ -38,7 +38,7 @@ import {
   TreeChildPlaceholder,
   TreeDropZones,
   TreeLeading,
-  TreeListProvider,
+  TreeProvider,
   TreeRootAdd,
   TreeRowActions,
   TreeToolbar,
@@ -46,10 +46,9 @@ import {
   treeRowGestures,
   treeRowIndentStyle,
   useTreeKeyboard,
-  useTreeListContext,
+  useTreeContext,
   useTreeModel,
   useTreeRow,
-  type TreeListContextValue,
 } from "@plugins/primitives/plugins/tree/web";
 import { RankReorderDndContext } from "@plugins/primitives/plugins/rank-reorder/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -86,18 +85,6 @@ function lineOwner(line: Line): Row {
 }
 
 /**
- * The table paints the flattened tree itself, so no row recurses through the
- * tree context's `Row` — the context still carries one (the tree's own rows
- * read it), and reaching this one would mean a `TreeList` row rendered inside
- * a table, which nothing does.
- */
-function noRecursiveRow(): never {
-  throw new Error(
-    "NestedTableView: a table paints its flattened tree; no row recurses",
-  );
-}
-
-/**
  * The first cell's tree head: the indent (the tree row's own split between
  * pill and content, so the guides sit where they sit in the tree), the guides,
  * the disclosure (the contributed `Tree.Disclosure` variant when the row has an
@@ -120,7 +107,7 @@ function TreeHead({
   pillInRow: boolean;
   children: ReactNode;
 }): ReactNode {
-  const ctx = useTreeListContext<Row>();
+  const ctx = useTreeContext<Row>();
   const { node, depth } = line;
   const hasChildren =
     node.children.length > 0 || (ctx.lazyChildren?.hasChildren(node) ?? false);
@@ -242,10 +229,6 @@ export function NestedTableView(
     setExpanded: props.setExpanded,
     lazyChildren: treeArgs.lazyChildren,
   });
-  const ctxValue = useMemo<TreeListContextValue<Row>>(
-    () => ({ ...model.context, Row: noRecursiveRow }),
-    [model.context],
-  );
   const { canReorder, canCreate } = model.context;
   // The toolbar's whole-table expand-all, over the rows in scope — the same
   // hook `TreeList` runs over its own.
@@ -651,7 +634,7 @@ export function NestedTableView(
       measuringAlways={windowed}
     >
       {(activeId) => (
-        <TreeListProvider value={ctxValue}>
+        <TreeProvider value={model.context}>
           {showToolbar && (
             <div className="rail-follow">
               <TreeToolbar
@@ -676,7 +659,7 @@ export function NestedTableView(
               />
             </div>
           )}
-        </TreeListProvider>
+        </TreeProvider>
       )}
     </RankReorderDndContext>
   );

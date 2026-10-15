@@ -14,7 +14,7 @@ import {
 import type { TreeItem } from "./types";
 
 /**
- * Arrow-key navigation for a `TreeList` whose rows are focusable: a key on a
+ * Arrow-key navigation for a tree whose rows are focusable: a key on a
  * focused row moves the selection (`onSelect`, the same path a click takes) and
  * DOM focus together, or opens / closes the row. Keys pressed in a control
  * INSIDE a row (a rename field, an action button) are left alone.

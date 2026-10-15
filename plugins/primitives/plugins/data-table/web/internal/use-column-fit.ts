@@ -56,7 +56,7 @@ export interface ColumnFit<TRow> {
 /**
  * Which columns a grid table shows in the room it has, and whether it still
  * overflows. A column whose field declares `dropOrder` gives way — lowest
- * first, as the tree's aligned columns do (`fitAlignedColumns`, unchanged) —
+ * first (`fitAlignedColumns`) —
  * until the first column keeps its minimum; a column with none never does, so
  * what is left scrolls sideways (the last resort).
  *

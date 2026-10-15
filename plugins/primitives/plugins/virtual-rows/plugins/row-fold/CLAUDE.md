@@ -79,7 +79,6 @@ a 60 fps display paints). It passes on the tween clock.
   - Imported by:
     - `debug/trace/spans`
     - `primitives/data-table`
-    - `primitives/tree`
     - `primitives/virtual-rows`
 - Core:
   - Exports (types):

@@ -7,9 +7,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // A fixed width: jsdom lays nothing out, so the chart would never draw.
-vi.mock("@plugins/primitives/plugins/dom/plugins/element-size/web", () => ({
-  useElementSize: () => [() => {}, { width: 600, height: 240 }],
-}));
+vi.mock(
+  "@plugins/primitives/plugins/dom/plugins/element-size/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    useElementSize: () => [() => {}, { width: 600, height: 240 }],
+  }),
+);
 // The rail watches scroll positions jsdom does not have; it is not what these
 // cases are about.
 vi.mock("@plugins/primitives/plugins/outline/plugins/rail/web", () => ({

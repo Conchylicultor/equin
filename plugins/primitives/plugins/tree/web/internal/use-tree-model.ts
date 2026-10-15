@@ -17,13 +17,13 @@ import {
 } from "../../core";
 import { useSubtreeExpandIndex } from "./use-subtree-expand-index";
 import { useLazyLoadRequests } from "./use-lazy-load-requests";
-import type { TreeListContextValue } from "./use-tree-row";
+import type { TreeContextValue } from "./use-tree-row";
 import type { TreeItem } from "./types";
 
 /**
  * Everything a tree needs to know about its rows and gestures, independent of
- * how it paints them. `TreeList` takes these plus its own rendering props; any
- * other renderer of a tree (a table whose rows nest) takes exactly these.
+ * how it paints them: a renderer (the table whose rows nest) takes exactly
+ * these.
  */
 export type TreeModelArgs<T extends TreeItem> = {
   rows: readonly T[];
@@ -127,12 +127,8 @@ export type TreeModelArgs<T extends TreeItem> = {
   guides?: boolean;
 };
 
-/** The renderer-independent half of the tree context: everything but how a
- *  row is drawn (`Row`). */
-export type TreeModelContext<T extends TreeItem> = Omit<
-  TreeListContextValue<T>,
-  "Row"
->;
+/** The tree context the model publishes to its rows (`TreeProvider`). */
+export type TreeModelContext<T extends TreeItem> = TreeContextValue<T>;
 
 export type TreeModel<T extends TreeItem> = {
   /** `rows` narrowed to the `rootId` subtree (all of them without one). */
@@ -164,8 +160,8 @@ export type TreeModel<T extends TreeItem> = {
  * flattening the forest; lazy listing requests; the subtree fold index; drop
  * resolution; reveal-on-select; the pending-focus hand-off of a just-created
  * row. A renderer adds only what it paints — the rows (windowed or not), the
- * toolbar, the keyboard host — and publishes `context` (plus its `Row` and
- * `windowed`) to its rows.
+ * toolbar, the keyboard host — and publishes `context` to its rows
+ * (`TreeProvider`).
  */
 export function useTreeModel<T extends TreeItem>(
   args: TreeModelArgs<T>,

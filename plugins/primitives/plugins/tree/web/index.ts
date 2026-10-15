@@ -1,14 +1,6 @@
 import { Tree } from "./slots";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { TreeList } from "./internal/tree-list";
-export type { TreeListProps } from "./internal/tree-list";
-export { RowChrome } from "./internal/row-chrome";
-export type {
-  RowChromeProps,
-  RowChromeMenuHelpers,
-  RowMenuItem,
-} from "./internal/row-chrome";
 export { TreeRowActions, treeRowTrailing } from "./internal/tree-row-actions";
 export type { RowMenu, TreeRowActionsProps } from "./internal/tree-row-actions";
 export {
@@ -37,27 +29,19 @@ export { TreeDisclosureToggle } from "./internal/tree-disclosure-toggle";
 export type { TreeDisclosureToggleProps } from "./internal/tree-disclosure-toggle";
 export { Tree } from "./slots";
 export type { TreeDisclosureContribution } from "./slots";
-export { RenameInput } from "./internal/rename-input";
-export type { RenameInputProps } from "./internal/rename-input";
 export {
   useTreeRow,
-  TreeListProvider,
-  useTreeListContext,
-  useOptionalTreeListContext,
+  TreeProvider,
+  useTreeContext,
+  useOptionalTreeContext,
   useOptionalRowControls,
   useRowControls,
   RowControlsProvider,
 } from "./internal/use-tree-row";
-export type {
-  RowControls,
-  TreeListContextValue,
-} from "./internal/use-tree-row";
+export type { RowControls, TreeContextValue } from "./internal/use-tree-row";
 export type { TreeItem } from "./internal/types";
 
-export {
-  useFlatExpandAll,
-  flatExpandAll,
-} from "./internal/use-flat-expand-all";
+export { useFlatExpandAll } from "./internal/use-flat-expand-all";
 export type {
   UseFlatExpandAllReturn,
   FlatExpandAll,
@@ -65,7 +49,7 @@ export type {
 
 export default {
   description:
-    "Tree hierarchy utilities (buildTree, isDescendant, resolveDropParent) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.",
+    "Tree hierarchy utilities (buildTree, isDescendant, resolveDropParent), the tree model (useTreeModel: flattened visible lines, DnD, lazy children, keyboard) and the tree-row pieces a renderer composes (TreeRowChrome, TreeLeading, useTreeRow, TreeRowActions, TreeToolbar) — drawn by data-view's nested table.",
   contributions: [],
   slots: Tree,
 } satisfies PluginDefinition;

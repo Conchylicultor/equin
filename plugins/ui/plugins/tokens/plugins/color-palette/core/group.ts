@@ -181,7 +181,7 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
     default: "var(--muted-foreground)",
     label: "Selected row meta text",
   },
-  // A tree's indent guides (`TreeListProps.guides`): the hairline per
+  // A tree's indent guides (`TreeModelArgs.guides`): the hairline per
   // ancestor level. Default = the border colour; a theme sets a softer rule.
   treeGuide: {
     default: "var(--border)",

@@ -7,20 +7,21 @@ import { buildInstanceFromRow } from "./resolve-instances";
 const Icon: ComponentType<{ className?: string }> = () => null;
 
 const table = { type: "table", title: "Table", icon: Icon };
-const tree = { type: "tree", title: "Tree", icon: Icon, hierarchical: true };
-const contributions = [table, tree] as unknown as SealContributions<ViewTypeMeta>[];
+const gallery = { type: "gallery", title: "Gallery", icon: Icon };
+const contributions = [
+  table,
+  gallery,
+] as unknown as SealContributions<ViewTypeMeta>[];
 
 /** The implicit sole source (the single-source case). */
 const implicitEntry: ViewSourceEntry = {
   contributions,
-  hasHierarchy: false,
 };
 
 const queueEntry: ViewSourceEntry = {
   id: "queue",
   title: "Queue",
   contributions,
-  hasHierarchy: false,
 };
 
 describe("buildInstanceFromRow — source-entry resolution", () => {
@@ -79,17 +80,10 @@ describe("buildInstanceFromRow — source-entry resolution", () => {
     ).toBeNull();
   });
 
-  it("gates hierarchical view-types on the entry's own hasHierarchy", () => {
-    const hierarchical: ViewSourceEntry = { ...queueEntry, hasHierarchy: true };
-    const row = { id: "t", name: "T", view: { type: "tree" }, source: "queue" };
-    expect(buildInstanceFromRow(row, [queueEntry])).toBeNull();
-    expect(buildInstanceFromRow(row, [hierarchical])).not.toBeNull();
-  });
-
   it("does NOT apply the entry's views whitelist to authored rows", () => {
     // The whitelist gates the add menu only — an authored row of a
     // non-whitelisted type still renders (single-source semantics preserved).
-    const whitelisted: ViewSourceEntry = { ...queueEntry, views: ["tree"] };
+    const whitelisted: ViewSourceEntry = { ...queueEntry, views: ["gallery"] };
     const resolved = buildInstanceFromRow(
       { id: "q", name: "Q", view: { type: "table" }, source: "queue" },
       [whitelisted],

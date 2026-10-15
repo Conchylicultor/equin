@@ -464,15 +464,12 @@ function DataViewBodyInner<TRow>(
   // The fold in effect: suspended while a search is typed (a match must never
   // hide behind "…"). Computed from `activeState` BEFORE the live branch below
   // zeroes `query`, and carried through that branch like `visibleFields`.
-  // A view that draws no fold lines (the tree) gets no fold at all — applying
-  // one would hold its live paging for rows it never set aside.
-  // The active view draws THIS source as a tree: a hierarchical view-type, or
-  // one that nests whenever the source has a hierarchy (the table). Nested, a
-  // view has no flat section of rows to fold and no flat rank to drag.
+  // A view that draws no fold lines gets no fold at all — applying one would
+  // hold its live paging for rows it never set aside.
+  // The active view nests THIS source's rows (the table over a hierarchy).
+  // Nested, a view has no flat section of rows to fold and no flat rank to drag.
   const activeNests =
-    hierarchy != null &&
-    (activeInstance.viewType.hierarchical === true ||
-      activeInstance.viewType.nestsHierarchy === true);
+    hierarchy != null && activeInstance.viewType.nestsHierarchy === true;
   const activeSupportsFold =
     activeInstance.viewType.supportsFold !== false && !activeNests;
   const fold = activeSupportsFold ? effectiveFold(activeState) : undefined;
@@ -1028,7 +1025,7 @@ function DataViewBodyInner<TRow>(
           activeState.sort.length > 0;
 
         // The host passes RAW rows; each view applies the processing matching its own
-        // semantics (gallery/table call `useFlatRows`, the tree feeds `TreeList`).
+        // semantics (gallery/list call `useFlatRows`, the table nests over a hierarchy).
         const renderProps: DataViewRenderProps<unknown> = {
           rows: effectiveRows,
           fields: fields as DataViewRenderProps<unknown>["fields"],

@@ -210,7 +210,6 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `primitives/log-channels`
     - `primitives/outline/scroll-spy`
     - `primitives/overlay/image-viewer`
-    - `primitives/tree`
     - `primitives/virtual-rows`
 - Exemptions:
   - Exempts itself from: `scroll-safety/no-adhoc-scroll-write` — `web` (sanctioned)

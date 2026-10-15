@@ -36,7 +36,6 @@ export default {
       icon: symbol("account-tree"),
       order: 5,
       views: ["table"],
-      hasHierarchy: true,
       component: DepsSource,
     }),
     DepsSources({
@@ -45,7 +44,6 @@ export default {
       icon: symbol("folder-open"),
       order: 10,
       views: ["table"],
-      hasHierarchy: true,
       component: CreatedSource,
     }),
   ],

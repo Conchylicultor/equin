@@ -21,7 +21,7 @@ export type FlatExpandAll = {
  * childless row's `expanded` flag paints nothing, so including it would only pad
  * the batch. Membership is read off the parent links rather than off a built
  * tree, because the callers hold rows, not a forest — which is what lets one
- * implementation serve a `TreeList`'s scoped rows and a grouped view's
+ * implementation serve a tree's scoped rows and a grouped view's
  * per-section bucket alike.
  *
  * Contrast `buildSubtreeExpandIndex`, which answers the same question for every
@@ -58,8 +58,8 @@ export type UseFlatExpandAllReturn = {
  * The hook form of {@link flatExpandAll}: memoized on `rows`, with the toggle
  * bound to a `setExpanded` sink.
  *
- * Three surfaces converge here — `TreeList`'s own toolbar, the grouped tree
- * view's hoisted toolbar, and a group header's per-section toggle — so the
+ * Two surfaces converge here — a tree's toolbar expand-all and a group
+ * header's per-section toggle — so the
  * "which rows are expandable / are they all open / write only what changes"
  * decision is made once instead of once per surface.
  */

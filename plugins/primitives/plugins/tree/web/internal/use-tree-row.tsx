@@ -20,7 +20,7 @@ import type {
 } from "../../core";
 import type { TreeItem } from "./types";
 
-export type TreeListContextValue<T extends TreeItem> = {
+export type TreeContextValue<T extends TreeItem> = {
   rows: readonly T[];
   selectedId: string | undefined;
   pendingFocusId: string | null;
@@ -28,14 +28,14 @@ export type TreeListContextValue<T extends TreeItem> = {
   setPendingFocus: (id: string) => void;
   clearPendingFocus: () => void;
   onSelect: (id: string) => void;
-  /** See `TreeListProps.selectHref`. */
+  /** See `TreeModelArgs.selectHref`. */
   selectHref?: (id: string) => (() => string) | undefined;
-  /** Batched expand write (see `TreeListProps.setExpanded`) — a single-row
+  /** Batched expand write (see `TreeModelArgs.setExpanded`) — a single-row
    *  toggle wraps itself in a 1-element array. */
   setExpanded: (changes: readonly ExpandChange[]) => void | Promise<void>;
   /**
    * Is every expandable node in this row's subtree (the row itself included)
-   * open? Answered from an index `TreeList` builds once per render — a leaf is
+   * open? Answered from an index the tree model builds once per render — a leaf is
    * vacuously "all expanded", and an unknown id answers `true`.
    */
   subtreeAllExpanded: (id: string) => boolean;
@@ -46,99 +46,75 @@ export type TreeListContextValue<T extends TreeItem> = {
     parentId: string | null;
     afterId?: string;
   }) => Promise<string | null | undefined>;
-  Row: (props: { node: TreeNode<T>; depth: number }) => ReactNode;
   /**
-   * One-shot per TreeList instance: returns `true` the first time it is called
+   * One-shot per tree (model) instance: returns `true` the first time it is called
    * (the tree's initial mount) and `false` forever after. Drives the row's
    * mount-time reveal so a deep-linked selection below the fold is scrolled into
    * view exactly once, while incidental row REmounts stay inert.
    */
   takeInitialReveal: () => boolean;
-  /** Whether the selected row scrolls itself into view (`TreeListProps.revealSelected`). */
+  /** Whether the selected row scrolls itself into view (`TreeModelArgs.revealSelected`). */
   revealSelected: boolean;
   /** Activating (body-clicking) a matching row toggles its expansion instead of
-   *  selecting it (see `TreeListProps.expandOnActivate`). Absent → every row
+   *  selecting it (see `TreeModelArgs.expandOnActivate`). Absent → every row
    *  selects, today's behavior. */
   expandOnActivate?: (row: T) => boolean;
   /** A single click on a matching row OPENS it (`onOpen`) instead of selecting
-   *  it (see `TreeListProps.openOnActivate`). */
+   *  it (see `TreeModelArgs.openOnActivate`). */
   openOnActivate?: (row: T) => boolean;
-  /** Lazily-listed children (see `TreeListProps.lazyChildren`). */
+  /** Lazily-listed children (see `TreeModelArgs.lazyChildren`). */
   lazyChildren?: LazyChildren<T>;
   /** The placeholder child row an open node shows in place of children it does
-   *  not have yet, or `null` (see `childPlaceholder`). Bound by `TreeList` to its
+   *  not have yet, or `null` (see `childPlaceholder`). Bound by the tree model to its
    *  lazy source and search state, so every row asks the same question. */
   childPlaceholder: (node: TreeNode<T>) => ChildPlaceholder | null;
-  /** The open gesture (double-click / Enter); see `TreeListProps.onOpen`. */
+  /** The open gesture (double-click / Enter); see `TreeModelArgs.onOpen`. */
   onOpen?: (id: string) => void;
-  /** True when the tree is in multi-select mode → RowChrome renders a checkbox. */
+  /** True when the tree is in multi-select mode → each row draws a checkbox. */
   multiSelect: boolean;
-  /** True when `onCreate` is wired → RowChrome renders root + per-node Add. */
+  /** True when `onCreate` is wired → the root Add and each row's add-child show. */
   canCreate: boolean;
-  /** True when `onMove` is wired → RowChrome renders the drag handle. */
+  /** True when `onMove` is wired → each row is a drag source. */
   canReorder: boolean;
-  /** Draw indent guides on every row (see `TreeListProps.guides`). */
+  /** Draw indent guides on every row (see `TreeModelArgs.guides`). */
   guides: boolean;
 };
 
 // The context is invariant in T at the React level; we cast through `unknown`
 // at the boundary so each consumer sees its own concrete row type.
-const TreeListContext = createContext<unknown>(null);
+const TreeContext = createContext<unknown>(null);
 
-export function TreeListProvider<T extends TreeItem>({
+export function TreeProvider<T extends TreeItem>({
   value,
   children,
 }: {
-  value: TreeListContextValue<T>;
+  value: TreeContextValue<T>;
   children: ReactNode;
 }) {
-  return (
-    <TreeListContext.Provider value={value}>
-      {children}
-    </TreeListContext.Provider>
-  );
+  return <TreeContext.Provider value={value}>{children}</TreeContext.Provider>;
 }
 
 /**
- * Non-throwing read of the tree context: `null` outside a `<TreeList>`. The
+ * Non-throwing read of the tree context: `null` outside a `<TreeProvider>`. The
  * primitive form — a component that may be rendered by a NON-tree surface (a
  * per-item action contributed to every view of a DataView, say) can only ask
  * "am I inside a tree?" if asking is legal outside one.
  */
-export function useOptionalTreeListContext<
+export function useOptionalTreeContext<
   T extends TreeItem = TreeItem,
->(): TreeListContextValue<T> | null {
-  const ctx = useContext(TreeListContext);
-  return ctx === null ? null : (ctx as TreeListContextValue<T>);
+>(): TreeContextValue<T> | null {
+  const ctx = useContext(TreeContext);
+  return ctx === null ? null : (ctx as TreeContextValue<T>);
 }
 
-export function useTreeListContext<
+export function useTreeContext<
   T extends TreeItem = TreeItem,
->(): TreeListContextValue<T> {
-  const ctx = useOptionalTreeListContext<T>();
+>(): TreeContextValue<T> {
+  const ctx = useOptionalTreeContext<T>();
   if (!ctx) {
-    throw new Error("useTreeListContext must be used inside <TreeList>");
+    throw new Error("useTreeContext must be used inside a <TreeProvider>");
   }
   return ctx;
-}
-
-/** Stable element-type wrapper for one tree row. Its identity is constant, so a
- *  row reconciles in place across renders for a stable key — an unstable `Row`
- *  prop can no longer cause the whole row subtree to remount on background
- *  live-state churn. Invokes the current `ctx.Row` as a function (not `<Row/>`),
- *  so the returned row body (a stable module type) is the reconciliation unit;
- *  per-node hook isolation is preserved because each TreeRowSlot is keyed. */
-export function TreeRowSlot<T extends TreeItem>({
-  node,
-  depth,
-}: {
-  node: TreeNode<T>;
-  depth: number;
-}): ReactNode {
-  // Lowercase local so the React Compiler / eslint capitalized-call heuristics
-  // don't treat this call as a component invocation.
-  const render = useTreeListContext<T>().Row;
-  return <>{render({ node, depth })}</>;
 }
 
 export type RowControls = {
@@ -170,8 +146,8 @@ export type RowControls = {
   addBelow: () => Promise<void>;
   /**
    * The whole row is the drag source (Notion-style: no separate grip handle).
-   * RowChrome merges `ref` with `childRef` onto the row element and spreads
-   * `attributes`/`listeners` onto it.
+   * The renderer merges `ref` with `childRef` onto the row element and
+   * spreads `attributes`/`listeners` onto it.
    */
   dragSource: {
     ref: (el: HTMLElement | null) => void;
@@ -183,7 +159,8 @@ export type RowControls = {
   childRef: (el: HTMLElement | null) => void;
 };
 
-// Published by `RowChrome` around the row it paints, so anything rendered INTO
+// Published around a row by its renderer (the nested table's row decoration),
+// so anything rendered INTO
 // that row (a per-item action, say) can reach the row's own controls without
 // being handed the node. Not generic in `T`: `RowControls` carries no row data,
 // only the node's own affordances, so no consumer needs the row type.
@@ -205,7 +182,7 @@ export function RowControlsProvider({
 
 /**
  * Non-throwing read of the enclosing tree row's controls: `null` outside a tree
- * row. Same rule as `useOptionalTreeListContext` — a per-item action contributed
+ * row. Same rule as `useOptionalTreeContext` — a per-item action contributed
  * to a DataView renders in EVERY view (list / table / gallery / tree), so a
  * row-control consumer can only ask "am I inside a tree row?" if asking is legal
  * outside one. Such an action should `return null` when the controls are absent.
@@ -225,7 +202,7 @@ export function useRowControls(): RowControls {
 }
 
 export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
-  const ctx = useTreeListContext<T>();
+  const ctx = useTreeContext<T>();
   const isOpen = node.expanded;
   const hasChildren =
     node.children.length > 0 || (ctx.lazyChildren?.hasChildren(node) ?? false);
@@ -310,7 +287,7 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
   const clickOpens = !!onOpen && !!ctx.openOnActivate?.(node);
 
   // Resolved for THIS node, so a row's fold affordance needs nothing but its own
-  // controls. The read is a map lookup into the index `TreeList` built for the
+  // controls. The read is a map lookup into the index the tree model built for the
   // whole forest this render; the walk that produces the write happens on click.
   const subtreeAllExpanded = ctx.subtreeAllExpanded(node.id);
   const toggleSubtreeExpanded = useCallback(
@@ -346,7 +323,7 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
     ctx.onSelect(id);
   }, [ctx, node.id, node.parentId]);
 
-  // Memoized, not a fresh literal per render: `RowChrome` publishes this object
+  // Memoized, not a fresh literal per render: the row publishes this object
   // as the `RowControlsContext` value, and a context value that churns every
   // render re-renders every consumer inside the row on unrelated tree churn.
   // Every member below is already stable on its own (primitives, `useCallback`

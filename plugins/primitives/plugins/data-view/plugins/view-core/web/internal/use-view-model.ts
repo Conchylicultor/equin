@@ -28,15 +28,14 @@ import {
  */
 export interface ViewActionsCore {
   /** Add-menu groups, one per source entry (each entry's registered
-   *  contributions ∩ `views` whitelist ∩ hierarchical gate). A single-source
+   *  contributions ∩ `views` whitelist). A single-source
    *  surface yields exactly one untitled group — the flat-menu fast path. */
   availableSources: AddableSource[];
   /**
    * The type-switcher registry for ONE instance's settings popover: the types
    * that instance's own source can render (the same gate the add menu uses),
    * each paired with its options sub-form. Per-instance, never global — a
-   * global registry is what let a flat surface switch a view to a hierarchical
-   * type that then could not resolve, silently emptying the switcher.
+   * view can only switch into a type its own source entry offers.
    *
    * Stable per view: the same Map until THAT view's source entry or type
    * changes — renaming it, editing its options, or touching another view
@@ -127,8 +126,7 @@ export function useViewModel<T extends ViewTypeMeta>(
   );
 
   // Capability-gated add menu, grouped per source entry: each group is that
-  // entry's registered contributions ∩ `views` whitelist (if present) ∩
-  // hierarchical gate. The `views` whitelist gates ADDABILITY only — authored
+  // entry's registered contributions ∩ `views` whitelist (if present). The `views` whitelist gates ADDABILITY only — authored
   // rows of a non-whitelisted type still resolve (see `buildInstanceFromRow`).
   // Generic — driven by the entries, never by a named view child.
   const availableSources = useMemo<AddableSource[]>(() => {

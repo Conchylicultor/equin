@@ -7,15 +7,15 @@
  * and before that into `groupBy: "origin"` groups. The tree used to drop
  * `hierarchy.onMove` whenever it saw only part of the roots (under a group-by)
  * — so reordering silently stopped working in the default view, with no
- * visible cause. The suspension existed because a partial `TreeList` could mint
+ * visible cause. The suspension existed because a partial tree could mint
  * a rank colliding with a hidden root; the drop contract now carries only an
  * anchor, which the server resolves against the complete sibling set
  * (`research/2026-07-30-global-anchor-only-rank-authority.md`).
  *
  * ## What this asserts, and why it is the affordance rather than a gesture
  *
- * `RowChrome` wires the row's drag source **only** when `canReorder`
- * (`= !!onMove`, `tree-list.tsx`). So dnd-kit's draggable attributes
+ * The nested table wires a row's drag source **only** when `canReorder`
+ * (`= !!onMove`, `useTreeModel`). So dnd-kit's draggable attributes
  * (`aria-roledescription="draggable"`, `aria-disabled="false"`) are present on a
  * grouped row **iff** `onMove` survived the gate — which is exactly the bug.
  * Under the old code they were absent, because the tree passed no handler.

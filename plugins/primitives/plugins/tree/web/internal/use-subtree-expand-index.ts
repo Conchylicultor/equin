@@ -89,7 +89,7 @@ export function buildSubtreeExpandIndex<T extends TreeItem>(
  * Memoize the index on the tree it was built from.
  *
  * `tree` must be the FULL forest — `buildTree(scoped)` — never the searched or
- * windowed projection `TreeList` paints. The windowed path renders only the rows
+ * windowed projection a renderer paints. The windowed path renders only the rows
  * intersecting the viewport, and the search path hands out clones forced to
  * `expanded: true`; an index built from either would answer about the slice on
  * screen rather than about the subtree the button claims to fold.

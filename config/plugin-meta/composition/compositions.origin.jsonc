@@ -1,4 +1,4 @@
-// @hash e36da68122ac
+// @hash 8427f7518773
 {
   "manifests": [
     {
@@ -445,7 +445,6 @@
         "primitives.data-view.gallery",
         "primitives.data-view.table",
         "primitives.data-view.list",
-        "primitives.data-view.tree",
         "fields.bool.table",
         "fields.color.table",
         "fields.date.table",

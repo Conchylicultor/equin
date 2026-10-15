@@ -16,8 +16,6 @@ export interface ViewTypeMeta {
   title: string;
   icon: IconRef;
   order?: number;
-  /** This view requires the host's hierarchy; the host drops it when absent. */
-  hierarchical?: boolean;
   /** Per-instance `options` sub-form schema, type-dispatched by `type`. Drives
    *  the settings popover's options sub-form (via a web-side `variantField`). */
   configSchema?: FieldsRecord;
@@ -81,7 +79,7 @@ export interface ViewConfigRow {
  * (`undefined` = the implicit sole source — the single-source case) — it never
  * knows what a source renders; the consumer (e.g. data-view's `MergedDataView`)
  * owns that. Each entry carries the per-source capability surface that used to
- * be the flat `(contributions, hasHierarchy, viewOptions)` triple.
+ * be the flat `(contributions, viewOptions)` pair.
  */
 export interface ViewSourceEntry<T extends ViewTypeMeta = ViewTypeMeta> {
   /** Matched against `ViewConfigRow.source`; `undefined` = the implicit sole
@@ -91,7 +89,6 @@ export interface ViewSourceEntry<T extends ViewTypeMeta = ViewTypeMeta> {
   title?: string;
   icon?: IconRef;
   contributions: readonly SealContributions<T>[];
-  hasHierarchy: boolean;
   /** Type whitelist for the add menu (gates addability, NOT authored rows —
    *  mirroring the single-source `views` prop semantics). */
   views?: string[];
@@ -114,6 +111,6 @@ export interface AddableSource {
   /** Menu group label; absent only for the implicit sole source. */
   title?: string;
   icon?: IconRef;
-  /** Per entry: contributions ∩ `views` whitelist ∩ hierarchical gate. */
+  /** Per entry: contributions ∩ `views` whitelist. */
   types: AddableViewType[];
 }

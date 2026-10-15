@@ -1,7 +1,7 @@
 /**
  * Tests for the whole-set expand-all — the pure half of `useFlatExpandAll`,
- * shared by `TreeList`'s toolbar, the grouped tree view's hoisted toolbar and a
- * group header's per-section toggle.
+ * shared by a tree's toolbar expand-all and a group header's per-section
+ * toggle.
  *
  * Two things it must keep getting right: `hasExpandable` is what decides whether
  * the button is rendered at all (a flat set has nothing to unfold, so it is

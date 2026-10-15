@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-primitives-data-view-tree",
-  "description": "Tree view child for the data-view primitive: adapts the shared field schema + hierarchy config onto the tree primitive (buildTree, TreeList, RowChrome, RenameInput).",
-  "private": true,
-  "version": "0.0.1"
-}

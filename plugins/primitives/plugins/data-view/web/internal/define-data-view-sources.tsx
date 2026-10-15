@@ -25,10 +25,10 @@ export interface DataViewSourceProps<THostProps> {
 }
 
 /**
- * One contributed source of a merged DataView surface. `views`/`hasHierarchy`
- * are **static contribution metadata** (not part of the render-time bundle) on
- * purpose: the view model must resolve *every* config row — switcher chips,
- * add-menu gating, the hierarchical gate — before any source component mounts,
+ * One contributed source of a merged DataView surface. `views` is **static
+ * contribution metadata** (not part of the render-time bundle) on purpose: the
+ * view model must resolve *every* config row — switcher chips, add-menu gating
+ * — before any source component mounts,
  * and only the ACTIVE source ever mounts. Everything dynamic (rows, fields,
  * rowKey, the actual `hierarchy` accessors, viewOptions, source, …) stays
  * in the bundle.
@@ -42,9 +42,6 @@ export interface DataViewSourceContribution<THostProps> {
   order?: number;
   /** STATIC view-type whitelist for this source's add-menu group. */
   views?: string[];
-  /** STATIC hierarchy availability — must match whether the bundle carries a
-   *  `hierarchy` (the host dev-warns on a mismatch). Default false. */
-  hasHierarchy?: boolean;
   component: ComponentType<DataViewSourceProps<THostProps>>;
 }
 

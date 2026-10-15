@@ -55,8 +55,8 @@ import type { Hook } from "@plugins/framework/plugins/hook-value/core";
  *  on each label cell when the labels ride the first group's header. */
 const HEADER_TEXT_CLASS =
   "text-3xs font-medium uppercase tracking-wider text-muted-foreground";
-/** An outline's header: the muted caption over tree rows (the tree view's
- *  aligned-columns header), a tree row tall, its rule under it. */
+/** An outline's header: the muted caption over tree rows, a tree row tall,
+ *  its rule under it. */
 const OUTLINE_HEADER_CLASS =
   "min-h-tree-row text-caption-compact font-medium text-faint-foreground";
 
@@ -143,7 +143,7 @@ const RAIL_END = "var(--rail-owed-end, var(--rail-end, var(--chrome-pad-x)))";
  * An outline row is the tree row's pill ON the rail: the rail is its margin
  * (the pill starts where a `rail-follow` band's content does), and the pill
  * pads its own content by the tree row's inset — so its label sits where a
- * `TreeList` row's does.
+ * `TreeRowChrome` row's does.
  */
 const OUTLINE_INSET: CSSProperties = {
   marginInline: `${RAIL_START} ${RAIL_END}`,
@@ -739,7 +739,7 @@ function DataTableRow<TRow>({
   const key = rowKey(row, index);
   // Destructure-and-rename so render never does inline `decoration.ref` member
   // access on the hook output (react-hooks/refs flags member access on a ref
-  // value in render; destructuring is fine — mirrors the tree's RowChrome).
+  // value in render; destructuring is fine).
   const decorationRef = decoration?.ref;
   const decorationProps = decoration?.props;
   const decorationClassName = decoration?.className;

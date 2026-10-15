@@ -23,8 +23,7 @@ export interface TreeToolbarProps {
 
 /**
  * A tree's sticky toolbar row: `start` on the left, the expand-all toggle on
- * the right. One markup for every tree that has one — `TreeList`'s own, the
- * grouped tree view's hoisted one, the nested table's — so they cannot drift.
+ * the right. One markup for every tree renderer that has one.
  * The caller decides whether there is one at all (it renders nothing of its
  * own when both slots are empty).
  */
@@ -51,7 +50,7 @@ export function TreeToolbar({ start, expandAll }: TreeToolbarProps): ReactNode {
 
 /**
  * The root-level "Add" button under a tree's rows (a new top-level row). One
- * markup for `TreeList`, the grouped tree view and the nested table.
+ * markup for every tree renderer.
  */
 export function TreeRootAdd({
   label,

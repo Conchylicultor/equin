@@ -24,15 +24,15 @@ import { ColumnConfig } from "./column-config-slot";
 
 /**
  * A registered view-*type*: the generic `ViewTypeMeta` (type/title/icon/order/
- * hierarchical/configSchema — owned by view-core) plus data-view's own render
+ * configSchema — owned by view-core) plus data-view's own render
  * contract, the `component`.
  */
 export interface DataViewContribution extends ViewTypeMeta {
   component: ComponentType<DataViewRenderProps<unknown>>;
   /** Whether this view honors `ViewState.sort` (flat field sort). Default true;
    *  a view sets false when it has no meaningful field-sort axis, and the host
-   *  hides the Sort pill for it. The tree honors sort by ordering each sibling
-   *  group by the field (defaulting to manual/rank order), so it stays true. */
+   *  hides the Sort pill for it. A nesting view honors sort by ordering each
+   *  sibling group by the field (defaulting to manual/rank order). */
   supportsSort?: boolean;
   /** Skeleton shape the host renders while this view is loading (the host owns
    *  the loading→empty precedence so view children never see a loading state).
@@ -41,27 +41,26 @@ export interface DataViewContribution extends ViewTypeMeta {
   /** Skeleton item count for the loading variant (forwarded to <Loading count>). */
   loadingCount?: number;
   /** Whether this view supports group-by sections. Default true (every built-in
-   *  view, including the tree — it partitions its ROOTS into sections); a view
+   *  view; a nesting view partitions its ROOTS into sections); a view
    *  with no meaningful group axis sets false and the host hides the group-by
    *  control for it. Mirrors `supportsSort`. */
   supportsGroupBy?: boolean;
   /** Whether this view draws fold lines (`ViewState.fold`). Default true — the
-   *  flat views render against `useDataViewSections`, which folds; the tree has
-   *  no flat section of rows to fold and sets false, so the host neither applies
-   *  a fold for it nor offers the "Fold rows" setting. Mirrors `supportsGroupBy`. */
+   *  flat views render against `useDataViewSections`, which folds; a view with
+   *  no flat section of rows to fold sets false, so the host neither applies a
+   *  fold for it nor offers the "Fold rows" setting. Mirrors `supportsGroupBy`. */
   supportsFold?: boolean;
   /** Whether this view supports flat manual-order (rank-based drag reorder).
    *  Default **false** (unlike `supportsSort`/`supportsGroupBy`): the flat views
-   *  list/table opt IN (`true`); gallery/tree do not. When false the host never
+   *  list/table opt IN (`true`); gallery does not. When false the host never
    *  passes `manualOrder` into the view and keeps the Sort control. */
   supportsManualOrder?: boolean;
   /**
-   * Whether this view NESTS its rows when the source has a `hierarchy` while
-   * staying available on a flat source (the table) — unlike `hierarchical`,
-   * which hides a view-type from flat sources. Over a hierarchical source the
-   * host then treats it as a hierarchical view: no fold and no flat manual order
-   * (a nested row's order is its rank, moved by the tree's own drag), and its
-   * `filterScope` decides `hideWhenEmpty`. Default false.
+   * Whether this view NESTS its rows when the source has a `hierarchy` (the
+   * table), while still drawing a flat source flat. Over a hierarchical source
+   * the host then applies no fold and no flat manual order (a nested row's order
+   * is its rank, moved by the tree's own drag), and its `filterScope` decides
+   * `hideWhenEmpty`. Default false.
    */
   nestsHierarchy?: boolean;
   /** Under an `overlay` toolbar arrangement, whether this view starts at the

@@ -10,7 +10,7 @@ Expand state is the `data-view` primitive's own per-view-instance map, with
 collapse still wins and survives reload. The former `PluginTreeContext`, which
 shared a hand-rolled `Set` of expanded ids with the row-badge sub-plugins, is
 **deleted**: a badge that needs expand state reads
-`useOptionalTreeListContext()` from the `tree` primitive instead. That also
+`useOptionalTreeContext()` from the `tree` primitive instead. That also
 fixes a seeding bug the local `useState` had: its lazy initializer never
 re-ran, so plugins arriving after first mount stayed collapsed.
 

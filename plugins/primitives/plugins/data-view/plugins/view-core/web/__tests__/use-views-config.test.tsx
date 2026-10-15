@@ -47,14 +47,12 @@ const contributions = [
 ] as unknown as SealContributions<ViewTypeMeta>[];
 
 // The implicit sole source — the single-source case every existing DataView is.
-const singleSource: ViewSourceEntry<ViewTypeMeta>[] = [
-  { contributions, hasHierarchy: false },
-];
+const singleSource: ViewSourceEntry<ViewTypeMeta>[] = [{ contributions }];
 
 // A multi-source entry list (named sources) plus the implicit one.
 const multiSource: ViewSourceEntry<ViewTypeMeta>[] = [
-  { contributions, hasHierarchy: false },
-  { id: "queue", title: "Queue", contributions, hasHierarchy: false },
+  { contributions },
+  { id: "queue", title: "Queue", contributions },
 ];
 
 const descriptorMap = new Map<string, ConfigDescriptor>([

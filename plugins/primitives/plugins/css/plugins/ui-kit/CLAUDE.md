@@ -579,8 +579,8 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `useSidewaysScroll`
     - `useSingleLine`
 - Cross-plugin:
-  - Imported by: 402 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×102
+  - Imported by: 401 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×101
     - `apps` ×81
     - `conversations` ×53
     - `page` ×25

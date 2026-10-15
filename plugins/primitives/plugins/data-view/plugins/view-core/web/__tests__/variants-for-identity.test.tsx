@@ -28,9 +28,7 @@ const contributions = [
   { type: "gallery", title: "Gallery", icon: viewIcon },
 ] as unknown as SealContributions<ViewTypeMeta>[];
 
-const entries: ViewSourceEntry<ViewTypeMeta>[] = [
-  { contributions, hasHierarchy: false },
-];
+const entries: ViewSourceEntry<ViewTypeMeta>[] = [{ contributions }];
 
 const descriptorMap = new Map<string, ConfigDescriptor>([
   ["k", {} as ConfigDescriptor],

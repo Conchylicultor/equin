@@ -20771,9 +20771,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 161 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 160 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×50
-              - `primitives` ×26
+              - `primitives` ×25
               - `page` ×24
               - `conversations` ×19
               - `debug` ×6
@@ -29958,9 +29958,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 112 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×28
-              - `primitives` ×24
+              - `primitives` ×23
               - `page` ×18
               - `conversations` ×7
               - `debug` ×6
@@ -30196,9 +30196,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 157 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 156 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×45
-              - `primitives` ×30
+              - `primitives` ×29
               - `conversations` ×23
               - `debug` ×15
               - `page` ×10
@@ -30272,12 +30272,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 87 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×16
               - `debug` ×16
               - `reports` ×12
               - `conversations` ×9
-              - `primitives` ×9
+              - `primitives` ×8
               - `page` ×7
               - `build` ×3
               - `plugin-meta` ×3
@@ -30522,10 +30522,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 112 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×21
               - `conversations` ×21
-              - `primitives` ×18
+              - `primitives` ×17
               - `debug` ×10
               - `page` ×7
               - `tasks` ×6
@@ -30672,10 +30672,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 391 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 390 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×98
               - `conversations` ×62
-              - `primitives` ×51
+              - `primitives` ×50
               - `debug` ×34
               - `ui` ×28
               - `page` ×24
@@ -30778,7 +30778,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/sticky/stack`
               - `primitives/data-table`
               - `primitives/data-view`
-              - `primitives/data-view/tree`
               - `primitives/multi-select`
               - `primitives/pane`
               - `primitives/tree`
@@ -31128,8 +31127,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidewaysScroll`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 402 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `primitives` ×102
+            - Imported by: 401 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `primitives` ×101
               - `apps` ×81
               - `conversations` ×53
               - `page` ×25
@@ -31318,11 +31317,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.ValueCodec`
           - `DataViewSlots.Grouping`
           - `DataViewSlots.ColumnConfig`
-        - Slot contributors: 41 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Slot contributors: 40 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `DataViewSlots.Cell` ×10
           - `DataViewSlots.Filter` ×7
           - `DataViewSlots.CellEditor` ×6
-          - `DataViewSlots.View` ×6
+          - `DataViewSlots.View` ×5
           - `DataViewSlots.Grouping` ×3
           - `DataViewSlots.ValueCodec` ×3
           - `DataViewSlots.Setting` ×2
@@ -31651,12 +31650,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `splitFieldSections`
           - `UNGROUPED_FOLD_KEY`
       - Cross-plugin:
-        - Imported by: 91 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 90 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×30
           - `apps` ×22
           - `debug` ×11
-          - `primitives` ×8
           - `conversations` ×7
+          - `primitives` ×7
           - `tasks` ×4
           - `infra` ×2
           - `apps-core/app-launcher`
@@ -31889,9 +31888,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
           - Web:
             - Contributes: `DataViewSlots.View` "Table" → `TableView`
-            - Uses: 59 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
+            - Uses: 58 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
               - `primitives/data-view` ×26
-              - `primitives/tree` ×18
+              - `primitives/tree` ×17
               - `primitives/data-table` ×6
               - `primitives/rank-reorder` ×3
               - `primitives/css/badge.Badge`
@@ -31903,23 +31902,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `TableViewOptions`
           - Core:
             - Exports (types): `TableViewOptions`
-        - **`tree`** — Tree view child for the data-view primitive: adapts the shared field schema + hierarchy config onto the tree primitive (buildTree, TreeList, RowChrome, RenameInput).
-          - Web:
-            - Contributes: `DataViewSlots.View` "Tree" → `TreeView`
-            - Uses: 41 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/tree/REFERENCE.md)
-              - `primitives/data-view` ×23
-              - `primitives/tree` ×8
-              - `primitives/css/center.Center`
-              - `primitives/css/fill.Fill`
-              - `primitives/css/inline.Inline`
-              - `primitives/css/rigid.rigidClass`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/sticky.Sticky`
-              - `primitives/css/ui-kit.cn`
-              - `primitives/dom/element-size.useResizeObserver`
-              - `primitives/latest-ref.useLatestRef`
-              - `ui/icons.Icon`
-            - Exports (types): `TreeViewOptions`
         - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
           - Web:
             - Contributes: `IdKinds.Kind` "view"
@@ -31952,7 +31934,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ViewsConfigHandle`
             - Exports (values):
               - `AddViewMenuItems`
-              - `buildInstanceFromRow`
               - `buildViewConfigContributions`
               - `buildViewDescriptors`
               - `CollapsedViewSwitcher`
@@ -31990,6 +31971,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `viewsDescriptor`
           - Test helpers:
             - Web: `@plugins/primitives/plugins/data-view/plugins/view-core/web/testing`
+              - `buildInstanceFromRow` — Build a resolved instance from a config row.
               - `fakeViewGetter` — Brand a test fake's per-view getter as a `ViewGetter`.
         - **`view-order`** — Per-view-instance manual row order for any DataView: subscribes to the persisted (dataViewId, viewId) ranks, synthesizes a total order, and contributes the resulting ManualOrderConfig back through data-view's global RowOrder slot. Persists a per-view-instance manual row order keyed by (dataViewId, viewId, rowKey): a generic DB table, a push live resource, and a validating upsert endpoint that writes only the drag's bounded set (the moved row plus the seeds now ahead of it) rank-ascending — O(gesture), never a full replace, nothing deleted.
           - Web:
@@ -32230,7 +32212,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/log-channels`
               - `primitives/outline/scroll-spy`
               - `primitives/overlay/image-viewer`
-              - `primitives/tree`
               - `primitives/virtual-rows`
           - Exemptions:
             - Exempts itself from: `scroll-safety/no-adhoc-scroll-write` — `web` (sanctioned)
@@ -32271,8 +32252,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useElementSize`
               - `useResizeObserver`
           - Cross-plugin:
-            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
-              - `primitives` ×18
+            - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+              - `primitives` ×17
               - `apps` ×7
               - `shell` ×2
               - `active-data/go`
@@ -32872,8 +32853,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SortDirection`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 68 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
-          - `primitives` ×32
+        - Imported by: 67 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+          - `primitives` ×31
           - `apps` ×20
           - `page` ×4
           - `apps-core` ×2
@@ -33597,7 +33578,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/agents`
           - `page/editor`
           - `primitives/data-table`
-          - `primitives/tree`
     - **`networking`** — WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
       - Web:
         - Uses: `primitives/latest-ref.useLatestRef`
@@ -35432,17 +35412,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/text-editor`
                   - `primitives/text-editor/inline-chip`
                   - `primitives/text-editor/paste-images`
-    - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, resolveDropParent) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
+    - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, resolveDropParent), the tree model (useTreeModel: flattened visible lines, DnD, lazy children, keyboard) and the tree-row pieces a renderer composes (TreeRowChrome, TreeLeading, useTreeRow, TreeRowActions, TreeToolbar) — drawn by data-view's nested table.
       - Web:
         - Slots: `Tree.Disclosure`
         - Slot contributors: `Tree.Disclosure` ← `ui.tree-disclosure`
-        - Uses: 34 symbols — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
+        - Uses: 26 symbols — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
           - `primitives/css/ui-kit` ×6
-          - `primitives/multi-select` ×3
           - `primitives/collapsible` ×2
-          - `primitives/rank-reorder` ×2
           - `primitives/row-actions` ×2
-          - `primitives/search` ×2
           - `primitives/css/center.Center`
           - `primitives/css/coords.Placed`
           - `primitives/css/fill.Fill`
@@ -35451,30 +35428,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/sticky.Sticky`
           - `primitives/css/text.Text`
-          - `primitives/dom/auto-scroll.KeepScrollAcross`
           - `primitives/dom/scroll-reveal.useRevealOnActive`
           - `primitives/icon-button.IconButton`
           - `primitives/link-gesture.linkProps`
           - `primitives/loading.Loading`
+          - `primitives/rank-reorder.useRankReorderItem`
+          - `primitives/search.filterTree`
           - `primitives/slot-render.renderIsolated`
-          - `primitives/virtual-rows/row-fold.useRowFold`
-          - `primitives/virtual-rows.VirtualRows`
           - `ui/icons.Icon`
         - Exports (types):
           - `FlatExpandAll`
-          - `RenameInputProps`
-          - `RowChromeMenuHelpers`
-          - `RowChromeProps`
           - `RowControls`
           - `RowMenu`
-          - `RowMenuItem`
+          - `TreeContextValue`
           - `TreeDisclosureContribution`
           - `TreeDisclosureToggleProps`
           - `TreeDropZonesProps`
           - `TreeItem`
           - `TreeLeadingProps`
-          - `TreeListContextValue`
-          - `TreeListProps`
           - `TreeModel`
           - `TreeModelArgs`
           - `TreeModelContext`
@@ -35483,18 +35454,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TreeToolbarProps`
           - `UseFlatExpandAllReturn`
         - Exports (values):
-          - `flatExpandAll`
           - `groupFoldAction`
-          - `RenameInput`
-          - `RowChrome`
           - `RowControlsProvider`
           - `Tree`
           - `TreeChildPlaceholder`
           - `TreeDisclosureToggle`
           - `TreeDropZones`
           - `TreeLeading`
-          - `TreeList`
-          - `TreeListProvider`
+          - `TreeProvider`
           - `TreeRootAdd`
           - `TreeRowActions`
           - `TreeRowChrome`
@@ -35504,10 +35471,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TreeToolbar`
           - `useFlatExpandAll`
           - `useOptionalRowControls`
-          - `useOptionalTreeListContext`
+          - `useOptionalTreeContext`
           - `useRowControls`
+          - `useTreeContext`
           - `useTreeKeyboard`
-          - `useTreeListContext`
           - `useTreeModel`
           - `useTreeRow`
       - Core:
@@ -35545,7 +35512,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-view`
           - `primitives/data-view/list`
           - `primitives/data-view/table`
-          - `primitives/data-view/tree`
           - `ui/tree-disclosure`
           - `ui/tree-disclosure/column`
           - `ui/tree-disclosure/dimmed-leaf`
@@ -35758,7 +35724,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/deploy/remote-deploy`
           - `primitives/data-view/view-core`
           - `primitives/tabbed-view`
-    - **`virtual-rows`** — Self-discovering windowed row renderer (@tanstack/react-virtual): renders only the rows intersecting the host's scroll viewport (+overscan) inside a full-height sizer, discovering the scroll container at runtime. Shared by data-view's flat/tree views.
+    - **`virtual-rows`** — Self-discovering windowed row renderer (@tanstack/react-virtual): renders only the rows intersecting the host's scroll viewport (+overscan) inside a full-height sizer, discovering the scroll container at runtime. Shared by data-view's list / gallery / icons views and data-table.
       - Web:
         - Uses:
           - `primitives/css/coords.Placed`
@@ -35781,7 +35747,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-view/icons`
           - `primitives/data-view/list`
           - `primitives/icon-picker`
-          - `primitives/tree`
       - Plugins:
         - **`row-fold`** — Disclosure motion for flat lists: useRowFold — given the rows and the open keys they were flattened under, rows a disclosure reveals grow in, rows it hides fold out (kept drawn until gone) and the rows below slide; any other change (scroll, search, live data, paging) lands as is. Owned by the flat renderers (VirtualRows, DataTable). Core: the pure disclosure diff; the fold timing is collapsible's (FOLD_MS / FOLD_EASING), one clock for every fold.
           - Web:
@@ -35798,7 +35763,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `debug/trace/spans`
               - `primitives/data-table`
-              - `primitives/tree`
               - `primitives/virtual-rows`
           - Core:
             - Exports (types):
@@ -39488,11 +39452,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Cross-plugin:
-        - Imported by: 309 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 308 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×65
           - `conversations` ×58
           - `page` ×41
-          - `primitives` ×40
+          - `primitives` ×39
           - `fields` ×33
           - `debug` ×15
           - `ui` ×8
