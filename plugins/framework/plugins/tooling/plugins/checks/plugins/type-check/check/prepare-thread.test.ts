@@ -16,6 +16,11 @@ import { test, expect, beforeAll, afterAll } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
+import {
+  LINT_DATA_FILES,
+  lintContributionPaths,
+} from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import { LINT_GROUP_BASE } from "../core";
 import { readTreeListing } from "./fingerprint";
 import { openPreparation, type Plan, type PrepareInput } from "./prepare";
 import { openPrepareThread } from "./prepare-thread";
@@ -76,6 +81,9 @@ beforeAll(async () => {
   write("src/a.ts", "export const a = 1;\n");
   write("src/b.ts", 'import { a } from "./a";\nexport const b = a + 1;\n');
   write("package.json", JSON.stringify({ name: "fixture" }));
+  // The stylesheet class rules read their declared utilities from: part of
+  // every lint rule group's key, so a tree without one cannot be planned.
+  for (const rel of LINT_DATA_FILES) write(rel, "@utility fixture {}\n");
   await git("init", "-q");
   // So the host user's own global ignores cannot decide what the fixture holds.
   await git("config", "core.excludesFile", "/dev/null");
@@ -121,12 +129,20 @@ test(
       const fromThread = await thread.prepare(await input());
       const inProcess = openPreparation(await input()).plan;
       expect(decisions(fromThread)).toEqual(decisions(inProcess));
-      // Not a vacuous equality: the fixture is a runnable, unkeyed cold tree.
+      // Not a vacuous equality: the fixture is a runnable, unkeyed cold tree,
+      // whose every file needs every rule group (the result store is empty).
+      const everyGroup = [LINT_GROUP_BASE, ...lintContributionPaths()];
       expect(decisions(fromThread)).toEqual({
         kind: "run",
         program: { name: PROGRAM, tsconfigPath: join(root, "tsconfig.json") },
         run: true,
-        lintFiles: [join(root, "src/a.ts"), join(root, "src/b.ts")],
+        lintFiles: [
+          { file: join(root, "src/a.ts"), groups: everyGroup },
+          { file: join(root, "src/b.ts"), groups: everyGroup },
+        ],
+        lintPlan: expect.stringContaining(
+          `type-check: lint 2/2 files (2 whole, 0 partial; ${everyGroup.length} groups`,
+        ) as string,
         skipped: false,
         unkeyed: "no buildinfo yet",
         // The data root is a fresh temp dir, so the pool partition really is

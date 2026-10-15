@@ -1,6 +1,6 @@
 // Everything type-check does that reads file bytes or walks the tree, before and
 // after the tsc worker: the import graph, the closure fingerprints, the
-// tsconfig's include-expansion and the coverage gate, the closure-cache lookups,
+// tsconfig's include-expansion and the coverage gate, the lint result lookups,
 // the warm-base materialize, the program key — and, once the worker is back,
 // every record.
 //
@@ -39,9 +39,18 @@ import {
   type ContentHashMemo,
   type TscProgram,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { loadExemptions } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
+import {
+  LINT_GROUP_ALL,
+  type LintFileJob,
+  type LintFileResult,
+  type RawLintMessage,
+} from "../core";
 import { buildImportGraphs } from "./import-graph";
 import { computeClosureFingerprints, type TreeListing } from "./fingerprint";
-import { openClosureCache } from "./closure-cache";
+import { computeLintGroups } from "./lint-groups";
+import { openLintResultStore } from "./lint-results";
+import { lintViolationLines } from "./lint-verdict";
 import {
   openProgramKeyContext,
   openProgramPasses,
@@ -79,8 +88,10 @@ export type Plan =
       program: TscProgram;
       /** Whether the worker must run at all (false = the program is unchanged). */
       run: boolean;
-      /** Absolute paths of the files the worker must lint. */
-      lintFiles: string[];
+      /** The files the worker must lint, each with its stale rule groups. */
+      lintFiles: LintFileJob[];
+      /** The transcript line saying what is re-linted, and why. */
+      lintPlan: string;
       /** True iff the program key is already recorded green (so `run` is false). */
       skipped: boolean;
       /** Why the program could not be keyed at all, when it could not. */
@@ -93,10 +104,23 @@ export type Plan =
 
 /** The worker that came back (a crashed worker has no outcome, and records nothing). */
 export interface ProgramOutcome {
-  /** No tsc error, no lint violation, no failed lint file. */
-  clean: boolean;
-  /** Absolute paths, as the worker reports them. */
-  failedLintFiles: string[];
+  /** tsc reported nothing. */
+  tscClean: boolean;
+  /** The raw lint results, one per file the plan sent. */
+  lint: LintFileResult[];
+}
+
+/** What the record phase hands back to the runner. */
+export interface Finalized {
+  /** Transcript lines (the warm-base publish summary). */
+  lines: string[];
+  /**
+   * The lint violations, assembled from every file's stored and fresh results
+   * under the current exemptions — "" when there are none. Undefined when the
+   * worker had files to lint and did not come back: there is no verdict to
+   * assemble, and the crash is the failure.
+   */
+  lintViolations: string | undefined;
 }
 
 /**
@@ -111,10 +135,10 @@ export type Preparation =
        * The record phase, in the order it always ran. Call once, with the
        * worker's outcome — or `undefined` when there is none, because the
        * worker crashed or the program was skipped. Returns the transcript lines
-       * the run should log — today the warm-base publish summary, which is the
-       * only record step whose result the caller cannot see from anywhere else.
+       * the run should log and the lint verdict, which only this side can
+       * assemble: most files' results are in the store, not in the outcome.
        */
-      finalize(outcome: ProgramOutcome | undefined): Promise<string[]>;
+      finalize(outcome: ProgramOutcome | undefined): Promise<Finalized>;
     };
 
 const toRel = (root: string, abs: string): string =>
@@ -173,7 +197,11 @@ export function openPreparation({
   // what let a stray `.ts` under gitignored `.cache/` reach the coverage gate
   // and fail a build over content the key never covered.
   const graphs = buildImportGraphs(listing);
-  const { perFile } = computeClosureFingerprints(listing, graphs, graphs.files);
+  const {
+    perFile,
+    contentHash: ch,
+    directives,
+  } = computeClosureFingerprints(listing, graphs, graphs.files);
 
   // THE COVERAGE GATE — the load-bearing replacement for projectService's
   // "every file resolves to a project". It used to need a forward-import
@@ -189,15 +217,53 @@ export function openPreparation({
     if (uncovered.length > 0) return { plan: { kind: "uncovered", uncovered } };
   }
 
-  // Closure cache: lint only files whose import closure changed since the last
-  // recorded PASS. tsc still runs regardless.
-  const cache = openClosureCache();
-  const lintFiles: string[] = [];
+  // The lint result store: for each file, which rule groups (`./lint-groups`)
+  // already have a result under this exact closure, and the messages they
+  // produced. Only the stale groups go to the worker; a file with an eslint
+  // directive is one unit and goes whole. tsc still runs regardless.
+  const groups = computeLintGroups(listing, graphs, ch);
+  const store = openLintResultStore();
+  /** Each file's required (group, fingerprint) pairs. */
+  const required = (rel: string): [string, string][] =>
+    directives.has(rel) ? [[LINT_GROUP_ALL, groups.allFp]] : [...groups.fps];
+  /** Each file's messages from the groups the store already answers. */
+  const cached = new Map<string, RawLintMessage[]>();
+  const lintFiles: LintFileJob[] = [];
+  const staleCount = new Map<string, number>();
+  let wholeFiles = 0;
   for (const rel of graphs.files) {
-    const fp = perFile.get(rel);
-    if (fp && cache.has(rel, fp)) continue; // unchanged closure → already linted
-    lintFiles.push(join(root, rel));
+    const closureFp = perFile.get(rel)!;
+    const entry = store.read(rel, closureFp);
+    const known = new Set(entry?.known);
+    const stale: string[] = [];
+    const messages: RawLintMessage[] = [];
+    for (const [g, fp] of required(rel)) {
+      if (known.has(fp)) messages.push(...(entry?.messages[fp] ?? []));
+      else stale.push(g);
+    }
+    cached.set(rel, messages);
+    if (stale.length === 0) continue;
+    for (const g of stale) staleCount.set(g, (staleCount.get(g) ?? 0) + 1);
+    const whole = stale.length === groups.fps.size || directives.has(rel);
+    if (whole) wholeFiles++;
+    lintFiles.push({
+      file: join(root, rel),
+      groups: directives.has(rel) ? LINT_GROUP_ALL : stale,
+    });
   }
+  // One greppable line: how much is re-linted, and which groups are why — the
+  // instrument that says whether a rule edit cost its group or the repo.
+  const topStale = [...staleCount]
+    .filter(([g]) => g !== LINT_GROUP_ALL)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([g, n]) => `${g} ${n}`)
+    .join(", ");
+  const lintPlan =
+    `type-check: lint ${lintFiles.length}/${graphs.files.length} files ` +
+    `(${wholeFiles} whole, ${lintFiles.length - wholeFiles} partial; ` +
+    `${groups.fps.size} groups, engine ${groups.engineFiles} files)` +
+    (topStale ? ` — stale: ${topStale}` : "");
 
   // Pick the incremental base: the pooled entry whose recorded file contents
   // best match this tree, or the local base when nothing beats it. That is what
@@ -258,6 +324,7 @@ export function openPreparation({
     program,
     run: !skipped,
     lintFiles,
+    lintPlan,
     skipped,
     ...(unkeyed !== undefined ? { unkeyed } : {}),
     warmBase: warmBase.line,
@@ -266,7 +333,7 @@ export function openPreparation({
 
   async function finalize(
     outcome: ProgramOutcome | undefined,
-  ): Promise<string[]> {
+  ): Promise<Finalized> {
     // Publish the worker's buildinfo as a warm base for whoever runs next.
     // Publish even when the check FAILED with diagnostics: the buildinfo records
     // program STATE, which is valid regardless of the verdict — a run that found
@@ -298,15 +365,45 @@ export function openPreparation({
       );
     }
 
-    // Record per-file lint PASSes for every file we sent that did NOT fail.
-    // (Conservative: a crashed worker records nothing — re-lints next time.)
+    // Record every fresh result — violations included: the store holds what
+    // the rules SAID, and the verdict is assembled from it below. A crashed
+    // worker records nothing (re-lints next time).
+    const fresh = new Map<string, RawLintMessage[]>();
     if (outcome) {
-      const failed = new Set(outcome.failedLintFiles);
-      for (const abs of lintFiles) {
-        if (failed.has(abs)) continue;
-        const fp = perFile.get(toRel(root, abs));
-        if (fp) cache.record(toRel(root, abs), fp);
+      for (const r of outcome.lint) {
+        const rel = toRel(root, r.file);
+        const req = required(rel);
+        const byFp = new Map<string, RawLintMessage[]>();
+        const fpOf = new Map(req);
+        for (const [g, messages] of Object.entries(r.groups)) {
+          const fp = fpOf.get(g);
+          if (fp === undefined) {
+            throw new Error(
+              `type-check: the worker returned lint group "${g}" for ${rel}, which the plan never asked for`,
+            );
+          }
+          byFp.set(fp, messages);
+          fresh.set(rel, [...(fresh.get(rel) ?? []), ...messages]);
+        }
+        // Keep a few versions per group, so two worktrees on two versions of
+        // one rule do not evict each other's results on every run.
+        store.add(rel, perFile.get(rel)!, byFp, 3 * req.length);
       }
+    }
+
+    // The lint verdict: every file's results — stored or fresh — under the
+    // exemptions as they are NOW. With files to lint and no outcome the worker
+    // crashed, and there is nothing to assemble.
+    let lintViolations: string | undefined;
+    if (outcome || lintFiles.length === 0) {
+      const exemptions = await loadExemptions();
+      lintViolations = lintViolationLines(
+        graphs.files.map((rel) => ({
+          rel,
+          messages: [...(cached.get(rel) ?? []), ...(fresh.get(rel) ?? [])],
+        })),
+        exemptions,
+      ).join("\n");
     }
 
     // Record a program PASS when the worker came back completely clean. The key
@@ -319,7 +416,11 @@ export function openPreparation({
     // green; a lint failure need not block a TSC key, but keeping the rule
     // "clean means clean" costs one re-run of a program that was failing anyway
     // and leaves nothing to reason about later.
-    if (outcome?.clean && rootsResult.kind === "roots") {
+    if (
+      outcome?.tscClean &&
+      lintViolations === "" &&
+      rootsResult.kind === "roots"
+    ) {
       const result = programKey(
         keyCtx,
         { tsconfigPath: program.tsconfigPath, buildInfoPath },
@@ -336,7 +437,7 @@ export function openPreparation({
     // 14 days", which is what it was always meant to say.
     if (skipped && key !== undefined) passes.record(program.name, key);
 
-    return lines;
+    return { lines, lintViolations };
   }
 
   return { plan, finalize };

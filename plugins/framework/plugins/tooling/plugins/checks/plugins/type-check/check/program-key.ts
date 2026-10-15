@@ -79,11 +79,13 @@ const BOUNDS: PassSetBounds = {
  * every program's TSC key.
  *
  * Dropping them is safe WITHOUT a second mechanism, and the reason is worth
- * stating: a lint-rule edit flips `globalConfigFingerprint`, which flips every
- * file's closure fingerprint, which empties the closure cache — so every
- * run's `lintFiles` list is non-empty and the skip clause refuses to skip
- * anyway. The narrowing only removes a redundancy; it cannot let a lint-rule
- * change go unchecked.
+ * stating: a lint-rule edit flips its rule group's fingerprint
+ * (`./lint-groups`), so every file's stored result for that group is stale —
+ * every run's `lintFiles` list is non-empty and the skip clause refuses to skip
+ * anyway. An exemption edit changes no fingerprint at all: the verdict is
+ * re-assembled from the stored results in `finalize`, skipped program or not.
+ * The narrowing only removes a redundancy; it cannot let a lint-rule change go
+ * unchecked.
  */
 function isTscTrigger(rel: string): boolean {
   const base = rel.split("/").pop()!;

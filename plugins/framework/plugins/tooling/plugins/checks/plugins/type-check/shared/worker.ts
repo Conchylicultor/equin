@@ -7,7 +7,9 @@
  *   1. `tsc` semantic diagnostics (via the incremental builder, persisting the
  *      shared `.tsbuildinfo` so warm runs re-check only the diff);
  *   2. type-aware ESLint, with the SAME program injected via `parserOptions.programs`
- *      so typescript-eslint reuses it instead of constructing a second one.
+ *      so typescript-eslint reuses it instead of constructing a second one —
+ *      only the rule groups each file's job names, returning the messages RAW
+ *      (exemptions are the check's to apply, when it reads them).
  *
  * That single construction — not the parallelism — is what removes the
  * duplicated ~99%-TS-program-build cost the two old checks each paid.
@@ -23,21 +25,20 @@ import { Linter } from "eslint";
 import { exitWithParent } from "@plugins/packages/plugins/flock/core";
 import {
   buildLintConfig,
-  lintExemptions,
   loadLintContributions,
 } from "@plugins/framework/plugins/tooling/plugins/lint/core";
-import {
-  createExemptionIndex,
-  describeExemption,
-  loadExemptions,
-} from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 // The job/result shapes live in this plugin's `core/` barrel: two spawners (the
 // check's fan-out and the build's fast path) name them, and only one worker
 // implements them. Through the barrel, not the file: a deep import into the
 // plugin's own `core/` is what the browser build cannot inline.
-import type {
-  TypeCheckWorkerJob as Job,
-  TypeCheckWorkerResult as Result,
+import {
+  LINT_GROUP_ALL,
+  LINT_GROUP_BASE,
+  type LintFileJob,
+  type LintFileResult,
+  type RawLintMessage,
+  type TypeCheckWorkerJob as Job,
+  type TypeCheckWorkerResult as Result,
 } from "../core";
 
 function rel(root: string, abs: string): string {
@@ -60,8 +61,7 @@ async function run(job: Job): Promise<Result> {
     return {
       name: job.name,
       tscErrors: formatTscDiagnostic(job.root, cfg.error),
-      lintViolations: "",
-      failedLintFiles: [],
+      lint: [],
     };
   }
   const parsed = ts.parseJsonConfigFileContent(
@@ -133,65 +133,82 @@ async function run(job: Job): Promise<Result> {
     .join("\n");
 
   // 3. Type-aware lint, reusing the program just built (no second construction).
-  let lintViolations = "";
-  const failedLintFiles: string[] = [];
+  //
+  //    Each file names the rule GROUPS it needs (`../check/lint-groups`): the
+  //    ones whose stored result is stale, or `LINT_GROUP_ALL` for a file that
+  //    carries an eslint directive. One config per distinct selection, built
+  //    once. Messages come back RAW — before exemptions, which the check applies
+  //    when it reads them — and split by group, so each lands under its own key.
+  const lint: LintFileResult[] = [];
   if (job.lintFiles.length > 0) {
     const program = builder.getProgram();
-    const config = await buildLintConfig({
-      root: job.root,
-      typeSource: { programs: [program] },
-      exemptions: "report",
-    });
-    // "report" mode: every rule runs on exempt files too, and an exemption is
-    // applied here, message by message, so it can be caught suppressing
-    // nothing. Validated by the same function the config build used.
-    const exemptions = createExemptionIndex(
-      lintExemptions(
-        await loadExemptions(),
-        await loadLintContributions(job.root),
-      ),
+    const contributions = await loadLintContributions(job.root);
+    // A rule id's namespace is its contribution's `name`; anything else (the
+    // config builder's own typescript-eslint / react-hooks / core rules) and
+    // a null id (the linter itself: a parse failure) belong to the base group.
+    const groupOfNamespace = new Map(
+      contributions.map((c) => [c.name, c.relPath] as const),
     );
+    const groupOf = (ruleId: string | null): string => {
+      if (ruleId === null) return LINT_GROUP_BASE;
+      const slash = ruleId.lastIndexOf("/");
+      const ns = slash < 0 ? "" : ruleId.slice(0, slash);
+      return groupOfNamespace.get(ns) ?? LINT_GROUP_BASE;
+    };
+    const configs = new Map<string, Linter.Config[]>();
+    const configFor = async (
+      groups: LintFileJob["groups"],
+    ): Promise<Linter.Config[]> => {
+      const key = groups === LINT_GROUP_ALL ? groups : groups.join("\n");
+      let config = configs.get(key);
+      if (config === undefined) {
+        config = await buildLintConfig({
+          root: job.root,
+          typeSource: { programs: [program] },
+          exemptions: "report",
+          ...(groups === LINT_GROUP_ALL
+            ? {}
+            : {
+                rules: {
+                  base: groups.includes(LINT_GROUP_BASE),
+                  contributions: new Set(groups),
+                },
+              }),
+        });
+        configs.set(key, config);
+      }
+      return config;
+    };
     const linter = new Linter({ configType: "flat" });
-    const lines: string[] = [];
-    for (const file of job.lintFiles) {
+    for (const { file, groups } of job.lintFiles) {
       const code = ts.sys.readFile(file);
       if (code === undefined) continue;
-      const relFile = rel(job.root, file);
       // `--quiet` parity: error-level (2) and fatal parse errors only.
-      const messages = linter
-        .verify(code, config as Linter.Config[], { filename: file })
+      const messages: RawLintMessage[] = linter
+        .verify(code, await configFor(groups), { filename: file })
         .filter((m) => m.severity === 2 || m.fatal)
-        .filter(
-          (m) =>
-            m.ruleId === null ||
-            exemptions.exemptionsFor(m.ruleId).match(relFile) === undefined,
-        );
-      // A FILE-level exemption on this file that suppressed nothing is dead —
-      // the same contract as `reportUnusedDisableDirectives: "error"`. A
-      // directory-level one cannot be judged here: an incremental run lints
-      // only part of its subtree (`exempt:manifests-valid` checks it exists).
-      const unused = exemptions.unused(exemptions.at(relFile));
-      if (messages.length === 0 && unused.length === 0) continue;
-      failedLintFiles.push(file);
-      for (const m of messages) {
-        // A null ruleId means the message came from the linter itself, not a
-        // rule — either a parse failure (fatal) or an unused-disable-directive
-        // report. Label them apart: with reportUnusedDisableDirectives on, the
-        // latter is common, and calling it a parse error sends the reader
-        // hunting for a syntax bug that isn't there.
-        const source = m.ruleId ?? (m.fatal ? "(parse)" : "(unused-disable)");
-        lines.push(`${relFile}:${m.line}:${m.column}  ${source}  ${m.message}`);
+        .map((m) => ({
+          ruleId: m.ruleId,
+          fatal: m.fatal === true,
+          line: m.line,
+          column: m.column,
+          message: m.message,
+        }));
+      const byGroup: Record<string, RawLintMessage[]> = {};
+      if (groups === LINT_GROUP_ALL) {
+        byGroup[LINT_GROUP_ALL] = messages;
+      } else {
+        for (const g of groups) byGroup[g] = [];
+        // A message outside the selection can only be a null-id one (a parse
+        // failure) on a run without the base group, whose stored result
+        // already holds it.
+        for (const m of messages) byGroup[groupOf(m.ruleId)]?.push(m);
       }
-      for (const e of unused) {
-        lines.push(
-          `${relFile}:1:1  (unused-exemption)  suppressed nothing — delete it from ${e.manifest}: ${describeExemption(e)}`,
-        );
-      }
+      lint.push({ file, groups: byGroup });
     }
-    lintViolations = lines.join("\n");
   }
 
-  return { name: job.name, tscErrors, lintViolations, failedLintFiles };
+  return { name: job.name, tscErrors, lint };
 }
 
 // A ~16 GB process whose only reader is the check that spawned it: when that

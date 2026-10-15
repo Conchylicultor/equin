@@ -36,7 +36,7 @@ async function handle(request: PrepareRequest): Promise<PrepareReply> {
       }
       return {
         type: "finalized",
-        lines: await session.finalize(request.outcome),
+        finalized: await session.finalize(request.outcome),
       };
   }
 }

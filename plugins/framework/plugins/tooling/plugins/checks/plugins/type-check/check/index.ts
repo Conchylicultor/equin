@@ -15,8 +15,8 @@
  * average file per cold miss and bought no type isolation.
  *
  * Warm paths are preserved: tsc stays incremental via the shared `.tsbuildinfo`,
- * lint reuses the per-file closure cache (only closure-changed files are
- * re-linted), and a program whose content key is already recorded green runs no
+ * lint reuses the per-file lint result store (only the rule groups whose
+ * inputs changed are re-run, on the files they cover), and a program whose content key is already recorded green runs no
  * worker at all.
  *
  * This file runs on the check runner's thread, which every other check in the
@@ -31,7 +31,7 @@ import {
   type TscProgram,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import type { TypeCheckWorkerResult } from "../core";
+import type { TypeCheckWorkerJob, TypeCheckWorkerResult } from "../core";
 import { spawnTypeCheckWorker } from "../server";
 import type {
   Check,
@@ -61,7 +61,7 @@ interface WorkerResult extends TypeCheckWorkerResult {
 async function runWorker(
   root: string,
   program: TscProgram,
-  lintFiles: string[],
+  lintFiles: TypeCheckWorkerJob["lintFiles"],
   grant: Grant,
 ): Promise<WorkerResult> {
   const run = await spawnTypeCheckWorker({
@@ -178,7 +178,7 @@ const check: Check = {
   // trigger set) into the recording FileSystemView; on the next run those facts
   // replay against the fresh snapshot, so a change touching NO typecheckable input
   // (e.g. docs-only) is an outer HIT with zero tsc workers. The INNER per-file
-  // closure cache (fingerprint.ts / closure-cache.ts) is untouched and orthogonal.
+  // lint result store (lint-groups.ts / lint-results.ts) is untouched and orthogonal.
   inputKeyed: true,
   async run(ctx: CheckContext) {
     const root = await getWorktreeRoot();
@@ -205,6 +205,7 @@ const check: Check = {
 
     let result: WorkerResult | undefined;
     let crash: string | undefined;
+    let lintLines = "";
 
     // Everything that reads file bytes or walks the tree — the import graph,
     // fingerprints, tsconfig include-expansion, the coverage gate, the closure
@@ -251,6 +252,7 @@ const check: Check = {
       // anywhere in the transcript — and a pool that hands out a base matching
       // nothing looks exactly like a pool that works.
       ctx.log?.(plan.warmBase, "stderr");
+      ctx.log?.(plan.lintPlan, "stderr");
       // Named, not just implied: "running" with no explanation of why there was
       // no key to compare against is the shape of a report that hides a broken
       // key. A cold worktree legitimately says this on its first run.
@@ -298,23 +300,21 @@ const check: Check = {
       if (costLine !== null) ctx.log?.(costLine, "stderr");
 
       // The record phase, on the thread that holds the session: the warm base,
-      // per-file lint PASSes, the program PASS, the skipped re-record (see
-      // `./prepare`). The outcome is handed over only when the worker RETURNED
-      // — a crashed or skipped run records nothing new. "Clean" is decided here
-      // because only this side has the outputs: no tsc error, no lint
-      // violation, no failed lint file.
+      // the per-file lint results, the lint verdict, the program PASS, the
+      // skipped re-record (see `./prepare`). The outcome is handed over only
+      // when the worker RETURNED — a crashed or skipped run records nothing
+      // new. The lint verdict comes back from there, not from the worker: most
+      // files' results are in the store, and exemptions apply at read time.
       const outcome: ProgramOutcome | undefined = result && {
-        clean:
-          !result.tscErrors &&
-          !result.lintViolations &&
-          result.failedLintFiles.length === 0,
-        failedLintFiles: result.failedLintFiles,
+        tscClean: !result.tscErrors,
+        lint: result.lint,
       };
       const finalizeStart = performance.now();
-      const finalizeLines = await thread.finalize(outcome);
+      const finalized = await thread.finalize(outcome);
+      lintLines = finalized.lintViolations ?? "";
       // What the record phase published back into the warm-base pool, and
       // whether that entry carries the sha that lets the prune protect it.
-      for (const line of finalizeLines) ctx.log?.(line, "stderr");
+      for (const line of finalized.lines) ctx.log?.(line, "stderr");
       // What used to be a freeze of the runner's thread, still measured: the
       // instrument for making the preparation itself cheaper.
       ctx.log?.(
@@ -327,7 +327,6 @@ const check: Check = {
 
     // Aggregate the two failure categories.
     const tscErrors = result?.tscErrors ?? "";
-    const lintLines = result?.lintViolations ?? "";
 
     if (crash === undefined && !tscErrors && !lintLines) return { ok: true };
 

@@ -2,10 +2,10 @@
 //
 // Each file's type-aware lint result depends on the file PLUS everything it
 // transitively imports (type info flows through forward import edges) PLUS the
-// global lint configuration (eslint.config.ts, lint rules, tsconfig, deps,
-// ambient declarations). The closure fingerprint folds all of that into one
-// content-addressed key, so a PASS recorded for that key is reusable across
-// runs and worktrees with an identical closure.
+// rules that ran on it. The closure fingerprint is the first half, one
+// content-addressed key per file; the rules are keyed per GROUP beside it
+// (`./lint-groups`), so a rule edit no longer changes every file's key. A result
+// stored under both is reusable across runs and worktrees.
 
 import { createHash } from "crypto";
 import { join } from "path";
@@ -19,14 +19,17 @@ function sha256(s: string): string {
 }
 
 export interface FingerprintResult {
-  global: string; // globalConfigFingerprint(root)
   perFile: Map<string, string>; // relpath -> closureFingerprint
+  /** The run's memoized per-file content hash, for the group fingerprints. */
+  contentHash: (rel: string) => string;
+  /** Candidates whose text can carry an eslint directive (`hasLintDirective`). */
+  directives: Set<string>;
 }
 
-// The "force-full" trigger files: those whose change can alter the lint result
-// of *any* file. These form the global config component, so a
-// config/rule/tsconfig/deps/ambient change flips every per-file fingerprint at
-// once (replacing the old mtime-based bustCacheIfStale).
+// The global trigger files: those whose change can alter the type-check
+// VERDICT for any file. The outer read-set records each one (`./outer-read-set`),
+// so a change to any of them re-runs the check. Re-running is not re-linting:
+// what the inner lint cache keys on is narrower and per group (`./lint-groups`).
 //
 // The trigger set is a FILTER over the run's one git-derived listing, never its
 // own walk. That also fixes a live bug: the walk this replaced skipped a literal
@@ -57,6 +60,9 @@ function isGlobalTrigger(rel: string): boolean {
   if (rel === "package.json") return true;
   if (rel === "bun.lock" || rel === "bun.lockb") return true;
   if (rel.endsWith(".d.ts")) return true;
+  // A dependency patch (`patchedDependencies`) changes the patched package's
+  // behaviour without changing its resolved version.
+  if (rel.startsWith("patches/")) return true;
   return false;
 }
 
@@ -107,46 +113,37 @@ export function findFiles(
 }
 
 /**
- * sha256 over the sorted `"<rel>\0<ch(rel)>"` of every file matching the
- * isForceFull trigger list (eslint.config.ts, plugins/**\/lint/**,
- * plugins/**\/exempt/**, tsconfig*.json,
- * package.json, bun.lock(b), *.d.ts, *.lint.generated.ts). A change to any of
- * these flips this component → every closure fingerprint changes → whole cache
- * invalidated.
- */
-export function globalConfigFingerprint(listing: TreeListing): string {
-  const parts = findFiles(listing, isGlobalTrigger).map(
-    (rel) => `${rel}\0${sha256(safeRead(join(listing.root, rel)) ?? "")}`,
-  );
-  return sha256(parts.join("\n"));
-}
-
-/**
- * The full list of global-trigger files (the SAME set `globalConfigFingerprint`
- * folds into its single hash: eslint.config.ts, plugins/**\/lint/**,
- * tsconfig*.json, package.json, bun.lock(b), *.d.ts, *.lint.generated.ts). For
- * callers that must record each trigger as an INDIVIDUAL input fact rather than
- * one opaque hash — type-check's outer input-keyed read-set records a per-file
- * `(path, blobSha)` fact for each, so a compiler-version bump (package.json /
- * bun.lock) or a tsconfig/eslint edit invalidates. Reuses `findFiles` /
- * `isGlobalTrigger`, so the recorded set can never drift from what the
- * fingerprint covers. Deduped + sorted for determinism.
+ * The full list of global-trigger files (eslint.config.ts, plugins/**\/lint/**,
+ * plugins/**\/exempt/**, tsconfig*.json, package.json, bun.lock(b), *.d.ts,
+ * patches/**, *.lint.generated.ts, the lint data files), for type-check's outer
+ * input-keyed read-set, which records a per-file `(path, blobSha)` fact for
+ * each, so a compiler-version bump or a rule/exemption/tsconfig edit re-runs the
+ * check. Deduped + sorted for determinism.
  */
 export function findGlobalTriggerFiles(listing: TreeListing): string[] {
   return findFiles(listing, isGlobalTrigger);
 }
 
 /**
+ * True iff `src` can carry an eslint directive — a disable/enable comment or an
+ * inline `/* eslint … *\/` config. Over-matching (the word in prose) only makes
+ * the file a whole unit, which is the safe side.
+ */
+export function hasLintDirective(src: string): boolean {
+  return /eslint-(?:disable|enable)|\/\*\s*eslint\s/.test(src);
+}
+
+/**
  * Compute the closure fingerprint for each candidate file:
  *
  *   closure(f) = { f } ∪ transitive forward-closure of f over graphs.forward
- *   fp(f) = sha256(
- *     "g:" + globalConfigFingerprint(root) + "\n" +
- *     sorted( `${c}\0${ch(c)}` for c in closure(f) ).join("\n")
- *   )
+ *   fp(f) = sha256( sorted( `${c}\0${ch(c)}` for c in closure(f) ).join("\n") )
  *
- * The closure DFS is memoized and cycle-safe (a visited set), and per-file
- * content hashes ch(rel) are memoized — both shared across all candidates.
+ * Nothing global: which rules ran is keyed per group beside it
+ * (`./lint-groups`). The closure DFS is memoized and cycle-safe (a visited
+ * set), and per-file content hashes ch(rel) are memoized — both shared across
+ * all candidates, and `ch` is handed back for the group fingerprints. Reading a
+ * file to hash it also notes whether it can carry an eslint directive.
  */
 export function computeClosureFingerprints(
   listing: TreeListing,
@@ -154,14 +151,16 @@ export function computeClosureFingerprints(
   candidates: string[],
 ): FingerprintResult {
   const { root } = listing;
-  const global = globalConfigFingerprint(listing);
 
   // Memoized per-file content hash: ch(rel) = sha256(content ?? "").
   const contentHash = new Map<string, string>();
+  const directives = new Set<string>();
   const ch = (rel: string): string => {
     let h = contentHash.get(rel);
     if (h === undefined) {
-      h = sha256(safeRead(join(root, rel)) ?? "");
+      const src = safeRead(join(root, rel)) ?? "";
+      if (hasLintDirective(src)) directives.add(rel);
+      h = sha256(src);
       contentHash.set(rel, h);
     }
     return h;
@@ -196,8 +195,13 @@ export function computeClosureFingerprints(
       .sort()
       .map((c) => `${c}\0${ch(c)}`)
       .join("\n");
-    perFile.set(f, sha256(`g:${global}\n${body}`));
+    perFile.set(f, sha256(body));
   }
 
-  return { global, perFile };
+  return {
+    perFile,
+    contentHash: ch,
+    // Only candidates: a non-candidate hashed as someone's import is not linted.
+    directives: new Set(candidates.filter((f) => directives.has(f))),
+  };
 }

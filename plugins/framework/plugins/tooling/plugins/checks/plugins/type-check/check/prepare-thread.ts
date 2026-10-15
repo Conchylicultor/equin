@@ -17,7 +17,7 @@
 // Nothing here imports `./prepare` at runtime — only its types — so the
 // runner's thread never evaluates the TypeScript compiler for it.
 
-import type { Plan, PrepareInput, ProgramOutcome } from "./prepare";
+import type { Finalized, Plan, PrepareInput, ProgramOutcome } from "./prepare";
 
 /** Runner → thread. One in flight at a time. */
 export type PrepareRequest =
@@ -28,7 +28,7 @@ export type PrepareRequest =
 export type PrepareReply =
   | { type: "plan"; plan: Plan }
   /** `lines` are the transcript lines the record phase produced (the warm-base publish summary). */
-  | { type: "finalized"; lines: string[] }
+  | { type: "finalized"; finalized: Finalized }
   /** The request threw on the thread; `stack` is the thread's own. */
   | { type: "error"; message: string; stack: string | undefined };
 
@@ -39,7 +39,7 @@ export interface PrepareThread {
    * Run the record phase of the session `prepare` opened, and hand back the
    * lines it wants logged. `undefined` when the worker crashed or never ran.
    */
-  finalize(outcome: ProgramOutcome | undefined): Promise<string[]>;
+  finalize(outcome: ProgramOutcome | undefined): Promise<Finalized>;
   /** Terminate the thread. Idempotent; a call still pending is rejected. */
   close(): void;
 }
@@ -148,7 +148,7 @@ export function openPrepareThread(): PrepareThread {
           `type-check prepare thread answered "finalize" with "${reply.type}"`,
         );
       }
-      return reply.lines;
+      return reply.finalized;
     },
     close() {
       die(new Error("type-check prepare thread was closed"));

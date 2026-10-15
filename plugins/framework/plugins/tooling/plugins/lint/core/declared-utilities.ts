@@ -13,8 +13,10 @@ import { join } from "path";
  * frozen at its previous contents (`cli:codegen-manifests-not-frozen`). A file
  * read at `buildLintConfig` time is current for every lint pass.
  *
- * The file is listed in {@link LINT_DATA_FILES}, so a change to it invalidates
- * every cached lint result exactly as a rule change does.
+ * The file is listed in {@link LINT_DATA_FILES}; the type-check lint cache keys
+ * on {@link lintDataKey} — the declared set, not the file's bytes — so editing a
+ * token value in app.css re-lints nothing, while adding or removing a utility
+ * invalidates every cached lint result exactly as a rule change does.
  */
 
 /** The app stylesheet, the single source of truth for custom `@utility` classes. */
@@ -46,4 +48,15 @@ export function readDeclaredUtilities(root: string): ReadonlySet<string> {
     );
   }
   return names;
+}
+
+/**
+ * What lint rules read from {@link LINT_DATA_FILES}, as one stable string: the
+ * sorted declared `@utility` names. A cache keyed on this, rather than on the
+ * stylesheet's bytes, survives the edits to app.css that cannot change a lint
+ * result — 6 of its 11 changes on main in the week to 2026-10-15 left the set
+ * alone.
+ */
+export function lintDataKey(root: string): string {
+  return [...readDeclaredUtilities(root)].sort().join("\n");
 }

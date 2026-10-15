@@ -123,6 +123,7 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `ClassRuleFactory`
     - `LintContribution`
     - `LintExemptionMode`
+    - `LintRuleSelection`
     - `LintToolkit`
     - `LoadedLintContribution`
     - `ParserTypeSource`
@@ -136,9 +137,12 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `collectTokens`
     - `findPluginDirs`
     - `isLintScopeExcluded`
+    - `LINT_CONFIG_SOURCE`
     - `LINT_DATA_FILES`
     - `LINT_SCOPE_EXCLUDE_GLOBS`
     - `lintCollectedDir`
+    - `lintContributionPaths`
+    - `lintDataKey`
     - `lintExemptions`
     - `lintRuleIds`
     - `loadLintContributions`

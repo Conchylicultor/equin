@@ -112,6 +112,23 @@ export interface LintContribution {
   closed?: string[];
 }
 
+/**
+ * This file, repo-relative: the root of the lint ENGINE's import closure, which
+ * the type-check lint cache folds into every cached result's key (what this
+ * builder enables, and everything it imports, can change any file's result).
+ */
+export const LINT_CONFIG_SOURCE =
+  "plugins/framework/plugins/tooling/plugins/lint/core/build-lint-config.ts";
+
+/**
+ * Every lint contribution's plugin path (`relPath` of its loaded form), without
+ * loading any of them — what the type-check lint cache keys one rule group on
+ * each.
+ */
+export function lintContributionPaths(): string[] {
+  return lintEntries.map((e) => e.pluginPath);
+}
+
 /** A loaded contribution: the barrel, with its class rules built into `rules`. */
 export interface LoadedLintContribution {
   /** Relative path under plugins/, e.g. "welcome" or "conversations/plugins/conversation-view". */
@@ -286,12 +303,28 @@ export type ParserTypeSource =
  */
 export type LintExemptionMode = "config-off" | "report";
 
+/**
+ * A subset of the rules to enable: the builder's own rules (`base` —
+ * typescript-eslint, react-hooks, eslint core) and/or the named contributions,
+ * by plugin path. The parser and its type source are configured either way.
+ */
+export interface LintRuleSelection {
+  base: boolean;
+  contributions: ReadonlySet<string>;
+}
+
 export interface BuildLintConfigOptions {
   /** Repo root — anchors `tsconfigRootDir`. */
   root: string;
   /** projectService (IDE/CLI) or a pre-built program set (type-check worker). */
   typeSource: ParserTypeSource;
   exemptions: LintExemptionMode;
+  /**
+   * Enable only these rules (default: all). The type-check worker re-runs only
+   * the rule groups whose cached result is stale for a file; a contribution
+   * left out is not even registered, so no block below names its rules.
+   */
+  rules?: LintRuleSelection;
 }
 
 /**
@@ -346,8 +379,8 @@ function compilerDiagnosticRulesAsWarn(
 export async function buildLintConfig(
   opts: BuildLintConfigOptions,
 ): Promise<Linter.Config[]> {
-  const { root, typeSource } = opts;
-  const [contributions, exemptions, tsPlugin, tsParser, reactHooks] =
+  const { root, typeSource, rules: selection } = opts;
+  const [allContributions, exemptions, tsPlugin, tsParser, reactHooks] =
     await Promise.all([
       loadLintContributions(root),
       loadExemptions(),
@@ -357,7 +390,12 @@ export async function buildLintConfig(
     ]);
   // Validated in BOTH modes, so a manifest naming a dead or closed rule fails
   // the IDE config and the check alike.
-  const lintExempt = lintExemptions(exemptions, contributions);
+  const lintExempt = lintExemptions(exemptions, allContributions);
+  const contributions =
+    selection === undefined
+      ? allContributions
+      : allContributions.filter((c) => selection.contributions.has(c.relPath));
+  const baseRulesOn = selection === undefined || selection.base;
 
   const parserOptions: Record<string, unknown> = {
     ecmaVersion: "latest",
@@ -399,88 +437,90 @@ export async function buildLintConfig(
           stableHooks: ["useLatestRef", "useEventCallback"],
         },
       },
-      rules: {
-        "@typescript-eslint/no-floating-promises": "off",
-        "@typescript-eslint/no-misused-promises": [
-          "error",
-          {
-            checksVoidReturn: { attributes: false },
+      rules: !baseRulesOn
+        ? {}
+        : {
+            "@typescript-eslint/no-floating-promises": "off",
+            "@typescript-eslint/no-misused-promises": [
+              "error",
+              {
+                checksVoidReturn: { attributes: false },
+              },
+            ],
+            "@typescript-eslint/switch-exhaustiveness-check": "error",
+            "@typescript-eslint/no-unnecessary-condition": [
+              "warn",
+              {
+                allowConstantLoopConditions: true,
+              },
+            ],
+            "@typescript-eslint/await-thenable": "error",
+            // React Compiler / Rules-of-React diagnostics, warn-first (see
+            // compilerDiagnosticRulesAsWarn above). Spread FIRST so the two
+            // explicit "error" pins below win the merge.
+            ...compilerDiagnosticRulesAsWarn(reactHooks),
+            "react-hooks/rules-of-hooks": "error",
+            // exhaustive-deps treats the `settings["react-hooks"].stableHooks` list
+            // above as known-stable returns (like a bare useRef), via our patch to
+            // isStableKnownHookValue (patches/eslint-plugin-react-hooks@*.patch) —
+            // so useLatestRef/useEventCallback refs need not be listed in dep arrays.
+            "react-hooks/exhaustive-deps": "error",
+            // Coverage-blocking React Compiler rules — RATCHETED warn→error once the
+            // codebase was driven to zero (2026-06-23). These are the diagnostics
+            // that make the compiler SILENTLY BAIL on (skip memoizing) a component;
+            // enforcing them at error keeps compiler coverage complete — a new bail
+            // fails `./singularity check` instead of silently eroding coverage.
+            // Genuine exemptions opt out at the site: a `"use no memo"` directive
+            // and/or an inline `// eslint-disable-next-line react-hooks/<rule> -- …`
+            // (e.g. the @tanstack/react-virtual incompatibility in primitives/
+            // virtual-rows). `react-hooks/refs` was likewise RATCHETED warn→error in
+            // Phase 2 (2026-06-23) once its burndown hit zero: the latest-value-ref
+            // idiom moved into the `useLatestRef`/`useEventCallback` primitive
+            // (primitives/latest-ref), which carries the one sanctioned disable;
+            // @dnd-kit / auto-scroll library refs are destructured at the call site
+            // (member access on a ref-bearing hook return is what trips the rule);
+            // genuine anti-patterns were refactored; and the few intentional
+            // render-time machines (use-tab-presence, use-cursor-pagination, the
+            // build-once markdown/overlay memos) carry an inline `react-hooks/refs`
+            // disable. `react-hooks/set-state-in-effect` was likewise RATCHETED
+            // warn→error on 2026-06-24 once its burndown hit zero: anti-patterns
+            // were refactored (props-to-state → key= remount, default-selection /
+            // derived state → derive in render), fetch/subscription effects migrated
+            // to useEndpoint / useSyncExternalStore or the shared useHighlightedHtml
+            // primitive, and the genuinely-stateful remainder (animation/temporal
+            // machines, NDJSON streams, optimistic-cleanup, primitive internals)
+            // carries an inline `react-hooks/set-state-in-effect` disable. See
+            // research/2026-06-24-global-react-compiler-set-state-burndown.md (and the
+            // refs burndown research/2026-06-23-global-react-compiler-refs-burndown.md).
+            "react-hooks/purity": "error",
+            "react-hooks/immutability": "error",
+            "react-hooks/use-memo": "error",
+            "react-hooks/void-use-memo": "error",
+            "react-hooks/static-components": "error",
+            "react-hooks/preserve-manual-memoization": "error",
+            "react-hooks/incompatible-library": "error",
+            "react-hooks/refs": "error",
+            "react-hooks/set-state-in-effect": "error",
+            // Final 6 diagnostics RATCHETED warn→error on 2026-06-24. Their scan count
+            // was ALREADY 0 (no burndown needed — the coverage / refs / set-state-in-
+            // effect phases left the whole web tree clean), so all six promote together.
+            // `set-state-in-render` (unconditional render-phase setState = re-render
+            // loop) and `unsupported-syntax` (the compiler SILENTLY BAILS on it = lost
+            // coverage) are the bug/coverage-bearing ones; `globals` / `error-boundaries`
+            // / `config` / `gating` are rare-but-correct guards (`gating` is permanently
+            // 0 — we don't use compiler feature-gating). With these, ALL react-hooks
+            // compiler diagnostics are now enforced at error — completing the compliance
+            // program; see research/2026-06-24-global-react-compiler-final-rules-ratchet.md.
+            "react-hooks/set-state-in-render": "error",
+            "react-hooks/unsupported-syntax": "error",
+            "react-hooks/globals": "error",
+            "react-hooks/error-boundaries": "error",
+            "react-hooks/config": "error",
+            "react-hooks/gating": "error",
+            "no-constant-binary-expression": "error",
+            eqeqeq: ["error", "smart"],
+            "no-template-curly-in-string": "error",
           },
-        ],
-        "@typescript-eslint/switch-exhaustiveness-check": "error",
-        "@typescript-eslint/no-unnecessary-condition": [
-          "warn",
-          {
-            allowConstantLoopConditions: true,
-          },
-        ],
-        "@typescript-eslint/await-thenable": "error",
-        // React Compiler / Rules-of-React diagnostics, warn-first (see
-        // compilerDiagnosticRulesAsWarn above). Spread FIRST so the two
-        // explicit "error" pins below win the merge.
-        ...compilerDiagnosticRulesAsWarn(reactHooks),
-        "react-hooks/rules-of-hooks": "error",
-        // exhaustive-deps treats the `settings["react-hooks"].stableHooks` list
-        // above as known-stable returns (like a bare useRef), via our patch to
-        // isStableKnownHookValue (patches/eslint-plugin-react-hooks@*.patch) —
-        // so useLatestRef/useEventCallback refs need not be listed in dep arrays.
-        "react-hooks/exhaustive-deps": "error",
-        // Coverage-blocking React Compiler rules — RATCHETED warn→error once the
-        // codebase was driven to zero (2026-06-23). These are the diagnostics
-        // that make the compiler SILENTLY BAIL on (skip memoizing) a component;
-        // enforcing them at error keeps compiler coverage complete — a new bail
-        // fails `./singularity check` instead of silently eroding coverage.
-        // Genuine exemptions opt out at the site: a `"use no memo"` directive
-        // and/or an inline `// eslint-disable-next-line react-hooks/<rule> -- …`
-        // (e.g. the @tanstack/react-virtual incompatibility in primitives/
-        // virtual-rows). `react-hooks/refs` was likewise RATCHETED warn→error in
-        // Phase 2 (2026-06-23) once its burndown hit zero: the latest-value-ref
-        // idiom moved into the `useLatestRef`/`useEventCallback` primitive
-        // (primitives/latest-ref), which carries the one sanctioned disable;
-        // @dnd-kit / auto-scroll library refs are destructured at the call site
-        // (member access on a ref-bearing hook return is what trips the rule);
-        // genuine anti-patterns were refactored; and the few intentional
-        // render-time machines (use-tab-presence, use-cursor-pagination, the
-        // build-once markdown/overlay memos) carry an inline `react-hooks/refs`
-        // disable. `react-hooks/set-state-in-effect` was likewise RATCHETED
-        // warn→error on 2026-06-24 once its burndown hit zero: anti-patterns
-        // were refactored (props-to-state → key= remount, default-selection /
-        // derived state → derive in render), fetch/subscription effects migrated
-        // to useEndpoint / useSyncExternalStore or the shared useHighlightedHtml
-        // primitive, and the genuinely-stateful remainder (animation/temporal
-        // machines, NDJSON streams, optimistic-cleanup, primitive internals)
-        // carries an inline `react-hooks/set-state-in-effect` disable. See
-        // research/2026-06-24-global-react-compiler-set-state-burndown.md (and the
-        // refs burndown research/2026-06-23-global-react-compiler-refs-burndown.md).
-        "react-hooks/purity": "error",
-        "react-hooks/immutability": "error",
-        "react-hooks/use-memo": "error",
-        "react-hooks/void-use-memo": "error",
-        "react-hooks/static-components": "error",
-        "react-hooks/preserve-manual-memoization": "error",
-        "react-hooks/incompatible-library": "error",
-        "react-hooks/refs": "error",
-        "react-hooks/set-state-in-effect": "error",
-        // Final 6 diagnostics RATCHETED warn→error on 2026-06-24. Their scan count
-        // was ALREADY 0 (no burndown needed — the coverage / refs / set-state-in-
-        // effect phases left the whole web tree clean), so all six promote together.
-        // `set-state-in-render` (unconditional render-phase setState = re-render
-        // loop) and `unsupported-syntax` (the compiler SILENTLY BAILS on it = lost
-        // coverage) are the bug/coverage-bearing ones; `globals` / `error-boundaries`
-        // / `config` / `gating` are rare-but-correct guards (`gating` is permanently
-        // 0 — we don't use compiler feature-gating). With these, ALL react-hooks
-        // compiler diagnostics are now enforced at error — completing the compliance
-        // program; see research/2026-06-24-global-react-compiler-final-rules-ratchet.md.
-        "react-hooks/set-state-in-render": "error",
-        "react-hooks/unsupported-syntax": "error",
-        "react-hooks/globals": "error",
-        "react-hooks/error-boundaries": "error",
-        "react-hooks/config": "error",
-        "react-hooks/gating": "error",
-        "no-constant-binary-expression": "error",
-        eqeqeq: ["error", "smart"],
-        "no-template-curly-in-string": "error",
-      },
     },
     {
       ignores: [

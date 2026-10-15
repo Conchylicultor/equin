@@ -15,6 +15,7 @@
 import { createHash } from "crypto";
 import {
   existsSync,
+  readFileSync,
   readdirSync,
   renameSync,
   rmSync,
@@ -49,10 +50,16 @@ export interface PassSet {
   /** True iff a PASS was recorded for this key. */
   has(key: string): boolean;
   /**
-   * Record a PASS. Atomic (write-then-rename). `detail` is written into the
-   * entry for a human reading the directory; nothing reads it back.
+   * The entry recorded for this key, parsed — or undefined when there is none.
+   * For a store whose entries carry data (the lint result store), not only a
+   * verdict; the caller owns the entry's shape.
    */
-  record(key: string, detail: Record<string, string>): void;
+  read(key: string): unknown;
+  /**
+   * Record an entry. Atomic (write-then-rename). `detail` is written into the
+   * entry: for a human reading the directory, or for `read`.
+   */
+  record(key: string, detail: Record<string, unknown>): void;
 }
 
 /** Open (and lazily create) a content-keyed PASS set under `dir`. */
@@ -64,6 +71,16 @@ export function openPassSet(dir: DataDir, bounds: PassSetBounds): PassSet {
   return {
     has(key) {
       return existsSync(entryFile(key));
+    },
+    read(key) {
+      let text: string;
+      try {
+        text = readFileSync(entryFile(key), "utf8");
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+        return undefined;
+      }
+      return JSON.parse(text) as unknown;
     },
     record(key, detail) {
       const file = entryFile(key);

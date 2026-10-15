@@ -20579,9 +20579,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Core:
                 - Uses: `infra/host/host-admission.PER_UNIT_BYTES`
                 - Exports (types):
+                  - `LintFileJob`
+                  - `LintFileResult`
+                  - `RawLintMessage`
                   - `TypeCheckWorkerJob`
                   - `TypeCheckWorkerResult`
                 - Exports (values):
+                  - `LINT_GROUP_ALL`
+                  - `LINT_GROUP_BASE`
                   - `TYPE_CHECK_WORKER_PEAK_BYTES`
                   - `TYPE_CHECK_WORKER_UNITS`
         - **`codegen`** — Plugin doc generation and registry codegen
@@ -20928,6 +20933,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ClassRuleFactory`
               - `LintContribution`
               - `LintExemptionMode`
+              - `LintRuleSelection`
               - `LintToolkit`
               - `LoadedLintContribution`
               - `ParserTypeSource`
@@ -20941,9 +20947,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `collectTokens`
               - `findPluginDirs`
               - `isLintScopeExcluded`
+              - `LINT_CONFIG_SOURCE`
               - `LINT_DATA_FILES`
               - `LINT_SCOPE_EXCLUDE_GLOBS`
               - `lintCollectedDir`
+              - `lintContributionPaths`
+              - `lintDataKey`
               - `lintExemptions`
               - `lintRuleIds`
               - `loadLintContributions`

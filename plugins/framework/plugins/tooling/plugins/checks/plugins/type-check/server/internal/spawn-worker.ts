@@ -77,7 +77,7 @@ export async function spawnTypeCheckWorker(opts: {
   name: string;
   tsconfigPath: string;
   buildInfoPath: string;
-  lintFiles: string[];
+  lintFiles: TypeCheckWorkerJob["lintFiles"];
   grant: Grant;
 }): Promise<TypeCheckWorkerRun> {
   const { root, name, tsconfigPath, buildInfoPath, lintFiles, grant } = opts;
