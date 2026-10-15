@@ -20,10 +20,6 @@ const progressSink = defineFileSink({
     "open, top-level span enter/leave (with RSS), 30s heartbeat, and completion — " +
     "so a wedged build names the phase it is stuck in AND whether its heap was " +
     "climbing. Host-global across worktrees.",
-  consumer: {
-    kind: "internal",
-    note: "Per-build progress log (defineFileSink, cli/op-runtime build-progress; CLI-only, host-global): span enter/leave with RSS, heartbeat, completion. Read back only by a waiting build's checkout-lock message to name what the lock holder is stuck in, and by humans investigating a wedge. No durable consumer.",
-  },
   path: PROGRESS_FILE,
   maxBytes: 2 * 1024 * 1024,
   keep: 2,

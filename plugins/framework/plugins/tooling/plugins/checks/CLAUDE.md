@@ -444,7 +444,6 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`css-vars-supplied`**
   - **`data-migration-dml-only`**
   - **`data-views-in-sync`**
-  - **`durable-signals-accounted`**
   - **`eager-tier-in-sync`**
   - **`fields-eager-in-sync`**
   - **`format-clean`**

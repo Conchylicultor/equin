@@ -29,10 +29,6 @@ const videoCheckLog = defineLogSink({
   id: "chord-video-check",
   description:
     "Chord video availability: the oEmbed checks that got no answer (the video stays unknown and is offered) or a code that says nothing about the video.",
-  consumer: {
-    kind: "internal",
-    note: "On-demand oEmbed checks that settled nothing (apps/chord/video-availability): no answer (timeout, network) or a code that says nothing about the video. Forensic only — nothing durable reads it. By design such a check fails open: the video stays `unknown`, the loop is still offered, and the next query or the player's own report settles it, so a stuck YouTube shows as rows that never leave `unknown` in chord_video_status_v, not as a report.",
-  },
 });
 
 /** The view's status for each id; an id with no row is `unknown`. */

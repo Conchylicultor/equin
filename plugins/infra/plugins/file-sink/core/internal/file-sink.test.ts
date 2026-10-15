@@ -10,8 +10,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineFileSink, getFileSinks, openDynamicSink } from "./file-sink";
 
-const TEST_CONSUMER = { kind: "internal", note: "test" } as const;
-
 // Hermetic: every sink writes into an isolated temp dir. The registry is
 // process-global (a sink is declared exactly once), so each test uses a UNIQUE id
 // to avoid cross-test collisions. `defineFileSink` takes an explicit maxBytes/keep
@@ -43,7 +41,6 @@ describe("defineFileSink rotation", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path,
       maxBytes: 1 << 20,
       keep: 3,
@@ -63,7 +60,6 @@ describe("defineFileSink rotation", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path,
       maxBytes: 10, // "line-1\n" is 7 bytes: the 2nd append (7+7=14) crosses it.
       keep: 3,
@@ -85,7 +81,6 @@ describe("defineFileSink rotation", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path,
       maxBytes: 5, // "L0\n" is 3 bytes: every subsequent append rotates.
       keep: 3,
@@ -110,7 +105,6 @@ describe("defineFileSink rotation", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path: join(dir, "f.jsonl"),
     });
     expect(sink.bound).toEqual({
@@ -132,7 +126,6 @@ describe("appendAll", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path,
       maxBytes: 1 << 20,
       keep: 3,
@@ -151,7 +144,6 @@ describe("appendAll", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path,
       maxBytes: 1 << 20,
       keep: 3,
@@ -170,7 +162,6 @@ describe("appendAll", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path,
       maxBytes: 12, // "L0\n" is 3 bytes → 4 lines fill the file exactly
       keep: 3,
@@ -198,7 +189,6 @@ describe("appendAll", () => {
     const exactSink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path: exact,
       maxBytes: 12, // 3 × "aaa\n" = 12 bytes exactly
       keep: 3,
@@ -212,7 +202,6 @@ describe("appendAll", () => {
     const overSink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path: over,
       maxBytes: 11,
       keep: 3,
@@ -229,7 +218,6 @@ describe("appendAll", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path,
       maxBytes: 6, // 2 lines per rotation group
       keep: 2,
@@ -258,7 +246,6 @@ describe("appendAll", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path,
       maxBytes: 10,
       keep: 3,
@@ -279,7 +266,6 @@ describe("appendAll", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path,
       maxBytes: 10,
       keep: 3,
@@ -300,14 +286,12 @@ describe("appendAll", () => {
     const loopSink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path: loopPath,
       ...opts,
     });
     const batchSink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path: batchPath,
       ...opts,
     });
@@ -334,7 +318,6 @@ describe("appendAll", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path,
       maxBytes: 1 << 20,
       keep: 3,
@@ -354,14 +337,12 @@ describe("defineFileSink / getFileSinks registry", () => {
     defineFileSink({
       id,
       description: "t",
-      consumer: TEST_CONSUMER,
       path: join(dir, "d.jsonl"),
     });
     expect(() =>
       defineFileSink({
         id,
         description: "t",
-        consumer: TEST_CONSUMER,
         path: join(dir, "d2.jsonl"),
       }),
     ).toThrow(/already defined/);
@@ -372,7 +353,6 @@ describe("defineFileSink / getFileSinks registry", () => {
     const sink = defineFileSink({
       id,
       description: "t",
-      consumer: TEST_CONSUMER,
       path: join(dir, "e.jsonl"),
     });
     const first = getFileSinks() as Map<string, unknown>;

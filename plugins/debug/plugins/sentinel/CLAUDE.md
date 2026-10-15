@@ -241,8 +241,7 @@ episode, so a storm collapses to counted rows. The kind is
 **`duressExempt: true`** — it IS the durable record of the condition that drives
 shedding, so it must never be shed (a re-trip racing the async record, or buffer
 overflow at peak, would lose it — the same bar as `duress-shed`'s own summary
-kind). The `boot`/`duress-episodes` channels' report+timeline wiring is enforced by
-the `durable-signals-accounted` check.
+kind).
 
 ## Fleet flight windows (B5)
 

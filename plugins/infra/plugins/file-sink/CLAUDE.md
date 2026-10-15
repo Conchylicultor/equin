@@ -16,13 +16,23 @@ import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
 const buildLog = defineFileSink({
   id: "build-log",
   description: "`./singularity build` step timings, read by the Profiling Gantt",
-  consumer: { kind: "rendering-only", note: "Read by the Profiling Gantt." },
   path: "/…/build-log.jsonl", // absolute, caller-owned
   // maxBytes? default 128 MB   keep? default 3
 });
 buildLog.append(JSON.stringify(record)); // rotates at the cap, atomically
 buildLog.appendAll(records.map((r) => JSON.stringify(r))); // …or a whole batch, as ONE write
 ```
+
+## A sink is evidence, not a signal
+
+A sink never declares who reads it. Detecting a failure and alerting on it
+belongs to the code that owns the operation: it files a `ReportKind` (e.g. the
+boot watchdog files `boot-wedge` for a boot that never became ready). A report
+may point at a sink as its evidence; a sink never points at a report. (A
+required `consumer` classification on every sink, validated by a
+`durable-signals-accounted` check, was tried and removed — it labelled files
+without making any failure detectable. See
+`research/2026-10-15-global-remove-sink-consumer-classification.md`.)
 
 ## Bound is true by construction
 
@@ -68,11 +78,7 @@ filter naturally excludes the rotations.
   is **declared exactly once**: a duplicate `id` throws (mirroring
   `declareGrowthBound`), because two owners claiming one id is an authoring bug.
   `getFileSinks()` then exposes it as part of the true, enumerable set of sinks.
-  `consumer` (`SinkConsumer`: `report` / `timeline` / `rendering-only` /
-  `internal`, with a `note`) is a **required** classification of who reads the
-  file — the primitive ignores it at runtime and keeps its `reportKind` /
-  `timelineSource` as opaque strings; the `durable-signals-accounted` check
-  validates them, so a durable signal can never be persisted and read by nothing.
+  A sink does **not** declare who reads it (see below).
 - **`getFileSinks() → ReadonlyMap<string, FileSink>`** — a **copy** of the
   registry, never the live map. Its consumer is `retention` (which merges each
   sink into `getGrowthBounds()` under `file:${id}`) and, later, the
@@ -169,7 +175,6 @@ as the only escape. Being importable from every runtime *is* the feature.
     - `FileSinkSpec`
     - `JsonlTailResult`
     - `RotateBound`
-    - `SinkConsumer`
     - `TailOptions`
     - `TailResult`
   - Exports (values):

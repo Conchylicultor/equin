@@ -9,10 +9,6 @@ const depsInstallLog = defineLogSink({
   id: "deps-install",
   description:
     "Dependency installs requested from the app (Settings → Dependencies, a feature's first use): each install's progress and its installer's output.",
-  consumer: {
-    kind: "internal",
-    note: "Detached deps.install child transcript (infra/deps): one dependency install requested from the app, its progress and its installer's output. Failures surface as the dependency's `failed` state (its failed.json, pushed on deps.states and shown in Settings → Dependencies) and the job dead-letter.",
-  },
 });
 
 /**

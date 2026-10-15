@@ -5,8 +5,6 @@ import { join } from "node:path";
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
 import { declareGrowthBound, getGrowthBounds } from "./growth-bounds";
 
-const TEST_CONSUMER = { kind: "internal", note: "test" } as const;
-
 // The registry is process-global, so every test uses a UNIQUE name to avoid
 // cross-test collisions (a sink is declared exactly once). Keys are namespaced:
 // a DB table is `table:${name}`, a file sink is `file:${id}`.
@@ -61,7 +59,6 @@ describe("declareGrowthBound / getGrowthBounds", () => {
     const sink = defineFileSink({
       id,
       description: "test file sink",
-      consumer: TEST_CONSUMER,
       path: join(dir, "x.jsonl"),
       maxBytes: 1234,
       keep: 2,
@@ -83,7 +80,6 @@ describe("declareGrowthBound / getGrowthBounds", () => {
     defineFileSink({
       id: shared,
       description: "t",
-      consumer: TEST_CONSUMER,
       path: join(dir, "s.jsonl"),
     });
 

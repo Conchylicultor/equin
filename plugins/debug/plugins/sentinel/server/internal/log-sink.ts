@@ -9,8 +9,4 @@ export const sentinelLog = defineLogSink({
   id: "sentinel",
   description:
     "Sentinel onset TRIP/CLEAR + worker-supervision diagnostic prose (the durable duress signal is the duress-episodes channel).",
-  consumer: {
-    kind: "internal",
-    note: "Sentinel onset TRIP/CLEAR + worker supervision prose. The durable duress signal is the duress-episodes channel (report + timeline); this is diagnostic prose.",
-  },
 });

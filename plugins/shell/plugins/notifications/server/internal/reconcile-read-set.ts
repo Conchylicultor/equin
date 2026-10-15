@@ -7,10 +7,6 @@ const log = defineLogSink({
   id: "notifications",
   description:
     "Notifications ops log: boot-time read-set reconciliation (stale live-state reader eviction).",
-  consumer: {
-    kind: "internal",
-    note: "Boot-time notifications read-set reconciliation diagnostics (shell/notifications). Not a failure signal.",
-  },
 });
 
 // The `notifications` table's only live-state readers are the resources the

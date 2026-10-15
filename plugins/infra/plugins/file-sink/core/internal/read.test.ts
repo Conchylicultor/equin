@@ -5,8 +5,6 @@ import { join } from "node:path";
 import { defineFileSink } from "./file-sink";
 import { readJsonlTail, readTail } from "./read";
 
-const TEST_CONSUMER = { kind: "internal", note: "test" } as const;
-
 // Hermetic, mirroring file-sink.test.ts: every file lives in an isolated temp dir.
 // Sink ids must be unique (the registry is process-global, declared exactly once).
 
@@ -87,7 +85,6 @@ describe("readTail", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path,
       maxBytes: 5, // "L0\n" is 3 bytes → every subsequent append rotates
       keep: 3,
@@ -121,7 +118,6 @@ describe("readTail", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path,
       maxBytes: 12, // "L0\n" is 3 bytes → 4 lines per rotation group
       keep: 3,
@@ -141,7 +137,6 @@ describe("readTail", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path,
       maxBytes: 5,
       keep: 3,
@@ -210,7 +205,6 @@ describe("FileSink read methods", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path,
     });
     sink.append(JSON.stringify({ n: 1 }));
@@ -231,7 +225,6 @@ describe("FileSink read methods", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path,
     });
     expect(sink.bound.maxBytes).toBe(128 * 1024 * 1024);
@@ -246,7 +239,6 @@ describe("FileSink read methods", () => {
     const sink = defineFileSink({
       id: uniqueId(),
       description: "t",
-      consumer: TEST_CONSUMER,
       path: join(dir, "k.jsonl"),
     });
     expect(sink.readTail()).toEqual({ kind: "missing" });

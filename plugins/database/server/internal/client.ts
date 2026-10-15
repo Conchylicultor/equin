@@ -332,10 +332,6 @@ export const dbLog = defineLogSink({
   id: "db",
   description:
     "Database log: the app pool's transient-contention SQL retries ([deadlock-retry]) and, on every backend connection, calls that got no reply within their deadline ([deadline]); read via db.jsonl.",
-  consumer: {
-    kind: "internal",
-    note: "Database client diagnostics — slow acquires, pool events (database).",
-  },
 });
 
 function retryableSqlState(err: unknown): string | null {

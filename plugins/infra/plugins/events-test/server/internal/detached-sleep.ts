@@ -14,10 +14,6 @@ const detachedSleepLog = defineLogSink({
   id: "events-test-detached-sleep",
   description:
     "events-test detached-sleep harness: transcript of the supervised child's progress lines.",
-  consumer: {
-    kind: "internal",
-    note: "Transcript of the infra/events-test detached-sleep harness (supervised-job restart-survival probe); read by hand while verifying, nothing consumes it.",
-  },
 });
 
 export const detachedSleep = defineSupervisedJob({

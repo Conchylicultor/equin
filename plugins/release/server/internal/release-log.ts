@@ -10,8 +10,4 @@ export const releaseLog = defineLogSink({
   id: RELEASE_LOG_CHANNEL,
   description:
     "Release engine run log: stdout/stderr streamed from `./singularity release`, read back by the per-run logs endpoint.",
-  consumer: {
-    kind: "rendering-only",
-    note: "Local release-run logs, streamed into the Studio release-logs pane. A release progress log, not a failure funnel.",
-  },
 });

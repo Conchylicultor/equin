@@ -153,7 +153,6 @@ export const exemptEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/file-viewer/plugins/image", id: "primitives.file-viewer.image", loader: () => import("@plugins/primitives/plugins/file-viewer/plugins/image/exempt"), dependsOn: [] },
   { pluginPath: "primitives/plugins/folder-picker", id: "primitives.folder-picker", loader: () => import("@plugins/primitives/plugins/folder-picker/exempt"), dependsOn: [] },
   { pluginPath: "primitives/plugins/live-state", id: "primitives.live-state", loader: () => import("@plugins/primitives/plugins/live-state/exempt"), dependsOn: [] },
-  { pluginPath: "primitives/plugins/log-channels", id: "primitives.log-channels", loader: () => import("@plugins/primitives/plugins/log-channels/exempt"), dependsOn: [] },
   { pluginPath: "primitives/plugins/networking", id: "primitives.networking", loader: () => import("@plugins/primitives/plugins/networking/exempt"), dependsOn: [] },
   { pluginPath: "primitives/plugins/optimistic-mutation", id: "primitives.optimistic-mutation", loader: () => import("@plugins/primitives/plugins/optimistic-mutation/exempt"), dependsOn: [] },
   { pluginPath: "primitives/plugins/overlay/plugins/cursor-menu", id: "primitives.overlay.cursor-menu", loader: () => import("@plugins/primitives/plugins/overlay/plugins/cursor-menu/exempt"), dependsOn: [] },

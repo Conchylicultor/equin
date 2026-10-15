@@ -26,10 +26,6 @@ const log = defineLogSink({
   id: "derived-tables",
   description:
     "Derived-tables rebuild ops log: rollup table/function/trigger DDL and the boot reconcile from source.",
-  consumer: {
-    kind: "internal",
-    note: "Derived rollup-table rebuild diagnostics on boot (database/derived-tables).",
-  },
 });
 
 function q(name: string): string {

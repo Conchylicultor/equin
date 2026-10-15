@@ -32,10 +32,6 @@ const ugAlignmentLog = defineLogSink({
   id: "sonata-ug-alignment",
   description:
     "Sonata UG alignment: the video search and its candidates, the recording's beat analysis (download, installs, extractor) and the sheet-to-beats alignment, with its transpose and score.",
-  consumer: {
-    kind: "internal",
-    note: "Detached sonata.ug-alignment.align child transcript (apps/sonata/sources/ultimate-guitar/alignment): one song's beat-features fetch and the aligner's result (transpose, score). Failures surface as the song's alignment row `failed` (served on the sonata-ug-alignment live collection, shown in the player's Recording section) and the job dead-letter.",
-  },
 });
 
 const UgAlignInputSchema = z.object({ songId: z.string() });

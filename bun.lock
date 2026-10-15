@@ -3049,10 +3049,6 @@
       "name": "@singularity/plugin-framework-tooling-checks-data-views-in-sync",
       "version": "0.0.1",
     },
-    "plugins/framework/plugins/tooling/plugins/checks/plugins/durable-signals-accounted": {
-      "name": "@singularity/plugin-framework-tooling-checks-durable-signals-accounted",
-      "version": "0.0.1",
-    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/eager-tier-in-sync": {
       "name": "@singularity/plugin-framework-tooling-checks-eager-tier-in-sync",
       "version": "0.0.1",
@@ -8079,8 +8075,6 @@
     "@singularity/plugin-framework-tooling-checks-data-migration-dml-only": ["@singularity/plugin-framework-tooling-checks-data-migration-dml-only@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/data-migration-dml-only"],
 
     "@singularity/plugin-framework-tooling-checks-data-views-in-sync": ["@singularity/plugin-framework-tooling-checks-data-views-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/data-views-in-sync"],
-
-    "@singularity/plugin-framework-tooling-checks-durable-signals-accounted": ["@singularity/plugin-framework-tooling-checks-durable-signals-accounted@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/durable-signals-accounted"],
 
     "@singularity/plugin-framework-tooling-checks-eager-tier-in-sync": ["@singularity/plugin-framework-tooling-checks-eager-tier-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/eager-tier-in-sync"],
 

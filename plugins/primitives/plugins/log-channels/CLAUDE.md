@@ -10,16 +10,16 @@ live-state pipeline is wedged. `debug/logs` is the read-only viewer on top of th
 Durability is a **declaration**, not a flag. There is no `persist` option: a
 channel either declares a durable file sink or it doesn't.
 
-- **Durable (server):** `defineLogSink({ id, description, consumer }).publish(line, stream?, t?)`
+- **Durable (server):** `defineLogSink({ id, description }).publish(line, stream?, t?)`
   from `@plugins/primitives/plugins/log-channels/server`. This registers the
   channel AND (lazily, on first publish) a `defineFileSink` under the per-worktree
   logs dir — one declared, enumerable, 128 MB × 3-rotation growth bound
   (`@plugins/infra/plugins/file-sink`, merged into `retention.getGrowthBounds()` as
   `file:<id>`). The `description` is what makes a perf sink (`health`,
   `health-host`, `slow-op-markers`) distinguishable from an ops log in
-  `getFileSinks()`. `consumer` is the required classification of who reads the
-  file, forwarded to its `defineFileSink` (see `infra/file-sink`; validated by
-  `durable-signals-accounted`). Declared **exactly once** per id — a channel written from two
+  `getFileSinks()`. A channel never declares who reads it — alerting belongs to
+  the code that detects the failure (see `infra/file-sink`, *A sink is
+  evidence, not a signal*). Declared **exactly once** per id — a channel written from two
   modules hoists ONE `defineLogSink` into a shared module and imports it from both
   (a duplicate id throws). The sink is built lazily so declaring one is
   **import-safe** (the process's runtime namespace is not resolved at module eval — the barrel is

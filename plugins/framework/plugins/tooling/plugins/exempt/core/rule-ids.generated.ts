@@ -33,7 +33,6 @@ export type ExemptableRuleId =
   | "dom-access-safety/no-module-scope-dom"
   | "dom-selection-safety/no-raw-selection-range"
   | "drizzle-cli-safety/no-adhoc-drizzle-cli"
-  | "durable-signals-accounted"
   | "e2e-harness/no-networkidle"
   | "element-type-safety/no-post-mount-element-type"
   | "endpoints/no-raw-web-fetch"

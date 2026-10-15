@@ -88,12 +88,6 @@ const episodesChannel = defineLogSink({
   id: DURESS_EPISODES_CHANNEL,
   description:
     "Sentinel duress trip/clear lines (one per episode transition). Each episode files the duress-episode report and renders as a timeline duress band.",
-  consumer: {
-    kind: "report",
-    reportKind: "duress-episode",
-    timelineSource: "duress",
-    note: "Sentinel duress trip/clear lines. Each episode files the duress-episode report (on clear) AND renders as a timeline duress band.",
-  },
 });
 
 function emit(frame: WorkerToMainFrame): void {

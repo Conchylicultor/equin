@@ -14,10 +14,6 @@ export const opLogSink = defineFileSink({
   id: "op-log",
   description:
     "Unified op log: one record per host-contending op (build / push / check) — the requested/granted/completed phases with their per-resource wait lists. Read by the Debug → Profiling op Gantt and stats/pushes.",
-  consumer: {
-    kind: "rendering-only",
-    note: "Unified host op log (defineFileSink, debug/profiling/op-log): requested/granted/completed phases of every build / push / check. Read back through the sink's bounded tail reader by the Debug → Profiling ops Gantt + op detail, and by stats/pushes. A profiling record, not a failure funnel.",
-  },
   path: OP_LOG_FILE,
 });
 

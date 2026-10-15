@@ -21,10 +21,6 @@ const reapLog = defineLogSink({
   id: "worktree-cleanup",
   description:
     "Worktree-cleanup reaper ops log: stale git worktree + Postgres DB-fork removals.",
-  consumer: {
-    kind: "internal",
-    note: "Stale-worktree/DB-fork reap-job diagnostics (debug/worktree-cleanup).",
-  },
 });
 
 // Run `fn` over `items` with at most `limit` concurrent executions.

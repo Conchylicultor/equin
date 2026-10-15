@@ -6,8 +6,4 @@ export const derivedViewsLog = defineLogSink({
   id: "derived-views",
   description:
     "Derived-views ops log: the live view layer dropped before pending migrations, and plain DB view drops/creates in dependency order on boot.",
-  consumer: {
-    kind: "internal",
-    note: "Derived-view rebuild diagnostics on boot (database/derived-views).",
-  },
 });

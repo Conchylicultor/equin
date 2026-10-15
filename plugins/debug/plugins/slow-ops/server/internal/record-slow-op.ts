@@ -32,10 +32,6 @@ const markerChannel = defineLogSink({
   id: "slow-op-markers",
   description:
     "PERF sink: one marker line per recorded slow op, read from disk to draw spike lines on the Debug → Health charts.",
-  consumer: {
-    kind: "rendering-only",
-    note: "Per-worktree slow-op markers overlaid on the Debug → Health pane (readSlowOpMarkers). The durable slow-op SIGNAL is the slow-op report filed on the DB path by the same recorder; this channel is display-only.",
-  },
 });
 
 function shedSummaryMessage(s: ShedSummary): string {

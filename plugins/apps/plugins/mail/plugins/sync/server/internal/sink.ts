@@ -9,8 +9,4 @@ export const mailSyncLog = defineLogSink({
   id: "mail-sync",
   description:
     "Gmail sync engine ops log: bootstrap / backfill / delta / attachment-scan caps and recoveries.",
-  consumer: {
-    kind: "internal",
-    note: "Gmail sync engine ops log — bootstrap / backfill / delta / attachment-scan caps and recoveries (apps/mail/sync tick, backfill, attachment-scan jobs). Diagnostic prose; no durable failure funnel.",
-  },
 });

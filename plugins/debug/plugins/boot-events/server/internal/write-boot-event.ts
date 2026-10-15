@@ -21,12 +21,6 @@ const channel = defineLogSink({
   id: "boot",
   description:
     "Per-boot start/ready lines (boot-events): a start line at the register phase and a ready line at onReady, so a wedged-mid-boot backend is visible on cross-worktree timelines.",
-  consumer: {
-    kind: "report",
-    reportKind: "boot-wedge",
-    timelineSource: "boot",
-    note: "Per-boot start/ready lines (boot-events). A never-ready boot files the boot-wedge report (debug/boot-watchdog) AND renders as a timeline boot bar.",
-  },
 });
 
 function publish(line: BootLine): void {
