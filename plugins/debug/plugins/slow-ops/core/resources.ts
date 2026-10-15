@@ -1,13 +1,10 @@
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import {
-  liveInstant,
-  liveNumber,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
-import {
-  SlowOpCallerSchema,
-  SlowOpListRowSchema,
-  SlowOpSchema,
+  SLOW_OP_CALLER_CARRIED,
+  SLOW_OP_CALLER_LISTED,
+  SLOW_OP_LIST_CARRIED,
+  SLOW_OP_LIST_LISTED,
+  slowOpFields,
 } from "./schema";
 
 /**
@@ -18,15 +15,9 @@ import {
  * a new slow occurrence reaches an open list without a per-write cascade.
  */
 export const slowOpsList = liveCollection("slow-ops.ops", {
-  row: SlowOpListRowSchema,
+  fields: SLOW_OP_LIST_LISTED,
+  carry: { fields: SLOW_OP_LIST_CARRIED },
   id: "id",
-  filterable: {
-    operationKind: liveText(),
-    operation: liveText(),
-    count: liveNumber(),
-    totalMs: liveNumber(),
-    lastSeenAt: liveInstant(),
-  },
   sortable: ["totalMs", "count", "maxMs", "lastMs", "waitMs", "lastSeenAt"],
   default: { orderBy: [["totalMs", "desc"]], limit: 100 },
   maxLimit: 500,
@@ -39,7 +30,7 @@ export const slowOpsList = liveCollection("slow-ops.ops", {
  * 30-day sweep removed).
  */
 export const slowOpById = liveCollection("slow-ops.op", {
-  row: SlowOpSchema,
+  carry: { fields: slowOpFields },
   id: "id",
 });
 
@@ -49,14 +40,9 @@ export const slowOpById = liveCollection("slow-ops.op", {
  * by total time and paged. Every caller keeps its own row: nothing is folded.
  */
 export const slowOpCallers = liveCollection("slow-ops.callers", {
-  row: SlowOpCallerSchema,
+  fields: SLOW_OP_CALLER_LISTED,
+  carry: { fields: SLOW_OP_CALLER_CARRIED },
   id: "id",
-  filterable: {
-    operationKind: liveText(),
-    operation: liveText(),
-    callerKind: liveText(),
-    callerLabel: liveText(),
-  },
   sortable: ["totalMs", "count", "maxMs", "lastSeenAt"],
   default: { orderBy: [["totalMs", "desc"]], limit: 50 },
   maxLimit: 500,

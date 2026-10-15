@@ -61,14 +61,15 @@ import type {
 import { nullable } from "@plugins/fields/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
-import { enumTextField } from "@plugins/fields/plugins/text/plugins/config/core";
+import {
+  enumTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
-import {
-  liveNumber,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   exposedColumns,
   liveCollection,
@@ -482,16 +483,20 @@ const ccJoin: KeyedSideJoin<"cc", typeof custom> = {
   ],
   hostKey: custom.rowKey,
 };
-const SongRow = z.object({
-  id: z.string(),
-  title: z.string(),
-  createdAt: z.number(),
-  lastPlayedAt: z.number().nullable(),
-  plays: z.number().nullable(),
-  artistName: z.string().nullable(),
-  labelName: z.string().nullable(),
-  c1: z.string().nullable(),
-});
+// The song list's fields, in the row's key order (the compile binds columns by
+// it, so the golden pins it). Every one is listed (labelled); the ones the
+// row never filtered on opt out of the filter (`filterable: false`).
+const HIDDEN = { filterable: false } as const;
+const SONG = {
+  id: textField({ label: "Id", ...HIDDEN }),
+  title: textField({ label: "Title" }),
+  createdAt: intField({ label: "Created", ...HIDDEN }),
+  lastPlayedAt: nullable(intField({ label: "Last played", ...HIDDEN })),
+  plays: nullable(intField({ label: "Plays" })),
+  artistName: nullable(textField({ label: "Artist" })),
+  labelName: nullable(textField({ label: "Label" })),
+  c1: nullable(textField({ label: "C1" })),
+};
 const SONG_SAMPLE = [
   {
     id: "s1",
@@ -522,13 +527,13 @@ const tracks = pgTable("golden_tracks", {
   durationSec: integer("duration_sec").notNull(),
   owner: text("owner").notNull(),
 });
-const TrackRow = z.object({
-  id: z.string(),
-  title: z.string(),
-  playedAt: z.date().nullable(),
-  durationSec: z.number(),
-  owner: z.string(),
-});
+const TRACK = {
+  id: textField({ label: "Id", ...HIDDEN }),
+  title: textField({ label: "Title" }),
+  playedAt: nullable(dateField({ label: "Played", ...HIDDEN })),
+  durationSec: intField({ label: "Duration", ...HIDDEN }),
+  owner: textField({ label: "Owner" }),
+};
 const TRACK_SAMPLE = [
   {
     id: "t1",
@@ -561,7 +566,10 @@ const playsSongs = pgTable("golden_plays_songs", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
 });
-const playsSongsRef = entityRef("golden_plays_songs", {});
+const playsSongsRef = entityRef("golden_plays_songs", {
+  id: textField({ label: "Id", ...HIDDEN }),
+  title: textField({ label: "Title" }),
+});
 // A defaulted count and a nullable instant, exposed to every list of songs.
 const songPlayback = defineExtension(
   playsSongs,
@@ -806,15 +814,8 @@ async function collectionCases(): Promise<Record<string, Json>> {
   for (const required of [false, true]) {
     const name = required ? "joins-required" : "joins";
     const c = liveCollection(`golden.${name}`, {
-      row: SongRow,
+      fields: SONG,
       id: "id",
-      filterable: {
-        title: liveText(),
-        plays: liveNumber(),
-        artistName: liveText(),
-        labelName: liveText(),
-        c1: liveText(),
-      },
       sortable: [
         "createdAt",
         "title",
@@ -875,13 +876,12 @@ async function collectionCases(): Promise<Record<string, Json>> {
   // A base `where` over a join, and a default scope a filter drops.
   {
     const c = liveCollection("golden.defaults", {
-      row: SongRow,
-      id: "id",
-      filterable: {
-        title: liveText(),
-        artistName: liveText(),
-        labelName: liveText(),
+      fields: {
+        ...SONG,
+        plays: nullable(intField({ label: "Plays", ...HIDDEN })),
+        c1: nullable(textField({ label: "C1", ...HIDDEN })),
       },
+      id: "id",
       sortable: ["createdAt", "title", "labelName"],
       default: { orderBy: [["createdAt", "desc"]], limit: 10 },
       maxLimit: 50,
@@ -927,9 +927,8 @@ async function collectionCases(): Promise<Record<string, Json>> {
   // Page cuts — NULL keys, a sortable-but-not-filterable key, a long key.
   {
     const c = liveCollection("golden.cuts", {
-      row: TrackRow,
+      fields: TRACK,
       id: "id",
-      filterable: { title: liveText(), owner: liveText() },
       sortable: ["title", "playedAt", "durationSec"],
       default: { orderBy: [["playedAt", "desc"]], limit: 10 },
       maxLimit: 30,
@@ -994,9 +993,12 @@ async function collectionCases(): Promise<Record<string, Json>> {
     });
     const SCOPE = "golden.surface";
     const c = liveCollection("golden.scoped", {
-      row: z.object({ id: z.string(), title: z.string(), n: z.number() }),
+      fields: {
+        id: textField({ label: "Id", ...HIDDEN }),
+        title: textField({ label: "Title" }),
+        n: intField({ label: "N" }),
+      },
       id: "id",
-      filterable: { title: liveText(), n: liveNumber() },
       sortable: ["title", "n"],
       default: { orderBy: [["n", "asc"]], limit: 10 },
       maxLimit: 50,
@@ -1039,13 +1041,12 @@ async function collectionCases(): Promise<Record<string, Json>> {
   // and a nullable one, folded into `$columns`.
   {
     const c = liveCollection("golden.exposed-sort", {
-      row: z.object({ id: z.string(), title: z.string() }),
+      from: playsSongsRef,
+      pick: ["id", "title"],
       id: "id",
-      filterable: { title: liveText() },
       sortable: ["title"],
       default: { orderBy: [["title", "asc"]], limit: 10 },
       maxLimit: 30,
-      exposes: { base: playsSongsRef },
     });
     const stats = exposedColumns(songPlayback.exposure);
     const PLAYS = stats.wireName("playCount");
@@ -1090,7 +1091,7 @@ async function collectionCases(): Promise<Record<string, Json>> {
   // Lookup-only: the `:rows` point read alone.
   {
     const c = liveCollection("golden.lookup-only", {
-      row: z.object({ id: z.string(), n: z.number() }),
+      carry: { fields: { id: textField(), n: intField() } },
       id: "id",
     });
     const { db, h } = harness(ROW_SAMPLE);
@@ -1215,25 +1216,28 @@ const allTaskPush = defineRollup({
   ],
 });
 
-const AllFlatRow = z.object({
-  id: z.string(),
-  title: z.string(),
-  rank: z.number(),
-  createdAt: z.date(),
-});
-const AllTreeRow = z.object({
-  id: z.string(),
-  title: z.string(),
-  createdAt: z.date(),
-  ownerName: z.string(),
-  firstPushAt: z.date().nullable(),
-  done: z.boolean(),
-  live: z.boolean().nullable(),
-  attempts: z.array(z.unknown()),
-  dependencies: z.array(z.string()),
-  blocked: z.boolean(),
-  status: z.string(),
-});
+const ALL_FLAT = {
+  id: textField({ label: "Id" }),
+  title: textField({ label: "Title" }),
+  rank: intField({ label: "Rank" }),
+  createdAt: dateField({ label: "Created" }),
+};
+const ALL_TREE = {
+  id: textField({ label: "Id" }),
+  title: textField({ label: "Title" }),
+  createdAt: dateField({ label: "Created" }),
+  ownerName: textField({ label: "Owner" }),
+  firstPushAt: nullable(dateField({ label: "First push" })),
+  done: boolField({ label: "Done" }),
+  live: nullable(boolField({ label: "Live" })),
+};
+// Carried after the listed ones, in the row's key order.
+const ALL_TREE_CARRIED = {
+  attempts: jsonField({ schema: z.array(z.unknown()), default: [] }),
+  dependencies: jsonField({ schema: z.array(z.string()), default: [] }),
+  blocked: boolField(),
+  status: textField(),
+};
 
 /** The recording script of the `all` shapes: rows of exactly the projection each runs. */
 function allScript(sample: Record<string, unknown>) {
@@ -1296,7 +1300,7 @@ async function allRecord(
 
 async function allCases(): Promise<Record<string, Json>> {
   const flat = liveCollection("golden.all-flat", {
-    row: AllFlatRow,
+    fields: ALL_FLAT,
     id: "id",
     all: {
       orderBy: [
@@ -1307,7 +1311,8 @@ async function allCases(): Promise<Record<string, Json>> {
     },
   });
   const tree = liveCollection("golden.all-tree", {
-    row: AllTreeRow,
+    fields: ALL_TREE,
+    carry: { fields: ALL_TREE_CARRIED },
     id: "id",
     all: {
       orderBy: [["createdAt", "asc"]],
@@ -1521,7 +1526,11 @@ const xpConvs = pgTable("golden_xp_convs", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
 });
 const xpTasksRef = entityRef("golden_xp_tasks", {});
-const xpConvsRef = entityRef("golden_xp_convs", {});
+const xpConvsRef = entityRef("golden_xp_convs", {
+  id: textField({ label: "Id", ...HIDDEN }),
+  title: textField({ label: "Title" }),
+  createdAt: dateField({ label: "Created", ...HIDDEN }),
+});
 // A declared default (`main`): a missing row reads it, COALESCEd.
 const xpTrack = defineExtension(
   xpTasks,
@@ -1606,11 +1615,6 @@ const xpOwnerJoins = [
     required: true,
   } satisfies LookupJoin<"task", typeof xpTasks>,
 ] as const;
-const XpRow = z.object({
-  id: z.string(),
-  title: z.string(),
-  createdAt: z.date(),
-});
 
 async function exposedCases(): Promise<Record<string, Json>> {
   const out: Record<string, Json> = {};
@@ -1629,13 +1633,13 @@ async function exposedCases(): Promise<Record<string, Json>> {
 
   {
     const c = liveCollection("golden.exposed-window", {
-      row: XpRow,
+      from: xpConvsRef,
+      pick: ["id", "title", "createdAt"],
+      related: { task: xpTasksRef },
       id: "id",
-      filterable: { title: liveText() },
       sortable: ["createdAt"],
       default: { orderBy: [["createdAt", "desc"]], limit: 10 },
       maxLimit: 30,
-      exposes: { base: xpConvsRef, task: xpTasksRef },
     });
     const createdAt = new Date("2026-10-12T10:00:00.000Z");
     const { db, h } = harness([
@@ -1709,13 +1713,16 @@ async function exposedCases(): Promise<Record<string, Json>> {
 
   {
     const all = liveCollection("golden.exposed-all", {
-      row: XpRow,
+      from: xpConvsRef,
+      pick: ["id", "title", "createdAt"],
+      // The base entity's exposures stay off: only the task's fold.
+      baseExposures: false,
+      related: { task: xpTasksRef },
       id: "id",
       all: {
         orderBy: [["createdAt", "desc"]],
         unbounded: { reason: "a golden fixture" },
       },
-      exposes: { task: xpTasksRef },
     });
     const sample = {
       id: "r1",

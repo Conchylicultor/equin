@@ -657,8 +657,10 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `fields.fieldsToZodObject`
     - `fields.nullable`
     - `fields/date/config.dateField`
+    - `fields/float/config.floatField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
+    - `fields/text/config.parsedTextField`
     - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveCollection`

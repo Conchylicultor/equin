@@ -26,7 +26,10 @@ import { sql } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { integer, pgTable, text } from "drizzle-orm/pg-core";
 import { Client } from "pg";
-import { z } from "zod";
+import { nullable } from "@plugins/fields/core";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import {
   createTestDb,
   type TestDb,
@@ -56,10 +59,6 @@ import type { ExtensionJoin } from "@plugins/infra/plugins/query-resource/core";
 import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
 import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import {
-  liveNumber,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
 import { compileCollection } from "./serve-collection";
 
 const HOST = "orc_songs";
@@ -83,18 +82,15 @@ const extJoin: ExtensionJoin<"x", typeof ext> = {
   parentKey: songs.id,
 };
 
-const Row = z.object({
-  id: z.string(),
-  title: z.string(),
-  n: z.number(),
-  score: z.number().nullable(),
-  note: z.string().nullable(),
-});
-
 const songsCollection = liveCollection("test.live.oracle.songs", {
-  row: Row,
+  fields: {
+    id: textField({ label: "Id", filterable: false }),
+    title: textField({ label: "Title", filterable: false }),
+    n: intField({ label: "N" }),
+    score: nullable(floatField({ label: "Score" })),
+    note: nullable(textField({ label: "Note" })),
+  },
   id: "id",
-  filterable: { n: liveNumber(), score: liveNumber(), note: liveText() },
   sortable: ["n", "score", "title"],
   default: { orderBy: [["n", "asc"]], limit: 4 },
   maxLimit: 20,

@@ -21,11 +21,11 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { z } from "zod";
 import { pgTable, text } from "drizzle-orm/pg-core";
 import { nullable } from "@plugins/fields/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
@@ -40,14 +40,16 @@ import {
   liveCollection,
   LIVE_COLUMNS_KEY,
 } from "@plugins/network/plugins/live/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { compileCollection } from "./serve-collection";
 
 const songs = pgTable("xs_songs", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
 });
-const songsRef = entityRef("xs_songs", {});
+const songsRef = entityRef("xs_songs", {
+  id: textField({ label: "Id", filterable: false }),
+  title: textField({ label: "Title" }),
+});
 const playback = defineExtension(
   songs,
   "playback",
@@ -70,18 +72,15 @@ const SLICE = "xs_songs_ext_playback";
 const PLAYS = `${SLICE}.playCount`;
 const LAST = `${SLICE}.lastPlayedAt`;
 
-const Song = z.object({ id: z.string(), title: z.string() });
-
 let n = 0;
 function library() {
   return liveCollection(`test.live.exposed-sort-${n++}`, {
-    row: Song,
+    from: songsRef,
+    pick: ["id", "title"],
     id: "id",
-    filterable: { title: liveText() },
     sortable: ["title"],
     default: { orderBy: [["title", "asc"]], limit: 10 },
     maxLimit: 30,
-    exposes: { base: songsRef },
   });
 }
 
@@ -133,9 +132,8 @@ describe("exposed columns — the codec", () => {
     ]);
     // A collection that does not reach the entity cannot name its columns.
     const unreached = liveCollection(`test.live.exposed-sort-x-${n++}`, {
-      row: Song,
+      carry: { fields: { id: textField(), title: textField() } },
       id: "id",
-      filterable: {},
       sortable: ["title"],
       default: { orderBy: [["title", "asc"]], limit: 10 },
       maxLimit: 30,

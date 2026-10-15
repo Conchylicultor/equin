@@ -3,7 +3,7 @@ import type { HostFsEntryKind } from "@plugins/infra/plugins/host-fs/core";
 
 /**
  * One entry of a listed folder, as a row of the browser's tree DataView — what
- * a `FileBrowserSlots.Fields` contributor projects its fields from. Its path is
+ * a row of the `fileEntry` kind. Its path is
  * its id, in the browser's display form (`~/…` under home).
  */
 export interface EntryRow {

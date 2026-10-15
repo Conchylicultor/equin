@@ -1,5 +1,5 @@
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import { UgAlignmentRowSchema } from "../core";
+import { ugAlignmentShape } from "../core";
 
 // The alignment row of ONE song, read by its `songId`. The side-table holds 0 or
 // 1 row per song — its primary key IS the song — so it is a lookup-only
@@ -12,6 +12,6 @@ import { UgAlignmentRowSchema } from "../core";
 // the Recording section), a load is one primary-key seek, and the `:rows` point
 // routing schedules a job's write for the one song whose row it named.
 export const ugAlignmentRows = liveCollection("sonata-ug-alignment", {
-  row: UgAlignmentRowSchema,
+  from: ugAlignmentShape,
   id: "songId",
 });

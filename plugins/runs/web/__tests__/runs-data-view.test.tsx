@@ -88,8 +88,16 @@ afterEach(() => {
 const NOW = new Date("2026-10-02T12:00:00Z");
 
 /** Two arms as their cores declare them — a kind and its label, no fields of their own. */
-const buildArm = liveArm(runs, "build", { label: "Build", fields: {} });
-const releaseArm = liveArm(runs, "release", { label: "Release", fields: {} });
+const buildArm = liveArm(runs, "build", {
+  label: "Build",
+  order: 10,
+  fields: {},
+});
+const releaseArm = liveArm(runs, "release", {
+  label: "Release",
+  order: 20,
+  fields: {},
+});
 
 describe("<RunDuration>", () => {
   it("a finished run reads its duration", () => {

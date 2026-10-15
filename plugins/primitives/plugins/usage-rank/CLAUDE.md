@@ -95,9 +95,12 @@ the ranked things are config entries with no parent row to cascade from.
     - `useUsageOrder`
 - Core:
   - Uses:
+    - `fields.fieldsToZodObject`
+    - `fields/date/config.dateField`
+    - `fields/float/config.floatField`
+    - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveCollection`
-    - `network/live/filter.liveText`
   - Exports (types):
     - `RecordUsageBody`
     - `ScorableStat`

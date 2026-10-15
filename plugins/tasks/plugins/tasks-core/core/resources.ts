@@ -2,23 +2,28 @@ import {
   liveCollection,
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { z } from "zod";
 import {
-  PushSchema,
+  AttemptStatusSchema,
   TASK_STATUS_OPTIONS,
   TaskStatusSchema,
 } from "./internal/schema";
-import { AttemptWithConversationsSchema } from "./schemas";
-import { WorkspaceSpecSchema } from "@plugins/conversations/plugins/workspace/core";
-import { conversationsEntityRef, tasksEntityRef } from "./entity-refs";
+import { pushFields } from "./internal/fields";
+import { ConversationSummarySchema } from "./schemas";
+import {
+  attemptsEntityRef,
+  conversationsEntityRef,
+  tasksEntityRef,
+} from "./entity-refs";
 import { nullable } from "@plugins/fields/core";
 import {
   enumTextField,
+  parsedTextField,
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { rankValueField } from "@plugins/fields/plugins/rank/plugins/config/core";
 import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
 
@@ -120,7 +125,9 @@ export type TaskRow =
 // refill. A task the read does not find is `found: false`. Served over the
 // `tasks` table in `../server/internal/resources.ts`.
 export const taskDescriptions = liveCollection("task-descriptions", {
-  row: z.object({ id: z.string(), description: z.string().nullable() }),
+  from: tasksEntityRef,
+  carry: { pick: ["id", "description"] },
+  baseExposures: false,
   id: "id",
 });
 // Every attempt — the WHOLE ordered set (`all`), each with its non-system
@@ -145,7 +152,23 @@ export const taskDescriptions = liveCollection("task-descriptions", {
 // Boot-critical (`preload: "boot"`). Named `attemptRows` because `attempts`
 // is the server's view handle.
 export const attemptRows = liveCollection("attempts", {
-  row: AttemptWithConversationsSchema,
+  from: attemptsEntityRef,
+  // `workspace` is left off: the row is pinned by the C39 old-bundle check, so
+  // the workspace crosses the wire on its own lookup (`attemptWorkspaces`).
+  carry: {
+    pick: ["id", "taskId", "worktreePath", "createdAt", "updatedAt"],
+    fields: {
+      status: parsedTextField(AttemptStatusSchema, { default: "pending" }),
+      active: boolField(),
+      retained: boolField(),
+      finishedAt: nullable(dateField()),
+      conversations: jsonField({
+        schema: z.array(ConversationSummarySchema),
+        default: [],
+      }),
+    },
+  },
+  baseExposures: false,
   id: "id",
   all: {
     orderBy: [["createdAt", "asc"]],
@@ -164,7 +187,9 @@ export const attemptRows = liveCollection("attempts", {
 // `attempts` table in `../server/internal/resources.ts`; the column is written
 // once, at insert.
 export const attemptWorkspaces = liveCollection("attempt-workspaces", {
-  row: z.object({ id: z.string(), workspace: WorkspaceSpecSchema }),
+  from: attemptsEntityRef,
+  carry: { pick: ["id", "workspace"] },
+  baseExposures: false,
   id: "id",
 });
 // The `pushes` ledger as a live collection: one row per landed commit sha.
@@ -180,9 +205,18 @@ export const attemptWorkspaces = liveCollection("attempt-workspaces", {
 // `attempts` set does not read it: a push reaches its attempt through the
 // `attempt_push_agg` rollup's source route on `pushes`.
 export const pushRows = liveCollection("pushes", {
-  row: PushSchema,
+  fields: { attemptId: textField({ label: "Attempt" }) },
+  carry: {
+    fields: {
+      id: pushFields.id,
+      conversationId: pushFields.conversationId,
+      sha: pushFields.sha,
+      pushId: pushFields.pushId,
+      message: pushFields.message,
+      createdAt: pushFields.createdAt,
+    },
+  },
   id: "id",
-  filterable: { attemptId: liveText() },
   sortable: ["createdAt"],
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },
   maxLimit: 500,

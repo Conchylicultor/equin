@@ -38,7 +38,10 @@ import {
 } from "../../core/internal/window-descriptor";
 import type { WindowParams } from "@plugins/primitives/plugins/live-state/core";
 import { liveCollection, LIVE_ROW_KEY } from "../../core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
+import { nullable } from "@plugins/fields/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { compileCollection } from "./serve-collection";
 
 const rows = pgTable("rows", {
@@ -932,20 +935,18 @@ describe("compileWindowQuery — key-range pages (serveCollection over a collect
     durationSec: integer("duration_sec").notNull(),
     owner: text("owner").notNull(),
   });
-  const TrackRow = z.object({
-    id: z.string(),
-    title: z.string(),
-    playedAt: z.date().nullable(),
-    durationSec: z.number(),
-    owner: z.string(),
-  });
   let n = 0;
   const pagedCollection = () =>
     liveCollection(`test.cw.scroll-${n++}`, {
-      row: TrackRow,
+      fields: {
+        id: textField({ label: "Id", filterable: false }),
+        title: textField({ label: "Title" }),
+        playedAt: nullable(dateField({ label: "Played", filterable: false })),
+        // durationSec is sortable but NOT filterable.
+        durationSec: intField({ label: "Duration", filterable: false }),
+        owner: textField({ label: "Owner" }),
+      },
       id: "id",
-      filterable: { title: liveText(), owner: liveText() },
-      // durationSec is sortable but NOT filterable.
       sortable: ["title", "playedAt", "durationSec"],
       default: { orderBy: [["playedAt", "desc"]], limit: 10 },
       maxLimit: 30,

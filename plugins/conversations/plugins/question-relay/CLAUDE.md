@@ -131,9 +131,11 @@ questions.
     - `POST /api/conversations/:id/questions/:toolUseId/abandon`
 - Core:
   - Uses:
+    - `fields/date/config.dateField`
+    - `fields/json/config.jsonField`
+    - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveCollection`
-    - `network/live/filter.liveText`
   - Exports (types):
     - `AnswerQuestionBody`
     - `CliAnswer`

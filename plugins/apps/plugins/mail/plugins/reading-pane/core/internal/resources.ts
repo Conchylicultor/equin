@@ -1,6 +1,10 @@
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
-import { MailMessageSchema } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { mailMessageFields } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+
+// The message row, split into the one field the pane filters by (listed, so
+// `where: { threadId }` type-checks) and the rest, carried.
+const { threadId: _threadId, ...MESSAGE_CARRIED } = mailMessageFields;
 
 // The messages of the mailbox, as a live collection — the reading pane reads
 // one thread's window of it (`useLive(threadMessages, { where: { threadId } })`).
@@ -20,9 +24,9 @@ import { MailMessageSchema } from "@plugins/apps/plugins/mail/plugins/mail-core/
 // first expand via the sync plugin's `mailHydrateMessageEndpoint` (cached
 // thereafter).
 export const threadMessages = liveCollection("mail-thread-messages", {
-  row: MailMessageSchema,
+  fields: { threadId: textField({ label: "Thread" }) },
+  carry: { fields: MESSAGE_CARRIED },
   id: "id",
-  filterable: { threadId: liveText() },
   sortable: ["internalDate"],
   default: { orderBy: [["internalDate", "desc"]], limit: 100 },
   maxLimit: 500,

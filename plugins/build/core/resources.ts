@@ -1,19 +1,30 @@
 import { z } from "zod";
+import { fieldsToZodObject, nullable } from "@plugins/fields/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
+import {
+  enumTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 
-export const BuildRunSchema = z.object({
-  id: z.string(),
-  trigger: z.enum(["manual", "auto"]),
-  commitHash: z.string().nullable(),
+// One build run as the client sees it. `ledger.pid` is internal and absent.
+// All carried: the build surfaces read rows by id / newest-first, none filters.
+const BUILD_RUN_FIELDS = {
+  id: textField(),
+  trigger: enumTextField(["manual", "auto"] as const),
+  commitHash: nullable(textField()),
   // WHICH COMPOSITIONS this one invocation built: `[MAIN_COMPOSITION_ID]` for a
   // plain deploy, or the composition ids of a `build --composition a b` run. One
   // invocation is one shared build (one install, codegen, checks pass,
   // transcript, profile and verdict), so it is one row with N target chips.
-  targets: z.array(z.string()),
-  startedAt: z.coerce.date(),
-  finishedAt: z.coerce.date().nullable(),
-  exitCode: z.number().int().nullable(),
-});
+  targets: stringListField(),
+  startedAt: dateField(),
+  finishedAt: nullable(dateField()),
+  exitCode: nullable(intField()),
+};
+export const BuildRunSchema = fieldsToZodObject(BUILD_RUN_FIELDS);
 
 export type BuildRun = z.infer<typeof BuildRunSchema>;
 
@@ -44,9 +55,8 @@ export type BuildRun = z.infer<typeof BuildRunSchema>;
  * its 50 rows fresh.
  */
 export const buildHistory = liveCollection("build.history", {
-  row: BuildRunSchema,
+  carry: { fields: BUILD_RUN_FIELDS },
   id: "id",
-  filterable: {},
   sortable: ["startedAt"],
   default: { orderBy: [["startedAt", "desc"]], limit: 50 },
   maxLimit: 100,

@@ -68,7 +68,6 @@
     - `ids.idKindField`
     - `ids.IdOf`
     - `network/live.liveCollection`
-    - `network/live/filter.liveText`
   - Exports (types):
     - `ConversationSummary`
     - `Phase`

@@ -36,6 +36,9 @@ function asOptions(values: readonly string[]): Record<string, FieldOptionMeta> {
  */
 export const deployRunArm = liveArm(runs, DEPLOY_RUN_KIND, {
   label: "Deploy",
+  // After release: `deploy.releaseRunId` points INTO the release arm, so a
+  // reader following it scans forward (`runs` core, "Arm order").
+  order: 30,
   fields: {
     /** `converge` / `ship` / `update` — what the run was asked to do. */
     verb: textField({

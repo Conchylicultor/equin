@@ -27,6 +27,7 @@ import {
   entryCategory,
   entryExtension,
   entryKindLabel,
+  fileEntry,
   formatCount,
   formatModified,
   formatModifiedFull,
@@ -322,7 +323,7 @@ export interface FileTreeProps {
 /**
  * The folder's contents as a DataView tree: Name / Kind / Modified / Size in
  * aligned columns (Created, Accessed, Category, Extension, Path and Link
- * target hidden until switched on) plus every `FileBrowserSlots.Fields` contribution, folders first (a
+ * target hidden until switched on) plus the client fields of the `fileEntry` kind (git's), folders first (a
  * pinned sort rule, so they stay on top under any header sort), every folder lazily listed through host-fs on first
  * expand — an archive file (a zip) expands like one. Clicking a folder makes it the listing; clicking a file selects it
  * (and opens it beside the listing). Double-click or Enter opens either. A
@@ -366,9 +367,10 @@ export function FileTree({
 
   // When the listing is narrow Kind, then Modified, give their room to the
   // names (`dropOrder`); Size stays longest.
-  const fields = useMemo<FieldDef<EntryRow>[]>(
+  // `name` and `path` are the `fileEntry` kind's own fields; these are the
+  // columns computed from the row and this tree's context.
+  const extraFields = useMemo<FieldDef<EntryRow>[]>(
     () => [
-      { id: "name", label: "Name", primary: true, value: (r) => r.name },
       KIND_FIELD,
       timeField("modified", "Modified", (r) => r.mtimeMs, now, {
         dropOrder: 2,
@@ -412,7 +414,6 @@ export function FileTree({
         visible: false,
         value: (r) => entryExtension(r.name),
       },
-      { id: "path", label: "Path", visible: false, value: (r) => r.path },
       FOLDERS_FIELD,
       {
         id: "link",
@@ -449,8 +450,8 @@ export function FileTree({
   return (
     <DataView<EntryRow>
       rows={rows}
-      fields={fields}
-      fieldExtensions={FileBrowserSlots.Fields}
+      collection={fileEntry}
+      extraFields={extraFields}
       itemActions={FileBrowserSlots.RowActions}
       rowKey={(r) => r.id}
       views={["table"]}

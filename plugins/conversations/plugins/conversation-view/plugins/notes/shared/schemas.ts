@@ -32,6 +32,6 @@ export type ConversationNote = z.infer<typeof ConversationNoteSchema>;
 // useEditableField always has a valid initial value, and its consumers gate on
 // `pending`.
 export const conversationNoteRows = liveCollection("conversation-notes", {
-  row: ConversationNoteSchema,
+  from: conversationNotesShape,
   id: "conversationId",
 });

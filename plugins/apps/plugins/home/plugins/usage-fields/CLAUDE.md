@@ -1,7 +1,7 @@
 # usage-fields
 
-Contributes per-app usage stats from `apps-core/app-usage` into the Home grid's
-`HomeApps.Fields` extension: Time · 7d, Opens · 7d, Time · all, Opens · all,
+Contributes per-app usage stats from `apps-core/app-usage` as client fields of the
+`installedApp` row kind (`appUsageFields`, core), listed by the Home grid: Time · 7d, Opens · 7d, Time · all, Opens · all,
 Last opened. They are real DataView fields — sortable and filterable in every
 view — shown as columns in the grid's **Stats** table view; the default icons
 view still draws only the tile and the name.
@@ -13,13 +13,24 @@ zeros); an app missing from a ready summary was never used and reads 0 / "—".
 
 ## Plugin reference
 
-- Description: Contributes per-app usage stats into the Home app grid: opens and active time over 7 days and all time, and when the app was last opened — sortable, filterable fields shown as columns of the grid's table view.
+- Description: Declares per-app usage stats as client fields of the installed-app row kind: opens and active time over 7 days and all time, and when the app was last opened — sortable, filterable fields shown as columns of the Home grid's table view.
 - Web:
-  - Contributes: `HomeApps.Fields` "usage" → `UsageFields`
+  - Contributes:
+    - `ClientFields.Resolve` "client:apps.installed-app:usage" → `UsageResolver`
+    - `FieldPresentation.Register` "client:apps.installed-app:usage"
   - Uses:
     - `apps-core/app-usage.useAppUsageSummary`
-    - `apps/home/app-cards.HomeApps`
-    - `primitives/loading.Loading`
+    - `network/live.ClientFields`
+    - `network/live.FieldPresentation`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
+- Core:
+  - Uses:
+    - `apps-core/app-launcher.installedApp`
+    - `fields/date/config.dateField`
+    - `fields/int/config.intField`
+    - `network/live.clientFields`
+  - Exports (values): `appUsageFields`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
 

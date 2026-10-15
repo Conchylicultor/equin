@@ -55,7 +55,7 @@ export type TaskTrackRow = z.infer<typeof TaskTrackRowSchema>;
 // before first paint, and the cache stays resident for surfaces that mount
 // late.
 export const taskTracks = liveCollection("task-tracks.all", {
-  row: TaskTrackRowSchema,
+  from: taskTrackShape,
   id: "taskId",
   all: {
     orderBy: [["taskId", "asc"]],

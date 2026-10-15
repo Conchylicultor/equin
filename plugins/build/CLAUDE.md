@@ -340,6 +340,13 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `POST /api/build/serve`
 - Core:
   - Uses:
+    - `fields.fieldsToZodObject`
+    - `fields.nullable`
+    - `fields/date/config.dateField`
+    - `fields/int/config.intField`
+    - `fields/string-list/config.stringListField`
+    - `fields/text/config.enumTextField`
+    - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `network/live.liveCollection`

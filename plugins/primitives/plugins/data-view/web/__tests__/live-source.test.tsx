@@ -33,7 +33,10 @@ import {
 } from "@testing-library/react";
 import type { QueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { z } from "zod";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { markDeferredLoadComplete } from "@plugins/framework/plugins/web-sdk/core";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import {
@@ -52,13 +55,9 @@ import {
 import {
   and,
   clause,
-  liveBoolean,
-  liveInstant,
-  liveText,
   or,
   type Filter,
 } from "@plugins/network/plugins/live/plugins/filter/core";
-import { liveStringArray } from "@plugins/network/plugins/live/plugins/filter/core/testing";
 import {
   type FieldDef,
   type FieldGrouping,
@@ -78,28 +77,28 @@ import { UnavailableSortRuleError } from "../internal/live-filter";
 import { resolveBodyState } from "../internal/body-state";
 import { BodyFallback } from "../components/body-fallback";
 
-const Thread = z.object({
-  id: z.string(),
-  subject: z.string(),
+type Thread = {
+  id: string;
+  subject: string;
   /** Sorts, but no grouping can count it (not filterable). */
-  folder: z.string(),
-  labelIds: z.array(z.string()),
-  unread: z.boolean(),
-  lastMessageAt: z.date(),
-});
-type Thread = z.infer<typeof Thread>;
+  folder: string;
+  labelIds: string[];
+  unread: boolean;
+  lastMessageAt: Date;
+};
 
 let n = 0;
 const threads = () =>
   liveCollection(`test.data-view.live-adapter-${n++}`, {
-    row: Thread,
-    id: "id",
-    filterable: {
-      subject: liveText(),
-      labelIds: liveStringArray(),
-      unread: liveBoolean(),
-      lastMessageAt: liveInstant(),
+    fields: {
+      subject: textField({ label: "Subject" }),
+      labelIds: stringListField({ label: "Labels" }),
+      unread: boolField({ label: "Unread" }),
+      lastMessageAt: dateField({ label: "Last message" }),
     },
+    // Sorts, but is not listed — so not filterable and no grouping can count it.
+    carry: { fields: { id: textField(), folder: textField() } },
+    id: "id",
     sortable: ["subject", "lastMessageAt", "folder"],
     default: { orderBy: [["lastMessageAt", "desc"]], limit: 2 },
     maxLimit: 6,

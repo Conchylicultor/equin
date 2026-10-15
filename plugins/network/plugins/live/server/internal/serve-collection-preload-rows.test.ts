@@ -9,7 +9,8 @@
 
 import { describe, expect, test } from "bun:test";
 import { integer, pgTable, text } from "drizzle-orm/pg-core";
-import { z } from "zod";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { recordingQueryDb } from "@plugins/infra/plugins/query-resource/server/testing";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { serveCollection } from "./serve-collection";
@@ -23,22 +24,18 @@ const scores = pgTable("pr_scores", {
   score: integer("score").notNull(),
 });
 
-const Person = z.object({ id: z.string(), name: z.string() });
-const Score = z.object({ personId: z.string(), score: z.number() });
-
 let seq = 0;
 const peopleCollection = (preload?: "boot") =>
   liveCollection(`test.live.preload-rows-people-${seq++}`, {
-    row: Person,
+    carry: { fields: { id: textField(), name: textField() } },
     id: "id",
     all: { orderBy: [["name", "asc"]], unbounded: { reason: "a test set" } },
     ...(preload === undefined ? {} : { preload }),
   });
 const scoresCollection = () =>
   liveCollection(`test.live.preload-rows-scores-${seq++}`, {
-    row: Score,
+    carry: { fields: { personId: textField(), score: intField() } },
     id: "personId",
-    filterable: {},
     sortable: ["score"],
     default: { orderBy: [["score", "asc"]], limit: 10 },
     maxLimit: 20,

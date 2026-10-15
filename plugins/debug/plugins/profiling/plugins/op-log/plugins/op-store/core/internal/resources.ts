@@ -1,9 +1,5 @@
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import {
-  liveInstant,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
-import { OpKindSchema, OpRowSchema, TerminalOutcomeSchema } from "./schemas";
+import { OP_ROW_CARRIED, OP_ROW_LISTED } from "./schemas";
 
 /**
  * Every op still in flight (`closed_by IS NULL`), oldest first — the set the
@@ -24,7 +20,7 @@ import { OpKindSchema, OpRowSchema, TerminalOutcomeSchema } from "./schemas";
  * never parses these rows.
  */
 export const opsInFlight = liveCollection("op-store.in-flight.all", {
-  row: OpRowSchema,
+  carry: { fields: { ...OP_ROW_CARRIED, ...OP_ROW_LISTED } },
   id: "opId",
   all: {
     orderBy: [["requestedAt", "asc"]],
@@ -40,15 +36,9 @@ export const opsInFlight = liveCollection("op-store.in-flight.all", {
  * is stable); one op is `useLiveRow(opsHistory, opId)`.
  */
 export const opsHistory = liveCollection("op-store.history", {
-  row: OpRowSchema,
+  fields: OP_ROW_LISTED,
+  carry: { fields: OP_ROW_CARRIED },
   id: "opId",
-  filterable: {
-    opSlug: liveText(),
-    kind: liveText(OpKindSchema),
-    outcome: liveText(TerminalOutcomeSchema),
-    requestedAt: liveInstant(),
-    completedAt: liveInstant(),
-  },
   sortable: ["requestedAt", "completedAt"],
   default: { orderBy: [["requestedAt", "desc"]], limit: 500 },
   maxLimit: 2000,

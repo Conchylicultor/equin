@@ -26,26 +26,30 @@ import {
   type LiveStateHarness,
 } from "@plugins/primitives/plugins/live-state/web/testing";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
-import {
-  liveBoolean,
-  liveText,
-  or,
-} from "@plugins/network/plugins/live/plugins/filter/core";
+import { or } from "@plugins/network/plugins/live/plugins/filter/core";
+import { fieldsToZodObject } from "@plugins/fields/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import {
   useLive,
   useLiveRow,
   type LiveRowResult,
 } from "@plugins/network/plugins/live/web";
 
-const Row = z.object({ id: z.string(), n: z.number(), on: z.boolean() });
+const ROW_FIELDS = {
+  id: textField({ label: "Id" }),
+  n: intField({ label: "N", filterable: false }),
+  on: boolField({ label: "On" }),
+};
+const Row = fieldsToZodObject(ROW_FIELDS);
 type Row = z.infer<typeof Row>;
 
 let seq = 0;
 function collection() {
   return liveCollection(`test.use-live.${seq++}`, {
-    row: Row,
+    fields: ROW_FIELDS,
     id: "id",
-    filterable: { on: liveBoolean(), id: liveText() },
     sortable: ["n"],
     default: { orderBy: [["n", "asc"]], limit: 2 },
     maxLimit: 5,
@@ -676,7 +680,10 @@ describe("useLiveRow", () => {
 
 describe("a lookup-only collection", () => {
   const lookup = () =>
-    liveCollection(`test.use-live.lookup-${seq++}`, { row: Row, id: "id" });
+    liveCollection(`test.use-live.lookup-${seq++}`, {
+      fields: ROW_FIELDS,
+      id: "id",
+    });
 
   it("useLiveRow and an id set read its :rows sibling", async () => {
     const c = lookup();
@@ -1071,9 +1078,11 @@ describe("status arms", () => {
 describe("useLive — a window's rows", () => {
   it("hands rows out without `$key` — the error arm's last-known rows too", async () => {
     const c = liveCollection(`test.use-live.scroll.${seq++}`, {
-      row: Row,
+      fields: {
+        ...ROW_FIELDS,
+        id: textField({ label: "Id", filterable: false }),
+      },
       id: "id",
-      filterable: { on: liveBoolean() },
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 2 },
       maxLimit: 6,

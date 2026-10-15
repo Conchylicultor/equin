@@ -63,7 +63,15 @@ export type PageTagAssignmentRow = z.infer<typeof PageTagAssignmentRowSchema>;
 
 /** The workspace's tag vocabulary, whole. */
 export const pageTagVocabulary = liveCollection("page-tags.vocabulary", {
-  row: PageTagRowSchema,
+  // The stored record minus its server-only columns (`PAGE_TAG_SERVER_ONLY`).
+  carry: {
+    fields: {
+      id: pageTagFields.id,
+      name: pageTagFields.name,
+      color: pageTagFields.color,
+      createdAt: pageTagFields.createdAt,
+    },
+  },
   id: "id",
   all: {
     orderBy: [["createdAt", "asc"]],
@@ -80,7 +88,7 @@ export const pageTagVocabulary = liveCollection("page-tags.vocabulary", {
  * at most one row per page and usually a handful.
  */
 export const pageTagAssignments = liveCollection("page-tags.assignments", {
-  row: PageTagAssignmentRowSchema,
+  from: pageTagAssignmentShape,
   id: "pageId",
   all: {
     orderBy: [["pageId", "asc"]],

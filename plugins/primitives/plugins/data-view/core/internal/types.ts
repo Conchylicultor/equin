@@ -1702,15 +1702,6 @@ export interface DataViewBaseProps<TRow> {
    *  each contributed action in their natural trailing affordance. */
   itemActions?: ItemActionsDescriptor<TRow>;
   /**
-   * Optional cross-plugin field contribution surface minted by
-   * `defineFieldExtensions`. Present → the host folds every contributor's extra
-   * `FieldDef[]` into `fields` BEFORE the sort/filter controllers and the view
-   * render-props, so contributed fields appear in the Sort pill, Filter pill, and
-   * table columns for free. Each contributor is a component (it may load
-   * hook-backed data), so the merge happens through a render-callback fold.
-   */
-  fieldExtensions?: FieldExtensionsDescriptor<TRow>;
-  /**
    * Typed create affordances. The host renders them in the toolbar (1 → a
    * `Button`, N → a "+" dropdown menu, with host-owned in-flight busy state) and
    * threads them to views (gallery trailing card + empty-state CTA). Domain-pure

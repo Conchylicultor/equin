@@ -42,6 +42,9 @@ import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { boolean, index, integer, pgTable, text } from "drizzle-orm/pg-core";
 import { Client } from "pg";
 import { z } from "zod";
+import { fieldsToZodObject } from "@plugins/fields/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import {
   createTestDb,
   type TestDb,
@@ -107,15 +110,16 @@ const notes = pgTable(
   (t) => [index("sao_notes_item_idx").on(t.itemId)],
 );
 
-const RowSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  rank: z.number(),
-  notes: z.number(),
-});
+const ROW_FIELDS = {
+  id: textField({ label: "Id" }),
+  title: textField({ label: "Title" }),
+  rank: intField({ label: "Rank" }),
+  notes: intField({ label: "Notes" }),
+};
+const RowSchema = fieldsToZodObject(ROW_FIELDS);
 
 const collection = liveCollection(KEY, {
-  row: RowSchema,
+  fields: ROW_FIELDS,
   id: "id",
   all: { orderBy: [["rank", "asc"]], unbounded: { reason: "an oracle set" } },
 });

@@ -86,7 +86,6 @@ Bookmarks section reads the same collection).
     - `ids.idKindField`
     - `ids.IdOf`
     - `network/live.liveCollection`
-    - `network/live/filter.liveText`
   - Exports (types):
     - `BookmarkId`
     - `BookmarkRow`

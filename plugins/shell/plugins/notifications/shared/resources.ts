@@ -1,7 +1,9 @@
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
-import { NotificationSchema, NotificationsUnreadSchema } from "./schema";
-import { countedUnreadFilterable } from "./unread";
+import {
+  NOTIFICATION_CARRIED,
+  NOTIFICATION_LISTED,
+  NotificationsUnreadSchema,
+} from "./schema";
 
 // The undismissed notifications, as a live collection: a bounded window (newest
 // first, 200 / max 500) plus its `:rows` and `:groups` siblings. The base
@@ -16,18 +18,14 @@ import { countedUnreadFilterable } from "./unread";
 // older rows still has a chip and lists all of its rows.
 //
 // The Debug → Notifications pane reads the same collection as a DataView: its
-// `read` / `muted` / `variant` columns are `countedUnreadFilterable` (the ONE
-// declaration the badge's predicate is written over), so the pane groups on
+// `read` / `muted` / `variant` columns are the three `countedUnreadFilterable`
+// names (the ONE declaration the badge's predicate is written over), so the pane groups on
 // `read` as server sections and filters on `muted`; `title` is its search box;
 // `type` / `variant` are its facets.
 export const notifications = liveCollection("notifications", {
-  row: NotificationSchema,
+  fields: NOTIFICATION_LISTED,
+  carry: { fields: NOTIFICATION_CARRIED },
   id: "id",
-  filterable: {
-    ...countedUnreadFilterable,
-    type: liveText(),
-    title: liveText(),
-  },
   sortable: ["createdAt"],
   default: { orderBy: [["createdAt", "desc"]], limit: 200 },
   maxLimit: 500,

@@ -114,9 +114,9 @@ parses MIME or HTML itself.
     - `mail-thread-messages:rows` (keyed, point)
 - Core:
   - Uses:
-    - `apps/mail/mail-core.MailMessageSchema`
+    - `apps/mail/mail-core.mailMessageFields`
+    - `fields/text/config.textField`
     - `network/live.liveCollection`
-    - `network/live/filter.liveText`
   - Exports (values): `threadMessages`
 - Cross-plugin:
   - Uses tokens:

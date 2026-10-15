@@ -20,6 +20,14 @@ export type {
   WithContributedColumns,
 } from "./internal/live-columns";
 export { exposedColumns } from "./internal/exposed-columns";
+export { clientFields, rowKind } from "./internal/row-kind";
+export type {
+  ClientFields,
+  ClientFieldsOwner,
+  ClientFieldsOwnerRow,
+  ClientFieldValue,
+  RowKind,
+} from "./internal/row-kind";
 export type {
   FieldsRow,
   LabelledKeys,
@@ -27,6 +35,7 @@ export type {
   LiveFieldIds,
   LiveFields,
   LiveFieldsSpec,
+  LiveFrom,
   LiveRelated,
   RequireLabel,
 } from "./internal/live-fields";
@@ -78,13 +87,10 @@ export type {
 export type {
   LiveAllCollection,
   LiveAllOrder,
-  LiveAllSpec,
   LiveArms,
   LiveArmsCollection,
-  LiveArmsSpec,
   LiveCollection,
   LiveCollectionOf,
-  LiveCollectionSpec,
   LiveCountCodec,
   LiveCountDescriptor,
   LiveCountedCollection,
@@ -94,9 +100,7 @@ export type {
   LiveGroupCodec,
   LiveGroupsDescriptor,
   LiveLookupCollection,
-  LiveLookupSpec,
   LiveNoWindowCollection,
-  LiveNoWindowSpec,
   LivePreload,
   LiveRowsCollection,
   LiveRowSchema,

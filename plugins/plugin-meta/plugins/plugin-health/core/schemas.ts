@@ -15,8 +15,8 @@ import { pluginReviewIdKind } from "./id-kind";
 // the loader returns `db.select()` rows verbatim, no projection.
 export const pluginHealthReviewFields = {
   id: idKindField(pluginReviewIdKind),
-  pluginId: textField(),
-  axis: textField(),
+  pluginId: textField({ label: "Plugin" }),
+  axis: textField({ label: "Axis" }),
   commitHash: textField(),
   conversationId: nullable(textField()),
   createdAt: dateField(),

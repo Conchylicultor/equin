@@ -11,7 +11,11 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { z } from "zod";
+import { nullable } from "@plugins/fields/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import {
@@ -40,18 +44,15 @@ const cuts = pgTable("scroll_key_cuts", {
   b: boolean("b"),
 });
 
-const Row = z.object({
-  id: z.string(),
-  t: z.date().nullable(),
-  num: z.string().nullable(),
-  f: z.number().nullable(),
-  b: z.boolean().nullable(),
-});
-
 const collection = liveCollection("test.live.scroll-key-roundtrip", {
-  row: Row,
+  fields: {
+    id: textField({ label: "Id" }),
+    t: nullable(dateField({ label: "T" })),
+    num: nullable(textField({ label: "Num" })),
+    f: nullable(floatField({ label: "F" })),
+    b: nullable(boolField({ label: "B" })),
+  },
   id: "id",
-  filterable: {},
   sortable: ["t", "num", "f", "b"],
   default: { orderBy: [["t", "asc"]], limit: 10 },
   maxLimit: 30,

@@ -27,6 +27,6 @@ export type TaskShortTitle = z.infer<typeof TaskShortTitleSchema>;
 // alone. `found: false` means none has been generated (yet, or ever: the
 // backfill only covers tasks with a recent conversation).
 export const taskShortTitles = liveCollection("task-short-titles", {
-  row: TaskShortTitleSchema,
+  from: taskShortTitleShape,
   id: "taskId",
 });

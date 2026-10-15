@@ -52,7 +52,9 @@ import {
   text,
 } from "drizzle-orm/pg-core";
 import { Client } from "pg";
-import { z } from "zod";
+import { nullable } from "@plugins/fields/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import {
   createTestDb,
   type TestDb,
@@ -88,10 +90,6 @@ import {
 import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
 import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import {
-  liveNumber,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
 import { compileCollection } from "./serve-collection";
 
 const HOST = "olk_items";
@@ -149,26 +147,17 @@ const noteJoin: KeyedSideJoin<"note", typeof notes> = {
   hostKey: notes.rowKey,
 };
 
-const Row = z.object({
-  id: z.string(),
-  title: z.string(),
-  n: z.number(),
-  srcId: z.string(),
-  srcLabel: z.string(),
-  parentTitle: z.string().nullable(),
-  note: z.string().nullable(),
-});
-
 const itemsCollection = liveCollection("test.live.lookup-oracle.items", {
-  row: Row,
-  id: "id",
-  filterable: {
-    n: liveNumber(),
-    srcId: liveText(),
-    srcLabel: liveText(),
-    parentTitle: liveText(),
-    note: liveText(),
+  fields: {
+    id: textField({ label: "Id", filterable: false }),
+    title: textField({ label: "Title", filterable: false }),
+    n: intField({ label: "N" }),
+    srcId: textField({ label: "Source id" }),
+    srcLabel: textField({ label: "Source label" }),
+    parentTitle: nullable(textField({ label: "Parent title" })),
+    note: nullable(textField({ label: "Note" })),
   },
+  id: "id",
   sortable: ["n", "title", "srcLabel"],
   default: { orderBy: [["n", "asc"]], limit: 4 },
   maxLimit: 20,
@@ -178,11 +167,13 @@ const itemsCollection = liveCollection("test.live.lookup-oracle.items", {
 // research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md): `tag` reads
 // the source's label through its reverse route, and the host's title through
 // its identity route — a label rename refills exactly the source's items.
-const TagRow = z.object({ id: z.string(), tag: z.string(), n: z.number() });
 const tagCollection = liveCollection("test.live.lookup-oracle.tags", {
-  row: TagRow,
+  fields: {
+    id: textField({ label: "Id", filterable: false }),
+    tag: textField({ label: "Tag" }),
+    n: intField({ label: "N", filterable: false }),
+  },
   id: "id",
-  filterable: { tag: liveText() },
   sortable: ["tag", "n"],
   default: { orderBy: [["n", "asc"]], limit: 4 },
   maxLimit: 20,

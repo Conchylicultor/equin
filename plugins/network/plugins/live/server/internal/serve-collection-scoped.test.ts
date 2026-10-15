@@ -17,7 +17,8 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { z } from "zod";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { sql } from "drizzle-orm";
 import { integer, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 import { familyMemberAlias } from "@plugins/infra/plugins/query-resource/core/testing";
@@ -31,10 +32,6 @@ import {
   type LiveColumnsDeclaration,
   type LiveWindowParams,
 } from "@plugins/network/plugins/live/core";
-import {
-  liveNumber,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
 import { compileCollection } from "./serve-collection";
 import { serveScopedColumns, type ScopedMemberRead } from "./serve-columns";
 
@@ -80,9 +77,12 @@ function setup() {
     recomputeOn: () => RECOMPUTE,
   });
   const c = liveCollection(`test.live.scoped-${seq++}`, {
-    row: z.object({ id: z.string(), title: z.string(), n: z.number() }),
+    fields: {
+      id: textField({ label: "Id", filterable: false }),
+      title: textField({ label: "Title" }),
+      n: intField({ label: "N" }),
+    },
     id: "id",
-    filterable: { title: liveText(), n: liveNumber() },
     sortable: ["title", "n"],
     default: { orderBy: [["n", "asc"]], limit: 10 },
     maxLimit: 50,
@@ -318,9 +318,11 @@ describe("serveCollection with a scoped column set", () => {
   test("a collection with no column scope is refused scoped sets", () => {
     const { set } = setup();
     const plain = liveCollection(`test.live.scoped-${seq++}`, {
-      row: z.object({ id: z.string(), n: z.number() }),
+      fields: {
+        id: textField({ label: "Id", filterable: false }),
+        n: intField({ label: "N" }),
+      },
       id: "id",
-      filterable: { n: liveNumber() },
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 10 },
       maxLimit: 50,

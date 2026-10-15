@@ -74,6 +74,8 @@
   - Uses:
     - `fields/bool/config.boolField`
     - `fields/rank/config.rankField`
+    - `fields/rank/config.rankValueField`
+    - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
     - `infra/entity-extensions.defineExtensionShape`
     - `network/live.liveCollection`

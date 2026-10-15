@@ -26,7 +26,6 @@ export {
   isFilterGroup,
   liveBoolean,
   liveInstant,
-  liveNumber,
   liveText,
   or,
 } from "./internal/expr";

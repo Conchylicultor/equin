@@ -4,34 +4,33 @@
 
 ## Plugin reference
 
-- Description: The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — Fields, extra tree columns, RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
+- Description: The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
 - Web:
   - Slots:
     - `filesHomePane.Actions`
     - `filesAtPane.Actions`
-    - `FileBrowserSlots.Fields`
     - `FileBrowserSlots.Lens`
     - `FileBrowserSlots.RowActions`
   - Slot contributors:
     - `filesHomePane.Actions` ← `primitives.pane`
     - `filesAtPane.Actions` ← `primitives.pane`
-    - `FileBrowserSlots.Fields` ← `apps.file-explorer.git`
     - `FileBrowserSlots.Lens` ← `apps.file-explorer.git`
     - `FileBrowserSlots.RowActions` ← `apps.file-explorer.browser`
   - Contributes:
     - `Pane.Register` "files-at"
     - `Pane.Register` "files-home"
     - `ThemeEngine.SubTheme` "Files document"
+    - `FieldPresentation.Register` "collection:file-explorer.entry"
     - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
     - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
   - Uses: 54 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
-    - `primitives/data-view` ×6
     - `infra/endpoints` ×5
+    - `primitives/data-view` ×5
     - `primitives/file-viewer` ×5
     - `primitives/pane` ×4
+    - `network/live` ×2
     - `primitives/path-bar` ×2
-    - `network/live.useLive`
     - `primitives/bar.Bar`
     - `primitives/copy-to-clipboard.useCopyToClipboard`
     - `primitives/css/center.Center`
@@ -73,6 +72,8 @@
     - `useHomeDir`
 - Core:
   - Uses:
+    - `fields/text/config.textField`
+    - `network/live.rowKind`
     - `primitives/file-type.FilePreview`
     - `primitives/file-type.fileTypeOf`
   - Exports (types):
@@ -94,6 +95,7 @@
     - `entryCategory`
     - `entryExtension`
     - `entryKindLabel`
+    - `fileEntry`
     - `formatCount`
     - `formatModified`
     - `formatModifiedFull`

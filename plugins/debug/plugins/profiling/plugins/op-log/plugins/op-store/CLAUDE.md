@@ -120,21 +120,17 @@ filesystem event; the 30 s tick is what notices it.
     - `op-store.in-flight.all` (keyed)
     - `op-store.in-flight.all:rows` (keyed, point)
 - Core:
-  - Uses:
-    - `debug/profiling/op-log.OpenWait`
-    - `debug/profiling/op-log.OpFoldState`
-    - `debug/profiling/op-log.OpSleep`
-    - `debug/profiling/op-log.OpSleepStamp`
-    - `debug/profiling/op-log.OpStep`
-    - `debug/profiling/op-log.OpWait`
-    - `debug/profiling/op-log.TerminalOutcome`
-    - `debug/profiling/op-log.WAIT_KINDS`
-    - `debug/profiling/op-log.WaitKind`
-    - `debug/profiling/op-log.WaitResult`
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug/profiling/op-log` ×10
+    - `fields/text/config` ×3
+    - `fields` ×2
+    - `fields/bool/config.boolField`
+    - `fields/date/config.dateField`
+    - `fields/float/config.floatField`
+    - `fields/int/config.intField`
+    - `fields/json/config.jsonField`
     - `infra/worktree.OP_KIND_IDS`
     - `network/live.liveCollection`
-    - `network/live/filter.liveInstant`
-    - `network/live/filter.liveText`
   - Exports (types):
     - `OpRow`
     - `StoreClosedBy`

@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { pgTable, text } from "drizzle-orm/pg-core";
-import { z } from "zod";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { recordingQueryDb } from "@plugins/infra/plugins/query-resource/server/testing";
 import { liveCollection } from "../../core";
 import { compileCollection, serveCollection } from "./serve-collection";
@@ -18,15 +18,15 @@ const runsT = pgTable("arms_runs", {
   kind: text("kind").notNull(),
 });
 
-const Row = z.object({ runKey: z.string(), kind: z.string() });
-
 describe("serveCollection refuses a union collection", () => {
   test("a module-eval throw against a cast past the type, and a tsc error", () => {
     const runs = liveCollection("test.live.serve-arms", {
-      row: Row,
+      fields: {
+        runKey: textField({ label: "Key", filterable: false }),
+        kind: textField({ label: "Kind", filterable: false }),
+      },
       id: "runKey",
       arms: { discriminator: "kind" },
-      filterable: {},
       sortable: ["kind"],
       default: { orderBy: [["kind", "asc"]], limit: 10 },
       maxLimit: 30,

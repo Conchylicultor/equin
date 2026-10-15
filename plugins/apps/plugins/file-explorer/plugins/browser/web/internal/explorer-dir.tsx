@@ -2,7 +2,7 @@ import { createContext, useContext } from "react";
 
 /**
  * The absolute folder a browser region shows, for whatever renders inside it —
- * a `FileBrowserSlots.Fields` contribution has only its rows, which do not say
+ * a client-fields resolver of the `fileEntry` kind has only its rows, which do not say
  * which folder (or checkout) they were listed from.
  */
 export const ExplorerDirContext = createContext<string | null>(null);

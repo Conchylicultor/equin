@@ -1,4 +1,5 @@
-import { Apps, type ActiveApp, useCurrentAppId } from "@plugins/apps-core/web";
+import { useMemo } from "react";
+import { Apps, useCurrentAppId } from "@plugins/apps-core/web";
 import { useActivateApp } from "@plugins/apps-core/plugins/tabs/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -7,7 +8,12 @@ import {
   type CreateOption,
 } from "@plugins/primitives/plugins/data-view/web";
 import { capsuleToolbar } from "@plugins/primitives/plugins/data-view/plugins/capsule-toolbar/web";
-import { appFields } from "@plugins/apps-core/plugins/app-launcher/web";
+import {
+  appRow,
+  appRowOverrides,
+  type AppRow,
+} from "@plugins/apps-core/plugins/app-launcher/web";
+import { installedApp } from "@plugins/apps-core/plugins/app-launcher/core";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { LaunchAgentForm } from "@plugins/primitives/plugins/launch/web";
 import { APPS_CATEGORY_ID } from "@plugins/apps/plugins/home/core";
@@ -17,7 +23,6 @@ import {
 } from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { HomeApps } from "../slots";
 
 const addIcon = symbol("add");
 
@@ -127,7 +132,10 @@ export function AppGrid() {
   // Lands in the grid's OWN surface tab — in desktop mode multiple Home
   // windows can be open, so the global focused tab is the wrong target.
   const activate = useActivateApp();
-  const launchable = apps.filter((a) => a.id !== currentId);
+  const rows = useMemo(
+    () => apps.filter((a) => a.id !== currentId).map(appRow),
+    [apps, currentId],
+  );
 
   const creators: CreateOption[] = [
     {
@@ -139,12 +147,13 @@ export function AppGrid() {
   ];
 
   return (
-    <DataView<ActiveApp>
-      rows={launchable}
+    <DataView<AppRow>
+      rows={rows}
       rowKey={(a) => a.id}
-      // The same tile and name the app launcher draws.
-      fields={appFields}
-      fieldExtensions={HomeApps.Fields}
+      // The same tile and name the app launcher draws; the client fields of
+      // the kind (usage stats, …) join them.
+      collection={installedApp}
+      overrides={appRowOverrides}
       // Icons is the launcher (tile + name only); the table shows every field,
       // contributed ones included.
       views={["icons", "table"]}
@@ -154,7 +163,7 @@ export function AppGrid() {
       storageKey={HOME_APPS_VIEW}
       // The grid only renders inside the visible (focused) Home tab, so the
       // launcher navigates that tab into the picked app in place.
-      rowActivation={activate}
+      rowActivation={(row) => activate(row.entry)}
       creators={creators}
       // Every install has apps, so an empty grid is a search that matched
       // nothing — which is when building the missing app is the useful offer.

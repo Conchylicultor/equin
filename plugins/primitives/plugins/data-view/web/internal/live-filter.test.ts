@@ -2,10 +2,10 @@ import { describe, expect, it } from "bun:test";
 import {
   FilterError,
   clause,
-  liveNumber,
   liveText,
   or,
 } from "@plugins/network/plugins/live/plugins/filter/core";
+import { liveNumber } from "@plugins/network/plugins/live/plugins/filter/core/testing";
 import type {
   FieldDef,
   FilterGroup,

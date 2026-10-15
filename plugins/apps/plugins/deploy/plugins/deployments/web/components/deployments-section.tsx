@@ -30,9 +30,7 @@ import {
   type DeployRun,
 } from "../../core";
 import { RUN_STATE_OPTIONS, runStateOf } from "../internal/deploy-runs";
-import { DeploymentsListServerIdProvider } from "../internal/list-server-id-context";
 import { deploymentDetailPane } from "../panes";
-import { Deployments } from "../slots";
 import { DeploymentItemActions } from "./deployment-item-actions";
 import { AddDeploymentDialog } from "./add-deployment-dialog";
 import { RunCell, RunFailureNotice } from "./run-cell";
@@ -196,9 +194,10 @@ function DeploymentsBody({
         // Trailing, so the list row keeps it out of the truncating subtitle line.
         align: "end",
       },
-      // The `release` column is NOT here: it is contributed through
-      // `Deployments.Fields` by whichever plugin owns the release pipeline, so
-      // this list never names that feature (the `Servers.Fields` precedent).
+      // The `release` column is NOT here: it is a client field of the
+      // `deployments` collection (`releaseFields`), declared and resolved by
+      // whichever plugin owns the release pipeline, so this list never names
+      // that feature.
     ],
     [runs],
   );
@@ -226,11 +225,7 @@ function DeploymentsBody({
   ];
 
   return (
-    // Every `Deployments.Fields` contribution (the `Release` column) is
-    // handed no rows of its own — this is how it learns which server's list
-    // it is inside, so it can ask the SAME `{ where: { serverId } }` question
-    // this component just did, instead of probing the whole collection.
-    <DeploymentsListServerIdProvider serverId={serverId}>
+    <>
       <RunFailureNotice
         runs={Object.values(runs).filter((r) => r.serverId === serverId)}
       />
@@ -239,7 +234,6 @@ function DeploymentsBody({
         collection={deployments}
         overrides={DEPLOYMENT_OVERRIDES}
         extraFields={extraFields}
-        fieldExtensions={Deployments.Fields}
         rowKey={(d) => d.id}
         views={["list", "table"]}
         defaultView="list"
@@ -257,6 +251,6 @@ function DeploymentsBody({
         }
         emptyState="Nothing is deployed on this server yet."
       />
-    </DeploymentsListServerIdProvider>
+    </>
   );
 }

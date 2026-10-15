@@ -58,6 +58,9 @@ export const BuildStatusSchema: ZodParser<BuildStatus> = z.enum(BUILD_STATUSES);
  */
 export const buildRunArm = liveArm(runs, BUILD_RUN_KIND, {
   label: "Build",
+  // First: the merged run surface's primary hosts ARE the build popover and
+  // /debug/build (`runs` core, "Arm order").
+  order: 10,
   fields: {
     status: enumTextField(BUILD_STATUSES, {
       label: "Build status",

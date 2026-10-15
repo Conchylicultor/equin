@@ -9,14 +9,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { Component, type ReactNode } from "react";
-import { z } from "zod";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { registerSlotItemMiddleware } from "@plugins/primitives/plugins/slot-render/web";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import {
-  liveBoolean,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   type DataViewId,
   type FieldDef,
@@ -52,12 +49,14 @@ registerSlotItemMiddleware({
   ),
 });
 
-const Song = z.object({ id: z.string(), title: z.string(), fav: z.boolean() });
-type Song = z.infer<typeof Song>;
+type Song = { id: string; title: string; fav: boolean };
 const songs = liveCollection("test.data-view.field-extension-check", {
-  row: Song,
+  fields: {
+    title: textField({ label: "Title" }),
+    fav: boolField({ label: "Favourite" }),
+  },
+  carry: { fields: { id: textField() } },
   id: "id",
-  filterable: { title: liveText(), fav: liveBoolean() },
   sortable: ["title"],
   default: { orderBy: [["title", "asc"]], limit: 2 },
   maxLimit: 6,

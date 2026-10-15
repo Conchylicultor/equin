@@ -39,6 +39,6 @@ export type TodoTaskLink = z.infer<typeof TodoTaskLinkSchema>;
 // the point membership intersects the ids a write touched — PK values — with
 // each card's id set, so keying on `taskId` would name ids no card subscribed to.
 export const todoTasks = liveCollection("todo-block-task", {
-  row: TodoTaskLinkSchema,
+  from: todoTaskShape,
   id: "blockId",
 });

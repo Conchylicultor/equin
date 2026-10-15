@@ -131,6 +131,8 @@ a steady-state reboot writes nothing).
   - Exports (values): `Backlinks`
 - Core:
   - Uses:
+    - `fields/string-list/config.stringListField`
+    - `fields/text/config.textField`
     - `network/live.liveCollection`
     - `network/live.liveValue`
     - `ui/icons/emoji.EmojiSchema`

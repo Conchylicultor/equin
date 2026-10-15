@@ -69,6 +69,7 @@ const EXTENSION_CALL =
 const EXPOSE = /\bLiveColumns\s*\.\s*Expose\s*\(\s*(\w+)/g;
 /** A `FieldPresentation.Register(` call. */
 const REGISTER = /\bFieldPresentation\s*\.\s*Register\s*\(/g;
+const RESOLVE = /\bClientFields\s*\.\s*Resolve\s*\(/g;
 
 /** The text of a call's arguments: from just after its `(` to the matching `)`. */
 function callArgs(masked: string, afterOpen: number): string {
@@ -119,6 +120,7 @@ function rootIn(file: CandidateSource, runtime: string): string | null {
 /** Per plugin: the identifiers its web's `FieldPresentation.Register(` calls name (import aliases undone). */
 function registeredNames(
   web: readonly CandidateSource[],
+  call: RegExp = REGISTER,
 ): Map<string, Set<string>> {
   const registered = new Map<string, Set<string>>();
   for (const file of web.filter(notTest)) {
@@ -127,7 +129,7 @@ function registeredNames(
     const imported = importAliases(file);
     const masked = maskSource(file.src);
     const names = registered.get(root) ?? new Set<string>();
-    for (const m of masked.matchAll(REGISTER)) {
+    for (const m of masked.matchAll(call)) {
       const args = callArgs(masked, m.index + m[0].length);
       for (const n of namesIn(args, imported)) names.add(n);
     }
@@ -335,4 +337,74 @@ const armsRegistered: Check = {
   },
 };
 
-export default [exposuresRegistered, armsRegistered];
+// ── live:client-fields-resolved ────────────────────────────────────────────
+// Client fields (`const x = clientFields(owner, id, …)`, in a plugin's core)
+// reach a list only through a resolver its own plugin's web registers
+// (`ClientFields.Resolve({ fields: x, … })`). Without one the declaration
+// type-checks and its fields are simply absent from every list of the owner.
+
+/** A `clientFields(` call — not the function's own definition. */
+const CLIENT_FIELDS_CALL =
+  /(?<!\bfunction\s+)\bclientFields\s*(?:<[^()]*>)?\s*\(/g;
+
+/**
+ * The client-fields declarations (outside test code) whose own plugin's
+ * `web/` resolves none of them — as `path:line — name`.
+ */
+export function unresolvedClientFields(
+  declaring: readonly CandidateSource[],
+  web: readonly CandidateSource[],
+): string[] {
+  const resolved = registeredNames(web, RESOLVE);
+  const missing: string[] = [];
+  for (const file of declaring.filter(notTest)) {
+    const root = pluginRootOf(file.rel) ?? "";
+    for (const { name, line } of boundCalls(file, CLIENT_FIELDS_CALL)) {
+      if (name === null) {
+        missing.push(
+          `${file.rel}:${line} — a clientFields(…) call no \`const\` binds`,
+        );
+      } else if (!(resolved.get(root)?.has(name) ?? false)) {
+        missing.push(`${file.rel}:${line} — ${name}`);
+      }
+    }
+  }
+  return missing;
+}
+
+const clientFieldsResolved: Check = {
+  id: "live:client-fields-resolved",
+  // INPUT-KEYED: a pure scan of tracked sources.
+  inputKeyed: true,
+  description:
+    "Every client-fields declaration (`const x = clientFields(…)`, network/live) is resolved by its own plugin's web — `ClientFields.Resolve({ fields: x })` — outside test code. Without one its fields are absent from every list of its owner.",
+  async run() {
+    const root = await getWorktreeRoot();
+    const declaring = await listCandidateSources({
+      root,
+      grepArg: "clientFields(",
+      fixed: true,
+    });
+    const roots = new Set(
+      declaring
+        .filter(notTest)
+        .map((f) => pluginRootOf(f.rel))
+        .filter((r): r is string => r !== null),
+    );
+    if (roots.size === 0) return { ok: true };
+    const web = await listCandidateSources({
+      root,
+      grepArg: ".",
+      pathspecs: [...roots].flatMap((r) => [`${r}/web/*.ts`, `${r}/web/*.tsx`]),
+    });
+    const missing = unresolvedClientFields(declaring, web);
+    if (missing.length === 0) return { ok: true };
+    return {
+      ok: false,
+      message: `${missing.length} client-fields declaration(s) are not resolved by their own plugin:\n    ${missing.join("\n    ")}`,
+      hint: "In the declaring plugin, contribute `ClientFields.Resolve({ fields: x, component })` (network/live/web) from its web barrel.",
+    };
+  },
+};
+
+export default [exposuresRegistered, armsRegistered, clientFieldsResolved];

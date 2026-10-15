@@ -4,7 +4,7 @@ import {
   liveCollection,
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
-import { SavedBootTraceSchema } from "./fields";
+import { savedBootTraceFields } from "./fields";
 
 /**
  * The saved boot traces (`boot_traces`), newest first, as the Boot Profiles
@@ -35,6 +35,6 @@ export type BootTraceItem =
  * `found: false` is "no such snapshot".
  */
 export const bootTrace = liveCollection("debug.boot-trace", {
-  row: SavedBootTraceSchema,
+  carry: { fields: savedBootTraceFields },
   id: "id",
 });

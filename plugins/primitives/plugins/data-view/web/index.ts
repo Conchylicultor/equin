@@ -134,11 +134,7 @@ export type {
   ItemActionContribution,
 } from "./internal/define-item-actions";
 export { useItemActionZones } from "./internal/use-item-action-zones";
-export { defineFieldExtensions } from "./internal/field-extensions";
-export type {
-  FieldExtensions,
-  FieldExtensionContribution,
-} from "./internal/field-extensions";
+export type { FieldExtensionContribution } from "./internal/field-extensions";
 export type {
   FieldValue,
   FilterFieldValue,
@@ -178,7 +174,6 @@ export type {
   ItemActionsDescriptor,
   ItemActionZone,
   FieldExtensionProps,
-  FieldExtensionsDescriptor,
 } from "../core";
 
 export default {

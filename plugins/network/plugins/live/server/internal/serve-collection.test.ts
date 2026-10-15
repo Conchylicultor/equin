@@ -42,12 +42,15 @@ import {
 import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
 import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
 import { liveCollection } from "@plugins/network/plugins/live/core";
+import { and, or } from "@plugins/network/plugins/live/plugins/filter/core";
+import { fieldsToZodObject, nullable } from "@plugins/fields/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import {
-  and,
-  liveBoolean,
-  liveText,
-  or,
-} from "@plugins/network/plugins/live/plugins/filter/core";
+  enumTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
 import { withWire } from "@plugins/database/plugins/sql-column/server";
 import { compileCollection } from "./serve-collection";
 
@@ -66,21 +69,24 @@ const srcT = pgTable(TABLE, {
   secret: text("secret"),
 });
 
-const SrcSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  n: z.number(),
-  enabled: z.boolean(),
-  kind: z.string().nullable(),
-});
+// The listed (filterable) fields, and the ones the row carries without listing.
+const SRC_LISTED = {
+  enabled: boolField({ label: "Enabled" }),
+  kind: nullable(textField({ label: "Kind" })),
+};
+const SRC_CARRIED = { id: textField(), name: textField(), n: intField() };
+const SRC = {
+  fields: SRC_LISTED,
+  carry: { fields: SRC_CARRIED },
+  id: "id",
+} as const;
+const SrcSchema = fieldsToZodObject({ ...SRC_LISTED, ...SRC_CARRIED });
 type Src = z.infer<typeof SrcSchema>;
 
 let seq = 0;
 function collection() {
   return liveCollection(`test.live.src-${seq++}`, {
-    row: SrcSchema,
-    id: "id",
-    filterable: { enabled: liveBoolean(), kind: liveText() },
+    ...SRC,
     sortable: ["n", "name"],
     default: { orderBy: [["n", "asc"]], limit: 2 },
     maxLimit: 50,
@@ -429,11 +435,9 @@ describe("serveCollection — derived projection", () => {
   });
 
   test("a row field bound to no column throws at compile time", () => {
-    const Wide = SrcSchema.extend({ bogus: z.string() });
     const c = liveCollection(`test.live.wide-${seq++}`, {
-      row: Wide,
-      id: "id",
-      filterable: {},
+      ...SRC,
+      carry: { fields: { ...SRC_CARRIED, bogus: textField() } },
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 1 },
       maxLimit: 2,
@@ -536,11 +540,13 @@ describe("serveCollection — :groups", () => {
 
   test("a value the row schema's field cannot hold fails loudly", async () => {
     const c = liveCollection(`test.live.enum-${seq++}`, {
-      row: SrcSchema.extend({
-        kind: z.enum(["build", "alert"]).nullable(),
-      }),
+      fields: {
+        kind: nullable(
+          enumTextField(["build", "alert"] as const, { label: "Kind" }),
+        ),
+      },
+      carry: { fields: SRC_CARRIED },
       id: "id",
-      filterable: { kind: liveText() },
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 1 },
       maxLimit: 2,
@@ -604,9 +610,7 @@ describe("serveCollection — :groups", () => {
 describe("serveCollection — :count", () => {
   function counted() {
     return liveCollection(`test.live.counted-${seq++}`, {
-      row: SrcSchema,
-      id: "id",
-      filterable: { enabled: liveBoolean(), kind: liveText() },
+      ...SRC,
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 2 },
       maxLimit: 50,
@@ -729,8 +733,7 @@ describe("serveCollection — base where", () => {
 });
 
 describe("serveCollection — lookup-only", () => {
-  const lookup = () =>
-    liveCollection(`test.live.lookup-${seq++}`, { row: SrcSchema, id: "id" });
+  const lookup = () => liveCollection(`test.live.lookup-${seq++}`, { ...SRC });
 
   test("compiles the :rows point spec alone", () => {
     const specs = compileCollection(lookup(), {
@@ -800,11 +803,12 @@ describe("serveCollection — a column type's wire codec", () => {
     blob: wireBytes("blob").notNull(),
     maybe: wireBytes("maybe"),
   });
-  const BlobSchema = z.object({
-    id: z.string(),
-    blob: z.string(),
-    maybe: z.string().nullable(),
-  });
+  const BLOB_FIELDS = {
+    id: textField(),
+    blob: textField(),
+    maybe: nullable(textField()),
+  };
+  const BlobSchema = fieldsToZodObject(BLOB_FIELDS);
 
   beforeAll(async () => {
     await db.execute(
@@ -816,7 +820,7 @@ describe("serveCollection — a column type's wire codec", () => {
 
   test("encodes in JS per row — unfolded past 76 bytes — and keeps NULL null", async () => {
     const c = liveCollection(`test.live.blob-${seq++}`, {
-      row: BlobSchema,
+      carry: { fields: BLOB_FIELDS },
       id: "id",
     });
     const specs = compileCollection(c, {
@@ -849,14 +853,20 @@ describe("serveCollection — a column type's wire codec", () => {
   });
 
   test("types: a row field that is not the column's wire type is a tsc error", () => {
-    const AsBytes = BlobSchema.extend({ blob: z.instanceof(Uint8Array) });
-    const NotNullable = BlobSchema.extend({ maybe: z.string() });
     const asBytes = liveCollection(`test.live.blob-${seq++}`, {
-      row: AsBytes,
+      carry: {
+        fields: {
+          ...BLOB_FIELDS,
+          blob: jsonField({
+            schema: z.instanceof(Uint8Array),
+            default: new Uint8Array(),
+          }),
+        },
+      },
       id: "id",
     });
     const notNullable = liveCollection(`test.live.blob-${seq++}`, {
-      row: NotNullable,
+      carry: { fields: { ...BLOB_FIELDS, maybe: textField() } },
       id: "id",
     });
     // Never called — the assertions are the `@ts-expect-error`s.
@@ -871,9 +881,12 @@ describe("serveCollection — a column type's wire codec", () => {
 
   test("a wire-encoded column cannot be filtered", () => {
     const c = liveCollection(`test.live.blob-${seq++}`, {
-      row: BlobSchema,
+      fields: {
+        id: textField({ label: "Id", filterable: false }),
+        blob: textField({ label: "Blob" }),
+        maybe: nullable(textField({ label: "Maybe", filterable: false })),
+      },
       id: "id",
-      filterable: { blob: liveText() },
       sortable: ["id"],
       default: { orderBy: [["id", "asc"]], limit: 1 },
       maxLimit: 2,

@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { unregisteredArms, unregisteredExposures } from "./index";
+import {
+  unregisteredArms,
+  unregisteredExposures,
+  unresolvedClientFields,
+} from "./index";
 
 // Fixture files of made-up plugins `a` and `b` (spelled through a template, so
 // the plugin-refs scan does not read them as references to real plugins).
@@ -139,7 +143,7 @@ describe("live:exposures-registered", () => {
 
 describe("live:arms-registered", () => {
   const ARM =
-    'import { runs } from "@plugins/runs/core";\nexport const buildArm = liveArm(runs, "build", {\n  label: "Build",\n  fields,\n});\n';
+    'import { runs } from "@plugins/runs/core";\nexport const buildArm = liveArm(runs, "build", {\n  label: "Build",\n  order: 10,\n  fields,\n});\n';
   const SERVER =
     'import { buildArm as arm } from "../../core";\nexport const kind = defineRunKind({ columns: arm });\n';
   const WEB =
@@ -182,6 +186,35 @@ describe("live:arms-registered", () => {
         [file("a", "server/internal/kind.test.ts", SERVER)],
         [file("a", "web/index.ts", WEB)],
       ),
+    ).toHaveLength(1);
+  });
+});
+
+describe("live:client-fields-resolved", () => {
+  const DECL =
+    'import { fileEntry } from "./kind";\nexport const gitFields = clientFields(fileEntry, "git", {\n  fields,\n});\n';
+  const WEB =
+    'import { gitFields } from "../core";\nconst c = ClientFields.Resolve({ fields: gitFields, component: GitResolver });\n';
+
+  test("a declaration its own web resolves passes", () => {
+    expect(
+      unresolvedClientFields(
+        [file("a", "core/fields.ts", DECL)],
+        [file("a", "web/index.ts", WEB)],
+      ),
+    ).toEqual([]);
+  });
+
+  test("no resolver — or one in another plugin, or test code — is named", () => {
+    const declared = [file("a", "core/fields.ts", DECL)];
+    expect(unresolvedClientFields(declared, [])).toEqual([
+      "plugins/a/core/fields.ts:2 — gitFields",
+    ]);
+    expect(
+      unresolvedClientFields(declared, [file("b", "web/index.ts", WEB)]),
+    ).toHaveLength(1);
+    expect(
+      unresolvedClientFields(declared, [file("a", "web/index.test.ts", WEB)]),
     ).toHaveLength(1);
   });
 });

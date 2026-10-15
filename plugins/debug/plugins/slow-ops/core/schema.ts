@@ -5,7 +5,11 @@ import {
   type SpanMeasure,
   type WaitBreakdown,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import { fieldsToZodObject, type FieldsRecord } from "@plugins/fields/core";
+import {
+  fieldsToZodObject,
+  nullable,
+  type FieldsRecord,
+} from "@plugins/fields/core";
 import { uuidField } from "@plugins/fields/plugins/uuid/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
@@ -118,22 +122,29 @@ export type SlowOp = z.infer<typeof SlowOpSchema>;
 
 // One op as the ranked list reads it (`slow-ops.ops`): the counters only — no
 // JSON list, so a 100-row window is a few KB. `waitMs` (the summed `waits`)
-// and `lastTraceId` (the newest sample's trace) are derived server-side.
-export const SlowOpListRowSchema = SlowOpSchema.pick({
-  id: true,
-  worktree: true,
-  operationKind: true,
-  operation: true,
-  count: true,
-  totalMs: true,
-  maxMs: true,
-  lastMs: true,
-  thresholdMs: true,
-  firstSeenAt: true,
-  lastSeenAt: true,
-}).extend({
-  waitMs: z.number(),
-  lastTraceId: z.string().nullable(),
+// and `lastTraceId` (the newest sample's trace) are derived server-side. The
+// listed fields are the ones the list filters by (labelled); the rest ride the
+// row, in no list.
+export const SLOW_OP_LIST_LISTED = {
+  operationKind: textField({ label: "Kind" }),
+  operation: textField({ label: "Operation" }),
+  count: intField({ label: "Count" }),
+  totalMs: floatField({ label: "Total" }),
+  lastSeenAt: dateField({ label: "Last seen" }),
+};
+export const SLOW_OP_LIST_CARRIED = {
+  id: slowOpFields.id,
+  worktree: slowOpFields.worktree,
+  maxMs: slowOpFields.maxMs,
+  lastMs: slowOpFields.lastMs,
+  thresholdMs: slowOpFields.thresholdMs,
+  firstSeenAt: slowOpFields.firstSeenAt,
+  waitMs: floatField(),
+  lastTraceId: nullable(textField()),
+};
+export const SlowOpListRowSchema = fieldsToZodObject({
+  ...SLOW_OP_LIST_CARRIED,
+  ...SLOW_OP_LIST_LISTED,
 });
 export type SlowOpListRow = z.infer<typeof SlowOpListRowSchema>;
 
@@ -155,6 +166,23 @@ export const slowOpCallerFields = {
   firstSeenAt: dateField(),
   lastSeenAt: dateField(),
 } satisfies FieldsRecord;
+
+// The callers window filters by op and caller (labelled); the rest ride the row.
+export const SLOW_OP_CALLER_LISTED = {
+  operationKind: textField({ label: "Kind" }),
+  operation: textField({ label: "Operation" }),
+  callerKind: textField({ label: "Caller kind" }),
+  callerLabel: textField({ label: "Caller" }),
+};
+export const SLOW_OP_CALLER_CARRIED = {
+  id: slowOpCallerFields.id,
+  worktree: slowOpCallerFields.worktree,
+  count: slowOpCallerFields.count,
+  totalMs: slowOpCallerFields.totalMs,
+  maxMs: slowOpCallerFields.maxMs,
+  firstSeenAt: slowOpCallerFields.firstSeenAt,
+  lastSeenAt: slowOpCallerFields.lastSeenAt,
+};
 
 export const SlowOpCallerSchema = fieldsToZodObject(slowOpCallerFields);
 export type SlowOpCaller = z.infer<typeof SlowOpCallerSchema>;

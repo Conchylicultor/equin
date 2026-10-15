@@ -14,11 +14,15 @@ import type { EntityRef } from "@plugins/infra/plugins/entities/core";
 import type { EntityExposure } from "@plugins/infra/plugins/entity-extensions/core";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import type {
+  ClientFields,
+  ClientFieldValue,
   LiveArm,
   LiveFieldIds,
   LiveFields,
   LiveRowsCollection,
+  RowKind,
 } from "@plugins/network/plugins/live/core";
+import { clientFieldsKey } from "./client-fields";
 
 // How a field PRESENTS in every list — the browser half of fields declared
 // once (`../../CLAUDE.md`, "Fields"). A field's label, type and options are
@@ -33,7 +37,10 @@ import type {
 //   listed fields, in every list of it: the presentation of a collection's own
 //   fields (a union's base fields, a mirror's computed ones), declared once
 //   beside it instead of by every list. A picked field may be presented by
-//   its entity too — the two may not set one property of it.
+//   its entity too — the two may not set one property of it. A row kind
+//   (`rowKind`) is presented the same way: it is a collection with no server;
+// - client fields (`clientFields`) — their fields, in every list of their
+//   owner.
 //
 // The registering plugin may differ from the owner's (a plugin presents a
 // field another declares). Data-view folds the registrations a list reaches
@@ -60,6 +67,8 @@ export interface FieldPresentationSpec<V, Row> {
   cell?: (value: V, row: Row) => ReactNode;
   width?: string;
   align?: "start" | "end" | "center";
+  /** `false`: no header text in a table (a glyph column) — the label still names it everywhere else. */
+  header?: false;
   /** `false`: a dimension the body leaves out by default (the user can switch it on). */
   visible?: false;
   /**
@@ -88,10 +97,16 @@ export type PresentationOwner =
   | EntityRef
   | EntityExposure
   | LiveArm<unknown, FieldsRecord, string>
-  | FieldsCollection;
+  | FieldsCollection
+  | ClientFields<unknown, FieldsRecord>;
 
-/** The row a collection lists. */
-type CollectionRow<O> = O extends LiveRowsCollection<infer R> ? R : never;
+/** The row a collection (or a row kind) lists. */
+type CollectionRow<O> =
+  O extends RowKind<infer R>
+    ? R
+    : O extends LiveRowsCollection<infer R>
+      ? R
+      : never;
 
 /** The fields an owner declares, by key. */
 type OwnerFields<O> =
@@ -101,13 +116,15 @@ type OwnerFields<O> =
       ? R
       : O extends LiveArm<unknown, infer F, string, FieldsRecord>
         ? { [K in keyof F & string]: InferFieldValue<F[K]> }
-        : O extends FieldsCollection
-          ? {
-              [
-                K in LiveFieldIds<O> & keyof CollectionRow<O>
-              ]: CollectionRow<O>[K];
-            }
-          : never;
+        : O extends ClientFields<unknown, infer F>
+          ? { [K in keyof F & string]: ClientFieldValue<F[K]> }
+          : O extends FieldsCollection
+            ? {
+                [
+                  K in LiveFieldIds<O> & keyof CollectionRow<O>
+                ]: CollectionRow<O>[K];
+              }
+            : never;
 
 /**
  * The row a cell is handed: an entity's — its presented field and the
@@ -122,9 +139,11 @@ type OwnerRow<O, K extends string, Rd extends string> =
       }
     : O extends LiveArm<infer Row, FieldsRecord, string, FieldsRecord>
       ? Row
-      : O extends FieldsCollection
-        ? CollectionRow<O>
-        : unknown;
+      : O extends ClientFields<infer Row, FieldsRecord>
+        ? Row
+        : O extends FieldsCollection
+          ? CollectionRow<O>
+          : unknown;
 
 /** One registration (see {@link FieldPresentation}). */
 export interface FieldPresentationRegistration<
@@ -170,6 +189,8 @@ export function presentationOwnerKey(owner: PresentationOwner): string {
       return `exposure:${owner.slice}`;
     case "live-columns":
       return `arm:${owner.owner.collection}:${owner.owner.arm}`;
+    case "client-fields":
+      return clientFieldsKey(owner);
     default:
       return owner satisfies never;
   }

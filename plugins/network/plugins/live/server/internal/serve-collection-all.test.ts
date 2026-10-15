@@ -25,6 +25,11 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import { z } from "zod";
+import { fieldsToZodObject } from "@plugins/fields/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { loadResourceByKey } from "@plugins/framework/plugins/server-core/core";
 import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
 import {
@@ -60,12 +65,13 @@ const notes = pgTable(
   (t) => [index("sca_notes_item_idx").on(t.itemId)],
 );
 
-const Row = z.object({
-  id: z.string(),
-  title: z.string(),
-  rank: z.number(),
-  notes: z.number(),
-});
+const ROW_FIELDS = {
+  id: textField({ label: "Id" }),
+  title: textField({ label: "Title" }),
+  rank: intField({ label: "Rank" }),
+  notes: intField({ label: "Notes" }),
+};
+const Row = fieldsToZodObject(ROW_FIELDS);
 type Row = z.infer<typeof Row>;
 
 const ALL = {
@@ -76,7 +82,7 @@ const ALL = {
 let seq = 0;
 const allCollection = (preload?: "boot") =>
   liveCollection(`test.live.all-${seq++}`, {
-    row: Row,
+    fields: ROW_FIELDS,
     id: "id",
     all: ALL,
     ...(preload ? { preload } : {}),
@@ -150,15 +156,18 @@ describe("serveCollection — the `all` arm (C4)", () => {
   test("A28 (runtime half): what serveCollection registers is exactly what the declaration minted — window, lookup-only and `all`", () => {
     const { db } = recordingQueryDb();
     const window = liveCollection(`test.live.all-window-${seq++}`, {
-      row: z.object({ id: z.string(), title: z.string(), rank: z.number() }),
+      fields: {
+        id: textField({ label: "Id", filterable: false }),
+        title: textField({ label: "Title", filterable: false }),
+        rank: intField({ label: "Rank", filterable: false }),
+      },
       id: "id",
-      filterable: {},
       sortable: ["rank"],
       default: { orderBy: [["rank", "asc"]], limit: 10 },
       maxLimit: 20,
     });
     const lookup = liveCollection(`test.live.all-lookup-${seq++}`, {
-      row: z.object({ id: z.string(), title: z.string() }),
+      carry: { fields: { id: textField(), title: textField() } },
       id: "id",
     });
     const all = allCollection();
@@ -210,7 +219,10 @@ describe("serveCollection — the `all` arm (C4)", () => {
 
   test("an expression over an aggregate binds like a column", async () => {
     const c = liveCollection(`test.live.all-expr-${seq++}`, {
-      row: z.object({ id: z.string(), label: z.string() }),
+      fields: {
+        id: textField({ label: "Id" }),
+        label: textField({ label: "Label" }),
+      },
       id: "id",
       all: { orderBy: [["id", "asc"]], unbounded: { reason: "a test set" } },
     });
@@ -299,7 +311,10 @@ describe("serveCollection — the `all` arm (C4)", () => {
       }),
     });
     const w = liveCollection(`test.live.all-wire-${seq++}`, {
-      row: z.object({ id: z.string(), blob: z.string() }),
+      fields: {
+        id: textField({ label: "Id" }),
+        blob: textField({ label: "Blob" }),
+      },
       id: "id",
       all: { orderBy: [["id", "asc"]], unbounded: { reason: "a test set" } },
     });
@@ -330,7 +345,7 @@ describe("serveCollection — the `all` arm (C4)", () => {
       });
       // A window or lookup collection's options cannot carry a grouped join.
       const lookup = liveCollection("t.all.lookup", {
-        row: z.object({ id: z.string() }),
+        fields: { id: textField({ label: "Id" }) },
         id: "id",
       });
       // @ts-expect-error — a children join is the `all` compiler's alone (C9)
@@ -360,10 +375,15 @@ describe("serveCollection — the `all` arm (C4)", () => {
         }),
       });
       const datedList = liveCollection("t.all.dated-list", {
-        row: z.object({
-          id: z.string(),
-          stamps: z.array(z.object({ at: z.coerce.date() })),
-        }),
+        fields: { id: textField({ label: "Id" }) },
+        carry: {
+          fields: {
+            stamps: jsonField({
+              schema: z.array(z.object({ at: z.coerce.date() })),
+              default: [],
+            }),
+          },
+        },
         id: "id",
         all: { orderBy: [["id", "asc"]], unbounded: { reason: "a test set" } },
       });
@@ -373,7 +393,10 @@ describe("serveCollection — the `all` arm (C4)", () => {
         columns: { stamps: (j) => j.st.list },
       });
       const datedLast = liveCollection("t.all.dated-last", {
-        row: z.object({ id: z.string(), last: z.coerce.date() }),
+        fields: {
+          id: textField({ label: "Id" }),
+          last: dateField({ label: "Last" }),
+        },
         id: "id",
         all: { orderBy: [["id", "asc"]], unbounded: { reason: "a test set" } },
       });

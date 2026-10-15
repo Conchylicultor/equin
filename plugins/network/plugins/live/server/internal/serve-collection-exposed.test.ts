@@ -18,10 +18,13 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { z } from "zod";
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
-import { enumTextField } from "@plugins/fields/plugins/text/plugins/config/core";
+import {
+  enumTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
@@ -43,7 +46,6 @@ import {
   LIVE_COLUMNS_KEY,
   LIVE_ROW_KEY,
 } from "@plugins/network/plugins/live/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { compileCollection, serveCollection } from "./serve-collection";
 import { LiveColumns } from "./serve-columns";
 
@@ -62,7 +64,11 @@ const conversations = pgTable("xp_conversations", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
 });
 const tasksRef = entityRef("xp_tasks", {});
-const conversationsRef = entityRef("xp_conversations", {});
+const conversationsRef = entityRef("xp_conversations", {
+  id: textField({ label: "Id", filterable: false }),
+  title: textField({ label: "Title" }),
+  createdAt: dateField({ label: "Created", filterable: false }),
+});
 
 const track = defineExtension(
   tasks,
@@ -140,12 +146,6 @@ const ownerJoins = [
   } satisfies LookupJoin<"task", typeof tasks>,
 ] as const;
 
-const Conversation = z.object({
-  id: z.string(),
-  title: z.string(),
-  createdAt: z.date(),
-});
-
 const trackCols = exposedColumns(track.exposure);
 const usageCols = exposedColumns(usage.exposure);
 const TRACK = "xp_tasks_ext_track.track";
@@ -154,21 +154,23 @@ const COST = "xp_conversations_ext_usage.cost";
 let n = 0;
 const listOf = () =>
   liveCollection(`test.live.exposed-${n++}`, {
-    row: Conversation,
+    from: conversationsRef,
+    pick: ["id", "title", "createdAt"],
+    related: { task: tasksRef },
     id: "id",
-    filterable: { title: liveText() },
     sortable: ["createdAt"],
     default: { orderBy: [["createdAt", "desc"]], limit: 10 },
     maxLimit: 30,
     count: true,
-    exposes: { base: conversationsRef, task: tasksRef },
   });
 const allOf = (preload?: "boot") =>
   liveCollection(`test.live.exposed-all-${n++}`, {
-    row: Conversation,
+    from: conversationsRef,
+    pick: ["id", "title", "createdAt"],
+    baseExposures: false,
+    related: { task: tasksRef },
     id: "id",
     all: { orderBy: [["createdAt", "desc"]], unbounded: { reason: "test" } },
-    exposes: { task: tasksRef },
     ...(preload ? { preload } : {}),
   });
 
@@ -429,13 +431,12 @@ describe("exposed columns — the window", () => {
 
   test("an exposure of an entity the collection does not reach is not folded", () => {
     const c = liveCollection(`test.live.exposed-narrow-${n++}`, {
-      row: Conversation,
+      from: conversationsRef,
+      pick: ["id", "title", "createdAt"],
       id: "id",
-      filterable: {},
       sortable: ["createdAt"],
       default: { orderBy: [["createdAt", "desc"]], limit: 10 },
       maxLimit: 30,
-      exposes: { base: conversationsRef },
     });
     const specs = compileCollection(
       c,
@@ -453,16 +454,24 @@ describe("exposed columns — the window", () => {
 });
 
 describe("exposed columns — the bind's refusals", () => {
-  const compileWith = (exposes: Record<string, ReturnType<typeof entityRef>>) =>
+  const compileWith = (reach: {
+    from?: ReturnType<typeof entityRef>;
+    related?: Record<string, ReturnType<typeof entityRef>>;
+  }) =>
     compileCollection(
       liveCollection(`test.live.exposed-bad-${n++}`, {
-        row: Conversation,
+        ...reach,
+        carry: {
+          fields: {
+            id: textField(),
+            title: textField(),
+            createdAt: dateField(),
+          },
+        },
         id: "id",
-        filterable: {},
         sortable: ["createdAt"],
         default: { orderBy: [["createdAt", "desc"]], limit: 10 },
         maxLimit: 30,
-        exposes,
       }),
       { from: conversations, joins: ownerJoins },
       [],
@@ -470,16 +479,16 @@ describe("exposed columns — the bind's refusals", () => {
     );
 
   test("`base` must be the collection's own entity", () => {
-    expect(() => compileWith({ base: tasksRef })).toThrow(
+    expect(() => compileWith({ from: tasksRef })).toThrow(
       /`exposes.base` names entity "xp_tasks", but the collection reads table "xp_conversations"/,
     );
   });
 
   test("a relation must be a declared lookup over the entity", () => {
-    expect(() => compileWith({ owner: tasksRef })).toThrow(
+    expect(() => compileWith({ related: { owner: tasksRef } })).toThrow(
       /names relation "owner", which is neither `base` nor a join/,
     );
-    expect(() => compileWith({ attempt: tasksRef })).toThrow(
+    expect(() => compileWith({ related: { attempt: tasksRef } })).toThrow(
       /`exposes.attempt` names entity "xp_tasks", but join "attempt" reads table "xp_attempts"/,
     );
   });
@@ -595,13 +604,14 @@ describe("exposed columns — the deferred bind", () => {
             ],
     );
     const list = liveCollection(`test.live.exposed-boot-${n++}`, {
-      row: Conversation,
+      from: conversationsRef,
+      pick: ["id", "title", "createdAt"],
+      baseExposures: false,
+      related: { task: tasksRef },
       id: "id",
-      filterable: {},
       sortable: ["createdAt"],
       default: { orderBy: [["createdAt", "desc"]], limit: 10 },
       maxLimit: 30,
-      exposes: { task: tasksRef },
     });
     // Preloaded: the boot snapshot and L2 see its key from module eval.
     const set = allOf("boot");

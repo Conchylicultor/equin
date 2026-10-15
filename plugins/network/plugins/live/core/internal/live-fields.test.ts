@@ -180,7 +180,7 @@ describe("liveCollection — the fields spelling", () => {
       /listed field "internal" has no label/,
     );
     expect(declare({ ...base, pick: ["nope"] })).toThrow(
-      /names "nope", which is not a field of entity "notes"/,
+      /names "nope", which is not a wire field of entity "notes"/,
     );
     expect(declare({ ...base, pick: ["title", "title"] })).toThrow(
       /"title" is declared twice/,
@@ -269,16 +269,17 @@ describe("liveCollection — the fields spelling", () => {
 
 describe("liveArm — a union arm declared by fields", () => {
   const runs = liveCollection("test.live-fields.runs", {
-    row: z.object({ key: z.string(), kind: z.string(), label: z.string() }),
+    fields: { label: textField({ label: "Label" }) },
+    carry: { fields: { key: textField(), kind: textField() } },
     id: "key",
     arms: { discriminator: "kind" },
-    filterable: {},
     sortable: ["label"],
     default: { orderBy: [["label", "asc"]], limit: 10 },
     maxLimit: 40,
   });
   const build = liveArm(runs, "build", {
     label: "Build",
+    order: 10,
     fields: {
       status: enumTextField(["ok", "failed"] as const, {
         label: "Build status",
@@ -321,6 +322,7 @@ describe("liveArm — a union arm declared by fields", () => {
   test("`carry` puts fields on the slice that no list shows, filters or sorts", () => {
     const backup = liveArm(runs, "backup", {
       label: "Backup",
+      order: 10,
       fields: { size: nullable(intField({ label: "Archive size" })) },
       carry: {
         results: nullable(
@@ -343,6 +345,7 @@ describe("liveArm — a union arm declared by fields", () => {
     expect(() =>
       liveArm(runs, "dup", {
         label: "Dup",
+        order: 10,
         fields: { size: intField({ label: "Size" }) },
         carry: { size: intField() },
       }),
@@ -353,6 +356,7 @@ describe("liveArm — a union arm declared by fields", () => {
     const _typesOnly = () =>
       liveArm(runs, "backup", {
         label: "Backup",
+        order: 10,
         // @ts-expect-error — no label
         fields: { size: intField() },
       });

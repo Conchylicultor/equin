@@ -5,7 +5,8 @@ import {
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
 import { eventSourceRunsEntityRef } from "./entity-refs";
-import { EventSourceSchema, RunEventSchema } from "./schema";
+import { eventSourceFields } from "./fields";
+import { RunEventSchema } from "./schema";
 
 /**
  * The configured sources, as the WHOLE ordered set (`all`, newest first) plus
@@ -22,7 +23,7 @@ import { EventSourceSchema, RunEventSchema } from "./schema";
  * one gets `unknown-key` (a `skew` verdict) and never parses these rows.
  */
 export const eventSources = liveCollection("events.sources.all", {
-  row: EventSourceSchema,
+  carry: { fields: eventSourceFields },
   id: "id",
   all: {
     orderBy: [["createdAt", "desc"]],

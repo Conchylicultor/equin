@@ -20,6 +20,7 @@
     - `config_v2/fields.fieldSample`
     - `fields.FieldDef`
     - `fields.FieldMeta`
+    - `fields.Labelled`
     - `fields.pickMeta`
     - `fields/json.jsonFieldType`
   - Exports (types): `JsonFieldDef`
@@ -34,17 +35,21 @@
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps-core/app-launcher`
     - `apps/events/events-core`
     - `apps/mail/mail-core`
     - `apps/places/places-core`
     - `apps/sonata/sources/ultimate-guitar/alignment`
     - `backup/runs-arm`
+    - `conversations/question-relay`
     - `debug/boot-profile`
+    - `debug/profiling/op-log/op-store`
     - `debug/slow-ops`
     - `debug/trace/engine`
     - `infra/claude-cli`
     - `infra/events`
     - `infra/jobs`
+    - `infra/trash`
     - `page/block-entity`
     - `reports`
     - `tasks/automations`

@@ -7,7 +7,6 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { z } from "zod";
 import { nullable } from "@plugins/fields/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
@@ -23,8 +22,13 @@ import {
   liveArm,
   liveCollection,
   LIVE_COLUMNS_KEY,
+  clientFields,
+  rowKind,
 } from "@plugins/network/plugins/live/core";
-import type { StoredFieldPresentation } from "@plugins/network/plugins/live/web";
+import type {
+  StoredClientFieldsResolution,
+  StoredFieldPresentation,
+} from "@plugins/network/plugins/live/web";
 import { fieldOverrides } from "../../core";
 import { deriveFields, listSchema, mergePresentations } from "./derived-fields";
 
@@ -186,18 +190,25 @@ describe("deriveFields", () => {
     expect(optionReaders).toEqual([{ id: "title", useOptions }]);
   });
 
-  test("a union's arm fields, under the arm's label, bound to its columns under a live source", () => {
-    const runs = liveCollection("test.derived-fields.runs", {
-      row: z.object({ key: z.string(), kind: z.string(), label: z.string() }),
+  /** A union of `key` / `kind` / `label` rows — the label listed, the key and kind carried. */
+  const unionRuns = (key: string) =>
+    liveCollection(key, {
+      fields: {},
+      carry: {
+        fields: { key: textField(), kind: textField(), label: textField() },
+      },
       id: "key",
       arms: { discriminator: "kind" },
-      filterable: {},
       sortable: ["label"],
       default: { orderBy: [["label", "asc"]], limit: 10 },
       maxLimit: 40,
     });
+
+  test("a union's arm fields, under the arm's label, bound to its columns under a live source", () => {
+    const runs = unionRuns("test.derived-fields.runs");
     const build = liveArm(runs, "build", {
       label: "Build",
+      order: 10,
       fields: { exitCode: nullable(intField({ label: "Exit code" })) },
       sortable: ["exitCode"],
     });
@@ -227,6 +238,96 @@ describe("deriveFields", () => {
         [LIVE_COLUMNS_KEY]: {},
       }),
     ).toBeNull();
+  });
+
+  test("the arms' bands follow their declared order, never the order they registered in", () => {
+    const runs = unionRuns("test.derived-fields.runs-order");
+    const arm = (name: string, order: number) =>
+      liveArm(runs, name, {
+        label: name.toUpperCase(),
+        order,
+        fields: { code: nullable(intField({ label: "Code" })) },
+      });
+    const release = arm("release", 30);
+    const build = arm("build", 10);
+    const backup = arm("backup", 20);
+    // Registered release, build, backup — the plugins' load order.
+    const { fields } = deriveFields(runs, false, [
+      registration({ owner: release }),
+      registration({ owner: build }),
+      registration({ owner: backup }),
+    ]);
+    expect(fields.map((f) => [f.id, f.section])).toEqual([
+      ["build.code", "BUILD"],
+      ["backup.code", "BACKUP"],
+      ["release.code", "RELEASE"],
+    ]);
+  });
+});
+
+describe("deriveFields — client fields", () => {
+  const files = rowKind("test.derived-fields.files", {
+    fields: { name: textField({ label: "Name", primary: true }) },
+    carry: { fields: { id: textField() } },
+    id: "id",
+  });
+  const git = clientFields(files, "git", {
+    section: "Git",
+    fields: {
+      branch: nullable(textField({ label: "Branch" })),
+      dirty: nullable(boolField({ label: "Dirty" })),
+    },
+  });
+  const usage = clientFields(files, "usage", {
+    fields: { opens: nullable(intField({ label: "Opens" })) },
+  });
+  // A resolver registration: only its declaration is read by the derivation.
+  const resolver = (
+    fields: StoredClientFieldsResolution["fields"],
+  ): StoredClientFieldsResolution => ({ fields, component: null });
+
+  test("derive in declaration order after the owner's own fields, each under its declared section", () => {
+    const { fields, clientReaders } = deriveFields(
+      files,
+      false,
+      [],
+      [resolver(git), resolver(usage)],
+    );
+    expect(fields.map((f) => [f.id, f.section])).toEqual([
+      ["name", undefined],
+      ["branch", "Git"],
+      ["dirty", "Git"],
+      ["opens", undefined],
+    ]);
+    expect(clientReaders).toHaveLength(2);
+  });
+
+  test("a row kind with no resolver derives only its own fields", () => {
+    const { fields, clientReaders } = deriveFields(files, false, []);
+    expect(fields.map((f) => f.id)).toEqual(["name"]);
+    expect(clientReaders).toEqual([]);
+  });
+
+  test("a resolver of another owner is not this owner's", () => {
+    const other = rowKind("test.derived-fields.other", {
+      fields: { title: textField({ label: "Title" }) },
+      carry: { fields: { id: textField() } },
+      id: "id",
+    });
+    const foreign = clientFields(other, "git", {
+      fields: { branch: textField({ label: "Branch" }) },
+    });
+    expect(
+      deriveFields(files, false, [], [resolver(foreign)]).fields.map(
+        (f) => f.id,
+      ),
+    ).toEqual(["name"]);
+  });
+
+  test("a live source with client fields throws: they are filtered in memory", () => {
+    expect(() => deriveFields(files, true, [], [resolver(git)])).toThrow(
+      /has client fields.*cannot list them/,
+    );
   });
 });
 

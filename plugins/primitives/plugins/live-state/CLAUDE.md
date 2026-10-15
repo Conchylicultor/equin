@@ -1163,8 +1163,8 @@ keeps every row's identity rather than re-minting each moved row.
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --spacing`
-  - Imported by: 237 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×66
+  - Imported by: 238 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×67
     - `conversations` ×40
     - `tasks` ×22
     - `ui` ×22
@@ -1193,6 +1193,7 @@ keeps every row's identity rather than re-minting each moved row.
     - `endpoints/no-raw-web-fetch` — `web/notifications-client.ts` (sanctioned)
     - `live/no-legacy-resource-spelling` — `.` (sanctioned)
     - `live/no-endpoint-read` — `web` (sanctioned)
+  - Exempted by: `apps/file-explorer/git` (0 debt)
 - Core:
   - Exports (types):
     - `PointParams`

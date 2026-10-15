@@ -67,7 +67,8 @@ import {
 import { compileCollection } from "./serve-collection";
 import { serveScopedColumns, type ScopedMemberRead } from "./serve-columns";
 import { serveValue } from "./serve-value";
-import { liveNumber } from "@plugins/network/plugins/live/plugins/filter/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 
 const HOST = "sco_hosts";
 const VALUES = "sco_custom_values";
@@ -90,9 +91,11 @@ const valuesTable = pgTable(
 );
 
 const collection = liveCollection("test.live.scoped-oracle", {
-  row: z.object({ id: z.string(), n: z.number() }),
+  fields: {
+    id: textField({ label: "Id", filterable: false }),
+    n: intField({ label: "N" }),
+  },
   id: "id",
-  filterable: { n: liveNumber() },
   sortable: ["n"],
   default: { orderBy: [["n", "asc"]], limit: 4 },
   maxLimit: 20,

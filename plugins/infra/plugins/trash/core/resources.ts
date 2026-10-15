@@ -1,6 +1,5 @@
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
-import { TrashEntrySchema } from "./schemas";
+import { TRASH_ENTRY_CARRIED, TRASH_ENTRY_LISTED } from "./schemas";
 
 // The trash ledger as a live collection: a bounded window, newest-deleted first
 // (pages of 100, at most 500 rows to a reader with no viewport), plus its
@@ -11,9 +10,9 @@ import { TrashEntrySchema } from "./schemas";
 // list's search can match it. The ledger is bounded only by the 30-day purge,
 // so the window is what keeps a reader's list bounded.
 export const trashEntries = liveCollection("trash-entries", {
-  row: TrashEntrySchema,
+  fields: TRASH_ENTRY_LISTED,
+  carry: { fields: TRASH_ENTRY_CARRIED },
   id: "id",
-  filterable: { sourceId: liveText(), label: liveText() },
   sortable: ["deletedAt"],
   default: { orderBy: [["deletedAt", "desc"]], limit: 100 },
   maxLimit: 500,

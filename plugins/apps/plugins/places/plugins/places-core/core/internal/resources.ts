@@ -1,5 +1,5 @@
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
-import { PlaceSchema, PlaceTagSchema } from "./schema";
+import { placeFields, placeTagFields } from "./fields";
 import { PlaceSearchQuerySchema, PlaceSearchResultSchema } from "./maps";
 
 /**
@@ -15,7 +15,7 @@ import { PlaceSearchQuerySchema, PlaceSearchResultSchema } from "./maps";
  * one gets `unknown-key` (a `skew` verdict) and never parses these rows.
  */
 export const places = liveCollection("places.places.all", {
-  row: PlaceSchema,
+  carry: { fields: placeFields },
   id: "id",
   all: {
     orderBy: [["createdAt", "desc"]],
@@ -36,7 +36,7 @@ export const places = liveCollection("places.places.all", {
  * `places`).
  */
 export const placeTags = liveCollection("places.tags.all", {
-  row: PlaceTagSchema,
+  carry: { fields: placeTagFields },
   id: "id",
   all: {
     orderBy: [["rank", "asc"]],

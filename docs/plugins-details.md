@@ -607,7 +607,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ids.idKindField`
               - `ids.IdOf`
               - `network/live.liveCollection`
-              - `network/live/filter.liveText`
             - Exports (types):
               - `BookmarkId`
               - `BookmarkRow`
@@ -1889,7 +1888,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Slots:
               - `DeploymentDetail.Section`
-              - `Deployments.Fields`
               - `DeploymentItemActions`
               - `deploymentDetailPane.Actions`
             - Slot contributors:
@@ -1899,7 +1897,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DeploymentDetail.Section` ← `apps.deploy.deployments`
               - `DeploymentDetail.Section` ← `apps.deploy.local-serve`
               - `DeploymentDetail.Section` ← `apps.deploy.remote-deploy`
-              - `Deployments.Fields` ← `apps.deploy.remote-deploy`
               - `DeploymentItemActions` ← `apps.deploy.deployments`
               - `DeploymentItemActions` ← `apps.deploy.local-serve`
               - `deploymentDetailPane.Actions` ← `primitives.pane`
@@ -1911,9 +1908,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DeploymentDetail.Section` "Overview" → `DeploymentOverview`
               - `DeploymentItemActions` "deploy" → `DeployAction`
               - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
-            - Uses: 50 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
+            - Uses: 49 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
               - `primitives/css/ui-kit` ×9
-              - `primitives/data-view` ×8
+              - `primitives/data-view` ×7
               - `primitives/pane` ×5
               - `infra/endpoints` ×4
               - `network/live` ×3
@@ -1939,9 +1936,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DeploymentDetail`
               - `deploymentDetailPane`
               - `DeploymentItemActions`
-              - `Deployments`
               - `useBlockedReason`
-              - `useDeploymentsListServerId`
           - Server:
             - Contributes:
               - `ids.kind` "dpl"
@@ -2223,18 +2218,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/loading.Loading`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-        - **`remote-deploy`** — Deploy one composition to its remote server: a single Deploy button launching the `update` sequence (converge → build a platform-pinned candidate unless one is already current → ship that pinned run id), the three-phase report of the running deploy, what is currently built and how it relates to HEAD, the public URLs to inspect the deployed app, the phase-following deploy/build log output section, and the `Release` column contributed into the deployments list.
+        - **`remote-deploy`** — Deploy one composition to its remote server: a single Deploy button launching the `update` sequence (converge → build a platform-pinned candidate unless one is already current → ship that pinned run id), the three-phase report of the running deploy, what is currently built and how it relates to HEAD, the public URLs to inspect the deployed app, the phase-following deploy/build log output section, and the `Release` client field (`releaseFields`) of the deployments list.
           - Web:
             - Contributes:
               - `DeploymentDetail.Section` "Deploy to server" → `RemoteDeploySection`
               - `DeploymentDetail.Section` "Output" → `OutputSection`
-              - `Deployments.Fields` "release" → `ReleaseField`
-            - Uses: 36 symbols — full list in [`plugins/apps/plugins/deploy/plugins/remote-deploy/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/remote-deploy/REFERENCE.md)
-              - `primitives/live-state` ×7
-              - `apps/deploy/deployments` ×4
+              - `ClientFields.Resolve` "client:deploy.deployments:release" → `ReleaseFieldResolver`
+              - `FieldPresentation.Register` "client:deploy.deployments:release"
+            - Uses: 35 symbols — full list in [`plugins/apps/plugins/deploy/plugins/remote-deploy/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/remote-deploy/REFERENCE.md)
+              - `primitives/live-state` ×6
+              - `network/live` ×4
               - `primitives/setup-steps` ×4
               - `apps/deploy/health` ×3
-              - `network/live` ×2
+              - `apps/deploy/deployments` ×2
               - `primitives/view-switcher` ×2
               - `infra/endpoints.useEndpointMutation`
               - `primitives/css/badge.Badge`
@@ -2250,6 +2246,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/log-channels.LiveLogChannel`
               - `primitives/relative-time.RelativeTime`
               - `ui/icons.Icon`
+          - Core:
+            - Uses:
+              - `apps/deploy/deployments.deployments`
+              - `fields/text/config.enumTextField`
+              - `network/live.clientFields`
+            - Exports (types):
+              - `ReleaseState`
+              - `ReleaseStateInput`
+            - Exports (values):
+              - `candidatePredatesLatest`
+              - `RELEASE_STATE_OPTIONS`
+              - `releaseFields`
+              - `releaseStateLabel`
+              - `resolveReleaseState`
+              - `shortSha`
+              - `stalenessChipLabel`
+              - `stalenessSentence`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --destructive`
@@ -2258,18 +2271,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --success`
               - `ui/tokens/color-palette --warning`
               - `ui/tokens/shape --spacing`
-          - Core:
-            - Exports (types):
-              - `ReleaseState`
-              - `ReleaseStateInput`
-            - Exports (values):
-              - `candidatePredatesLatest`
-              - `RELEASE_STATE_OPTIONS`
-              - `releaseStateLabel`
-              - `resolveReleaseState`
-              - `shortSha`
-              - `stalenessChipLabel`
-              - `stalenessSentence`
         - **`servers`** — Server registry for the deployment platform.
           - Web:
             - Slots:
@@ -3262,34 +3263,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.useReservesFloatingBar`
               - `primitives/text-editor/paste-images.AttachmentSlots`
             - Exports (values): `attachmentPreviewPane`
-        - **`browser`** — The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — Fields, extra tree columns, RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
+        - **`browser`** — The file explorer's browser: <FileBrowser/> (toolbar with back / forward / up, the host path bar and a filter; the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — the home index and /files/at/<folder>[/<open file>], so every location is a link and back / forward are the browser history. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
           - Web:
             - Slots:
               - `filesHomePane.Actions`
               - `filesAtPane.Actions`
-              - `FileBrowserSlots.Fields`
               - `FileBrowserSlots.Lens`
               - `FileBrowserSlots.RowActions`
             - Slot contributors:
               - `filesHomePane.Actions` ← `primitives.pane`
               - `filesAtPane.Actions` ← `primitives.pane`
-              - `FileBrowserSlots.Fields` ← `apps.file-explorer.git`
               - `FileBrowserSlots.Lens` ← `apps.file-explorer.git`
               - `FileBrowserSlots.RowActions` ← `apps.file-explorer.browser`
             - Contributes:
               - `Pane.Register` "files-at"
               - `Pane.Register` "files-home"
               - `ThemeEngine.SubTheme` "Files document"
+              - `FieldPresentation.Register` "collection:file-explorer.entry"
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
             - Uses: 54 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/css/ui-kit` ×7
-              - `primitives/data-view` ×6
               - `infra/endpoints` ×5
+              - `primitives/data-view` ×5
               - `primitives/file-viewer` ×5
               - `primitives/pane` ×4
+              - `network/live` ×2
               - `primitives/path-bar` ×2
-              - `network/live.useLive`
               - `primitives/bar.Bar`
               - `primitives/copy-to-clipboard.useCopyToClipboard`
               - `primitives/css/center.Center`
@@ -3331,6 +3331,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useHomeDir`
           - Core:
             - Uses:
+              - `fields/text/config.textField`
+              - `network/live.rowKind`
               - `primitives/file-type.FilePreview`
               - `primitives/file-type.fileTypeOf`
             - Exports (types):
@@ -3352,6 +3354,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `entryCategory`
               - `entryExtension`
               - `entryKindLabel`
+              - `fileEntry`
               - `formatCount`
               - `formatModified`
               - `formatModifiedFull`
@@ -3383,22 +3386,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `live/no-endpoint-read` — `web/components/preview-pane.tsx`, `web/internal/folder-peek.ts`, `web/internal/listings.ts` (debt)
               - `live/no-endpoint-read` — `web/internal/host-path-source.ts` (debt)
-        - **`git`** — Git awareness for the file explorer: inside a git checkout the tree gains a git status badge (M / A / D / R / C / ?, a dot on a folder holding changes; pending until the status is known) and a Changed vs main filter field, ignored files hide behind a Show ignored files toggle, and a changed file's preview gets its git context (the Diff tab). Git awareness for the file explorer, server half: which checkout holds a folder (GET /api/file-explorer/git/checkout, git rev-parse) and the checkout's status as the file-explorer.git-status live value — each path's status vs HEAD and vs the main merge-base, untracked and ignored folders collapsed — memoized behind a content signature and pushed from the shared checkout watch (infra/git/checkout-watch: working tree + git dir) while subscribed.
+        - **`git`** — Git awareness for the file explorer: inside a git checkout the tree gains a git status badge (M / A / D / R / C / ?, a dot on a folder holding changes; pending until the status is known) and a Changed vs main filter field (client fields of the file-entry row kind, empty outside a checkout), ignored files hide behind a Show ignored files toggle, and a changed file's preview gets its git context (the Diff tab). Git awareness for the file explorer, server half: which checkout holds a folder (GET /api/file-explorer/git/checkout, git rev-parse) and the checkout's status as the file-explorer.git-status live value — each path's status vs HEAD and vs the main merge-base, untracked and ignored folders collapsed — memoized behind a content signature and pushed from the shared checkout watch (infra/git/checkout-watch: working tree + git dir) while subscribed.
           - Web:
             - Contributes:
-              - `FileBrowserSlots.Fields` "git" → `GitFields`
+              - `ClientFields.Resolve` "client:file-explorer.entry:git" → `GitFieldsResolver`
+              - `FieldPresentation.Register` "client:file-explorer.entry:git"
               - `FileBrowserSlots.Lens` "git"
             - Uses:
               - `apps/file-explorer/browser.FileBrowserSlots`
               - `apps/file-explorer/browser.useExplorerDir`
               - `apps/file-explorer/browser.useHomeDir`
+              - `network/live.ClientFields`
+              - `network/live.FieldPresentation`
               - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/status-dot.StatusDot`
               - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceError`
               - `primitives/live-state.ResourceResult`
               - `primitives/live-state.useEndpointResource`
-              - `primitives/loading.Loading`
           - Server:
             - Contributes: `resource.declare` "file-explorer.git-status"
             - Uses:
@@ -3413,12 +3419,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/commit-list.tryRunGit`
             - Resources: `file-explorer.git-status` (push, notified)
             - Routes: `GET /api/file-explorer/git/checkout`
+          - Core:
+            - Uses:
+              - `apps/file-explorer/browser.fileEntry`
+              - `fields/bool/config.boolField`
+              - `fields/text/config.enumTextField`
+              - `network/live.clientFields`
+            - Exports (types): `GitBadge`
+            - Exports (values):
+              - `GIT_BADGE_OPTIONS`
+              - `gitFields`
           - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --warning`
-              - `ui/tokens/shape --spacing`
+            - Uses tokens: `ui/tokens/color-palette --warning`
           - Exemptions:
-            - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-git.ts` (debt)
+            - Exempts itself from:
+              - `live/no-endpoint-read` — `web/internal/use-git.ts` (debt)
+              - `live-state/no-handrolled-result` — `web/components/git-fields.tsx` (sanctioned)
         - **`places`** — The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the Singularity checkout, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Where the file explorer's Singularity place leads: serves the file-explorer.main-checkout value, the main checkout's path.
           - Web:
             - Contributes:
@@ -3515,16 +3531,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (values): `APPS_CATEGORY_ID`
       - Plugins:
-        - **`app-cards`** — Launcher grid of one card per installed app, plus the new-app placeholder.
+        - **`app-cards`** — Launcher grid of one card per installed app (a DataView of the installedApp row kind; plugins add fields to it as client fields of that kind), plus the new-app placeholder.
           - Web:
-            - Slots: `HomeApps.Fields`
-            - Slot contributors: `HomeApps.Fields` ← `apps.home.usage-fields`
             - Contributes: `Home.Section` "Apps" → `AppGrid`
             - Uses:
-              - `apps-core.ActiveApp`
               - `apps-core.Apps`
               - `apps-core.useCurrentAppId`
-              - `apps-core/app-launcher.appFields`
+              - `apps-core/app-launcher.appRow`
+              - `apps-core/app-launcher.AppRow`
+              - `apps-core/app-launcher.appRowOverrides`
               - `apps-core/tabs.useActivateApp`
               - `apps/home/shell.Home`
               - `apps/prototypes/gallery.mintPrototypeFolder`
@@ -3533,15 +3548,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view.CreateOption`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
-              - `primitives/data-view.defineFieldExtensions`
               - `primitives/data-view/capsule-toolbar.capsuleToolbar`
               - `primitives/launch.LaunchAgentForm`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `ui/icons.Icon`
-            - Exports (values): `HomeApps`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: `apps/home/usage-fields`
         - **`shell`** — App shell for Home. Registers the /home app entry, defines the Home.Section slot, and contributes Home's own theme (a black page and the ocean tile palette), which the home app selects.
           - Web:
             - Slots: `Home.Section`
@@ -3567,13 +3579,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --background`
               - `ui/tokens/type-scale --font-weight-semibold`
             - Imported by: `apps/home/app-cards`
-        - **`usage-fields`** — Contributes per-app usage stats into the Home app grid: opens and active time over 7 days and all time, and when the app was last opened — sortable, filterable fields shown as columns of the grid's table view.
+        - **`usage-fields`** — Declares per-app usage stats as client fields of the installed-app row kind: opens and active time over 7 days and all time, and when the app was last opened — sortable, filterable fields shown as columns of the Home grid's table view.
           - Web:
-            - Contributes: `HomeApps.Fields` "usage" → `UsageFields`
+            - Contributes:
+              - `ClientFields.Resolve` "client:apps.installed-app:usage" → `UsageResolver`
+              - `FieldPresentation.Register` "client:apps.installed-app:usage"
             - Uses:
               - `apps-core/app-usage.useAppUsageSummary`
-              - `apps/home/app-cards.HomeApps`
-              - `primitives/loading.Loading`
+              - `network/live.ClientFields`
+              - `network/live.FieldPresentation`
+              - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceResult`
+          - Core:
+            - Uses:
+              - `apps-core/app-launcher.installedApp`
+              - `fields/date/config.dateField`
+              - `fields/int/config.intField`
+              - `network/live.clientFields`
+            - Exports (values): `appUsageFields`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
     - **`mail`** — Mail — a Gmail-class client.
@@ -3841,9 +3864,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mail-thread-messages:rows` (keyed, point)
           - Core:
             - Uses:
-              - `apps/mail/mail-core.MailMessageSchema`
+              - `apps/mail/mail-core.mailMessageFields`
+              - `fields/text/config.textField`
               - `network/live.liveCollection`
-              - `network/live/filter.liveText`
             - Exports (values): `threadMessages`
           - Cross-plugin:
             - Uses tokens:
@@ -9553,17 +9576,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `AppShell.Brand` "Brand" → `AppBrand`
           - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
-        - Uses: 32 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
+          - `FieldPresentation.Register` "collection:apps.installed-app"
+        - Uses: 34 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
           - `apps-core/tabs` ×5
           - `apps-core` ×4
+          - `primitives/data-view` ×3
           - `apps-core/app-icon` ×2
           - `primitives/app-shell` ×2
           - `primitives/css/fill` ×2
           - `primitives/css/theme-boundary` ×2
           - `primitives/css/ui-kit` ×2
-          - `primitives/data-view` ×2
           - `reorder` ×2
           - `apps-core/chrome-theme.chromeThemeScope`
+          - `network/live.FieldPresentation`
           - `primitives/css/line.Line`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
@@ -9572,7 +9597,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/overlay/hover-popover.HoverPopover`
           - `primitives/pane.currentRoutePath`
           - `ui/icons.Icon`
-        - Exports (values): `appFields`
+        - Exports (types): `AppRow`
+        - Exports (values):
+          - `appRow`
+          - `appRowOverrides`
+      - Core:
+        - Uses:
+          - `fields/json/config.jsonField`
+          - `fields/text/config.textField`
+          - `network/live.rowKind`
+          - `ui/icons.symbol`
+        - Exports (values): `installedApp`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --background`
@@ -9585,7 +9620,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/sidebar-metrics --sidebar-brand-name-pad-x`
           - `ui/tokens/sidebar-palette --sidebar-accent-foreground`
           - `ui/tokens/type-scale --font-weight-bold`
-        - Imported by: `apps/home/app-cards`
+        - Imported by:
+          - `apps/home/app-cards`
+          - `apps/home/usage-fields`
     - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.
       - Web:
         - Uses:
@@ -10908,6 +10945,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `POST /api/build/serve`
   - Core:
     - Uses:
+      - `fields.fieldsToZodObject`
+      - `fields.nullable`
+      - `fields/date/config.dateField`
+      - `fields/int/config.intField`
+      - `fields/string-list/config.stringListField`
+      - `fields/text/config.enumTextField`
+      - `fields/text/config.textField`
       - `infra/endpoints.defineEndpoint`
       - `infra/namespace.MAIN_COMPOSITION_ID`
       - `network/live.liveCollection`
@@ -12302,6 +12346,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UpdateAgentBody`
         - Exports (values):
           - `agentIdKind`
+          - `AgentLaunchConversationRefSchema`
           - `agentLaunchIdKind`
           - `AgentLaunchSchema`
           - `AgentLaunchWithStatusSchema`
@@ -16258,6 +16303,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `fields/bool/config.boolField`
               - `fields/rank/config.rankField`
+              - `fields/rank/config.rankValueField`
+              - `fields/text/config.textField`
               - `infra/endpoints.defineEndpoint`
               - `infra/entity-extensions.defineExtensionShape`
               - `network/live.liveCollection`
@@ -16629,9 +16676,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `POST /api/conversations/:id/questions/:toolUseId/abandon`
       - Core:
         - Uses:
+          - `fields/date/config.dateField`
+          - `fields/json/config.jsonField`
+          - `fields/text/config.textField`
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveCollection`
-          - `network/live/filter.liveText`
         - Exports (types):
           - `AnswerQuestionBody`
           - `CliAnswer`
@@ -16851,7 +16900,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.idKindField`
           - `ids.IdOf`
           - `network/live.liveCollection`
-          - `network/live/filter.liveText`
         - Exports (types):
           - `ConversationSummary`
           - `Phase`
@@ -19094,21 +19142,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `op-store.in-flight.all` (keyed)
                   - `op-store.in-flight.all:rows` (keyed, point)
               - Core:
-                - Uses:
-                  - `debug/profiling/op-log.OpenWait`
-                  - `debug/profiling/op-log.OpFoldState`
-                  - `debug/profiling/op-log.OpSleep`
-                  - `debug/profiling/op-log.OpSleepStamp`
-                  - `debug/profiling/op-log.OpStep`
-                  - `debug/profiling/op-log.OpWait`
-                  - `debug/profiling/op-log.TerminalOutcome`
-                  - `debug/profiling/op-log.WAIT_KINDS`
-                  - `debug/profiling/op-log.WaitKind`
-                  - `debug/profiling/op-log.WaitResult`
+                - Uses: 22 symbols — full list in [`plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/REFERENCE.md)
+                  - `debug/profiling/op-log` ×10
+                  - `fields/text/config` ×3
+                  - `fields` ×2
+                  - `fields/bool/config.boolField`
+                  - `fields/date/config.dateField`
+                  - `fields/float/config.floatField`
+                  - `fields/int/config.intField`
+                  - `fields/json/config.jsonField`
                   - `infra/worktree.OP_KIND_IDS`
                   - `network/live.liveCollection`
-                  - `network/live/filter.liveInstant`
-                  - `network/live/filter.liveText`
                 - Exports (types):
                   - `OpRow`
                   - `StoreClosedBy`
@@ -19932,6 +19976,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/trace/engine.traceListRoute`
           - `fields.FieldsRecord`
           - `fields.fieldsToZodObject`
+          - `fields.nullable`
           - `fields/date/config.dateField`
           - `fields/float/config.floatField`
           - `fields/int/config.intField`
@@ -19943,9 +19988,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/runtime-profiler.SpanMeasure`
           - `infra/runtime-profiler.WaitBreakdown`
           - `network/live.liveCollection`
-          - `network/live/filter.liveInstant`
-          - `network/live/filter.liveNumber`
-          - `network/live/filter.liveText`
           - `primitives/pane.defineRoute`
         - Exports (types):
           - `CallerRef`
@@ -20386,8 +20428,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/text/config.textField`
               - `fields/uuid/config.uuidField`
               - `network/live.liveCollection`
-              - `network/live/filter.liveInstant`
-              - `network/live/filter.liveText`
               - `primitives/pane.defineRoute`
             - Exports (types):
               - `RingEvent`
@@ -20661,23 +20701,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×26
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 84 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 90 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×48
       - `apps` ×12
-      - `infra` ×4
-      - `debug` ×3
+      - `infra` ×5
+      - `debug` ×4
+      - `page` ×3
       - `tasks` ×3
+      - `build` ×2
+      - `primitives` ×2
       - `release` ×2
       - `backup/runs-arm`
-      - `build/runs-arm`
       - `config_v2`
       - `conversations/summary`
       - `history/engine`
       - `ids`
       - `network/live`
-      - `page/block-entity`
       - `plugin-meta/plugin-health`
-      - `primitives/data-view`
       - `reports`
       - `runs`
   - Core:
@@ -20813,9 +20853,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 28 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
-              - `debug` ×12
-              - `apps` ×5
+            - Imported by: 30 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+              - `debug` ×13
+              - `apps` ×6
               - `conversations` ×2
               - `release` ×2
               - `tasks` ×2
@@ -20954,15 +20994,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 27 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
-              - `apps` ×8
-              - `infra` ×4
-              - `debug` ×3
-              - `page` ×3
+            - Imported by: 34 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+              - `apps` ×9
+              - `infra` ×5
+              - `debug` ×4
+              - `page` ×4
               - `tasks` ×3
-              - `conversations/summary`
+              - `conversations` ×2
+              - `build`
               - `history/engine`
               - `plugin-meta/plugin-health`
+              - `primitives/usage-rank`
               - `release`
               - `reports`
               - `runs`
@@ -21352,10 +21394,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/library`
               - `apps/sonata/track-mixer`
               - `debug/live-state-churn/monitor`
+              - `debug/profiling/op-log/op-store`
               - `debug/queue-health`
               - `debug/sentinel`
               - `debug/slow-ops`
               - `debug/trace/engine`
+              - `infra/jobs`
+              - `primitives/usage-rank`
               - `runs`
         - **`storage`** — Float field type: DB storage capability — maps to a Postgres double precision column.
           - Server:
@@ -21470,14 +21515,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 31 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
-              - `debug` ×11
-              - `apps` ×7
+            - Imported by: 34 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+              - `debug` ×12
+              - `apps` ×8
               - `infra` ×4
+              - `build` ×2
               - `conversations` ×2
               - `apps-core/surface/floating/wallpaper`
               - `backup/runs-arm`
-              - `build/runs-arm`
               - `fields/object/config`
               - `release`
               - `reports`
@@ -21519,6 +21564,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/fields.fieldSample`
               - `fields.FieldDef`
               - `fields.FieldMeta`
+              - `fields.Labelled`
               - `fields.pickMeta`
               - `fields/json.jsonFieldType`
             - Exports (types): `JsonFieldDef`
@@ -21533,17 +21579,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
             - Imported by:
+              - `apps-core/app-launcher`
               - `apps/events/events-core`
               - `apps/mail/mail-core`
               - `apps/places/places-core`
               - `apps/sonata/sources/ultimate-guitar/alignment`
               - `backup/runs-arm`
+              - `conversations/question-relay`
               - `debug/boot-profile`
+              - `debug/profiling/op-log/op-store`
               - `debug/slow-ops`
               - `debug/trace/engine`
               - `infra/claude-cli`
               - `infra/events`
               - `infra/jobs`
+              - `infra/trash`
               - `page/block-entity`
               - `reports`
               - `tasks/automations`
@@ -22053,7 +22103,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/deploy/deployments`
+              - `build`
               - `build/runs-arm`
+              - `page/links`
               - `plugin-meta/composition`
               - `tasks/automations`
               - `tasks/tasks-core`
@@ -22196,20 +22248,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 41 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
-              - `apps` ×13
+            - Imported by: 55 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+              - `apps` ×17
+              - `infra` ×5
+              - `page` ×5
               - `tasks` ×5
-              - `infra` ×4
-              - `debug` ×3
-              - `conversations` ×2
+              - `conversations` ×4
+              - `debug` ×4
+              - `apps-core` ×2
+              - `build` ×2
               - `fields` ×2
-              - `page` ×2
               - `plugin-meta` ×2
               - `release` ×2
-              - `apps-core/surface/floating/wallpaper`
               - `backup/runs-arm`
-              - `build/runs-arm`
               - `history/engine`
+              - `primitives/usage-rank`
               - `reports`
               - `runs`
         - **`filter`** — Text field type: data-view filter operator set (contains / is / is-empty …).
@@ -26150,8 +26203,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields.fieldsToZodObject`
           - `fields.nullable`
           - `fields/date/config.dateField`
+          - `fields/float/config.floatField`
           - `fields/int/config.intField`
           - `fields/json/config.jsonField`
+          - `fields/text/config.parsedTextField`
           - `fields/text/config.textField`
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveCollection`
@@ -27267,12 +27322,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `POST /api/trash/:sourceId/:entryId/purge`
       - Core:
         - Uses:
+          - `fields.fieldsToZodObject`
+          - `fields/date/config.dateField`
+          - `fields/json/config.jsonField`
+          - `fields/text/config.textField`
           - `ids.defineIdKind`
+          - `ids.idKindField`
           - `ids.IdOf`
-          - `ids.storedIdSchema`
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveCollection`
-          - `network/live/filter.liveText`
         - Exports (types):
           - `TrashEntry`
           - `TrashEntryId`
@@ -28083,9 +28141,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Plugins:
     - **`live`** — Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; FieldPresentation.Register presents an owner's fields — an entity's own, an extension's exposed ones, a union arm's, a collection's own — with their cells, widths and live options in every list that reaches the owner, read by useFieldPresentations. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a collection reaching an entity compiles at boot, folding every LiveColumns.Expose contribution of an extension exposing fields of it — and a `columnScope` collection every LiveColumns.Scoped set — into its rows' `$columns`) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
       - Web:
-        - Slots: `FieldPresentation.Register`
-        - Slot contributors: 23 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `FieldPresentation.Register` ×23
+        - Slots:
+          - `FieldPresentation.Register`
+          - `ClientFields.Resolve`
+        - Slot contributors: 31 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `FieldPresentation.Register` ×28
+          - `ClientFields.Resolve` ×3
         - Uses:
           - `primitives/live-state.PagedResourceResult`
           - `primitives/live-state.ResourceDerivation`
@@ -28096,7 +28157,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/live-state.useResource`
           - `primitives/live-state.useResources`
           - `primitives/log-channels.clientLog`
+          - `primitives/slot-render.renderIsolated`
         - Exports (types):
+          - `ClientFieldReaders`
+          - `ClientFieldsResolution`
+          - `ClientFieldsResolverProps`
+          - `ClientFieldValues`
           - `FieldPresentationRegistration`
           - `FieldPresentationSpec`
           - `FieldsCollection`
@@ -28114,14 +28180,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveValuePagesOptions`
           - `PagesTruncation`
           - `PresentationOwner`
+          - `StoredClientFieldsResolution`
           - `StoredFieldPresentation`
           - `VisibleRange`
         - Exports (values):
+          - `ClientFields`
+          - `clientFieldsKey`
           - `collectionPresentationKey`
           - `FieldPresentation`
           - `mapRow`
           - `mintVisibleRange`
           - `presentationOwnerKey`
+          - `renderClientFieldsResolver`
+          - `useClientFieldsResolvers`
           - `useFieldPresentations`
           - `useLive`
           - `useLiveRow`
@@ -28181,6 +28252,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/query-resource.KIND_RE`
           - `packages/canonical-params.canonicalJson`
         - Exports (types):
+          - `ClientFields`
+          - `ClientFieldsOwner`
+          - `ClientFieldsOwnerRow`
+          - `ClientFieldValue`
           - `ContributedColumns`
           - `DomainOfValue`
           - `ExternalAllCollection`
@@ -28196,12 +28271,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LabelledKeys`
           - `LiveAllCollection`
           - `LiveAllOrder`
-          - `LiveAllSpec`
           - `LiveArm`
           - `LiveArmColumnsHandle`
           - `LiveArms`
           - `LiveArmsCollection`
-          - `LiveArmsSpec`
           - `LiveBytesBrand`
           - `LiveBytesParamValueSpec`
           - `LiveBytesQueryValueSpec`
@@ -28212,7 +28285,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveCollectionChange`
           - `LiveCollectionChanges`
           - `LiveCollectionOf`
-          - `LiveCollectionSpec`
           - `LiveColumnFilter`
           - `LiveColumnRef`
           - `LiveColumnRefOwner`
@@ -28238,6 +28310,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveFieldsSpec`
           - `LiveFilterable`
           - `LiveFilterableOf`
+          - `LiveFrom`
           - `LiveGroup`
           - `LiveGroupableColumn`
           - `LiveGroupableDomain`
@@ -28253,9 +28326,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveKeyDirection`
           - `LiveKeyRange`
           - `LiveLookupCollection`
-          - `LiveLookupSpec`
           - `LiveNoWindowCollection`
-          - `LiveNoWindowSpec`
           - `LiveOrderBy`
           - `LivePageBounds`
           - `LivePagedCodec`
@@ -28301,6 +28372,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveWindowDescriptor`
           - `LiveWindowParams`
           - `RequireLabel`
+          - `RowKind`
           - `ScopedColumnMember`
           - `ServedExternalAll`
           - `ServedExternalLookup`
@@ -28315,6 +28387,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WithContributedColumns`
         - Exports (values):
           - `bindExternalServe`
+          - `clientFields`
           - `exposedColumns`
           - `isPointId`
           - `LIVE_COLUMNS_KEY`
@@ -28325,13 +28398,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveArm`
           - `liveCollection`
           - `liveValue`
+          - `rowKind`
           - `scopedLiveColumns`
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 230 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×67
+        - Imported by: 232 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×68
           - `conversations` ×36
           - `tasks` ×27
           - `debug` ×24
@@ -28344,11 +28418,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `auth` ×3
           - `code-explorer` ×3
           - `review` ×3
+          - `apps-core` ×2
           - `config_v2` ×2
           - `history` ×2
           - `release` ×2
           - `search` ×2
-          - `apps-core/app-usage`
           - `backup/runs-arm`
           - `database/query-deadline`
           - `fields/secret/config`
@@ -28431,19 +28505,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
-              - `apps/browser/bookmarks`
-              - `apps/mail/reading-pane`
-              - `conversations/question-relay`
-              - `conversations/summary`
-              - `debug/profiling/op-log/op-store`
-              - `debug/slow-ops`
-              - `debug/trace/engine`
-              - `infra/trash`
               - `network/live`
-              - `primitives/usage-rank`
               - `shell/notifications`
-              - `tasks/automations`
-              - `tasks/tasks-core`
           - Server:
             - Exports (values):
               - `filterSql`
@@ -28490,7 +28553,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `LIST_MAX`
               - `liveBoolean`
               - `liveInstant`
-              - `liveNumber`
               - `liveText`
               - `matchesFilter`
               - `opAllowsDomain`
@@ -28499,6 +28561,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `testClause`
           - Test helpers:
             - Core: `@plugins/network/plugins/live/plugins/filter/core/testing`
+              - `liveNumber` — A finite-number column (`int`, `float`, …).
               - `liveStringArray` — A jsonb string array (tags, label ids).
 
 - **`packages`** — Umbrella for package management utilities.
@@ -29786,7 +29849,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `POST /api/pages/:pageId/blocks/op`
           - `POST /api/pages/:pageId/blocks/patch`
       - Core:
-        - Uses: 22 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Uses: 26 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+          - `fields` ×3
           - `network/live` ×3
           - `primitives/collab-doc` ×3
           - `primitives/text-editor/token-extension` ×3
@@ -29794,6 +29858,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/block-entity` ×2
           - `primitives/rank` ×2
           - `fields/date/config.dateField`
+          - `fields/text/config.textField`
           - `ids.defineIdKind`
           - `infra/endpoints.defineEndpoint`
           - `infra/trash.TrashOutcomeSchema`
@@ -30052,6 +30117,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `POST /api/blocks/:id/doc-update`
       - Core:
         - Uses:
+          - `fields.FieldsRecord`
+          - `fields.fieldsToZodObject`
+          - `fields/date/config.dateField`
+          - `fields/text/config.textField`
           - `infra/endpoints.blob`
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveCollection`
@@ -30473,6 +30542,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `Backlinks`
       - Core:
         - Uses:
+          - `fields/string-list/config.stringListField`
+          - `fields/text/config.textField`
           - `network/live.liveCollection`
           - `network/live.liveValue`
           - `ui/icons/emoji.EmojiSchema`
@@ -35085,8 +35156,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
-        - Uses: 95 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `network/live` ×12
+        - Uses: 101 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `network/live` ×18
           - `primitives/css/ui-kit` ×11
           - `primitives/data-view/view-core` ×8
           - `primitives/live-state` ×5
@@ -35162,8 +35233,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FieldDef`
           - `FieldExtensionContribution`
           - `FieldExtensionProps`
-          - `FieldExtensions`
-          - `FieldExtensionsDescriptor`
           - `FieldGrouping`
           - `FieldGroupingSet`
           - `FieldOption`
@@ -35225,7 +35294,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots`
           - `defineDataView`
           - `defineDataViewSources`
-          - `defineFieldExtensions`
           - `defineItemActions`
           - `EditableCell`
           - `EditableTreeLabel`
@@ -37102,8 +37170,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 237 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×66
+        - Imported by: 238 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×67
           - `conversations` ×40
           - `tasks` ×22
           - `ui` ×22
@@ -37132,6 +37200,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `endpoints/no-raw-web-fetch` — `web/notifications-client.ts` (sanctioned)
           - `live/no-legacy-resource-spelling` — `.` (sanctioned)
           - `live/no-endpoint-read` — `web` (sanctioned)
+        - Exempted by: `apps/file-explorer/git` (0 debt)
       - Core:
         - Exports (types):
           - `PointParams`
@@ -37193,8 +37262,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 189 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×64
+        - Imported by: 187 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×62
           - `ui` ×19
           - `conversations` ×17
           - `primitives` ×17
@@ -39185,7 +39254,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/density --control-height-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 80 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+        - Imported by: 81 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
           - `apps` ×25
           - `conversations` ×13
           - `primitives` ×13
@@ -39198,6 +39267,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page` ×2
           - `improve`
           - `map`
+          - `network/live`
           - `reorder`
           - `reports`
           - `review/plugin-changes`
@@ -40034,9 +40104,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useUsageOrder`
       - Core:
         - Uses:
+          - `fields.fieldsToZodObject`
+          - `fields/date/config.dateField`
+          - `fields/float/config.floatField`
+          - `fields/text/config.textField`
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveCollection`
-          - `network/live/filter.liveText`
         - Exports (types):
           - `RecordUsageBody`
           - `ScorableStat`
@@ -40338,8 +40411,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 242 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×242
+    - Contributes: 239 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×239
     - Uses: 21 symbols — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
       - `reorder/editor` ×5
       - `config_v2` ×3
@@ -40364,8 +40437,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 241 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×241
+    - Contributes: 238 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×238
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -42781,7 +42854,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `automations.tasks:rows` (keyed, point)
         - Routes: `POST /api/automations/:automationId/launch-decisions`
       - Core:
-        - Uses: 25 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
+        - Uses: 24 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
           - `config_v2` ×3
           - `conversations/model-provider` ×3
           - `fields/text/config` ×2
@@ -42798,7 +42871,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/plugin-id.asPluginId`
           - `infra/endpoints.defineEndpoint`
           - `infra/entity-extensions.defineExtensionShape`
-          - `network/live/filter.liveText`
           - `primitives/pane.defineRoute`
           - `tasks/tasks-core.tasksEntityRef`
         - Exports (types):
@@ -44088,7 +44160,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` (keyed)
           - `tasks:rows` (keyed, point)
       - Core:
-        - Uses: 25 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Uses: 24 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations/workspace` ×3
           - `fields/text/config` ×3
           - `fields` ×3
@@ -44101,7 +44173,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/json/config.jsonField`
           - `fields/string-list/config.stringListField`
           - `infra/entities.entityRef`
-          - `network/live/filter.liveText`
           - `primitives/pane.defineRoute`
           - `primitives/rank.RankSchema`
         - Exports (types):
@@ -45736,8 +45807,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 653 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `apps` ×135
+            - Tokens used by: 652 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+              - `apps` ×134
               - `primitives` ×123
               - `conversations` ×101
               - `page` ×46

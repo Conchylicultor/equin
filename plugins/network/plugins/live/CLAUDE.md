@@ -23,9 +23,10 @@ the filter language: `research/2026-09-25-global-unified-filter-language.md`).
 ```ts
 // core/ (browser-safe) — declare once
 export const orders = liveCollection("shop.orders", {        // an illustrative collection
-  row: OrderSchema,                      // a zod OBJECT — its keys are the projection
+  from: ordersEntityRef,                 // the entity the rows are (or an extension shape)
+  pick: ["status", "paid", "total"],     // the fields a list shows — each labelled, each filterable in its domain
+  carry: { pick: ["id", "createdAt"] },  // on the row, in no list (see *Fields*)
   id: "id",
-  filterable: { status: liveText(OrderStatusSchema), paid: liveBoolean() },  // domain constructors
   sortable: ["createdAt", "total"],
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },
   maxLimit: 500,
@@ -51,7 +52,7 @@ useLiveRow(orders, orderId);                                          // one row
 
 // the whole ordered set, for a set its readers need entire (see `all` below)
 export const graphNodes = liveCollection("graph.nodes", {
-  row: GraphNodeSchema,
+  carry: { fields: graphNodeFields },    // own fields no list shows
   id: "id",
   all: { orderBy: [["createdAt", "asc"]], unbounded: { reason: "the graph view lays out every node" } },
   preload: "boot",
@@ -75,17 +76,16 @@ useLive(graphNodes, { select: countNodes });                          // a slice
   construction: `default.limit` and `maxLimit` are required, and a grouping returns
   at most the filter language's `LIST_MAX` (100) groups. The one unbounded
   spelling is a separate form, `all` (below), which must state its
-  `unbounded: { reason }`. `row` is a zod object schema: its keys are what the server
-  projects. `filterable` maps row fields to the filter language's DOMAIN
-  constructors (`liveText(Schema)`, `liveNumber()`, `liveBoolean()`,
-  `liveInstant()`, `liveStringArray()`); the domain must fit the row field's
-  type (tsc), and `and` / `or` / `column` / `op` / `operand` cannot be column
-  names (they spell a filter tree). As for a `liveValue`, a window, id set or
+  `unbounded: { reason }`. A collection declares its FIELDS (*Fields* below):
+  its row schema — whose keys are exactly what the server projects — and the
+  filter domains of its listed fields are derived from them. There is no
+  other spelling: the `row` / `filterable` / `exposes` one is deleted (fields
+  declared once, phase 2b), and an untyped caller still spelling it throws. As for a `liveValue`, a window, id set or
   grouping not loaded yet is `pending`, never `[]`.
-- **Lookup-only.** Declared WITHOUT `default` — `liveCollection(key, { row, id })`
-  — a collection mints `key:rows` alone: a table whose rows are only ever read by
+- **Lookup-only.** Declared WITHOUT `default` — `liveCollection(key, { from:
+  shape, id })`, `{ carry: { fields }, id }` — a collection mints `key:rows` alone: a table whose rows are only ever read by
   id (one row per mounted block: `todo-block-task`, `page-block-doc`). Every
-  window field (`filterable`, `sortable`, `maxLimit`) and `preload` is `never`
+  window field (`sortable`, `maxLimit`) and `preload` is `never`
   there (an id set has no default tuple), and a stray one from an untyped caller
   throws. It is `LiveLookupCollection<Row>`; `useLiveRow` and `useLive(c, { ids })`
   take it (they take `LiveRowsCollection<Row>`, the part every collection has),
@@ -98,7 +98,7 @@ useLive(graphNodes, { select: countNodes });                          // a slice
   `research/2026-09-26-global-live-values-migration-contract.md` §10).
 - **The whole ordered set — `all`.** Declared with `all: { orderBy,
   unbounded: { reason } }` and no window field —
-  `liveCollection(key, { row, id, all, preload? })` — a collection holds EVERY
+  `liveCollection(key, { …fields, id, all, preload? })` — a collection holds EVERY
   row, in `orderBy` (row fields; the id breaks ties), for a set small enough to
   hold whole whose readers need all of it (the task tree, a graph). It mints
   `key` — one param-less keyed resource (`AllQueryResourceContract`, minted by
@@ -217,7 +217,7 @@ useLive(graphNodes, { select: countNodes });                          // a slice
     (its `reach` plan: one `full` route on the table), a write to any other
     table reaches none, and push mode drops a byte-identical result. Each value
     is checked against the ROW schema's field (a group value is a stored value;
-    an operand narrowing like `liveText(Enum)` is tsc-only), so a value the row
+    an operand narrowed by an enum field is tsc-only), so a value the row
     type cannot hold fails loudly.
   - `:count` (declared `count: true`) is a plain push value per `where`,
     compiled by query-resource's `compileCountQuery`: the grouping's plan —
@@ -850,8 +850,9 @@ The spelling every new collection uses (phase 2 of fields-declared-once,
 `research/2026-10-13-global-fields-declared-once-phase2.md` §2): a collection
 names the entity its rows are and the fields a list shows, and everything else
 is DERIVED from the field declarations — the row schema, the filter domains,
-each field's label, type, options and title flag. `row` / `filterable` /
-`exposes` are the old spelling's (still accepted; deleted in phase 2b).
+each field's label, type, options and title flag. It is the only spelling:
+`row` / `filterable` / `exposes` are deleted (fields declared once, phase 2b
+— `research/2026-10-15-global-fields-declared-once-phase2b.md`).
 
 ```ts
 // core/ — the entity's fields carry their labels and options once
@@ -895,6 +896,14 @@ conversationHistory.fields.status;   // { id, key, label, typeId, options, prima
   field of `from`, the id must be a row field. The same checks throw for an
   untyped caller, beside a stray old-spelling key, a field named twice, `pick`
   without `from`, an own field named like an entity field.
+- **`from` an extension shape.** `from: shape` (a `defineExtensionShape`
+  result — a 1:1 side table's field record, in core) makes the rows the
+  shape's whole WIRE row (`shape.schema`'s keys, its server-only fields and
+  off-wire timestamps never); `pick` lists some of it (labelled). A shape
+  reaches no exposure (`baseExposures`, `carry.pick` throw) and
+  `collection.from` is `null` — only an entity's presentation applies by
+  owner. Most lookups and `all` sets over one extension are this one line
+  (`from: transposeShape`).
 - **Exposures.** `from` folds the entity's exposures (`exposes.base`) unless
   `baseExposures: false` (a boot-preloaded set whose base exposure is
   write-hot: the Queue's `conversations-active` leaves usage off); `related`
@@ -904,18 +913,21 @@ conversationHistory.fields.status;   // { id, key, label, typeId, options, prima
   order any row field); neither → lookup-only. The server half is unchanged:
   `serveCollection` binds every row field by name, an own field through
   `columns`, and folds the exposures as below.
-- **Overloads.** The fields spelling is two overloads (no-window first, window
-  LAST): a misdeclared spec — old spelling included — is reported against the
-  window one (`row` / `filterable` there are `never`). The window one is last
+- **Overloads.** Three (no-window first, union, window LAST): a misdeclared
+  spec — a stray `row` / `filterable` / `exposes` included — is reported
+  against the window one (they are `never` there). The window one is last
   because the resource vocabulary infers a collection factory from the last
   overload's return type (a top-level conditional return would hide it).
-- **Union arms — `liveArm(union, arm, { label, fields, carry?, sortable? })`.**
+- **Union arms — `liveArm(union, arm, { label, order, fields, carry?, sortable? })`.**
   An arm's own fields, declared the same way (each labelled, domains derived,
   `sortable` explicit; `carry` puts fields on the slice that no list shows —
   a jsonb blob a detail pane decodes — never listed, filtered or sorted): an
   arm column set (served by the union's binding, `runs`' `defineRunKind({
-  columns })`) plus `label` (the band its fields are listed under) and
-  `listed` (its descriptors, ids `<arm>.<field>`). See *Union collections*.
+  columns })`) plus `label` (the band its fields are listed under), `order`
+  (its band's place among the union's arms, ascending — each arm states its
+  own, so the order is the surface's choice, never plugin load order; the
+  runs arms' rationale is in `runs` core) and `listed` (its descriptors, ids
+  `<arm>.<field>`). See *Union collections*.
 - **Presentation — `FieldPresentation.Register({ owner, reads?, fields })`**
   (web). What only the browser can say of a field — `cell(value, row)`,
   `width`, `align`, `visible: false`, `groupable: true` (a text dimension
@@ -942,7 +954,50 @@ conversationHistory.fields.status;   // { id, key, label, typeId, options, prima
   `"null"` option's label.
 - **The `live:exposures-registered` / `live:arms-registered` checks**: every
   exposing shape and every `const x = liveArm(…)` is bound by its own plugin's
-  `server/` and registered (`FieldPresentation.Register`) by its own `web/`.
+  `server/` and registered (`FieldPresentation.Register`) by its own `web/`;
+  **`live:client-fields-resolved`**: every `const x = clientFields(…)` is
+  resolved (`ClientFields.Resolve`) by its own plugin's `web/`.
+
+## Rows that are not database data — `rowKind` / `clientFields`
+
+Fields declared once reach lists whose rows or values are not database data
+too (`core/internal/row-kind.ts`, `web/internal/client-fields.ts`; phase 2b
+§B):
+
+```ts
+// core — a kind of in-memory row: a collection with no server
+export const fileEntry = rowKind("file-explorer.entry", {
+  fields: { name: textField({ label: "Name", primary: true }), size: nullable(intField({ label: "Size" })) },
+  carry: { fields: { id: textField() } },
+  id: "id",
+});
+// core — fields whose VALUES only the browser knows, declared once on an owner
+export const gitFields = clientFields(fileEntry, "git", {
+  section: "Git",
+  fields: { git: enumTextField(GIT_BADGES, { label: "Git", options }) },
+});
+// web — the declaring plugin resolves them, once
+ClientFields.Resolve({ fields: gitFields, component: GitResolver });
+// GitResolver: ({ rows, render }) => render(read) — read: ResourceResult<{ git: (row) => value | null }>
+<DataView rows={entries} collection={fileEntry} … />   // every list of the kind gets them
+```
+
+- **A row kind** has a collection's `key` / `fields` / `rowKeys` (no
+  `from`, no exposures), so a DataView's in-memory origin takes it as its
+  `collection` and derives its fields; `FieldPresentation.Register({ owner:
+  kind })` presents them. A kind that comes to need server filtering becomes a
+  `liveCollection` of the same fields plus a `serveCollection`, and no list
+  changes.
+- **Client fields** are declared on a row kind or a collection (the
+  deployments list's release state is on `deploy.deployments`). They are not
+  the owner's fields, so a server query cannot name one (tsc); a DataView
+  filters, sorts and groups them in memory, and refuses (throws) to list
+  them under a live `source`. Their values are a READ: `loading` → each
+  cell pending, `error` → `readError` (stale readers keep painting), `ready`
+  → the per-field readers (`null` where a row has none). The resolver is a
+  component handed the list's rows, so it may read once per surface or per
+  row (a probe per deployment). `FieldPresentation.Register({ owner:
+  gitFields })` presents them.
 
 ## Other plugins' columns are exposures
 
@@ -1078,8 +1133,7 @@ filterable, sortable, default, maxLimit })`. Its id is the union row key
   base fields are its own (`fields` / `carry.fields` — no `from` / `pick` /
   `related`: a union's rows are no entity's), presented once by
   `FieldPresentation.Register({ owner: union })`, so a list of it derives
-  every field (`runs`); the old `row` / `filterable` spelling still takes
-  `arms` until 2b. The discriminator is a row
+  every field (`runs`). The discriminator is a row
   field (tsc) other than the id. An untyped caller's stray field throws. The
   collection is `LiveArmsCollection` (`arms` set); every single-table
   collection is `arms: null`, which is what `serveCollection` takes (a union
@@ -1546,9 +1600,9 @@ never add one.
 
 ## Internals
 
-- `core/` (browser-safe): `liveCollection(key, { row, id, filterable, sortable, default, maxLimit, preload? })`
-  (or `{ row, id }` alone — lookup-only, minting `` `${key}:rows` `` only; or
-  `{ row, id, all, preload? }` — the whole ordered set, minting `key` through
+- `core/` (browser-safe): `liveCollection(key, { …fields, id, sortable, default, maxLimit, preload? })`
+  (or `{ …fields, id }` alone — lookup-only, minting `` `${key}:rows` `` only; or
+  `{ …fields, id, all, preload? }` — the whole ordered set, minting `key` through
   the internal `allResourceDescriptor` (`core/internal/window-descriptor.ts`) and
   `` `${key}:rows` ``, no `:groups`)
   mints three resources from one declaration — `key` (window membership),
@@ -1607,9 +1661,12 @@ never add one.
 
 - Description: Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; FieldPresentation.Register presents an owner's fields — an entity's own, an extension's exposed ones, a union arm's, a collection's own — with their cells, widths and live options in every list that reaches the owner, read by useFieldPresentations. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a collection reaching an entity compiles at boot, folding every LiveColumns.Expose contribution of an extension exposing fields of it — and a `columnScope` collection every LiveColumns.Scoped set — into its rows' `$columns`) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
 - Web:
-  - Slots: `FieldPresentation.Register`
-  - Slot contributors: 23 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `FieldPresentation.Register` ×23
+  - Slots:
+    - `FieldPresentation.Register`
+    - `ClientFields.Resolve`
+  - Slot contributors: 31 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `FieldPresentation.Register` ×28
+    - `ClientFields.Resolve` ×3
   - Uses:
     - `primitives/live-state.PagedResourceResult`
     - `primitives/live-state.ResourceDerivation`
@@ -1620,7 +1677,12 @@ never add one.
     - `primitives/live-state.useResource`
     - `primitives/live-state.useResources`
     - `primitives/log-channels.clientLog`
+    - `primitives/slot-render.renderIsolated`
   - Exports (types):
+    - `ClientFieldReaders`
+    - `ClientFieldsResolution`
+    - `ClientFieldsResolverProps`
+    - `ClientFieldValues`
     - `FieldPresentationRegistration`
     - `FieldPresentationSpec`
     - `FieldsCollection`
@@ -1638,14 +1700,19 @@ never add one.
     - `LiveValuePagesOptions`
     - `PagesTruncation`
     - `PresentationOwner`
+    - `StoredClientFieldsResolution`
     - `StoredFieldPresentation`
     - `VisibleRange`
   - Exports (values):
+    - `ClientFields`
+    - `clientFieldsKey`
     - `collectionPresentationKey`
     - `FieldPresentation`
     - `mapRow`
     - `mintVisibleRange`
     - `presentationOwnerKey`
+    - `renderClientFieldsResolver`
+    - `useClientFieldsResolvers`
     - `useFieldPresentations`
     - `useLive`
     - `useLiveRow`
@@ -1705,6 +1772,10 @@ never add one.
     - `infra/query-resource.KIND_RE`
     - `packages/canonical-params.canonicalJson`
   - Exports (types):
+    - `ClientFields`
+    - `ClientFieldsOwner`
+    - `ClientFieldsOwnerRow`
+    - `ClientFieldValue`
     - `ContributedColumns`
     - `DomainOfValue`
     - `ExternalAllCollection`
@@ -1720,12 +1791,10 @@ never add one.
     - `LabelledKeys`
     - `LiveAllCollection`
     - `LiveAllOrder`
-    - `LiveAllSpec`
     - `LiveArm`
     - `LiveArmColumnsHandle`
     - `LiveArms`
     - `LiveArmsCollection`
-    - `LiveArmsSpec`
     - `LiveBytesBrand`
     - `LiveBytesParamValueSpec`
     - `LiveBytesQueryValueSpec`
@@ -1736,7 +1805,6 @@ never add one.
     - `LiveCollectionChange`
     - `LiveCollectionChanges`
     - `LiveCollectionOf`
-    - `LiveCollectionSpec`
     - `LiveColumnFilter`
     - `LiveColumnRef`
     - `LiveColumnRefOwner`
@@ -1762,6 +1830,7 @@ never add one.
     - `LiveFieldsSpec`
     - `LiveFilterable`
     - `LiveFilterableOf`
+    - `LiveFrom`
     - `LiveGroup`
     - `LiveGroupableColumn`
     - `LiveGroupableDomain`
@@ -1777,9 +1846,7 @@ never add one.
     - `LiveKeyDirection`
     - `LiveKeyRange`
     - `LiveLookupCollection`
-    - `LiveLookupSpec`
     - `LiveNoWindowCollection`
-    - `LiveNoWindowSpec`
     - `LiveOrderBy`
     - `LivePageBounds`
     - `LivePagedCodec`
@@ -1825,6 +1892,7 @@ never add one.
     - `LiveWindowDescriptor`
     - `LiveWindowParams`
     - `RequireLabel`
+    - `RowKind`
     - `ScopedColumnMember`
     - `ServedExternalAll`
     - `ServedExternalLookup`
@@ -1839,6 +1907,7 @@ never add one.
     - `WithContributedColumns`
   - Exports (values):
     - `bindExternalServe`
+    - `clientFields`
     - `exposedColumns`
     - `isPointId`
     - `LIVE_COLUMNS_KEY`
@@ -1849,13 +1918,14 @@ never add one.
     - `liveArm`
     - `liveCollection`
     - `liveValue`
+    - `rowKind`
     - `scopedLiveColumns`
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 230 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×67
+  - Imported by: 232 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×68
     - `conversations` ×36
     - `tasks` ×27
     - `debug` ×24
@@ -1868,11 +1938,11 @@ never add one.
     - `auth` ×3
     - `code-explorer` ×3
     - `review` ×3
+    - `apps-core` ×2
     - `config_v2` ×2
     - `history` ×2
     - `release` ×2
     - `search` ×2
-    - `apps-core/app-usage`
     - `backup/runs-arm`
     - `database/query-deadline`
     - `fields/secret/config`

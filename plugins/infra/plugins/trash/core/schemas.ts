@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { storedIdSchema } from "@plugins/ids/core";
+import { fieldsToZodObject } from "@plugins/fields/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { idKindField } from "@plugins/ids/core";
 import { trashEntryIdKind } from "./id-kind";
 
 // One soft-deleted root entity, awaiting restore or purge. Domain-agnostic: the
@@ -9,13 +13,21 @@ import { trashEntryIdKind } from "./id-kind";
 // is an opaque per-source bag (JSON) the source may read back on restore/purge.
 // Deliberately NO drizzle import here — `core/` is web-safe and importable from
 // any runtime; the wire shape is derived from this schema alone.
-export const TrashEntrySchema = z.object({
-  id: storedIdSchema(trashEntryIdKind),
-  sourceId: z.string(),
-  rootEntityId: z.string(),
-  label: z.string(),
-  deletedAt: z.coerce.date(),
-  meta: z.record(z.unknown()),
+// `sourceId` and `label` are the fields a trash list filters (and searches) by;
+// the rest ride the row.
+export const TRASH_ENTRY_LISTED = {
+  sourceId: textField({ label: "Source" }),
+  label: textField({ label: "Label" }),
+};
+export const TRASH_ENTRY_CARRIED = {
+  id: idKindField(trashEntryIdKind),
+  rootEntityId: textField(),
+  deletedAt: dateField(),
+  meta: jsonField({ schema: z.record(z.unknown()), default: {} }),
+};
+export const TrashEntrySchema = fieldsToZodObject({
+  ...TRASH_ENTRY_CARRIED,
+  ...TRASH_ENTRY_LISTED,
 });
 export type TrashEntry = z.infer<typeof TrashEntrySchema>;
 

@@ -172,12 +172,15 @@ bun test plugins/infra/plugins/trash
     - `POST /api/trash/:sourceId/:entryId/purge`
 - Core:
   - Uses:
+    - `fields.fieldsToZodObject`
+    - `fields/date/config.dateField`
+    - `fields/json/config.jsonField`
+    - `fields/text/config.textField`
     - `ids.defineIdKind`
+    - `ids.idKindField`
     - `ids.IdOf`
-    - `ids.storedIdSchema`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveCollection`
-    - `network/live/filter.liveText`
   - Exports (types):
     - `TrashEntry`
     - `TrashEntryId`

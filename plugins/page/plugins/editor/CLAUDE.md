@@ -4652,7 +4652,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `POST /api/pages/:pageId/blocks/op`
     - `POST /api/pages/:pageId/blocks/patch`
 - Core:
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×3
     - `network/live` ×3
     - `primitives/collab-doc` ×3
     - `primitives/text-editor/token-extension` ×3
@@ -4660,6 +4661,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `page/block-entity` ×2
     - `primitives/rank` ×2
     - `fields/date/config.dateField`
+    - `fields/text/config.textField`
     - `ids.defineIdKind`
     - `infra/endpoints.defineEndpoint`
     - `infra/trash.TrashOutcomeSchema`

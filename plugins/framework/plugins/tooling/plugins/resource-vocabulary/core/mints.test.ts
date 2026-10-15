@@ -7,12 +7,26 @@
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
 import { mintsOf } from "./mints";
 import { resourceDescriptorFactories } from "./vocabulary";
 
-const Row = z.object({ id: z.string(), kind: z.string(), n: z.number() });
+// The row every fixture declares: `id`, `kind` and `n`, all carried.
+const ROW = {
+  carry: { fields: { id: textField(), kind: textField(), n: floatField() } },
+  id: "id",
+} as const;
+const ROW_TEXT = `carry: { fields: { id: textField(), kind: textField(), n: floatField() } }, id: "id"`;
+// The union's row: the arms overload lists its base fields (`n`) and carries the rest.
+const UNION_ROW = {
+  fields: { n: floatField({ label: "N" }) },
+  carry: { fields: { id: textField(), kind: textField() } },
+  id: "id",
+} as const;
+const UNION_ROW_TEXT = `fields: { n: floatField({ label: "N" }) }, carry: { fields: { id: textField(), kind: textField() } }, id: "id"`;
 const WHERE = { file: "x.ts", line: 1 };
 
 /** The keys a collection minted, with whether each is keyed, read off the runtime registry. */
@@ -39,9 +53,7 @@ function scannedMints(
 describe("mintsOf ≡ liveCollection's runtime mints (A28)", () => {
   test("a window collection: key, :rows, :groups", () => {
     const c = liveCollection("test.mints.window", {
-      row: Row,
-      id: "id",
-      filterable: {},
+      ...ROW,
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 10 },
       maxLimit: 20,
@@ -49,27 +61,26 @@ describe("mintsOf ≡ liveCollection's runtime mints (A28)", () => {
     expect(
       scannedMints(
         "test.mints.window",
-        `{ row: Row, id: "id", filterable: {}, sortable: ["n"], default: { orderBy: [["n", "asc"]], limit: 10 }, maxLimit: 20 }`,
+        `{ ${ROW_TEXT}, sortable: ["n"], default: { orderBy: [["n", "asc"]], limit: 10 }, maxLimit: 20 }`,
       ),
     ).toEqual(runtimeMints(c));
   });
 
   test("a lookup-only collection: :rows alone", () => {
-    const c = liveCollection("test.mints.lookup", { row: Row, id: "id" });
-    expect(scannedMints("test.mints.lookup", `{ row: Row, id: "id" }`)).toEqual(
+    const c = liveCollection("test.mints.lookup", ROW);
+    expect(scannedMints("test.mints.lookup", `{ ${ROW_TEXT} }`)).toEqual(
       runtimeMints(c),
     );
   });
 
   test("an `all` collection: the whole set and :rows, no :groups", () => {
     const c = liveCollection("test.mints.all", {
-      row: Row,
-      id: "id",
+      ...ROW,
       all: { orderBy: [["n", "asc"]], unbounded: { reason: "a test set" } },
     });
     const scanned = scannedMints(
       "test.mints.all",
-      `{ row: Row, id: "id", all: { orderBy: [["n", "asc"]], unbounded: { reason: "a test set" } } }`,
+      `{ ${ROW_TEXT}, all: { orderBy: [["n", "asc"]], unbounded: { reason: "a test set" } } }`,
     );
     expect(scanned).toEqual(runtimeMints(c));
     expect(scanned.map((m) => m.key)).toEqual([
@@ -80,10 +91,8 @@ describe("mintsOf ≡ liveCollection's runtime mints (A28)", () => {
 
   test("a union collection: key, :rows, :groups", () => {
     const c = liveCollection("test.mints.arms", {
-      row: Row,
-      id: "id",
+      ...UNION_ROW,
       arms: { discriminator: "kind" },
-      filterable: {},
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 10 },
       maxLimit: 30,
@@ -91,7 +100,7 @@ describe("mintsOf ≡ liveCollection's runtime mints (A28)", () => {
     expect(
       scannedMints(
         "test.mints.arms",
-        `{ row: Row, id: "id", arms: { discriminator: "kind" }, filterable: {}, sortable: ["n"], default: { orderBy: [["n", "asc"]], limit: 10 }, maxLimit: 30 }`,
+        `{ ${UNION_ROW_TEXT}, arms: { discriminator: "kind" }, sortable: ["n"], default: { orderBy: [["n", "asc"]], limit: 10 }, maxLimit: 30 }`,
       ),
     ).toEqual(runtimeMints(c));
   });

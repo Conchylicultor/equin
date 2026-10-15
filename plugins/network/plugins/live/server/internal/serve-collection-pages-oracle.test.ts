@@ -35,7 +35,8 @@ import { sql } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { integer, pgTable, text } from "drizzle-orm/pg-core";
 import { Client } from "pg";
-import { z } from "zod";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import {
   createTestDb,
   type TestDb,
@@ -83,19 +84,18 @@ import {
   type PageViewport,
 } from "../../shared/page-plan";
 import { compileCollection } from "./serve-collection";
-import { liveNumber } from "@plugins/network/plugins/live/plugins/filter/core";
 
 const TABLE = "pgo_items";
 const items = pgTable(TABLE, {
   id: text("id").primaryKey(),
   n: integer("n").notNull(),
 });
-const Row = z.object({ id: z.string(), n: z.number() });
-
 const collection = liveCollection("test.live.pages-oracle.items", {
-  row: Row,
+  fields: {
+    id: textField({ label: "Id", filterable: false }),
+    n: intField({ label: "N" }),
+  },
   id: "id",
-  filterable: { n: liveNumber() },
   sortable: ["n"],
   default: { orderBy: [["n", "asc"]], limit: 2 },
   maxLimit: 4,

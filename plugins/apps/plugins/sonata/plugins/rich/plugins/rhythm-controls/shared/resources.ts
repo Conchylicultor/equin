@@ -113,6 +113,6 @@ export type RhythmRow = z.infer<typeof RhythmRowSchema>;
  * the default accompaniment.
  */
 export const rhythms = liveCollection("sonata-rhythm", {
-  row: RhythmRowSchema,
+  from: rhythmShape,
   id: "songId",
 });

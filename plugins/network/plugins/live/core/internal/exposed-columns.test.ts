@@ -4,10 +4,12 @@ import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
-import { enumTextField } from "@plugins/fields/plugins/text/plugins/config/core";
+import {
+  enumTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
 import { exposedColumns } from "./exposed-columns";
 import { liveCollection } from "./live-collection";
@@ -17,7 +19,10 @@ import { LIVE_COLUMNS_KEY } from "./live-columns";
 // collection whose `exposes` reaches the exposure's entity.
 
 const tasks = entityRef("tasks", {});
-const conversations = entityRef("conversations", {});
+const conversations = entityRef("conversations", {
+  id: textField({ label: "Id" }),
+  title: textField({ label: "Title" }),
+});
 
 const trackShape = defineExtensionShape({
   key: "taskId",
@@ -49,8 +54,6 @@ const usageShape = defineExtensionShape({
 });
 const track = exposedColumns(trackShape.exposure);
 const usage = exposedColumns(usageShape.exposure);
-
-const Row = z.object({ id: z.string(), title: z.string() });
 
 describe("exposedColumns", () => {
   it("is named by the slice, owned by the parent entity, one object per exposure", () => {
@@ -122,14 +125,14 @@ describe("liveCollection — exposes", () => {
   let n = 0;
   const window = () =>
     liveCollection(`live-test.exposes-${n++}`, {
-      row: Row,
+      from: conversations,
+      pick: ["id", "title"],
+      related: { task: tasks },
       id: "id",
-      filterable: { title: liveText() },
       sortable: ["title"],
       default: { orderBy: [["title", "asc"]], limit: 10 },
       maxLimit: 50,
       count: true,
-      exposes: { base: conversations, task: tasks },
     });
 
   it("its rows carry `$columns`; its own row keys stay the author's", () => {
@@ -143,12 +146,13 @@ describe("liveCollection — exposes", () => {
 
   it("an `all` set reaches exposures too", () => {
     const c = liveCollection(`live-test.exposes-all-${n++}`, {
-      row: Row,
+      from: conversations,
+      pick: ["id", "title"],
+      related: { task: tasks },
       id: "id",
       all: { orderBy: [["title", "asc"]], unbounded: { reason: "test" } },
-      exposes: { task: tasks },
     });
-    expect(c.exposes).toEqual({ task: tasks });
+    expect(c.exposes).toEqual({ base: conversations, task: tasks });
     expect(c.rowKeys).toEqual(["id", "title"]);
     expect(
       c.all.schema.safeParse([{ id: "a", title: "t", [LIVE_COLUMNS_KEY]: {} }])
@@ -156,37 +160,27 @@ describe("liveCollection — exposes", () => {
     ).toBe(true);
   });
 
-  it("refuses an empty one, a non-identifier relation, one entity twice, and a lookup / union carrier", () => {
+  it("refuses a non-identifier relation and one entity twice", () => {
     const base = {
-      row: Row,
+      from: conversations,
+      pick: ["id", "title"] as const,
       id: "id" as const,
-      filterable: {},
       sortable: ["title"] as const,
       default: { orderBy: [["title", "asc"]] as const, limit: 10 },
       maxLimit: 50,
     };
     expect(() =>
-      liveCollection(`live-test.exposes-bad-${n++}`, { ...base, exposes: {} }),
-    ).toThrow(/`exposes` is empty/);
-    expect(() =>
       liveCollection(`live-test.exposes-bad-${n++}`, {
         ...base,
-        exposes: { "a.b": tasks },
+        related: { "a.b": tasks },
       }),
     ).toThrow(/names relation "a.b", which is not an identifier/);
     expect(() =>
       liveCollection(`live-test.exposes-bad-${n++}`, {
         ...base,
-        exposes: { base: tasks, task: tasks },
+        related: { task: conversations },
       }),
-    ).toThrow(/reaches entity "tasks" through both "base" and "task"/);
-    expect(() =>
-      liveCollection(`live-test.exposes-bad-${n++}`, {
-        row: Row,
-        id: "id",
-        exposes: { task: tasks },
-      } as never),
-    ).toThrow(/exposes without `default`/);
+    ).toThrow(/reaches entity "conversations" through both "base" and "task"/);
   });
 
   it("a query, a grouping and a count name the exposed columns it reaches", () => {
@@ -237,13 +231,12 @@ describe("liveCollection — exposes", () => {
 
   it("refuses exposed columns of an entity its `exposes` does not reach", () => {
     const c = liveCollection(`live-test.exposes-narrow-${n++}`, {
-      row: Row,
+      from: conversations,
+      pick: ["id", "title"],
       id: "id",
-      filterable: {},
       sortable: ["title"],
       default: { orderBy: [["title", "asc"]], limit: 10 },
       maxLimit: 50,
-      exposes: { base: conversations },
     });
     expect(() =>
       c.window.window.encode({

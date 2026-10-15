@@ -38,23 +38,17 @@ export interface FieldExtensionContribution<TRow> {
  * `useContributions`) is ALREADY provided by `RenderSlot` — so we extend only
  * `RenderSlot` (extending both would be a duplicate-member conflict, TS2320). The
  * slot is structurally assignable to `FieldExtensionsDescriptor`, which is all the
- * `fieldExtensions` prop needs.
+ * fold needs.
  */
 export interface FieldExtensions<TRow> extends RenderSlot<
   FieldExtensionContribution<TRow>
 > {}
 
 /**
- * Mint a per-consumer field-extension slot. The returned value is **callable for
- * contributions** (`MyFields({ id, section, component })`, like any `defineRenderSlot`
- * result) and — being a slot — already exposes the `FieldExtensionsDescriptor`
- * surface (`id` + `useContributions`) the host reads. Mirrors `defineItemActions`:
- * disjoint row types per consumer → a factory, not a global slot.
- *
- * Pass the result to `<DataView fieldExtensions={MyFields} />`; the host folds
- * every contributor's `FieldDef[]` into the schema before the sort/filter
- * controllers, so contributed fields appear in the Sort/Filter pills and table
- * columns for free.
+ * Mint the field-extension slot. Internal: its one use is the global
+ * `DataViewSlots.FieldExtension` (custom-columns' user-defined columns) — a
+ * list's own fields are derived from its collection, row kind and client
+ * fields (`./derived-fields.tsx`), never contributed per list.
  */
 export function defineFieldExtensions<TRow>(): FieldExtensions<TRow> {
   return defineRenderSlot<FieldExtensionContribution<TRow>>({

@@ -1,4 +1,15 @@
 import { z } from "zod";
+import { fieldsToZodObject, nullable } from "@plugins/fields/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
+import {
+  enumTextField,
+  parsedTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
 import {
   WAIT_KINDS,
   type OpFoldState,
@@ -114,48 +125,61 @@ export const OpSleepStampSchema = z.object({
  * the open wait is not stored: it grows with `now`, so a reader computes it
  * with `liveTimes(opRowToFoldState(row), now)`.
  */
-export const OpRowSchema = z.object({
-  opId: z.string(),
-  kind: OpKindSchema,
+/** The fields both collections LIST (and filter by), in the row's own order. */
+export const OP_ROW_LISTED = {
+  kind: enumTextField(OP_KIND_IDS, { label: "Kind" }),
   /** `basename(worktree root)` of the checkout the op ran in. */
-  opSlug: z.string().nullable(),
-  branch: z.string(),
-  conversationId: z.string().nullable(),
-  lane: LaneSchema.nullable(),
-  mode: PushModeSchema.nullable(),
-  buildId: z.string().nullable(),
-  /** The CLI process that ran it; `null` for a legacy (pre-v2) op. */
-  pid: z.number().int().nullable(),
-  requestedAt: z.coerce.date(),
-  grantedAt: z.coerce.date().nullable(),
+  opSlug: nullable(textField({ label: "Worktree" })),
+  requestedAt: dateField({ label: "Requested" }),
   /** `null` while in flight — and for a reconciler close (a killed op has no end). */
-  completedAt: z.coerce.date().nullable(),
+  completedAt: nullable(dateField({ label: "Completed" })),
   /** `null` while in flight. */
-  outcome: TerminalOutcomeSchema.nullable(),
-  interrupted: z.boolean(),
+  outcome: nullable(enumTextField(TERMINAL_OUTCOMES, { label: "Outcome" })),
+};
+
+/** Every other key of the row: on the wire, in no list, never filterable. */
+export const OP_ROW_CARRIED = {
+  opId: textField(),
+  branch: textField(),
+  conversationId: nullable(textField()),
+  lane: nullable(parsedTextField(LaneSchema, { default: "interactive" })),
+  mode: nullable(parsedTextField(PushModeSchema, { default: "worktree" })),
+  buildId: nullable(textField()),
+  /** The CLI process that ran it; `null` for a legacy (pre-v2) op. */
+  pid: nullable(intField()),
+  grantedAt: nullable(dateField()),
+  interrupted: boolField(),
   /** Non-null ⇔ terminal. THE in-flight predicate (`completedAt` is not one). */
-  closedBy: StoreClosedBySchema.nullable(),
+  closedBy: nullable(parsedTextField(StoreClosedBySchema, { default: "self" })),
   /** Closed waits, in order. */
-  waits: z.array(OpWaitSchema),
+  waits: jsonField({ schema: z.array(OpWaitSchema), default: [] }),
   /** The wait the op is parked in right now; `null` when working or closed. */
-  openWait: OpenWaitSchema.nullable(),
+  openWait: nullable(
+    jsonField({ schema: OpenWaitSchema, default: {} as OpenWait }),
+  ),
   /** Current (or final) requeue cycle. */
-  cycle: z.number().int(),
+  cycle: intField(),
   /** `sum(waits.durationMs)` — closed waits only. */
-  closedWaitMs: z.number(),
-  holdMs: z.number(),
-  totalMs: z.number(),
-  steps: z.array(OpStepSchema),
+  closedWaitMs: floatField(),
+  holdMs: floatField(),
+  totalMs: floatField(),
+  steps: jsonField({ schema: z.array(OpStepSchema), default: [] }),
   /** Highest v2 `seq` applied; 0 for a legacy op. */
-  lastSeq: z.number().int(),
+  lastSeq: intField(),
   /**
    * Sleeps folded so far (wall axis, ms after `requestedAt`); `[]` for an op
    * from a writer without sleep stamps — and for every row stored before the
    * column existed (its DB default).
    */
-  sleeps: z.array(OpSleepSchema),
+  sleeps: jsonField({ schema: z.array(OpSleepSchema), default: [] }),
   /** The last sleep stamp applied — where the next sleep's gap starts. */
-  sleepStamp: OpSleepStampSchema.nullable(),
+  sleepStamp: nullable(
+    jsonField({ schema: OpSleepStampSchema, default: {} as OpSleepStamp }),
+  ),
+};
+export const OpRowSchema = fieldsToZodObject({
+  ...OP_ROW_CARRIED,
+  ...OP_ROW_LISTED,
 });
 export type OpRow = z.infer<typeof OpRowSchema>;
 

@@ -49,6 +49,6 @@ export type OutcomeReport = z.infer<typeof OutcomeReportSchema>;
 // The `:rows` point routing sends a submit only to the readers of that task.
 // Served from the extension handle in `server/internal/resource.ts`.
 export const outcomeReportRows = liveCollection("outcome-reports", {
-  row: OutcomeReportSchema,
+  from: outcomeReportShape,
   id: "taskId",
 });

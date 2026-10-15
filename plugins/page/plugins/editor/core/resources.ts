@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  fieldsToZodObject,
+  nullable,
+  type FieldsRecord,
+} from "@plugins/fields/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import {
   liveCollection,
@@ -113,16 +119,17 @@ export const pageBlocks = liveValue("page-blocks", {
 // restore an entrant. The point route reads only these columns, so the typing
 // projection (a `data` write) loads nothing; a cross-page move or a
 // turn-into-page refills the row.
-export const BlockLocationSchema = z.object({
-  id: z.string(),
-  type: z.string(),
+const blockLocationFields = {
+  id: textField(),
+  type: textField(),
   // The nearest page ancestor; NULL for a page-less block at the forest root
   // (displayed by no page) — and, for a page row, the page it sits under.
-  pageId: z.string().nullable(),
-});
+  pageId: nullable(textField()),
+} satisfies FieldsRecord;
+export const BlockLocationSchema = fieldsToZodObject(blockLocationFields);
 export type BlockLocation = z.infer<typeof BlockLocationSchema>;
 
 export const blockLocations = liveCollection("page.block-locations", {
-  row: BlockLocationSchema,
+  carry: { fields: blockLocationFields },
   id: "id",
 });

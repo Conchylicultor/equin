@@ -66,6 +66,16 @@ const runFields = {
  * (`FieldPresentation.Register({ owner: runs })`); every listed one filters.
  * Newest first by default; read as key-range pages, so the list pages past
  * one window.
+ *
+ * **Arm order.** Each arm states its place (`liveArm({ order })`): its band in
+ * every field list, and its kind among the kind options. Not alphabetical by
+ * plugin id (an artefact of where the code lives), but by how close each arm
+ * sits to the reader — build (10) first, as this surface's primary hosts are
+ * the build popover and /debug/build; then the shipping pair in pipeline
+ * order, release (20) and deploy (30) — deploy after release because
+ * `deploy.releaseRunId` points into the release arm, so a reader following it
+ * scans forward; backup (40) last, host-global and orthogonal to the rest,
+ * with its own pinned surface (the Backup panel).
  */
 export const runs = liveCollection("runs", {
   fields: runFields,

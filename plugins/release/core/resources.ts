@@ -93,7 +93,7 @@ export type ReleaseRun = z.infer<typeof ReleaseRunSchema>;
 // deep in Studio, not first paint). The server projects exactly this schema's
 // keys, so `pid` — absent here — never reaches the wire.
 export const releaseRuns = liveCollection("release.runs", {
-  row: ReleaseRunSchema,
+  carry: { fields: { ...RELEASE_RUN_CARRIED, ...RELEASE_RUN_LISTED } },
   id: "id",
 });
 

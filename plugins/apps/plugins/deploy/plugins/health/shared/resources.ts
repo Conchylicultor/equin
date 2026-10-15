@@ -1,5 +1,5 @@
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import { ServerHealthRowSchema } from "./schemas";
+import { serverHealthShape } from "./schemas";
 
 /**
  * Every server's last probe verdict, as a live collection over the
@@ -19,9 +19,8 @@ import { ServerHealthRowSchema } from "./schemas";
  * Named `…Rows` because `serverHealth` is the extension handle's name.
  */
 export const serverHealthRows = liveCollection("deploy.server-health", {
-  row: ServerHealthRowSchema,
+  from: serverHealthShape,
   id: "serverId",
-  filterable: {},
   sortable: ["checkedAt"],
   default: { orderBy: [["checkedAt", "desc"]], limit: 100 },
   maxLimit: 500,

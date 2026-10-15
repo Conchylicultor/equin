@@ -21,6 +21,7 @@ export {
   formatSize,
 } from "./internal/format";
 export type { EntryRow } from "./internal/entry-row";
+export { fileEntry } from "./internal/file-entry";
 export {
   ENTRY_CATEGORY_OPTIONS,
   entryCategory,

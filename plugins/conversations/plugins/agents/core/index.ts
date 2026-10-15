@@ -24,6 +24,7 @@ export {
   AgentSchema,
   AgentLaunchSchema,
   AgentLaunchWithStatusSchema,
+  AgentLaunchConversationRefSchema,
 } from "./schemas";
 export type { Agent, AgentLaunch, AgentLaunchWithStatus } from "./schemas";
 export { agentIdKind, agentLaunchIdKind } from "./id-kinds";

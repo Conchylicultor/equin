@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 
@@ -9,7 +8,7 @@ import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/c
 // this shape, and the collection below sends this one wire row.
 export const promptBlockShape = defineExtensionShape({
   key: "taskId",
-  fields: { pageId: textField(), blockId: textField() },
+  fields: { pageId: textField(), blockId: textField({ label: "Block" }) },
   wireTimestamps: ["createdAt"],
 });
 
@@ -39,9 +38,9 @@ export type PromptTaskLink = z.infer<typeof PromptTaskLinkSchema>;
 // NOT preloaded: the block renderer and the task-detail origin section both
 // mount route-scoped, so they hydrate post-mount via their sub-ack.
 export const promptBlockTasks = liveCollection("prompt-block-tasks", {
-  row: PromptTaskLinkSchema,
+  from: promptBlockShape,
+  pick: ["blockId"],
   id: "taskId",
-  filterable: { blockId: liveText() },
   sortable: ["createdAt"],
   default: { orderBy: [["createdAt", "desc"]], limit: 50 },
   maxLimit: 200,

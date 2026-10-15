@@ -1,9 +1,13 @@
 import { z } from "zod";
 import { fieldsToZodObject, nullable } from "@plugins/fields/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
-import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import {
+  parsedTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { HoldClassSchema } from "./hold";
 
@@ -163,31 +167,32 @@ export type JobRunOutcome = z.infer<typeof JobRunOutcomeSchema>;
  * history kept them. `error` is the error's message (up to 8000 chars), set
  * exactly when `outcome` is `failed`.
  */
-export const JobRunRowSchema = z.object({
-  id: z.string(),
-  jobName: z.string(),
-  seq: z.number(),
-  startedAt: z.coerce.date(),
-  finishedAt: z.coerce.date(),
-  outcome: JobRunOutcomeSchema,
-  error: z.string().nullable(),
-  durationMs: z.number(),
+const JOB_RUN_FIELDS = {
+  id: textField(),
+  jobName: textField(),
+  seq: floatField(),
+  startedAt: dateField(),
+  finishedAt: dateField(),
+  outcome: parsedTextField(JobRunOutcomeSchema, { default: "succeeded" }),
+  error: nullable(textField()),
+  durationMs: floatField(),
   /** Which attempt this run was (1-based; graphile's `attempts` after the run started). */
-  attempt: z.number(),
-  maxAttempts: z.number().nullable(),
+  attempt: floatField(),
+  maxAttempts: nullable(floatField()),
   /** graphile's job id — the queue row this run executed. */
-  jobId: z.string().nullable(),
-  hold: HoldClassSchema.nullable(),
+  jobId: nullable(textField()),
+  hold: nullable(parsedTextField(HoldClassSchema, { default: "instant" })),
   /** When the row became runnable (graphile's `run_at`). */
-  queuedAt: z.coerce.date().nullable(),
-  input: z.unknown(),
+  queuedAt: nullable(dateField()),
+  input: jsonField({ schema: z.unknown(), default: null }),
   /**
    * How long the run waited for a worker slot: `startedAt − queuedAt` in ms,
    * floored at 0 (the two come from different clocks). Not a stored column —
    * the served collection computes it in SQL. NULL when `queuedAt` is.
    */
-  waitMs: z.number().nullable(),
-});
+  waitMs: nullable(floatField()),
+};
+export const JobRunRowSchema = fieldsToZodObject(JOB_RUN_FIELDS);
 export type JobRunRow = z.infer<typeof JobRunRowSchema>;
 
 /**
@@ -206,7 +211,7 @@ export type JobRunRow = z.infer<typeof JobRunRowSchema>;
  * `unknown-key` (a `skew` verdict) and never parses these rows.
  */
 export const jobRuns = liveCollection("job-runs.all", {
-  row: JobRunRowSchema,
+  carry: { fields: JOB_RUN_FIELDS },
   id: "id",
   all: {
     orderBy: [["finishedAt", "desc"]],

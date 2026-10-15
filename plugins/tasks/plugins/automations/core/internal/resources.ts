@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import {
@@ -66,9 +65,9 @@ export type AutomationTaskRow = z.infer<typeof AutomationTaskRowSchema>;
  * `taskOriginShape`), never this window as a set.
  */
 export const automationTasks = liveCollection("automations.tasks", {
-  row: AutomationTaskRowSchema,
+  from: taskOriginShape,
+  pick: ["automationId"],
   id: "taskId",
-  filterable: { automationId: liveText() },
   sortable: ["filedAt"],
   default: { orderBy: [["filedAt", "desc"]], limit: 50 },
   maxLimit: 2000,
@@ -104,7 +103,7 @@ export type LaunchDecisionRow = z.infer<typeof LaunchDecisionRowSchema>;
 export const launchDecisions = liveCollection(
   "automations.launch-decisions.all",
   {
-    row: LaunchDecisionRowSchema,
+    from: launchDecisionShape,
     id: "taskId",
     all: {
       orderBy: [["taskId", "asc"]],

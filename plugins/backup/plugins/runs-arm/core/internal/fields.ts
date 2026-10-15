@@ -30,6 +30,9 @@ import { BACKUP_RUN_STATUSES, type BackupRunStatus } from "./status";
  */
 export const backupRunArm = liveArm(runs, BACKUP_RUN_KIND, {
   label: "Backup",
+  // Last: host-global and orthogonal to build → release → deploy, with its own
+  // pinned surface (`runs` core, "Arm order").
+  order: 40,
   fields: {
     /** `running` / `ok` / `partial` / `failed` — the arm's own vocabulary. */
     status: enumTextField(

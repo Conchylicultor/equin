@@ -23,8 +23,9 @@ import {
   defineEndpoint,
   implement,
 } from "@plugins/infra/plugins/endpoints/core";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 import {
   NotificationsProvider,
@@ -52,17 +53,19 @@ import { browserServerTransport } from "../browser-server-transport";
 let seq = 0;
 const key = (name: string) => `test.browser-server.${name}.${seq++}`;
 
-const Row = z.object({ id: z.string(), title: z.string(), rank: z.number() });
-type Row = z.infer<typeof Row>;
+type Row = { id: string; title: string; rank: number };
+const ROW_FIELDS = {
+  fields: { title: textField({ label: "Title" }) },
+  carry: { fields: { id: textField(), rank: floatField() } },
+} as const;
 
 const greeting = liveValue(key("greeting"), {
   schema: z.object({ text: z.string() }),
   params: ["who"],
 });
 const tasks = liveCollection(key("tasks"), {
-  row: Row,
+  ...ROW_FIELDS,
   id: "id",
-  filterable: { title: liveText() },
   sortable: ["rank", "title"],
   default: { orderBy: [["rank", "asc"]], limit: 10 },
   maxLimit: 50,
@@ -72,9 +75,8 @@ const missingValue = liveValue(key("missing-value"), {
   schema: z.object({ n: z.number() }),
 });
 const missingCollection = liveCollection(key("missing-collection"), {
-  row: Row,
+  ...ROW_FIELDS,
   id: "id",
-  filterable: { title: liveText() },
   sortable: ["rank"],
   default: { orderBy: [["rank", "asc"]], limit: 10 },
   maxLimit: 50,

@@ -277,8 +277,6 @@ expandable JSON.
     - `fields/text/config.textField`
     - `fields/uuid/config.uuidField`
     - `network/live.liveCollection`
-    - `network/live/filter.liveInstant`
-    - `network/live/filter.liveText`
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `RingEvent`

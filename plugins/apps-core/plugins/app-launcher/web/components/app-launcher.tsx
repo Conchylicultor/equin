@@ -13,7 +13,12 @@ import {
   useActivateApp,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
-import { appFields } from "./app-fields";
+import {
+  appRow,
+  appRowOverrides,
+  type AppRow,
+} from "../internal/installed-app";
+import { installedApp } from "../../core";
 import { HoverPopover } from "@plugins/primitives/plugins/overlay/plugins/hover-popover/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -123,6 +128,7 @@ export function AppLauncher({ form }: { form: AppShellBrandForm }) {
   const home = useHomeApp();
   const gallery = home.kind === "app" ? home.app : undefined;
   const launchable = useLaunchableApps(gallery?.id);
+  const rows = useMemo(() => launchable.map(appRow), [launchable]);
   const active = useActiveApp();
   const activeId = active?.id;
   const activate = useActivateApp();
@@ -171,10 +177,11 @@ export function AppLauncher({ form }: { form: AppShellBrandForm }) {
               </Button>
             }
           >
-            <DataView<ActiveApp>
-              rows={launchable}
+            <DataView<AppRow>
+              rows={rows}
               rowKey={(a) => a.id}
-              fields={appFields}
+              collection={installedApp}
+              overrides={appRowOverrides}
               views={["icons"]}
               defaultView="icons"
               density="compact"
@@ -182,7 +189,7 @@ export function AppLauncher({ form }: { form: AppShellBrandForm }) {
               searchPlaceholder="Search apps"
               storageKey={LAUNCHER_VIEW}
               selectedRowId={activeId}
-              rowActivation={(entry) => afterOpen(activate(entry), close)}
+              rowActivation={(row) => afterOpen(activate(row.entry), close)}
               emptyState="No app matches."
             />
           </FooterContext.Provider>

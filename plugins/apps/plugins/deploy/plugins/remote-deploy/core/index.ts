@@ -10,3 +10,4 @@ export {
   stalenessChipLabel,
   stalenessSentence,
 } from "./internal/provenance";
+export { releaseFields } from "./internal/release-fields";

@@ -1,36 +1,41 @@
 import { describe, expect, it } from "bun:test";
-import { z } from "zod";
+import type { z } from "zod";
+import { fieldsToZodObject, nullable } from "@plugins/fields/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import {
+  enumTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
 import type { WindowQueryResourceContract } from "@plugins/infra/plugins/query-resource/core";
 import {
   and,
   decodeFilter,
-  liveBoolean,
-  liveText,
   matchesFilter,
   or,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
 import { liveCollection } from "./live-collection";
 
-const RowSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  status: z.enum(["running", "error", "idle"]),
-  enabled: z.boolean(),
-  count: z.number().nullable(),
-  createdAt: z.string(),
-});
-const Status = z.enum(["running", "error", "idle"]);
+const STATUSES = ["running", "error", "idle"] as const;
+// The listed fields (filterable); `id`, `count` and `createdAt` ride the row
+// without being listed, so they are never filterable.
+const LISTED = {
+  name: textField({ label: "Name" }),
+  status: enumTextField(STATUSES, { label: "Status" }),
+  enabled: boolField({ label: "Enabled" }),
+};
+const CARRIED = {
+  id: textField(),
+  count: nullable(intField()),
+  createdAt: textField(),
+};
+const F = { fields: LISTED, carry: { fields: CARRIED }, id: "id" } as const;
+const RowSchema = fieldsToZodObject({ ...LISTED, ...CARRIED });
 type Row = z.infer<typeof RowSchema>;
 
 const sources = liveCollection("live-test.codec", {
-  row: RowSchema,
-  id: "id",
-  filterable: {
-    status: liveText(Status),
-    enabled: liveBoolean(),
-    name: liveText(),
-  },
+  ...F,
   sortable: ["createdAt", "name"],
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },
   maxLimit: 500,
@@ -47,10 +52,10 @@ describe("liveCollection", () => {
     expect(sources.rows.key).toBe("live-test.codec:rows");
     expect(sources.groups.key).toBe("live-test.codec:groups");
     expect(sources.rowKeys).toEqual([
-      "id",
       "name",
       "status",
       "enabled",
+      "id",
       "count",
       "createdAt",
     ]);
@@ -59,20 +64,17 @@ describe("liveCollection", () => {
     expect(_asContract.window.decode({ limit: "7" }).limit).toBe(7);
   });
 
-  it("rejects undeclared columns, reserved names and domain mismatches at the type level", () => {
-    // Each refused spec sits on one line: tsc reports it wherever the last
-    // overload tried (the fields spelling's) trips on it.
-    // prettier-ignore
-    // @ts-expect-error — "bogus" is not a row field
-    liveCollection("live-test.bad-filter", { row: RowSchema, id: "id", filterable: { bogus: liveText() }, sortable: ["name"], default: { orderBy: [["name", "asc"]], limit: 1 }, maxLimit: 2 });
-    // prettier-ignore
-    // @ts-expect-error — `name` is a string field, not a boolean
-    liveCollection("live-test.bad-domain", { row: RowSchema, id: "id", filterable: { name: liveBoolean() }, sortable: ["name"], default: { orderBy: [["name", "asc"]], limit: 1 }, maxLimit: 2 });
-    const OrRow = z.object({ id: z.string(), or: z.string() });
+  it("rejects an unsortable column, bad operands and a reserved field name", () => {
+    // A listed field named like a filter-tree key cannot be filtered on.
     expect(() =>
-      // prettier-ignore
-      // @ts-expect-error — "or" spells a filter tree, so it cannot be a filterable column
-      liveCollection("live-test.reserved", { row: OrRow, id: "id", filterable: { or: liveText() }, sortable: [], default: { orderBy: [["id", "asc"]], limit: 1 }, maxLimit: 2 }),
+      liveCollection("live-test.reserved", {
+        fields: { or: textField({ label: "Or" }) },
+        carry: { fields: { id: textField() } },
+        id: "id",
+        sortable: [],
+        default: { orderBy: [["id", "asc"]], limit: 1 },
+        maxLimit: 2,
+      }),
     ).toThrow(/cannot be a filterable column/);
     expect(() =>
       // @ts-expect-error — "nope" is not sortable
@@ -324,7 +326,7 @@ describe("decode", () => {
       count: 1,
       createdAt: "2026-09-01T00:00:00.000Z",
     };
-    for (const status of Status.options) {
+    for (const status of STATUSES) {
       expect(
         matchesFilter({ ...row, status }, where!, sources.filterable),
       ).toBe(false);
@@ -394,9 +396,7 @@ describe("decode", () => {
 
 describe("preload", () => {
   const spec = {
-    row: RowSchema,
-    id: "id",
-    filterable: { enabled: liveBoolean() },
+    ...F,
     sortable: ["name"],
     default: { orderBy: [["name", "asc"]], limit: 10 },
     maxLimit: 20,
@@ -543,9 +543,7 @@ describe("groups codec", () => {
 
 describe("count codec", () => {
   const counted = liveCollection("live-test.codec-counted", {
-    row: RowSchema,
-    id: "id",
-    filterable: { status: liveText(Status), enabled: liveBoolean() },
+    ...F,
     sortable: ["createdAt"],
     default: { orderBy: [["createdAt", "desc"]], limit: 100 },
     maxLimit: 500,
@@ -585,9 +583,7 @@ describe("count codec", () => {
   it("is refused beside `arms` (an untyped caller)", () => {
     expect(() =>
       liveCollection("live-test.codec-counted-union", {
-        row: RowSchema,
-        id: "id",
-        filterable: {},
+        ...F,
         sortable: ["createdAt"],
         default: { orderBy: [["createdAt", "desc"]], limit: 100 },
         maxLimit: 500,
@@ -660,9 +656,7 @@ describe("which failures are a contract mismatch", () => {
     expect(
       isContract(() =>
         liveCollection("live-test.contract-decl", {
-          row: RowSchema,
-          id: "id",
-          filterable: {},
+          ...F,
           sortable: ["name"],
           default: { orderBy: [["name", "asc"]], limit: 0 },
           maxLimit: 1,
@@ -674,9 +668,7 @@ describe("which failures are a contract mismatch", () => {
 
 describe("page cuts — every window takes them", () => {
   const scrolled = liveCollection("live-test.codec-scroll", {
-    row: RowSchema,
-    id: "id",
-    filterable: { name: liveText() },
+    ...F,
     sortable: ["createdAt", "name", "id"],
     default: { orderBy: [["createdAt", "desc"]], limit: 100 },
     maxLimit: 300,
@@ -688,9 +680,7 @@ describe("page cuts — every window takes them", () => {
   it("needs maxLimit ≥ 2 · default.limit, on every window", () => {
     expect(() =>
       liveCollection("live-test.codec-scroll-tight", {
-        row: RowSchema,
-        id: "id",
-        filterable: {},
+        ...F,
         sortable: ["name"],
         default: { orderBy: [["name", "asc"]], limit: 100 },
         maxLimit: 199,

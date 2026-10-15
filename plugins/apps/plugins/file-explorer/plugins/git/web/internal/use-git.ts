@@ -3,6 +3,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import {
   mapResource,
   useEndpointResource,
+  type ResourceError,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import {
@@ -45,7 +46,7 @@ export function useGitStatus(
 export type GitView =
   | { kind: "loading" }
   | { kind: "none" }
-  | { kind: "failed"; message: string }
+  | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> }
   | { kind: "ready"; checkout: Checkout; index: GitStatusIndex };
 
 /**
@@ -59,18 +60,27 @@ export function useGitView(dir: string): GitView {
   const found =
     checkoutKnown && checkout.data.kind === "checkout" ? checkout.data : null;
   const status = useGitStatus(found?.root ?? null);
-  const checkoutFailure =
-    checkout.status === "error" ? checkout.error.message : null;
+  const checkoutError = checkout.status === "error" ? checkout.error : null;
+  const refetchCheckout = checkout.refetch;
   const index = status.status === "ready" ? status.data : null;
-  const statusFailure = status.status === "error" ? status.error.message : null;
+  const statusError = status.status === "error" ? status.error : null;
+  const refetchStatus = status.refetch;
   return useMemo<GitView>(() => {
-    if (checkoutFailure !== null)
-      return { kind: "failed", message: checkoutFailure };
+    if (checkoutError !== null)
+      return { kind: "failed", error: checkoutError, refetch: refetchCheckout };
     if (found !== null && index !== null)
       return { kind: "ready", checkout: found, index };
-    if (statusFailure !== null)
-      return { kind: "failed", message: statusFailure };
+    if (statusError !== null)
+      return { kind: "failed", error: statusError, refetch: refetchStatus };
     if (checkoutKnown && found === null) return { kind: "none" };
     return { kind: "loading" };
-  }, [checkoutFailure, checkoutKnown, found, index, statusFailure]);
+  }, [
+    checkoutError,
+    checkoutKnown,
+    found,
+    index,
+    refetchCheckout,
+    refetchStatus,
+    statusError,
+  ]);
 }

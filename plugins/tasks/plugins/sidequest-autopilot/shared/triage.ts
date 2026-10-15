@@ -74,7 +74,7 @@ export type SidequestTriage = z.infer<typeof SidequestTriageSchema>;
 export const sidequestTriageRows = liveCollection(
   "sidequest-autopilot.triage.all",
   {
-    row: SidequestTriageSchema,
+    from: sidequestTriageShape,
     id: "taskId",
     all: {
       orderBy: [["taskId", "asc"]],

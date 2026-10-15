@@ -1,6 +1,9 @@
 import { z } from "zod";
+import { fieldsToZodObject } from "@plugins/fields/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 
 /**
  * One (namespace, key) usage rollup. `score` is the frecency score as of
@@ -9,12 +12,18 @@ import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
  * `lastUsedAt` crosses the wire as an ISO string, so it is coerced back to a
  * `Date` on read (the `conversation-category` precedent).
  */
-export const UsageStatSchema = z.object({
-  usageKey: z.string(),
-  namespace: z.string(),
-  score: z.number(),
-  useCount: z.number(),
-  lastUsedAt: z.coerce.date(),
+const USAGE_STAT_LISTED = {
+  namespace: textField({ label: "Namespace" }),
+};
+const USAGE_STAT_CARRIED = {
+  usageKey: textField(),
+  score: floatField(),
+  useCount: floatField(),
+  lastUsedAt: dateField(),
+};
+export const UsageStatSchema = fieldsToZodObject({
+  ...USAGE_STAT_CARRIED,
+  ...USAGE_STAT_LISTED,
 });
 export type UsageStat = z.infer<typeof UsageStatSchema>;
 
@@ -38,9 +47,9 @@ export type UsageStat = z.infer<typeof UsageStatSchema>;
  * cache.
  */
 export const usageStats = liveCollection("usage-stats", {
-  row: UsageStatSchema,
+  fields: USAGE_STAT_LISTED,
+  carry: { fields: USAGE_STAT_CARRIED },
   id: "usageKey",
-  filterable: { namespace: liveText() },
   sortable: ["lastUsedAt"],
   default: { orderBy: [["lastUsedAt", "desc"]], limit: 20 },
   maxLimit: 100,

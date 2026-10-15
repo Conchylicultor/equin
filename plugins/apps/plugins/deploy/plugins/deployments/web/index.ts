@@ -9,7 +9,7 @@ import {
   DeleteDeploymentAction,
 } from "./components/deployment-item-actions";
 import { deploymentDetailPane } from "./panes";
-import { DeploymentDetail, Deployments } from "./slots";
+import { DeploymentDetail } from "./slots";
 import { IdKinds } from "@plugins/ids/web";
 import { deploymentIdKind, deployRunIdKind } from "../core";
 
@@ -17,9 +17,8 @@ export {
   DeploymentItemActions,
   useBlockedReason,
 } from "./components/deployment-item-actions";
-export { DeploymentDetail, Deployments } from "./slots";
+export { DeploymentDetail } from "./slots";
 export { deploymentDetailPane } from "./panes";
-export { useDeploymentsListServerId } from "./internal/list-server-id-context";
 
 export default {
   description:
@@ -50,7 +49,6 @@ export default {
   ],
   slots: {
     ...DeploymentDetail,
-    ...Deployments,
     itemActions: DeploymentItemActions,
     "deploy-deployment-detail": deploymentDetailPane,
   },

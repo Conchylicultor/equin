@@ -9,7 +9,8 @@
  * (its payload parse included) run here; only the transport is stubbed.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
 import type * as LiveStateWeb from "@plugins/primitives/plugins/live-state/web";
@@ -52,9 +53,12 @@ vi.mock(
 
 const { runBootSnapshot } = await import("../internal/boot");
 
-const Row = z.object({ id: z.string(), title: z.string(), rank: z.number() });
 const tasks = liveCollection("test.boot.all-tasks", {
-  row: Row,
+  fields: {
+    title: textField({ label: "Title" }),
+    rank: floatField({ label: "Rank" }),
+  },
+  carry: { fields: { id: textField() } },
   id: "id",
   all: { orderBy: [["rank", "asc"]], unbounded: { reason: "a boot test" } },
   preload: "boot",
@@ -88,7 +92,7 @@ describe("boot snapshot hydration of an `all` key (C39)", () => {
 
   it("a value its row schema rejects is reported and skipped, never hydrated", async () => {
     snapshot = {
-      resources: { [tasks.key]: [{ id: "a", title: "A" }] },
+      resources: { [tasks.key]: [{ id: "a", title: 7, rank: 1 }] },
       tuples: {},
       timings: {},
     };

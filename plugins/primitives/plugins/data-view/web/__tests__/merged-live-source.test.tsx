@@ -28,7 +28,6 @@ vi.mock("../internal/use-data-view-model", () => ({
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { QueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { z } from "zod";
 import {
   PluginProvider,
   type LoadedPlugin,
@@ -36,18 +35,11 @@ import {
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
 import { createLiveStateHarness } from "@plugins/primitives/plugins/live-state/web/testing";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import {
-  liveInstant,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import type {
-  DataViewId,
-  DataViewRenderProps,
-  FieldDef,
-  ViewState,
-} from "../../core";
+import type { DataViewId, DataViewRenderProps, ViewState } from "../../core";
 import { liveDataSource } from "../internal/live-data-source";
 import { defineDataViewSources } from "../internal/define-data-view-sources";
 import { MergedDataView } from "../components/merged-data-view";
@@ -61,41 +53,24 @@ const LIST_ICON = symbol("view-list");
 
 const STORAGE_KEY = "test-merged-sidebar" as DataViewId;
 
-const Conv = z.object({
-  id: z.string(),
-  title: z.string(),
-  status: z.string(),
-  createdAt: z.date(),
-});
-type Conv = z.infer<typeof Conv>;
+type Conv = { id: string; title: string; status: string; createdAt: Date };
 
 let n = 0;
 const convs = (columnScope: string) =>
   liveCollection(`test.data-view.merged-live-${n++}`, {
-    row: Conv,
-    id: "id",
-    filterable: {
-      title: liveText(),
-      status: liveText(),
-      createdAt: liveInstant(),
+    fields: {
+      title: textField({ label: "Title" }),
+      status: textField({ label: "Status" }),
+      createdAt: dateField({ label: "Created" }),
     },
+    carry: { fields: { id: textField() } },
+    id: "id",
     sortable: ["title", "createdAt"],
     default: { orderBy: [["createdAt", "desc"]], limit: 2 },
     maxLimit: 6,
     columnScope,
   });
 type C = ReturnType<typeof convs>;
-
-const FIELDS: FieldDef<Conv>[] = [
-  { id: "title", label: "Title", type: "text", value: (c) => c.title },
-  { id: "status", label: "Status", type: "text", value: (c) => c.status },
-  {
-    id: "createdAt",
-    label: "Created",
-    type: "date",
-    value: (c) => c.createdAt,
-  },
-];
 
 /** The one view: each row's id, the selected one marked, via the code-only renderRow. */
 function TestList(props: DataViewRenderProps<unknown>): ReactElement {
@@ -187,7 +162,6 @@ function mount(c: C, state: ViewState, activeId: string | null = null) {
     render: (bundle: never) => ReactElement;
   }): ReactElement {
     return renderBundle({
-      fields: FIELDS,
       source,
       selectedRowId: hostProps.activeId ?? undefined,
       viewOptions: { list: { renderRow: (r: Conv) => `row ${r.id}` } },

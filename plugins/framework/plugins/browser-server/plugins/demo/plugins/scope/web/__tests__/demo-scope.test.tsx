@@ -49,6 +49,8 @@ import {
   useFetchEndpoint,
   type EndpointErrorInfo,
 } from "@plugins/infra/plugins/endpoints/web";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
@@ -69,14 +71,13 @@ import { DemoScope } from "../components/demo-scope";
 let seq = 0;
 const key = (name: string) => `test.demo-scope.${name}.${seq++}`;
 
-const Track = z.object({ id: z.string(), title: z.string(), rank: z.number() });
-
 const greeting = liveValue(key("greeting"), {
   schema: z.object({ text: z.string() }),
   params: ["who"],
 });
 const tracks = liveCollection(key("tracks"), {
-  row: Track,
+  fields: { title: textField({ label: "Title" }) },
+  carry: { fields: { id: textField(), rank: floatField() } },
   id: "id",
   all: { orderBy: [["rank", "asc"]], unbounded: { reason: "test fixture" } },
 });

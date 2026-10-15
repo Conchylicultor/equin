@@ -36,7 +36,11 @@ import {
   recordingQueryDb,
 } from "@plugins/infra/plugins/query-resource/server/testing";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
+import { nullable } from "@plugins/fields/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { compileCollection } from "./serve-collection";
 
 // ── The schema: a host, a defaulted 1:1 extension, an N:1 lookup ────────────
@@ -95,19 +99,16 @@ const artistJoin: LookupJoin<"artist", typeof artists> = {
   required: false,
 };
 
-const Row = z.object({
-  id: z.string(),
-  createdAt: z.number(),
-  label: z.string(),
-  artistUpper: z.string().nullable(),
-  playsPlusOne: z.number(),
-});
-
 let seq = 0;
 const SPEC = {
-  row: Row,
+  fields: {
+    id: textField({ label: "Id", filterable: false }),
+    createdAt: intField({ label: "Created", filterable: false }),
+    label: textField({ label: "Label" }),
+    artistUpper: nullable(textField({ label: "Artist" })),
+    playsPlusOne: intField({ label: "Plays + 1", filterable: false }),
+  },
   id: "id",
-  filterable: { label: liveText(), artistUpper: liveText() },
   sortable: ["createdAt", "label", "artistUpper", "playsPlusOne"],
   default: { orderBy: [["createdAt", "desc"]], limit: 10 },
   maxLimit: 50,
@@ -259,15 +260,28 @@ describe("serveCollection with expression fields — a wire codec", () => {
     at: timestamp("at", { withTimezone: true }).notNull(),
   });
   const isoWire = { schema: z.string(), encode: (d: Date) => d.toISOString() };
-  const Wired = z.object({ id: z.string(), lastIso: z.string().nullable() });
-  const wiredCollection = (filterable: boolean) =>
+  const wiredWindow = {
+    id: "id",
+    sortable: ["id"],
+    default: { orderBy: [["id", "asc"]], limit: 10 },
+    maxLimit: 50,
+  } as const;
+  const idField = textField({ label: "Id", filterable: false });
+  const plainWired = () =>
     liveCollection(`test.live.expr-${seq++}`, {
-      row: Wired,
-      id: "id",
-      filterable: filterable ? { lastIso: liveText() } : {},
-      sortable: ["id"],
-      default: { orderBy: [["id", "asc"]], limit: 10 },
-      maxLimit: 50,
+      ...wiredWindow,
+      fields: {
+        id: idField,
+        lastIso: nullable(textField({ label: "Last", filterable: false })),
+      },
+    });
+  const filterableWired = () =>
+    liveCollection(`test.live.expr-${seq++}`, {
+      ...wiredWindow,
+      fields: {
+        id: idField,
+        lastIso: nullable(textField({ label: "Last" })),
+      },
     });
   const lastIso = (j: { base: { createdAt: unknown } }) =>
     expr(sql`to_timestamp(${j.base.createdAt})`, {
@@ -277,7 +291,7 @@ describe("serveCollection with expression fields — a wire codec", () => {
     });
 
   test("encodes the decoded value per row; a NULL passes through unencoded", async () => {
-    const c = wiredCollection(false);
+    const c = plainWired();
     const at = new Date("2026-10-01T12:00:00Z");
     // The fake answers decoded rows, as drizzle's builder would.
     const { db } = recordingQueryDb(() => [
@@ -300,7 +314,7 @@ describe("serveCollection with expression fields — a wire codec", () => {
 
   test("a wire-encoded expression cannot be filtered", () => {
     expect(() =>
-      compileCollection(wiredCollection(true), {
+      compileCollection(filterableWired(), {
         from: songs,
         columns: { lastIso: (j) => lastIso(j) },
         db: recordingQueryDb().db,
@@ -309,11 +323,11 @@ describe("serveCollection with expression fields — a wire codec", () => {
   });
 
   test("the field's type is the WIRE type, not the stored one (tsc)", () => {
-    const AsDate = z.object({ id: z.string(), lastIso: z.date().nullable() });
     const asDate = liveCollection(`test.live.expr-${seq++}`, {
-      row: AsDate,
+      carry: {
+        fields: { id: textField(), lastIso: nullable(dateField()) },
+      },
       id: "id",
-      filterable: {},
       sortable: ["id"],
       default: { orderBy: [["id", "asc"]], limit: 10 },
       maxLimit: 50,
@@ -330,12 +344,10 @@ describe("serveCollection with expression fields — a wire codec", () => {
 });
 
 describe("serveCollection with expression fields — misuse", () => {
-  const Mini = z.object({ id: z.string(), v: z.string() });
   const mini = () =>
     liveCollection(`test.live.expr-${seq++}`, {
-      row: Mini,
+      carry: { fields: { id: textField(), v: textField() } },
       id: "id",
-      filterable: {},
       sortable: ["id"],
       default: { orderBy: [["id", "asc"]], limit: 10 },
       maxLimit: 50,

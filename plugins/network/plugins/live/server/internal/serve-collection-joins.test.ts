@@ -48,10 +48,11 @@ import {
 import {
   type Filter,
   and,
-  liveNumber,
-  liveText,
   or,
 } from "@plugins/network/plugins/live/plugins/filter/core";
+import { nullable } from "@plugins/fields/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { compileCollection } from "./serve-collection";
 
 // ── The schema: a host, a 1:1 extension, a chained N:1 lookup, a keyed side ──
@@ -126,23 +127,17 @@ const ccJoin: KeyedSideJoin<"cc", typeof custom> = {
   hostKey: custom.rowKey,
 };
 
-const SongRow = z.object({
-  id: z.string(),
-  title: z.string(),
-  createdAt: z.number(),
-  lastPlayedAt: z.number().nullable(),
-  plays: z.number().nullable(),
-  artistName: z.string().nullable(),
-  labelName: z.string().nullable(),
-  c1: z.string().nullable(),
-});
-
-const FILTERABLE = {
-  title: liveText(),
-  plays: liveNumber(),
-  artistName: liveText(),
-  labelName: liveText(),
-  c1: liveText(),
+// Every field listed, in the row's key order; the ones the list never filtered
+// on opt out of the filter (`filterable: false`).
+const SONG_FIELDS = {
+  id: textField({ label: "Id", filterable: false }),
+  title: textField({ label: "Title" }),
+  createdAt: intField({ label: "Created", filterable: false }),
+  lastPlayedAt: nullable(intField({ label: "Last played", filterable: false })),
+  plays: nullable(intField({ label: "Plays" })),
+  artistName: nullable(textField({ label: "Artist" })),
+  labelName: nullable(textField({ label: "Label" })),
+  c1: nullable(textField({ label: "C1" })),
 };
 const SORTABLE = [
   "createdAt",
@@ -155,9 +150,8 @@ const SORTABLE = [
 
 let seq = 0;
 const SPEC = {
-  row: SongRow,
+  fields: SONG_FIELDS,
   id: "id",
-  filterable: FILTERABLE,
   sortable: SORTABLE,
   default: { orderBy: [["createdAt", "desc"]], limit: 10 },
   maxLimit: 50,
@@ -257,9 +251,10 @@ describe("serveCollection with joins — routes", () => {
 
   test("a lookup keyed by the host's own id routes like an extension (alias)", () => {
     const c = liveCollection(`test.live.joins-${seq++}`, {
-      row: z.object({ id: z.string(), name: z.string().nullable() }),
+      carry: {
+        fields: { id: textField(), name: nullable(textField()) },
+      },
       id: "id",
-      filterable: {},
       sortable: ["id"],
       default: { orderBy: [["id", "asc"]], limit: 10 },
       maxLimit: 50,
@@ -341,9 +336,10 @@ describe("serveCollection with joins — reverse routes", () => {
       studioSlug: text("studio_slug"),
     });
     const c = liveCollection(`test.live.joins-${seq++}`, {
-      row: z.object({ id: z.string(), studio: z.string().nullable() }),
+      carry: {
+        fields: { id: textField(), studio: nullable(textField()) },
+      },
       id: "id",
-      filterable: {},
       sortable: ["id"],
       default: { orderBy: [["id", "asc"]], limit: 10 },
       maxLimit: 50,
@@ -390,13 +386,14 @@ describe("serveCollection with joins — reverse routes", () => {
       ownerId: text("owner_id"),
     });
     const c = liveCollection(`test.live.joins-${seq++}`, {
-      row: z.object({
-        id: z.string(),
-        owner: z.string().nullable(),
-        mentor: z.string().nullable(),
-      }),
+      carry: {
+        fields: {
+          id: textField(),
+          owner: nullable(textField()),
+          mentor: nullable(textField()),
+        },
+      },
       id: "id",
-      filterable: {},
       sortable: ["id"],
       default: { orderBy: [["id", "asc"]], limit: 10 },
       maxLimit: 50,
@@ -444,13 +441,14 @@ describe("serveCollection with joins — reverse routes", () => {
       parentId: text("parent_id"),
     });
     const c = liveCollection(`test.live.joins-${seq++}`, {
-      row: z.object({
-        id: z.string(),
-        name: z.string(),
-        parentName: z.string().nullable(),
-      }),
+      carry: {
+        fields: {
+          id: textField(),
+          name: textField(),
+          parentName: nullable(textField()),
+        },
+      },
       id: "id",
-      filterable: {},
       sortable: ["name"],
       default: { orderBy: [["name", "asc"]], limit: 10 },
       maxLimit: 50,
@@ -862,7 +860,8 @@ describe("serveCollection with joins — provenance property", () => {
   // A generated tree is a `Filter` over this collection's own columns and
   // domains, which the codec checks again when it encodes.
   const randomWhere = (rand: () => number) =>
-    randomFilter(rand) as LiveWhere<typeof FILTERABLE> | undefined;
+    randomFilter(rand) as
+      LiveWhere<ReturnType<typeof collection>["filterable"]> | undefined;
 
   test("for random params, every shape's SQL reads exactly the relations usesOf names", async () => {
     const rand = prng(20260929);
@@ -929,7 +928,7 @@ describe("serveCollection with joins — provenance property", () => {
         expectReads(calls[at]!, rows.routes!.usesOf(point), "point");
 
         const groupBy = (
-          Object.keys(FILTERABLE) as (keyof typeof FILTERABLE)[]
+          ["title", "plays", "artistName", "labelName", "c1"] as const
         )[Math.floor(rand() * 5)]!;
         const gp = c.groups.groups.encode({
           groupBy,
@@ -953,7 +952,9 @@ describe("serveCollection with joins — A4 / T2", () => {
   // Lookup-only: the binding and the joins are checked all the same.
   const lookupOnly = () =>
     liveCollection(`test.live.joins-${seq++}`, {
-      row: z.object({ id: z.string(), name: z.string().nullable() }),
+      carry: {
+        fields: { id: textField(), name: nullable(textField()) },
+      },
       id: "id",
     });
   const db = recordingQueryDb().db;
@@ -1101,7 +1102,7 @@ describe("serveCollection with joins — A4 / T2", () => {
   test("a field read through a LEFT join must be nullable", () => {
     const strict = () =>
       liveCollection(`test.live.joins-${seq++}`, {
-        row: z.object({ id: z.string(), plays: z.number() }),
+        carry: { fields: { id: textField(), plays: intField() } },
         id: "id",
       });
     // `plays` is NOT NULL in its table, but NULL for a host with no playback row.
@@ -1117,7 +1118,7 @@ describe("serveCollection with joins — A4 / T2", () => {
     );
     // A required (INNER) lookup never reads NULL for a member: a non-null field is fine.
     const named = liveCollection(`test.live.joins-${seq++}`, {
-      row: z.object({ id: z.string(), name: z.string() }),
+      carry: { fields: { id: textField(), name: textField() } },
       id: "id",
     });
     expect(() =>
@@ -1151,11 +1152,11 @@ describe("serveCollection with joins — a joined column's wire form", () => {
     key: blobs.parentId,
     parentKey: songs.id,
   };
-  const Row = z.object({ id: z.string(), blob: z.string().nullable() });
+  const BLOB_FIELDS = { id: textField(), blob: nullable(textField()) };
 
   test("is encoded per row, looked up by the table's own column (not the alias proxy)", async () => {
     const c = liveCollection(`test.live.joins-${seq++}`, {
-      row: Row,
+      carry: { fields: BLOB_FIELDS },
       id: "id",
     });
     const { db: recording } = recordingQueryDb(() => [
@@ -1179,9 +1180,11 @@ describe("serveCollection with joins — a joined column's wire form", () => {
 
   test("cannot be filtered, like a base wire-encoded column", () => {
     const c = liveCollection(`test.live.joins-${seq++}`, {
-      row: Row,
+      fields: {
+        id: textField({ label: "Id", filterable: false }),
+        blob: nullable(textField({ label: "Blob" })),
+      },
       id: "id",
-      filterable: { blob: liveText() },
       sortable: ["id"],
       default: { orderBy: [["id", "asc"]], limit: 1 },
       maxLimit: 2,

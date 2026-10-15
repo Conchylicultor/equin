@@ -42,7 +42,7 @@ export type StarredPageRow = z.infer<typeof StarredPageRowSchema>;
 // bundle ever declared this key with another contract, so a tab on an older
 // one gets `unknown-key` (a `skew` verdict) and never parses these rows.
 export const starredPages = liveCollection("pages-starred.all", {
-  row: StarredPageRowSchema,
+  from: starredPageShape,
   id: "blockId",
   all: {
     orderBy: [["blockId", "asc"]],

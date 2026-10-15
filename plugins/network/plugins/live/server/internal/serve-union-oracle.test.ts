@@ -32,7 +32,6 @@ import { eq, sql } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { Client } from "pg";
-import { z } from "zod";
 import {
   createTestDb,
   type TestDb,
@@ -69,12 +68,9 @@ import {
   liveCollection,
 } from "@plugins/network/plugins/live/core";
 import { nullable } from "@plugins/fields/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import {
-  liveInstant,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
 import { compileUnion, type UnionArmBinding } from "./serve-union";
 
 const SRV = "ou_servers";
@@ -104,37 +100,31 @@ const bRuns = pgTable(B, {
   pid: integer("pid"),
 });
 
-const Row = z.object({
-  runKey: z.string(),
-  kind: z.string(),
-  id: z.string(),
-  label: z.string(),
-  outcome: z.string(),
-  startedAt: z.coerce.date(),
-  finishedAt: z.coerce.date().nullable(),
-});
-
 const runs = liveCollection("test.live.union-oracle", {
-  row: Row,
+  fields: {
+    runKey: textField({ label: "Key", filterable: false }),
+    kind: textField({ label: "Kind" }),
+    id: textField({ label: "Id", filterable: false }),
+    label: textField({ label: "Label" }),
+    outcome: textField({ label: "Outcome" }),
+    startedAt: dateField({ label: "Started" }),
+    finishedAt: nullable(dateField({ label: "Finished", filterable: false })),
+  },
   id: "runKey",
   arms: { discriminator: "kind" },
-  filterable: {
-    kind: liveText(),
-    label: liveText(),
-    outcome: liveText(),
-    startedAt: liveInstant(),
-  },
   sortable: ["kind", "label", "startedAt"],
   default: { orderBy: [["startedAt", "desc"]], limit: 4 },
   maxLimit: 12,
 });
 const aColumns = liveArm(runs, "a", {
   label: "A",
+  order: 10,
   fields: { code: nullable(floatField({ label: "Code" })) },
   sortable: ["code"],
 });
 const bColumns = liveArm(runs, "b", {
   label: "B",
+  order: 20,
   fields: { server: textField({ label: "Server" }) },
   sortable: ["server"],
 });

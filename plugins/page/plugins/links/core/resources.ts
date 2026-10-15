@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
-import { BacklinkRowSchema, PageLinkSourcesRowSchema } from "./schemas";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
+import { BacklinkRowSchema } from "./schemas";
 
 // The pages that link TO `pageId`, ordered by title — one value per target
 // page, pushed whole whenever any table its loader read changes (the change
@@ -34,7 +36,9 @@ export const pageBacklinks = liveValue("page-backlinks", {
 //
 // Not preloaded: nothing reads it until the Pages sidebar mounts.
 export const pageLinkSources = liveCollection("page-links.sources", {
-  row: PageLinkSourcesRowSchema,
+  carry: {
+    fields: { id: textField(), linkedFrom: stringListField() },
+  },
   id: "id",
   all: {
     orderBy: [["id", "asc"]],

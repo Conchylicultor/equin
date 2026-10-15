@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { z } from "zod";
+import type { z } from "zod";
+import { fieldsToZodObject } from "@plugins/fields/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
 import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
 import {
@@ -8,12 +11,16 @@ import {
   type LiveRowsCollection,
 } from "./live-collection";
 
-const Row = z.object({ id: z.string(), n: z.number() });
+const F = {
+  id: textField({ label: "Id" }),
+  n: intField({ label: "N" }),
+};
+const Row = fieldsToZodObject(F);
 
 describe("liveCollection — lookup-only (no default window)", () => {
   test("mints only the :rows point descriptor: no window, no groups, nothing else registered", () => {
     const c = liveCollection("test.live-collection.lookup", {
-      row: Row,
+      fields: F,
       id: "id",
     });
     expect(c.rows.key).toBe("test.live-collection.lookup:rows");
@@ -35,9 +42,8 @@ describe("liveCollection — lookup-only (no default window)", () => {
 
   test("a full collection still mints all three", () => {
     const c = liveCollection("test.live-collection.full", {
-      row: Row,
+      fields: F,
       id: "id",
-      filterable: {},
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 10 },
       maxLimit: 50,
@@ -53,9 +59,8 @@ describe("liveCollection — lookup-only (no default window)", () => {
 
   test("every window pages: its rows carry `$key` on the wire, and its maxLimit leaves a split's headroom", () => {
     const c = liveCollection("test.live-collection.paged", {
-      row: Row,
+      fields: F,
       id: "id",
-      filterable: {},
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 10 },
       maxLimit: 20,
@@ -74,9 +79,8 @@ describe("liveCollection — lookup-only (no default window)", () => {
     ]);
     expect(() =>
       liveCollection("test.live-collection.tight", {
-        row: Row,
+        fields: F,
         id: "id",
-        filterable: {},
         sortable: ["n"],
         default: { orderBy: [["n", "asc"]], limit: 10 },
         maxLimit: 19,
@@ -88,9 +92,8 @@ describe("liveCollection — lookup-only (no default window)", () => {
     // Never called — the assertions are the `@ts-expect-error`s.
     const _typesOnly = () => {
       const w = {
-        row: Row,
+        fields: F,
         id: "id",
-        filterable: {},
         sortable: ["n"],
         default: { orderBy: [["n", "asc"]], limit: 1 },
         maxLimit: 2,
@@ -108,11 +111,11 @@ describe("liveCollection — lookup-only (no default window)", () => {
     // Never called — the assertions are the `@ts-expect-error`s.
     const _typesOnly = () => {
       // @ts-expect-error — an id set has no default tuple to preload
-      liveCollection("test.types.a", { row: Row, id: "id", preload: "boot" });
+      liveCollection("test.types.a", { fields: F, id: "id", preload: "boot" });
       // @ts-expect-error — no order to sort without a default window
-      liveCollection("test.types.b", { row: Row, id: "id", sortable: ["n"] });
+      liveCollection("test.types.b", { fields: F, id: "id", sortable: ["n"] });
       // @ts-expect-error — no list read would ever read a filter declaration
-      liveCollection("test.types.c", { row: Row, id: "id", filterable: {} });
+      liveCollection("test.types.c", { fields: F, id: "id", filterable: {} });
     };
     void _typesOnly;
   });
@@ -120,7 +123,7 @@ describe("liveCollection — lookup-only (no default window)", () => {
   test("an untyped half-window declaration throws instead of minting a lookup", () => {
     expect(() =>
       liveCollection("test.live-collection.half", {
-        row: Row,
+        fields: F,
         id: "id",
         maxLimit: 10,
       } as never),
@@ -136,7 +139,7 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
 
   test("mints `key` (the whole ordered set) and :rows — no window, no groups", () => {
     const c = liveCollection("test.live-collection.all", {
-      row: Row,
+      fields: F,
       id: "id",
       all,
       preload: "boot",
@@ -166,7 +169,7 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
 
   test('`preload: "none"` is the absence of the flag', () => {
     const c = liveCollection("test.live-collection.all-none", {
-      row: Row,
+      fields: F,
       id: "id",
       all,
       preload: "none",
@@ -176,7 +179,7 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
 
   test("any param is a contract mismatch; the `{}` tuple passes", () => {
     const c = liveCollection("test.live-collection.all-params", {
-      row: Row,
+      fields: F,
       id: "id",
       all,
     });
@@ -197,17 +200,16 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
   });
 
   test("runtime throws for an untyped caller: a window or union field, an empty reason or order, a non-row field, a bad direction, a repeat", () => {
-    const base = { row: Row, id: "id", all };
+    const base = { fields: F, id: "id", all };
     const cases: [Record<string, unknown>, RegExp][] = [
       [
         { ...base, default: { orderBy: [["n", "asc"]], limit: 1 } },
-        /default beside `all`/,
+        /default, filterable beside `all`/,
       ],
       [
         { ...base, sortable: ["n"], maxLimit: 5 },
         /sortable, maxLimit beside `all`/,
       ],
-      [{ ...base, filterable: {} }, /filterable beside `all`/],
       [{ ...base, contributed: true }, /`contributed` no longer exists/],
       [{ ...base, columnScope: "s" }, /columnScope beside `all`/],
       [{ ...base, arms: { discriminator: "n" } }, /arms beside `all`/],
@@ -255,12 +257,10 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
     // One line per refused call: past one failed overload, TypeScript may
     // report the call itself rather than the field at fault.
     const _typesOnly = () => {
-      const s = { row: Row, id: "id", all } as const;
+      const s = { fields: F, id: "id", all } as const;
       const order = { unbounded: { reason: "r" } } as const;
       // @ts-expect-error — the whole set has no window
       liveCollection("t.a", { ...s, sortable: ["n"] });
-      // @ts-expect-error — nor a filter declaration
-      liveCollection("t.b", { ...s, filterable: {} });
       // @ts-expect-error — nor a cap
       liveCollection("t.c", { ...s, maxLimit: 5 });
       const bad = { ...order, orderBy: [["x", "asc"]] } as const;
@@ -269,11 +269,11 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
       const noBound = { orderBy: [["n", "asc"]] } as const;
       // @ts-expect-error — `unbounded` is required: the set has no other bound
       liveCollection("t.f", { ...s, all: noBound });
-      const w = { filterable: {}, sortable: ["n"], maxLimit: 1 } as const;
+      const w = { sortable: ["n"], maxLimit: 1 } as const;
       const d = { orderBy: [["n", "asc"]], limit: 1 } as const;
       // @ts-expect-error — a window collection is not also the whole set
       liveCollection("t.g", { ...s, ...w, default: d });
-      const whole = liveCollection("t.h", { row: Row, id: "id", all });
+      const whole = liveCollection("t.h", { fields: F, id: "id", all });
       // @ts-expect-error — a whole set is not a lookup-only collection (serveCollection's lookup arm)
       const _lookup: LiveLookupCollection<z.infer<typeof Row>> = whole;
       // A whole set is still read by id (`useLive(c, { ids })`, `useLiveRow`).

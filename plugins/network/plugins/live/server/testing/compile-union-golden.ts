@@ -24,7 +24,6 @@
 // `server/internal/compile-union-golden.test.ts` recomputes and compares.
 
 import { fileURLToPath } from "node:url";
-import { z } from "zod";
 import { eq, sql } from "drizzle-orm";
 import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import {
@@ -36,13 +35,9 @@ import {
   type RecordedQuery,
 } from "@plugins/infra/plugins/query-resource/server/testing";
 import type { ResourceParams } from "@plugins/framework/plugins/resource-runtime/core";
-import {
-  clause,
-  liveInstant,
-  liveText,
-  or,
-} from "@plugins/network/plugins/live/plugins/filter/core";
+import { clause, or } from "@plugins/network/plugins/live/plugins/filter/core";
 import { nullable } from "@plugins/fields/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveArm, liveCollection } from "../../core";
@@ -110,26 +105,20 @@ const uRuns = pgTable("golden_union_u", {
   finishedAt: timestamp("finished_at", { withTimezone: true }),
 });
 
-const Row = z.object({
-  runKey: z.string(),
-  kind: z.string(),
-  id: z.string(),
-  label: z.string(),
-  outcome: z.string(),
-  startedAt: z.coerce.date(),
-  finishedAt: z.coerce.date().nullable(),
-});
-
 const runs = liveCollection("golden-union.runs", {
-  row: Row,
+  fields: {
+    // In the row's key order (the compile binds columns by it, so the golden
+    // pins it); `filterable: false` keeps the ones that never filtered out.
+    runKey: textField({ label: "Key", filterable: false }),
+    kind: textField({ label: "Kind" }),
+    id: textField({ label: "Id", filterable: false }),
+    label: textField({ label: "Label" }),
+    outcome: textField({ label: "Outcome" }),
+    startedAt: dateField({ label: "Started" }),
+    finishedAt: nullable(dateField({ label: "Finished", filterable: false })),
+  },
   id: "runKey",
   arms: { discriminator: "kind" },
-  filterable: {
-    kind: liveText(),
-    label: liveText(),
-    outcome: liveText(),
-    startedAt: liveInstant(),
-  },
   sortable: ["kind", "label", "startedAt"],
   default: { orderBy: [["startedAt", "desc"]], limit: 4 },
   maxLimit: 12,
@@ -138,22 +127,26 @@ const runs = liveCollection("golden-union.runs", {
 // field filters in the domain its value reads in.
 const aColumns = liveArm(runs, "a", {
   label: "A",
+  order: 10,
   fields: { code: nullable(floatField({ label: "Code" })) },
   sortable: ["code"],
 });
 const bColumns = liveArm(runs, "b", {
   label: "B",
+  order: 20,
   fields: { server: textField({ label: "Server" }) },
   sortable: ["server"],
 });
 const nColumns = liveArm(runs, "n", {
   label: "N",
+  order: 30,
   fields: { size: floatField({ label: "Size" }) },
   sortable: ["size"],
 });
 
 const uColumns = liveArm(runs, "u", {
   label: "U",
+  order: 40,
   fields: { owner: textField({ label: "Owner" }) },
   sortable: ["owner"],
 });

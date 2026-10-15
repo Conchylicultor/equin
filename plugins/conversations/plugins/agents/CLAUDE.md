@@ -226,6 +226,7 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `UpdateAgentBody`
   - Exports (values):
     - `agentIdKind`
+    - `AgentLaunchConversationRefSchema`
     - `agentLaunchIdKind`
     - `AgentLaunchSchema`
     - `AgentLaunchWithStatusSchema`

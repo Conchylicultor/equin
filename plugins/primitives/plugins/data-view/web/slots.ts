@@ -270,10 +270,10 @@ export const DataViewSlots = {
    * slot spans disjoint consumer row types). Every DataView folds its
    * contributions into the schema (before the sort/filter controllers), threading
    * `{ storageKey, rowKey }` so a contributor can key its per-row `FieldDef.value`
-   * over the surface. This is the cross-plugin, always-on case of field extensions
-   * — used by custom-columns to add every surface's user-defined columns without
-   * the host importing it — as opposed to the per-consumer `fieldExtensions` prop
-   * (Sonata's typed/scoped fields). Both share one contribution shape and one fold.
+   * over the surface. It is the one contributed field family — custom-columns'
+   * user-defined columns, added to every surface without the host importing it;
+   * every other field is derived from the list's collection, row kind and
+   * client fields (fields declared once).
    */
   FieldExtension: defineFieldExtensions<unknown>(),
   /**

@@ -12,8 +12,12 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { createBrowserServer } from "@plugins/framework/plugins/browser-server/core";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import {
+  enumTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   definePack,
   DemoMissingError,
@@ -29,33 +33,42 @@ import {
 let seq = 0;
 const key = (name: string) => `test.demo-pack.${name}.${seq++}`;
 
-const Item = z.object({
-  id: z.string(),
-  title: z.string(),
-  kind: z.enum(["a", "b"]),
-  rank: z.number(),
-  at: z.string(),
-});
-type Item = z.infer<typeof Item>;
+type Item = {
+  id: string;
+  title: string;
+  kind: "a" | "b";
+  rank: number;
+  at: string;
+};
+// `kind` is the one listed (so filterable) field; the rest ride on the row.
+const ITEM_SPEC = {
+  fields: { kind: enumTextField(["a", "b"], { label: "Kind" }) },
+  carry: {
+    fields: {
+      id: textField(),
+      title: textField(),
+      rank: floatField(),
+      at: textField(),
+    },
+  },
+  id: "id",
+} as const;
 
 const items = liveCollection(key("items"), {
-  row: Item,
-  id: "id",
-  filterable: { kind: liveText(z.enum(["a", "b"])) },
+  ...ITEM_SPEC,
   sortable: ["rank", "title"],
   default: { orderBy: [["rank", "asc"]], limit: 2 },
   maxLimit: 10,
   count: true,
 });
 const tracks = liveCollection(key("tracks"), {
-  row: Item,
-  id: "id",
+  ...ITEM_SPEC,
   all: {
     orderBy: [["rank", "desc"]],
     unbounded: { reason: "test fixture" },
   },
 });
-const byId = liveCollection(key("by-id"), { row: Item, id: "id" });
+const byId = liveCollection(key("by-id"), ITEM_SPEC);
 const greeting = liveValue(key("greeting"), {
   schema: z.object({ text: z.string() }),
   params: ["who", "lang?"],
@@ -394,9 +407,7 @@ describe("loading a pack", () => {
       packWindow(items, { where: { kind: "c" } }, []),
     ]);
     const uncounted = liveCollection(key("uncounted"), {
-      row: Item,
-      id: "id",
-      filterable: { kind: liveText(z.enum(["a", "b"])) },
+      ...ITEM_SPEC,
       sortable: ["rank"],
       default: { orderBy: [["rank", "asc"]], limit: 2 },
       maxLimit: 10,

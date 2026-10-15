@@ -14,7 +14,6 @@ import {
   scopeFilterRows,
   type DataViewRenderProps,
   type FieldDef,
-  type FieldExtensionsDescriptor,
   type FieldGrouping,
   type FilterGroup,
   type ItemActionsDescriptor,
@@ -72,6 +71,7 @@ import {
   CollectFieldOptions,
   listSchema,
   useDerivedFields,
+  CollectClientValues,
 } from "../internal/derived-fields";
 import { CollectFacetOptions } from "../internal/facet-options";
 import { RowOrderReader, type ReportedRowOrder } from "../internal/row-order";
@@ -184,18 +184,12 @@ export function DataViewSectionsBody<TRow>(
  * Fold cross-plugin field contributions into `fields` BEFORE the controllers,
  * so the merged schema reaches `useSortController`, `useFilterController`, and
  * `renderProps.fields` uniformly (automatic once it is the `fields` prop). ONE
- * fold over an ordered list of sources:
- *
- *  1. the **global** `DataViewSlots.FieldExtension` slot — always folded (every
- *     DataView), the cross-cutting contributor case (e.g. custom-columns); then
- *  2. the **per-consumer** `props.fieldExtensions` factory (Sonata's play-count
- *     / last-played fields) — appended only when present.
- *
- * Both are the same `FieldExtensionsDescriptor`; the fold threads
- * `{ storageKey, rowKey }` to every contributor (a per-consumer contributor
- * ignores the coordinates it does not need). The host names no individual
- * contributor: custom-columns folds in through the generic global slot,
- * inverting the old host→child bridge.
+ * fold over the **global** `DataViewSlots.FieldExtension` slot — every
+ * DataView's, the cross-cutting contributor case (custom-columns' user-defined
+ * columns); the fold threads `{ storageKey, rowKey }` to every contributor.
+ * The host names no individual contributor. Fields of an entity, an exposure,
+ * an arm, a row kind or client fields are DERIVED before it (`deriveFields`,
+ * `CollectClientValues`) — there is no per-list field slot.
  *
  * The fold runs in `unknown` row space (the global slot spans disjoint consumer
  * row types), so `props.fields`/`rowKey` and the merged result cross a safe
@@ -212,11 +206,11 @@ function CollectBodyFields<TRow>(props: {
     | "fields"
     | "overrides"
     | "extraFields"
-    | "fieldExtensions"
     | "storageKey"
     | "rowKey"
     | "source"
     | "collection"
+    | "rows"
   >;
   children: (
     fields: FieldDef<unknown>[],
@@ -277,37 +271,44 @@ function CollectBodyFields<TRow>(props: {
     [live, resolveOperatorSet],
   );
   return (
-    <CollectFieldOptions readers={derived.optionReaders} fields={base}>
-      {(presented) => (
-        <CollectFieldExtensions
-          sources={
-            source.fieldExtensions
-              ? [
-                  DataViewSlots.FieldExtension,
-                  source.fieldExtensions as FieldExtensionsDescriptor<unknown>,
-                ]
-              : [DataViewSlots.FieldExtension]
-          }
-          base={presented}
-          storageKey={source.storageKey}
-          rowKey={rowKey as (row: unknown, index: number) => string}
-          liveColumnScope={liveColumnScope}
-          validate={validate}
+    <CollectClientValues
+      readers={derived.clientReaders}
+      rows={(source.rows ?? NO_CLIENT_ROWS) as readonly unknown[]}
+      fields={base}
+    >
+      {(withValues) => (
+        <CollectFieldOptions
+          readers={derived.optionReaders}
+          fields={withValues}
         >
-          {(folded) => (
-            <CollectFacetOptions
-              source={live as LiveDataSource<unknown> | undefined}
-              fields={folded}
-              resolveOperatorSet={resolveOperatorSet}
+          {(presented) => (
+            <CollectFieldExtensions
+              sources={[DataViewSlots.FieldExtension]}
+              base={presented}
+              storageKey={source.storageKey}
+              rowKey={rowKey as (row: unknown, index: number) => string}
+              liveColumnScope={liveColumnScope}
+              validate={validate}
             >
-              {(fields) => children(fields, rowKey)}
-            </CollectFacetOptions>
+              {(folded) => (
+                <CollectFacetOptions
+                  source={live as LiveDataSource<unknown> | undefined}
+                  fields={folded}
+                  resolveOperatorSet={resolveOperatorSet}
+                >
+                  {(fields) => children(fields, rowKey)}
+                </CollectFacetOptions>
+              )}
+            </CollectFieldExtensions>
           )}
-        </CollectFieldExtensions>
+        </CollectFieldOptions>
       )}
-    </CollectFieldOptions>
+    </CollectClientValues>
   );
 }
+
+/** A live origin holds no rows here: its client fields are refused at derivation. */
+const NO_CLIENT_ROWS: readonly unknown[] = [];
 
 /** A live source's row key: its collection's `id` field. */
 function liveRowKey<TRow>(
@@ -385,9 +386,8 @@ function DataViewBodyInner<TRow>(
   }
 
   // The schema is already fully merged: `props.fields` here arrives AFTER
-  // `DataViewBody` folded both the global `DataViewSlots.FieldExtension` slot
-  // (custom columns, keyed by `{ storageKey, rowKey }`) and the per-consumer
-  // `fieldExtensions` factory into it. So the merged fields reach the
+  // `DataViewBody` derived it and folded the global `DataViewSlots.FieldExtension`
+  // slot (custom columns, keyed by `{ storageKey, rowKey }`) into it. So the merged fields reach the
   // controllers and render-props uniformly with no custom-columns knowledge here.
   const fields = props.fields;
 

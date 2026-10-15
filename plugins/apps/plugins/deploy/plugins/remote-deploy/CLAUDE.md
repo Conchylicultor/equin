@@ -6,7 +6,8 @@
 [`2026-08-03-global-deploy-release-candidate-pipeline.md`](../../../../../../research/2026-08-03-global-deploy-release-candidate-pipeline.md).
 
 This plugin contributes `deploy` + `output` into `DeploymentDetail.Section` and
-`release` into `Deployments.Fields`. It owns **no** sequencing: pressing Deploy
+`release` as a client field of the `deployments` collection
+(`releaseFields`, core; resolved by `ReleaseFieldResolver`, web). It owns **no** sequencing: pressing Deploy
 POSTs `{ verb: "update" }` and everything after that is the `deployments`
 sibling's server-side orchestrator.
 
@@ -107,16 +108,17 @@ the log is. `unknown` staleness (dirty build / absent sha) is **not** `stale`:
 unprovable is not out-of-date, and in an active worktree most candidates read
 unknown.
 
-It reaches the list through `Deployments.Fields`, so `deployments` never names
-this feature. A field extension mounts once per surface but the answer is per
+It reaches the list as a `clientFields(deployments, "release", …)` declaration
+(`ClientFields.Resolve`), so `deployments` never names this feature. The
+resolver mounts once per surface but the answer is per
 `(composition, platform)` — hence one headless `CandidateProbe` per row folding
 into a map that `value` reads synchronously, so filter/group/sort agree with the
 chips instead of trailing them by a render.
 
-`ReleaseField` reads `useDeploymentsListServerId()` and the identical
-`useLive(deployments, { where: { serverId } })` query `DeploymentsBody` itself
-subscribes to — never the collection's default window, which is not
-guaranteed to hold every row of the server the list happens to be showing.
+The resolver is handed the list's rows (they carry `serverId`), so it probes
+exactly the rows the list shows; the `release` cell (`ReleaseCell`) reads the
+probed infos the resolver publishes around the list, since a cell is handed only
+the field's value (the state), not the snapshot the chip also draws.
 
 ## What this still does not claim
 
@@ -131,18 +133,19 @@ remote health gate.
 
 ## Plugin reference
 
-- Description: Deploy one composition to its remote server: a single Deploy button launching the `update` sequence (converge → build a platform-pinned candidate unless one is already current → ship that pinned run id), the three-phase report of the running deploy, what is currently built and how it relates to HEAD, the public URLs to inspect the deployed app, the phase-following deploy/build log output section, and the `Release` column contributed into the deployments list.
+- Description: Deploy one composition to its remote server: a single Deploy button launching the `update` sequence (converge → build a platform-pinned candidate unless one is already current → ship that pinned run id), the three-phase report of the running deploy, what is currently built and how it relates to HEAD, the public URLs to inspect the deployed app, the phase-following deploy/build log output section, and the `Release` client field (`releaseFields`) of the deployments list.
 - Web:
   - Contributes:
     - `DeploymentDetail.Section` "Deploy to server" → `RemoteDeploySection`
     - `DeploymentDetail.Section` "Output" → `OutputSection`
-    - `Deployments.Fields` "release" → `ReleaseField`
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×7
-    - `apps/deploy/deployments` ×4
+    - `ClientFields.Resolve` "client:deploy.deployments:release" → `ReleaseFieldResolver`
+    - `FieldPresentation.Register` "client:deploy.deployments:release"
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×6
+    - `network/live` ×4
     - `primitives/setup-steps` ×4
     - `apps/deploy/health` ×3
-    - `network/live` ×2
+    - `apps/deploy/deployments` ×2
     - `primitives/view-switcher` ×2
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/badge.Badge`
@@ -158,6 +161,23 @@ remote health gate.
     - `primitives/log-channels.LiveLogChannel`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`
+- Core:
+  - Uses:
+    - `apps/deploy/deployments.deployments`
+    - `fields/text/config.enumTextField`
+    - `network/live.clientFields`
+  - Exports (types):
+    - `ReleaseState`
+    - `ReleaseStateInput`
+  - Exports (values):
+    - `candidatePredatesLatest`
+    - `RELEASE_STATE_OPTIONS`
+    - `releaseFields`
+    - `releaseStateLabel`
+    - `resolveReleaseState`
+    - `shortSha`
+    - `stalenessChipLabel`
+    - `stalenessSentence`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
@@ -166,17 +186,5 @@ remote health gate.
     - `ui/tokens/color-palette --success`
     - `ui/tokens/color-palette --warning`
     - `ui/tokens/shape --spacing`
-- Core:
-  - Exports (types):
-    - `ReleaseState`
-    - `ReleaseStateInput`
-  - Exports (values):
-    - `candidatePredatesLatest`
-    - `RELEASE_STATE_OPTIONS`
-    - `releaseStateLabel`
-    - `resolveReleaseState`
-    - `shortSha`
-    - `stalenessChipLabel`
-    - `stalenessSentence`
 
 <!-- AUTOGENERATED:END -->

@@ -1,63 +1,37 @@
 import { useMemo, type ReactNode } from "react";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import type {
-  FieldDef,
-  FieldExtensionProps,
-  FieldOption,
-} from "@plugins/primitives/plugins/data-view/web";
+  ClientFieldReaders,
+  ClientFieldsResolverProps,
+} from "@plugins/network/plugins/live/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
-import {
-  absolutePath,
-  type EntryRow,
-} from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
+import { absolutePath } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
 import {
   useExplorerDir,
   useHomeDir,
 } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
-import type { GitChange } from "../../shared/resources";
+import { GIT_BADGE_OPTIONS, type gitFields, type GitBadge } from "../../core";
 import { relativeTo } from "../../shared/status-index";
 import { useGitView, type GitView } from "../internal/use-git";
 
+type GitFieldsRecord = NonNullable<(typeof gitFields)["__fields"]>;
+/** The row the fields are resolved for: the `fileEntry` kind's declared row. */
+type EntryRow = NonNullable<(typeof gitFields)["__row"]>;
+
 /** A folder holding changes below it — its own value, so it filters and groups too. */
 const CONTAINS_CHANGES = "contains-changes";
-type GitBadge = GitChange | typeof CONTAINS_CHANGES;
 
-const BADGES: Record<GitBadge, { letter: string; option: FieldOption }> = {
-  modified: {
-    letter: "M",
-    option: { value: "modified", label: "Modified", variant: "warning" },
-  },
-  added: {
-    letter: "A",
-    option: { value: "added", label: "Added", variant: "success" },
-  },
-  deleted: {
-    letter: "D",
-    option: { value: "deleted", label: "Deleted", variant: "destructive" },
-  },
-  renamed: {
-    letter: "R",
-    option: { value: "renamed", label: "Renamed", variant: "info" },
-  },
-  copied: {
-    letter: "C",
-    option: { value: "copied", label: "Copied", variant: "info" },
-  },
-  untracked: {
-    letter: "?",
-    option: { value: "untracked", label: "Untracked", variant: "success" },
-  },
-  [CONTAINS_CHANGES]: {
-    letter: "•",
-    option: {
-      value: CONTAINS_CHANGES,
-      label: "Contains changes",
-      variant: "muted",
-    },
-  },
+/** The letter a badge draws (the label and tint are the field's options). */
+const LETTERS: Record<GitBadge, string> = {
+  modified: "M",
+  added: "A",
+  deleted: "D",
+  renamed: "R",
+  copied: "C",
+  untracked: "?",
+  [CONTAINS_CHANGES]: "•",
 };
-const OPTIONS = Object.values(BADGES).map((b) => b.option);
 
 /** The row's path relative to the checkout, when the view knows its checkout. */
 function relOf(
@@ -97,72 +71,68 @@ function changedVsMain(
   return row.kind === "dir" && view.index.hasDescendantChangedVsMain(rel);
 }
 
-function GitBadgeCell({ badge }: { badge: GitBadge }): ReactNode {
-  const { letter, option } = BADGES[badge];
+/** The badge cell of a row's git status (its label and tint are the field's option). */
+export function GitBadgeCell({ badge }: { badge: GitBadge }): ReactNode {
+  const { label, variant } = GIT_BADGE_OPTIONS[badge];
   if (badge === CONTAINS_CHANGES) {
     return (
-      <span title={option.label}>
+      <span title={label}>
         <StatusDot colorClass="bg-warning" />
       </span>
     );
   }
   return (
-    <Badge variant={option.variant} mono title={option.label}>
-      {letter}
+    <Badge variant={variant} mono title={label}>
+      {LETTERS[badge]}
     </Badge>
   );
 }
 
 /**
- * The tree's git fields, for the folder the browser shows: `git` (the status
- * badge — M / A / D / R / C / ?, a dot on a folder holding changes) and
- * `changed` ("Changed vs main", the Filter pill that narrows the tree to a
- * branch's work). Outside a checkout there are none — no empty badge column
- * taking room from the names; while the status (or whether this is a checkout
- * at all) is not known yet the badge cell says so rather than showing the
- * file clean.
+ * Resolves the tree's git client fields (`gitFields`) for the folder the
+ * browser shows: `git` (the status badge) and `changed` ("Changed vs main").
+ * While the status (or whether this is a checkout at all) is not known yet the
+ * fields are pending — the badge cell says so rather than showing the file
+ * clean. Outside a checkout the fields exist with no value (null — an empty
+ * cell) rather than vanishing.
  */
-export function GitFields({
+export function GitFieldsResolver({
   render,
-}: FieldExtensionProps<EntryRow>): ReactNode {
+}: ClientFieldsResolverProps<EntryRow, GitFieldsRecord>): ReactNode {
   const dir = useExplorerDir();
   const homeDir = useHomeDir();
   const home = homeDir.kind === "ready" ? homeDir.home : null;
   const view = useGitView(dir);
 
-  const fields = useMemo<FieldDef<EntryRow>[]>(() => {
-    if (view.kind === "none") return [];
-    const pending = view.kind === "loading";
-    return [
-      {
-        id: "git",
-        label: "Git",
-        header: false,
-        type: "enum",
-        width: "28px",
-        align: "center",
-        options: OPTIONS,
-        value: (r) => badgeOf(view, r, home),
-        cell: (r) => {
-          if (pending) return <Loading variant="block" className="h-3 w-3" />;
-          const badge = badgeOf(view, r, home);
-          return badge === null ? null : <GitBadgeCell badge={badge} />;
-        },
-        ...(view.kind === "failed"
-          ? { readError: { error: new Error(view.message) } }
-          : {}),
+  const values = useMemo<
+    ResourceResult<ClientFieldReaders<EntryRow, GitFieldsRecord>>
+  >(() => {
+    if (view.kind === "loading") {
+      return { status: "loading", refetch: () => Promise.resolve() };
+    }
+    if (view.kind === "failed") {
+      return {
+        status: "error",
+        error: view.error,
+        refetch: view.refetch,
+      };
+    }
+    if (view.kind === "none") {
+      return {
+        status: "ready",
+        data: { git: () => null, changed: () => null },
+        refetch: () => Promise.resolve(),
+      };
+    }
+    return {
+      status: "ready",
+      data: {
+        git: (r) => badgeOf(view, r, home),
+        changed: (r) => changedVsMain(view, r, home),
       },
-      {
-        id: "changed",
-        label: "Changed vs main",
-        type: "bool",
-        visible: false,
-        value: (r) => changedVsMain(view, r, home),
-        // A filter dimension, not searchable text.
-        filterable: false,
-      },
-    ];
+      refetch: () => Promise.resolve(),
+    };
   }, [view, home]);
 
-  return <>{render(fields)}</>;
+  return <>{render(values)}</>;
 }

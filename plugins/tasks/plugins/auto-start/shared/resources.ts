@@ -64,6 +64,6 @@ export type TaskAutoStartRow = z.infer<typeof TaskAutoStartRowSchema>;
 // intersects the ids a write touched — PK values — with each reader's id set.
 // Served from the extension handle in `server/internal/resource.ts`.
 export const taskAutoStart = liveCollection("tasks-auto-start", {
-  row: TaskAutoStartRowSchema,
+  from: taskAutoStartShape,
   id: "taskId",
 });

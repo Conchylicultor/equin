@@ -27,6 +27,6 @@ export type TransposeRow = z.infer<typeof TransposeRowSchema>;
  * it touched, and only a tab that has that song open subscribes to it.
  */
 export const transposes = liveCollection("sonata-transpose", {
-  row: TransposeRowSchema,
+  from: transposeShape,
   id: "songId",
 });

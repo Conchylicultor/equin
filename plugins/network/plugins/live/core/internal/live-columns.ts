@@ -375,6 +375,12 @@ export interface LiveArm<
 > {
   /** The arm's name in every list — the band its fields are listed under (`"Build"`). */
   readonly label: string;
+  /**
+   * Where its band (and its kind among the kind options) sits among the
+   * union's arms, ascending — each arm states its own place, so the order is
+   * one the surface chose, never the plugins' load order.
+   */
+  readonly order: number;
   /** The fields every list of the union shows for this arm, by id (`<arm>.<field>`), in declaration order. */
   readonly listed: LiveFields<`${string}.${keyof F & string}`>;
 }
@@ -400,6 +406,8 @@ export function liveArm<
   arm: string,
   spec: {
     label: string;
+    /** Its band's place among the union's arms, ascending ({@link LiveArm.order}). */
+    order: number;
     fields: F & RequireLabel<F>;
     carry?: C;
     sortable?: readonly S[];
@@ -409,6 +417,7 @@ export function liveArm<
     throw new Error(`liveArm("${collection.key}", "${arm}"): ${message}`);
   };
   if (spec.label.trim().length === 0) fail("`label` is empty.");
+  if (!Number.isFinite(spec.order)) fail("`order` is not a finite number.");
   const carried = spec.carry ?? ({} as C);
   for (const name of Object.keys(carried)) {
     if (Object.hasOwn(spec.fields, name)) {
@@ -455,10 +464,9 @@ export function liveArm<
       }),
     ),
   ) as LiveFields<`${string}.${keyof F & string}`>;
-  return Object.assign(handle, { label: spec.label, listed }) as LiveArm<
-    WithContributedColumns<Row>,
-    F,
-    S,
-    C
-  >;
+  return Object.assign(handle, {
+    label: spec.label,
+    order: spec.order,
+    listed,
+  }) as LiveArm<WithContributedColumns<Row>, F, S, C>;
 }

@@ -26,6 +26,6 @@ export type KeyAutoDetectRow = z.infer<typeof KeyAutoDetectRowSchema>;
  * absent row, i.e. `false`.
  */
 export const keyAutoDetects = liveCollection("sonata-key-auto-detect", {
-  row: KeyAutoDetectRowSchema,
+  from: keyAutoDetectShape,
   id: "songId",
 });

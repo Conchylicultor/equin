@@ -28,9 +28,10 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 
 import { act, cleanup, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { z } from "zod";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import type {
   DataViewPaging,
@@ -46,10 +47,8 @@ import {
   PAGED_VIEWPORT_PX as VIEW,
   type PagedDataView,
 } from "../testing";
-import { liveNumber } from "@plugins/network/plugins/live/plugins/filter/core";
 
-const Item = z.object({ id: z.string(), n: z.number() });
-type Item = z.infer<typeof Item>;
+type Item = { id: string; n: number };
 
 const FIELDS: FieldDef<Item>[] = [
   { id: "n", label: "N", type: "number", value: (r) => r.n },
@@ -258,9 +257,9 @@ const TOTAL = 80;
 let n = 0;
 const items_ = () =>
   liveCollection(`test.data-view.page-placeholders-${n++}`, {
-    row: Item,
+    fields: { n: floatField({ label: "N" }) },
+    carry: { fields: { id: textField() } },
     id: "id",
-    filterable: { n: liveNumber() },
     sortable: ["n"],
     default: { orderBy: [["n", "asc"]], limit: 2 },
     maxLimit: 6,
@@ -284,7 +283,7 @@ describe("page placeholders — a live source scrolled deep", () => {
   it("the rows drawn stay bounded however deep the read goes; the rest stand as placeholders", async () => {
     const c = items_();
     const source = liveDataSource(c, { searchable: [] });
-    const view = mount(() => ({ fields: FIELDS, source }));
+    const view = mount(() => ({ source }));
     const { notifications, queryClient } = view;
     // Every subscribed tuple is answered a tick later, as a sub-ack would.
     const observe = notifications.observe.bind(notifications);

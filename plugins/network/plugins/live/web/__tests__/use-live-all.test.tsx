@@ -29,7 +29,10 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { QueryClient } from "@tanstack/react-query";
 import { type ReactElement, type ReactNode } from "react";
-import { z } from "zod";
+import type { z } from "zod";
+import { fieldsToZodObject } from "@plugins/fields/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import {
   NotificationsProvider,
   ensureNotificationsClient,
@@ -44,13 +47,18 @@ import {
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 
-const Row = z.object({ id: z.string(), title: z.string(), rank: z.number() });
+const ROW_FIELDS = {
+  id: textField({ label: "Id" }),
+  title: textField({ label: "Title" }),
+  rank: intField({ label: "Rank" }),
+};
+const Row = fieldsToZodObject(ROW_FIELDS);
 type Row = z.infer<typeof Row>;
 
 let seq = 0;
 function allCollection() {
   return liveCollection(`test.use-live-all.${seq++}`, {
-    row: Row,
+    fields: ROW_FIELDS,
     id: "id",
     all: { orderBy: [["rank", "asc"]], unbounded: { reason: "a test set" } },
   });
@@ -311,7 +319,7 @@ describe("useLive(all)", () => {
   it("types: the whole set and a select are `all`-only; a lookup or window collection has no whole set", () => {
     const c = allCollection();
     const lookup = liveCollection(`test.use-live-all.lookup.${seq++}`, {
-      row: Row,
+      fields: ROW_FIELDS,
       id: "id",
     });
     // Never called — the assertions are the types and `@ts-expect-error`s.

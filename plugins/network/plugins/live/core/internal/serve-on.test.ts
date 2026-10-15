@@ -10,17 +10,18 @@
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
+import { fieldsToZodObject } from "@plugins/fields/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { createHarness } from "@plugins/framework/plugins/resource-runtime/core/testing";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { liveCollection } from "./live-collection";
 import { liveValue } from "./live-value";
 import { serveCollectionOn, serveValueOn } from "./serve-on";
 
-const RowSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  rank: z.number(),
-});
+const LISTED = { title: textField({ label: "Title" }) };
+const CARRIED = { id: textField(), rank: intField() };
+const F = { fields: LISTED, carry: { fields: CARRIED }, id: "id" } as const;
+const RowSchema = fieldsToZodObject({ ...LISTED, ...CARRIED });
 type Row = z.infer<typeof RowSchema>;
 
 let seq = 0;
@@ -71,9 +72,7 @@ function source(initial: Row[]) {
 
 const windowCollection = (k: string) =>
   liveCollection(k, {
-    row: RowSchema,
-    id: "id",
-    filterable: { title: liveText() },
+    ...F,
     sortable: ["rank", "title"],
     default: { orderBy: [["rank", "asc"]], limit: 10 },
     maxLimit: 50,
@@ -176,9 +175,7 @@ describe("serveCollectionOn — a window collection", () => {
     const h = createHarness();
     const k = key("groups");
     const c = liveCollection(k, {
-      row: RowSchema,
-      id: "id",
-      filterable: { title: liveText() },
+      ...F,
       sortable: ["rank"],
       default: { orderBy: [["rank", "asc"]], limit: 10 },
       maxLimit: 50,
@@ -281,7 +278,7 @@ describe("serveCollectionOn — a window collection", () => {
     expect(fixed.changes).toEqual({ fixed: { reason: "a demo pack" } });
     const immutable = serveCollectionOn(
       h.runtime,
-      liveCollection(key("immutable-lookup"), { row: RowSchema, id: "id" }),
+      liveCollection(key("immutable-lookup"), { ...F }),
       {
         source: "external",
         changes: { immutable: { reason: "sha-keyed" } },
@@ -320,9 +317,7 @@ describe("serveCollectionOn — every window's $key", () => {
   test("rows carry a minted $key; a non-text order field needs keyText", async () => {
     const h = createHarness();
     const c = liveCollection(key("keyed"), {
-      row: RowSchema,
-      id: "id",
-      filterable: {},
+      ...F,
       sortable: ["rank", "title"],
       default: { orderBy: [["rank", "desc"]], limit: 10 },
       maxLimit: 50,
@@ -365,9 +360,7 @@ describe("serveCollectionOn — every window's $key", () => {
   test("rows answered out of the order asked are refused", async () => {
     const h = createHarness();
     const c = liveCollection(key("key-order"), {
-      row: RowSchema,
-      id: "id",
-      filterable: {},
+      ...F,
       sortable: ["title"],
       default: { orderBy: [["title", "asc"]], limit: 10 },
       maxLimit: 50,
@@ -388,8 +381,7 @@ describe("serveCollectionOn — an `all` collection", () => {
   test("pushes the whole set, and a notify ships a keyed delta", async () => {
     const h = createHarness();
     const c = liveCollection(key("all"), {
-      row: RowSchema,
-      id: "id",
+      ...F,
       all: { orderBy: [["rank", "asc"]], unbounded: { reason: "a test set" } },
     });
     const src = source(initial);

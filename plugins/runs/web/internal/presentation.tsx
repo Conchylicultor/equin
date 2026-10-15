@@ -25,12 +25,16 @@ function muted(text: string | null): ReactNode {
  * The kind chip's options: the REGISTERED arms (`Runs.Kind`) — a build kind is
  * a fact about what is installed, not about the loaded page, which a
  * server-paginated window could only offer a slice of. Always known (a
- * contribution registry), so the plain options.
+ * contribution registry), so the plain options — in the arms' declared order
+ * (`liveArm({ order })`), the order of their field bands.
  */
 export function useRunKindOptions(): readonly LiveFieldOption[] {
   const kinds = Runs.Kind.useContributions();
   return useMemo(
-    () => kinds.map(({ arm }) => ({ value: arm.owner.arm, label: arm.label })),
+    () =>
+      [...kinds]
+        .sort((a, b) => a.arm.order - b.arm.order)
+        .map(({ arm }) => ({ value: arm.owner.arm, label: arm.label })),
     [kinds],
   );
 }

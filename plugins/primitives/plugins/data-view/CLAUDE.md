@@ -227,7 +227,7 @@ the source axis only decides *which data bundle* feeds the body.
 
 - **Sources are contributed components** through the per-consumer
   `defineDataViewSources<THostProps>(id)` factory (web barrel — the sibling of
-  `defineItemActions`/`defineFieldExtensions`). A contribution is `{ id, title,
+  `defineItemActions`). A contribution is `{ id, title,
   icon, order?, views?, component }`; the component receives
   `DataViewSourceProps<THostProps>` = `{ hostProps, render }`, owns its data
   hooks, and **must always call `render(bundle)`** — pass `{ rows: [], loading:
@@ -1750,13 +1750,24 @@ row); `zone` answers *is the cluster painted at rest*. They compose.
 field schema is the generic seam (it also buys sort, filter and a table column),
 so a private "extra meta" slot beside it is always a duplicate.
 
-`FieldDef.value` is a *synchronous* `(row) => FieldValue` and cannot call hooks, so
-a field whose projection must close over **hook-loaded data** owned by another
-plugin (e.g. a deployment's release candidate, read off the filesystem) has to be
-produced from inside a mounted component.
+`FieldDef.value` is a *synchronous* `(row) => FieldValue` and cannot call hooks.
+A field whose values only the browser knows (a git status, a usage summary, a
+release probe) is a **client field** (`network/live`, "Rows that are not
+database data"): declared once in core on a row kind or a collection
+(`clientFields(owner, id, { section?, fields })`) and resolved once by its
+plugin's web (`ClientFields.Resolve({ fields, component })` — a component
+handed the list's rows that renders its values as a read). Every list of the
+owner derives the fields (below) and `CollectClientValues`
+(`web/internal/derived-fields.tsx`) mounts each resolver above the controllers:
+loading → the field is `pending`, failed → its `readError`, ready → its
+values. They filter, sort and group in memory; a live `source` listing an
+owner with client fields throws. A list of rows that are not database data
+names its **row kind** (`rowKind`) as its in-memory `collection`, so its own
+fields are derived too.
 
-**One contribution shape.** A field-extension contribution is a **component** (not
-a plain `FieldDef[]`) typed `ComponentType<FieldExtensionProps<TRow>>`, where
+The one remaining contributed family is user-defined: **the global
+`DataViewSlots.FieldExtension` slot** (custom-columns), a component per
+contribution typed `ComponentType<FieldExtensionProps<unknown>>`, where
 
 ```ts
 interface FieldExtensionProps<TRow> {
@@ -1767,23 +1778,9 @@ interface FieldExtensionProps<TRow> {
 ```
 
 The registration carries one more thing — **`section: string | null`**, the band
-its fields are listed under (see "Field sections" below).
-
-Every contributor receives the **surface coordinates** (`storageKey`, `rowKey`) so
-a cross-cutting contributor can key its per-row data over the surface; one that
-doesn't need them just ignores them:
-
-```tsx
-function RatingFields({ render }: FieldExtensionProps<Item>) {
-  const ratings = useRatingsMap();          // hypothetical: this plugin's own live read
-  const fields = useMemo<FieldDef<Item>[]>(() => [
-    { id: "rating", label: "Rating", type: "int",
-      value: (it) => ratings.get(it.id) ?? null, sortable: true },
-  ], [ratings]);
-  return <>{render(fields)}</>;  // ignores storageKey/rowKey — it keys off its own resource
-}
-MyFields({ id: "rating", section: null, component: RatingFields });
-```
+its fields are listed under (see "Field sections" below). Per-list field slots
+(`defineFieldExtensions`, a `fieldExtensions` prop) no longer exist (fields
+declared once, phase 2b).
 
 Per-row data another plugin owns is not a field extension at all: the plugin
 exposes it from its entity extension (`defineExtensionShape({ exposes })`), and
@@ -1803,7 +1800,10 @@ declaration order:
 2. the exposed fields of every entity it reaches (`from`, `related`) — id the
    exposure field's id (`as`, else its key);
 3. a union's arm fields (`liveArm`) — ids `<arm>.<field>`, listed under the
-   arm's `label` (`section`);
+   arm's `label` (`section`), the arms in their declared `order`;
+3b. the owner's client fields (`clientFields`) — ids their keys, listed under
+   their `section` (or with the owner's own fields), values from their
+   resolver;
 4. each presented by its owner's registration (`FieldPresentation.Register` —
    the entity, the exposure, the arm, or the collection itself for its listed
    fields (one property of a picked field set by both it and its entity
@@ -1819,10 +1819,8 @@ A list then says only what it changes, by id — `overrides={fieldOverrides(
 collection, { status: { groupable: false } })}` (typed against the
 collection's field ids: an unknown id is a tsc error, and throws at mount) —
 and what it computes itself, `extraFields` (the Queue's `section`). A hand
-`fields` beside a collection declared by fields throws (and so does a list
-with neither); beside a collection in the old `row` spelling, `fields` is
-still its base schema, with the exposed and arm fields appended (deleted in
-phase 2b). An id two fields share throws. The collection is the live
+`fields` beside a collection (or row kind) throws, and so does a list with
+neither. An id two fields share throws. The collection is the live
 source's, or — for in-memory rows taken from one (the Queue) — the origin's
 `collection` prop (an in-memory DataView without one needs `fields`, tsc);
 only a live source binds an exposed or arm field's `column`, so an exposed
@@ -1844,53 +1842,20 @@ Retry, and a view laid out by the field renders that failure in place of its
 rows (`field-error`, naming the field). A failure over held values keeps
 painting them. The task list's `category` field is the case that needed both.
 
-**Two registration entry points, one mechanism.** A field extension reaches the
-host through exactly one of two places — the difference is only the **registration
-site** (and, consequently, the row typing):
-
-1. **The always-on global `DataViewSlots.FieldExtension` slot** — the
-   **cross-cutting** case: a single slot **every** DataView folds, for a
-   contributor that augments *all* surfaces (custom-columns' user-defined columns).
-   It is literally `defineFieldExtensions<unknown>("primitives.data-view.field-extension")`
-   — the same factory minted once at `<unknown>` (a global slot spans disjoint
-   consumer row types, so `rowKey` is `(row: unknown, …) => string`). A cross-plugin
-   contributor imports the slot and contributes itself (`custom-columns →
-   data-view`, the legal parent-ward edge), so the host names **no** individual
-   contributor.
-2. **The per-consumer `defineFieldExtensions<TRow>(id)` factory** (web barrel), the
-   sibling of `defineItemActions` — the **typed/scoped** case (disjoint row types
-   per consumer → a factory, per the same collection-vs-factory rule). Each
-   consumer calls it once with a stable id; the result is **callable for
-   contributions** (`MyFields({ id, component })`, like any `defineRenderSlot`) and
-   — being a slot — is itself the `FieldExtensionsDescriptor` the host reads (no
-   extra `.Row`-style member, unlike item-actions). Pass it to
-   `<DataView fieldExtensions={MyFields} />` (the Deployments list's release
-   column — Group C, moving to client fields in phase 2b). Full `TRow` typing.
-
-**One fold over an ordered source list.** `CollectFieldExtensions` (internal) folds
-`[DataViewSlots.FieldExtension, ...(props.fieldExtensions ? [props.fieldExtensions] : [])]`,
-threading `{ storageKey, rowKey }` to every contributor — each mounts
-error-boundary-isolated (`renderIsolated`), runs its own hooks, yields its
-`FieldDef[]`, and recurses; the base case calls `children([...base, ...allExtra])`.
-Both the source-level and contribution-level folds are recursive **components**,
-never a `.map` over contributed hooks (which `react-hooks/rules-of-hooks` rejects).
-The fold wraps the model **before** the sort/filter controllers, so a contributed
-`int`/`date` field shows up in the Sort control, the Filter control, and the table
-columns for free. It runs at `<unknown>` (the global slot spans disjoint consumer
-row types), so `props.fields`/`rowKey` and the merged result cross a safe
-`FieldDef<unknown>`↔`FieldDef<TRow>` cast at the top-level `DataView` boundary; the
-global slot being a `defineRenderSlot`, its fold order is a committed reorder
-override (`config/primitives/data-view/primitives.data-view.field-extension.jsonc`).
-
-**Intentional asymmetry vs `RowOrder`.** There is deliberately no
-`GlobalFieldExtensionProps` (a field extension is one shape whether registered
-globally or per-consumer) while the sibling `GlobalRowOrderProps` remains:
-`FieldExtension` had **two** cases to unify (global custom-columns + the
-per-consumer factories); `RowOrder` has only the global one (`view-order`), so there is nothing to
-symmetrize. Do **not** "restore symmetry" by re-splitting `FieldExtension` or by
-minting a per-consumer `RowOrder` factory that has no consumer. See
-["The global `RowOrder` slot"](#the-global-roworder-slot-cross-plugin) under
-Manual order.
+**One fold.** `CollectFieldExtensions` (internal) folds the global
+`DataViewSlots.FieldExtension` slot, threading `{ storageKey, rowKey }` to every
+contributor — each mounts error-boundary-isolated (`renderIsolated`), runs its
+own hooks, yields its `FieldDef[]`, and recurses; the base case calls
+`children([...base, ...allExtra])`. The fold is a recursive **component**, never
+a `.map` over contributed hooks (which `react-hooks/rules-of-hooks` rejects). It
+wraps the model **before** the sort/filter controllers, so a contributed
+`int`/`date` field shows up in the Sort control, the Filter control, and the
+table columns for free. It runs at `<unknown>` (the global slot spans disjoint
+consumer row types), so `props.fields`/`rowKey` and the merged result cross a
+safe `FieldDef<unknown>`↔`FieldDef<TRow>` cast at the top-level `DataView`
+boundary; the global slot being a `defineRenderSlot`, its fold order is a
+committed reorder override
+(`config/primitives/data-view/primitives.data-view.field-extension.jsonc`).
 
 ### Field sections: a band per contributor
 
@@ -1903,7 +1868,8 @@ its own name, so the merged run surface reads `Common / Build / Backup / Release
 / Deploy` everywhere instead of one undifferentiated list.
 
 **A contributor never authors it per field.** `FieldExtensionContribution.section`
-is declared once on the registration and the fold **stamps** it over every field
+is declared once on the registration (and a client-fields declaration's
+`section` once on the declaration) and the fold **stamps** it over every field
 that contributor returned (`sectioned()` in `field-extensions.tsx`), so a plugin
 cannot spell its own band two ways across forty columns, forget it on the
 fortieth, or file a column under another plugin's name. Authoring
@@ -2454,8 +2420,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 95 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live` ×12
+  - Uses: 101 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×18
     - `primitives/css/ui-kit` ×11
     - `primitives/data-view/view-core` ×8
     - `primitives/live-state` ×5
@@ -2531,8 +2497,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `FieldDef`
     - `FieldExtensionContribution`
     - `FieldExtensionProps`
-    - `FieldExtensions`
-    - `FieldExtensionsDescriptor`
     - `FieldGrouping`
     - `FieldGroupingSet`
     - `FieldOption`
@@ -2594,7 +2558,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots`
     - `defineDataView`
     - `defineDataViewSources`
-    - `defineFieldExtensions`
     - `defineItemActions`
     - `EditableCell`
     - `EditableTreeLabel`

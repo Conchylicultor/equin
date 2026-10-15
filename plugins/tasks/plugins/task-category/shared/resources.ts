@@ -47,7 +47,7 @@ export type TaskCategoryRow = z.infer<typeof TaskCategoryRowSchema>;
 // render, and the eager web tier is derived from this flag (this module sits in
 // the eager web import graph via the plugin's web barrel).
 export const taskCategories = liveCollection("task-categories", {
-  row: TaskCategoryRowSchema,
+  from: taskCategoryShape,
   id: "taskId",
   all: {
     orderBy: [["taskId", "asc"]],

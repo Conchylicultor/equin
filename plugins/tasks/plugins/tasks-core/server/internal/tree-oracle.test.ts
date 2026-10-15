@@ -67,6 +67,8 @@ import {
   setDefaultTimeout,
   test,
 } from "bun:test";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import {
@@ -117,7 +119,9 @@ setDefaultTimeout(120_000);
 const PROBE = "test.tree-oracle.tasks-probe";
 
 const probe = liveCollection(PROBE, {
-  row: z.object({ id: z.string(), title: z.string(), attempts: z.number() }),
+  carry: {
+    fields: { id: textField(), title: textField(), attempts: floatField() },
+  },
   id: "id",
   all: {
     orderBy: [["title", "asc"]],

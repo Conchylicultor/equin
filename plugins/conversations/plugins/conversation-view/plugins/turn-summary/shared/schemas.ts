@@ -45,6 +45,6 @@ export type TurnSummary = z.infer<typeof TurnSummarySchema>;
 //
 // Served from the extension handle in `server/internal/resource.ts`.
 export const turnSummaryRows = liveCollection("turn-summaries", {
-  row: TurnSummarySchema,
+  from: turnSummaryShape,
   id: "conversationId",
 });

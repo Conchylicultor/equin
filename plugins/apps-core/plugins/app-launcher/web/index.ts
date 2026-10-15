@@ -3,8 +3,9 @@ import { Apps } from "@plugins/apps-core/web";
 import { AppShell } from "@plugins/primitives/plugins/app-shell/web";
 import { AppBrand } from "./components/app-brand";
 import { FloatingAppLauncher } from "./components/floating-app-launcher";
+import { installedAppPresentation } from "./internal/installed-app";
 
-export { appFields } from "./components/app-fields";
+export { appRow, appRowOverrides, type AppRow } from "./internal/installed-app";
 
 export default {
   description:
@@ -12,5 +13,6 @@ export default {
   contributions: [
     AppShell.Brand({ component: AppBrand }),
     Apps.Overlay({ id: "floating-launcher", component: FloatingAppLauncher }),
+    installedAppPresentation,
   ],
 } satisfies PluginDefinition;

@@ -286,6 +286,7 @@ bar).
     - `debug/trace/engine.traceListRoute`
     - `fields.FieldsRecord`
     - `fields.fieldsToZodObject`
+    - `fields.nullable`
     - `fields/date/config.dateField`
     - `fields/float/config.floatField`
     - `fields/int/config.intField`
@@ -297,9 +298,6 @@ bar).
     - `infra/runtime-profiler.SpanMeasure`
     - `infra/runtime-profiler.WaitBreakdown`
     - `network/live.liveCollection`
-    - `network/live/filter.liveInstant`
-    - `network/live/filter.liveNumber`
-    - `network/live/filter.liveText`
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `CallerRef`

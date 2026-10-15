@@ -16,9 +16,12 @@ import { sql } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { Client } from "pg";
-import { z } from "zod";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
-import { enumTextField } from "@plugins/fields/plugins/text/plugins/config/core";
+import {
+  enumTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
@@ -49,7 +52,10 @@ const conversations = pgTable("xpdb_conversations", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
 });
 const tasksRef = entityRef("xpdb_tasks", {});
-const conversationsRef = entityRef("xpdb_conversations", {});
+const conversationsRef = entityRef("xpdb_conversations", {
+  id: textField(),
+  createdAt: dateField({ label: "Created" }),
+});
 
 const track = defineExtension(
   tasks,
@@ -114,13 +120,14 @@ const ownerJoins = [
 ] as const;
 
 const list = liveCollection("test.live.exposed-db", {
-  row: z.object({ id: z.string(), createdAt: z.date() }),
+  from: conversationsRef,
+  pick: ["createdAt"],
+  carry: { pick: ["id"] },
+  related: { task: tasksRef },
   id: "id",
-  filterable: {},
   sortable: ["createdAt"],
   default: { orderBy: [["createdAt", "desc"]], limit: 10 },
   maxLimit: 30,
-  exposes: { base: conversationsRef, task: tasksRef },
 });
 const TRACK = "xpdb_tasks_ext_track.track";
 const COST = "xpdb_conversations_ext_usage.cost";

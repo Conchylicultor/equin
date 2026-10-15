@@ -1,5 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { FieldPresentation as FieldPresentationSlots } from "./internal/field-presentation";
+import { ClientFields as ClientFieldsSlots } from "./internal/client-fields";
 
 export { useLive, useLiveRow } from "./internal/use-live";
 export { mapRow } from "./internal/map-row";
@@ -9,6 +10,19 @@ export {
   presentationOwnerKey,
   useFieldPresentations,
 } from "./internal/field-presentation";
+export {
+  ClientFields,
+  clientFieldsKey,
+  renderClientFieldsResolver,
+  useClientFieldsResolvers,
+} from "./internal/client-fields";
+export type {
+  ClientFieldReaders,
+  ClientFieldsResolution,
+  ClientFieldsResolverProps,
+  ClientFieldValues,
+  StoredClientFieldsResolution,
+} from "./internal/client-fields";
 export type {
   FieldPresentationRegistration,
   FieldPresentationSpec,
@@ -40,5 +54,5 @@ export default {
   description:
     "Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; FieldPresentation.Register presents an owner's fields — an entity's own, an extension's exposed ones, a union arm's, a collection's own — with their cells, widths and live options in every list that reaches the owner, read by useFieldPresentations.",
   contributions: [],
-  slots: FieldPresentationSlots,
+  slots: { ...FieldPresentationSlots, ...ClientFieldsSlots },
 } satisfies PluginDefinition;

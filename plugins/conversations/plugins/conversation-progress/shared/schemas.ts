@@ -82,5 +82,5 @@ export type ConversationProgress = z.infer<typeof ConversationProgressSchema>;
 // nothing for the one round-trip.
 export const conversationProgressRows = liveCollection(
   "conversation-progress",
-  { row: ConversationProgressSchema, id: "conversationId" },
+  { from: conversationProgressShape, id: "conversationId" },
 );

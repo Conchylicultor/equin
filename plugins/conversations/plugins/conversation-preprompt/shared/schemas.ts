@@ -65,5 +65,5 @@ export type ConversationPreprompt = z.infer<typeof ConversationPrepromptSchema>;
 // icons stay unrendered for the one round-trip.
 export const conversationPrepromptRows = liveCollection(
   "conversation-preprompts",
-  { row: ConversationPrepromptSchema, id: "conversationId" },
+  { from: conversationPrepromptShape, id: "conversationId" },
 );

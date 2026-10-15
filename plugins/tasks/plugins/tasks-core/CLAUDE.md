@@ -431,7 +431,7 @@ serves them.
     - `tasks` (keyed)
     - `tasks:rows` (keyed, point)
 - Core:
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/workspace` ×3
     - `fields/text/config` ×3
     - `fields` ×3
@@ -444,7 +444,6 @@ serves them.
     - `fields/json/config.jsonField`
     - `fields/string-list/config.stringListField`
     - `infra/entities.entityRef`
-    - `network/live/filter.liveText`
     - `primitives/pane.defineRoute`
     - `primitives/rank.RankSchema`
   - Exports (types):

@@ -7,12 +7,18 @@ import {
   type LiveField,
 } from "@plugins/network/plugins/live/core";
 import {
+  clientFieldsKey,
   collectionPresentationKey,
   presentationOwnerKey,
+  renderClientFieldsResolver,
+  useClientFieldsResolvers,
   useFieldPresentations,
+  type ClientFieldReaders,
+  type ClientFieldValues,
   type FieldPresentationSpec,
   type LiveFieldOption,
   type LiveFieldOptionsRead,
+  type StoredClientFieldsResolution,
   type StoredFieldPresentation,
 } from "@plugins/network/plugins/live/web";
 import type { FieldsRecord } from "@plugins/fields/core";
@@ -45,10 +51,27 @@ export interface FieldOptionsReader {
   readonly useOptions: Hook<() => LiveFieldOptionsRead>;
 }
 
-/** What a list derives: its fields, and the live option reads some of them take. */
+/**
+ * A client-fields resolver a list mounts (`ClientFields.Resolve`): the
+ * registration, and how each of its fields reads a row once its values land.
+ */
+export interface ClientValuesReader {
+  readonly resolution: StoredClientFieldsResolution;
+  /** Field id → the derived field rebuilt over a value read (the presentation's cell applied). */
+  readonly resolve: ReadonlyMap<
+    string,
+    {
+      readonly placeholder: FieldDef<unknown>;
+      readonly build: (read: (row: unknown) => unknown) => FieldDef<unknown>;
+    }
+  >;
+}
+
+/** What a list derives: its fields, and the live option and client value reads some of them take. */
 export interface DerivedFields {
   readonly fields: FieldDef<unknown>[];
   readonly optionReaders: readonly FieldOptionsReader[];
+  readonly clientReaders: readonly ClientValuesReader[];
 }
 
 /**
@@ -119,8 +142,12 @@ function optionsOf(
 /** The presentation props a field takes from its spec (the cell is the caller's — it knows the read). */
 function presented(
   spec: FieldPresentationSpec<unknown, unknown> | undefined,
-): Pick<FieldDef<unknown>, "width" | "align" | "visible" | "groupable"> {
+): Pick<
+  FieldDef<unknown>,
+  "width" | "align" | "visible" | "groupable" | "header"
+> {
   return {
+    ...(spec?.header !== undefined ? { header: spec.header } : {}),
     ...(spec?.width !== undefined ? { width: spec.width } : {}),
     ...(spec?.align !== undefined ? { align: spec.align } : {}),
     ...(spec?.visible !== undefined ? { visible: spec.visible } : {}),
@@ -185,9 +212,10 @@ export function useDerivedFields(
   live: boolean,
 ): DerivedFields {
   const registrations = useFieldPresentations();
+  const resolvers = useClientFieldsResolvers();
   return useMemo(
-    () => deriveFields(collection, live, registrations),
-    [collection, live, registrations],
+    () => deriveFields(collection, live, registrations, resolvers),
+    [collection, live, registrations, resolvers],
   );
 }
 
@@ -196,8 +224,10 @@ export function deriveFields(
   collection: DataViewRowsCollection | undefined,
   live: boolean,
   registrations: readonly StoredFieldPresentation[],
+  resolvers: readonly StoredClientFieldsResolution[] = [],
 ): DerivedFields {
-  if (collection === undefined) return { fields: [], optionReaders: [] };
+  if (collection === undefined)
+    return { fields: [], optionReaders: [], clientReaders: [] };
   const presentations = mergePresentations(registrations);
   const fields: FieldDef<unknown>[] = [];
   const optionReaders: FieldOptionsReader[] = [];
@@ -214,7 +244,7 @@ export function deriveFields(
   // Its own fields, presented by its entity's registration (the picked ones)
   // and by its own (`FieldPresentation.Register({ owner: collection })`, any
   // listed one — one property of one field set by both throws).
-  if (collection.fields !== null) {
+  {
     const entity =
       collection.from === null
         ? undefined
@@ -299,12 +329,18 @@ export function deriveFields(
     }
   }
 
-  // Every arm's fields, when the collection is a union.
-  for (const owner of registered) {
-    if ("rowKeys" in owner || owner.kind !== "live-columns") continue;
-    const arm = owner as LiveArm<unknown, FieldsRecord, string>;
-    if (arm.owner.collection !== collection.key) continue;
-    const ownerKey = presentationOwnerKey(owner);
+  // Every arm's fields, when the collection is a union — in the arms' own
+  // declared order (`liveArm({ order })`), never the plugins' load order.
+  const arms = registered
+    .filter(
+      (owner): owner is LiveArm<unknown, FieldsRecord, string> =>
+        !("rowKeys" in owner) &&
+        owner.kind === "live-columns" &&
+        owner.owner.collection === collection.key,
+    )
+    .sort((a, b) => a.order - b.order);
+  for (const arm of arms) {
+    const ownerKey = presentationOwnerKey(arm);
     if (!once(ownerKey)) continue;
     const presentation = presentations.get(ownerKey);
     for (const field of Object.values(arm.listed)) {
@@ -330,7 +366,121 @@ export function deriveFields(
       );
     }
   }
-  return { fields, optionReaders };
+
+  // Every client field of the owner (`clientFields` — a row kind's, or a
+  // collection's), its values resolved in the browser by its plugin
+  // (`ClientFields.Resolve`) and filtered in memory: a live source, which
+  // filters on the server, cannot list one.
+  const clientReaders: ClientValuesReader[] = [];
+  for (const resolution of resolvers) {
+    const decl = resolution.fields;
+    if (decl.owner !== collection.key) continue;
+    const ownerKey = clientFieldsKey(decl);
+    if (live) {
+      throw new Error(
+        `data-view: "${collection.key}" has client fields ("${ownerKey}") — their values are resolved in the browser and filtered in memory, so a live source cannot list them. List its rows in memory (\`rows\` with \`collection\`).`,
+      );
+    }
+    if (!once(ownerKey)) {
+      throw new Error(
+        `data-view: client fields "${ownerKey}" are resolved twice — one \`ClientFields.Resolve\` per declaration.`,
+      );
+    }
+    const presentation = presentations.get(ownerKey);
+    const resolve = new Map<
+      string,
+      {
+        placeholder: FieldDef<unknown>;
+        build: (read: (row: unknown) => unknown) => FieldDef<unknown>;
+      }
+    >();
+    for (const field of Object.values(decl.listed)) {
+      const spec = presentation?.fields.get(field.key);
+      const extra = decl.section === null ? {} : { section: decl.section };
+      const build = (read: (row: unknown) => unknown): FieldDef<unknown> =>
+        derivedField(field, read, spec, extra);
+      const placeholder = build(() => undefined);
+      add(placeholder, spec);
+      resolve.set(field.id, { placeholder, build });
+    }
+    clientReaders.push({ resolution, resolve });
+  }
+  return { fields, optionReaders, clientReaders };
+}
+
+/**
+ * Mount every client-fields resolver a list's owner has and hand each of its
+ * fields the resolver's read — one level per resolver, keyed by its
+ * declaration. Not known yet, a field is `pending` (its cells draw the loading
+ * block, a view laid out by it its loading state); failed with nothing held,
+ * its `readError`; else its value read. Only what the derivation put there is
+ * replaced (a list's override of a cell stands).
+ */
+export function CollectClientValues(props: {
+  readers: readonly ClientValuesReader[];
+  rows: readonly unknown[];
+  fields: FieldDef<unknown>[];
+  children: (fields: FieldDef<unknown>[]) => ReactNode;
+}): ReactNode {
+  const { readers, rows, fields, children } = props;
+  if (readers.length === 0) return children(fields);
+  const [first, ...rest] = readers;
+  return renderClientFieldsResolver(first!.resolution, {
+    rows,
+    render: (values) => (
+      <ClientValuesLevel
+        key={clientFieldsKey(first!.resolution.fields)}
+        reader={first!}
+        values={values}
+        fields={fields}
+        render={(resolved) => (
+          <CollectClientValues readers={rest} rows={rows} fields={resolved}>
+            {children}
+          </CollectClientValues>
+        )}
+      />
+    ),
+  });
+}
+
+function ClientValuesLevel(props: {
+  reader: ClientValuesReader;
+  values: ClientFieldValues<unknown, FieldsRecord>;
+  fields: FieldDef<unknown>[];
+  render: (fields: FieldDef<unknown>[]) => ReactNode;
+}): ReactNode {
+  const { reader, values, fields, render } = props;
+  const resolved = useMemo(() => {
+    const readers: ClientFieldReaders<unknown, FieldsRecord> | undefined =
+      values.status === "ready"
+        ? values.data
+        : values.status === "error"
+          ? values.stale
+          : undefined;
+    return fields.map((f): FieldDef<unknown> => {
+      const entry = reader.resolve.get(f.id);
+      if (entry === undefined) return f;
+      const read = readers?.[f.id];
+      const built = entry.build(read === undefined ? () => undefined : read);
+      // Replace only what the derivation set (an override's cell stands).
+      const next: FieldDef<unknown> = {
+        ...f,
+        ...(f.value === entry.placeholder.value ? { value: built.value } : {}),
+        ...(f.values === entry.placeholder.values
+          ? { values: built.values }
+          : {}),
+        ...(f.cell === entry.placeholder.cell ? { cell: built.cell } : {}),
+      } as FieldDef<unknown>;
+      if (read !== undefined) return next;
+      return values.status === "error"
+        ? {
+            ...next,
+            readError: { error: values.error, refetch: values.refetch },
+          }
+        : { ...next, pending: true };
+    });
+  }, [fields, reader, values]);
+  return render(resolved);
 }
 
 /**
@@ -351,8 +501,7 @@ export function listSchema(input: {
   const { collection, derived, fields, overrides, extraFields } = input;
   const who =
     collection === undefined ? "this DataView" : `"${collection.key}"`;
-  const declaredByFields =
-    collection !== undefined && collection.fields !== null;
+  const declaredByFields = collection !== undefined;
   if (declaredByFields && fields !== undefined) {
     throw new Error(
       `data-view: ${who} is declared by fields — its list derives them; pass \`overrides\` (by id) and \`extraFields\`, not \`fields\`.`,
@@ -360,7 +509,7 @@ export function listSchema(input: {
   }
   if (!declaredByFields && fields === undefined) {
     throw new Error(
-      `data-view: ${who} has no fields — pass \`fields\`, or list a collection declared by fields (\`liveCollection({ from, pick, fields })\`).`,
+      `data-view: ${who} has no fields — pass \`fields\`, or list the rows' collection or row kind (\`collection\`).`,
     );
   }
   let base = [...(fields ?? []), ...derived];

@@ -6,7 +6,9 @@ import {
   type InferFieldValue,
   type Labelled,
 } from "@plugins/fields/core";
+import type { z } from "zod";
 import type { EntityRef } from "@plugins/infra/plugins/entities/core";
+import type { AnyExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import type {
   FilterColumn,
   FilterDomainId,
@@ -21,6 +23,9 @@ import { fieldDomain, type FieldsFilterable } from "./field-domain";
 // fields' wire schemas), the filter domains (`./field-domain`), the labels,
 // types and options every list and the MCP read off `collection.fields`.
 // `carry` puts fields on the row a list does not show (an id, a foreign key).
+// `from` is an entity or an entity EXTENSION's shape (a side table's own
+// field record): a shape's rows carry its whole wire row, and `pick` lists
+// some of its fields.
 
 /** One field of a live row set, as every list shows it — derived from its `FieldDef`. */
 export interface LiveField {
@@ -68,10 +73,23 @@ export type LiveFieldIds<C> = C extends { readonly fields: infer FS }
 /** What a collection's rows reach beyond its own entity: a lookup join's alias → the entity it reads. */
 export type LiveRelated = Readonly<Record<string, EntityRef>>;
 
+/**
+ * What a collection's rows are (`from`): an entity, or an entity extension's
+ * shape (`defineExtensionShape` — a 1:1 side table, its field record declared
+ * once in core). A shape's rows carry its whole WIRE row (`shape.schema`'s
+ * keys); an entity's carry only the fields picked or carried by name.
+ */
+export type LiveFrom = EntityRef | AnyExtensionShape;
+
 /** The field record of `from` (none without one). */
 export type FromFields<E> = [E] extends [EntityRef<string, infer F>]
   ? F
-  : Record<never, never>;
+  : [E] extends [AnyExtensionShape]
+    ? E["fields"]
+    : Record<never, never>;
+
+/** `collection.from`: the entity a collection's rows are — `null` for a shape's or none. */
+export type FromEntity<E> = [E] extends [EntityRef] ? E : null;
 
 /** The fields of `F` declared with a label — the ones a list may show (`RequireLabel`). */
 export type LabelledKeys<F> = {
@@ -107,10 +125,17 @@ export type RowFields<E, P extends string, CP extends string, OF, CF> = Pick<
   OF &
   CF;
 
-/** The row a fields spec derives. */
-export type FieldsRow<E, P extends string, CP extends string, OF, CF> = Flatten<
-  RowOfFields<RowFields<E, P, CP, OF, CF>>
->;
+/**
+ * The row a fields spec derives: over a shape, its wire row and the own /
+ * carried fields; otherwise every row field's value.
+ */
+export type FieldsRow<E, P extends string, CP extends string, OF, CF> = [
+  E,
+] extends [EntityRef]
+  ? Flatten<RowOfFields<RowFields<E, P, CP, OF, CF>>>
+  : [E] extends [AnyExtensionShape]
+    ? Flatten<z.infer<E["schema"]> & RowOfFields<OF & CF>>
+    : Flatten<RowOfFields<RowFields<E, P, CP, OF, CF>>>;
 
 /** The filterable columns a fields spec derives: every listed field with a domain. */
 export type FieldsSpecFilterable<E, P extends string, OF> = Flatten<
@@ -134,7 +159,7 @@ export type FieldsSpecExposes<E, R, B> = [E] extends [EntityRef]
  * declares only `fields` (and `carry.fields`).
  */
 export interface LiveFieldsSpec<
-  E extends EntityRef | undefined,
+  E extends LiveFrom | undefined,
   P extends string,
   CP extends string,
   OF extends FieldsRecord,
@@ -144,7 +169,8 @@ export interface LiveFieldsSpec<
   /**
    * The entity the rows are: `pick` reads its fields, and every extension
    * exposing fields of it folds into the rows (`exposes.base`) — unless
-   * `baseExposures: false`.
+   * `baseExposures: false`. Or an extension's shape: its whole wire row is
+   * on the rows, `pick` lists some of it, and it reaches no exposure.
    */
   from?: E;
   /** The fields of `from` a list shows, in list order — each must carry a label (tsc). */
@@ -218,7 +244,7 @@ export function isFieldsSpec(spec: object): boolean {
 export function resolveFieldsSpec(
   key: string,
   spec: LiveFieldsSpec<
-    EntityRef | undefined,
+    LiveFrom | undefined,
     string,
     string,
     FieldsRecord,
@@ -238,15 +264,39 @@ export function resolveFieldsSpec(
     );
   }
   const from = spec.from;
-  if (from !== undefined && from?.kind !== "entity") {
-    fail("`from` is not an EntityRef (`entityRef(name, fields)`).");
+  const shape = from !== undefined && isShape(from) ? from : undefined;
+  if (
+    from !== undefined &&
+    shape === undefined &&
+    (from as { kind?: unknown }).kind !== "entity"
+  ) {
+    fail(
+      "`from` is neither an EntityRef (`entityRef(name, fields)`) nor an extension shape (`defineExtensionShape`).",
+    );
   }
   if (from === undefined && (spec.pick ?? spec.carry?.pick) !== undefined) {
     fail("`pick` without `from` — a picked field is one of `from`'s.");
   }
-  if (from === undefined && spec.baseExposures !== undefined) {
-    fail("`baseExposures` without `from` — there is no base entity to fold.");
+  if (shape === undefined || from === undefined) {
+    if (from === undefined && spec.baseExposures !== undefined) {
+      fail("`baseExposures` without `from` — there is no base entity to fold.");
+    }
+  } else {
+    if (spec.baseExposures !== undefined) {
+      fail(
+        "`baseExposures` over an extension shape — a shape's rows reach no exposure.",
+      );
+    }
+    if (spec.carry?.pick !== undefined) {
+      fail(
+        "`carry.pick` over an extension shape — its whole wire row is carried already.",
+      );
+    }
   }
+  const ownerName =
+    shape !== undefined
+      ? `extension shape (key "${shape.key}")`
+      : `entity "${(from as EntityRef | undefined)?.name}"`;
   const listed: [string, FieldDef][] = [];
   const carried: [string, FieldDef][] = [];
   const seen = new Set<string>();
@@ -258,7 +308,7 @@ export function resolveFieldsSpec(
   ): void => {
     if (field === undefined) {
       fail(
-        `${where} names "${name}", which is not a field of entity "${from?.name}".`,
+        `${where} names "${name}", which is not a wire field of ${ownerName}.`,
       );
     }
     if (seen.has(name)) fail(`"${name}" is declared twice (${where}).`);
@@ -266,15 +316,23 @@ export function resolveFieldsSpec(
     into.push([name, field!]);
   };
   const fromField = (name: string): FieldDef | undefined =>
-    from !== undefined && Object.hasOwn(from.fields, name)
+    from !== undefined &&
+    Object.hasOwn(from.fields, name) &&
+    (shape === undefined || Object.hasOwn(shape.schema.shape, name))
       ? from.fields[name]
       : undefined;
   for (const name of spec.pick ?? [])
     add(listed, name, fromField(name), "`pick`");
+  // A shape's rows are its whole wire row: what no list shows is carried.
+  if (shape !== undefined) {
+    for (const name of Object.keys(shape.schema.shape)) {
+      if (!seen.has(name)) add(carried, name, fromField(name), "the shape");
+    }
+  }
   for (const [name, field] of Object.entries(spec.fields ?? {})) {
-    if (fromField(name) !== undefined) {
+    if (from !== undefined && Object.hasOwn(from.fields, name)) {
       fail(
-        `own field "${name}" is named like a field of entity "${from!.name}" — pick it, or name it apart.`,
+        `own field "${name}" is named like a field of ${ownerName} — pick it, or name it apart.`,
       );
     }
     add(listed, name, field, "`fields`");
@@ -304,7 +362,8 @@ export function resolveFieldsSpec(
     if (domain !== null) filterable[name] = { domain } as FilterColumn;
   }
   const exposes: Record<string, EntityRef> = {};
-  if (from !== undefined && spec.baseExposures !== false) exposes.base = from;
+  if (from !== undefined && shape === undefined && spec.baseExposures !== false)
+    exposes.base = from as EntityRef;
   for (const [alias, ref] of Object.entries(spec.related ?? {})) {
     if (alias === "base") {
       fail("`related` names `base` — the base entity is `from`.");
@@ -340,4 +399,9 @@ export function resolveFieldsSpec(
         ),
       ),
   };
+}
+
+/** Whether `from` is an extension shape (its wire row is `schema`), not an entity ref. */
+export function isShape(from: LiveFrom): from is AnyExtensionShape {
+  return (from as { kind?: unknown }).kind !== "entity" && "schema" in from;
 }

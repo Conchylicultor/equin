@@ -2,7 +2,25 @@
 // pull `server/api`'s runtime surface. Cross-plugin consumers go through
 // `@plugins/conversations/plugins/agents/server/api`.
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import { AgentSchema, AgentLaunchWithStatusSchema } from "./schemas";
+import { nullable } from "@plugins/fields/core";
+import {
+  parsedTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { rankValueField } from "@plugins/fields/plugins/rank/plugins/config/core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
+import {
+  SavedSymbolNameSchema,
+  parseSavedSymbolName,
+} from "@plugins/ui/plugins/icons/plugins/saved-names/core";
+import {
+  DEFAULT_MODEL_CHOICE,
+  StoredModelChoiceSchema,
+} from "@plugins/conversations/plugins/model-provider/core";
+import { ConversationStatusSchema } from "@plugins/tasks/plugins/tasks-core/core";
+import { AgentLaunchConversationRefSchema } from "../core";
 
 export type { Agent, AgentLaunch, AgentLaunchWithStatus } from "./schemas";
 
@@ -27,7 +45,32 @@ export type { Agent, AgentLaunch, AgentLaunchWithStatus } from "./schemas";
 // Boot-critical (`preload: "boot"`): the sidebar and the conversation avatars
 // paint settled on the first frame.
 export const agentRows = liveCollection("agents.roster", {
-  row: AgentSchema,
+  carry: {
+    fields: {
+      id: textField(),
+      parentId: nullable(textField()),
+      name: textField(),
+      prompt: nullable(textField()),
+      // A family ("sonnet" — its newest version) or a pinned version; null =
+      // default. The inner default is never reached (nullable).
+      model: nullable(
+        parsedTextField(StoredModelChoiceSchema, {
+          default: DEFAULT_MODEL_CHOICE,
+        }),
+      ),
+      // A picked Material Symbols name; null = the default avatar.
+      icon: nullable(
+        parsedTextField(SavedSymbolNameSchema, {
+          default: parseSavedSymbolName("smart-toy"),
+        }),
+      ),
+      iconColor: nullable(textField()),
+      rank: rankValueField(),
+      createdAt: dateField(),
+      updatedAt: dateField(),
+      isFolder: boolField(),
+    },
+  },
   id: "id",
   all: {
     orderBy: [
@@ -63,7 +106,21 @@ export const agentRows = liveCollection("agents.roster", {
 //
 // Boot-critical (`preload: "boot"`): the avatars paint settled.
 export const agentLaunchRows = liveCollection("agent-launches", {
-  row: AgentLaunchWithStatusSchema,
+  carry: {
+    fields: {
+      id: textField(),
+      agentId: textField(),
+      taskId: textField(),
+      createdAt: dateField(),
+      latestConversationStatus: nullable(
+        parsedTextField(ConversationStatusSchema, { default: "starting" }),
+      ),
+      latestConversation: jsonField({
+        schema: AgentLaunchConversationRefSchema.nullable(),
+        default: null,
+      }),
+    },
+  },
   id: "id",
   all: {
     orderBy: [["createdAt", "asc"]],

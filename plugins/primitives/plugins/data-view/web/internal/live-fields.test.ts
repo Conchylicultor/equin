@@ -7,7 +7,10 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { z } from "zod";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
@@ -17,12 +20,6 @@ import {
   scopedLiveColumns,
   type WithContributedColumns,
 } from "@plugins/network/plugins/live/core";
-import {
-  liveBoolean,
-  liveInstant,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
-import { liveStringArray } from "@plugins/network/plugins/live/plugins/filter/core/testing";
 import { type FieldDef, type FilterOperatorSet } from "../../core";
 import { liveDataSource } from "./live-data-source";
 import {
@@ -31,26 +28,41 @@ import {
   resolveLiveFields,
 } from "./live-fields";
 
-const Thread = z.object({
-  id: z.string(),
-  subject: z.string(),
-  labelIds: z.array(z.string()),
-  unread: z.boolean(),
-  lastMessageAt: z.date(),
-});
-type Thread = z.infer<typeof Thread>;
+type Thread = {
+  id: string;
+  subject: string;
+  labelIds: string[];
+  unread: boolean;
+  lastMessageAt: Date;
+};
+// Every field but the id is listed — so filterable, in its own domain.
+const THREAD_FIELDS = {
+  subject: textField({ label: "Subject" }),
+  labelIds: stringListField({ label: "Labels" }),
+  unread: boolField({ label: "Unread" }),
+  lastMessageAt: dateField({ label: "Last message" }),
+};
+// The same row with only `subject` listed (a filter over it is the one a
+// declared filterable column offers); the rest ride on the row.
+const THREAD_SUBJECT_ONLY = {
+  fields: { subject: THREAD_FIELDS.subject },
+  carry: {
+    fields: {
+      id: textField(),
+      labelIds: THREAD_FIELDS.labelIds,
+      unread: THREAD_FIELDS.unread,
+      lastMessageAt: THREAD_FIELDS.lastMessageAt,
+    },
+  },
+  id: "id",
+} as const;
 
 let n = 0;
 const threads = () =>
   liveCollection(`test.data-view.live-source-${n++}`, {
-    row: Thread,
+    fields: THREAD_FIELDS,
+    carry: { fields: { id: textField() } },
     id: "id",
-    filterable: {
-      subject: liveText(),
-      labelIds: liveStringArray(),
-      unread: liveBoolean(),
-      lastMessageAt: liveInstant(),
-    },
     sortable: ["subject", "lastMessageAt"],
     default: { orderBy: [["lastMessageAt", "desc"]], limit: 10 },
     maxLimit: 30,
@@ -321,13 +333,11 @@ describe("resolveLiveFields — exposed columns", () => {
       }).exposure,
     );
     const c = liveCollection(`test.data-view.live-source-exposed-${n++}`, {
-      row: Thread,
-      id: "id",
-      filterable: { subject: liveText() },
+      ...THREAD_SUBJECT_ONLY,
       sortable: ["subject"],
       default: { orderBy: [["subject", "asc"]], limit: 10 },
       maxLimit: 30,
-      exposes: { base: threadsRef },
+      from: threadsRef,
     });
     const source = liveDataSource(c, { searchable: ["subject"] });
     const fields: FieldDef<WithContributedColumns<Thread>>[] = [
@@ -354,9 +364,7 @@ describe("resolveLiveFields — exposed columns", () => {
 describe("scoped columns (a surface's custom columns)", () => {
   const scopedThreads = () =>
     liveCollection(`test.data-view.live-source-${n++}`, {
-      row: Thread,
-      id: "id",
-      filterable: { subject: liveText() },
+      ...THREAD_SUBJECT_ONLY,
       sortable: ["subject"],
       default: { orderBy: [["subject", "asc"]], limit: 10 },
       maxLimit: 30,

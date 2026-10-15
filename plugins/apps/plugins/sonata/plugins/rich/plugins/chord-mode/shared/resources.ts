@@ -26,6 +26,6 @@ export type ChordModeRow = z.infer<typeof ChordModeRowSchema>;
  * `useLiveRow(chordModes, songId)`; `found: false` is an absent row, i.e. off.
  */
 export const chordModes = liveCollection("sonata-chord-mode", {
-  row: ChordModeRowSchema,
+  from: chordModeShape,
   id: "songId",
 });

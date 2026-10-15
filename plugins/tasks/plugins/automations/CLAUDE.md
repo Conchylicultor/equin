@@ -343,7 +343,7 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `automations.tasks:rows` (keyed, point)
   - Routes: `POST /api/automations/:automationId/launch-decisions`
 - Core:
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2` ×3
     - `conversations/model-provider` ×3
     - `fields/text/config` ×2
@@ -360,7 +360,6 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `framework/plugin-id.asPluginId`
     - `infra/endpoints.defineEndpoint`
     - `infra/entity-extensions.defineExtensionShape`
-    - `network/live/filter.liveText`
     - `primitives/pane.defineRoute`
     - `tasks/tasks-core.tasksEntityRef`
   - Exports (types):

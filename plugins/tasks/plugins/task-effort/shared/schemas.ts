@@ -36,6 +36,6 @@ export type TaskEffort = z.infer<typeof TaskEffortSchema>;
 // via its sub-ack. Served from the extension handle in
 // `server/internal/resource.ts`.
 export const taskEfforts = liveCollection("task-efforts", {
-  row: TaskEffortSchema,
+  from: taskEffortShape,
   id: "taskId",
 });

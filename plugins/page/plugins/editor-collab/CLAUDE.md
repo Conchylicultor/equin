@@ -82,6 +82,10 @@ bun test plugins/page/plugins/editor-collab/server/internal
     - `POST /api/blocks/:id/doc-update`
 - Core:
   - Uses:
+    - `fields.FieldsRecord`
+    - `fields.fieldsToZodObject`
+    - `fields/date/config.dateField`
+    - `fields/text/config.textField`
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveCollection`

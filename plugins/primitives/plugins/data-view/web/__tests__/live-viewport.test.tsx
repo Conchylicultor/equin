@@ -24,7 +24,6 @@ vi.mock("../internal/use-data-view-model", () => ({
 
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { z } from "zod";
 import {
   PluginProvider,
   type LoadedPlugin,
@@ -32,18 +31,11 @@ import {
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
 import { createLiveStateHarness } from "@plugins/primitives/plugins/live-state/web/testing";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import {
-  liveInstant,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import type {
-  DataViewId,
-  DataViewRenderProps,
-  FieldDef,
-  ViewState,
-} from "../../core";
+import type { DataViewId, DataViewRenderProps, ViewState } from "../../core";
 import { liveDataSource } from "../internal/live-data-source";
 import { defineDataViewSources } from "../internal/define-data-view-sources";
 import { MergedDataView } from "../components/merged-data-view";
@@ -55,34 +47,22 @@ const SECTION = { collapsed: false, hideWhenEmpty: false, description: null };
 
 const STORAGE_KEY = "test-live-viewport" as DataViewId;
 
-const Conv = z.object({
-  id: z.string(),
-  title: z.string(),
-  createdAt: z.date(),
-});
-type Conv = z.infer<typeof Conv>;
+type Conv = { id: string; title: string; createdAt: Date };
 
 let n = 0;
 const convs = () =>
   liveCollection(`test.data-view.live-viewport-${n++}`, {
-    row: Conv,
+    fields: {
+      title: textField({ label: "Title" }),
+      createdAt: dateField({ label: "Created" }),
+    },
+    carry: { fields: { id: textField() } },
     id: "id",
-    filterable: { title: liveText(), createdAt: liveInstant() },
     sortable: ["title", "createdAt"],
     default: { orderBy: [["createdAt", "desc"]], limit: 2 },
     maxLimit: 6,
   });
 type C = ReturnType<typeof convs>;
-
-const FIELDS: FieldDef<Conv>[] = [
-  { id: "title", label: "Title", type: "text", value: (c) => c.title },
-  {
-    id: "createdAt",
-    label: "Created",
-    type: "date",
-    value: (c) => c.createdAt,
-  },
-];
 
 /** The one view: a row per entry, marked with its row key as every view's is. */
 function TestList(props: DataViewRenderProps<unknown>): ReactElement {
@@ -159,7 +139,7 @@ function mount(c: C, state: ViewState) {
   }: {
     render: (bundle: never) => ReactElement;
   }): ReactElement {
-    return renderBundle({ fields: FIELDS, source } as never);
+    return renderBundle({ source } as never);
   }
   const plugin = {
     id: "data-view-live-viewport-test",

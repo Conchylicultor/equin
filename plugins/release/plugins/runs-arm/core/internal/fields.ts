@@ -48,6 +48,8 @@ const RELEASE_KINDS = Object.keys(RELEASE_KIND_OPTIONS) as [
  */
 export const releaseRunArm = liveArm(runs, RELEASE_RUN_KIND, {
   label: "Release",
+  // After build: the shipping pair, in pipeline order (`runs` core, "Arm order").
+  order: 20,
   fields: {
     kind: enumTextField(RELEASE_KINDS, {
       label: "Release kind",

@@ -28,6 +28,7 @@ const ledger = pgTable("rt_type_runs", {
 
 const columns = liveArm(runs, "typecheck", {
   label: "Typecheck",
+  order: 10,
   fields: {
     code: nullable(intField({ label: "Code" })),
     note: nullable(textField({ label: "Note" })),

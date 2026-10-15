@@ -1,9 +1,6 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
-import {
-  defineFieldExtensions,
-  defineItemActions,
-} from "@plugins/primitives/plugins/data-view/web";
+import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
 import type { EntryRow, ExplorerLens } from "../core";
 
 /**
@@ -23,13 +20,6 @@ export interface ExplorerLensItem {
  * in another surface — composes them all.
  */
 export const FileBrowserSlots = {
-  /**
-   * Extra fields of the tree DataView. A field with a `value` gets Sort and
-   * Filter for free; a field extension is a component, so its `value` may
-   * close over data it reads with hooks.
-   */
-  Fields: defineFieldExtensions<EntryRow>(),
-
   /**
    * A tree row's hover actions (Extract here on an archive, Copy path). Which
    * stay inline and which sit behind the row's `⋯` is authored in this slot's

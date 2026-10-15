@@ -2,7 +2,11 @@ import { z } from "zod";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
-import { rankField } from "@plugins/fields/plugins/rank/plugins/config/core";
+import {
+  rankField,
+  rankValueField,
+} from "@plugins/fields/plugins/rank/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 
 // One queue row: the conversation's position (`rank`) plus whether the user
@@ -42,9 +46,17 @@ export type QueueData = z.infer<typeof QueueDataSchema>;
 // `conversations-active` (the server half's `preloadRows`), so the queue's
 // all-or-nothing gate settles on the first render.
 export const queueRanks = liveCollection("queue-ranks", {
-  row: QueueRankRowSchema,
+  // Declared by fields, not `from: queueShape`: a shape's rows carry its
+  // columns' own fields, whose `rank` can only say `string` — the wire row
+  // decodes it into a `Rank` (`rankValueField`), the same keys as the shape.
+  carry: {
+    fields: {
+      conversationId: textField(),
+      rank: rankValueField(),
+      pinned: boolField(),
+    },
+  },
   id: "conversationId",
-  filterable: {},
   sortable: ["rank"],
   default: { orderBy: [["rank", "asc"]], limit: 100 },
   maxLimit: 500,

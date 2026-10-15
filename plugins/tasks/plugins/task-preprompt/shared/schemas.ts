@@ -32,6 +32,6 @@ export type TaskPreprompt = z.infer<typeof TaskPrepromptSchema>;
 // via its sub-ack. Served from the extension handle in
 // `server/internal/resource.ts`.
 export const taskPreprompts = liveCollection("task-preprompts", {
-  row: TaskPrepromptSchema,
+  from: taskPrepromptShape,
   id: "taskId",
 });

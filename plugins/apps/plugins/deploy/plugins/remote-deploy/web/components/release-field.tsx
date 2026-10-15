@@ -1,24 +1,27 @@
 import {
+  createContext,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
-import type {
-  FieldDef,
-  FieldExtensionProps,
-} from "@plugins/primitives/plugins/data-view/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
-import { useLive } from "@plugins/network/plugins/live/web";
-import { useServerHealthMap } from "@plugins/apps/plugins/deploy/plugins/health/web";
 import {
-  deployments,
-  type Deployment,
-} from "@plugins/apps/plugins/deploy/plugins/deployments/core";
-import { useDeploymentsListServerId } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
+  mapResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
+import type {
+  ClientFieldReaders,
+  ClientFieldsResolverProps,
+} from "@plugins/network/plugins/live/web";
+import {
+  useServerHealthMap,
+  type ServerHealthRow,
+} from "@plugins/apps/plugins/deploy/plugins/health/web";
+import type { Deployment } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import type { PlatformTag } from "@plugins/release/core";
-import { RELEASE_STATE_OPTIONS } from "../../core";
+import type { releaseFields } from "../../core";
 import {
   releaseStateOf,
   useReleaseInfo,
@@ -26,33 +29,39 @@ import {
 } from "../internal/use-release-info";
 import { ReleaseChip } from "./release-chip";
 
+type ReleaseFieldsRecord = NonNullable<(typeof releaseFields)["__fields"]>;
+
+const ReleaseInfosContext = createContext<ReadonlyMap<
+  string,
+  ReleaseInfo
+> | null>(null);
+
 /**
- * The `Release` column of the deployments list, contributed through
- * `Deployments.Fields` so the list plugin never names the release feature.
- *
- * It is an `enum` field with a custom `cell`, which is what buys the filter chip
- * and group-by for free — *what on this box is stale?* is then a question the
- * generic DataView chrome already answers.
- *
- * A field extension is handed no host rows, so it cannot simply read the
- * `deployments` collection's default window and hope that lines up with what
- * the host list shows — past the window's rank cutoff it wouldn't. Instead it
- * reads `useDeploymentsListServerId()` (published by `DeploymentsBody`) and
- * asks the SAME `useLive(deployments, { where: { serverId } })` query the host
- * list itself subscribes to, so the two share one subscription and can never
- * disagree about which rows exist.
- *
- * **Why the probes.** A field extension mounts once for the whole surface, but
- * the answer is per `(composition, platform)` — one query per row. Hooks cannot
- * be called in a loop, so each pair is asked by its own headless component and
- * folded back into one map. `value` then reads the map synchronously, which is
- * what makes filter/group/sort agree with the chips instead of trailing them.
+ * The `Release` cell: the chip of the row's probed info, read from the infos
+ * the resolver publishes around the list (a cell is handed only the field's
+ * value, the state — the chip also needs the snapshot behind it).
  */
-export function ReleaseField({
+export function ReleaseCell({ row }: { row: Deployment }): ReactNode {
+  const infos = useContext(ReleaseInfosContext);
+  if (infos === null) {
+    throw new Error("ReleaseCell rendered outside the release resolver.");
+  }
+  return <ReleaseChip info={infos.get(row.id)} />;
+}
+
+/**
+ * Resolves the deployments list's `release` client field.
+ *
+ * The answer is per `(composition, platform)` — one query per row. Hooks cannot
+ * be called in a loop, so each pair is asked by its own headless component and
+ * folded back into one map; the values read the map synchronously, which keeps
+ * filter/group/sort in agreement with the chips instead of trailing them. The
+ * value is `null` while unresolved (the column never showed pending).
+ */
+export function ReleaseFieldResolver({
+  rows,
   render,
-}: FieldExtensionProps<Deployment>): ReactNode {
-  const serverId = useDeploymentsListServerId();
-  const rows = useLive(deployments, { where: { serverId } });
+}: ClientFieldsResolverProps<Deployment, ReleaseFieldsRecord>): ReactNode {
   const [infos, setInfos] = useState<ReadonlyMap<string, ReleaseInfo>>(
     new Map(),
   );
@@ -65,34 +74,37 @@ export function ReleaseField({
     );
   }, []);
 
-  const fields = useMemo<FieldDef<Deployment>[]>(
-    () => [
-      {
-        id: "release",
-        label: "Release",
-        type: "enum",
-        align: "end",
-        options: RELEASE_STATE_OPTIONS,
-        value: (d) => releaseStateOf(infos.get(d.id)),
-        cell: (d) => <ReleaseChip info={infos.get(d.id)} />,
-      },
-    ],
-    [infos],
+  // Exactly the servers these rows belong to (today, one).
+  const serverIds = useMemo(
+    () => Array.from(new Set(rows.map((d) => d.serverId))),
+    [rows],
+  );
+  const health = useServerHealthMap(serverIds);
+
+  // Not known until the servers' platforms are (there is no candidate question
+  // before that): the column is pending, then each row reads its probed state
+  // synchronously — null while that row's probe has not answered.
+  const values = useMemo<
+    ResourceResult<ClientFieldReaders<Deployment, ReleaseFieldsRecord>>
+  >(
+    () =>
+      mapResource(health, () => ({
+        release: (d: Deployment) => releaseStateOf(infos.get(d.id)),
+      })),
+    [health, infos],
   );
 
   return (
-    <>
-      {matchResource(rows, {
-        // Nothing to probe until the rows land, and nothing to fake: the column
-        // simply has no answers yet, which `value: null` already says.
-        loading: () => null,
-        error: () => null,
-        ready: (loaded) => (
-          <CandidateProbes rows={loaded} onResolve={onResolve} />
-        ),
-      })}
-      {render(fields)}
-    </>
+    <ReleaseInfosContext.Provider value={infos}>
+      {health.status === "ready" ? (
+        <CandidateProbes
+          rows={rows}
+          platforms={health.data}
+          onResolve={onResolve}
+        />
+      ) : null}
+      {render(values)}
+    </ReleaseInfosContext.Provider>
   );
 }
 
@@ -100,31 +112,21 @@ export function ReleaseField({
  * One probe per row that has a platform to ask about. A server with no verified
  * platform has no candidate question at all — its rows carry no probe and their
  * cell renders nothing, the honest reading of "we have not discovered what this
- * box accepts". Until the verdicts load there is no question to ask yet either:
- * no probe, and the column still has no answers.
+ * box accepts". Until the verdicts load there is no question to ask yet either (no probe mounted).
  */
 function CandidateProbes({
   rows,
+  platforms,
   onResolve,
 }: {
   rows: readonly Deployment[];
+  platforms: ReadonlyMap<string, ServerHealthRow>;
   onResolve: (deploymentId: string, info: ReleaseInfo) => void;
 }): ReactNode {
-  // Exactly the servers these rows belong to (today, one — `rows` is already
-  // scoped to a single server's list — but this asks the question generically
-  // rather than assuming that scope).
-  const serverIds = useMemo(
-    () => Array.from(new Set(rows.map((d) => d.serverId))),
-    [rows],
-  );
-  const health = useServerHealthMap(serverIds);
-  // Headless: loading or failed, there is no question to ask yet, and the
-  // column simply has no answers (`value: null`) — nothing to fake.
-  if (health.status === "loading" || health.status === "error") return null;
   return (
     <>
       {rows.map((d) => {
-        const platform = health.data.get(d.serverId)?.platform ?? null;
+        const platform = platforms.get(d.serverId)?.platform ?? null;
         if (!platform) return null;
         return (
           <CandidateProbe
@@ -142,8 +144,8 @@ function CandidateProbes({
 
 /**
  * One `(composition, platform)` question, mounted as its own component so its
- * hooks are stable while the set of rows changes. Renders nothing — it exists to
- * hold a subscription and report its answer upward.
+ * hooks are stable while the set of rows changes. Renders nothing — it holds a
+ * subscription and reports its answer upward.
  */
 function CandidateProbe({
   deploymentId,
@@ -157,9 +159,6 @@ function CandidateProbe({
   onResolve: (deploymentId: string, info: ReleaseInfo) => void;
 }): null {
   const info = useReleaseInfo(composition, platform);
-  // `info` is memoized and `onResolve` is stable, so this fires only when the
-  // answer actually changes; the parent's setter bails out on an identical
-  // value, so there is no update loop.
   useEffect(() => {
     onResolve(deploymentId, info);
   }, [deploymentId, info, onResolve]);

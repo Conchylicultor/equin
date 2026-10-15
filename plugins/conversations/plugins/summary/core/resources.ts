@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   fieldsToZodObject,
   nullable,
@@ -37,7 +36,7 @@ export type Phase = z.infer<typeof PhaseSchema>;
 // app-minted text PK (no DB default); `generatedAt` defaults to now() in the DB.
 export const conversationSummaryFields = {
   id: idKindField(summaryIdKind),
-  conversationId: textField(),
+  conversationId: textField({ label: "Conversation" }),
   generatedAt: dateField(),
   model: textField(),
   turnCountAtGeneration: intField(),
@@ -68,10 +67,12 @@ export type ConversationSummary = z.infer<typeof ConversationSummarySchema>;
 // { conversationId }, limit: 1 })`: the window is ordered server-side, so its
 // first row IS the latest (`useLatestConversationSummary`). NOT preloaded —
 // route-scoped, it hydrates post-mount via its sub-ack.
+const { conversationId: summaryConversationId, ...summaryCarried } =
+  conversationSummaryFields;
 export const conversationSummaries = liveCollection("conversation-summaries", {
-  row: ConversationSummarySchema,
+  fields: { conversationId: summaryConversationId },
+  carry: { fields: summaryCarried },
   id: "id",
-  filterable: { conversationId: liveText() },
   sortable: ["generatedAt"],
   default: { orderBy: [["generatedAt", "desc"]], limit: 20 },
   maxLimit: 200,

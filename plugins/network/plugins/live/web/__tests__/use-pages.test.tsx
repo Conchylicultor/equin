@@ -40,7 +40,10 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { QueryClient } from "@tanstack/react-query";
-import { z } from "zod";
+import type { z } from "zod";
+import { fieldsToZodObject } from "@plugins/fields/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
 import {
   createLiveStateHarness,
@@ -52,21 +55,24 @@ import {
   scopedLiveColumns,
   type LiveWindowBounds,
 } from "@plugins/network/plugins/live/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { useLive } from "../internal/use-live";
 import type { LivePagesResult } from "../internal/use-pages";
 import type { LivePagesQuery } from "../internal/page-source";
 import { mintVisibleRange, type VisibleRange } from "../internal/visible-range";
 
-const Row = z.object({ id: z.string(), n: z.number(), title: z.string() });
+const ROW_FIELDS = {
+  id: textField({ label: "Id", filterable: false }),
+  n: intField({ label: "N", filterable: false }),
+  title: textField({ label: "Title" }),
+};
+const Row = fieldsToZodObject(ROW_FIELDS);
 type Row = z.infer<typeof Row>;
 
 let seq = 0;
 function collection() {
   return liveCollection(`test.use-pages.${seq++}`, {
-    row: Row,
+    fields: ROW_FIELDS,
     id: "id",
-    filterable: { title: liveText() },
     sortable: ["n"],
     default: { orderBy: [["n", "asc"]], limit: 2 },
     maxLimit: 4,
@@ -607,9 +613,8 @@ describe("useLive — a collection's pages, with a viewport", () => {
 
   it("a change of the column sets alone keeps the plan, its cuts and its rows", async () => {
     const c = liveCollection(`test.use-pages.${seq++}`, {
-      row: Row,
+      fields: ROW_FIELDS,
       id: "id",
-      filterable: { title: liveText() },
       sortable: ["n"],
       default: { orderBy: [["n", "asc"]], limit: 2 },
       maxLimit: 4,

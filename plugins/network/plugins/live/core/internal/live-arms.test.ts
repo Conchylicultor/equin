@@ -5,12 +5,11 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { z } from "zod";
 import { nullable } from "@plugins/fields/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { exposedColumns } from "./exposed-columns";
 import { liveCollection } from "./live-collection";
 import {
@@ -20,20 +19,19 @@ import {
   type LiveColumnsDeclaration,
 } from "./live-columns";
 
-const Run = z.object({
-  runKey: z.string(),
-  kind: z.string(),
-  label: z.string(),
-  startedAt: z.number(),
-});
+const RUN = {
+  runKey: textField({ label: "Key" }),
+  kind: textField({ label: "Kind" }),
+  label: textField({ label: "Label" }),
+  startedAt: intField({ label: "Started" }),
+};
 
 let seq = 0;
 const runs = () =>
   liveCollection(`test.live.arms-${seq++}`, {
-    row: Run,
+    fields: RUN,
     id: "runKey",
     arms: { discriminator: "kind" },
-    filterable: { kind: liveText(), label: liveText() },
     sortable: ["startedAt"],
     default: { orderBy: [["startedAt", "desc"]], limit: 10 },
     maxLimit: 30,
@@ -61,9 +59,8 @@ describe("liveCollection — the `arms` overload", () => {
 
   test("a single-table collection is `arms: null`", () => {
     const c = liveCollection(`test.live.arms-plain-${seq++}`, {
-      row: Run,
+      fields: RUN,
       id: "runKey",
-      filterable: {},
       sortable: ["startedAt"],
       default: { orderBy: [["startedAt", "desc"]], limit: 10 },
       maxLimit: 30,
@@ -71,11 +68,10 @@ describe("liveCollection — the `arms` overload", () => {
     expect(c.arms).toBeNull();
   });
 
-  test("runtime throws mirror the overload: exposes, columnScope, no default, a bad discriminator", () => {
+  test("runtime throws mirror the overload: from, columnScope, no default, a bad discriminator", () => {
     const base = {
-      row: Run,
+      fields: RUN,
       id: "runKey",
-      filterable: {},
       sortable: ["startedAt"],
       default: { orderBy: [["startedAt", "desc"]], limit: 10 },
       maxLimit: 30,
@@ -89,9 +85,9 @@ describe("liveCollection — the `arms` overload", () => {
       untyped(`test.live.arms-bad-${seq++}`, {
         ...base,
         arms: { discriminator: "kind" },
-        exposes: { base: entityRef("runs", {}) },
+        from: entityRef("runs", RUN),
       }),
-    ).toThrow(/exposes beside `arms`/);
+    ).toThrow(/from beside `arms`/);
     // The deleted `contributed` option fails loudly rather than being ignored.
     expect(() =>
       untyped(`test.live.arms-bad-${seq++}`, {
@@ -109,7 +105,7 @@ describe("liveCollection — the `arms` overload", () => {
     ).toThrow(/columnScope beside `arms`/);
     expect(() =>
       untyped(`test.live.arms-bad-${seq++}`, {
-        row: Run,
+        fields: RUN,
         id: "runKey",
         arms: { discriminator: "kind" },
       }),
@@ -128,27 +124,24 @@ describe("liveCollection — the `arms` overload", () => {
     ).toThrow(/is the id/);
   });
 
-  test("types: the overload refuses exposes / columnScope, and types the discriminator (T12)", () => {
+  test("types: the overload refuses `from` / columnScope, and types the discriminator (T12)", () => {
     // Never called — the assertions are the `@ts-expect-error`s.
     const _typesOnly = () => {
       const spec = {
-        row: Run,
+        fields: RUN,
         id: "runKey",
-        filterable: {},
         sortable: ["startedAt"],
         default: { orderBy: [["startedAt", "desc"]], limit: 10 },
         maxLimit: 30,
       } as const;
       // A union needs nothing beside `arms`: every window pages.
       liveCollection("t.a", { ...spec, arms: { discriminator: "kind" } });
-      // Overload resolution reports the refused spec at every field the last
-      // overload tried (the fields spelling's) has no place for.
+      // Overload resolution reports some refusals at the call, not the field.
+      // @ts-expect-error — a union's rows are no entity's
       liveCollection("t.b", {
         ...spec,
-        // @ts-expect-error — a union's columns are its arms', never exposed
         arms: { discriminator: "kind" },
-        // @ts-expect-error — (the same refusal, reported at the field)
-        exposes: { base: entityRef("runs", {}) },
+        from: entityRef("runs", RUN),
       });
       liveCollection("t.c", {
         ...spec,
@@ -156,9 +149,9 @@ describe("liveCollection — the `arms` overload", () => {
         arms: { discriminator: "kind" },
         columnScope: "s",
       });
+      // @ts-expect-error — the discriminator is a row field
       liveCollection("t.d", {
         ...spec,
-        // @ts-expect-error — the discriminator is a row field
         arms: { discriminator: "nope" },
       });
     };
@@ -171,6 +164,7 @@ describe("liveArm — the column set", () => {
     const c = runs();
     const build = liveArm(c, "build", {
       label: "Build",
+      order: 10,
       fields: BUILD_FIELDS,
       sortable: ["exitCode"],
     });
@@ -191,7 +185,11 @@ describe("liveArm — the column set", () => {
 
   test("read: null on another arm's row; its own slice parsed once; a missing own slice throws (A16)", () => {
     const c = runs();
-    const build = liveArm(c, "build", { label: "Build", fields: BUILD_FIELDS });
+    const build = liveArm(c, "build", {
+      label: "Build",
+      order: 10,
+      fields: BUILD_FIELDS,
+    });
     const other = {
       runKey: "backup:1",
       kind: "backup",
@@ -217,9 +215,8 @@ describe("liveArm — the column set", () => {
 
   test("throws on a collection without `arms`, and on an arm KIND_RE refuses", () => {
     const plain = liveCollection(`test.live.arms-plain-${seq++}`, {
-      row: Run,
+      fields: RUN,
       id: "runKey",
-      filterable: {},
       sortable: ["startedAt"],
       default: { orderBy: [["startedAt", "desc"]], limit: 10 },
       maxLimit: 30,
@@ -229,11 +226,11 @@ describe("liveArm — the column set", () => {
         // @ts-expect-error — only a union collection has arms
         plain,
         "build",
-        { label: "Build", fields: BUILD_FIELDS },
+        { label: "Build", order: 10, fields: BUILD_FIELDS },
       ),
     ).toThrow(/not declared with `arms`/);
     expect(() =>
-      liveArm(runs(), "a.b", { label: "A", fields: BUILD_FIELDS }),
+      liveArm(runs(), "a.b", { label: "A", order: 10, fields: BUILD_FIELDS }),
     ).toThrow(/plain identifier/);
   });
 });
@@ -243,6 +240,7 @@ describe("the codec switches on the owner (T11)", () => {
     const c = runs();
     const build = liveArm(c, "build", {
       label: "Build",
+      order: 10,
       fields: BUILD_FIELDS,
       sortable: ["exitCode"],
     });
@@ -277,7 +275,7 @@ describe("the codec switches on the owner (T11)", () => {
     ).toThrow(/arm columns "build" belong to "test.live.arms-/);
 
     // An exposure is read by a collection reaching its entity — never a union.
-    const runsEntity = entityRef("test_arm_runs", {});
+    const runsEntity = entityRef("test_arm_runs", RUN);
     const extra = exposedColumns(
       defineExtensionShape({
         key: "runKey",
@@ -292,13 +290,12 @@ describe("the codec switches on the owner (T11)", () => {
       } as never),
     ).toThrow(/which the collection's `exposes` does not reach/);
     const host = liveCollection(`test.live.arms-ex-${seq++}`, {
-      row: Run,
+      from: runsEntity,
+      pick: ["runKey", "kind", "label", "startedAt"],
       id: "runKey",
-      filterable: {},
       sortable: ["startedAt"],
       default: { orderBy: [["startedAt", "desc"]], limit: 10 },
       maxLimit: 30,
-      exposes: { base: runsEntity },
     });
     expect(() =>
       host.window.window.encode({

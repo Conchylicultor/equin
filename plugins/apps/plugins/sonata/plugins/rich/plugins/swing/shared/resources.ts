@@ -28,6 +28,6 @@ export type SwingRow = z.infer<typeof SwingRowSchema>;
  * with `useLiveRow(swings, songId)`; `found: false` is the song's own feel.
  */
 export const swings = liveCollection("sonata-swing", {
-  row: SwingRowSchema,
+  from: swingShape,
   id: "songId",
 });

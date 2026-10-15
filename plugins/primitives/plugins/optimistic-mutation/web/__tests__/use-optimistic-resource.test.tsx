@@ -21,6 +21,7 @@ import { act, render, renderHook, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { z } from "zod";
 import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import {
   createLiveStateHarness,
@@ -981,12 +982,10 @@ const namedValue = liveValue("test.optimistic-mutation.named", {
   params: ["name"],
 });
 
-const RankRow = z.object({ id: z.string(), rank: z.string() });
-type RankRow = z.infer<typeof RankRow>;
+type RankRow = { id: string; rank: string };
 const ranks = liveCollection("test.optimistic-mutation.ranks", {
-  row: RankRow,
+  carry: { fields: { id: textField(), rank: textField() } },
   id: "id",
-  filterable: {},
   sortable: ["rank"],
   default: { orderBy: [["rank", "asc"]], limit: 50 },
   maxLimit: 200,

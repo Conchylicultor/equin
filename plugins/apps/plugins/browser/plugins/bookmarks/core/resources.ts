@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { fieldsToZodObject, type FieldsRecord } from "@plugins/fields/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
@@ -30,9 +29,15 @@ export type BookmarkRow = z.infer<typeof BookmarkRowSchema>;
 // `{ where: { url }, limit: 1 }` read answered by the server, never a scan of
 // the default window, which would miss a bookmark past its first 100 rows.
 export const browserBookmarks = liveCollection("browser-bookmarks", {
-  row: BookmarkRowSchema,
+  fields: { url: textField({ label: "URL" }) },
+  carry: {
+    fields: {
+      id: bookmarkFields.id,
+      title: bookmarkFields.title,
+      createdAt: bookmarkFields.createdAt,
+    },
+  },
   id: "id",
-  filterable: { url: liveText() },
   sortable: ["createdAt"],
   default: { orderBy: [["createdAt", "asc"]], limit: 100 },
   maxLimit: 500,

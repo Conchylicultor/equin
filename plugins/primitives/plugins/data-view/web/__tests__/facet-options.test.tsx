@@ -28,7 +28,6 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { z } from "zod";
 import {
   ResourceError,
   queryKeyFor,
@@ -37,12 +36,10 @@ import {
   createLiveStateHarness,
   type LiveStateHarness,
 } from "@plugins/primitives/plugins/live-state/web/testing";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import {
-  liveBoolean,
-  liveInstant,
-  liveText,
-} from "@plugins/network/plugins/live/plugins/filter/core";
 import type {
   FieldDef,
   FieldOptionsResult,
@@ -57,26 +54,25 @@ import {
 } from "../internal/facet-options";
 import { ChipSelectFilterInput } from "../components/filter/chip-select-filter-input";
 
-const Report = z.object({
-  id: z.string(),
-  kind: z.string(),
-  source: z.string(),
-  noise: z.boolean(),
-  lastSeenAt: z.date(),
-});
-type Report = z.infer<typeof Report>;
+type Report = {
+  id: string;
+  kind: string;
+  source: string;
+  noise: boolean;
+  lastSeenAt: Date;
+};
 
 let n = 0;
 const reports = () =>
   liveCollection(`test.data-view.facets-${n++}`, {
-    row: Report,
-    id: "id",
-    filterable: {
-      kind: liveText(),
-      source: liveText(),
-      noise: liveBoolean(),
-      lastSeenAt: liveInstant(),
+    fields: {
+      kind: textField({ label: "Kind" }),
+      source: textField({ label: "Source" }),
+      noise: boolField({ label: "Noise" }),
+      lastSeenAt: dateField({ label: "Last seen" }),
     },
+    carry: { fields: { id: textField() } },
+    id: "id",
     sortable: ["lastSeenAt"],
     default: { orderBy: [["lastSeenAt", "desc"]], limit: 2 },
     maxLimit: 6,

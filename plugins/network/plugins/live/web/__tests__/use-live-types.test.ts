@@ -10,6 +10,9 @@
 
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { fieldsToZodObject } from "@plugins/fields/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import {
   liveCollection,
   liveValue,
@@ -20,19 +23,22 @@ import type { LivePagesResult } from "../internal/use-pages";
 import type { LiveListResult } from "../internal/use-live";
 import { mintVisibleRange } from "../internal/visible-range";
 
-const Row = z.object({ id: z.string(), n: z.number() });
+const ROW_FIELDS = {
+  id: textField({ label: "Id" }),
+  n: intField({ label: "N" }),
+};
+const Row = fieldsToZodObject(ROW_FIELDS);
 type Row = z.infer<typeof Row>;
 
 const windowed = liveCollection("test.use-live-types.window", {
-  row: Row,
+  fields: ROW_FIELDS,
   id: "id",
-  filterable: {},
   sortable: ["n"],
   default: { orderBy: [["n", "asc"]], limit: 2 },
   maxLimit: 4,
 });
 const lookup = liveCollection("test.use-live-types.lookup", {
-  row: Row,
+  fields: ROW_FIELDS,
   id: "id",
 });
 const viewport = mintVisibleRange({ kind: "measuring" });

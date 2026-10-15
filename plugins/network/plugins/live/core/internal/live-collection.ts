@@ -23,12 +23,10 @@ import {
   type LiveDecodedCountQuery,
   type LiveDecodedGroupQuery,
   type LiveDecodedQuery,
-  type LiveFilterable,
   type LiveGroup,
   type LiveGroupParams,
   type LiveGroupQuery,
   type LiveOrderBy,
-  type LiveReservedColumn,
   type LiveQuery,
   type LiveSortDirection,
   type LiveWindowBounds,
@@ -45,14 +43,17 @@ import {
 } from "./live-columns";
 import {
   isFieldsSpec,
+  isShape,
   resolveFieldsSpec,
   type FieldsRow,
   type FieldsSpecExposes,
   type FieldsSpecFilterable,
+  type FromEntity,
   type FromFields,
   type LabelledKeys,
   type LiveFields,
   type LiveFieldsSpec,
+  type LiveFrom,
   type LiveRelated,
   type RequireLabel,
 } from "./live-fields";
@@ -220,16 +221,15 @@ export interface LiveRowsCollection<Row> {
    */
   exposes: LiveExposes | null;
   /**
-   * Declared in the fields spelling (`from` / `pick` / `fields`): the fields
-   * every list of it shows, by id, in declaration order — their labels, types,
-   * options and filter domains (see {@link LiveFields}). `null` for the old
-   * `row` spelling, whose lists declare their fields by hand.
+   * The fields every list of it shows (`pick` and own `fields`), by id, in
+   * declaration order — their labels, types, options and filter domains (see
+   * {@link LiveFields}).
    */
-  fields: LiveFields | null;
+  fields: LiveFields;
   /**
-   * Declared in the fields spelling with `from`: the entity its rows are —
-   * whose presentation (`FieldPresentation.Register({ owner: entity })`) its
-   * lists apply to the picked fields. `null` otherwise.
+   * The entity its rows are (`from: entityRef`) — whose presentation
+   * (`FieldPresentation.Register({ owner: entity })`) its lists apply to the
+   * picked fields. `null` over an extension shape or no `from`.
    */
   from: EntityRef | null;
 }
@@ -565,7 +565,7 @@ export type LiveFieldsForm<W, Al, S extends string, Cn, R> = [W] extends [
  * `key` stays a positional string literal: the build scanners read it statically.
  */
 export function liveCollection<
-  const E extends EntityRef | undefined = undefined,
+  const E extends LiveFrom | undefined = undefined,
   const P extends LabelledKeys<FromFields<E>> = never,
   const CP extends keyof FromFields<E> & string = never,
   const OF extends FieldsRecord = Record<never, never>,
@@ -593,7 +593,7 @@ export function liveCollection<
       ? FieldsRow<E, P, CP, OF, CF>
       : WithContributedColumns<FieldsRow<E, P, CP, OF, CF>>,
   Al
-> & { fields: LiveFields<P | (keyof OF & string)>; from: E | null };
+> & { fields: LiveFields<P | (keyof OF & string)>; from: FromEntity<E> };
 export function liveCollection<
   const OF extends FieldsRecord,
   const CF extends FieldsRecord = Record<never, never>,
@@ -627,51 +627,7 @@ export function liveCollection<
   D
 > & { fields: LiveFields<keyof OF & string>; from: null };
 export function liveCollection<
-  Row,
-  const F extends LiveFilterable<Row>,
-  const S extends keyof Row & string = never,
-  const D extends keyof Row & string = never,
->(
-  key: string,
-  spec: LiveArmsSpec<Row, F, S, D> & {
-    filterable: {
-      [
-        K in Exclude<keyof F, keyof Row> | Extract<keyof F, LiveReservedColumn>
-      ]: never;
-    };
-  },
-): LiveArmsCollection<Row, F, S, D>;
-export function liveCollection<
-  Row,
-  const F extends LiveFilterable<Row>,
-  const S extends keyof Row & string = never,
-  const Cn extends true | undefined = undefined,
-  const Ex extends LiveExposes | undefined = undefined,
->(
-  key: string,
-  spec: LiveCollectionSpec<Row, F, S> & {
-    count?: Cn;
-    exposes?: Ex;
-    filterable: {
-      [
-        K in Exclude<keyof F, keyof Row> | Extract<keyof F, LiveReservedColumn>
-      ]: never;
-    };
-  },
-): LiveCollectionOf<Row, F, S, Cn, Ex>;
-export function liveCollection<
-  Row,
-  const Al extends LiveAllOrder<Row> | undefined = undefined,
-  const Ex extends LiveExposes | undefined = undefined,
->(
-  key: string,
-  spec: LiveNoWindowSpec<Row, Al> & { exposes?: Ex },
-): LiveNoWindowCollection<
-  [Ex] extends [undefined] ? Row : WithContributedColumns<Row>,
-  Al
->;
-export function liveCollection<
-  const E extends EntityRef | undefined = undefined,
+  const E extends LiveFrom | undefined = undefined,
   const P extends LabelledKeys<FromFields<E>> = never,
   const CP extends keyof FromFields<E> & string = never,
   const OF extends FieldsRecord = Record<never, never>,
@@ -697,27 +653,28 @@ export function liveCollection<
   S,
   Cn,
   FieldsSpecExposes<E, R, B>
-> & { fields: LiveFields<P | (keyof OF & string)>; from: E | null };
+> & { fields: LiveFields<P | (keyof OF & string)>; from: FromEntity<E> };
 export function liveCollection<Row, F, S extends string>(
   key: string,
-  declared:
-    | LiveCollectionSpec<Row, F, S>
-    | LiveLookupSpec<Row>
-    | LiveArmsSpec<Row, F, S, string>
-    | LiveAllSpec<Row>
-    | LiveFieldsSpec<
-        EntityRef | undefined,
-        string,
-        string,
-        FieldsRecord,
-        FieldsRecord,
-        LiveRelated | undefined
-      >,
+  declared: LiveFieldsSpec<
+    LiveFrom | undefined,
+    string,
+    string,
+    FieldsRecord,
+    FieldsRecord,
+    LiveRelated | undefined
+  >,
 ): unknown {
-  // The fields spelling derives the old one's `row`, `filterable` and
-  // `exposes` (`./live-fields`), then mints exactly as it does — and carries
-  // its fields' descriptors.
-  if (isFieldsSpec(declared)) {
+  // A collection declares its FIELDS (`./live-fields`); its row schema, filter
+  // domains and the entities it reaches are derived from them, then minted.
+  // The old `row` / `filterable` / `exposes` spelling is gone (fields declared
+  // once, phase 2b): an untyped caller still spelling it is told so.
+  if (!isFieldsSpec(declared)) {
+    throw new Error(
+      `liveCollection("${key}"): declare the collection's fields — \`from\` (an entity or an extension shape) with \`pick\`, own \`fields\`, \`carry\` — the \`row\` / \`filterable\` / \`exposes\` spelling no longer exists.`,
+    );
+  }
+  {
     const fieldsSpec = declared as unknown as Parameters<
       typeof resolveFieldsSpec
     >[1] & {
@@ -768,23 +725,19 @@ export function liveCollection<Row, F, S extends string>(
           ?.orderBy ?? []
       ).map(([f]) => f),
     ];
+    const from = fieldsSpec.from;
     return {
       ...minted,
       fields: resolved.fields(sortable),
-      from: fieldsSpec.from ?? null,
+      from: from !== undefined && !isShape(from) ? from : null,
     };
   }
-  return mintCollection(
-    key,
-    declared as
-      | LiveCollectionSpec<Row, F, S>
-      | LiveLookupSpec<Row>
-      | LiveArmsSpec<Row, F, S, string>
-      | LiveAllSpec<Row>,
-  );
 }
 
-/** Mint a declaration in the old spelling (`row`, `filterable`, `exposes`) — every form. */
+/**
+ * Mint a declaration from what its fields derive (`row`, `filterable`,
+ * `exposes` — internal: no caller spells them) — every form.
+ */
 function mintCollection<Row, F, S extends string>(
   key: string,
   spec:
@@ -1007,7 +960,8 @@ function rowsPart<Row>(
     row: spec.row,
     rowKeys: Object.keys(spec.row.shape) as (keyof Row & string)[],
     exposes,
-    fields: null,
+    // Set by `liveCollection` from the declaration's fields.
+    fields: Object.freeze({}),
     from: null,
   };
 }

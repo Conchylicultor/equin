@@ -1,23 +1,24 @@
 import { describe, expect, it } from "bun:test";
 import { z } from "zod";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
+import { nullable } from "@plugins/fields/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveCollection, liveValue } from "../../core";
 import { startPages } from "../../shared/page-plan";
 import { pageZeroParams } from "../testing";
 import { pageSourceOf } from "./page-source";
 
-const Row = z.object({
-  id: z.string(),
-  title: z.string(),
-  endedAt: z.coerce.date().nullable(),
-});
+const ROW_FIELDS = {
+  id: textField({ label: "Id", filterable: false }),
+  title: textField({ label: "Title" }),
+  endedAt: nullable(dateField({ label: "Ended", filterable: false })),
+};
 
 let seq = 0;
 const scrolled = (limit: number) =>
   liveCollection(`test.page-source.${seq++}`, {
-    row: Row,
+    fields: ROW_FIELDS,
     id: "id",
-    filterable: { title: liveText() },
     sortable: ["endedAt", "title"],
     default: { orderBy: [["endedAt", "desc"]], limit },
     maxLimit: 4 * limit,
@@ -31,9 +32,11 @@ describe("pageSourceOf — a collection's window", () => {
     }
     // A preloaded one, declared like the conversations' `conversationsGone`.
     const booted = liveCollection(`test.page-source.${seq++}`, {
-      row: Row,
+      fields: {
+        ...ROW_FIELDS,
+        title: textField({ label: "Title", filterable: false }),
+      },
       id: "id",
-      filterable: {},
       sortable: ["endedAt"],
       default: { orderBy: [["endedAt", "desc"]], limit: 50 },
       maxLimit: 500,
