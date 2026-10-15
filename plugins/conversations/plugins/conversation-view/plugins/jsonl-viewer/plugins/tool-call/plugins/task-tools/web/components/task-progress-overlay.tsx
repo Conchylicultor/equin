@@ -8,6 +8,10 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import {
+  FoldMotion,
+  useCollapsible,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { useTaskAggregate, type TaskEntry } from "./use-task-aggregate";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -85,7 +89,11 @@ function TaskRow({ task }: { task: TaskEntry }) {
 export function TaskProgressOverlay() {
   const { tasks, completedCount, totalCount, shouldShow } = useTaskAggregate();
   const [dismissed, setDismissed] = useState(false);
-  const [expanded, setExpanded] = useState(true);
+  const {
+    open: expanded,
+    triggerProps,
+    contentProps,
+  } = useCollapsible({ defaultOpen: true });
 
   if (!shouldShow || dismissed) return null;
 
@@ -117,8 +125,8 @@ export function TaskProgressOverlay() {
             <Fill />
             <Stack direction="row" gap="xs" align="center">
               <button
-                type="button"
-                onClick={() => setExpanded((v) => !v)}
+                {...triggerProps}
+                aria-label={expanded ? "Collapse tasks" : "Expand tasks"}
                 className="rounded-md p-2xs text-muted-foreground hover:bg-accent hover:text-foreground"
               >
                 {expanded ? (
@@ -136,12 +144,14 @@ export function TaskProgressOverlay() {
               </button>
             </Stack>
           </Stack>
-          {expanded && tasks.length > 0 && (
-            <Scroll className="max-h-[180px] border-t border-border/40 py-xs">
-              {tasks.map((task) => (
-                <TaskRow key={task.taskId} task={task} />
-              ))}
-            </Scroll>
+          {tasks.length > 0 && (
+            <FoldMotion {...contentProps}>
+              <Scroll className="max-h-[180px] border-t border-border/40 py-xs">
+                {tasks.map((task) => (
+                  <TaskRow key={task.taskId} task={task} />
+                ))}
+              </Scroll>
+            </FoldMotion>
           )}
         </div>
       </Center>

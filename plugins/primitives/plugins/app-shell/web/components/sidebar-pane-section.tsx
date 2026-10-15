@@ -9,6 +9,7 @@ import { type ComponentType, type ReactNode } from "react";
 import {
   useCollapsible,
   CollapsibleChevron,
+  FoldMotion,
 } from "@plugins/primitives/plugins/collapsible/web";
 
 export function SidebarPaneSection({
@@ -24,7 +25,7 @@ export function SidebarPaneSection({
   defaultOpen?: boolean;
   children: ReactNode;
 }) {
-  const { open, triggerControlProps, contentId } = useCollapsible({
+  const { open, triggerControlProps, contentProps } = useCollapsible({
     defaultOpen,
   });
   return (
@@ -41,15 +42,18 @@ export function SidebarPaneSection({
         {LabelExtra && <LabelExtra />}
         <CollapsibleChevron open={open} className="ml-auto size-4" />
       </SidebarGroupLabel>
-      {open && (
+      <FoldMotion
+        {...contentProps}
+        // eslint-disable-next-line layout/no-adhoc-layout -- the fold box is the section's flexible cell in SidebarGroup's flex column (the fold caps its height, so its siblings take the room back as it closes); the body inside fills it
+        className="flex min-h-0 flex-1 flex-col"
+      >
         <SidebarGroupContent
-          id={contentId}
           // eslint-disable-next-line layout/no-adhoc-layout -- shadcn SidebarGroupContent is the flexible scrolling body of the section; flex/min-h-0/overflow-hidden configure the third-party component's own box
           className="min-h-0 flex flex-1 flex-col overflow-hidden"
         >
           {children}
         </SidebarGroupContent>
-      )}
+      </FoldMotion>
     </SidebarGroup>
   );
 }

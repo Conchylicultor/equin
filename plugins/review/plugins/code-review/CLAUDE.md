@@ -9,8 +9,8 @@
   - Contributes:
     - `ReviewSlots.Section` "Code Review" → `CodeReviewSection`
     - `ConfigV2.WebRegister` "config"
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/collapsible` ×6
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/collapsible` ×7
     - `config_v2` ×2
     - `conversations/conversation-view/code` ×2
     - `primitives/live-state` ×2

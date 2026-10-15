@@ -3533,26 +3533,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/sync`
               - `apps/mail/threads`
         - **`mail-html`** — Privacy-safe email HTML renderer: <MailHtml> runs a DOMPurify sanitize → remote-image gating (proxied only after opt-in) → cid: inline-image resolution → quoted-history collapse pipeline, injected inside a style-scoped container.
-          - Cross-plugin:
-            - Imported by: `apps/mail/reading-pane`
           - Web:
+            - Uses:
+              - `primitives/collapsible.FoldMotion`
+              - `primitives/collapsible.useCollapsible`
             - Exports (types): `MailHtmlProps`
             - Exports (values): `MailHtml`
+          - Cross-plugin:
+            - Imported by: `apps/mail/reading-pane`
         - **`reading-pane`** — Mail reading pane: the threadPane Miller column showing a thread's newest messages oldest→newest (live key-range pages of 100 — Load older messages adds the next page, up to 500), each a collapsible card (newest expanded) with sender header, hydrated HTML/text body (privacy-safe images, inline cid: resolution), and attachment chips. Reading pane server: serves the thread-messages live collection (threadMessages) over mail_messages, so a reply/flag/hydration in an open thread pushes automatically.
           - Web:
             - Slots: `threadPane.Actions`
             - Slot contributors: `threadPane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "mail-thread"
-            - Uses: 28 symbols — full list in [`plugins/apps/plugins/mail/plugins/reading-pane/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/reading-pane/REFERENCE.md)
+            - Uses: 29 symbols — full list in [`plugins/apps/plugins/mail/plugins/reading-pane/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/reading-pane/REFERENCE.md)
               - `primitives/pane` ×3
               - `apps/mail/attachments` ×2
+              - `primitives/collapsible` ×2
               - `primitives/css/spacing` ×2
               - `primitives/css/ui-kit` ×2
               - `apps/mail/mail-html.MailHtml`
               - `infra/endpoints.fetchEndpoint`
               - `network/live.useLive`
               - `primitives/avatar.Avatar`
-              - `primitives/collapsible.useCollapsible`
               - `primitives/css/center.Center`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/fill.Fill`
@@ -4022,7 +4025,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
               - `PageTree.RowActions` "delete" → `DeletePageAction`
               - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-            - Uses: 79 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
+            - Uses: 80 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
               - `primitives/pane` ×9
               - `page/editor` ×7
               - `primitives/data-view` ×5
@@ -4034,6 +4037,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/pages/shell` ×2
               - `infra/endpoints` ×2
               - `primitives/breadcrumb` ×2
+              - `primitives/collapsible` ×2
               - `primitives/css/control-panel` ×2
               - `primitives/hover-reveal` ×2
               - `primitives/usage-rank` ×2
@@ -4042,7 +4046,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/trash.useUndoableTrash`
               - `page/links.Backlinks`
               - `primitives/app-shell.SidebarItem`
-              - `primitives/collapsible.useCollapsible`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
               - `primitives/css/grid.Grid`
@@ -6679,6 +6682,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/shell.useSonataApp`
                   - `infra/endpoints.fetchEndpoint`
                   - `infra/endpoints.useEndpointMutation`
+                  - `primitives/collapsible.FoldMotion`
+                  - `primitives/collapsible.useCollapsible`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/fill.Fill`
@@ -8884,9 +8889,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Auth.ScopeRequirement` ← `backup.targets.google-drive`
       - `Auth.ScopeRequirement` ← `integrations.gmail`
       - `accountsPane.Actions` ← `primitives.pane`
-    - Uses: 28 symbols — full list in [`plugins/auth/REFERENCE.md`](../plugins/auth/REFERENCE.md)
+    - Uses: 32 symbols — full list in [`plugins/auth/REFERENCE.md`](../plugins/auth/REFERENCE.md)
       - `primitives/css/ui-kit` ×5
       - `infra/endpoints` ×4
+      - `primitives/collapsible` ×4
       - `primitives/live-state` ×4
       - `primitives/pane` ×3
       - `config_v2/settings.configNavPane`
@@ -10090,6 +10096,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `network/live.useLive`
           - `primitives/collapsible.CollapsibleChevron`
+          - `primitives/collapsible.FoldMotion`
           - `primitives/css/column.Column`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
@@ -12417,6 +12424,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Web:
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
+                  - `primitives/collapsible.FoldMotion`
                   - `primitives/collapsible.useCollapsible`
                   - `primitives/css/card.Card`
                   - `primitives/css/fill.Fill`
@@ -13112,6 +13120,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `conversations/conversation-view/jsonl-viewer.useTranscriptEvents`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `primitives/collapsible.FoldMotion`
+                      - `primitives/collapsible.useCollapsible`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/badge.formatStatusLabel`
                       - `primitives/css/center.Center`
@@ -13156,15 +13166,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Contributes:
                       - `JsonlViewerTool.Renderer` "Workflow" → `WorkflowToolView`
                       - `Pane.Register` "workflow-node"
-                    - Uses: 31 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md)
+                    - Uses: 32 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md)
                       - `primitives/pane` ×4
                       - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
+                      - `primitives/collapsible` ×2
                       - `primitives/css/badge` ×2
                       - `primitives/css/spacing` ×2
                       - `conversations/conversation-view.conversationPane`
                       - `conversations/model-provider.familyClass`
                       - `network/live.useLive`
-                      - `primitives/collapsible.useCollapsible`
                       - `primitives/css/card.Card`
                       - `primitives/css/center.Center`
                       - `primitives/css/cluster.Cluster`
@@ -13399,7 +13409,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Conversation.AbovePromptInput` → `OpStatusBanner`
               - `Item.Chips` → `OpStatusChip`
               - `queue-actions` "open-conversation" → `OpenConversationAction`
-            - Uses: 34 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md)
+            - Uses: 35 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md)
               - `primitives/data-view` ×5
               - `primitives/live-state` ×4
               - `conversations/conversation-view` ×2
@@ -13410,6 +13420,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/profiling/ops.opDetailPane`
               - `infra/host/machine-sleep.useSleepNowForFold`
               - `network/live.useLive`
+              - `primitives/collapsible.FoldMotion`
               - `primitives/css/clip.Clip`
               - `primitives/css/inline.Inline`
               - `primitives/css/line.Line`
@@ -13688,11 +13699,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Conversation.AbovePromptInput` → `RunningAgentsBand`
               - `TranscriptStats.Item` "agents" → `AgentsStat`
-            - Uses: 33 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/running-agents/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/running-agents/REFERENCE.md)
+            - Uses: 34 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/running-agents/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/running-agents/REFERENCE.md)
               - `conversations/conversation-view/jsonl-viewer/background-shells` ×4
+              - `primitives/collapsible` ×4
               - `conversations/conversation-view/jsonl-viewer/transcript-stats` ×3
               - `conversations/conversation-view/jsonl-viewer` ×3
-              - `primitives/collapsible` ×3
               - `conversations/conversation-view/jsonl-viewer/subagents` ×2
               - `primitives/css/fill` ×2
               - `primitives/data-view` ×2
@@ -13802,6 +13813,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view.Conversation`
               - `network/live.useLiveRow`
               - `primitives/collapsible.CollapsibleChevron`
+              - `primitives/collapsible.FoldMotion`
               - `primitives/collapsible.useCollapsible`
               - `primitives/css/fill.Fill`
               - `primitives/css/rigid.rigidClass`
@@ -17912,6 +17924,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.SingleLineProvider`
+              - `primitives/virtual-rows/row-fold.RowFoldProps`
+              - `primitives/virtual-rows/row-fold.useRowFold`
               - `ui/icons.Icon`
           - Server:
             - Contributes: `trace-event-class` "spans"
@@ -20679,9 +20693,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 161 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 162 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×50
-              - `primitives` ×26
+              - `primitives` ×27
               - `page` ×24
               - `conversations` ×19
               - `debug` ×6
@@ -29183,6 +29197,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/plugin-view.PluginViewSlots`
               - `plugin-meta/plugin-view.SectionCount`
               - `primitives/collapsible.CollapsibleChevron`
+              - `primitives/collapsible.FoldMotion`
               - `primitives/collapsible.useCollapsible`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
@@ -29243,6 +29258,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/plugin-view.PluginViewSlots`
               - `plugin-meta/plugin-view.SectionCount`
               - `primitives/collapsible.CollapsibleChevron`
+              - `primitives/collapsible.FoldMotion`
               - `primitives/collapsible.useCollapsible`
               - `primitives/css/center.Center`
               - `primitives/css/row.Row`
@@ -29422,10 +29438,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slot contributors:
           - `AppShell.Framing` ← `ui.sidebar-framing`
           - `AppShell.Brand` ← `apps-core.app-launcher`
-        - Uses: 29 symbols — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
+        - Uses: 30 symbols — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
           - `primitives/css/ui-kit` ×13
           - `primitives/pane` ×4
-          - `primitives/collapsible` ×2
+          - `primitives/collapsible` ×3
           - `primitives/slot-render` ×2
           - `primitives/bar.Bar`
           - `primitives/css/clip.Clip`
@@ -29598,6 +29614,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/icons.Icon`
         - Exports (types):
           - `CollapsibleChevronProps`
+          - `CollapsibleContentBindProps`
           - `CollapsibleContentProps`
           - `CollapsibleCtx`
           - `CollapsibleProps`
@@ -29621,18 +29638,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useCollapsibleContext`
           - `useExpandAll`
       - Cross-plugin:
-        - Imported by: 42 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+        - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+          - `conversations` ×10
           - `ui` ×9
-          - `conversations` ×8
-          - `primitives` ×7
-          - `apps` ×6
+          - `apps` ×8
+          - `primitives` ×8
           - `plugin-meta` ×4
           - `review` ×3
+          - `auth`
           - `build/build-logs`
           - `code-explorer/commit-detail`
           - `debug/read-set`
           - `reorder/node-types/header`
           - `shell/health-report`
+      - Core:
+        - Exports (values):
+          - `FOLD_EASING`
+          - `FOLD_MS`
     - **`collapsible-wrap`** — Wraps overflowing children to multiple lines, clamped to N rows by default with a chevron toggle to reveal the rest. Force-expands while reorder edit mode is active.
       - Web:
         - Uses:
@@ -31147,13 +31169,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/notifications`
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
       - Web:
-        - Uses: 21 symbols — full list in [`plugins/primitives/plugins/data-table/REFERENCE.md`](../plugins/primitives/plugins/data-table/REFERENCE.md)
+        - Uses: 23 symbols — full list in [`plugins/primitives/plugins/data-table/REFERENCE.md`](../plugins/primitives/plugins/data-table/REFERENCE.md)
           - `primitives/css/ui-kit` ×4
           - `primitives/multi-select` ×3
           - `primitives/css/sticky/stack` ×2
           - `primitives/css/sticky` ×2
           - `primitives/dom/element-size` ×2
           - `primitives/row-actions` ×2
+          - `primitives/virtual-rows/row-fold` ×2
           - `primitives/css/center.Center`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
@@ -31731,10 +31754,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
           - Web:
             - Contributes: `DataViewSlots.View` "List" → `ListView`
-            - Uses: 43 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
+            - Uses: 44 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
               - `primitives/data-view` ×24
               - `primitives/rank-reorder` ×3
               - `primitives/css/spacing` ×2
+              - `primitives/collapsible.FoldMotion`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
               - `primitives/css/clip.clipClasses`
@@ -35323,8 +35347,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slot contributors: `Tree.Disclosure` ← `ui.tree-disclosure`
         - Uses: 34 symbols — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
           - `primitives/css/ui-kit` ×6
-          - `primitives/collapsible` ×3
           - `primitives/multi-select` ×3
+          - `primitives/collapsible` ×2
           - `primitives/rank-reorder` ×2
           - `primitives/row-actions` ×2
           - `primitives/search` ×2
@@ -35342,6 +35366,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/link-gesture.linkProps`
           - `primitives/loading.Loading`
           - `primitives/slot-render.renderIsolated`
+          - `primitives/virtual-rows/row-fold.useRowFold`
           - `primitives/virtual-rows.VirtualRows`
           - `ui/icons.Icon`
         - Exports (types):
@@ -35636,6 +35661,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.cn`
           - `primitives/dom/auto-scroll.findScrollParent`
           - `primitives/dom/element-size.useResizeObserver`
+          - `primitives/virtual-rows/row-fold.useRowFold`
         - Exports (types):
           - `UseVirtualRowsOptions`
           - `UseVirtualRowsResult`
@@ -35652,6 +35678,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-view/list`
           - `primitives/icon-picker`
           - `primitives/tree`
+      - Plugins:
+        - **`row-fold`** — Disclosure motion for flat lists: useRowFold — given the rows and the open keys they were flattened under, rows a disclosure reveals grow in, rows it hides fold out (kept drawn until gone) and the rows below slide; any other change (scroll, search, live data, paging) lands as is. Owned by the flat renderers (VirtualRows, DataTable). Core: the pure disclosure diff; the fold timing is collapsible's (FOLD_MS / FOLD_EASING), one clock for every fold.
+          - Cross-plugin:
+            - Imported by:
+              - `debug/trace/spans`
+              - `primitives/data-table`
+              - `primitives/tree`
+              - `primitives/virtual-rows`
+          - Web:
+            - Exports (types):
+              - `RowFold`
+              - `RowFoldHostProps`
+              - `RowFoldProps`
+              - `UseRowFoldOptions`
+            - Exports (values): `useRowFold`
+          - Core:
+            - Exports (types):
+              - `AwaitedReveal`
+              - `FoldingRow`
+              - `IsStandIn`
+              - `RowDisclosure`
+            - Exports (values):
+              - `awaitedReveal`
+              - `detectContinuation`
+              - `detectDisclosure`
+              - `NOTHING_AWAITED`
+              - `withFoldingRows`
 
 - **`release`** — Release engine web presence: eagerly registers the boot-critical release.previews live value so boot-snapshot can hydrate it before first paint, independent of the (lazy) Studio release UI. Local composition release lifecycle engine: run, observe, preview F4 artifacts.
   - Web:
@@ -35985,6 +36038,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `ReorderNodes.NodeType` "header"
             - Uses:
               - `primitives/collapsible.CollapsibleChevron`
+              - `primitives/collapsible.FoldMotion`
+              - `primitives/collapsible.useCollapsible`
               - `primitives/css/center.Center`
               - `primitives/css/line.Line`
               - `primitives/css/rigid.rigidClass`
@@ -36534,8 +36589,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `ReviewSlots.Section` "Code Review" → `CodeReviewSection`
           - `ConfigV2.WebRegister` "config"
-        - Uses: 30 symbols — full list in [`plugins/review/plugins/code-review/REFERENCE.md`](../plugins/review/plugins/code-review/REFERENCE.md)
-          - `primitives/collapsible` ×6
+        - Uses: 31 symbols — full list in [`plugins/review/plugins/code-review/REFERENCE.md`](../plugins/review/plugins/code-review/REFERENCE.md)
+          - `primitives/collapsible` ×7
           - `config_v2` ×2
           - `conversations/conversation-view/code` ×2
           - `primitives/live-state` ×2
@@ -36583,13 +36638,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.slots.render-diff`
           - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.structure.render-diff`
         - Contributes: `ReviewSlots.Section` "Plugin Changes" → `PluginChangesSection`
-        - Uses:
+        - Uses: 22 symbols — full list in [`plugins/review/plugins/plugin-changes/REFERENCE.md`](../plugins/review/plugins/plugin-changes/REFERENCE.md)
+          - `primitives/collapsible` ×4
+          - `primitives/css/badge` ×2
+          - `primitives/live-state` ×2
           - `infra/endpoints.useEndpoint`
           - `network/live.useLive`
-          - `primitives/collapsible.ExpandAllButton`
-          - `primitives/collapsible.useExpandAll`
-          - `primitives/css/badge.Badge`
-          - `primitives/css/badge.formatStatusLabel`
           - `primitives/css/card.Card`
           - `primitives/css/clip.Clip`
           - `primitives/css/fill.Fill`
@@ -36598,8 +36652,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
-          - `primitives/live-state.foldResource`
-          - `primitives/live-state.ResourceResult`
           - `primitives/loading.Loading`
           - `primitives/slot-render.defineRenderSlot`
           - `review.ReviewSlots`
@@ -36682,6 +36734,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations.useConversationById`
               - `conversations/conversation-view/code.gitStatusBadge`
               - `primitives/collapsible.CollapsibleChevron`
+              - `primitives/collapsible.FoldMotion`
+              - `primitives/collapsible.useCollapsible`
               - `primitives/copy-to-clipboard.CopyButton`
               - `primitives/css/badge.Badge`
               - `primitives/css/clip.Clip`

@@ -5370,6 +5370,10 @@
         "@tanstack/react-virtual": "^3.13.0",
       },
     },
+    "plugins/primitives/plugins/virtual-rows/plugins/row-fold": {
+      "name": "@singularity/plugin-primitives-virtual-rows-row-fold",
+      "version": "0.0.1",
+    },
     "plugins/release": {
       "name": "@singularity/plugin-release",
       "version": "0.0.1",
@@ -9147,6 +9151,8 @@
     "@singularity/plugin-primitives-view-switcher": ["@singularity/plugin-primitives-view-switcher@workspace:plugins/primitives/plugins/view-switcher"],
 
     "@singularity/plugin-primitives-virtual-rows": ["@singularity/plugin-primitives-virtual-rows@workspace:plugins/primitives/plugins/virtual-rows"],
+
+    "@singularity/plugin-primitives-virtual-rows-row-fold": ["@singularity/plugin-primitives-virtual-rows-row-fold@workspace:plugins/primitives/plugins/virtual-rows/plugins/row-fold"],
 
     "@singularity/plugin-release": ["@singularity/plugin-release@workspace:plugins/release"],
 

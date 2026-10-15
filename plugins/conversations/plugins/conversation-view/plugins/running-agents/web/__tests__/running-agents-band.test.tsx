@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ComponentType, ReactNode } from "react";
 import {
   PluginProvider,
@@ -353,14 +353,15 @@ describe("the running-agents band", () => {
     );
   });
 
-  it("folds the list from the summary line", () => {
+  it("folds the list from the summary line", async () => {
     subagents = known(FIXTURES);
     renderBand();
 
     act(() => summaryLine().click());
 
-    expect(screen.queryByTestId("rows")).toBeNull();
     expect(summaryLine().getAttribute("aria-expanded")).toBe("false");
+    // The rows fold away first, then unmount.
+    await waitFor(() => expect(screen.queryByTestId("rows")).toBeNull());
     // The summary itself never leaves — it is what folds and unfolds the rows.
     expect(summaryLine().textContent).toContain("2 agents working");
   });

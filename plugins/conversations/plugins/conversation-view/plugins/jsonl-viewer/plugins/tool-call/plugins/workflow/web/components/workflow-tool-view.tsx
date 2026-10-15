@@ -12,7 +12,10 @@ import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
-import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
+import {
+  FoldMotion,
+  useCollapsible,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { parseWorkflowMeta, parseWorkflowResult } from "../../core";
 import { useWorkflowTrace } from "../internal/use-workflow-trace";
@@ -70,7 +73,7 @@ function PhaseList({
 }
 
 function ScriptSection({ script }: { script: string }) {
-  const { open, triggerProps, contentId } = useCollapsible({
+  const { open, triggerProps, contentProps } = useCollapsible({
     defaultOpen: false,
   });
   return (
@@ -89,11 +92,11 @@ function ScriptSection({ script }: { script: string }) {
           ({script.split("\n").length} lines)
         </span>
       </Stack>
-      {open && (
-        <Scroll axis="both" id={contentId} className="max-h-96 px-md pb-sm">
+      <FoldMotion {...contentProps}>
+        <Scroll axis="both" className="max-h-96 px-md pb-sm">
           <HighlightedCode code={script} lang="ts" />
         </Scroll>
-      )}
+      </FoldMotion>
     </div>
   );
 }

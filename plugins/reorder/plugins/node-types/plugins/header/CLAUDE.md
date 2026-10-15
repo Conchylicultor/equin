@@ -20,6 +20,8 @@ Contributes one `ReorderNodes.NodeType(...)` to the `reorder.node-type` registry
   - Contributes: `ReorderNodes.NodeType` "header"
   - Uses:
     - `primitives/collapsible.CollapsibleChevron`
+    - `primitives/collapsible.FoldMotion`
+    - `primitives/collapsible.useCollapsible`
     - `primitives/css/center.Center`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`

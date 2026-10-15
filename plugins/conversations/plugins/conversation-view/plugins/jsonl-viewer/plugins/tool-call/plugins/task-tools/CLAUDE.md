@@ -21,6 +21,8 @@ Renders Claude Code's native task tools (TaskCreate, TaskUpdate, TaskGet, TaskLi
     - `conversations/conversation-view/jsonl-viewer.useTranscriptEvents`
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+    - `primitives/collapsible.FoldMotion`
+    - `primitives/collapsible.useCollapsible`
     - `primitives/css/badge.Badge`
     - `primitives/css/badge.formatStatusLabel`
     - `primitives/css/center.Center`

@@ -232,6 +232,8 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
     // both the column header (was hiding behind the toolbar) and the group headers
     // (were not sticky) — consistent with the list view's sticky group headers.
     stickyHeaderOffset: `var(${DATA_VIEW_HEADER_OFFSET_VAR}, 0px)`,
+    // Opening a fold line folds in the rows it set aside.
+    openKeys: props.foldLines?.open,
     // Manual order: per-row drag affordances. Composes with DataTable's
     // windowing. Sort is already hidden by the host while manual order is on.
     useRowDecoration: manualOrder ? useRowDecoration : undefined,

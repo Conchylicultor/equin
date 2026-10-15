@@ -21,7 +21,20 @@ export interface CollapsibleTriggerControlProps {
   onClick: () => void;
 }
 
+/**
+ * What makes a box the collapsible's content: the open state it folds on, and
+ * the id / `region` role the trigger's `aria-controls` points at. Spread onto
+ * `<FoldMotion>` — the content is never `{open && …}`, which drops the motion.
+ */
+export interface CollapsibleContentBindProps {
+  open: boolean;
+  id: string;
+  role: "region";
+}
+
 export interface UseCollapsibleReturn {
+  /** For the trigger's chrome (a chevron, a label) — never to gate the
+   *  content: that is `contentProps` on a `<FoldMotion>`. */
   open: boolean;
   toggle: () => void;
   /** {@link CollapsibleTriggerControlProps} — for a host that owns its element. */
@@ -33,6 +46,11 @@ export interface UseCollapsibleReturn {
    * never disagree about what the trigger does.
    */
   triggerProps: CollapsibleTriggerControlProps & { type: "button" };
+  /**
+   * {@link CollapsibleContentBindProps} — spread onto `<FoldMotion>` so the
+   * content folds with motion: `<FoldMotion {...contentProps}>…</FoldMotion>`.
+   */
+  contentProps: CollapsibleContentBindProps;
   contentId: string;
   chevronClassName: ClassName;
 }
@@ -64,6 +82,7 @@ export function useCollapsible({
       toggle,
       triggerControlProps,
       triggerProps: { type: "button" as const, ...triggerControlProps },
+      contentProps: { open, id: contentId, role: "region" as const },
       contentId,
       chevronClassName: cn(
         "transition-transform duration-200",

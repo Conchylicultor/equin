@@ -21,6 +21,11 @@ import {
 } from "@tanstack/react-virtual";
 import { findScrollParent } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import { useRowFold } from "@plugins/primitives/plugins/virtual-rows/plugins/row-fold/web";
+
+/** How far past its window a fold in flight draws (rows) — enough for any
+ *  viewport's worth of rows sliding through, without drawing a whole subtree. */
+const MAX_DRAW_PAST_END = 60;
 
 export interface VirtualRowsProps<T> {
   items: readonly T[];
@@ -49,6 +54,16 @@ export interface VirtualRowsProps<T> {
    * id while a drag is in flight, nothing otherwise.
    */
   raisedKey?: string;
+  /**
+   * The open disclosures `items` were flattened under (a tree's expanded ids)
+   * — present, a change of `items` that comes with a flip here FOLDS: revealed
+   * rows grow in, hidden ones fold out, the rows below slide (`row-fold`).
+   * Absent: the list has no disclosures and every change lands as is.
+   */
+  openKeys?: ReadonlySet<string>;
+  /** Lines drawn in place of rows not listed yet (a lazy node's placeholder):
+   *  rows that later land in their place fold in (`useRowFold`). */
+  isStandIn?: (item: T) => boolean;
   children: (item: T, index: number) => ReactNode;
 }
 
@@ -67,6 +82,12 @@ export interface UseVirtualRowsOptions<T> {
   scrollToIndex?: number | null;
   /** Item keys that must stay rendered even when scrolled out of the window. */
   keepMounted?: readonly string[];
+  /**
+   * Rows drawn past the window's end on top of `overscan` — while a fold is
+   * in flight, the rows it slides up through the viewport (or the ones it
+   * pushes down out of it) must exist. Default 0.
+   */
+  drawPastEnd?: number;
 }
 
 export interface UseVirtualRowsResult {
@@ -135,6 +156,7 @@ export function useVirtualRows<T>({
   getKey,
   scrollToIndex,
   keepMounted,
+  drawPastEnd = 0,
 }: UseVirtualRowsOptions<T>): UseVirtualRowsResult {
   "use no memo";
   // "use no memo" -- @tanstack/react-virtual returns a mutable Virtualizer whose state mutates outside React's render cycle (incompatible-library); compiling it risks stale windowed rows.
@@ -187,7 +209,14 @@ export function useVirtualRows<T>({
   // the viewport.
   const rangeExtractor = useCallback(
     (range: Range) => {
-      const base = defaultRangeExtractor(range);
+      const base = defaultRangeExtractor(
+        drawPastEnd === 0
+          ? range
+          : {
+              ...range,
+              endIndex: Math.min(range.count - 1, range.endIndex + drawPastEnd),
+            },
+      );
       if (pinnedIndexes.length === 0) return base;
       const set = new Set(base);
       for (const i of pinnedIndexes) {
@@ -195,7 +224,7 @@ export function useVirtualRows<T>({
       }
       return [...set].sort((a, b) => a - b);
     },
-    [pinnedIndexes, items.length],
+    [pinnedIndexes, items.length, drawPastEnd],
   );
 
   // Resolve the scroll container and the region's offset within it once mounted
@@ -343,8 +372,12 @@ export function VirtualRows<T>({
   scrollToIndex,
   keepMounted,
   raisedKey,
+  openKeys,
+  isStandIn,
   children,
 }: VirtualRowsProps<T>): ReactNode {
+  const fold = useRowFold({ items, getKey, openKeys, isStandIn });
+  const drawn = fold.items;
   const {
     measureRef,
     virtualizer,
@@ -353,12 +386,13 @@ export function VirtualRows<T>({
     totalSize,
     probe,
   } = useVirtualRows({
-    items,
+    items: drawn,
     estimateSize,
     overscan,
     getKey,
     scrollToIndex,
     keepMounted,
+    drawPastEnd: Math.min(fold.inFlight, MAX_DRAW_PAST_END),
   });
 
   return (
@@ -368,6 +402,7 @@ export function VirtualRows<T>({
     // CONTEXT (`relative`/`static`) and sizing (`w-full`) alone.
     <div
       ref={measureRef}
+      {...fold.hostProps}
       className="relative w-full"
       style={{ height: totalSize }}
     >
@@ -380,16 +415,18 @@ export function VirtualRows<T>({
           y={{ start: 0 }}
           className={cn(itemClassName, "invisible")}
         >
-          {children(items[0]!, 0)}
+          {children(drawn[0]!, 0)}
         </Placed>
       )}
       {virtualItems.map((vi) => (
         // Each windowed row spans the sizer's width and is composited down to
         // its measured offset. The two axes are different mechanics on purpose:
         // x is a plain inset, and only y is a `shift`, so the offset stays on
-        // the compositor while the row still stretches to the sizer.
+        // the compositor while the row still stretches to the sizer. A fold
+        // moves the row with `transform`, which composes with that `translate`.
         <Placed
           key={vi.key}
+          {...fold.rowProps(String(vi.key))}
           data-index={vi.index}
           ref={virtualizer.measureElement}
           x={{ start: 0, end: 0 }}
@@ -397,7 +434,7 @@ export function VirtualRows<T>({
           layer={vi.key === raisedKey ? "raised" : undefined}
           className={itemClassName}
         >
-          {children(items[vi.index]!, vi.index)}
+          {children(drawn[vi.index]!, vi.index)}
         </Placed>
       ))}
     </div>

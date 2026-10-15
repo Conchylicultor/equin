@@ -14,6 +14,7 @@ import type {
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   CollapsibleChevron,
+  FoldMotion,
   useCollapsible,
   type UseCollapsibleReturn,
 } from "@plugins/primitives/plugins/collapsible/web";
@@ -284,7 +285,7 @@ const FIELDS: FieldDef<RunningAgentRow>[] = [
  */
 function RunningAgentsCard({ options, switcher, body }: HostedToolbarParts) {
   const { summary, collapsible, showAll } = useBandChrome();
-  const { open, triggerProps, contentId } = collapsible;
+  const { open, triggerProps, contentProps } = collapsible;
   const working =
     summary.running > 0 || summary.shellsRunning > 0 || summary.runsGoing > 0;
   return (
@@ -350,17 +351,14 @@ function RunningAgentsCard({ options, switcher, body }: HostedToolbarParts) {
           {switcher}
           {options}
         </Line>
-        {open && (
-          // Capped and scrolled on its own: a workflow can fan out into dozens
-          // of rows, and an unbounded list would push the prompt box below it
-          // off-screen with no way to reach it.
-          <Scroll
-            id={contentId}
-            className="max-h-[40vh] rail-x-2xs border-t border-border/60 bg-background/40 py-2xs"
-          >
+        <FoldMotion {...contentProps}>
+          {/* Capped and scrolled on its own: a workflow can fan out into
+              dozens of rows, and an unbounded list would push the prompt box
+              below it off-screen with no way to reach it. */}
+          <Scroll className="max-h-[40vh] rail-x-2xs border-t border-border/60 bg-background/40 py-2xs">
             {body}
           </Scroll>
-        )}
+        </FoldMotion>
       </Clip>
     </Text>
   );

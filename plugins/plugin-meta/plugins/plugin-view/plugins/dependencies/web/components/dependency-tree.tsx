@@ -3,6 +3,7 @@ import { pluginIdSegments } from "@plugins/framework/plugins/plugin-id/core";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   CollapsibleChevron,
+  FoldMotion,
   useCollapsible,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -117,7 +118,12 @@ function DependencySection({
 }
 
 function DepRow({ node, depth }: { node: DepTreeNode; depth: number }) {
-  const { open: expanded, toggle } = useCollapsible();
+  const {
+    open: expanded,
+    toggle,
+    triggerProps,
+    contentProps,
+  } = useCollapsible();
   const openPane = useOpenPane();
   const hasChildren = node.children.length > 0 && !node.duplicate;
   const segs = pluginIdSegments(node.id);
@@ -125,8 +131,9 @@ function DepRow({ node, depth }: { node: DepTreeNode; depth: number }) {
 
   const chevronIcon = hasChildren ? (
     <button
-      type="button"
+      {...triggerProps}
       className="rounded-sm text-muted-foreground hover:text-foreground"
+      // The row under it opens the plugin: the toggle must not reach it.
       onClick={(e) => {
         e.stopPropagation();
         toggle();
@@ -162,11 +169,13 @@ function DepRow({ node, depth }: { node: DepTreeNode; depth: number }) {
           </Text>
         )}
       </Row>
-      {expanded &&
-        hasChildren &&
-        node.children.map((c, i) => (
-          <DepRow key={`${c.id}-${i}`} node={c} depth={depth + 1} />
-        ))}
+      {hasChildren && (
+        <FoldMotion {...contentProps}>
+          {node.children.map((c, i) => (
+            <DepRow key={`${c.id}-${i}`} node={c} depth={depth + 1} />
+          ))}
+        </FoldMotion>
+      )}
     </>
   );
 }

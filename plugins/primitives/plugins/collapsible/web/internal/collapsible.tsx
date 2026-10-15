@@ -13,6 +13,7 @@ import {
   type ReactNode,
 } from "react";
 import { useCollapsible, type UseCollapsibleOptions } from "./use-collapsible";
+import { FOLD_EASING, FOLD_MS } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -150,12 +151,6 @@ export function CollapsibleTrigger({
 
 export interface CollapsibleContentProps extends ComponentProps<"div"> {}
 
-/** The fold / unfold tween: the content's height and opacity, and the
- *  chevron's quarter turn (`duration-200`), on one clock. */
-const FOLD_MS = 200;
-/** Fast out, soft landing — the content arrives decisively and settles. */
-const FOLD_EASING = "cubic-bezier(0.2, 0, 0, 1)";
-
 /**
  * The content, while open — and, after a close, until its fold-away has run.
  *
@@ -221,11 +216,19 @@ export function FoldMotion({ open, children, ...props }: FoldMotionProps) {
 }
 
 /**
- * Tweens a box's height between 0 and its natural height when `open` flips,
+ * Tweens a box's height between 0 and its settled height when `open` flips,
  * keeping it mounted (`present`) until a close has finished. A flip mid-tween
  * starts from where the box is, so a quick double click reverses smoothly.
  * Under `prefers-reduced-motion` the tween has no duration — the same states,
  * no motion.
+ *
+ * The tween drives `max-height`, not `height`, and its far end is the box's
+ * own measured size with the cap released — never `scrollHeight`. For a block
+ * the two are the same motion. For a box its parent sizes — a `flex-1` body
+ * sharing a column with its siblings — a `height` is overridden by the flex
+ * basis and `scrollHeight` is the parent's allocation's inside, so only a cap
+ * on the measured box folds it (and its siblings take the room back as it
+ * goes).
  *
  * The tween starts on the first frame AFTER the commit, on the real clock.
  * Opening mounts the content, and mounting a long list of rows can hold the
@@ -272,7 +275,7 @@ function useFoldMotion(open: boolean) {
             opacity: Number(getComputedStyle(el).opacity),
           }
         : {
-            height: motion.opening ? 0 : el.scrollHeight,
+            height: motion.opening ? 0 : el.getBoundingClientRect().height,
             opacity: motion.opening ? 0 : 1,
           };
     prior?.cancel();
@@ -281,13 +284,14 @@ function useFoldMotion(open: boolean) {
 
     const start = (duration: number) => {
       pinned.current = false;
-      const to = motion.opening ? el.scrollHeight : 0;
-      el.style.height = "";
+      // Released first, so an unfold measures the size the box settles at.
+      el.style.maxHeight = "";
       el.style.opacity = "";
+      const to = motion.opening ? el.getBoundingClientRect().height : 0;
       const anim = el.animate(
         [
-          { height: `${from.height}px`, opacity: from.opacity },
-          { height: `${to}px`, opacity: motion.opening ? 1 : 0 },
+          { maxHeight: `${from.height}px`, opacity: from.opacity },
+          { maxHeight: `${to}px`, opacity: motion.opening ? 1 : 0 },
         ],
         {
           duration,
@@ -325,7 +329,7 @@ function useFoldMotion(open: boolean) {
       return;
     }
     // Pin the first frame now (before paint), start the tween next frame.
-    el.style.height = `${from.height}px`;
+    el.style.maxHeight = `${from.height}px`;
     el.style.opacity = String(from.opacity);
     pinned.current = true;
     const frame = requestAnimationFrame(() => start(FOLD_MS));

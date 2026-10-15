@@ -197,7 +197,7 @@ it, so an id means the same thing wherever it is clicked.
     - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
     - `PageTree.RowActions` "delete" → `DeletePageAction`
     - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-  - Uses: 79 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 80 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×9
     - `page/editor` ×7
     - `primitives/data-view` ×5
@@ -209,6 +209,7 @@ it, so an id means the same thing wherever it is clicked.
     - `apps/pages/shell` ×2
     - `infra/endpoints` ×2
     - `primitives/breadcrumb` ×2
+    - `primitives/collapsible` ×2
     - `primitives/css/control-panel` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/usage-rank` ×2
@@ -217,7 +218,6 @@ it, so an id means the same thing wherever it is clicked.
     - `infra/trash.useUndoableTrash`
     - `page/links.Backlinks`
     - `primitives/app-shell.SidebarItem`
-    - `primitives/collapsible.useCollapsible`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/grid.Grid`

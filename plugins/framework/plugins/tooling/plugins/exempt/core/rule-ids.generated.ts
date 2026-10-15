@@ -17,6 +17,7 @@ export type ExemptableRuleId =
   | "caret-trigger-safety/no-adhoc-caret-trigger"
   | "change-feed:producer-writes"
   | "check-runner-safety/no-adhoc-check-runner"
+  | "collapsible/no-unanimated-disclosure"
   | "color-palette/no-fill-color-as-text"
   | "config-link/no-unlinked-config-picker"
   | "context-safety/no-unstable-context-value"

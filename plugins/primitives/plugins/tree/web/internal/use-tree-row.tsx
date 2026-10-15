@@ -77,8 +77,6 @@ export type TreeListContextValue<T extends TreeItem> = {
   canCreate: boolean;
   /** True when `onMove` is wired → RowChrome renders the drag handle. */
   canReorder: boolean;
-  /** True when TreeList renders rows through VirtualRows; RowChrome then skips its own child recursion. */
-  windowed: boolean;
   /** Draw indent guides on every row (see `TreeListProps.guides`). */
   guides: boolean;
 };

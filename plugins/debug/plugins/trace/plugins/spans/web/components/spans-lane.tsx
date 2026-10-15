@@ -28,6 +28,10 @@ import {
 } from "../internal/build-tree";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import {
+  useRowFold,
+  type RowFoldProps,
+} from "@plugins/primitives/plugins/virtual-rows/plugins/row-fold/web";
 
 const chevronRightIcon = symbol("chevron-right");
 const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
@@ -97,6 +101,8 @@ function tripSpanId(detail: unknown): number | null {
   return parsed.success ? (parsed.data.spanId ?? null) : null;
 }
 
+const rowKey = (row: { node: SpanNode }): string => String(row.node.id);
+
 /**
  * The spans Gantt lane group: the captured flight window rendered as a **nested
  * waterfall** — one row per span *instance*, depth-indented under its true parent
@@ -114,6 +120,13 @@ export function SpansLane({ trace, onSelect }: TraceLaneProps): ReactElement {
     () => (tree.kind === "ok" ? flattenTree(tree.roots, collapsed) : []),
     [tree, collapsed],
   );
+  // A toggle folds the rows it reveals or hides: the fold reads the flips of
+  // the collapsed set (which side of it is "open" does not matter).
+  const foldKeys = useMemo(
+    () => new Set([...collapsed].map(String)),
+    [collapsed],
+  );
+  const fold = useRowFold({ items: rows, getKey: rowKey, openKeys: foldKeys });
   const tripId = useMemo(
     () => tripSpanId(trace.trigger.detail),
     [trace.trigger.detail],
@@ -153,10 +166,11 @@ export function SpansLane({ trace, onSelect }: TraceLaneProps): ReactElement {
           Collapse all
         </Button>
       </Stack>
-      <Stack gap="2xs" className="px-lg pb-sm">
-        {rows.map(({ node, depth }) => (
+      <Stack gap="2xs" className="px-lg pb-sm" {...fold.hostProps}>
+        {fold.items.map(({ node, depth }) => (
           <SpanRow
             key={node.id}
+            fold={fold.rowProps(String(node.id))}
             node={node}
             depth={depth}
             collapsed={collapsed.has(node.id)}
@@ -179,6 +193,7 @@ export function SpansLane({ trace, onSelect }: TraceLaneProps): ReactElement {
 }
 
 function SpanRow({
+  fold,
   node,
   depth,
   collapsed,
@@ -186,6 +201,8 @@ function SpanRow({
   onToggle,
   onClick,
 }: {
+  /** The row's place in a fold (`useRowFold`). */
+  fold: RowFoldProps;
   node: SpanNode;
   depth: number;
   collapsed: boolean;
@@ -216,7 +233,10 @@ function SpanRow({
   };
 
   return (
-    <div className={cn("rounded-md", isTrip && "ring-1 ring-primary")}>
+    <div
+      {...fold}
+      className={cn("rounded-md", isTrip && "ring-1 ring-primary")}
+    >
       <MultiSpanLane
         label={
           <TreeLabel

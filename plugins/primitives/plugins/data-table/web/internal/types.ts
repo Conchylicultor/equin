@@ -230,6 +230,15 @@ export interface DataTableProps<TRow> {
    * flight, nothing otherwise. Ignored in grouped (non-windowed) mode.
    */
   keepMountedRowKeys?: readonly string[];
+  /**
+   * The host's open disclosures the rows were flattened under, in its own key
+   * space — a nested table's expanded node ids, the open fold lines. A change
+   * of the rows that comes with a flip here folds (revealed rows grow in,
+   * hidden ones fold out, the rows below slide — `row-fold`); so does a
+   * group's `collapsed` flip, which the table tracks itself. Absent: only
+   * group collapse folds.
+   */
+  openKeys?: ReadonlySet<string>;
   /** Control density for the table's controls/badges; defaults to compact (`xs`). */
   controlSize?: ControlSize;
   /** Where the column labels sit — see {@link DataTableColumnHeader}. Default `"row"`. */

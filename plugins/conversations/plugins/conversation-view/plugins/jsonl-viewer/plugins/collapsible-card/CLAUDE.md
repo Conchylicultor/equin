@@ -8,6 +8,7 @@
 - Web:
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
+    - `primitives/collapsible.FoldMotion`
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/card.Card`
     - `primitives/css/fill.Fill`

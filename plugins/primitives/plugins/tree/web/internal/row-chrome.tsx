@@ -9,18 +9,15 @@ import { useCallback, type ReactNode } from "react";
 import { SelectionCheckbox } from "@plugins/primitives/plugins/multi-select/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 import type { TreeNode } from "../../core";
 import type { TreeItem } from "./types";
 import {
   RowControlsProvider,
-  TreeRowSlot,
   useTreeListContext,
   useTreeRow,
   type RowControls,
 } from "./use-tree-row";
 import { TreeRowChrome } from "./tree-row-chrome";
-import { TreeChildPlaceholder } from "./tree-child-placeholder";
 import { TreeDropZones } from "./tree-drop-zones";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -109,10 +106,6 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
     listeners: dragListeners,
   } = dragSource;
   const ctx = useTreeListContext<T>();
-  // What this open node shows in place of children it does not have yet (a lazy
-  // listing in flight, failed, or empty). The windowed list paints the same row
-  // from the same rule, as an item of its own.
-  const placeholder = isOpen ? ctx.childPlaceholder(node) : null;
 
   const menuItems =
     typeof menu === "function"
@@ -215,9 +208,8 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
 
   return (
     <div>
-      {/* Scoped to THIS row's own chrome — the child recursion below stays
-          outside, so a descendant row never reads its parent's controls before
-          mounting its own provider. */}
+      {/* Scoped to THIS row's own chrome: every line of the flattened tree
+          mounts its own provider. */}
       <RowControlsProvider value={controls}>
         <div className="relative">
           <TreeRowChrome
@@ -278,28 +270,6 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
           />
         </div>
       </RowControlsProvider>
-      {/* In windowed mode the flat list already contains every visible descendant in paint order, so recursing here would double-render. */}
-      {/* Children fold in and out with the shared collapsible tween. A
-          windowed tree has no nested box to animate: its rows are one flat
-          list, so opening a node there just inserts them. */}
-      {!ctx.windowed && (
-        <FoldMotion open={isOpen}>
-          {node.children.map((child) => (
-            <TreeRowSlot
-              key={child.id}
-              node={child as TreeNode<T>}
-              depth={depth + 1}
-            />
-          ))}
-          {placeholder && (
-            <TreeChildPlaceholder
-              placeholder={placeholder}
-              depth={depth + 1}
-              guides={ctx.guides}
-            />
-          )}
-        </FoldMotion>
-      )}
     </div>
   );
 }

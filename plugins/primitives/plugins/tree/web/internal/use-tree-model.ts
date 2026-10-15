@@ -128,10 +128,10 @@ export type TreeModelArgs<T extends TreeItem> = {
 };
 
 /** The renderer-independent half of the tree context: everything but how a
- *  row is drawn (`Row`) and whether the renderer windows (`windowed`). */
+ *  row is drawn (`Row`). */
 export type TreeModelContext<T extends TreeItem> = Omit<
   TreeListContextValue<T>,
-  "Row" | "windowed"
+  "Row"
 >;
 
 export type TreeModel<T extends TreeItem> = {
@@ -143,6 +143,13 @@ export type TreeModel<T extends TreeItem> = {
   flat: FlatTreeLine<T>[];
   /** The painted node ids in paint order — multi-select's range order. */
   orderedIds: string[];
+  /**
+   * The expanded node ids, over every row (unsearched, unscoped) — the open
+   * state `flat` was flattened under. A renderer hands it to its flat list
+   * (`VirtualRows` / `DataTable` `openKeys`), which folds the rows a toggle
+   * reveals or hides: a toggle is exactly a flip in here.
+   */
+  openKeys: ReadonlySet<string>;
   /** Resolves a drop to an `onMove` (and opens a collapsed destination). */
   onDragEnd: (event: DragEndEvent) => void;
   /** The floating chip's content for the row being dragged. */
@@ -257,6 +264,12 @@ export function useTreeModel<T extends TreeItem>(
     [visibleTree, placeholderOf],
   );
   const orderedIds = useMemo(() => flatNodeIds(flat), [flat]);
+  // From `rows`, not the searched or scoped forest: a search force-opens what
+  // it keeps and a scope drops rows, and neither is a toggle.
+  const openKeys = useMemo(
+    () => new Set(rows.filter((r) => r.expanded).map((r) => r.id)),
+    [rows],
+  );
 
   // The per-row subtree toggle every row with children renders (row-chrome).
   // Built ONCE per render from the full forest and consulted by each row, rather
@@ -414,6 +427,7 @@ export function useTreeModel<T extends TreeItem>(
     visibleTree,
     flat,
     orderedIds,
+    openKeys,
     onDragEnd,
     dragChip,
     createAtRoot,

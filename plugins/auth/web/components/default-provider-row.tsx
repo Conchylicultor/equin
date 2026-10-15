@@ -3,6 +3,12 @@ import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web"
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, type ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  Collapsible,
+  CollapsibleChevron,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -299,20 +305,24 @@ function AccountDetails({
       ) : null}
       {status.scopes && status.scopes.length > 0 ? (
         // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical offset from preceding sibling block
-        <details className="mt-1 text-caption text-muted-foreground">
-          <summary>
+        <Collapsible className="mt-1 text-caption text-muted-foreground">
+          <CollapsibleTrigger className="gap-2xs">
+            <CollapsibleChevron className="size-3" />
             {status.scopes.length} scope
             {status.scopes.length === 1 ? "" : "s"}
-          </summary>
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- list offset below summary + indent for nested list */}
-          <ul className="mt-1 list-disc pl-4">
-            {status.scopes.map((s) => (
-              <li key={s} className="break-all">
-                {s}
-              </li>
-            ))}
-          </ul>
-        </details>
+          </CollapsibleTrigger>
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- list offset below summary, inside the fold so it tweens with it */}
+          <CollapsibleContent className="pt-1">
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- indent for nested list */}
+            <ul className="list-disc pl-4">
+              {status.scopes.map((s) => (
+                <li key={s} className="break-all">
+                  {s}
+                </li>
+              ))}
+            </ul>
+          </CollapsibleContent>
+        </Collapsible>
       ) : null}
       {status.connected && status.credentialsConfigured ? (
         <ScopeGrantNotice providerId={providerId} status={status} />

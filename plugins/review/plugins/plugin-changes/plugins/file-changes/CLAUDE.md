@@ -12,6 +12,8 @@
     - `conversations.useConversationById`
     - `conversations/conversation-view/code.gitStatusBadge`
     - `primitives/collapsible.CollapsibleChevron`
+    - `primitives/collapsible.FoldMotion`
+    - `primitives/collapsible.useCollapsible`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/badge.Badge`
     - `primitives/css/clip.Clip`

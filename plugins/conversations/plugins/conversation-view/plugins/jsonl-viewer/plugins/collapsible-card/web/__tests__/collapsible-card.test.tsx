@@ -7,7 +7,13 @@
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 
 import { CollapsibleCard } from "../components/collapsible-card";
 
@@ -29,7 +35,7 @@ describe("CollapsibleCard", () => {
     expect(container.querySelector("svg")).toBeNull();
   });
 
-  it("still toggles from the row, and says so to assistive tech", () => {
+  it("still toggles from the row, and says so to assistive tech", async () => {
     render(<CollapsibleCard label="Thinking">the body</CollapsibleCard>);
     const toggle = screen.getByRole("button", { name: "Expand" });
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
@@ -41,6 +47,8 @@ describe("CollapsibleCard", () => {
     expect(screen.getByText("the body")).toBeTruthy();
 
     fireEvent.click(open);
-    expect(screen.queryByText("the body")).toBeNull();
+    // The body folds away first, then unmounts.
+    expect(open.getAttribute("aria-expanded")).toBe("false");
+    await waitFor(() => expect(screen.queryByText("the body")).toBeNull());
   });
 });

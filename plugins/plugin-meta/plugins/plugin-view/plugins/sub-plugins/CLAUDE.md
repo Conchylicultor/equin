@@ -13,6 +13,7 @@
     - `plugin-meta/plugin-view.PluginViewSlots`
     - `plugin-meta/plugin-view.SectionCount`
     - `primitives/collapsible.CollapsibleChevron`
+    - `primitives/collapsible.FoldMotion`
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/center.Center`
     - `primitives/css/row.Row`

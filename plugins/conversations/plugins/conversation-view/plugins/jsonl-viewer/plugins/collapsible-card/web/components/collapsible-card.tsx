@@ -1,6 +1,9 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ReactNode } from "react";
-import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
+import {
+  FoldMotion,
+  useCollapsible,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -109,7 +112,7 @@ export function CollapsibleCard({
   className,
   children,
 }: CollapsibleCardProps) {
-  const { open, triggerProps, contentId } = useCollapsible({ defaultOpen });
+  const { open, triggerProps, contentProps } = useCollapsible({ defaultOpen });
   const sideContent = aside ?? null;
   return (
     <Card
@@ -209,12 +212,11 @@ export function CollapsibleCard({
           </CardHeaderAction>
         </Line>
       </Overlay>
-      {open && (
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the collapsible body from the header inside the non-flex Card; lifting into Card padding would also pad the always-present header
-        <div id={contentId} className="mt-2">
-          {children}
-        </div>
-      )}
+      <FoldMotion {...contentProps}>
+        {/* The offset rides inside the fold, so it tweens with the body. */}
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the collapsible body from the header inside the non-flex Card; lifting into Card padding would also pad the always-present header */}
+        <div className="pt-2">{children}</div>
+      </FoldMotion>
     </Card>
   );
 }

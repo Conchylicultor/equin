@@ -1,5 +1,5 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { Fragment, type CSSProperties, type ReactNode } from "react";
+import { Fragment, useMemo, type CSSProperties, type ReactNode } from "react";
 import {
   cn,
   ControlSizeProvider,
@@ -11,6 +11,10 @@ import {
   rowActionsAnchor,
 } from "@plugins/primitives/plugins/row-actions/web";
 import { useVirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
+import {
+  useRowFold,
+  type RowFoldProps,
+} from "@plugins/primitives/plugins/virtual-rows/plugins/row-fold/web";
 import {
   Sticky,
   stickyOffsetPx,
@@ -194,6 +198,7 @@ export function DataTable<TRow>({
   selectedRowId,
   useRowDecoration,
   keepMountedRowKeys,
+  openKeys: hostOpenKeys,
   controlSize = "xs",
   stickyHeaderOffset = "0px",
   columnHeader = "row",
@@ -262,6 +267,33 @@ export function DataTable<TRow>({
         tree?.fullSpan?.(row) != null ? [] : [rowKey(row, i)],
       )
     : [];
+
+  // The body as one flat list of lines — each group's header, rows and footer
+  // in paint order — so a group's collapse (or a host disclosure: a nested
+  // row's toggle, a fold line) folds through the one row-fold mechanism.
+  const lines = useMemo(
+    () => bodyLines(groups, rows, rowKey),
+    [groups, rows, rowKey],
+  );
+  const openKeys = useMemo(() => {
+    if (!groups) return hostOpenKeys;
+    const open = new Set(hostOpenKeys);
+    for (const group of groups)
+      if (!group.collapsed) open.add(groupLineKey(group));
+    return open;
+  }, [groups, hostOpenKeys]);
+  // Stand-ins for rows not listed yet: a group's footer (its paging / fold
+  // line, drawn before a live section's rows arrive) and a nested row's lazy
+  // placeholder. Rows landing in their place fold in.
+  const fullSpan = tree?.fullSpan;
+  const fold = useRowFold({
+    items: lines,
+    getKey: lineKeyOf,
+    openKeys,
+    isStandIn: (line) =>
+      line.kind === "footer" ||
+      (line.kind === "row" && fullSpan?.(line.row) != null),
+  });
 
   if (bodyRowCount === 0 && !hasFooter) {
     return (
@@ -386,7 +418,8 @@ export function DataTable<TRow>({
   const renderRow = (
     row: TRow,
     i: number,
-    measure?: { ref: (el: Element | null) => void; index: number },
+    foldProps: RowFoldProps,
+    measure?: RowMeasure,
   ) => {
     // A tree's full-span line (a lazy placeholder) is no row: no decoration
     // hook, no cells, no actions — one band across every track.
@@ -396,6 +429,7 @@ export function DataTable<TRow>({
         <div
           key={rowKey(row, i)}
           ref={measure?.ref}
+          {...foldProps}
           data-index={measure?.index}
           // eslint-disable-next-line layout/no-adhoc-layout -- full-span line spanning the subgrid table's column tracks (a tree's placeholder child)
           className="col-span-full rail-follow"
@@ -418,6 +452,7 @@ export function DataTable<TRow>({
         rowPersistentActions={rowPersistentActions}
         useRowDecoration={useDecorate}
         measure={measure}
+        foldProps={foldProps}
         rowPad={rowPad}
         presentation={presentation}
         tree={tree}
@@ -425,6 +460,34 @@ export function DataTable<TRow>({
         pinLead={pinLead}
       />
     );
+  };
+
+  // One body line, whichever body draws it — the fold's row props on its
+  // outermost element, which is a direct child of the grid.
+  const renderLine = (line: BodyLine<TRow>, measure?: RowMeasure) => {
+    const foldProps = fold.rowProps(line.key);
+    switch (line.kind) {
+      case "row":
+        return renderRow(line.row, line.index, foldProps, measure);
+      case "header":
+        return renderGroupHeader(
+          line,
+          line.first ? firstGroupLabels : undefined,
+          foldProps,
+          pinLead,
+        );
+      case "footer":
+        return (
+          <div
+            key={line.key}
+            {...foldProps}
+            // eslint-disable-next-line layout/no-adhoc-layout -- full-span group-footer row spanning the subgrid table's column tracks
+            className="col-span-full"
+          >
+            <PinToView active={pinLead}>{line.group.footer}</PinToView>
+          </div>
+        );
+    }
   };
 
   // Group headers pin flush beneath the sticky column header (which itself pins
@@ -456,6 +519,8 @@ export function DataTable<TRow>({
           // host: a key on a focused row walks the painted lines.
           role={tree ? "treegrid" : undefined}
           ref={composeRefs<HTMLElement>(tree?.containerRef, fitGridRef)}
+          // The fold's host: its direct children are the body's lines.
+          {...fold.hostProps}
           onKeyDown={tree?.onKeyDown}
         >
           {/* The column-header row pins to the scroll viewport at `stickyHeaderOffset`
@@ -488,27 +553,43 @@ export function DataTable<TRow>({
             </Sticky>
           )}
           {groups ? (
-            renderGroupedBody(
-              groups,
-              renderRow,
-              groupHeaderTop,
-              pinLead,
-              firstGroupLabels,
-            )
+            // Group headers accumulate: with few enough groups every header
+            // stays pinned, each below the last (StickyStack sums their measured
+            // heights); past the stack's cap it degrades to the swap hand-off,
+            // where each arriving header covers the pinned one. `base` is the
+            // column header's own pinned bottom edge, so the first group header
+            // pins flush beneath it.
+            //
+            // All group headers share the one grid as their sticky containing
+            // block (the subgrid table can't wrap a group in its own block
+            // without breaking column alignment), which is exactly what the
+            // stack needs — and StickyStack renders no element of its own, so
+            // the `col-span-full` lines stay direct grid children: the tracks
+            // line up, and the fold finds them.
+            <StickyStack
+              keys={groups.map((group) => group.key)}
+              base={groupHeaderTop}
+            >
+              {fold.items.map((line) => renderLine(line))}
+            </StickyStack>
           ) : rows.length > VIRTUALIZE_THRESHOLD ? (
             <VirtualTableBody
-              rows={rows}
-              rowKey={rowKey}
+              lines={fold.items}
               selectedRowId={selectedRowId}
-              renderRow={renderRow}
+              renderLine={renderLine}
               keepMounted={keepMountedRowKeys}
+              drawPastEnd={fold.inFlight}
             />
           ) : (
-            rows.map((row, i) => renderRow(row, i))
+            fold.items.map((line) => renderLine(line))
           )}
           {!groups && footer != null ? (
-            // eslint-disable-next-line layout/no-adhoc-layout -- full-span footer row spanning the subgrid table's column tracks
-            <div className="col-span-full">
+            // A rule under the rows: it slides with them as they fold.
+            <div
+              {...fold.rowProps(FOOTER_LINE_KEY)}
+              // eslint-disable-next-line layout/no-adhoc-layout -- full-span footer row spanning the subgrid table's column tracks
+              className="col-span-full"
+            >
               <PinToView active={pinLead}>{footer}</PinToView>
             </div>
           ) : null}
@@ -562,6 +643,7 @@ function DataTableRow<TRow>({
   rowPersistentActions,
   useRowDecoration,
   measure,
+  foldProps,
   rowPad,
   presentation,
   tree,
@@ -580,7 +662,9 @@ function DataTableRow<TRow>({
   useRowDecoration: Hook<
     (row: TRow, index: number) => DataTableRowDecoration | undefined
   >;
-  measure?: { ref: (el: Element | null) => void; index: number };
+  measure?: RowMeasure;
+  /** The row's place in a fold (`useRowFold`). */
+  foldProps: RowFoldProps;
   /** The row block-padding class, from the table's density. */
   rowPad: "py-row" | "py-row-compact";
   presentation: DataTablePresentation;
@@ -614,6 +698,7 @@ function DataTableRow<TRow>({
   return (
     <div
       ref={rowRef}
+      {...foldProps}
       data-index={measure?.index}
       // The row's identity on the DOM — the same marker the list and icons
       // views carry — so a test can address one row instead of walking text.
@@ -812,25 +897,22 @@ function CompactActionsCell({
  * identical to the two-spacer form this generalizes.
  */
 function VirtualTableBody<TRow>({
-  rows,
-  rowKey,
+  lines,
   selectedRowId,
-  renderRow,
+  renderLine,
   keepMounted,
+  drawPastEnd,
 }: {
-  rows: readonly TRow[];
-  rowKey: (row: TRow, index: number) => string;
+  lines: readonly BodyLine<TRow>[];
   selectedRowId: string | undefined;
-  renderRow: (
-    row: TRow,
-    i: number,
-    measure?: { ref: (el: Element | null) => void; index: number },
-  ) => ReactNode;
+  renderLine: (line: BodyLine<TRow>, measure: RowMeasure) => ReactNode;
   keepMounted: readonly string[] | undefined;
+  /** Rows the fold in flight moves (`useRowFold().inFlight`). */
+  drawPastEnd: number;
 }) {
   // Reveal the selected row when selection changes off-screen.
   const selectedIndex = selectedRowId
-    ? rows.findIndex((row, i) => rowKey(row, i) === selectedRowId)
+    ? lines.findIndex((line) => line.key === selectedRowId)
     : -1;
 
   const {
@@ -840,12 +922,13 @@ function VirtualTableBody<TRow>({
     totalSize,
     scrollMargin,
     probe,
-  } = useVirtualRows<TRow>({
-    items: rows,
+  } = useVirtualRows<BodyLine<TRow>>({
+    items: lines,
     estimateSize: ROW_ESTIMATE,
-    getKey: rowKey,
+    getKey: lineKeyOf,
     scrollToIndex: selectedIndex >= 0 ? selectedIndex : null,
     keepMounted,
+    drawPastEnd: Math.min(drawPastEnd, MAX_DRAW_PAST_END),
   });
 
   // The marker sits at the start of the row region (right after the sticky
@@ -862,8 +945,8 @@ function VirtualTableBody<TRow>({
         {/* The first commit draws no window: one real row, measured before
             paint to become the window's estimate (never painted — the
             window replaces it in the same frame). */}
-        {probe !== null && rows.length > 0
-          ? renderRow(rows[0]!, 0, { ref: probe, index: 0 })
+        {probe !== null && lines.length > 0
+          ? renderLine(lines[0]!, { ref: probe, index: 0 })
           : null}
         <div
           aria-hidden
@@ -909,7 +992,7 @@ function VirtualTableBody<TRow>({
                 style={{ height: gap }}
               />
             )}
-            {renderRow(rows[vi.index]!, vi.index, {
+            {renderLine(lines[vi.index]!, {
               ref: virtualizer.measureElement,
               index: vi.index,
             })}
@@ -937,89 +1020,135 @@ interface FirstGroupLabels {
 }
 
 /**
- * Grouped (non-virtualized) body: a caller-built full-span header per group,
- * then the group's rows when not collapsed — all inside the single subgrid so
- * columns stay aligned across groups. The row index counter is global so
- * `rowKey(row, i)` stays stable/unique across groups.
+ * A group's full-span header line. In `first-group` mode (`labels`) the FIRST
+ * group's band becomes a subgrid row carrying the column labels; otherwise
+ * every header is a full-span band.
  */
-function renderGroupedBody<TRow>(
-  groups: DataTableGroup<TRow>[],
-  renderRow: (row: TRow, i: number) => ReactNode,
-  groupHeaderTop: string,
-  /** Pin each band to the visible part of a sideways-scrolling table. */
+function renderGroupHeader<TRow>(
+  line: Extract<BodyLine<TRow>, { kind: "header" }>,
+  labels: FirstGroupLabels | undefined,
+  foldProps: RowFoldProps,
+  /** Pin the band to the visible part of a sideways-scrolling table. */
   pinLead: boolean,
-  /** `first-group` mode: the FIRST group's band becomes a subgrid row carrying
-   *  the column labels. Absent ⇒ every header is a full-span band. */
-  firstGroupLabels?: FirstGroupLabels,
 ): ReactNode {
-  let i = 0;
-  // Group headers accumulate: with few enough groups every header stays pinned,
-  // each below the last (StickyStack sums their measured heights); past the
-  // stack's cap it degrades to the swap hand-off, where each arriving header
-  // covers the pinned one. `base` is the column header's own pinned bottom edge,
-  // so the first group header pins flush beneath it.
-  //
-  // All group headers already share the one grid as their sticky containing block
-  // (the subgrid table can't wrap a group in its own block without breaking column
-  // alignment), which is exactly what the stack needs — and StickyStack renders no
-  // element of its own, so the `col-span-full` headers stay direct grid children
-  // and the tracks still line up. `mask` keeps rows from showing through.
-  return (
-    <StickyStack keys={groups.map((group) => group.key)} base={groupHeaderTop}>
-      {groups.map((group, groupIndex) => {
-        const labels = groupIndex === 0 ? firstGroupLabels : undefined;
-        return (
-          <Fragment key={group.key}>
-            {labels ? (
-              <StickyStackItem
-                itemKey={group.key}
-                as="div"
-                mask
-                layer="raised"
-                data-slot="data-table-first-group-header"
-                // The band IS a subgrid row here (like a data row, same rail), so
-                // the label cells below land in the body's own column tracks.
-                // eslint-disable-next-line layout/no-adhoc-layout -- first group header is a full-span subgrid row inheriting the host's column tracks
-                className="col-span-full grid grid-cols-subgrid items-center rail-follow"
-              >
-                <div
-                  // eslint-disable-next-line layout/no-adhoc-layout -- the group label's cell spans the unlabelled leading tracks of the subgrid
-                  className="min-w-0"
-                  style={{ gridColumn: `span ${labels.leadSpan}` }}
-                >
-                  {group.header}
-                </div>
-                {labels.cells}
-              </StickyStackItem>
-            ) : (
-              <StickyStackItem
-                itemKey={group.key}
-                as="div"
-                mask
-                layer="raised"
-                // eslint-disable-next-line layout/no-adhoc-layout -- full-span sticky group-header row spanning the subgrid table's column tracks
-                className="col-span-full rail-follow"
-                // Pinned on the left too, as wide as the table's box: a
-                // sideways scroll leaves the label (and its count) in view.
-                style={pinLead ? GROUP_BAND_PIN : undefined}
-              >
-                {group.header}
-              </StickyStackItem>
-            )}
-            {group.collapsed
-              ? null
-              : group.rows.map((row) => renderRow(row, i++))}
-            {!group.collapsed && group.footer != null ? (
-              // eslint-disable-next-line layout/no-adhoc-layout -- full-span group-footer row spanning the subgrid table's column tracks
-              <div className="col-span-full">
-                <PinToView active={pinLead}>{group.footer}</PinToView>
-              </div>
-            ) : null}
-          </Fragment>
-        );
-      })}
-    </StickyStack>
+  const { group } = line;
+  return labels ? (
+    <StickyStackItem
+      key={line.key}
+      {...foldProps}
+      itemKey={group.key}
+      as="div"
+      mask
+      layer="raised"
+      data-slot="data-table-first-group-header"
+      // The band IS a subgrid row here (like a data row, same rail), so
+      // the label cells below land in the body's own column tracks.
+      // eslint-disable-next-line layout/no-adhoc-layout -- first group header is a full-span subgrid row inheriting the host's column tracks
+      className="col-span-full grid grid-cols-subgrid items-center rail-follow"
+    >
+      <div
+        // eslint-disable-next-line layout/no-adhoc-layout -- the group label's cell spans the unlabelled leading tracks of the subgrid
+        className="min-w-0"
+        style={{ gridColumn: `span ${labels.leadSpan}` }}
+      >
+        {group.header}
+      </div>
+      {labels.cells}
+    </StickyStackItem>
+  ) : (
+    <StickyStackItem
+      key={line.key}
+      {...foldProps}
+      itemKey={group.key}
+      as="div"
+      mask
+      layer="raised"
+      // eslint-disable-next-line layout/no-adhoc-layout -- full-span sticky group-header row spanning the subgrid table's column tracks
+      className="col-span-full rail-follow"
+      // Pinned on the left too, as wide as the table's box: a sideways
+      // scroll leaves the label (and its count) in view.
+      style={pinLead ? GROUP_BAND_PIN : undefined}
+    >
+      {group.header}
+    </StickyStackItem>
   );
+}
+
+/** A windowed row's measurement handle (tanstack's `measureElement` reads the
+ *  `data-index`). */
+interface RowMeasure {
+  ref: (el: Element | null) => void;
+  index: number;
+}
+
+/**
+ * One line of the table body, in paint order: a data row, or — grouped — a
+ * group's header and footer around its rows. A collapsed group draws its
+ * header alone.
+ */
+type BodyLine<TRow> =
+  | { kind: "row"; key: string; row: TRow; index: number }
+  | {
+      kind: "header";
+      key: string;
+      group: DataTableGroup<TRow>;
+      /** The first group's header, the one `first-group` labels ride. */
+      first: boolean;
+    }
+  | { kind: "footer"; key: string; group: DataTableGroup<TRow> };
+
+function lineKeyOf<TRow>(line: BodyLine<TRow>): string {
+  return line.key;
+}
+
+/** A group header's line key — also the group's key in the fold's open set,
+ *  so a group's collapse is a flip of a line both lists draw. NUL-prefixed:
+ *  never a row key. */
+function groupLineKey<TRow>(group: DataTableGroup<TRow>): string {
+  return `\u0000group:${group.key}`;
+}
+
+/** The ungrouped body's footer — a fold row too, so it slides with the rows. */
+const FOOTER_LINE_KEY = "\u0000footer";
+
+/** How far past its window a fold in flight draws (rows) — see `VirtualRows`. */
+const MAX_DRAW_PAST_END = 60;
+
+/**
+ * The body's lines. The row index is global across groups, so `rowKey(row, i)`
+ * stays stable and unique.
+ */
+function bodyLines<TRow>(
+  groups: DataTableGroup<TRow>[] | undefined,
+  rows: readonly TRow[],
+  rowKey: (row: TRow, index: number) => string,
+): BodyLine<TRow>[] {
+  if (!groups) {
+    return rows.map((row, index) => ({
+      kind: "row",
+      key: rowKey(row, index),
+      row,
+      index,
+    }));
+  }
+  const out: BodyLine<TRow>[] = [];
+  let index = 0;
+  groups.forEach((group, g) => {
+    out.push({
+      kind: "header",
+      key: groupLineKey(group),
+      group,
+      first: g === 0,
+    });
+    if (group.collapsed) return;
+    for (const row of group.rows) {
+      out.push({ kind: "row", key: rowKey(row, index), row, index });
+      index++;
+    }
+    if (group.footer != null)
+      out.push({ kind: "footer", key: `\u0000footer:${group.key}`, group });
+  });
+  return out;
 }
 
 /** A group band pinned to the left edge, as wide as the scroller shows. */

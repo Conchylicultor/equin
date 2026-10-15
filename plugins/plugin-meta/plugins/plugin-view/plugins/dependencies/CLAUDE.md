@@ -36,6 +36,7 @@ the renderer mirrors the sibling `sub-plugins` section's recursive row.
     - `plugin-meta/plugin-view.PluginViewSlots`
     - `plugin-meta/plugin-view.SectionCount`
     - `primitives/collapsible.CollapsibleChevron`
+    - `primitives/collapsible.FoldMotion`
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`

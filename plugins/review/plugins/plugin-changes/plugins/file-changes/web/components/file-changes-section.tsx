@@ -1,5 +1,8 @@
-import { useState } from "react";
-import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
+import {
+  CollapsibleChevron,
+  FoldMotion,
+  useCollapsible,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -43,7 +46,7 @@ function FileRow({
   file: PluginChangedFile;
   worktree: string;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const { open: expanded, triggerProps, contentProps } = useCollapsible();
   const slash = file.path.lastIndexOf("/");
   const dir = slash >= 0 ? file.path.slice(0, slash + 1) : "";
   const basename = slash >= 0 ? file.path.slice(slash + 1) : file.path;
@@ -54,10 +57,8 @@ function FileRow({
     <div className="border-b border-border/40 last:border-b-0">
       <Line
         as="button"
-        type="button"
-        onClick={() => setExpanded(!expanded)}
+        {...triggerProps}
         className="text-body w-full gap-sm px-sm py-xs text-left hover:bg-muted/50"
-        aria-expanded={expanded}
       >
         <CollapsibleChevron
           open={expanded}
@@ -104,7 +105,7 @@ function FileRow({
           <span className="text-destructive">&minus;{file.deletions}</span>
         </Line>
       </Line>
-      {expanded && (
+      <FoldMotion {...contentProps}>
         <div className="bg-background">
           <DiffOrImageView
             worktree={worktree}
@@ -113,7 +114,7 @@ function FileRow({
             from={file.from}
           />
         </div>
-      )}
+      </FoldMotion>
     </div>
   );
 }

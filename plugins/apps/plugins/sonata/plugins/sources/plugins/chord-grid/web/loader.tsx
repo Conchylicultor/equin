@@ -12,6 +12,10 @@
 
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import {
+  FoldMotion,
+  useCollapsible,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -78,6 +82,10 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
     "sonata:chord-grid:legend",
     false,
   );
+  const legend = useCollapsible({
+    open: legendOpen,
+    onOpenChange: setLegendOpen,
+  });
 
   const update = (patch: Partial<ChordGridRaw>) =>
     onRaw({ ...current, ...patch });
@@ -106,20 +114,16 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
           </Badge>
         ) : null}
         <Fill />
-        <Button
-          variant="ghost"
-          aria-expanded={legendOpen}
-          onClick={() => setLegendOpen((open) => !open)}
-        >
+        <Button variant="ghost" {...legend.triggerControlProps}>
           Syntax
           <Icon
             icon={arrowDownIcon}
-            className={cn("transition-transform", legendOpen && "rotate-180")}
+            className={cn("transition-transform", legend.open && "rotate-180")}
           />
         </Button>
       </Cluster>
 
-      {legendOpen ? (
+      <FoldMotion {...legend.contentProps}>
         <dl className="chord-grid-legend text-caption">
           {LEGEND.map(([example, meaning]) => (
             <Fragment key={example}>
@@ -130,7 +134,7 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
             </Fragment>
           ))}
         </dl>
-      ) : null}
+      </FoldMotion>
     </Stack>
   );
 }

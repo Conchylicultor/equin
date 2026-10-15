@@ -22,6 +22,7 @@ export type {
 export {
   useCollapsible,
   type CollapsibleTriggerControlProps,
+  type CollapsibleContentBindProps,
 } from "./internal/use-collapsible";
 export type {
   UseCollapsibleOptions,

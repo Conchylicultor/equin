@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
-import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
+import {
+  FoldMotion,
+  useCollapsible,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -42,7 +45,7 @@ const FACES = 3;
 export function BacklinksUnderTitle({ pageId }: PageHeaderPartProps) {
   const result = useLive(pageBacklinks, { pageId });
   const [openFor, setOpenFor] = useState<string | null>(null);
-  const { open, triggerControlProps, contentId, chevronClassName } =
+  const { triggerControlProps, contentProps, chevronClassName } =
     useCollapsible({
       open: openFor === pageId,
       onOpenChange: (next) => setOpenFor(next ? pageId : null),
@@ -85,21 +88,24 @@ export function BacklinksUnderTitle({ pageId }: PageHeaderPartProps) {
           </Button>
         </ControlSizeProvider>
       </Inline>
-      {open && (
-        // The list unfolds as a card on the page's own ground, widened past the
-        // column on both sides by the rows' own inline padding, so the rows'
-        // text sits just inside the column rather than a whole row inset in.
-        // A bleed the spacing ramp does not model, so it is an inline margin.
+      {/* The list unfolds as a card on the page's own ground, widened past the
+          column on both sides by the rows' own inline padding, so the rows'
+          text sits just inside the column rather than a whole row inset in.
+          A bleed the spacing ramp does not model, so it is an inline margin:
+          the sideways one on the fold box (outside what the fold clips), the
+          vertical ones inside it, so they tween with the card. */}
+      <FoldMotion
+        {...contentProps}
+        aria-label="Pages linking here"
+        style={{ marginInline: "calc(-1 * var(--pad-row-x))" }}
+      >
         <div
-          id={contentId}
-          role="region"
-          aria-label="Pages linking here"
           className="rounded-card border border-border bg-background p-xs"
-          style={{ margin: "0.375rem calc(-1 * var(--pad-row-x)) 0.25rem" }}
+          style={{ margin: "0.375rem 0 0.25rem" }}
         >
           <Backlinks documentId={pageId} />
         </div>
-      )}
+      </FoldMotion>
     </Stack>
   );
 }

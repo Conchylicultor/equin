@@ -11,6 +11,7 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 import {
   DataView,
   defineDataView,
@@ -278,21 +279,23 @@ function OpStatusCard({ options, body }: HostedToolbarParts) {
             />
           </Stack>
         </button>
-        {expanded && options !== null && (
-          <span className={cn("pr-sm text-foreground", rigidClass())}>
-            {options}
-          </span>
+        {/* The list's options trigger is the list's own: it comes and goes
+            with the list, on the same fold. */}
+        {options !== null && (
+          <FoldMotion open={expanded} className={rigidClass()}>
+            <span className="pr-sm text-foreground">{options}</span>
+          </FoldMotion>
         )}
       </Line>
-      {expanded && (
-        // The list sits on the surface's own background (`bg-chrome-mask`),
-        // not a translucent wash of the card's tone: the table's group headers
-        // pin with `bg-chrome-mask`, so any other fill here would paint them as
-        // bands of a different colour.
+      <FoldMotion open={expanded}>
+        {/* The list sits on the surface's own background (`bg-chrome-mask`),
+            not a translucent wash of the card's tone: the table's group
+            headers pin with `bg-chrome-mask`, so any other fill here would
+            paint them as bands of a different colour. */}
         <div className="border-t border-border/60 bg-chrome-mask py-2xs text-foreground">
           {body}
         </div>
-      )}
+      </FoldMotion>
     </Clip>
   );
 }

@@ -2,6 +2,7 @@ import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web"
 import { useLiveRow } from "@plugins/network/plugins/live/web";
 import {
   CollapsibleChevron,
+  FoldMotion,
   useCollapsible,
 } from "@plugins/primitives/plugins/collapsible/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
@@ -52,7 +53,9 @@ export function TurnSummaryCard({
   conversation: ConversationRecord;
 }) {
   const result = useLiveRow(turnSummaryRows, conversation.id);
-  const { open, toggle } = useCollapsible({ defaultOpen: true });
+  const { open, triggerProps, contentProps } = useCollapsible({
+    defaultOpen: true,
+  });
   // Not loaded yet and "no summary yet" both render nothing: the card is an
   // optional banner, and there is no stand-in summary to show in either case.
   if (result.status === "loading") return null;
@@ -82,15 +85,13 @@ export function TurnSummaryCard({
           Stack inside it — the summary text wraps, so this is a flow row and NOT
           a single-line `Line` (whose whitespace-nowrap would defeat the wrap). */}
       <button
-        type="button"
-        onClick={hasDetail ? toggle : undefined}
+        {...(hasDetail ? triggerProps : { type: "button" })}
         className={cn(
           "w-full text-left",
           // No detail to open: this turn's card is a readout, so it keeps the
           // arrow the base rule hands every other button the hand for.
           !hasDetail && "cursor-default",
         )}
-        aria-expanded={hasDetail ? open : undefined}
       >
         <Stack direction="row" gap="xs" align="start">
           {hasDetail ? (
@@ -109,34 +110,36 @@ export function TurnSummaryCard({
           <Fill as="span">{summary.summary || "(no summary)"}</Fill>
         </Stack>
       </button>
-      {hasDetail && open && (
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 separates this detail block from the always-visible summary button (sibling under a non-flex Text); ml-5 indents it under the chevron column
-        <Stack gap="sm" className="mt-2 ml-5">
-          {caveats.length > 0 && (
-            <BulletList
-              icon={
-                <Icon
-                  icon={warningIcon}
-                  // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the bullet icon with its first text line
-                  className={cn("mt-0.5 size-3 text-warning", rigidClass())}
-                />
-              }
-              items={caveats}
-            />
-          )}
-          {actions.length > 0 && (
-            <BulletList
-              icon={
-                <Icon
-                  icon={arrowForwardIcon}
-                  // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the bullet icon with its first text line
-                  className={cn("mt-0.5 size-3 text-info", rigidClass())}
-                />
-              }
-              items={actions}
-            />
-          )}
-        </Stack>
+      {hasDetail && (
+        <FoldMotion {...contentProps}>
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- pt-2 separates this detail block from the always-visible summary button (inside the fold, so it tweens with it); ml-5 indents it under the chevron column */}
+          <Stack gap="sm" className="pt-2 ml-5">
+            {caveats.length > 0 && (
+              <BulletList
+                icon={
+                  <Icon
+                    icon={warningIcon}
+                    // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the bullet icon with its first text line
+                    className={cn("mt-0.5 size-3 text-warning", rigidClass())}
+                  />
+                }
+                items={caveats}
+              />
+            )}
+            {actions.length > 0 && (
+              <BulletList
+                icon={
+                  <Icon
+                    icon={arrowForwardIcon}
+                    // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the bullet icon with its first text line
+                    className={cn("mt-0.5 size-3 text-info", rigidClass())}
+                  />
+                }
+                items={actions}
+              />
+            )}
+          </Stack>
+        </FoldMotion>
       )}
     </Text>
   );

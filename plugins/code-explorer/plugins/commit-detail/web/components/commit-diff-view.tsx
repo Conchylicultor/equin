@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
+import {
+  CollapsibleChevron,
+  FoldMotion,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { DiffOrImageView } from "@plugins/primitives/plugins/diff-view/web";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -191,7 +194,7 @@ function CommitFileRow({
           </Line>
         </button>
       </Sticky>
-      {expanded && (
+      <FoldMotion open={expanded}>
         <div className="bg-background">
           <DiffOrImageView
             worktree={worktree}
@@ -201,7 +204,7 @@ function CommitFileRow({
             from={file.from}
           />
         </div>
-      )}
+      </FoldMotion>
     </div>
   );
 }

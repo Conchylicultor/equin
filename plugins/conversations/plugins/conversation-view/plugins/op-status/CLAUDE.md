@@ -113,7 +113,7 @@ spawn / control-file / banner helpers both scripts share are `e2e/synthetic.ts`.
     - `Conversation.AbovePromptInput` → `OpStatusBanner`
     - `Item.Chips` → `OpStatusChip`
     - `queue-actions` "open-conversation" → `OpenConversationAction`
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
     - `primitives/live-state` ×4
     - `conversations/conversation-view` ×2
@@ -124,6 +124,7 @@ spawn / control-file / banner helpers both scripts share are `e2e/synthetic.ts`.
     - `debug/profiling/ops.opDetailPane`
     - `infra/host/machine-sleep.useSleepNowForFold`
     - `network/live.useLive`
+    - `primitives/collapsible.FoldMotion`
     - `primitives/css/clip.Clip`
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`

@@ -136,6 +136,8 @@ directives establish); the selected voicing strategy from the shared
     - `apps/sonata/shell.useSonataApp`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpointMutation`
+    - `primitives/collapsible.FoldMotion`
+    - `primitives/collapsible.useCollapsible`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`

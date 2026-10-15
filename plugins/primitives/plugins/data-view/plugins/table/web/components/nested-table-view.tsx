@@ -213,7 +213,7 @@ export function NestedTableView(
     lazyChildren: treeArgs.lazyChildren,
   });
   const ctxValue = useMemo<TreeListContextValue<Row>>(
-    () => ({ ...model.context, Row: noRecursiveRow, windowed: true }),
+    () => ({ ...model.context, Row: noRecursiveRow }),
     [model.context],
   );
   const { canReorder, canCreate, subtreeAllExpanded, toggleSubtreeExpanded } =
@@ -442,6 +442,8 @@ export function NestedTableView(
     rowActions,
     rowPersistentActions,
     stickyHeaderOffset: `var(${DATA_VIEW_HEADER_OFFSET_VAR}, 0px)`,
+    // A row's toggle folds the lines it reveals or hides.
+    openKeys: model.openKeys,
     useRowDecoration,
     columnHeader: options.columnHeader,
     density: props.density,

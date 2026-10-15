@@ -135,7 +135,10 @@ describe("data-view nested table leading field", () => {
     // dnd-kit numbers its accessibility regions per mount; that counter is the
     // only difference two mounts of identical tables may have.
     const markup = (el: HTMLElement) =>
-      el.innerHTML.replace(/(DndDescribedBy|DndLiveRegion)-\d+/g, "$1");
+      el.innerHTML
+        .replace(/(DndDescribedBy|DndLiveRegion)-\d+/g, "$1")
+        // The fold host's per-instance id (`useId`).
+        .replace(/data-row-fold-host="[^"]*"/g, "data-row-fold-host");
     const html = markup(renderTable([name, note]).container);
     cleanup();
     const hidden = renderTable([{ ...avatar, leading: true }, name, note], {

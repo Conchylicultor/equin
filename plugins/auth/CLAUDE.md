@@ -107,9 +107,10 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `Auth.ScopeRequirement` ← `backup.targets.google-drive`
     - `Auth.ScopeRequirement` ← `integrations.gmail`
     - `accountsPane.Actions` ← `primitives.pane`
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×5
     - `infra/endpoints` ×4
+    - `primitives/collapsible` ×4
     - `primitives/live-state` ×4
     - `primitives/pane` ×3
     - `config_v2/settings.configNavPane`

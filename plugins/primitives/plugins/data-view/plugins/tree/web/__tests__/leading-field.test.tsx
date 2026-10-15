@@ -138,7 +138,10 @@ describe("data-view tree leading field", () => {
     // dnd-kit numbers its accessibility regions per mount; that counter is the
     // only difference two mounts of identical trees may have.
     const markup = (el: HTMLElement) =>
-      el.innerHTML.replace(/(DndDescribedBy|DndLiveRegion)-\d+/g, "$1");
+      el.innerHTML
+        .replace(/(DndDescribedBy|DndLiveRegion)-\d+/g, "$1")
+        // The fold host's per-instance id (`useId`).
+        .replace(/data-row-fold-host="[^"]*"/g, "data-row-fold-host");
     const html = markup(renderTree([name, note]).container);
     cleanup();
     const hidden = renderTree([{ ...avatar, leading: true }, name, note], {

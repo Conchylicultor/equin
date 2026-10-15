@@ -10,6 +10,10 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  FoldMotion,
+  useCollapsible,
+} from "@plugins/primitives/plugins/collapsible/web";
 import type { PluginReviewProps } from "../../core";
 import { PluginChanges } from "../slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -26,6 +30,10 @@ export function PluginChangeCard({
 }: PluginReviewProps & { expanded: boolean; onToggle: () => void }) {
   const sections = PluginChanges.Section.useContributions();
   const hasExpandable = sections.some((s) => s.hasContent?.(plugin) ?? false);
+  const { open, triggerProps, contentProps } = useCollapsible({
+    open: expanded,
+    onOpenChange: onToggle,
+  });
 
   return (
     <Clip
@@ -34,10 +42,10 @@ export function PluginChangeCard({
     >
       <Line
         as="button"
-        onClick={onToggle}
+        {...triggerProps}
         className="w-full gap-sm px-md py-sm text-left hover:bg-muted/30"
       >
-        {expanded ? (
+        {open ? (
           <Icon
             icon={keyboardArrowUpIcon}
             className={cn("size-4 text-muted-foreground", rigidClass())}
@@ -71,16 +79,21 @@ export function PluginChangeCard({
           ) : null;
         })}
       </Line>
-      {expanded && hasExpandable && (
-        <Stack gap="md" className="px-md pb-md pt-xs border-t border-border/40">
-          <PluginChanges.Section.Render>
-            {(item) => {
-              if (item.hasContent && !item.hasContent(plugin)) return null;
-              const C = item.component;
-              return <C conversationId={conversationId} plugin={plugin} />;
-            }}
-          </PluginChanges.Section.Render>
-        </Stack>
+      {hasExpandable && (
+        <FoldMotion {...contentProps}>
+          <Stack
+            gap="md"
+            className="px-md pb-md pt-xs border-t border-border/40"
+          >
+            <PluginChanges.Section.Render>
+              {(item) => {
+                if (item.hasContent && !item.hasContent(plugin)) return null;
+                const C = item.component;
+                return <C conversationId={conversationId} plugin={plugin} />;
+              }}
+            </PluginChanges.Section.Render>
+          </Stack>
+        </FoldMotion>
       )}
     </Clip>
   );

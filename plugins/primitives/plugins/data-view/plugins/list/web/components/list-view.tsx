@@ -15,6 +15,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { TreeRowChrome } from "@plugins/primitives/plugins/tree/web";
+import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 import {
   FieldCell,
   GroupedSections,
@@ -811,15 +812,17 @@ function listRowNode(props: ListEntryProps): ReactNode {
       )}
     </Row>
   );
-  if (!detail || !open) return rowNode;
+  if (!detail) return rowNode;
   // The detail is the row's SIBLING, so it may hold controls of its own
-  // whatever the row's activation is.
+  // whatever the row's activation is. It folds in and out under the row.
   return (
     <Stack gap="none">
       {rowNode}
-      <Inset x="sm" b="sm">
-        {detail(row)}
-      </Inset>
+      <FoldMotion open={open}>
+        <Inset x="sm" b="sm">
+          {detail(row)}
+        </Inset>
+      </FoldMotion>
     </Stack>
   );
 }

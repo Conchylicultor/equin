@@ -36,13 +36,12 @@ A push's review is not live: it reads `GET /api/review/plugin-changes` once.
     - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.slots.render-diff`
     - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.structure.render-diff`
   - Contributes: `ReviewSlots.Section` "Plugin Changes" → `PluginChangesSection`
-  - Uses:
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/collapsible` ×4
+    - `primitives/css/badge` ×2
+    - `primitives/live-state` ×2
     - `infra/endpoints.useEndpoint`
     - `network/live.useLive`
-    - `primitives/collapsible.ExpandAllButton`
-    - `primitives/collapsible.useExpandAll`
-    - `primitives/css/badge.Badge`
-    - `primitives/css/badge.formatStatusLabel`
     - `primitives/css/card.Card`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
@@ -51,8 +50,6 @@ A push's review is not live: it reads `GET /api/review/plugin-changes` once.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.ResourceResult`
     - `primitives/loading.Loading`
     - `primitives/slot-render.defineRenderSlot`
     - `review.ReviewSlots`

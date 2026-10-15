@@ -24,10 +24,36 @@ Both take the same `UseCollapsibleOptions` (`open` / `defaultOpen` /
 element to put it on. `CollapsibleTrigger` / `CollapsibleContent` /
 `CollapsibleChevron` read the context and work identically under either.
 
-## `useCollapsible` hands out two trigger bags
+## The content is never `{open && …}`
 
-`useCollapsible()` is for building your **own** trigger, and which bag you spread
-depends on one question: **do you own the element?**
+A disclosure's content folds with motion — through `CollapsibleContent`, or
+`FoldMotion`. A bare `{open && <Body/>}` mounts and unmounts it in one frame,
+and nothing says so; the lint rule `collapsible/no-unanimated-disclosure`
+rejects it. Its sources of a disclosure boolean: `open` from `useCollapsible` /
+`useCollapsibleContext`, `expanded.has(…)` from `useExpandAll`, and whatever an
+`aria-expanded` (without `aria-haspopup` — a popup is not a fold) or a
+`<CollapsibleChevron open>` reports. A conditional INSIDE the trigger (a chevron
+or label swap) is the trigger's own chrome and passes. It also rejects a native
+`<details>`. Not seen: an early `if (!open) return`, and a toggle that reports
+its state nowhere — give it `useCollapsible`'s trigger props. A summary/full
+swap is two folds (`<FoldMotion {...contentProps}>` + `<FoldMotion open={!open}>`,
+the mail message card); a one-way inline "+N more" in a wrapping chip row is not
+a disclosure and stays a plain slice.
+
+## `useCollapsible` hands out a trigger bag and a content bag
+
+`useCollapsible()` is for building your **own** trigger and content.
+`contentProps` (`open`, `id`, `role="region"`) goes on a `<FoldMotion>`, so the
+content folds and the trigger's `aria-controls` points at it:
+
+```tsx
+const { open, triggerProps, contentProps } = useCollapsible();
+<button {...triggerProps}>…<CollapsibleChevron open={open} /></button>
+<FoldMotion {...contentProps}><div className="pt-2">{body}</div></FoldMotion>
+```
+
+`open` is for the trigger's chrome. Which trigger bag you spread depends on one
+question: **do you own the element?**
 
 - **`triggerProps`** — you render a raw `<button>` (or `as="button"`). It adds
   `type="button"`, without which the trigger submits any surrounding form.
@@ -44,7 +70,8 @@ could accept — which is how `sidebar-pane-section` used to read them one by on
 ## `CollapsibleContent` folds with motion
 
 A flip of `open` after mount tweens the content's height and opacity (200 ms,
-the chevron's quarter turn on the same clock); a close keeps the content mounted
+the chevron's quarter turn on the same clock — `FOLD_MS` / `FOLD_EASING` from this
+plugin's `core`, the one fold timing flat-list folds (`virtual-rows/row-fold`) read too); a close keeps the content mounted
 (and `inert`) until its fold-away has run, then unmounts it as before. Content
 that starts open just appears — a page of open sections never unfolds on load.
 A flip mid-tween reverses from the in-flight frame. Under
@@ -60,8 +87,16 @@ no per-site opt-in to forget.
 
 `FoldMotion` is that tween on its own — `open` plus children, no collapsible
 context, no `region` role — for a fold whose open state lives elsewhere: the
-`tree` primitive folds a node's children with it. `CollapsibleContent` is
-`FoldMotion` plus the context's state, id and role.
+`tree` primitive folds a node's children with it, a `useExpandAll` list each
+row's diff. `CollapsibleContent` is `FoldMotion` plus the context's state, id
+and role. Its props land on the moving box, so padding, borders and vertical
+margins go on a box INSIDE it; a sideways bleed (a negative inline margin) may
+sit on it.
+
+The tween caps `max-height` and its far end is the box's own size measured with
+the cap released, never `scrollHeight` — the same motion for a block, and the
+only one that folds a box its parent sizes: the sidebar section is a `flex-1`
+cell of its column, and as it folds its siblings take the room back.
 
 An unfold survives a slow mount. Mounting a long list can hold the main thread
 for hundreds of milliseconds, and the browser dates an animation from a frame
@@ -84,6 +119,7 @@ fold and an unfold (`--path /agents --header Queue`).
     - `ui/icons.Icon`
   - Exports (types):
     - `CollapsibleChevronProps`
+    - `CollapsibleContentBindProps`
     - `CollapsibleContentProps`
     - `CollapsibleCtx`
     - `CollapsibleProps`
@@ -107,17 +143,22 @@ fold and an unfold (`--path /agents --header Queue`).
     - `useCollapsibleContext`
     - `useExpandAll`
 - Cross-plugin:
-  - Imported by: 42 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 48 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×10
     - `ui` ×9
-    - `conversations` ×8
-    - `primitives` ×7
-    - `apps` ×6
+    - `apps` ×8
+    - `primitives` ×8
     - `plugin-meta` ×4
     - `review` ×3
+    - `auth`
     - `build/build-logs`
     - `code-explorer/commit-detail`
     - `debug/read-set`
     - `reorder/node-types/header`
     - `shell/health-report`
+- Core:
+  - Exports (values):
+    - `FOLD_EASING`
+    - `FOLD_MS`
 
 <!-- AUTOGENERATED:END -->

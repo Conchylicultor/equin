@@ -1,4 +1,7 @@
-import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
+import {
+  CollapsibleChevron,
+  FoldMotion,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -145,7 +148,7 @@ export function ReviewFileRow({
           </Line>
         </Line>
       </Sticky>
-      {expanded && (
+      <FoldMotion open={expanded}>
         <div className="bg-background">
           <DiffOrImageView
             worktree={worktree}
@@ -155,7 +158,7 @@ export function ReviewFileRow({
             from={file.from}
           />
         </div>
-      )}
+      </FoldMotion>
     </div>
   );
 }

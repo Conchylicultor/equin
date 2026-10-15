@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { useEffect, useMemo, type ReactElement } from "react";
+import {
+  FoldMotion,
+  useCollapsible,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { processEmailHtml } from "../internal/process-email-html";
 import "./mail-html.css";
 
@@ -38,7 +42,7 @@ export function MailHtml({
     [html, showRemoteImages, resolveCid],
   );
 
-  const [showQuoted, setShowQuoted] = useState(false);
+  const quoted = useCollapsible();
 
   useEffect(() => {
     onRemoteImagesDetected?.(processed.hadRemoteImage);
@@ -50,20 +54,20 @@ export function MailHtml({
       {processed.quotedHtml !== null && (
         <>
           <button
-            type="button"
+            {...quoted.triggerProps}
             className="mail-html-quote-toggle"
-            aria-expanded={showQuoted}
-            aria-label={showQuoted ? "Hide trimmed content" : "Show trimmed content"}
-            onClick={() => setShowQuoted((v) => !v)}
+            aria-label={
+              quoted.open ? "Hide trimmed content" : "Show trimmed content"
+            }
           >
-            {showQuoted ? "Hide trimmed content" : "•••"}
+            {quoted.open ? "Hide trimmed content" : "•••"}
           </button>
-          {showQuoted && (
+          <FoldMotion {...quoted.contentProps}>
             <div
               className="mail-html-quoted"
               dangerouslySetInnerHTML={{ __html: processed.quotedHtml }}
             />
-          )}
+          </FoldMotion>
         </>
       )}
     </div>

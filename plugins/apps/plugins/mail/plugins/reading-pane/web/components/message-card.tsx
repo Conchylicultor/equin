@@ -11,7 +11,10 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Avatar } from "@plugins/primitives/plugins/avatar/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
+import {
+  FoldMotion,
+  useCollapsible,
+} from "@plugins/primitives/plugins/collapsible/web";
 import type { MailMessage } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { addressLabel, recipientsLabel } from "../internal/format-address";
 import { MessageBody } from "./message-body";
@@ -26,10 +29,11 @@ export interface MessageCardProps {
 }
 
 // One message in a thread: a raised card that collapses to a one-line summary
-// (sender · snippet · date) and expands to the full header + body. The body is
-// only mounted (and hydrated) while expanded.
+// (sender · snippet · date) and expands to the full header + body. The two
+// faces swap on one fold — the summary folds away as the full message unfolds —
+// and the body is only mounted (and hydrated) while expanded.
 export function MessageCard({ message, defaultOpen }: MessageCardProps) {
-  const { open, toggle, contentId, triggerControlProps } = useCollapsible({
+  const { open, toggle, contentProps, triggerControlProps } = useCollapsible({
     defaultOpen,
   });
 
@@ -40,7 +44,7 @@ export function MessageCard({ message, defaultOpen }: MessageCardProps) {
   return (
     <Surface level="raised" className="rounded-lg">
       <Inset pad="md">
-        {open ? (
+        <FoldMotion {...contentProps}>
           <Stack gap="sm">
             <Inline gap="sm" align="start">
               <Avatar
@@ -75,11 +79,10 @@ export function MessageCard({ message, defaultOpen }: MessageCardProps) {
                 />
               </Inline>
             </Inline>
-            <div id={contentId}>
-              <MessageBody messageId={message.id} />
-            </div>
+            <MessageBody messageId={message.id} />
           </Stack>
-        ) : (
+        </FoldMotion>
+        <FoldMotion open={!open}>
           <Row
             icon={
               <ControlSizeProvider size="sm">
@@ -103,7 +106,7 @@ export function MessageCard({ message, defaultOpen }: MessageCardProps) {
             <Text variant="label">{fromLabel}</Text>
             <Text tone="muted">{message.snippet ?? ""}</Text>
           </Row>
-        )}
+        </FoldMotion>
       </Inset>
     </Surface>
   );

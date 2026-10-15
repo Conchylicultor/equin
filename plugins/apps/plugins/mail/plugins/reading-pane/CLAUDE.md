@@ -75,16 +75,16 @@ parses MIME or HTML itself.
   - Slots: `threadPane.Actions`
   - Slot contributors: `threadPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "mail-thread"
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×3
     - `apps/mail/attachments` ×2
+    - `primitives/collapsible` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
     - `apps/mail/mail-html.MailHtml`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
     - `primitives/avatar.Avatar`
-    - `primitives/collapsible.useCollapsible`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`

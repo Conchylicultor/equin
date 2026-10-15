@@ -11,7 +11,9 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
+  FoldMotion,
 } from "../internal/collapsible";
+import { useCollapsible } from "../internal/use-collapsible";
 
 // jsdom has neither the Web Animations API nor layout: stand in for both, and
 // hold animation frames so a test decides when the next one runs.
@@ -44,7 +46,12 @@ beforeEach(() => {
   vi.spyOn(window, "cancelAnimationFrame").mockImplementation((id) => {
     frames.delete(id);
   });
-  vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(120);
+  // The box's settled size, measured with the tween's cap released.
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+    function (this: HTMLElement) {
+      return { height: this.style.maxHeight === "" ? 120 : 0 } as DOMRect;
+    },
+  );
 });
 afterEach(() => {
   cleanup();
@@ -86,18 +93,18 @@ describe("CollapsibleContent fold motion", () => {
     fireEvent.click(screen.getByText("Queue"));
     // The commit: content mounted, held at height 0, no tween yet — one
     // created here would be dated before a slow mount and elapse unseen.
-    expect(region()!.style.height).toBe("0px");
+    expect(region()!.style.maxHeight).toBe("0px");
     expect(region()!.style.opacity).toBe("0");
     expect(animations).toHaveLength(0);
 
     nextFrame();
     expect(animations).toHaveLength(1);
     expect(animations[0]!.keyframes).toEqual([
-      { height: "0px", opacity: 0 },
-      { height: "120px", opacity: 1 },
+      { maxHeight: "0px", opacity: 0 },
+      { maxHeight: "120px", opacity: 1 },
     ]);
     // The pin is released to the tween, and the box settles unclipped.
-    expect(region()!.style.height).toBe("");
+    expect(region()!.style.maxHeight).toBe("");
     act(() => animations[0]!.onfinish!());
     expect(region()!.style.overflow).toBe("");
   });
@@ -105,12 +112,12 @@ describe("CollapsibleContent fold motion", () => {
   it("folds away from the natural height and unmounts when the tween ends", () => {
     render(<Harness defaultOpen />);
     fireEvent.click(screen.getByText("Queue"));
-    expect(region()!.style.height).toBe("120px");
+    expect(region()!.style.maxHeight).toBe("120px");
 
     nextFrame();
     expect(animations[0]!.keyframes).toEqual([
-      { height: "120px", opacity: 1 },
-      { height: "0px", opacity: 0 },
+      { maxHeight: "120px", opacity: 1 },
+      { maxHeight: "0px", opacity: 0 },
     ]);
     expect(region()).not.toBeNull();
     act(() => animations[0]!.onfinish!());
@@ -122,12 +129,33 @@ describe("CollapsibleContent fold motion", () => {
     fireEvent.click(screen.getByText("Queue"));
     // Flipped back before any frame ran: the fold-away starts from the pinned
     // height 0, not from the full height.
-    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
-      height: 0,
-    } as DOMRect);
     fireEvent.click(screen.getByText("Queue"));
     nextFrame();
     expect(animations).toHaveLength(1);
-    expect(animations[0]!.keyframes[0]).toEqual({ height: "0px", opacity: 0 });
+    expect(animations[0]!.keyframes[0]).toEqual({
+      maxHeight: "0px",
+      opacity: 0,
+    });
+  });
+
+  it("folds useCollapsible's content bag, controlled by its trigger", () => {
+    function Own() {
+      const { triggerProps, contentProps } = useCollapsible();
+      return (
+        <>
+          <button {...triggerProps}>Own</button>
+          <FoldMotion {...contentProps}>body</FoldMotion>
+        </>
+      );
+    }
+    render(<Own />);
+    fireEvent.click(screen.getByText("Own"));
+    const content = screen.getByRole("region");
+    expect(content.textContent).toBe("body");
+    expect(screen.getByText("Own").getAttribute("aria-controls")).toBe(
+      content.id,
+    );
+    nextFrame();
+    expect(animations).toHaveLength(1);
   });
 });

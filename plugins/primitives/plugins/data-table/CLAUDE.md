@@ -82,6 +82,17 @@ by the guess's error.
 The threshold is exported because a drag-reordering consumer must know whether the
 body windows, to decide whether its `RankReorderProvider` needs `measuringAlways`.
 
+## Fold motion
+
+The body is one flat list of lines (`bodyLines`: each group's header, rows
+and footer, or the plain rows), run through `virtual-rows/row-fold`'s
+`useRowFold` with the grid as host — plain, grouped and windowed bodies alike.
+A group's `collapsed` flip folds its rows in or out (the table tracks it in
+its own open set, keyed by the header line); a host disclosure folds through
+`openKeys` (the nested table's expanded ids, data-view's open fold lines).
+Every line's outermost element carries `rowProps` — rows, full-span lines,
+group headers, footers — so the lines below a fold slide with it.
+
 ## Presentation: grid or outline
 
 `presentation` (default `"grid"`) is how the table looks. `grid` is the header
@@ -199,13 +210,14 @@ Verified in Chromium only (the e2e harness drives Chromium).
 
 - Description: Sortable/filterable flex-layout data table primitive.
 - Web:
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×4
     - `primitives/multi-select` ×3
     - `primitives/css/sticky/stack` ×2
     - `primitives/css/sticky` ×2
     - `primitives/dom/element-size` ×2
     - `primitives/row-actions` ×2
+    - `primitives/virtual-rows/row-fold` ×2
     - `primitives/css/center.Center`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

@@ -34,6 +34,7 @@ this repository — a reaped attempt's commits stay readable.
   - Uses:
     - `network/live.useLive`
     - `primitives/collapsible.CollapsibleChevron`
+    - `primitives/collapsible.FoldMotion`
     - `primitives/css/column.Column`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`

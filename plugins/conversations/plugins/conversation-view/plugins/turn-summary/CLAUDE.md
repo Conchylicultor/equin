@@ -36,6 +36,7 @@ A persistent global trigger on `conversationTurnCompleted` (installed in this pl
     - `conversations/conversation-view.Conversation`
     - `network/live.useLiveRow`
     - `primitives/collapsible.CollapsibleChevron`
+    - `primitives/collapsible.FoldMotion`
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/fill.Fill`
     - `primitives/css/rigid.rigidClass`

@@ -1,6 +1,10 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ReactNode } from "react";
-import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
+import {
+  CollapsibleChevron,
+  FoldMotion,
+  useCollapsible,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -27,22 +31,24 @@ export function HeaderBox({
   onPatch: (next: Partial<HeaderPayload>) => void;
   children: ReactNode;
 }) {
-  const collapsed = payload.collapsed ?? false;
+  const { open, triggerProps, contentProps } = useCollapsible({
+    open: !(payload.collapsed ?? false),
+    onOpenChange: (next) => onPatch({ collapsed: !next }),
+  });
 
   return (
     <div className="rounded-md border border-border/50">
       <Line className="gap-2xs px-xs py-xs">
         <button
-          type="button"
-          onClick={() => onPatch({ collapsed: !collapsed })}
-          aria-label={collapsed ? "Expand" : "Collapse"}
+          {...triggerProps}
+          aria-label={open ? "Collapse" : "Expand"}
           className={cn(
             rigidClass(),
             "size-4 rounded-sm text-muted-foreground hover:text-foreground",
           )}
         >
           <Center className="size-full">
-            <CollapsibleChevron open={!collapsed} className="size-3.5" />
+            <CollapsibleChevron open={open} className="size-3.5" />
           </Center>
         </button>
         <Text
@@ -53,11 +59,11 @@ export function HeaderBox({
           {payload.label || "Group"}
         </Text>
       </Line>
-      {!collapsed && (
+      <FoldMotion {...contentProps}>
         <Inset x="xs" b="xs">
           {children}
         </Inset>
-      )}
+      </FoldMotion>
     </div>
   );
 }
