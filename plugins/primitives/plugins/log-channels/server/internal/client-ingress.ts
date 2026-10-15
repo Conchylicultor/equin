@@ -21,26 +21,19 @@ import { logsDir } from "./persist";
 // this representative entry (path `<logsDir>/client-log.jsonl`, never itself
 // written unless a browser literally names a channel "client-log") stands in for
 // the family. The real per-channel writes go to sibling `<channel>.jsonl` files
-// under the same rotation.
-//
-// It is declared LAZILY on the first ingress (not at module eval): resolving the
-// logs dir asks for this process's runtime namespace, and this module is on the import path of
-// the log-channels/server barrel, which must stay import-safe. First-ingress is
-// also exactly when the first client-log file starts existing.
-let familyBoundDeclared = false;
-function ensureFamilyBound(): void {
-  if (familyBoundDeclared) return;
-  familyBoundDeclared = true;
-  defineFileSink({
-    id: "client-log",
-    description:
-      "Family bound for browser clientLog ingress channels (open-ended, " +
-      "browser-supplied ids). Every <channel>.jsonl written by POST /api/logs/emit " +
-      "shares this 128 MB × 3 rotation via openDynamicSink; this representative " +
-      "entry makes the family enumerable/bounded in getFileSinks().",
-    path: join(logsDir(), "client-log.jsonl"),
-  });
-}
+// under the same rotation. Declared at import, its path resolved lazily (see
+// `defineLogSink`): resolving the logs dir asks for this process's runtime
+// namespace, and this module is on the import path of the log-channels/server
+// barrel, which must stay import-safe.
+export const clientLogFamily = defineFileSink({
+  id: "client-log",
+  description:
+    "Family bound for browser clientLog ingress channels (open-ended, " +
+    "browser-supplied ids). Every <channel>.jsonl written by POST /api/logs/emit " +
+    "shares this 128 MB × 3 rotation via openDynamicSink; this representative " +
+    "entry makes the family enumerable/bounded in getFileSinks().",
+  path: () => join(logsDir(), "client-log.jsonl"),
+});
 
 /**
  * Ingest ONE `POST /api/logs/emit` body. Route-internal ONLY (the emit handler) —
@@ -60,7 +53,6 @@ function ensureFamilyBound(): void {
  * registry's `timestamp` — one name per concept, renamed in exactly one place.
  */
 export function emitClientLogs(body: EmitLogsBody): void {
-  ensureFamilyBound();
   const { channel: channelId } = body;
   const channel = getOrCreateChannel(channelId, () =>
     openDynamicSink(logsDir(), channelId),

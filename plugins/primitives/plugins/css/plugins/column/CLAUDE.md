@@ -59,10 +59,10 @@ Only present slots render — an absent slot produces no region and no phantom g
   - Exports (values): `Column`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×11
     - `primitives` ×5
-    - `debug` ×3
+    - `debug` ×4
     - `code-explorer/commit-detail`
     - `config_v2/settings`
     - `conversations/conversation-view/commits-graph`

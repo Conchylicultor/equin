@@ -2447,8 +2447,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 69 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×61
+  - Contributes: 71 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×63
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
@@ -2630,6 +2630,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `useHierarchyTree`
     - `useIsChipField`
     - `useItemActionZones`
+    - `useLivePagedValuePaging`
     - `useLivePagesPaging`
     - `useResolveCell`
     - `useResolveCellEditor`
@@ -2641,8 +2642,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `useRowFilter`
     - `useSortController`
 - Server:
-  - Contributes: 63 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×61
+  - Contributes: 65 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×63
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getConfig`
@@ -2792,10 +2793,10 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`
-  - Imported by: 90 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 91 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×30
     - `apps` ×22
-    - `debug` ×11
+    - `debug` ×12
     - `conversations` ×7
     - `primitives` ×7
     - `tasks` ×4

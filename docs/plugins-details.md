@@ -18595,7 +18595,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
-    - **`logs`** — System logs pane, opened from the Debug sidebar.
+    - **`logs`** — Debug → Logs: every log of a worktree (what it records, its size against its rotation bound, its kept files) and a reader that pages one log back across its rotations, opened from the Debug sidebar or by a link naming a worktree, a log and an instant. The debug.logs.catalog value (every log of a worktree with its files' sizes and ages) and the debug.logs.lines paged value (one log's lines across its whole kept history), each watched through the dir hub.
       - Web:
         - Slots:
           - `logsPane.Actions`
@@ -18607,39 +18607,46 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Pane.Register` "logs"
           - `Pane.Register` "logs-channel"
           - `DebugApp.Sidebar` "Logs"
-        - Uses:
+        - Uses: 29 symbols — full list in [`plugins/debug/plugins/logs/REFERENCE.md`](../plugins/debug/plugins/logs/REFERENCE.md)
+          - `primitives/css/ui-kit` ×7
+          - `primitives/data-view` ×4
+          - `primitives/pane` ×4
+          - `primitives/css/spacing` ×3
+          - `primitives/relative-time` ×2
           - `apps/debug/shell.DebugApp`
-          - `infra/endpoints.fetchEndpoint`
+          - `network/live.useLive`
+          - `primitives/copy-to-clipboard.CopyButton`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/clip.Clip`
+          - `primitives/css/column.Column`
           - `primitives/css/fill.Fill`
-          - `primitives/css/pin.Pin`
-          - `primitives/css/spacing.Stack`
-          - `primitives/css/ui-kit.cn`
-          - `primitives/dom/auto-scroll.JumpToBottomButton`
-          - `primitives/dom/auto-scroll.useStickyScroll`
-          - `primitives/log-channels.LiveLogChannel`
-          - `primitives/log-channels.LogEntryList`
-          - `primitives/networking.ReconnectingEventSource`
-          - `primitives/pane.defineRoute`
-          - `primitives/pane.Pane`
-          - `primitives/pane.PaneChrome`
+          - `primitives/css/text.Text`
+          - `primitives/live-state.foldResource`
         - Exports (values):
           - `logChannelPane`
           - `logsPane`
+      - Server:
+        - Contributes:
+          - `resource.declare` "debug.logs.catalog"
+          - `resource.declare` "debug.logs.lines"
+        - Uses:
+          - `infra/file-watcher.acquireDirWatch`
+          - `network/live.serveValue`
+          - `primitives/log-channels.clientLogFamily`
+          - `primitives/log-channels.logsDir`
+          - `primitives/log-channels.logsDirFor`
+        - Resources:
+          - `debug.logs.catalog` (push, notified)
+          - `debug.logs.lines` (keyed, window, notified)
       - Cross-plugin:
         - Uses tokens:
-          - `ui/tokens/color-palette --foreground`
+          - `ui/tokens/color-palette --muted`
           - `ui/tokens/color-palette --muted-foreground`
-          - `ui/tokens/color-palette --ring`
-          - `ui/tokens/density --space-md`
-          - `ui/tokens/density --space-xl`
-          - `ui/tokens/density --space-xs`
+          - `ui/tokens/color-palette --primary`
+          - `ui/tokens/color-palette --warning`
+          - `ui/tokens/font-family --font-mono`
+          - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-          - `ui/tokens/type-scale --font-scale`
-          - `ui/tokens/type-scale --font-size-body`
-          - `ui/tokens/type-scale --font-weight-normal`
-          - `ui/tokens/type-scale --line-height-body`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/components/log-viewer.tsx` (debt)
     - **`memory`** — Browse Claude Code auto-memory files for the current project. The memory.files listing and memory.file content live values, each watched through the dir hub.
       - Web:
         - Slots: `memoryPane.Actions`
@@ -25015,10 +25022,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `multipart`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 203 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 202 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×53
           - `conversations` ×27
-          - `debug` ×18
+          - `debug` ×17
           - `infra` ×16
           - `page` ×14
           - `tasks` ×13
@@ -25430,6 +25437,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `FileSink`
           - `FileSinkSpec`
+          - `HistoryFile`
+          - `HistoryLine`
+          - `HistoryRange`
           - `JsonlTailResult`
           - `RotateBound`
           - `TailOptions`
@@ -25437,17 +25447,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `defineFileSink`
           - `getFileSinks`
+          - `historyCutAt`
+          - `isHistoryPosition`
           - `openDynamicSink`
+          - `readHistory`
           - `readJsonlTail`
           - `readTail`
           - `sanitizeChannel`
+          - `statHistory`
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope.
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 25 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+        - Imported by: 26 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+          - `debug` ×6
           - `infra` ×6
           - `conversations` ×5
-          - `debug` ×5
           - `apps` ×2
           - `build`
           - `config_v2`
@@ -28285,11 +28299,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 228 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 229 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×67
           - `conversations` ×36
           - `tasks` ×26
-          - `debug` ×23
+          - `debug` ×24
           - `active-data` ×12
           - `infra` ×11
           - `page` ×10
@@ -28333,7 +28347,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/build-profiling` (1 debt)
           - `build/serve-composition` (1 debt)
           - `code-explorer/file-resolve` (1 debt)
-          - `debug/logs` (1 debt)
           - `debug/profiling/build` (1 debt)
           - `debug/slow-ops/cluster` (1 debt)
           - `debug/timeline` (1 debt)
@@ -33365,13 +33378,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CopyButton`
           - `useCopyToClipboard`
       - Cross-plugin:
-        - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
+        - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
           - `apps` ×8
           - `page` ×4
           - `primitives` ×4
           - `conversations` ×3
+          - `debug` ×2
           - `review` ×2
-          - `debug/queue`
           - `infra/claude-cli`
           - `tasks/worktree-identity`
     - **`css`** — Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
@@ -33431,9 +33444,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 165 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 166 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
-              - `debug` ×35
+              - `debug` ×36
               - `conversations` ×24
               - `reports` ×11
               - `primitives` ×9
@@ -33543,11 +33556,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+            - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
               - `apps` ×18
               - `primitives` ×10
               - `conversations` ×7
-              - `debug` ×6
+              - `debug` ×7
               - `page` ×5
               - `fields` ×2
               - `review` ×2
@@ -33653,10 +33666,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `Column`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/css/plugins/column/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/column/REFERENCE.md)
+            - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/css/plugins/column/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/column/REFERENCE.md)
               - `apps` ×11
               - `primitives` ×5
-              - `debug` ×3
+              - `debug` ×4
               - `code-explorer/commit-detail`
               - `config_v2/settings`
               - `conversations/conversation-view/commits-graph`
@@ -34046,14 +34059,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pinClasses`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×17
               - `apps` ×15
               - `page` ×9
               - `conversations` ×7
               - `apps-core` ×2
               - `tasks` ×2
-              - `debug/logs`
               - `map`
               - `reorder/editor`
               - `screenshot/draw-on-app`
@@ -34545,11 +34557,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 363 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 364 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×96
               - `conversations` ×72
               - `primitives` ×40
-              - `debug` ×32
+              - `debug` ×33
               - `page` ×21
               - `plugin-meta` ×14
               - `ui` ×14
@@ -35035,8 +35047,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 69 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×61
+        - Contributes: 71 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×63
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
@@ -35218,6 +35230,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useHierarchyTree`
           - `useIsChipField`
           - `useItemActionZones`
+          - `useLivePagedValuePaging`
           - `useLivePagesPaging`
           - `useResolveCell`
           - `useResolveCellEditor`
@@ -35229,8 +35242,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowFilter`
           - `useSortController`
       - Server:
-        - Contributes: 63 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×61
+        - Contributes: 65 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×63
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -35380,10 +35393,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-semibold`
-        - Imported by: 90 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 91 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×30
           - `apps` ×22
-          - `debug` ×11
+          - `debug` ×12
           - `conversations` ×7
           - `primitives` ×7
           - `tasks` ×4
@@ -36045,7 +36058,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/outline`
-              - `debug/logs`
               - `layouts/miller`
               - `page/editor`
               - `primitives/data-view`
@@ -37012,12 +37024,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 235 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 236 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×66
           - `conversations` ×40
           - `tasks` ×22
           - `ui` ×22
-          - `debug` ×20
+          - `debug` ×21
           - `page` ×12
           - `primitives` ×9
           - `active-data` ×7
@@ -37131,7 +37143,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `search/quick-find`
           - `shell/notifications`
           - `stats/commits`
-    - **`log-channels`** — Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/* + /ws/logs routes; debug/logs is the viewer.
+    - **`log-channels`** — Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/emit + /ws/logs routes; debug/logs is the viewer.
       - Web:
         - Uses:
           - `infra/endpoints.EndpointError`
@@ -37154,13 +37166,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/networking.subscribeWsStatus`
           - `primitives/networking.useReconnectingWebSocket`
           - `primitives/networking.wsUrl`
-        - Exports (types):
-          - `LiveLogChannelProps`
-          - `LogEntryListProps`
+        - Exports (types): `LiveLogChannelProps`
         - Exports (values):
           - `clientLog`
           - `LiveLogChannel`
-          - `LogEntryList`
       - Server:
         - Uses:
           - `infra/endpoints.HttpError`
@@ -37171,15 +37180,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LogChannel`
           - `LogStream`
         - Exports (values):
+          - `clientLogFamily`
           - `defineLogSink`
           - `listChannels`
           - `Log`
+          - `logsDir`
           - `logsDirFor`
           - `readChannelEntries`
           - `readChannelJson`
           - `readChannelJsonAsync`
         - Routes:
-          - `GET /api/logs/channels`
           - `POST /api/logs/emit`
           - `/ws/logs (WS)`
       - Core:
@@ -37196,7 +37206,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `emitLogs`
           - `EmitLogsBodySchema`
-          - `getLogChannels`
           - `MAX_EMIT_LINES`
       - Cross-plugin:
         - Uses tokens:
@@ -37648,17 +37657,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wsUrl`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
-          - `primitives` ×5
-          - `conversations` ×3
-          - `apps` ×2
-          - `framework` ×2
-          - `infra` ×2
-          - `page` ×2
-          - `tasks` ×2
-          - `debug/logs`
+        - Imported by:
+          - `apps/events/event-list`
+          - `apps/pages/page-tree`
+          - `conversations/all-conversations`
+          - `conversations/conversations-view/data-view`
+          - `conversations/conversations-view/data-view/history`
+          - `framework/browser-server`
+          - `framework/browser-server/demo/scope`
+          - `infra/endpoints`
+          - `infra/health`
           - `network/live`
+          - `page/editor`
+          - `page/editor-collab`
+          - `primitives/live-state`
+          - `primitives/log-channels`
+          - `primitives/optimistic-mutation`
+          - `primitives/overlay/image-viewer`
+          - `primitives/terminal`
           - `shell/notifications`
+          - `tasks/task-attachments`
+          - `tasks/tasks-core`
       - Exemptions:
         - Exempts itself from:
           - `no-raw-websocket` — `web/shared-ws.worker.ts`, `web/use-reconnecting-ws.ts` (sanctioned)
@@ -38707,9 +38726,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 62 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 63 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×23
-          - `debug` ×12
+          - `debug` ×13
           - `conversations` ×8
           - `tasks` ×4
           - `build` ×3
@@ -45309,11 +45328,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 312 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 311 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×64
               - `apps` ×63
               - `conversations` ×47
-              - `debug` ×26
+              - `debug` ×25
               - `page` ×20
               - `ui` ×16
               - `plugin-meta` ×13
@@ -45382,11 +45401,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 145 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+            - Tokens used by: 146 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×35
               - `apps` ×21
               - `plugin-meta` ×21
-              - `debug` ×19
+              - `debug` ×20
               - `primitives` ×14
               - `reports` ×6
               - `ui` ×5
@@ -45734,11 +45753,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 225 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 224 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×55
               - `conversations` ×39
               - `primitives` ×37
-              - `debug` ×17
+              - `debug` ×16
               - `plugin-meta` ×15
               - `page` ×12
               - `tasks` ×8

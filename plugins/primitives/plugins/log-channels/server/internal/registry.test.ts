@@ -25,6 +25,7 @@ interface SinkStub extends FileSink {
 function makeSinkStub(): SinkStub {
   const stub: SinkStub = {
     id: "stub",
+    description: "stub",
     path: "/dev/null",
     bound: { kind: "rotate", maxBytes: 1, keep: 1 },
     batches: [],

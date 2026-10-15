@@ -17,8 +17,16 @@ export interface FileSinkSpec {
   id: string;
   /** Human-readable purpose of the sink (for the undeclared-growth monitor). */
   description: string;
-  /** Absolute path of the live file. Rotations are `path.1` … `path.N`. */
-  path: string;
+  /**
+   * Absolute path of the live file. Rotations are `path.1` … `path.N`.
+   *
+   * A function is resolved on the sink's first use (an append, a read, or a
+   * read of `sink.path`) and kept: a sink whose directory is only known at
+   * runtime (a per-worktree logs dir, which asks for the process's runtime
+   * namespace) is still DECLARED at import, so `getFileSinks()` lists it — with
+   * its description and bound — before it has written a line.
+   */
+  path: string | (() => string);
   /** Rotate once the live file would exceed this. Defaults to 128 MB. */
   maxBytes?: number;
   /** How many rotated files to keep (`path.1` … `path.keep`). Defaults to 3. */
@@ -40,7 +48,9 @@ export interface RotateBound {
 /** A live, bounded-append file sink. `append` writes `line + "\n"`, rotating at the cap. */
 export interface FileSink {
   id: string;
-  path: string;
+  /** The live file's absolute path (a lazy spec path is resolved on first read). */
+  readonly path: string;
+  description: string;
   bound: RotateBound;
   append(line: string): void;
   /**

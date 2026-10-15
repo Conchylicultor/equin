@@ -68,7 +68,6 @@ export const exemptEntries: CollectedEntry[] = [
   { pluginPath: "debug/plugins/health-monitor", id: "debug.health-monitor", loader: () => import("@plugins/debug/plugins/health-monitor/exempt"), dependsOn: [] },
   { pluginPath: "debug/plugins/latency-ledger", id: "debug.latency-ledger", loader: () => import("@plugins/debug/plugins/latency-ledger/exempt"), dependsOn: [] },
   { pluginPath: "debug/plugins/live-state-churn/plugins/emit", id: "debug.live-state-churn.emit", loader: () => import("@plugins/debug/plugins/live-state-churn/plugins/emit/exempt"), dependsOn: [] },
-  { pluginPath: "debug/plugins/logs", id: "debug.logs", loader: () => import("@plugins/debug/plugins/logs/exempt"), dependsOn: [] },
   { pluginPath: "debug/plugins/paging-probe", id: "debug.paging-probe", loader: () => import("@plugins/debug/plugins/paging-probe/exempt"), dependsOn: [] },
   { pluginPath: "debug/plugins/profiling/plugins/build", id: "debug.profiling.build", loader: () => import("@plugins/debug/plugins/profiling/plugins/build/exempt"), dependsOn: [] },
   { pluginPath: "debug/plugins/profiling/plugins/runtime", id: "debug.profiling.runtime", loader: () => import("@plugins/debug/plugins/profiling/plugins/runtime/exempt"), dependsOn: [] },

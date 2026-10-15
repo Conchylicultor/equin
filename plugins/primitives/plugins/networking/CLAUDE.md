@@ -137,17 +137,27 @@ built on them — see
     - `wsUrl`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×5
-    - `conversations` ×3
-    - `apps` ×2
-    - `framework` ×2
-    - `infra` ×2
-    - `page` ×2
-    - `tasks` ×2
-    - `debug/logs`
+  - Imported by:
+    - `apps/events/event-list`
+    - `apps/pages/page-tree`
+    - `conversations/all-conversations`
+    - `conversations/conversations-view/data-view`
+    - `conversations/conversations-view/data-view/history`
+    - `framework/browser-server`
+    - `framework/browser-server/demo/scope`
+    - `infra/endpoints`
+    - `infra/health`
     - `network/live`
+    - `page/editor`
+    - `page/editor-collab`
+    - `primitives/live-state`
+    - `primitives/log-channels`
+    - `primitives/optimistic-mutation`
+    - `primitives/overlay/image-viewer`
+    - `primitives/terminal`
     - `shell/notifications`
+    - `tasks/task-attachments`
+    - `tasks/tasks-core`
 - Exemptions:
   - Exempts itself from:
     - `no-raw-websocket` — `web/shared-ws.worker.ts`, `web/use-reconnecting-ws.ts` (sanctioned)

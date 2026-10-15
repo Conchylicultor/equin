@@ -428,13 +428,13 @@
     },
     {
       "paneId": "logs",
-      "segment": "logs",
+      "segment": "logs;wt",
       "appIndex": false,
       "parent": null
     },
     {
       "paneId": "logs-channel",
-      "segment": "ch/:channel",
+      "segment": "ch/:channel;at",
       "appIndex": false,
       "parent": "logs"
     },

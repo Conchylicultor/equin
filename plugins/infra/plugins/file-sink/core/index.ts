@@ -13,3 +13,14 @@ export {
 } from "./internal/file-sink";
 export { readTail, readJsonlTail } from "./internal/read";
 export type { TailOptions, TailResult, JsonlTailResult } from "./internal/read";
+export {
+  historyCutAt,
+  isHistoryPosition,
+  readHistory,
+  statHistory,
+} from "./internal/history";
+export type {
+  HistoryFile,
+  HistoryLine,
+  HistoryRange,
+} from "./internal/history";

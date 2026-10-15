@@ -1,0 +1,40 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "all",
+      "name": "All logs",
+      "icon": "terminal",
+      // Grouped by where the log lives (this worktree / backend / host /
+      // undeclared), most recently written first inside each group.
+      // The group header already says where; the column would only take
+      // width from the name beside the reader.
+      "view": {
+        "type": "table",
+        "groupBy": "scope",
+        "visibleFields": ["id", "size", "lastWrite"],
+        "sort": [{ "fieldId": "lastWrite", "direction": "desc" }]
+      }
+    },
+    {
+      "id": "largest",
+      "name": "Largest",
+      "icon": "storage",
+      // Which logs take the most disk, whatever their scope.
+      "view": {
+        "type": "table",
+        "visibleFields": ["id", "size", "lastWrite"],
+        "sort": [{ "fieldId": "size", "direction": "desc" }]
+      }
+    },
+    {
+      "id": "list",
+      "name": "List",
+      "icon": "list",
+      "view": { "type": "list", "groupBy": "scope" }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

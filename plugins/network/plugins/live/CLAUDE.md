@@ -1854,11 +1854,11 @@ never add one.
     - `serveValueOn`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 228 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 229 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×67
     - `conversations` ×36
     - `tasks` ×26
-    - `debug` ×23
+    - `debug` ×24
     - `active-data` ×12
     - `infra` ×11
     - `page` ×10
@@ -1902,7 +1902,6 @@ never add one.
     - `build/build-profiling` (1 debt)
     - `build/serve-composition` (1 debt)
     - `code-explorer/file-resolve` (1 debt)
-    - `debug/logs` (1 debt)
     - `debug/profiling/build` (1 debt)
     - `debug/slow-ops/cluster` (1 debt)
     - `debug/timeline` (1 debt)

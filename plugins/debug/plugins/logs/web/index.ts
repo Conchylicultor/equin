@@ -7,7 +7,8 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 export { logsPane, logChannelPane } from "./panes";
 
 export default {
-  description: "System logs pane, opened from the Debug sidebar.",
+  description:
+    "Debug → Logs: every log of a worktree (what it records, its size against its rotation bound, its kept files) and a reader that pages one log back across its rotations, opened from the Debug sidebar or by a link naming a worktree, a log and an instant.",
   contributions: [
     Pane.Register({ pane: logsPane }),
     Pane.Register({ pane: logChannelPane }),

@@ -179,29 +179,40 @@ function appendLines(
 
 function makeSink(
   id: string,
-  path: string,
+  description: string,
+  pathSpec: string | (() => string),
   maxBytes: number,
   keep: number,
 ): FileSink {
   const bound: RotateBound = { kind: "rotate", maxBytes, keep };
+  // A lazy path is resolved once, on first use, and kept (see FileSinkSpec.path).
+  let resolved: string | null = typeof pathSpec === "string" ? pathSpec : null;
+  const pathOf = (): string => {
+    if (resolved === null && typeof pathSpec === "function")
+      resolved = pathSpec();
+    return resolved as string;
+  };
   return {
     id,
-    path,
+    description,
+    get path(): string {
+      return pathOf();
+    },
     bound,
     append(line: string): void {
-      appendLines(path, [line], maxBytes, keep);
+      appendLines(pathOf(), [line], maxBytes, keep);
     },
     appendAll(lines: readonly string[]): void {
-      appendLines(path, lines, maxBytes, keep);
+      appendLines(pathOf(), lines, maxBytes, keep);
     },
     // The read budget is deliberately NOT derived from `maxBytes`: a default sink
     // is 128 MB × 3, so `bound`-derived defaults would mean a 512 MB read. The
     // reader carries its own 8 MB default; a caller that wants more says so.
     readTail(opts?: TailOptions): TailResult {
-      return readTail(path, opts);
+      return readTail(pathOf(), opts);
     },
     readJsonlTail<T>(opts?: TailOptions): JsonlTailResult<T> {
-      return readJsonlTail<T>(path, opts);
+      return readJsonlTail<T>(pathOf(), opts);
     },
   };
 }
@@ -222,13 +233,13 @@ export function defineFileSink(spec: FileSinkSpec): FileSink {
   if (existing) {
     throw new Error(
       `[file-sink] sink "${spec.id}" is already defined ` +
-        `(path ${existing.path}); a file sink is declared exactly once. ` +
-        `Attempted to re-declare it at ${spec.path}. ` +
+        `(${existing.description}); a file sink is declared exactly once. ` +
         `Remove the duplicate defineFileSink.`,
     );
   }
   const sink = makeSink(
     spec.id,
+    spec.description,
     spec.path,
     spec.maxBytes ?? DEFAULT_MAX_BYTES,
     spec.keep ?? DEFAULT_KEEP,
@@ -251,5 +262,11 @@ export function getFileSinks(): ReadonlyMap<string, FileSink> {
  */
 export function openDynamicSink(dir: string, name: string): FileSink {
   const path = join(dir, sanitizeChannel(name) + ".jsonl");
-  return makeSink(name, path, DEFAULT_MAX_BYTES, DEFAULT_KEEP);
+  return makeSink(
+    name,
+    "A dynamic sink of an open-ended family",
+    path,
+    DEFAULT_MAX_BYTES,
+    DEFAULT_KEEP,
+  );
 }

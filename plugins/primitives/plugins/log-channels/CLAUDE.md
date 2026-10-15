@@ -12,8 +12,8 @@ channel either declares a durable file sink or it doesn't.
 
 - **Durable (server):** `defineLogSink({ id, description }).publish(line, stream?, t?)`
   from `@plugins/primitives/plugins/log-channels/server`. This registers the
-  channel AND (lazily, on first publish) a `defineFileSink` under the per-worktree
-  logs dir — one declared, enumerable, 128 MB × 3-rotation growth bound
+  channel AND a `defineFileSink` under the per-worktree logs dir (declared at
+  import, its path resolved lazily on first use) — one declared, enumerable, 128 MB × 3-rotation growth bound
   (`@plugins/infra/plugins/file-sink`, merged into `retention.getGrowthBounds()` as
   `file:<id>`). The `description` is what makes a perf sink (`health`,
   `health-host`, `slow-op-markers`) distinguishable from an ops log in
@@ -21,8 +21,10 @@ channel either declares a durable file sink or it doesn't.
   the code that detects the failure (see `infra/file-sink`, *A sink is
   evidence, not a signal*). Declared **exactly once** per id — a channel written from two
   modules hoists ONE `defineLogSink` into a shared module and imports it from both
-  (a duplicate id throws). The sink is built lazily so declaring one is
-  **import-safe** (the process's runtime namespace is not resolved at module eval — the barrel is
+  (a duplicate id throws). The sink is DECLARED at import — so `getFileSinks()`
+  (and Debug → Logs) know every channel, with its description, before it writes
+  a line — but its PATH resolves lazily, so declaring one is **import-safe** (the
+  process's runtime namespace is not resolved at module eval — the barrel is
   imported inside the import-safe `@plugins/database/server` graph).
   A caller holding an ARRAY of lines calls `publishAll([{ line, stream?, timestamp? }])`
   instead of looping. `publishAll` is the single implementation and `publish`
@@ -129,7 +131,7 @@ count accumulates across drops.
 
 ## Plugin reference
 
-- Description: Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/* + /ws/logs routes; debug/logs is the viewer.
+- Description: Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/emit + /ws/logs routes; debug/logs is the viewer.
 - Load-bearing: yes
 - Web:
   - Uses:
@@ -153,13 +155,10 @@ count accumulates across drops.
     - `primitives/networking.subscribeWsStatus`
     - `primitives/networking.useReconnectingWebSocket`
     - `primitives/networking.wsUrl`
-  - Exports (types):
-    - `LiveLogChannelProps`
-    - `LogEntryListProps`
+  - Exports (types): `LiveLogChannelProps`
   - Exports (values):
     - `clientLog`
     - `LiveLogChannel`
-    - `LogEntryList`
 - Server:
   - Uses:
     - `infra/endpoints.HttpError`
@@ -170,15 +169,16 @@ count accumulates across drops.
     - `LogChannel`
     - `LogStream`
   - Exports (values):
+    - `clientLogFamily`
     - `defineLogSink`
     - `listChannels`
     - `Log`
+    - `logsDir`
     - `logsDirFor`
     - `readChannelEntries`
     - `readChannelJson`
     - `readChannelJsonAsync`
   - Routes:
-    - `GET /api/logs/channels`
     - `POST /api/logs/emit`
     - `/ws/logs (WS)`
 - Core:
@@ -195,7 +195,6 @@ count accumulates across drops.
   - Exports (values):
     - `emitLogs`
     - `EmitLogsBodySchema`
-    - `getLogChannels`
     - `MAX_EMIT_LINES`
 - Cross-plugin:
   - Uses tokens:

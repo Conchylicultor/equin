@@ -1,0 +1,43 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "lines",
+      "name": "Lines",
+      "icon": "terminal",
+      // The read's own order (newest first, paged back by scroll): no sort, so
+      // paging follows the log; the file each line sits in is a filter, not a
+      // column worth its width.
+      "view": {
+        "type": "table",
+        "visibleFields": ["t", "stream", "text"]
+      }
+    },
+    {
+      "id": "errors",
+      "name": "stderr",
+      "icon": "error",
+      "view": {
+        "type": "table",
+        "visibleFields": ["t", "text"],
+        "filter": {
+          "kind": "group",
+          "id": "f-stderr",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-stderr",
+              "fieldId": "stream",
+              "operatorId": "is-any-of",
+              "value": ["stderr"]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

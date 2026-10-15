@@ -26,6 +26,8 @@ export const dataViews: DataViewEntry[] = [
   { id: "debug.broadcasts", pluginId: "debug.broadcasts" },
   { id: "debug.claude-cli-calls", pluginId: "debug.claude-cli-calls" },
   { id: "debug.config-orphans", pluginId: "debug.config-orphans" },
+  { id: "debug.logs.catalog", pluginId: "debug.logs" },
+  { id: "debug.logs.lines", pluginId: "debug.logs" },
   { id: "debug.memory", pluginId: "debug.memory" },
   { id: "debug.profiling.runtime", pluginId: "debug.profiling.runtime" },
   { id: "debug.queue.dead", pluginId: "debug.queue" },

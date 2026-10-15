@@ -4,7 +4,11 @@ import {
   type LivePagesQuery,
   type LivePagesResult,
 } from "@plugins/network/plugins/live/web";
-import type { LiveCollection } from "@plugins/network/plugins/live/core";
+import type {
+  LiveCollection,
+  LivePagedValue,
+  LiveValueOrigin,
+} from "@plugins/network/plugins/live/core";
 import type { DataViewPaging } from "../../core";
 import { pagesPaging } from "./pages-paging";
 import { usePagesViewport } from "./pages-viewport";
@@ -39,6 +43,43 @@ export function useLivePagesPaging<Row, F, S extends string>(
       case "ready":
         return pagesPaging<unknown>(pages, sink);
       // Nothing to page yet: the DataView shows the read's own state.
+      case "loading":
+      case "error":
+        return null;
+    }
+  }, [pages, sink]);
+  return useMemo(() => ({ pages, paging }), [pages, paging]);
+}
+
+/**
+ * `useLivePagesPaging`'s twin for a key-range-paged VALUE (`liveValue(key, {
+ * query, paged })`, an external source's items): the same viewport-kept pages
+ * and the same `paging`, so a DataView shows an external source at any depth
+ * exactly as it shows a collection's window. Search and filter run in memory
+ * over the rows loaded (a value has no filterable seam).
+ */
+export function useLivePagedValuePaging<
+  Item,
+  Meta,
+  Q,
+  QIn,
+  C extends string = never,
+>(
+  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C> | null,
+  query: NoInfer<QIn> | null,
+  options?: { resetKey?: string },
+): { pages: LivePagesResult<Item, C>; paging: LivePagesPaging | null } {
+  const { viewport, sink } = usePagesViewport();
+  const resetKey = options?.resetKey;
+  const pages = useLive(
+    value,
+    query,
+    resetKey === undefined ? { viewport } : { viewport, resetKey },
+  );
+  const paging = useMemo((): LivePagesPaging | null => {
+    switch (pages.status) {
+      case "ready":
+        return pagesPaging<unknown>(pages, sink);
       case "loading":
       case "error":
         return null;

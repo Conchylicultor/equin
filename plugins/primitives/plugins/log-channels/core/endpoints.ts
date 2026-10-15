@@ -1,11 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
-export const getLogChannels = defineEndpoint({
-  route: "GET /api/logs/channels",
-  response: z.object({ channels: z.array(z.string()) }),
-});
-
 // Max lines accepted per emit request. Shared so the client chunks its flush to
 // this size and can never form a batch the server will reject (see client-log.ts).
 export const MAX_EMIT_LINES = 500;

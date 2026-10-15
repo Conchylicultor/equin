@@ -37,11 +37,11 @@ truncation leaf (it ellipsizes via the ambient single-line context).
   - Uses tokens:
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-  - Imported by: 57 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 58 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×18
     - `primitives` ×10
     - `conversations` ×7
-    - `debug` ×6
+    - `debug` ×7
     - `page` ×5
     - `fields` ×2
     - `review` ×2

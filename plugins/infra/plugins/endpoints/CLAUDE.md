@@ -223,10 +223,10 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `multipart`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 203 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 202 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×53
     - `conversations` ×27
-    - `debug` ×18
+    - `debug` ×17
     - `infra` ×16
     - `page` ×14
     - `tasks` ×13

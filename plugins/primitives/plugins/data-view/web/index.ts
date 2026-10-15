@@ -23,7 +23,10 @@ export type {
   DataViewSourceProps,
 } from "./internal/define-data-view-sources";
 export type { DataViewSourceBundle } from "./internal/body-types";
-export { useLivePagesPaging } from "./internal/use-live-pages-paging";
+export {
+  useLivePagedValuePaging,
+  useLivePagesPaging,
+} from "./internal/use-live-pages-paging";
 export type { LivePagesPaging } from "./internal/use-live-pages-paging";
 export {
   defineDataView,
