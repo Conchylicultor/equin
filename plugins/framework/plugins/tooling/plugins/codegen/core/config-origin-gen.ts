@@ -601,10 +601,11 @@ export function fileConfigProxy(filePath: string): ConfigProxy {
  * Precedence is NEVER reimplemented here: the runtime reads the USER layer via
  * `readTypedConfig(descriptor, userOrigin, userOverwrites)` (config_v2's
  * registry), and the git layer only reaches that user layer through
- * `propagateConfigToUser`. This mirrors exactly that chain — when the user
- * origin was never propagated (fresh machine / new worktree name), the
- * git-effective document IS the origin, layered via the same pure primitives
- * (`effective` + `readTypedConfig`).
+ * `propagateConfigToUser`. This mirrors exactly that chain AS OF THIS
+ * CHECKOUT'S GIT LAYER: the git-effective document IS the origin (what
+ * propagation will write), layered via the same pure primitives (`effective` +
+ * `readTypedConfig`), so an already-propagated user origin left stale by a
+ * newer commit is never read in its place.
  *
  * `hierarchyPath` is the config's owning-plugin path (`asPath(pluginId)`) —
  * the descriptor does not carry its plugin identity, so the caller supplies it.
@@ -636,11 +637,17 @@ export function readEffectiveConfigFromDisk<F extends FieldsRecord>(
     join(userDir, `${descriptor.name}.jsonc`),
   );
 
-  let origin: ConfigProxy = userOrigin;
-  if (!userOrigin.exists()) {
-    const gitEff = effective(gitOrigin, gitOverwrites);
-    if (gitEff !== undefined) origin = readonlyProxy(gitEff);
-  }
+  // The origin is the git-effective document — what `propagateConfigToUser`
+  // writes into the user layer — never the user origin already on disk. That
+  // file is only as fresh as the LAST propagation, and the build reads this
+  // before its own propagation stage: a field added to the descriptor since
+  // then is absent from it and silently heals to its default. A user override
+  // still wins only while its `// @hash` matches the git-effective document,
+  // exactly as it will at runtime once this build has propagated. The user
+  // origin stands only when the git layer has no document at all.
+  const gitEff = effective(gitOrigin, gitOverwrites);
+  const origin: ConfigProxy =
+    gitEff !== undefined ? readonlyProxy(gitEff) : userOrigin;
   return readTypedConfig(descriptor, origin, userOverwrites);
 }
 
