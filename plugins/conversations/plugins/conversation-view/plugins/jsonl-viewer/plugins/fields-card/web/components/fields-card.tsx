@@ -28,6 +28,7 @@ export interface FieldsCardField {
 export function FieldsCard({
   icon,
   label,
+  note,
   summary,
   fields,
   mono,
@@ -40,6 +41,8 @@ export function FieldsCard({
   icon?: ReactNode;
   /** Headline content (a humanized tag name, a status label). */
   label: ReactNode;
+  /** Muted middot-led suffix after the label naming what it counted (`· 3 calls`). */
+  note?: ReactNode;
   /** One-line summary preview. Truncates in the header; shown full in the body. */
   summary?: string;
   /** The fold-out fields. Pass everything EXCEPT the summary (it is rendered
@@ -60,6 +63,7 @@ export function FieldsCard({
     <CollapsibleCard
       icon={icon}
       label={label}
+      note={note}
       summary={summary}
       aside={aside}
       trailing={trailing}

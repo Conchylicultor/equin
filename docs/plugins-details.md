@@ -11847,9 +11847,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JsonlViewer.Overlay`
               - `JsonlViewer.PendingPromptAction`
               - `JsonlViewer.TranscriptEnd`
-            - Slot contributors: 54 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Slot contributors: 55 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `JsonlViewer.ContextRole` ×29
-              - `JsonlViewer.EventRenderer` ×15
+              - `JsonlViewer.EventRenderer` ×16
               - `JsonlViewer.Overlay` ×4
               - `JsonlViewer.EventFilter` ×2
               - `JsonlViewer.PendingPrompt` ×2
@@ -11932,12 +11932,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `eventKey`
               - `jsonlEvents`
           - Cross-plugin:
-            - Imported by: 41 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
-              - `conversations` ×40
+            - Imported by: 42 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `conversations` ×41
               - `tasks/outcome-report`
           - Exemptions:
             - Exempts itself from: `no-db-backed-notify` — `server/internal/jsonl-events-resource.ts` (debt)
           - Plugins:
+            - **`api-request`** — Renders the model API call settings Claude Code logs (model, effort, thinking, max tokens, permission mode, betas, tool set) as a change log: the first call's settings, then one row per call that changed them.
+              - Web:
+                - Contributes: `JsonlViewer.EventRenderer` "api-request" → `ApiRequestRow`
+                - Uses:
+                  - `conversations/conversation-view/jsonl-viewer.formatTokenCount`
+                  - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                  - `conversations/conversation-view/jsonl-viewer/fields-card.FieldsCard`
+                  - `conversations/conversation-view/jsonl-viewer/fields-card.FieldsCardField`
+                  - `ui/icons.Icon`
             - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
               - Web:
                 - Contributes:
@@ -12441,6 +12450,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `FieldsCard`
               - Cross-plugin:
                 - Imported by:
+                  - `conversations/conversation-view/jsonl-viewer/api-request`
                   - `conversations/conversation-view/jsonl-viewer/attachment/queued-command`
                   - `conversations/conversation-view/jsonl-viewer/task-notification`
             - **`file-checkpoint`** — Renders Claude Code's rewind checkpoints (file-history-delta) in the JSONL viewer as one quiet line: the file a rewind would restore, or remove when the agent created it.
@@ -14702,6 +14712,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ForeignSessionPayload`
           - `JsonlEvent`
           - `QuestionAnswer`
+          - `RequestConfig`
+          - `RequestConfigChange`
+          - `RequestConfigScalarField`
           - `TeammateMessage`
           - `TokenUsage`
           - `ToolCallResult`
@@ -14715,6 +14728,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `JsonlEventSchema`
           - `PREPROMPT_TAG`
           - `QuestionAnswerSchema`
+          - `requestConfigChanges`
+          - `RequestConfigSchema`
           - `stripRelayBoilerplate`
           - `tokenUsageOf`
           - `TokenUsageSchema`
@@ -39246,9 +39261,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Cross-plugin:
-        - Imported by: 307 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 308 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×65
-          - `conversations` ×57
+          - `conversations` ×58
           - `page` ×40
           - `primitives` ×40
           - `fields` ×33

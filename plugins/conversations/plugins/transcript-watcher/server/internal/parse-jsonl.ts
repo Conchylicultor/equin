@@ -12,11 +12,7 @@ import {
   QuestionAnswerSchema,
   requestConfigChanges,
 } from "../../core";
-import type {
-  JsonlEvent,
-  QuestionAnswer,
-  ToolCallResult,
-} from "../../core";
+import type { JsonlEvent, QuestionAnswer, ToolCallResult } from "../../core";
 import { requestConfigOf } from "./api-request";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;

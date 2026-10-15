@@ -721,6 +721,9 @@ describe("readJsonlEvents — file-history-delta checkpoints", () => {
     expect((await readJsonlEvents(path)).map((e) => e.kind)).toEqual([
       "unknown",
     ]);
+  });
+});
+
 describe("api-request lines", () => {
   const apiRequest = (
     at: string,
@@ -745,7 +748,7 @@ describe("api-request lines", () => {
     },
   });
 
-  test("keeps a caller's first call and the ones that changed its settings", async () => {
+  test("keeps a caller's first call and the ones that changed its settings, counting the identical calls into them", async () => {
     const path = await writeFixture([
       apiRequest("2026-06-30T00:00:01.000Z"),
       apiRequest("2026-06-30T00:00:02.000Z"),
@@ -756,10 +759,15 @@ describe("api-request lines", () => {
       (e) => e.kind === "api-request",
     );
     expect(
-      events.map((e) => [e.at, e.previous?.effort ?? null, e.config.effort]),
+      events.map((e) => [
+        e.at,
+        e.previous?.effort ?? null,
+        e.config.effort,
+        e.calls,
+      ]),
     ).toEqual([
-      ["2026-06-30T00:00:01.000Z", null, "medium"],
-      ["2026-06-30T00:00:03.000Z", "medium", "high"],
+      ["2026-06-30T00:00:01.000Z", null, "medium", 2],
+      ["2026-06-30T00:00:03.000Z", "medium", "high", 2],
     ]);
     expect(events[0]!.config).toEqual({
       model: "model-a",

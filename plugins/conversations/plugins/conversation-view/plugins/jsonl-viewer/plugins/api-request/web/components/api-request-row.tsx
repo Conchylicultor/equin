@@ -131,7 +131,8 @@ function configFields(config: RequestConfig): FieldsCardField[] {
 
 /**
  * A model API call's settings. The parser emits only a caller's first call and
- * the calls that changed something, so the first renders the settings in full
+ * the calls that changed something, counting the identical calls after each
+ * into its `calls` (the `· N calls` note), so the first renders the settings in full
  * and every later row renders just what changed — the transcript reads as a
  * log of configuration changes, not one identical row per model call.
  */
@@ -142,12 +143,15 @@ export function ApiRequestRow({ event }: { event: JsonlEvent }) {
       ? [{ key: "Caller", value: e.source || "unnamed" }]
       : [];
   const prefix = e.source !== MAIN_SOURCE ? `${e.source || "unnamed"} · ` : "";
+  // The identical calls after this one are counted here, not rendered.
+  const note = `· ${plural(e.calls, "call")}`;
 
   if (e.previous === null) {
     return (
       <FieldsCard
         icon={<Icon icon={tuneIcon} className="size-3.5" />}
         label="Request settings"
+        note={note}
         summary={prefix + configSummary(e.config)}
         fields={[...sourceFields, ...configFields(e.config)]}
       />
@@ -159,6 +163,7 @@ export function ApiRequestRow({ event }: { event: JsonlEvent }) {
     <FieldsCard
       icon={<Icon icon={tuneIcon} className="size-3.5" />}
       label="Request settings changed"
+      note={note}
       summary={prefix + changes.map(changePhrase).join(" · ")}
       fields={[...sourceFields, ...changes.flatMap(changeFields)]}
     />

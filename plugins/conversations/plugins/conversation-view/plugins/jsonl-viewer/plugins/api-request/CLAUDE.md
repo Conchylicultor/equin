@@ -9,7 +9,8 @@ mode, betas, and the system-prompt/tool-set `shapeHash`) and emits a
 `kind: "api-request"` event only for a caller's (`querySource`) first call and for
 calls whose settings differ from that caller's previous one
 (`requestConfigChanges`, `transcript-watcher/core`). Identical calls — nearly all
-of them — never reach the viewer.
+of them — are not rows: each is counted into the `calls` of the row before it,
+shown as the card's `· N calls` note, so the reader still sees they happened.
 
 - First call: `Request settings` card, summary `Opus 5.5 · effort medium · adaptive
   thinking · auto mode`, fold-out with every setting and the beta list.
