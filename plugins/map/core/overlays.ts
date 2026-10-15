@@ -44,6 +44,11 @@ export interface MapPin {
   label?: string;
   /** Opaque payload for the pin component of `pinType`. */
   data?: unknown;
+  /**
+   * How important the pin is among its neighbours (default 0): a higher rank
+   * draws above a lower one where they overlap, and leads its spot.
+   */
+  rank?: number;
 }
 
 /** An open polyline through `points`, in order. */

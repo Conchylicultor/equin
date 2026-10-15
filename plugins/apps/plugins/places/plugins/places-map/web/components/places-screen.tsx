@@ -17,6 +17,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import type { LatLng } from "@plugins/map/core";
 import {
+  placeFlags,
   placeName,
   type Place,
   type PlaceTag,
@@ -183,6 +184,11 @@ function PlacesSurface({
         pinType: SAVED_PLACE_PIN_TYPE,
         pinData: (p) => placeVisual(p, tags),
         label: (p) => placeName(p),
+        // Every place stays on the map (Google's way): far out a round badge,
+        // with each spot's size beside its lead — a place still to go to
+        // leads, and draws above, one that is not.
+        crowd: { kind: "spots" },
+        rank: (p) => (placeFlags(p, tags).want ? 1 : 0),
         fitPadding,
         ...(pick === undefined ? {} : { pick }),
       } satisfies MapViewOptions<Place>,

@@ -3,13 +3,10 @@
  * in, groups out. No vendor, no map — a renderer projects its pins at the
  * current zoom and hands them here.
  */
+import { byId, pointGrid, type PixelPoint } from "./grid";
 
 /** A pin projected to pixels at the zoom being clustered. */
-export interface ClusterPoint {
-  id: string;
-  x: number;
-  y: number;
-}
+export type ClusterPoint = PixelPoint;
 
 /** A group of pins drawn as one mark. A lone pin is a group of one. */
 export interface PinCluster {
@@ -18,11 +15,6 @@ export interface PinCluster {
   /** The members' centroid, in the same pixel space as the input. */
   x: number;
   y: number;
-}
-
-/** Grid cell of a point, at a cell size equal to the radius. */
-function cellOf(p: ClusterPoint, radiusPx: number): [number, number] {
-  return [Math.floor(p.x / radiusPx), Math.floor(p.y / radiusPx)];
 }
 
 /**
@@ -41,43 +33,21 @@ export function clusterPins(
   if (!(radiusPx > 0)) {
     throw new Error(`clusterPins: radiusPx must be positive, got ${radiusPx}`);
   }
-  const sorted = [...points].sort((a, b) =>
-    a.id < b.id ? -1 : a.id > b.id ? 1 : 0,
-  );
-
-  const grid = new Map<string, ClusterPoint[]>();
-  for (const p of sorted) {
-    const [cx, cy] = cellOf(p, radiusPx);
-    const key = `${cx},${cy}`;
-    const bucket = grid.get(key);
-    if (bucket === undefined) grid.set(key, [p]);
-    else bucket.push(p);
-  }
-
+  const sorted = [...points].sort(byId);
+  const grid = pointGrid(sorted, radiusPx);
   const taken = new Set<ClusterPoint>();
-  const r2 = radiusPx * radiusPx;
   const out: PinCluster[] = [];
   for (const seed of sorted) {
     if (taken.has(seed)) continue;
     taken.add(seed);
     const members = [seed];
-    const [cx, cy] = cellOf(seed, radiusPx);
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        for (const p of grid.get(`${cx + dx},${cy + dy}`) ?? []) {
-          if (taken.has(p)) continue;
-          const ex = p.x - seed.x;
-          const ey = p.y - seed.y;
-          if (ex * ex + ey * ey > r2) continue;
-          taken.add(p);
-          members.push(p);
-        }
-      }
+    for (const p of grid.near(seed)) {
+      if (taken.has(p)) continue;
+      taken.add(p);
+      members.push(p);
     }
     // Neighbouring cells were walked out of id order; restore it after the seed.
-    const rest = members
-      .slice(1)
-      .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    const rest = members.slice(1).sort(byId);
     const all = [seed, ...rest];
     let sx = 0;
     let sy = 0;

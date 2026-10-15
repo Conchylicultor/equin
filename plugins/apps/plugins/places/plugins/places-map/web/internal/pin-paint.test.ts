@@ -1,13 +1,6 @@
 import { expect, test } from "bun:test";
 import { NEUTRAL_PLACE_COLOR } from "@plugins/apps/plugins/places/plugins/places-core/core";
-import {
-  clusterRing,
-  clusterSizePx,
-  conicSlices,
-  dropFill,
-  greyed,
-  placeColors,
-} from "./pin-paint";
+import { conicSlices, dropFill, greyed, placeColors } from "./pin-paint";
 
 test("a single colour fills the drop solid; several slice it from the visual top", () => {
   expect(dropFill(["#f97316"])).toBe("#f97316");
@@ -24,26 +17,6 @@ test("conic slices are proportional to their weights", () => {
       ["#b", 1],
     ]),
   ).toBe("conic-gradient(from 0deg, #a 0deg 270deg, #b 270deg 360deg)");
-});
-
-test("a cluster ring spreads each place over its colours, heaviest first", () => {
-  const { ring, been } = clusterRing([
-    { colors: ["#a"], been: true },
-    { colors: ["#a", "#b"], been: false },
-    { colors: ["#c"], been: true },
-  ]);
-  expect(ring).toEqual([
-    ["#a", 1.5],
-    ["#c", 1],
-    ["#b", 0.5],
-  ]);
-  expect(been).toBe(2);
-});
-
-test("cluster size steps with the count", () => {
-  expect(clusterSizePx(3)).toBe(40);
-  expect(clusterSizePx(10)).toBe(48);
-  expect(clusterSizePx(25)).toBe(56);
 });
 
 test("a closed place's colours keep their lightness and lose their chroma", () => {

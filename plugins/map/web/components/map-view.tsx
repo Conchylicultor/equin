@@ -8,15 +8,17 @@ import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import {
-  DEFAULT_CLUSTER_RADIUS_PX,
   NO_MAP_PADDING,
+  resolveCrowd,
   type LatLng,
+  type MapCrowdRequest,
   type MapOverlay,
   type MapPadding,
   type MapPin,
 } from "../../core";
 import {
   GeoMap,
+  type MapPinState,
   type MapRendererProps,
   type MapRendererReadiness,
 } from "../slots";
@@ -31,11 +33,11 @@ export interface MapViewProps {
   /** A pin was clicked. */
   onActivate?: (id: string) => void;
   /**
-   * Group pins that crowd each other on screen into one mark per group, drawn
-   * through `GeoMap.Cluster`. Absent = never cluster. `radiusPx` defaults to
-   * {@link DEFAULT_CLUSTER_RADIUS_PX}.
+   * How pins that crowd each other on screen are drawn: merged into clusters
+   * (`GeoMap.Cluster`) or kept as spots (see `MapRendererProps.crowd`).
+   * Omitted numbers take the map's defaults. Absent = every pin on its own.
    */
-  cluster?: { radiusPx?: number };
+  crowd?: MapCrowdRequest;
   /**
    * The pin to bring into view (a selected row, say). The map pans to it when
    * it changes and it is off-screen; it never refits or zooms for it.
@@ -78,7 +80,7 @@ export function MapView({
   overlays,
   activeId = null,
   onActivate = ignoreActivate,
-  cluster,
+  crowd,
   focusId = null,
   fitPadding = NO_MAP_PADDING,
   pick,
@@ -98,8 +100,8 @@ export function MapView({
   }
 
   const tiles = renderer.tiles;
-  const renderPin = (pin: MapPin, active: boolean) => (
-    <GeoMap.Pin.Dispatch pin={pin} active={active} tiles={tiles} />
+  const renderPin = (pin: MapPin, state: MapPinState) => (
+    <GeoMap.Pin.Dispatch pin={pin} tiles={tiles} {...state} />
   );
   const renderCluster = (pins: readonly MapPin[]) => (
     <GeoMap.Cluster.Dispatch pins={pins} count={pins.length} tiles={tiles} />
@@ -109,10 +111,7 @@ export function MapView({
     renderPin,
     onActivate,
     activeId,
-    cluster:
-      cluster === undefined
-        ? undefined
-        : { radiusPx: cluster.radiusPx ?? DEFAULT_CLUSTER_RADIUS_PX },
+    ...(crowd === undefined ? {} : { crowd: resolveCrowd(crowd) }),
     renderCluster,
     focusId,
     fitPadding,

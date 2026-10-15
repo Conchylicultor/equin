@@ -5,6 +5,7 @@ import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web"
 import {
   clusterPinType,
   type LatLng,
+  type MapCrowd,
   type MapOverlay,
   type MapPadding,
   type MapPin,
@@ -21,17 +22,24 @@ export interface MapRendererProps {
    * The React content of one pin — `GeoMap.Pin`'s dispatch, already isolated.
    * A renderer places it; it never draws a pin of its own.
    */
-  renderPin: (pin: MapPin, active: boolean) => ReactNode;
+  renderPin: (pin: MapPin, state: MapPinState) => ReactNode;
   /** A pin was clicked. */
   onActivate: (id: string) => void;
   activeId: string | null;
   /**
-   * Group pins that sit closer than `radiusPx` on screen into one mark, drawn
-   * with {@link renderCluster}. Absent = never cluster: every pin is drawn on
-   * its own, exactly as before clustering existed. The active pin is never
-   * clustered, so the selection stays visible at any zoom.
+   * How pins that crowd each other are drawn (`MapCrowd`). Absent = every pin
+   * on its own, near, at every zoom.
+   *
+   * - `cluster`: pins closer than `radiusPx` on screen merge into one mark,
+   *   drawn with {@link renderCluster}. The active pin is never clustered.
+   * - `spots`: every pin stays drawn. Below `nearZoom` each is drawn `far`,
+   *   anchored at its centre (near: at its bottom centre), and the pins within
+   *   `radiusPx` of each other form a spot whose lead — the active pin, else
+   *   the highest `rank` — is handed `spot`. A spot is re-formed on zoom only.
+   *
+   * In every mode a pin's stacking follows `pinStackOrder` (rank, active on top).
    */
-  cluster?: { radiusPx: number };
+  crowd?: MapCrowd;
   /**
    * The React content of one cluster — `GeoMap.Cluster`'s dispatch, already
    * isolated. Like {@link renderPin}, a renderer places it and never draws a
@@ -99,11 +107,29 @@ export interface MapRendererContribution {
   useReadiness?: Hook<() => MapRendererReadiness>;
 }
 
-/** What a pin component receives. */
-export interface MapPinProps {
-  pin: MapPin;
+/**
+ * How far out a pin is drawn. `near`: the full pin, anchored at its bottom
+ * centre. `far` (spots mode, below its near zoom): a compact mark anchored at
+ * its CENTRE — the renderer anchors it, so the pin must draw centred.
+ */
+export type MapPinScale = "near" | "far";
+
+/** What the renderer says about one pin, beyond the pin's own data. */
+export interface MapPinState {
   /** The pin is the selected one — grow and raise it. */
   active: boolean;
+  scale: MapPinScale;
+  /**
+   * Set only on the lead of a far spot holding more than one pin: draw the
+   * spot's size beside the pin. `hushed` while a pin of the spot is hovered —
+   * fade the count so the hovered name reads alone.
+   */
+  spot?: { count: number; hushed: boolean };
+}
+
+/** What a pin component receives. */
+export interface MapPinProps extends MapPinState {
+  pin: MapPin;
   /** The scheme of the tiles the pin is drawn on — draw its name with {@link MapLabel}. */
   tiles: MapTileScheme;
 }

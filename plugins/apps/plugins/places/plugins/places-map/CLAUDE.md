@@ -3,7 +3,8 @@
 The Places app's index pane (`/places`, `placesMapPane`): every saved place in
 one full-bleed `DataView`, with every piece of chrome floating on the map.
 Reference UI: prototype `proto-1791725279-9yramg` at its defaults
-(`status=been-want`, `emoji=material`, `drop=bare`).
+(`status=been-want`, `emoji=material`, `drop=bare`, `crowd=google`,
+`size=small`, `far-count=label`). Plan: `research/2026-10-15-apps-places-map-spots.md`.
 
 ## The screen (`web/components/places-screen.tsx`)
 
@@ -23,7 +24,9 @@ Then `PlacesSurface` renders, inside a `relative h-full` box:
   (`reserve={{ right: CARD_REACH }}` while it shows) — so switching views
   never moves the user's camera. `viewOptions.map` stamps
   `pinType: "saved-place"` and `pinData: placeVisual(place, tags)` on every
-  pin; gallery covers and list glyphs paint the same `PlaceVisual`.
+  pin, asks for `crowd: { kind: "spots" }` (every place always drawn — no
+  clusters) and ranks a Want to go place above the rest (`rank`); gallery
+  covers and list glyphs paint the same `PlaceVisual`.
 - The selected place's `PlaceCard` and the `TagManagerPanel` (from
   `tag-manager`) as `Pin`ned floating cards on the right, below the toolbar's
   tools card (`BELOW_TOOLBAR`); the manager starts past the sidebar
@@ -86,9 +89,19 @@ remembered per device (`useDraft("places.tag-sidebar.open")`). The aside card
 hugs the sidebar's height (it is a `<Column fill>`), so the folded card is
 just the header and the map below it is reachable.
 
-## Pins (`GeoMap.Pin` / `GeoMap.Cluster` for `saved-place`)
+## Pins (`GeoMap.Pin` for `saved-place`)
 
-- `SavedPlacePin` — the drop: 30px head (`PlaceDropHead`: a square with three
+No cluster: the map draws spots (`map` primitive), so every place is always on
+the map. `SavedPlacePin` draws both scales the renderer hands it:
+
+- **near** (zoom ≥ 13) — the drop at 0.8× (`PIN_HEAD_PX` 24 on the 30px
+  design head; icon and ground shadow scale with it).
+- **far** — a round badge (`PlaceDropHead shape="disc"`, 0.78× the head)
+  centred on the place; badges overlap, the better-ranked on top. A spot's
+  lead draws the spot's size beside it as `MapLabel` text (no chip), faded
+  while a pin of its spot is hovered (`spot.hushed`) or the lead itself is.
+
+The head (`PlaceDropHead`, design size 30px, `sizePx` scales it: a square with three
   round corners turned −45°, 2px white outline, the tag colours as conic slices
   from 45° — one colour solid — and the Material icon, white, 18px, with a soft
   shadow on multi-colour heads). SOLID iff the place carries Want to go;
@@ -96,10 +109,7 @@ just the header and the map below it is reachable.
   veil, icon 17px in the main colour darkened, ground shadow faded. No Been
   mark on the pin. Ground shadow under the tip; hover
   lifts, active grows from the tip. The `MapLabel` name shows on hover and
-  while active — the pin is never told the zoom.
-- `SavedPlaceCluster` — a disc ringed by the colour mix of its places (each
-  place one share split over its colours, heaviest first), white face with the
-  count and `✓ n` Been; 40 / 48 / 56px by count.
+  while active — never always-on, at any zoom.
 
 Paint strings are pure (`web/internal/pin-paint.ts`, tested). `PlaceVisual`
 (`web/internal/place-visual.ts`) resolves colours, the `want` / `been` flags and icon once: the
@@ -131,14 +141,13 @@ pin*, starts pick mode for a place Google does not know.
 
 ## Plugin reference
 
-- Description: The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the Add place search, the selected place's card — plus the saved-place drop pin and its colour-ringed cluster.
+- Description: The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the Add place search, the selected place's card — plus the saved-place pin: a drop near, a round badge far out with each spot's size beside it.
 - Web:
   - Slots: `places-map.actions`
   - Slot contributors: `places-map.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "places-map"
     - `GeoMap.Pin` → `SavedPlacePin`
-    - `GeoMap.Cluster` → `SavedPlaceCluster`
   - Uses: 69 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/places/places-core` ×9
     - `primitives/data-view` ×6

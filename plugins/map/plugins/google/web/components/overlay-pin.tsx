@@ -21,6 +21,8 @@ interface OverlayPinProps {
   label: string | undefined;
   zIndex: number;
   onActivate: () => void;
+  /** The pointer entered (`true`) or left (`false`) the pin. */
+  onHoverChange?: (hovered: boolean) => void;
   children: ReactNode;
 }
 
@@ -40,6 +42,7 @@ export function OverlayPin({
   label,
   zIndex,
   onActivate,
+  onHoverChange,
   children,
 }: OverlayPinProps) {
   const map = useMap();
@@ -83,6 +86,8 @@ export function OverlayPin({
       title={label}
       onClick={onActivate}
       onKeyDown={onKeyDown}
+      onPointerEnter={onHoverChange && (() => onHoverChange(true))}
+      onPointerLeave={onHoverChange && (() => onHoverChange(false))}
     >
       {children}
     </div>,

@@ -83,6 +83,7 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
             locationField,
             pinType: options.pinType ?? DEFAULT_ROW_PIN_TYPE,
             pinData: options.pinData,
+            rank: options.rank,
             label,
           })
         : null,
@@ -92,6 +93,7 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
       locationField,
       options.pinType,
       options.pinData,
+      options.rank,
       label,
     ],
   );
@@ -124,14 +126,16 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
     else props.onRowOpen?.(row);
   };
   const selected = props.selectedRowId ?? null;
-  const cluster =
-    options.cluster === false ? undefined : (options.cluster ?? {});
+  const crowd =
+    options.crowd === false
+      ? undefined
+      : (options.crowd ?? { kind: "cluster" as const });
 
   return (
     <div className="relative size-full">
       <MapView
         overlays={pins}
-        cluster={cluster}
+        crowd={crowd}
         activeId={selected}
         focusId={selected}
         fitPadding={options.fitPadding}

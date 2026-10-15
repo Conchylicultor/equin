@@ -5,8 +5,18 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { PlaceVisual } from "../internal/place-visual";
 import { PALE_WASH, dropFill, washInk } from "../internal/pin-paint";
 
-/** The drop's head: a 30px square with three round corners, turned −45°. */
+/**
+ * The drop's head at its design size: a 30px square with three round corners,
+ * turned −45°. The legend and the place card draw it at this size; the map pin
+ * draws it smaller (`saved-place-pin`), its icon scaled with it.
+ */
 export const DROP_HEAD_PX = 30;
+
+/** The icon's size on a head of {@link DROP_HEAD_PX}: a white icon, a washed one. */
+const ICON_PX = { solid: 18, pale: 17 } as const;
+
+/** `drop`: the pin's head (one square corner for the tip). `disc`: a round badge. */
+export type PlaceHeadShape = "drop" | "disc";
 
 /**
  * Keeps a white icon readable where two slices of a multi-colour head meet.
@@ -26,26 +36,47 @@ const MULTI_ICON_SHADOW =
  * The colours are user data (tag hexes), so the fill is painted through
  * `style`; the geometry is the map-layer place pin's (`page/place/map-layer`).
  */
-export function PlaceDropHead({ visual }: { visual: PlaceVisual }) {
+export function PlaceDropHead({
+  visual,
+  shape = "drop",
+  sizePx = DROP_HEAD_PX,
+}: {
+  visual: PlaceVisual;
+  shape?: PlaceHeadShape;
+  /** The box the head fills, in px; the icon scales with it. */
+  sizePx?: number;
+}) {
   const pale = !visual.want;
   const fill = dropFill(visual.colors);
+  const iconPx = Math.round(
+    ((pale ? ICON_PX.pale : ICON_PX.solid) * sizePx) / DROP_HEAD_PX,
+  );
   return (
     <>
       {/* A teardrop is a circle with one square corner, turned 45° so that
-          corner becomes the tip. */}
+          corner becomes the tip. The disc keeps the turn, so its slices start
+          at the top exactly as the drop's do. */}
       <Layer
-        className="-rotate-45 rounded-full rounded-bl-none border-2 border-categorical-foreground shadow-md"
+        className={cn(
+          "-rotate-45 rounded-full border-2 border-categorical-foreground shadow-md",
+          shape === "drop" && "rounded-bl-none",
+        )}
         style={{ background: pale ? `${PALE_WASH}, ${fill}` : fill }}
       />
       <Center className="relative size-full">
         <Icon
           icon={visual.icon}
           active
-          className={cn(pale ? "size-[17px]" : "size-[18px]")}
           style={
             pale
-              ? { color: washInk(visual.mainColor) }
+              ? {
+                  color: washInk(visual.mainColor),
+                  width: iconPx,
+                  height: iconPx,
+                }
               : {
+                  width: iconPx,
+                  height: iconPx,
                   color: "white",
                   filter:
                     visual.colors.length > 1 ? MULTI_ICON_SHADOW : undefined,

@@ -46,6 +46,7 @@ export interface RowPinsInput<TRow> {
   locationField: FieldDef<TRow>;
   pinType: string;
   pinData?: (row: TRow) => unknown;
+  rank?: (row: TRow) => number;
   label: (row: TRow) => string | undefined;
 }
 
@@ -64,7 +65,7 @@ export interface RowPins<TRow> {
  * `missing` rather than drawn somewhere wrong.
  */
 export function rowsToPins<TRow>(input: RowPinsInput<TRow>): RowPins<TRow> {
-  const { rows, rowKey, locationField, pinType, pinData, label } = input;
+  const { rows, rowKey, locationField, pinType, pinData, rank, label } = input;
   const read = locationField.data ?? locationField.value;
   const pins: MapPin[] = [];
   const rowById = new Map<string, TRow>();
@@ -85,6 +86,7 @@ export function rowsToPins<TRow>(input: RowPinsInput<TRow>): RowPins<TRow> {
     const name = label(row);
     if (name !== undefined && name !== "") pin.label = name;
     if (pinData) pin.data = pinData(row);
+    if (rank) pin.rank = rank(row);
     pins.push(pin);
     rowById.set(id, row);
   });

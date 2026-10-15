@@ -63,8 +63,13 @@ which decides which one draws on top).
 - `fitPadding?` — `MapPadding` (px per edge) the surface's floating chrome
   covers; passed to `MapView`, so the fit and the selected-pin pan keep pins
   out from under the aside, the band and a detail card. Default none.
-- `cluster?` — `false` draws every pin on its own; `{ radiusPx }` overrides the
-  map primitive's default radius. Default on.
+- `crowd?` — how crowding pins are drawn (`MapCrowdRequest` from `map/core`):
+  `{ kind: "cluster", radiusPx? }` (the default) merges them into cluster
+  marks; `{ kind: "spots", radiusPx?, nearZoom? }` keeps every pin drawn —
+  far out as compact centred marks with each spot's size beside its lead
+  (Places). `false` draws every pin on its own.
+- `rank?(row)` — the row's importance (`MapPin.rank`): draws above lower ranks
+  where pins overlap and leads its spot. Default 0.
 
 ```tsx
 <DataView

@@ -1,4 +1,3 @@
-import { useSyncExternalStore } from "react";
 import { useMap } from "@vis.gl/react-google-maps";
 import {
   cameraFor,
@@ -9,6 +8,7 @@ import {
 } from "@plugins/map/core";
 import type { MapRendererProps } from "@plugins/map/web";
 import { OverlayPin } from "./overlay-pin";
+import { useProjectedZoom } from "../internal/projected-zoom";
 
 /** How far a click on a cluster whose pins share one spot zooms in. */
 const STACKED_CLUSTER_ZOOM_STEP = 2;
@@ -17,6 +17,8 @@ interface ClusteredPinsProps {
   pins: readonly MapPin[];
   radiusPx: number;
   activeId: string | null;
+  /** Each pin's z-index (`pinStackOrder`); the active pin's is the highest. */
+  stackOrder: ReadonlyMap<string, number>;
   renderPin: MapRendererProps["renderPin"];
   renderCluster: MapRendererProps["renderCluster"];
   onActivate: MapRendererProps["onActivate"];
@@ -36,6 +38,7 @@ export function ClusteredPins({
   pins,
   radiusPx,
   activeId,
+  stackOrder,
   renderPin,
   renderCluster,
   onActivate,
@@ -93,10 +96,10 @@ export function ClusteredPins({
               key={seed.id}
               position={seed.position}
               label={seed.label}
-              zIndex={1}
+              zIndex={stackOrder.get(seed.id) ?? 1}
               onActivate={() => onActivate(seed.id)}
             >
-              {renderPin(seed, false)}
+              {renderPin(seed, { active: false, scale: "near" })}
             </OverlayPin>
           );
         }
@@ -106,7 +109,7 @@ export function ClusteredPins({
             position={centroid(members)}
             anchor="center"
             label={`${members.length} pins — zoom in`}
-            zIndex={1}
+            zIndex={stackOrder.get(seed.id) ?? 1}
             onActivate={() => zoomTo(members)}
           >
             {renderCluster(members)}
@@ -118,10 +121,10 @@ export function ClusteredPins({
           key={active.id}
           position={active.position}
           label={active.label}
-          zIndex={2}
+          zIndex={stackOrder.get(active.id) ?? 1}
           onActivate={() => onActivate(active.id)}
         >
-          {renderPin(active, true)}
+          {renderPin(active, { active: true, scale: "near" })}
         </OverlayPin>
       )}
     </>
@@ -137,24 +140,4 @@ function centroid(members: readonly MapPin[]): LatLng {
     lng += m.position.lng;
   }
   return { lat: lat / members.length, lng: lng / members.length };
-}
-
-/**
- * The map's zoom, once its projection exists (`undefined` before). A plain
- * number snapshot, so the store is stable between events and a re-render
- * happens only when the zoom actually changes.
- */
-function useProjectedZoom(map: google.maps.Map | null): number | undefined {
-  return useSyncExternalStore(
-    (onChange) => {
-      if (map === null) return () => {};
-      const listeners = ["projection_changed", "zoom_changed"].map((event) =>
-        map.addListener(event, onChange),
-      );
-      return () => {
-        for (const l of listeners) l.remove();
-      };
-    },
-    () => (map?.getProjection() == null ? undefined : map.getZoom()),
-  );
 }

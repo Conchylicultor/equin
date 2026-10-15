@@ -25,10 +25,16 @@ Plain data, no React:
   in) with its duration — a renderer just plays its frames.
 - `MapPadding` (`{ top, right, bottom, left }` px, `NO_MAP_PADDING`): the room
   chrome floating over the map covers.
-- Clustering: `clusterPins(points, radiusPx)` greedily groups pins already
-  projected to pixels (deterministic, input-order-insensitive, grid-bucketed),
-  and `clusterPinType(pins)` names the dispatch key of a group — the shared
-  `pinType`, or `MIXED_PIN_TYPE` for a mixed group.
+- Crowding (`MapCrowdRequest` / `MapCrowd`, `resolveCrowd`): `cluster` or
+  `spots`, a closed union. `clusterPins(points, radiusPx)` greedily groups pins
+  already projected to pixels (deterministic, input-order-insensitive,
+  grid-bucketed — `grid.ts`, shared with spots), and `clusterPinType(pins)`
+  names the dispatch key of a group — the shared `pinType`, or
+  `MIXED_PIN_TYPE` for a mixed group. `groupSpots(points, radiusPx)` groups
+  the same way but seeds most-important first (`rank`, then id), so a spot's
+  lead is its best pin; `pinStackOrder(pins, activeId)` is the z-order every
+  renderer stacks pins in (rank, then id; the active pin on top).
+- `MapPin.rank` (default 0): a pin's importance among its neighbours.
 
 ## Host and slots (`web/`)
 
@@ -36,8 +42,12 @@ Plain data, no React:
   parent; the caller owns the size. The renderer is mounted whatever the
   overlays: with none, `empty` floats on a card over the map (`null`: a bare
   map) — a set that empties (a filter matching nothing) and fills again keeps
-  the camera. `cluster={{ radiusPx? }}` (default 48) opts into
-  clustering — without it every pin is drawn on its own. `focusId` pans to a pin
+  the camera. `crowd` picks how crowding pins are drawn:
+  `{ kind: "cluster", radiusPx? }` (default 48) merges them into cluster marks;
+  `{ kind: "spots", radiusPx?, nearZoom? }` (defaults 34px, zoom 13) keeps
+  every pin drawn — below `nearZoom` each is drawn `far` (a compact mark
+  anchored at its centre) and each spot's lead is told the spot's size. Absent:
+  every pin on its own. `focusId` pans to a pin
   when it changes and is off-screen, never refitting or zooming. `fitPadding`
   (a `MapPadding`, default none) names the edges floating chrome covers: fitting
   frames the overlays in the uncovered area, and a focused pin under the chrome
@@ -56,7 +66,7 @@ Plain data, no React:
   state, never the set-up action, because a pending configuration is not a
   missing one.
 - The renderer component receives `MapRendererProps` (`overlays`,
-  `renderPin(pin, active)`, `onActivate`, `activeId`, `cluster`,
+  `renderPin(pin, state)`, `onActivate`, `activeId`, `crowd`,
   `renderCluster(pins)`, `focusId`, `fitPadding` — always set, zeros when
   nothing floats — and the optional `pick`). **A renderer never styles
   a pin**: it places the node that `renderPin` returns. That node is
@@ -68,8 +78,12 @@ Plain data, no React:
   that flies (`flyPath`, never a jump) to frame the overlays showing now, on
   demand.
 - `GeoMap.Pin` — a dispatch slot keyed on `pin.pinType`. Its component gets
-  `{ pin, active }`. The fallback is a neutral dot, so an unclaimed type is still
-  visible.
+  `{ pin, tiles }` and the renderer's `MapPinState`: `active`, `scale`
+  (`near`: anchored at its bottom centre; `far`, spots mode only: anchored at
+  its CENTRE, so draw centred) and `spot` (`{ count, hushed }`, on a far spot's
+  lead only: draw the count beside the pin, faded while `hushed` — a pin of the
+  spot is hovered). The fallback is a neutral dot (with the count beside it as
+  a lead), so an unclaimed type is still visible.
 - `GeoMap.Cluster` — a dispatch slot keyed on `clusterPinType(pins)`. Its
   component gets `{ pins, count, tiles }`. The fallback is a neutral count disc,
   which a mixed group always gets. A renderer places `renderCluster`'s node like
@@ -82,7 +96,7 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
 
 ## Plugin reference
 
-- Description: Vendor-neutral map primitive: <MapView overlays/> draws pins, paths and areas through the first GeoMap.Renderer (showing its set-up action while it is blocked, and a loud state when none is installed), with every pin's look contributed through the GeoMap.Pin dispatch slot keyed on its pinType, and — when the caller asks for clustering — every group of nearby pins drawn through the GeoMap.Cluster dispatch slot keyed on the pinType its pins share.
+- Description: Vendor-neutral map primitive: <MapView overlays/> draws pins, paths and areas through the first GeoMap.Renderer (showing its set-up action while it is blocked, and a loud state when none is installed), with every pin's look contributed through the GeoMap.Pin dispatch slot keyed on its pinType, and a crowd mode the caller picks: clustering (every group of nearby pins drawn through the GeoMap.Cluster dispatch slot keyed on the pinType its pins share) or spots (every pin stays drawn — far out as a compact centred mark, with the size of each spot beside its lead pin).
 - Web:
   - Slots:
     - `GeoMap.Renderer`
@@ -92,9 +106,9 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `GeoMap.Renderer` ← `map.google`
     - `GeoMap.Pin` ← `apps.places.places-map`
     - `GeoMap.Pin` ← `page.place.map-layer`
-    - `GeoMap.Cluster` ← `apps.places.places-map`
   - Uses:
     - `primitives/css/center.Center`
+    - `primitives/css/coords.Placed`
     - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
@@ -108,6 +122,8 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `MapClusterProps`
     - `MapLabelProps`
     - `MapPinProps`
+    - `MapPinScale`
+    - `MapPinState`
     - `MapRendererContribution`
     - `MapRendererProps`
     - `MapRendererReadiness`
@@ -132,6 +148,8 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `MapArea`
     - `MapBounds`
     - `MapCamera`
+    - `MapCrowd`
+    - `MapCrowdRequest`
     - `MapOverlay`
     - `MapPadding`
     - `MapPath`
@@ -141,16 +159,23 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `MapTone`
     - `MapViewport`
     - `PinCluster`
+    - `PinSpot`
+    - `SpotPoint`
   - Exports (values):
     - `cameraFor`
     - `clusterPins`
     - `clusterPinType`
     - `DEFAULT_CLUSTER_RADIUS_PX`
+    - `DEFAULT_SPOT_NEAR_ZOOM`
+    - `DEFAULT_SPOT_RADIUS_PX`
     - `flyPath`
+    - `groupSpots`
     - `MAP_TONE_TOKEN`
     - `MIXED_PIN_TYPE`
     - `NO_MAP_PADDING`
     - `overlayPositions`
+    - `pinStackOrder`
+    - `resolveCrowd`
     - `SINGLE_POINT_ZOOM`
     - `viewFor`
 - Sub-plugins:

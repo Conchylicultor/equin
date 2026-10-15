@@ -4451,14 +4451,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/places/places-map`
               - `apps/places/tag-manager`
-        - **`places-map`** — The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the Add place search, the selected place's card — plus the saved-place drop pin and its colour-ringed cluster.
+        - **`places-map`** — The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the Add place search, the selected place's card — plus the saved-place pin: a drop near, a round badge far out with each spot's size beside it.
           - Web:
             - Slots: `places-map.actions`
             - Slot contributors: `places-map.actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "places-map"
               - `GeoMap.Pin` → `SavedPlacePin`
-              - `GeoMap.Cluster` → `SavedPlaceCluster`
             - Uses: 69 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `apps/places/places-core` ×9
               - `primitives/data-view` ×6
@@ -25061,7 +25060,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `layouts/full-pane`
           - `layouts/miller`
 
-- **`map`** — Vendor-neutral map primitive: <MapView overlays/> draws pins, paths and areas through the first GeoMap.Renderer (showing its set-up action while it is blocked, and a loud state when none is installed), with every pin's look contributed through the GeoMap.Pin dispatch slot keyed on its pinType, and — when the caller asks for clustering — every group of nearby pins drawn through the GeoMap.Cluster dispatch slot keyed on the pinType its pins share.
+- **`map`** — Vendor-neutral map primitive: <MapView overlays/> draws pins, paths and areas through the first GeoMap.Renderer (showing its set-up action while it is blocked, and a loud state when none is installed), with every pin's look contributed through the GeoMap.Pin dispatch slot keyed on its pinType, and a crowd mode the caller picks: clustering (every group of nearby pins drawn through the GeoMap.Cluster dispatch slot keyed on the pinType its pins share) or spots (every pin stays drawn — far out as a compact centred mark, with the size of each spot beside its lead pin).
   - Web:
     - Slots:
       - `GeoMap.Renderer`
@@ -25071,9 +25070,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `GeoMap.Renderer` ← `map.google`
       - `GeoMap.Pin` ← `apps.places.places-map`
       - `GeoMap.Pin` ← `page.place.map-layer`
-      - `GeoMap.Cluster` ← `apps.places.places-map`
     - Uses:
       - `primitives/css/center.Center`
+      - `primitives/css/coords.Placed`
       - `primitives/css/line.Line`
       - `primitives/css/pin.Pin`
       - `primitives/css/placeholder.Placeholder`
@@ -25087,6 +25086,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `MapClusterProps`
       - `MapLabelProps`
       - `MapPinProps`
+      - `MapPinScale`
+      - `MapPinState`
       - `MapRendererContribution`
       - `MapRendererProps`
       - `MapRendererReadiness`
@@ -25111,6 +25112,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `MapArea`
       - `MapBounds`
       - `MapCamera`
+      - `MapCrowd`
+      - `MapCrowdRequest`
       - `MapOverlay`
       - `MapPadding`
       - `MapPath`
@@ -25120,16 +25123,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `MapTone`
       - `MapViewport`
       - `PinCluster`
+      - `PinSpot`
+      - `SpotPoint`
     - Exports (values):
       - `cameraFor`
       - `clusterPins`
       - `clusterPinType`
       - `DEFAULT_CLUSTER_RADIUS_PX`
+      - `DEFAULT_SPOT_NEAR_ZOOM`
+      - `DEFAULT_SPOT_RADIUS_PX`
       - `flyPath`
+      - `groupSpots`
       - `MAP_TONE_TOKEN`
       - `MIXED_PIN_TYPE`
       - `NO_MAP_PADDING`
       - `overlayPositions`
+      - `pinStackOrder`
+      - `resolveCrowd`
       - `SINGLE_POINT_ZOOM`
       - `viewFor`
   - Plugins:
@@ -30175,13 +30185,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placedClasses`
               - `placedStyle`
           - Cross-plugin:
-            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
+            - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
               - `apps` ×16
               - `primitives` ×7
               - `debug` ×3
               - `page` ×2
               - `screenshot` ×2
               - `active-data/go`
+              - `map`
               - `shell/notifications`
         - **`fill`** — Flexible-cell layout primitive: <Fill axis> is the single grow+shrink cell of a Line/Row (min-w-0 flex-1). The one home for the slack-absorbing, truncation-enabling cell, so a stray flex-1 never strands the grow slot.
           - Web:

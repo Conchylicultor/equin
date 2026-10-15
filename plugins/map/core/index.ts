@@ -33,3 +33,12 @@ export {
   type ClusterPoint,
   type PinCluster,
 } from "./cluster";
+export {
+  DEFAULT_SPOT_NEAR_ZOOM,
+  DEFAULT_SPOT_RADIUS_PX,
+  groupSpots,
+  pinStackOrder,
+  type PinSpot,
+  type SpotPoint,
+} from "./spots";
+export { resolveCrowd, type MapCrowd, type MapCrowdRequest } from "./crowd";

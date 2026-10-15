@@ -19,6 +19,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
   cameraFor,
   overlayPositions,
+  pinStackOrder,
   viewFor,
   type CameraView,
   type MapArea,
@@ -42,6 +43,7 @@ import { MapErrorCard } from "./map-error-card";
 import { GOOGLE_COLOR_SCHEME, GOOGLE_TILES } from "../internal/tiles";
 import { OverlayPin } from "./overlay-pin";
 import { ClusteredPins } from "./clustered-pins";
+import { SpotPins } from "./spot-pins";
 import { flyCamera } from "../internal/fly-camera";
 
 /**
@@ -104,7 +106,7 @@ function GoogleMapCanvas({
   renderPin,
   onActivate,
   activeId,
-  cluster,
+  crowd,
   renderCluster,
   focusId,
   fitPadding,
@@ -116,6 +118,8 @@ function GoogleMapCanvas({
   const refused = useGoogleAuthRefused();
   const [loadError, setLoadError] = useState<string | null>(null);
   const colors = useToneColors(host, overlays);
+  const pins = overlays.filter((o): o is MapPin => o.kind === "pin");
+  const stackOrder = pinStackOrder(pins, activeId);
 
   if (refused) return <MapErrorCard reason={{ kind: "refused" }} />;
   if (loadError !== null) {
@@ -176,29 +180,41 @@ function GoogleMapCanvas({
             fitPadding={fitPadding}
           />
           {overlays.map((o) =>
-            // Clustered pins are drawn together below, not one by one.
-            cluster !== undefined && o.kind === "pin" ? null : (
+            // Crowded pins are drawn together below, not one by one.
+            crowd !== undefined && o.kind === "pin" ? null : (
               <OverlayNode
                 key={o.id}
                 overlay={o}
                 colors={colors}
                 active={o.id === activeId}
+                zIndex={stackOrder.get(o.id) ?? 1}
                 renderPin={renderPin}
                 onActivate={onActivate}
               />
             ),
           )}
-          {cluster === undefined ? null : (
+          {crowd?.kind === "cluster" ? (
             <ClusteredPins
-              pins={overlays.filter((o): o is MapPin => o.kind === "pin")}
-              radiusPx={cluster.radiusPx}
+              pins={pins}
+              radiusPx={crowd.radiusPx}
               activeId={activeId}
+              stackOrder={stackOrder}
               renderPin={renderPin}
               renderCluster={renderCluster}
               onActivate={onActivate}
               fitPadding={fitBoundsPadding(fitPadding)}
             />
-          )}
+          ) : crowd?.kind === "spots" ? (
+            <SpotPins
+              pins={pins}
+              radiusPx={crowd.radiusPx}
+              nearZoom={crowd.nearZoom}
+              activeId={activeId}
+              stackOrder={stackOrder}
+              renderPin={renderPin}
+              onActivate={onActivate}
+            />
+          ) : null}
         </GoogleMap>
       </APIProvider>
     </div>
@@ -431,6 +447,8 @@ interface OverlayNodeProps {
   overlay: MapOverlay;
   colors: ToneColors;
   active: boolean;
+  /** The pin's z-index (`pinStackOrder`); unused by paths and areas. */
+  zIndex: number;
   renderPin: MapRendererProps["renderPin"];
   onActivate: MapRendererProps["onActivate"];
 }
@@ -439,6 +457,7 @@ function OverlayNode({
   overlay,
   colors,
   active,
+  zIndex,
   renderPin,
   onActivate,
 }: OverlayNodeProps) {
@@ -449,11 +468,11 @@ function OverlayNode({
           position={overlay.position}
           label={overlay.label}
           // The active pin sits above its neighbours, so a grown bubble is
-          // never half-hidden under the next one.
-          zIndex={active ? 2 : 1}
+          // never half-hidden under the next one (`pinStackOrder`).
+          zIndex={zIndex}
           onActivate={() => onActivate(overlay.id)}
         >
-          {renderPin(overlay, active)}
+          {renderPin(overlay, { active, scale: "near" })}
         </OverlayPin>
       );
     case "path":

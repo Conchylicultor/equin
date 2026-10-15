@@ -1,6 +1,6 @@
 // The saved-place pin's paint, as data: CSS background strings built from the
-// place's tag colours. Pure so the slice geometry is unit-tested; the pin and
-// cluster components only place what these return.
+// place's tag colours. Pure so the slice geometry is unit-tested; the pin
+// components only place what these return.
 
 import { NEUTRAL_PLACE_COLOR } from "@plugins/apps/plugins/places/plugins/places-core/core";
 
@@ -58,7 +58,7 @@ export function washInk(mainColor: string): string {
 /**
  * A colour drained to its grey — same lightness, no chroma — for a place Google
  * says is permanently closed. Every surface paints from the greyed colours, so
- * the pin, its cluster share, the hero and the glyph all go grey together.
+ * the pin, the hero and the glyph all go grey together.
  */
 export function greyed(color: string): string {
   return `oklch(from ${color} l 0 h)`;
@@ -79,29 +79,4 @@ export function placeColors(
 /** The pale tint of a colour — a place's hero or gallery cover behind its icon. */
 export function paleTint(color: string): string {
   return `color-mix(in srgb, ${color} 22%, white)`;
-}
-
-/**
- * A cluster's ring: every place inside spreads one unit of weight evenly over
- * its colours, so a two-colour place adds half to each; the heaviest colour
- * runs first. Returns the ring and how many of the places are Been.
- */
-export function clusterRing(
-  places: readonly { colors: readonly string[]; been: boolean }[],
-): { ring: ColorWeight[]; been: number } {
-  const weights = new Map<string, number>();
-  let been = 0;
-  for (const p of places) {
-    for (const c of p.colors) {
-      weights.set(c, (weights.get(c) ?? 0) + 1 / p.colors.length);
-    }
-    if (p.been) been += 1;
-  }
-  const ring = [...weights.entries()].sort((a, b) => b[1] - a[1]);
-  return { ring, been };
-}
-
-/** A cluster's diameter in px: it grows with its count, in three steps. */
-export function clusterSizePx(count: number): number {
-  return count < 10 ? 40 : count < 25 ? 48 : 56;
 }
