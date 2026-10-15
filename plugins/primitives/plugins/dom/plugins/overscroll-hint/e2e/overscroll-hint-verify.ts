@@ -11,7 +11,10 @@
 //   - a sticky header stuck to the edge stays on the edge, at the end and at
 //     the start — whether it is a direct child of the scroller or nested inside
 //     the content — while a sticky still in flow further down moves with its
-//     rows.
+//     rows;
+//   - a header inside a `display: contents` wrapper (a theme boundary) stays on
+//     the edge, and a `position: fixed` widget inside the content stays where
+//     it is on the viewport.
 //
 // Synthetic wheel events never scroll anything, so every gesture below is
 // wasted by construction.
@@ -50,8 +53,10 @@ await withBrowser(async (h) => {
       target.dispatchEvent(
         new WheelEvent("wheel", { deltaY, bubbles: true, cancelable: true }),
       );
+    // moved by a relative inset (a layer in flow) or a transform (any other)
     const pulled = (el: HTMLElement): boolean =>
-      /translate/.test(el.style.transform || "");
+      /translate/.test(el.style.transform || "") ||
+      (el.style.top !== "" && el.style.top !== "0px");
     const scroller = (height: number): HTMLElement => {
       const s = document.createElement("div");
       s.style.cssText = `position:fixed;top:0;left:0;width:300px;height:${height}px;overflow-y:auto;z-index:99999;`;
@@ -71,13 +76,15 @@ await withBrowser(async (h) => {
     dead.appendChild(deadChild);
     wheel(deadChild, 120);
     await frames(2);
-    const firstPush = deadChild.style.transform;
+    const at = (el: HTMLElement): string => el.style.transform + el.style.top;
+    const firstPush = at(deadChild);
     wheel(deadChild, 120);
     await frames(2);
     const fits = {
       pulled: pulled(deadChild),
-      keepsMoving: pulled(deadChild) && deadChild.style.transform !== firstPush,
+      keepsMoving: pulled(deadChild) && at(deadChild) !== firstPush,
       boxStill: !pulled(dead),
+      css: `${firstPush} || ${deadChild.style.cssText}`,
     };
     dead.remove();
     await tick(500);
@@ -155,8 +162,11 @@ await withBrowser(async (h) => {
       scrollTop: surface.scrollTop,
       cleared:
         content.style.transform === "" &&
+        content.style.top === "" &&
+        content.style.position === "" &&
         nested.style.translate === "" &&
         surface.children.length === childCount,
+      left: `${content.style.cssText} | ${nested.style.cssText} | ${surface.children.length}/${childCount}`,
     };
 
     // At the start: push up.
@@ -205,6 +215,38 @@ await withBrowser(async (h) => {
     await tick(700);
     const overflowAfter = { scrollTop: pane.scrollTop };
     pane.remove();
+    await tick(500);
+
+    // --- a website page: the header inside a `display: contents` theme
+    // boundary, and a fixed widget (a gauge rail) inside the content ---
+    const site = scroller(200);
+    const wrap = block("display:contents;");
+    const siteHeader = block(
+      "position:sticky;top:0;height:30px;background:#000;",
+      "sticky",
+    );
+    wrap.appendChild(siteHeader);
+    const sitePage = block("height:1000px;");
+    const rail = block(
+      "position:fixed;left:400px;top:120px;width:10px;height:10px;",
+    );
+    sitePage.appendChild(rail);
+    site.append(wrap, sitePage);
+    site.scrollTop = site.scrollHeight;
+    await frames(2);
+    const siteBefore = {
+      header: siteHeader.getBoundingClientRect().top,
+      page: sitePage.getBoundingClientRect().top,
+      rail: rail.getBoundingClientRect().top,
+    };
+    wheel(sitePage, 150);
+    await frames(2);
+    const siteDuring = {
+      header: siteHeader.getBoundingClientRect().top,
+      page: sitePage.getBoundingClientRect().top,
+      rail: rail.getBoundingClientRect().top,
+    };
+    site.remove();
 
     return {
       fits,
@@ -217,6 +259,8 @@ await withBrowser(async (h) => {
       overflowBefore,
       overflowDuring,
       overflowAfter,
+      siteBefore,
+      siteDuring,
     };
   });
 
@@ -231,10 +275,12 @@ await withBrowser(async (h) => {
     overflowBefore,
     overflowDuring,
     overflowAfter,
+    siteBefore,
+    siteDuring,
   } = result;
   const same = (a: number, b: number): boolean => Math.abs(a - b) < 0.5;
 
-  r.ok("a wasted gesture rubber-bands the content", fits.pulled);
+  r.ok("a wasted gesture rubber-bands the content", fits.pulled, fits.css);
   r.ok("a second push moves it further (live, not one-shot)", fits.keepsMoving);
   r.ok("the scroll box itself never moves", fits.boxStill);
   r.ok("a real scroll does not bounce", !realScroll.pulled);
@@ -272,6 +318,7 @@ await withBrowser(async (h) => {
   r.ok(
     "once sprung back, every style and the extent anchor are gone",
     endAfter.cleared,
+    endAfter.left,
   );
 
   r.ok(
@@ -311,6 +358,22 @@ await withBrowser(async (h) => {
     "…or its header",
     same(overflowDuring.header, overflowBefore.header),
     `top ${overflowBefore.header} → ${overflowDuring.header}`,
+  );
+
+  r.ok(
+    "a page under a display:contents header still bounces",
+    siteDuring.page < siteBefore.page - 5,
+    `page ${siteBefore.page} → ${siteDuring.page}`,
+  );
+  r.ok(
+    "…its header, inside the wrapper, stays on the edge",
+    same(siteDuring.header, siteBefore.header),
+    `top ${siteBefore.header} → ${siteDuring.header}`,
+  );
+  r.ok(
+    "…and a fixed widget inside the content stays on the viewport",
+    same(siteDuring.rail, siteBefore.rail),
+    `top ${siteBefore.rail} → ${siteDuring.rail}`,
   );
 
   await r.finish();

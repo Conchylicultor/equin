@@ -69,18 +69,26 @@ framework-free detector — the plugin ships no CSS.
 
 ## A transform only looks like a scroll
 
-Translating content is not scrolling. Two things a real scroll gets right are
-kept right by the detector, both settled once when a bounce locks onto a surface:
+Moving content is not scrolling. Three things a real scroll gets right are
+kept right by the detector, all settled once when a bounce locks onto a surface:
 
 - **Pinned elements stay pinned.** A sticky element stuck to the surface's edge
   (pane header, table header, menu search bar) is chrome: it is held on the edge
-  while the content moves under it — left out of the translated layers if it is
-  a direct child, shifted back via the `translate` property if nested. Only
+  while the content moves under it — left out of the moved layers if it is
+  one, otherwise put back each frame (via the `translate` property) to the
+  position measured when the bounce locked on. A `display: contents` wrapper (a
+  theme boundary around a floating pane header) draws no box, so it is looked
+  through: its children are the layers. Only
   elements exactly on their pinned position count; a sticky still in flow (a
   group header below the fold) moves with its rows. Found via the `.sticky`
   class — the one spelling `position: sticky` has here (`Sticky` primitive,
   ui-kit menu headers; inline `position: sticky` is lint-banned) — confirmed
   against computed style.
+- **Fixed elements stay fixed.** A layer in normal flow is moved by a relative
+  inset (`position: relative; top`), not a `transform`: a transform makes every
+  `position: fixed` descendant (a floating button, a side rail) resolve against
+  the moved layer instead of the viewport, so it jumped away for the length of
+  the bounce. Only a layer that is already positioned falls back to a transform.
 - **The scroll position never moves.** Scrollable overflow counts a transformed
   box where it is drawn, so pushing content up at the end edge shortens the
   range and the browser clamps the offset back — the bounce cancels itself and

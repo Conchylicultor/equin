@@ -112,14 +112,14 @@ export function installOverscrollHint(): () => void {
   // transform-induced stacking context. This is the native model: the viewport
   // stays put and clips; only the content inside it moves.
   //
-  // `held` are pinned elements INSIDE a content layer, translated back by the
-  // same amount so they stay on the edge (a pinned element that is itself a
-  // content layer is simply left out of `targets`). `anchor` is the zero-size
-  // element holding the scroll extent while the content is pushed toward the
-  // start. All three are fixed when the bounce locks on and released together.
+  // `held` are pinned elements INSIDE a content layer, shifted back so they
+  // stay on the edge (a pinned element that is itself a content layer is simply
+  // left out of `targets`). `anchor` is the zero-size element holding the
+  // scroll extent while the content is pushed toward the start. All three are
+  // fixed when the bounce locks on and released together.
   let el: HTMLElement | null = null;
-  let targets: HTMLElement[] = [];
-  let held: HTMLElement[] = [];
+  let targets: Layer[] = [];
+  let held: Held[] = [];
   let anchor: HTMLElement | null = null;
   let axis: Axis = "y";
   let offset = 0; // current signed displacement in px
@@ -197,11 +197,12 @@ export function installOverscrollHint(): () => void {
    * nothing was changed.
    */
   function lockOn(surface: HTMLElement, ax: Axis, delta: number): boolean {
-    // Translate the viewport's content layers, not the viewport itself. A
-    // viewport with no element children (only text/pseudo content) has nothing
-    // to bounce safely, so we skip rather than fall back to moving the box.
+    // Move the viewport's content layers, not the viewport itself. A viewport
+    // with no element children (only text/pseudo content) has nothing to
+    // bounce safely, so we skip rather than fall back to moving the box.
     const pinned = pinnedElements(surface, ax);
-    const layers = contentLayers(surface).filter((c) => !pinned.includes(c));
+    const candidates = contentLayers(surface);
+    const layers = candidates.filter((c) => !pinned.includes(c));
     if (layers.length === 0) return false;
 
     // A push toward the start (scrolling down/right at the end) shortens a
@@ -214,10 +215,11 @@ export function installOverscrollHint(): () => void {
 
     el = surface;
     axis = ax;
-    targets = layers;
-    held = pinned.filter((p) => p.parentElement !== surface);
+    targets = layers.map((node) => toLayer(node, ax));
+    held = pinned
+      .filter((p) => !candidates.includes(p))
+      .map((node) => ({ node, at: edgeOf(node, ax) }));
     anchor = end;
-    for (const t of targets) t.style.willChange = "transform";
     return true;
   }
 
@@ -235,14 +237,19 @@ export function installOverscrollHint(): () => void {
 
   function apply(): void {
     if (targets.length === 0) return;
-    const value =
-      axis === "y" ? `translateY(${offset}px)` : `translateX(${offset}px)`;
-    for (const t of targets) t.style.transform = value;
-    // The individual `translate` property, so a held element keeps whatever
-    // `transform` it has of its own. Its one translated ancestor is its content
-    // layer, so an equal and opposite shift puts it back exactly.
-    const back = axis === "y" ? `0 ${-offset}px` : `${-offset}px 0`;
-    for (const h of held) h.style.translate = back;
+    for (const t of targets) moveLayer(t, axis, offset);
+    if (held.length === 0) return;
+    // A held element is put back where it was MEASURED, not shifted by
+    // `-offset`: under a relative inset a sticky re-resolves against its moved
+    // ancestor on its own, and would be pushed off the edge by an assumed
+    // correction. The individual `translate` property, so it keeps whatever
+    // `transform` it has of its own. One layout: clear, read all, write all.
+    for (const h of held) h.node.style.translate = "";
+    const shifts = held.map((h) => h.at - edgeOf(h.node, axis));
+    held.forEach((h, i) => {
+      const d = shifts[i] ?? 0;
+      h.node.style.translate = axis === "y" ? `0 ${d}px` : `${d}px 0`;
+    });
   }
 
   function startLoop(): void {
@@ -279,11 +286,8 @@ export function installOverscrollHint(): () => void {
       cancelAnimationFrame(loopId);
       loopId = null;
     }
-    for (const t of targets) {
-      t.style.transform = "";
-      t.style.willChange = "";
-    }
-    for (const h of held) h.style.translate = "";
+    for (const t of targets) restoreLayer(t);
+    for (const h of held) h.node.style.translate = "";
     anchor?.remove();
     targets = [];
     held = [];
@@ -291,18 +295,6 @@ export function installOverscrollHint(): () => void {
     el = null;
     offset = 0;
     lastTs = null;
-  }
-
-  /**
-   * The viewport's content layers — its direct element children. Translating
-   * these (instead of the viewport box) keeps the bounce inside the viewport's
-   * `overflow` clip, so it never escapes over adjacent chrome. Text/pseudo
-   * children are skipped (only an element can carry a transform).
-   */
-  function contentLayers(surface: HTMLElement): HTMLElement[] {
-    return Array.from(surface.children).filter(
-      (c): c is HTMLElement => c instanceof HTMLElement,
-    );
   }
 
   function pickScrollSurface(start: Element | null, ax: Axis): Element | null {
@@ -372,6 +364,84 @@ export function installOverscrollHint(): () => void {
     if (rafId !== null) cancelAnimationFrame(rafId);
     resetSurface();
   };
+}
+
+/**
+ * The viewport's content layers — the boxes laid out directly in it. Moving
+ * these (instead of the viewport box) keeps the bounce inside the viewport's
+ * `overflow` clip, so it never escapes over adjacent chrome. Text/pseudo
+ * children are skipped (only an element can be moved), and a `display:
+ * contents` wrapper (a theme boundary around a pane header) is looked through:
+ * it draws no box, so moving it moves nothing, and its children are the layers.
+ */
+function contentLayers(parent: HTMLElement): HTMLElement[] {
+  return Array.from(parent.children).flatMap((c) =>
+    !(c instanceof HTMLElement)
+      ? []
+      : getComputedStyle(c).display === "contents"
+        ? contentLayers(c)
+        : [c],
+  );
+}
+
+/** A content layer being moved, and how — with the inline styles it had, to put back. */
+interface Layer {
+  node: HTMLElement;
+  /**
+   * `inset`: a relative offset (`top` / `left`). It moves the layer exactly as
+   * a transform would, but opens no containing block for `position: fixed`
+   * descendants — a transform makes a page's fixed widget (a floating button, a
+   * side rail) resolve against the moved layer instead of the viewport, so it
+   * jumps to the layer's own top for the length of the bounce — and no stacking
+   * context. Only for a layer in normal flow (static, or relative with no inset
+   * on the axis), whose `top` / `left` is ours to set. `transform` is the
+   * fallback for any other layer.
+   */
+  how: "inset" | "transform";
+  prev: { position: string; top: string; left: string; transform: string };
+}
+
+/** A pinned element inside a moved layer, with its edge's resting position. */
+interface Held {
+  node: HTMLElement;
+  at: number;
+}
+
+function toLayer(node: HTMLElement, axis: Axis): Layer {
+  const style = getComputedStyle(node);
+  const inset = axis === "y" ? style.top : style.left;
+  const how =
+    style.position === "static" ||
+    (style.position === "relative" && inset === "auto")
+      ? "inset"
+      : "transform";
+  const { position, top, left, transform } = node.style;
+  if (how === "inset") node.style.position = "relative";
+  else node.style.willChange = "transform";
+  return { node, how, prev: { position, top, left, transform } };
+}
+
+function moveLayer(layer: Layer, axis: Axis, offset: number): void {
+  const { node, how } = layer;
+  if (how === "inset") {
+    node.style[axis === "y" ? "top" : "left"] = `${offset}px`;
+  } else {
+    node.style.transform =
+      axis === "y" ? `translateY(${offset}px)` : `translateX(${offset}px)`;
+  }
+}
+
+function restoreLayer({ node, how, prev }: Layer): void {
+  node.style.position = prev.position;
+  node.style.top = prev.top;
+  node.style.left = prev.left;
+  node.style.transform = prev.transform;
+  if (how === "transform") node.style.willChange = "";
+}
+
+function edgeOf(node: HTMLElement, axis: Axis): number {
+  const box = node.getBoundingClientRect();
+  return axis === "y" ? box.top : box.left;
 }
 
 /** The edges a sticky element on this surface is pinned against, in client px. */

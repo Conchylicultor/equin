@@ -70,6 +70,10 @@
   color: var(--berg-deep-ink);
   /* the fallback at the very edges: the strips paint the real sky and sea */
   background: linear-gradient(to bottom, var(--berg-sky-0) 50%, var(--berg-abyss) 50%);
+  /* the sky runs on above the page's top edge, so the rubber-band at the top (overscroll-hint pulls the
+     content down by up to 48px) reveals more sky rather than the pane's canvas — black in dark mode. Above
+     the scroll's top is negative overflow, so it adds no scroll length. */
+  box-shadow: 0 -64px 0 var(--berg-sky-0);
 }
 .iceberg-berg {
   position: absolute;
