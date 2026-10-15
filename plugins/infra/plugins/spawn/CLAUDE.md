@@ -76,8 +76,10 @@ functions on purpose: they are meant to outlive any one call.
   utf8 decodes of `stdoutBytes`/`stderrBytes` (the raw bytes exist for
   byte-offset parsers like `git cat-file --batch` framing).
   `resourceUsage` is the child's `getrusage`, read after exit: `maxRssBytes`
-  (true peak RSS) and `cpuTimeMicros` (user+system CPU, microseconds). Both are
-  `undefined` when the runtime reported no rusage. CPU time is the load-independent
+  (true peak RSS), `cpuTimeMicros` (user+system CPU, microseconds) and
+  `cpuSystemMicros` (its system share — what memory pressure inflates: page
+  faults and compressor work are charged there). All are `undefined` when the
+  runtime reported no rusage. CPU time is the load-independent
   cost of a run — wall clock on a shared host varies 2.5x for the identical work.
   `timedOut` is `true` iff OUR deadline fired and we killed the child (never
   inferred from `signalCode` — anyone can SIGTERM a child).
@@ -247,7 +249,6 @@ presence only — **no re-exports**; import from `core/`.
     - `framework/tooling`
     - `framework/tooling/boundaries`
     - `framework/tooling/checks`
-    - `framework/tooling/checks/type-check`
     - `framework/tooling/format`
     - `infra/deps/mise`
     - `infra/git/remotes`

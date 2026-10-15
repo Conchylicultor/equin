@@ -128,6 +128,16 @@ export const HOST_POOLS = {
   "browser-fetch": { size: 2 },
   "layout-geometry": { size: 1 },
   push: { size: 1 },
+  // One repo-program type-check worker (7–14 GB resident). The CPU grant
+  // cannot bound these: its 2-unit weight clamps to each holder's own share, so
+  // up to `B` holders ran one each — 2–4 at once on 2026-10-14, the box in
+  // memory duress, every warm worker burning 718–2211 CPU-s instead of 29–162.
+  // Two is what fits beside everything else on the 64 GB box that measured it;
+  // a CONSTANT (like `db-fork`), because the size names the slot files. The
+  // owner lanes it (background may use 1, the interactive lane — the push
+  // holder, main — keeps the other). See
+  // research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md.
+  "type-check-worker": { size: 2 },
 } as const satisfies Record<string, HostPoolEntry>;
 
 /**

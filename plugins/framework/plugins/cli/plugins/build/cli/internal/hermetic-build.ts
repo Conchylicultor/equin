@@ -299,7 +299,6 @@ export async function runHermeticBuild(opts: {
   const companions = await fastValidationJobs({
     root,
     checkRunId: buildId,
-    background: false,
     hooks,
   });
 

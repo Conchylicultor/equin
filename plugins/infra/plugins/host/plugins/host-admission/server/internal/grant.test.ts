@@ -34,6 +34,9 @@ test("inheritedGrant reads SINGULARITY_HOST_GRANT and bounds grant.run to units"
     const g = inheritedGrant();
     expect(g).toBeDefined();
     expect(g!.units).toBe(3);
+    // The lane is a field, not only an env string: a child reads lane-shaped
+    // decisions (its type-check worker's slot and priority) off the grant.
+    expect(g!.lane).toBe("interactive");
     // The env it hands a child round-trips the very values it was built from.
     expect(g!.env()).toEqual({
       [HOST_GRANT_ENV]: "3",
@@ -149,6 +152,7 @@ test("inheritedGrant defaults the lane to background when SINGULARITY_LANE is un
   delete process.env[HOST_LANE_ENV];
   try {
     const g = inheritedGrant();
+    expect(g?.lane).toBe("background");
     expect(g?.env()).toEqual({
       [HOST_GRANT_ENV]: "2",
       [HOST_LANE_ENV]: "background",

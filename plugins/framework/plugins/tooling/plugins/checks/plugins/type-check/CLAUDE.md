@@ -156,47 +156,34 @@ noise for one broken JSON file — and would mint a program key for a program we
 could not describe. The `unparsed` arm skips the gate and the key and lets the
 worker run, where tsc reports the broken config as the one diagnostic it is.
 
-## Host-wide worker budget — the grant
+## Host-wide worker admission — `server/spawnTypeCheckWorker`
 
-The worker builds a multi-GB TS program. The fleet is bounded **host-wide**, not
-per build: before this gate, N overlapping agent builds each spawned
-`targets.length` workers, so 4–5 concurrent builds put 30–40 multi-GB processes
-on a 64 GB box and the machine thrashed (see
-`research/2026-07-09-global-type-check-worker-host-budget.md`).
+The worker builds a 7–14 GB TS program. `spawnTypeCheckWorker` (`server/`) is
+the ONE place a worker starts — for this check and for the build's
+`--skip-checks` fast path — and it takes the caller's `Grant`, so admission and
+priority cannot be skipped or disagree:
 
-This check **acquires nothing host-wide.** It spends the CPU grant its invoking
-build/check/push already holds — `ctx.grant` (see
-`@plugins/infra/plugins/host-admission`) — via `ctx.grant.run`, so the whole host
-runs at most `B` type-check-class units total (the single laned `cpu` pool's
-size), subdivided across every concurrent build.
+1. **A slot in the laned `type-check-worker` host pool** (size 2, in
+   host-admission's `HOST_POOLS`; `server/internal/worker-pool.ts`). Background
+   (agent builds, agent checks) may hold one slot; the interactive lane (push,
+   main build/check) can take either. Taken FIRST, so a queued worker holds none
+   of its holder's grant units.
+2. **`TYPE_CHECK_WORKER_UNITS` of the holder's grant** (`core/worker-weight.ts`:
+   `ceil(7.2 GB mean peak / PER_UNIT_BYTES)` = 2), the CPU share. The grant
+   CLAMPS that to its own size, so a 1-unit holder still runs a whole worker —
+   which is why the grant alone never bounded memory: up to `B` = 9 holders
+   could each run one, and on 2026-10-14 two to four overlapped on a swapping
+   host, each burning 718–2211 CPU-s on a 99.9 %-warm program (29–162 alone).
+   Step 1 is the bound; this is the CPU accounting.
+3. **The lane's scheduling tier.** `background` → `taskpolicy -b`;
+   `interactive` → the holder's own tier, which `withHostGrant` lifted out of
+   darwinbg for the grant's lifetime (an agent session is darwinbg as a whole,
+   so without that a push's lock-holding worker ran on the E-cores). Never the
+   branch: a push checks the rebased agent branch and is interactive.
 
-- **The worker spends TWO units, not one** (`TYPE_CHECK_WORKER_UNITS`, declared
-  in `core/worker-weight.ts`). A unit is `PER_UNIT_BYTES` = 3.6e9 bytes of
-  resident memory, the fleet's mean; this process is measured at 7.2 GB mean
-  peak, so it is worth `ceil(7.2 / 3.6) = 2`. The weight is DERIVED from the two
-  constants, never a literal, so a retune of the quantum reflows into it. It is
-  declared here, where the cost is measured, and nothing in `host-admission`
-  names this consumer.
-- **The grant clamps the request** to `min(units, grant.units)`. A 1-unit
-  inherited grant (`SINGULARITY_HOST_GRANT=1`) runs the 2-unit request at weight
-  1 — the grant IS the ceiling, the same rule as "a reduced grant just runs the
-  fleet at lower concurrency" — so it can never wait for capacity it will not be
-  given.
-- **The grant carries the lane and the budget.** `interactive` = main build +
-  push (a human is blocked); `background` = agent build + direct agent check. The
-  CLI classifies the origin and passes the lane to `withHostGrant`; the resulting
-  `units` are drawn from the interactive lane's reserved floor or the background
-  window accordingly. A push runs its checks on the rebased _agent_ branch yet
-  stays interactive because it INHERITS the grant (its env), not because of any
-  branch gate.
-- **`B` is the residual of the summed host budget**, declared once in
-  `host-admission/core` (not recomputed here). On this host `B = 9`,
-  `backgroundLimit = 6` — so at most four workers run host-wide (≈ 29 GB at the
-  mean peak, under the 32 GB ceiling), and the background lane admits three
-  concurrent agent type-checks.
-- **Demotion is a separate axis, unchanged.** `workerDemotion()` still keys on
-  `branch === "main"`, so push's workers stay darwinbg-demoted exactly as before.
-  Admission (the grant) and scheduling priority (demotion) are orthogonal.
+Design and the simulation behind the sizes:
+`research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`; the
+original fleet-thrash bound: `research/2026-07-09-global-type-check-worker-host-budget.md`.
 
 ## The program is skipped when it is unchanged
 
@@ -349,10 +336,17 @@ lines per run, and they are the instrument every claim about this check is made 
   "running" half is what separates a cold tree from a broken key.
 - `type-check: no program key — <why>` — only when the program could not be
   keyed at all.
-- `type-check worker repo: cpu 186.6s, maxRSS 7.2 GB` — only when the worker RAN
-  (a skipped run has no line, by construction). These are the numbers
-  `TYPE_CHECK_WORKER_UNITS` is measured from, so a grep over many runs is how
-  the weight gets re-derived.
+- `type-check worker repo: cpu 186.6s (sys 12.0s), maxRSS 7.2 GB, slot wait 3.1s`
+  — only when the worker RAN (a skipped run has no line, by construction). These
+  are the numbers `TYPE_CHECK_WORKER_UNITS` is measured from, so a grep over many
+  runs is how the weight gets re-derived. A large `sys` share is the host's
+  memory pressure, not this program's work; `slot wait` is what the
+  `type-check-worker` cap cost this run.
+- `type-check worker repo: lane interactive, priority foreground` — when the
+  worker is about to run: the grant's lane and the tier it gets (`background
+  (taskpolicy -b)`, `background (inherited)` from a darwinbg holder, or
+  `foreground`), read from this process itself. `interactive` with
+  `background (inherited)` means the holder failed to leave darwinbg — a bug.
 - `type-check: warm base repo: …` — every run, saying which incremental base it
   started from and how much of it still matches: `seeded 6701/6858 from pool
   <entry>` (cold worktree, took a pooled base), `pool <entry> matched 6701/6858
@@ -409,16 +403,17 @@ measures the queue, so any per-check cost claim needs `./singularity check --job
 
 ## Plugin reference
 
+- Description: spawnTypeCheckWorker: the one way to start a repo-program type-check worker — admitted through the laned host-wide type-check-worker pool (background may hold one slot, the interactive lane the other) and the holder's grant, demoted only for a background-lane holder.
+- Server:
+  - Uses: `infra/host/host-admission.defineHostPool`
+  - Exports (types): `TypeCheckWorkerRun`
+  - Exports (values): `spawnTypeCheckWorker`
 - Core:
-  - Uses:
-    - `infra/host/host-admission.PER_UNIT_BYTES`
-    - `infra/spawn.spawnCaptured`
+  - Uses: `infra/host/host-admission.PER_UNIT_BYTES`
   - Exports (types):
     - `TypeCheckWorkerJob`
     - `TypeCheckWorkerResult`
-    - `TypeCheckWorkerRun`
   - Exports (values):
-    - `spawnTypeCheckWorker`
     - `TYPE_CHECK_WORKER_PEAK_BYTES`
     - `TYPE_CHECK_WORKER_UNITS`
 

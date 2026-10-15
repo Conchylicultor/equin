@@ -33,9 +33,10 @@ pool says can move any other pool's capacity:
 | `browser-fetch` | 2 | concurrent headless-Chromium page fetches |
 | `layout-geometry` | 1 | the geometry suite's Vite build + Chromium launch |
 | `push` | 1 | the global push mutex |
+| `type-check-worker` | 2 | live repo-program type-check workers (7–14 GB each); laned by its owner (`type-check/server`): background may hold 1 |
 
 `HOST_POOLS` is the single source both the pools and the `host-budget` check
-read, so their numbers can never drift. **All six keys stay listed** even for a
+read, so their numbers can never drift. **Every key stays listed** even for a
 pool whose only other reader is elsewhere:
 [`data-dirs/index.ts`](./data-dirs/index.ts) derives the `locks/<id>`
 declarations from its keys, so dropping one would un-declare that lock dir and
@@ -152,7 +153,7 @@ slot file. None does today.
 A `laned` pool MUST also pass an explicit `backgroundLimit` (the `background`
 lane's slot window); `defineHostPool` throws otherwise, since silently falling
 back to `backgroundLimit === size` would void the reserved floor the flag
-promises. Only the `cpu` pool is laned today.
+promises. Two pools are laned: `cpu` and `type-check-worker`.
 
 ## The grant (`server`)
 
@@ -175,11 +176,25 @@ the returned `slots` in an in-process `createSemaphore(slots)`
 - `grant.run(fn)` — spend one unit through the in-process semaphore. Every heavy
   child (a type-check worker, tsc, vite, the Chromium suite) goes through it.
   `grant.run(fn, { units })` spends more than one — see *Weighted spend* below.
+- `grant.lane` — the lane it was admitted in. Children read lane-shaped
+  decisions off it (the type-check worker's slot lane and scheduling tier),
+  never off the branch.
 - `grant.env()` — `{ SINGULARITY_HOST_GRANT, SINGULARITY_LANE }`, inherited by a
   subprocess child so its `inheritedGrant()` rebuilds the SAME budget and spends
   those units — acquiring NOTHING host-wide, because the parent holds the slots
   and the child is their only spender. This is what deletes the old
   `SINGULARITY_HOST_SLOT_HELD` / `kind: "exempt"` double-acquire dodge.
+
+### An interactive grant runs its holder in the foreground
+
+While `fn` runs under an `interactive` grant, `withHostGrant` takes the process
+out of macOS darwinbg (`spawn-priority`'s `withForegroundPriority`) and puts it
+back afterwards, so every child spawned meanwhile starts in the foreground. An
+agent session is darwinbg as a whole, so before this a push's lane bought it
+slots but not cores: its lock-holding type-check ran on the E-cores beside the
+fleet it was meant to outrank. Self-promotion is the only form that works from
+an agent session (`taskpolicy -B -p` from there is a silent no-op). Safe
+because the interactive lane is bounded: one push at a time, the reserved floor.
 
 ### Weighted spend
 
@@ -241,6 +256,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `packages/host-semaphore.AcquireHooks`
     - `packages/host-semaphore.createHostSemaphore`
     - `packages/host-semaphore.HostShare`
+    - `packages/spawn-priority.withForegroundPriority`
   - Exports (types):
     - `HostPool`
     - `HostPoolSpec`

@@ -17,11 +17,17 @@ import type { ChildResourceUsage } from "./types";
  */
 export function readResourceUsage(proc: {
   resourceUsage: () =>
-    { maxRSS: number; cpuTime: { total: number | bigint } } | undefined | null;
+    | {
+        maxRSS: number;
+        cpuTime: { total: number | bigint; system: number | bigint };
+      }
+    | undefined
+    | null;
 }): ChildResourceUsage {
   const usage = proc.resourceUsage();
   return {
     maxRssBytes: usage?.maxRSS,
     cpuTimeMicros: usage ? Number(usage.cpuTime.total) : undefined,
+    cpuSystemMicros: usage ? Number(usage.cpuTime.system) : undefined,
   };
 }

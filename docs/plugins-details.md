@@ -20437,17 +20437,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`theme-bridge-reads`**
             - **`token-group-vars-in-sync`**
             - **`tsconfig-alias-single-owner`**
-            - **`type-check`**
+            - **`type-check`** — spawnTypeCheckWorker: the one way to start a repo-program type-check worker — admitted through the laned host-wide type-check-worker pool (background may hold one slot, the interactive lane the other) and the holder's grant, demoted only for a background-lane holder.
+              - Server:
+                - Uses: `infra/host/host-admission.defineHostPool`
+                - Exports (types): `TypeCheckWorkerRun`
+                - Exports (values): `spawnTypeCheckWorker`
               - Core:
-                - Uses:
-                  - `infra/host/host-admission.PER_UNIT_BYTES`
-                  - `infra/spawn.spawnCaptured`
+                - Uses: `infra/host/host-admission.PER_UNIT_BYTES`
                 - Exports (types):
                   - `TypeCheckWorkerJob`
                   - `TypeCheckWorkerResult`
-                  - `TypeCheckWorkerRun`
                 - Exports (values):
-                  - `spawnTypeCheckWorker`
                   - `TYPE_CHECK_WORKER_PEAK_BYTES`
                   - `TYPE_CHECK_WORKER_UNITS`
         - **`codegen`** — Plugin doc generation and registry codegen
@@ -22843,6 +22843,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/host-semaphore.AcquireHooks`
               - `packages/host-semaphore.createHostSemaphore`
               - `packages/host-semaphore.HostShare`
+              - `packages/spawn-priority.withForegroundPriority`
             - Exports (types):
               - `HostPool`
               - `HostPoolSpec`
@@ -24176,7 +24177,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling`
           - `framework/tooling/boundaries`
           - `framework/tooling/checks`
-          - `framework/tooling/checks/type-check`
           - `framework/tooling/format`
           - `infra/deps/mise`
           - `infra/git/remotes`
@@ -25697,12 +25697,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `conversations/runtime-tmux`
+          - `infra/host/host-admission`
           - `infra/spawn`
       - Server:
+        - Exports (types): `DarwinBackground`
         - Exports (values):
           - `backgroundArgv`
           - `backgroundPrefix`
           - `boostInteractiveQos`
+          - `readDarwinBackground`
+          - `withForegroundPriority`
       - Core:
         - Exports (values):
           - `backgroundArgv`

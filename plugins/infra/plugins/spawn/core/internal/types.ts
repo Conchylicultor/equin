@@ -153,6 +153,14 @@ export interface ChildResourceUsage {
   maxRssBytes: number | undefined;
   /** User + system CPU consumed by the child, in MICROseconds. */
   cpuTimeMicros: number | undefined;
+  /**
+   * The SYSTEM share of `cpuTimeMicros` (kernel time on the child's behalf), in
+   * MICROseconds. Separated because it is what memory pressure inflates: page
+   * faults and compressor decompressions are charged here, so a run whose total
+   * balloons while its system share does too was paying for the host, not doing
+   * more of its own work. See research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md.
+   */
+  cpuSystemMicros: number | undefined;
 }
 
 /** What a completed capture-shaped spawn returns. */

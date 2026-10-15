@@ -30,19 +30,21 @@ import {
   currentScanView,
   type TscProgram,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import {
-  getWorktreeRoot,
-  spawnCaptured,
-} from "@plugins/infra/plugins/spawn/core";
-import {
-  spawnTypeCheckWorker,
-  TYPE_CHECK_WORKER_UNITS,
-  type TypeCheckWorkerResult,
-} from "../core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import type { TypeCheckWorkerResult } from "../core";
+import { spawnTypeCheckWorker } from "../server";
 import type {
   Check,
   CheckContext,
 } from "@plugins/framework/plugins/tooling/core";
+import type {
+  Grant,
+  Lane,
+} from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import {
+  readDarwinBackground,
+  type DarwinBackground,
+} from "@plugins/packages/plugins/spawn-priority/server";
 import { readTreeListing } from "./fingerprint";
 import { recordOuterReadSet } from "./outer-read-set";
 import { openPrepareThread } from "./prepare-thread";
@@ -52,34 +54,15 @@ import type { ProgramOutcome } from "./prepare";
 interface WorkerResult extends TypeCheckWorkerResult {
   maxRssBytes: number | undefined;
   cpuTimeMicros: number | undefined;
-}
-
-// Priority isolation at the spawn site: a worker for a non-main branch runs
-// darwinbg (E-cores + background IO tier) so N concurrent agent fleets can't
-// starve the interactive main backend — regardless of whether the parent
-// session/CLI was itself demoted. Relying on inheritance is how 10 of 11
-// workers ran undemoted on 2026-07-08 (see
-// research/perfs/2026-07-08-host-saturation-agent-checks-starve-main.md).
-// Main-branch runs stay undemoted — the user is waiting on them (same rule as
-// build.ts's `branch === "main"` slot exemption). The demotion itself is
-// spawnCaptured's `background` option (spawn-priority's backgroundArgv).
-async function workerBackground(): Promise<boolean> {
-  const result = await spawnCaptured(
-    ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-    // Wedge-breaker for a metadata-only git read, far above any real duration.
-    // The worker spawn this gates (`spawnTypeCheckWorker`, in `../core`) is the
-    // one that legitimately runs for minutes; this one only decides whether to
-    // demote it.
-    { timeoutMs: 60_000 },
-  );
-  return result.stdout.trim() !== "main";
+  cpuSystemMicros: number | undefined;
+  slotWaitMs: number;
 }
 
 async function runWorker(
   root: string,
   program: TscProgram,
   lintFiles: string[],
-  background: boolean,
+  grant: Grant,
 ): Promise<WorkerResult> {
   const run = await spawnTypeCheckWorker({
     root,
@@ -87,13 +70,43 @@ async function runWorker(
     tsconfigPath: program.tsconfigPath,
     buildInfoPath: tsBuildInfoPath(root, program.name),
     lintFiles,
-    background,
+    grant,
   });
   return {
     ...run.result,
     maxRssBytes: run.maxRssBytes,
     cpuTimeMicros: run.cpuTimeMicros,
+    cpuSystemMicros: run.cpuSystemMicros,
+    slotWaitMs: run.slotWaitMs,
   };
+}
+
+// Which scheduling tier the worker ran in, and why — one greppable line beside
+// the cost line, e.g.
+// "type-check worker repo: lane interactive, priority background (inherited)".
+//
+// darwinbg reaches a worker two ways: its spawn's own `taskpolicy -b` (a
+// background-lane grant), or INHERITANCE — an agent session runs entirely
+// under darwinbg, so a worker spawned with no demotion at all is still on the
+// E-cores unless its holder left darwinbg (an interactive grant does). The
+// second is invisible from the spawn site, which is how a push's lock-holding
+// check ran demoted for months while every reading of the code said "push is
+// interactive" (research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md).
+// So this process's own state is read, not inferred from the lane.
+function workerPriorityLine(
+  label: string,
+  lane: Lane,
+  parent: DarwinBackground,
+): string {
+  const priority =
+    lane === "background"
+      ? "background (taskpolicy -b)"
+      : parent.kind === "darwinbg"
+        ? "background (inherited)"
+        : parent.kind === "foreground"
+          ? "foreground"
+          : `unknown (${parent.reason})`;
+  return `${label}: lane ${lane}, priority ${priority}`;
 }
 
 // One greppable line for the worker, e.g.
@@ -123,21 +136,34 @@ async function runWorker(
 // reading, not a swallowed failure: the line is omitted and nothing else
 // changes. Either half alone still prints, so one missing number never hides
 // the other.
+//
+// The system share rides in parentheses: memory pressure is charged there (page
+// faults, compressor decompressions), so it is what tells a worker that did
+// more work from one that paid for a thrashing host.
 function workerCostLine(
   label: string,
   maxRssBytes: number | undefined,
   cpuTimeMicros: number | undefined,
+  cpuSystemMicros: number | undefined,
+  slotWaitMs: number | undefined,
 ): string | null {
   const parts: string[] = [];
   if (cpuTimeMicros != null)
-    parts.push(`cpu ${(cpuTimeMicros / 1e6).toFixed(1)}s`);
+    parts.push(
+      `cpu ${(cpuTimeMicros / 1e6).toFixed(1)}s${cpuSystemMicros != null ? ` (sys ${(cpuSystemMicros / 1e6).toFixed(1)}s)` : ""}`,
+    );
   if (maxRssBytes != null) {
     const gb = maxRssBytes / 1e9;
     parts.push(
       `maxRSS ${gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(maxRssBytes / 1e6)} MB`}`,
     );
   }
-  return parts.length === 0 ? null : `${label}: ${parts.join(", ")}`;
+  if (parts.length === 0) return null;
+  // How long the worker queued for its `type-check-worker` slot — the cap's
+  // cost, on the same line as what the worker then cost, so a wait that
+  // replaced a thrash can be weighed against it.
+  if (slotWaitMs != null) parts.push(`slot wait ${seconds(slotWaitMs)}s`);
+  return `${label}: ${parts.join(", ")}`;
 }
 
 /** Milliseconds as the seconds figure of a log line, e.g. `71.3`. */
@@ -233,22 +259,22 @@ const check: Check = {
       }
 
       if (plan.run) {
-        const background = await workerBackground();
-        // The worker spends the CPU grant the invoking build/check/push already
-        // holds (`ctx.grant`) — this check acquires NOTHING host-wide. That is
-        // the fix for the 2026-07-09 thrash (N overlapping agent builds each
-        // spawning `targets.length` multi-GB workers, 30-40 at once).
-        //
-        // It spends `TYPE_CHECK_WORKER_UNITS` of them, not one. A unit is
-        // `PER_UNIT_BYTES` (3.6e9) of resident memory, and this process is
-        // measured at ~7.2 GB — it is worth two. The weight is declared in
-        // `../core`, where the measurement lives; the grant clamps it to what
-        // the holder actually has, so a 1-unit grant still runs.
+        ctx.log?.(
+          workerPriorityLine(
+            `type-check worker ${program.name}`,
+            ctx.grant.lane,
+            readDarwinBackground(),
+          ),
+          "stderr",
+        );
+        // Admission is the spawn's own (`../server`): a host-wide
+        // `type-check-worker` slot in the grant's lane — the memory bound the
+        // grant's clamped weight could not express — then
+        // `TYPE_CHECK_WORKER_UNITS` of the CPU grant the invoking
+        // build/check/push already holds (`ctx.grant`), and the lane's
+        // scheduling tier.
         try {
-          result = await ctx.grant.run(
-            () => runWorker(root, program, lintFiles, background),
-            { units: TYPE_CHECK_WORKER_UNITS },
-          );
+          result = await runWorker(root, program, lintFiles, ctx.grant);
         } catch (err) {
           crash = (err as Error).message;
         }
@@ -266,6 +292,8 @@ const check: Check = {
         `type-check worker ${program.name}`,
         result?.maxRssBytes,
         result?.cpuTimeMicros,
+        result?.cpuSystemMicros,
+        result?.slotWaitMs,
       );
       if (costLine !== null) ctx.log?.(costLine, "stderr");
 

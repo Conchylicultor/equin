@@ -8,6 +8,8 @@
 // via `env()` and rebuilds its own in-process semaphore, so nothing a holder
 // spawns re-acquires host-wide.
 
+import type { Lane } from "./budget";
+
 /** Env var carrying the inherited unit count to a subprocess child (a positive int). */
 export const HOST_GRANT_ENV = "SINGULARITY_HOST_GRANT";
 /** Env var carrying the inherited lane to a subprocess child. */
@@ -22,6 +24,15 @@ export const HOST_LANE_ENV = "SINGULARITY_LANE";
  */
 export interface Grant {
   readonly units: number;
+  /**
+   * The lane the holder was admitted in — `interactive` (a human is blocked:
+   * main build, push) or `background` (agent build, agent check). It is the ONE
+   * classification a holder's children read for everything lane-shaped:
+   * which slots it may take, and which scheduling tier its heavy children run
+   * in. A child never re-derives it from the branch — a push checks an agent
+   * branch yet is interactive, which is exactly what a branch gate gets wrong.
+   */
+  readonly lane: Lane;
   /**
    * Spend the holder's units on one heavy child. `opts.units` is how many this
    * child is worth (default 1, a positive integer) — a child whose MEASURED peak

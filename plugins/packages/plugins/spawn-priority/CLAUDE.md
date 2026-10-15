@@ -20,7 +20,22 @@ the bulk work below default, and raise main's event-loop thread above it.
   root needed: a process may always raise its own thread's QoS, unlike
   negative nice.
 
+- `readDarwinBackground()` — the calling process's OWN darwinbg state
+  (`darwinbg` / `foreground` / `unsupported`). Only a self read is trustworthy:
+  measured from an agent shell (2026-10-15), `getpriority` on another pid read
+  0 for a darwinbg process, and `taskpolicy -B -p <pid>` exited 0 yet left the
+  target darwinbg. A process CAN clear its own state
+  (`setpriority(PRIO_DARWIN_PROCESS, 0, 0)`), and children spawned after start
+  in the foreground — so promotion has to be done by the process itself.
+- `withForegroundPriority(fn)` — that self-promotion, scoped: out of darwinbg
+  for `fn`, restored after, each write verified by a read (`setpriority(…, 1)`
+  returns 0 and changes nothing; only `PRIO_DARWIN_BG` = 0x1000 demotes). Like
+  `boostInteractiveQos`, the caller owns the contract: its one caller is
+  host-admission's interactive-lane `withHostGrant`.
+
 Mechanism: darwinbg (`/usr/sbin/taskpolicy -b`), inherited by all children.
+Every agent session runs under it (`conversations/runtime-tmux`), so all an agent
+spawns starts darwinbg whether or not the spawn asks for `background`.
 On Apple Silicon this pins the subtree to the efficiency cores and applies the
 background disk-IO throttle tier (which only bites under IO contention).
 Measured: `-c utility` gives ZERO CPU protection and must not be used; `-b`
@@ -50,12 +65,16 @@ server-only (`bun:ffi`).
 - Cross-plugin:
   - Imported by:
     - `conversations/runtime-tmux`
+    - `infra/host/host-admission`
     - `infra/spawn`
 - Server:
+  - Exports (types): `DarwinBackground`
   - Exports (values):
     - `backgroundArgv`
     - `backgroundPrefix`
     - `boostInteractiveQos`
+    - `readDarwinBackground`
+    - `withForegroundPriority`
 - Core:
   - Exports (values):
     - `backgroundArgv`

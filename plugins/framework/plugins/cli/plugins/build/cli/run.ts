@@ -1225,19 +1225,16 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // below — the child is exactly the inheriting subprocess this exists for,
   // and it classifies itself from what it reads here. See ../lane.ts.
   publishLane(branch === "main");
-  // Agent-branch builds additionally run their heavy children (tsc, vite)
-  // darwinbg-demoted so even a single build can't starve the interactive
-  // main backend (one build legitimately fans across every core). Usually
-  // redundant — a build started from an agent's tmux session already
-  // inherits darwinbg (runtime-tmux demotes the whole session) — but this
-  // keeps the invariant when a build of an agent branch is started from an
-  // undemoted shell. Main-branch builds stay undemoted: the user is
-  // waiting on them. The checks runner's type-check workers apply the same
-  // branch rule at their own spawn site (type-check/check/index.ts), so
-  // they are covered on every path (build, standalone check, push) without
-  // relying on session inheritance. Demotion rides spawnCaptured's
-  // `background` option (spawn-priority's backgroundArgv under the hood).
-  const backgroundBuild = branch !== "main";
+  // A background-lane build additionally runs its heavy children (vite, the
+  // server bundle) darwinbg-demoted so even a single build can't starve the
+  // interactive main backend (one build legitimately fans across every core).
+  // Usually redundant — a build started from an agent's tmux session already
+  // inherits darwinbg — but it keeps the invariant when an agent branch is
+  // built from an undemoted shell. Derived from the LANE, the same fact the
+  // grant carries, never re-derived from the branch: the type-check worker
+  // reads `grant.lane` at its one spawn site (type-check/server), so the two
+  // cannot disagree.
+  const backgroundBuild = lane === "background";
 
   // The FULL checks pass stays HERE rather than moving into the shared
   // pipeline: it is build-specific observability — the untruncated
@@ -1314,7 +1311,6 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     ? await fastValidationJobs({
         root,
         checkRunId: buildId,
-        background: backgroundBuild,
         hooks,
       })
     : [fullChecksJob];

@@ -20,6 +20,7 @@ import { withDirectOp, type DirectOpDeps } from "./direct-op";
 function fakeGrant(units: number, lane: Lane): Grant {
   return {
     units,
+    lane,
     run: (fn) => fn(),
     env: () => ({
       SINGULARITY_HOST_GRANT: String(units),

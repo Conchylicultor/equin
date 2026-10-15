@@ -17,10 +17,7 @@ import {
   tsBuildInfoPath,
   type ContentHashMemo,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import {
-  spawnTypeCheckWorker,
-  TYPE_CHECK_WORKER_UNITS,
-} from "@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/core";
+import { spawnTypeCheckWorker } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/server";
 import {
   holdThroughValve,
   PROGRESS_FILE,
@@ -618,10 +615,9 @@ export async function fastValidationJobs(opts: {
    * name the same file by construction rather than by agreement.
    */
   checkRunId: string;
-  background: boolean;
   hooks: ArtifactHooks;
 }): Promise<HeavyJob[]> {
-  const { root, checkRunId, background, hooks } = opts;
+  const { root, checkRunId, hooks } = opts;
   const jobs: HeavyJob[] = [];
 
   // Spawned, never called in-process — see ../../check-subprocess.ts. The
@@ -696,28 +692,25 @@ export async function fastValidationJobs(opts: {
     // re-checks its entire importer closure — and publishing such a base into
     // the shared pool inflicts that on whoever picks it up next.
     //
-    // Spend the same weight the check spends (`TYPE_CHECK_WORKER_UNITS`, from
-    // the measured peak of this very process) so the fast-path worker and the
-    // check's worker are admitted as the same size of thing.
-    const run = await grant.run(
-      () =>
-        spawnTypeCheckWorker({
-          root,
-          name: program.name,
-          tsconfigPath: program.tsconfigPath,
-          buildInfoPath: buildInfo,
-          // Type-checking only: linting belongs to the check pass this path is
-          // skipping, and an empty list is what the worker reads as "none".
-          lintFiles: [],
-          background,
-        }),
-      { units: TYPE_CHECK_WORKER_UNITS },
-    );
+    // Admitted exactly like the check's worker — the host-wide
+    // `type-check-worker` slot, then the measured grant weight, priority from
+    // the grant's lane — because `spawnTypeCheckWorker` is the one place a
+    // worker is admitted and takes the grant itself.
+    const run = await spawnTypeCheckWorker({
+      root,
+      name: program.name,
+      tsconfigPath: program.tsconfigPath,
+      buildInfoPath: buildInfo,
+      // Type-checking only: linting belongs to the check pass this path is
+      // skipping, and an empty list is what the worker reads as "none".
+      lintFiles: [],
+      grant,
+    });
     end({ maxRssBytes: run.maxRssBytes });
     for (const line of run.result.tscErrors.split("\n")) {
       if (line) lines.push({ text: line, stream: "stdout" });
     }
-    // A worker that CRASHED threw out of `grant.run` above and takes this step
+    // A worker that CRASHED threw out of `spawnTypeCheckWorker` above and takes this step
     // down with it, so reaching here means the program built: diagnostics or
     // not, its state is a usable base. Published only when clean, matching the
     // pool's other producer's caution about state it cannot vouch for.

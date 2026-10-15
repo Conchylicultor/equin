@@ -7,6 +7,7 @@ import {
   type GrantHooks,
   type Lane,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import { withForegroundPriority } from "@plugins/packages/plugins/spawn-priority/server";
 import { defineHostPool } from "./pool";
 
 // The laned host CPU pool + the grant that subdivides it. This is where the fleet
@@ -36,6 +37,7 @@ function grantOfUnits(units: number, lane: Lane): Grant {
   const sem = createSemaphore(units);
   return {
     units,
+    lane,
     run: (fn, opts) => sem.run(fn, { weight: spendOf(opts?.units, units) }),
     env: () => ({ [HOST_GRANT_ENV]: String(units), [HOST_LANE_ENV]: lane }),
   };
@@ -73,6 +75,18 @@ function spendOf(want: number | undefined, held: number): number {
  * call then throws `signal.reason`). It deliberately does not drop the share
  * mid-`fn` the way `pool.run` does — see `GrantHooks.signal` for why a grant's
  * inheritable tokens make that unsafe.
+ *
+ * **An interactive grant runs its holder in the foreground.** The lane says a
+ * human is blocked on this work, so while `fn` runs the process leaves macOS's
+ * darwinbg tier (`withForegroundPriority`), and every child it spawns meanwhile
+ * — the push's check subprocess, its type-check worker — inherits that. Without
+ * it the lane bought slots but not cores: an agent session is darwinbg as a
+ * whole, so a push's lock-holding type-check ran on the E-cores beside the
+ * fleet it was meant to outrank, at 718–2211 CPU-s for a 99.9 %-warm program
+ * (research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md). Tying
+ * it to the lane leaves no spelling for an interactive holder at background
+ * priority, and the lane is already bounded (one push at a time, the reserved
+ * floor), so this cannot lift the agent fleet.
  */
 export async function withHostGrant<T>(
   opts: { lane: Lane; max: number; hooks?: GrantHooks },
@@ -82,8 +96,11 @@ export async function withHostGrant<T>(
     ...opts.hooks,
     lane: opts.lane,
   });
+  const grant = grantOfUnits(share.slots, opts.lane);
   try {
-    return await fn(grantOfUnits(share.slots, opts.lane));
+    return opts.lane === "interactive"
+      ? await withForegroundPriority(() => fn(grant))
+      : await fn(grant);
   } finally {
     await share.release();
   }
