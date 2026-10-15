@@ -172,7 +172,10 @@ await withBrowser(async (h) => {
   if (tracing) {
     if (browser === null) throw new Error("no browser to trace");
     await browser.startTracing(page, {
-      categories: ["devtools.timeline", "disabled-by-default-devtools.timeline"],
+      categories: [
+        "devtools.timeline",
+        "disabled-by-default-devtools.timeline",
+      ],
     });
   }
   const t0 = Date.now();
@@ -218,9 +221,7 @@ await withBrowser(async (h) => {
     console.log(`[zoom] ${m.padEnd(20)} ${v}`);
   }
   if (profile === null) return;
-  const busy = selfTimes(profile).filter(
-    (e) => !e.name.startsWith("(idle)"),
-  );
+  const busy = selfTimes(profile).filter((e) => !e.name.startsWith("(idle)"));
   console.log("[zoom] heaviest self time:");
   for (const e of busy.slice(0, top)) {
     console.log(`    ${e.ms.toFixed(0).padStart(6)} ms  ${e.name}`);
