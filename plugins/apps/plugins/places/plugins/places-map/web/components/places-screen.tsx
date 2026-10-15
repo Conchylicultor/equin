@@ -55,15 +55,20 @@ const BELOW_TOOLBAR = `calc(${spaceLength("md")} * 2 + 2.75rem)`;
 /** The tag sidebar's reach from the left edge (gutter + its `w-72`). */
 const PAST_SIDEBAR = `calc(${spaceLength("md")} * 2 + 18rem)`;
 
-/** The place card's reach from the right edge (gutter + its width + gutter). */
-const PAST_CARD = `calc(${spaceLength("md")} * 2 + ${PLACE_CARD_WIDTH})`;
+/** The room the place card covers on the right edge (gutter + its width). */
+const CARD_REACH = `calc(${spaceLength("md")} + ${PLACE_CARD_WIDTH})`;
+
+/** Past the place card: its reach plus the gutter beside it. */
+const PAST_CARD = `calc(${CARD_REACH} + ${spaceLength("md")})`;
 
 /**
  * The Places screen: one full-bleed DataView of every saved place — Map,
  * Gallery and List over the same filtered rows — with its chrome floating on
  * the map (`floatingToolbar`): the tag sidebar as the surface's `aside`, the
- * view tabs top-left, search / filter / Add place top-right. Selecting a place
- * (a pin, a card, a row) opens its card on the right, and a click anywhere
+ * view tabs top-left, search / filter / Add place top-right. The map is the
+ * surface's `backdrop`: Gallery and List float over it as a card (the map
+ * behind showing the same places), which steps aside for the place card.
+ * Selecting a place (a pin, a card, a row) opens its card on the right, and a click anywhere
  * else on the screen (the map, the sidebar, the toolbar) or Esc closes it; Manage tags
  * lays the tag manager over the map. Dropping a custom pin (from Add place) or
  * moving one (from its card) puts the map in pick mode, with a bar at the
@@ -223,6 +228,8 @@ function PlacesSurface({
         fields={fields}
         views={["map", "gallery", "list"]}
         toolbar={floatingToolbar}
+        backdrop="map"
+        reserve={showCard ? { right: CARD_REACH } : undefined}
         aside={
           <TagSidebar
             places={places}

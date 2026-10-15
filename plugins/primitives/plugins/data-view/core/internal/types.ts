@@ -1751,4 +1751,31 @@ export interface DataViewBaseProps<TRow> {
    * takes it: a hosted or sections toolbar throws.
    */
   aside?: ReactNode;
+  /**
+   * A view type (`"map"`) the surface keeps mounted UNDER every view — its
+   * canvas. Only beside an {@link ToolbarArrangement.overlay} arrangement, and
+   * only a type declaring `fullBleed` (anything else throws).
+   *
+   * While the active view is of this type it IS the backdrop. Any other view
+   * floats over it as a card (below the band, past the aside, a gutter from
+   * the other edges, its own scroll), and the backdrop draws the active view's
+   * rows, search, filter and selection with the code options
+   * `viewOptions[backdrop]` — so it shows exactly what the card lists, and
+   * activating a row on it activates that row. One mount for every view: the
+   * backdrop's own state (a map's camera) survives switching views.
+   */
+  backdrop?: string;
+  /**
+   * Room on the surface's edges the consumer covers with chrome of its own (a
+   * detail card pinned right), as CSS lengths from the edge: the floating view
+   * card of a {@link DataViewBaseProps.backdrop} surface stops a gutter short
+   * of it. Only with `backdrop` (anything else throws — there is no card to
+   * move).
+   */
+  reserve?: DataViewReserve;
+}
+
+/** {@link DataViewBaseProps.reserve}: covered room per edge, a CSS length. */
+export interface DataViewReserve {
+  right?: string;
 }

@@ -17,7 +17,11 @@ Then `PlacesSurface` renders, inside a `relative h-full` box:
 - `<DataView storageKey="places.map" views={["map","gallery","list"]}
   toolbar={floatingToolbar} aside={<TagSidebar/>} actions={<AddPlaceButton/>}>`
   — the views are authored in `config/apps/places/places-map/places.map.jsonc`
-  (All places = map, Gallery, List). `viewOptions.map` stamps
+  (All places = map, Gallery, List). `backdrop="map"`: the map stays mounted
+  under every view — Gallery and List float over it as a card showing the
+  same places, its right edge stepping aside for the place card
+  (`reserve={{ right: CARD_REACH }}` while it shows) — so switching views
+  never moves the user's camera. `viewOptions.map` stamps
   `pinType: "saved-place"` and `pinData: placeVisual(place, tags)` on every
   pin; gallery covers and list glyphs paint the same `PlaceVisual`.
 - The selected place's `PlaceCard` and the `TagManagerPanel` (from

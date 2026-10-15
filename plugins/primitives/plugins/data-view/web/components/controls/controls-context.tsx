@@ -79,9 +79,9 @@ const DataViewControlsContext =
 
 /**
  * Takes the value FIELD BY FIELD rather than as one `value` object, and memoizes
- * it here. The host builds this inside a render-prop callback (`CollectRowOrder`'s
- * children), which is a plain function and may hold no hooks — so this component
- * is the only place with somewhere to put the memo, and passing it a pre-built
+ * it here. The host builds this inside a plain render function (the body's
+ * surface, beside the `RowOrderReader`), which may hold no hooks — so this
+ * component is the only place with somewhere to put the memo, and passing it a pre-built
  * object would hand every consumer a new identity on every render of the body.
  */
 export function DataViewControlsProvider({

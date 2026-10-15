@@ -95,6 +95,7 @@ export type {
   DataViewRenderProps,
   DataViewProps,
   DataViewBaseProps,
+  DataViewReserve,
   DataViewSearch,
   DataViewDataOrigin,
   DataViewInMemoryOrigin,

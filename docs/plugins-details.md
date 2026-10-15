@@ -29988,9 +29988,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Clip`
               - `clipClasses`
           - Cross-plugin:
-            - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+            - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
               - `apps` ×17
-              - `primitives` ×9
+              - `primitives` ×10
               - `conversations` ×7
               - `debug` ×6
               - `page` ×5
@@ -30318,6 +30318,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/code-block`
               - `page/place/map-layer`
               - `primitives/css/color-picker`
+              - `primitives/data-view`
               - `primitives/overlay/image-viewer`
               - `primitives/syntax-highlight/overlay-textarea`
               - `primitives/tree`
@@ -31334,7 +31335,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
-        - Uses: 93 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 95 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×12
           - `primitives/css/ui-kit` ×11
           - `primitives/data-view/view-core` ×8
@@ -31356,8 +31357,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/sortable-list` ×2
           - `fields.Fields`
           - `ids.IdKinds`
+          - `primitives/css/clip.Clip`
           - `primitives/css/fill.fillClasses`
           - `primitives/css/inline.Inline`
+          - `primitives/css/layer.Layer`
           - `primitives/css/pin.Pin`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/rigid.rigidClass`
@@ -31561,6 +31564,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewPagingTotal`
           - `DataViewProps`
           - `DataViewRenderProps`
+          - `DataViewReserve`
           - `DataViewRowEntry`
           - `DataViewRowsCollection`
           - `DataViewRowsComplete`

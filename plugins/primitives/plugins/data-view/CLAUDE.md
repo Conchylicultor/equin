@@ -441,7 +441,7 @@ interface GlobalRowOrderProps {
 }
 ```
 
-The host folds it in `CollectRowOrder` (`web/internal/row-order.tsx`) — the same
+The host folds it in `RowOrderReader` (`web/internal/row-order.tsx`) — the same
 recursive-component fold as `CollectFieldExtensions` (see Field extensions), but
 resolving a single `ManualOrderConfig | null` on a **first-non-null-wins** rule
 instead of accumulating a `FieldDef[]`, and *gated* rather than unconditional. Each
@@ -450,6 +450,12 @@ and hands back a config (or `null` to abstain) through `render`. Because the slo
 is a `defineRenderSlot`, that precedence is a committed reorder override
 (`config/primitives/data-view/primitives.data-view.row-order.jsonc`), not an
 import-order accident.
+
+**The fold is a reader beside the surface, never around it**: it renders
+nothing and reports the order up in a layout effect (applied before paint). A
+fold wrapping the surface makes its contributors ancestors of the band, aside
+and view, so switching list ↔ gallery remounted all of them (a backdrop map
+lost its camera).
 
 **`rows` is the view's ordered set: filter-applied, search-EXCLUDED,
 sort-suppressed** — computed with
@@ -461,7 +467,7 @@ only a bounded write set per gesture — see view-order's CLAUDE.md.
 
 ### The `rowOrderEnabled` gate
 
-`CollectRowOrder` takes an `enabled` prop and short-circuits **before**
+`RowOrderReader` takes an `enabled` prop and short-circuits **before**
 `useContributions()` when false — so an ineligible DataView never mounts a
 contributor and never subscribes to its live resource. Each clause is a structural
 exclusion, not a preference:
@@ -477,7 +483,7 @@ const rowOrderEnabled =
 **Group-by is deliberately absent too.** It used to be a clause, which is what
 made drag silently stop working under the Pages sidebar's default `groupBy`.
 Within-section reordering is well-defined — the contributed order covers the
-whole *unpartitioned* set (`CollectRowOrder` feeds it filter-applied,
+whole *unpartitioned* set (`RowOrderReader` feeds it filter-applied,
 search-excluded rows), so a drop anchored on a same-section neighbour resolves
 globally — and the one unsupported case, a drop into another section, is refused
 per-drop by the view (above), not by suspending the whole order.
@@ -1059,6 +1065,21 @@ tools floating over it — `floating-toolbar` is the reference arrangement).
   (`--dv-header-offset`, where its sticky group headers pin too) and the
   aside's reach, so its first row clears the cards. No effect beside an
   in-flow band.
+- **`DataViewProps.backdrop?: string`** — a `fullBleed` view type (`"map"`)
+  kept mounted UNDER every view, at one tree position in `BandSurface`, so a
+  view switch never remounts it (a map keeps its camera). While the active
+  view is of that type it IS the backdrop (its instance options); any other
+  view floats over it as a card (`Layer` + `Surface level="overlay"`: below the
+  band at `--dv-header-offset`, past the aside, a gutter from the bottom), with
+  its own scroller and `--dv-header-offset: 0px` inside so its sticky headers
+  pin at the card's top — and the backdrop draws the active view's render
+  props (rows, search, filter, selection, activation) with
+  `viewOptions[backdrop]`. A body not showing its view (loading, error) keeps
+  its card even over its own backdrop type. **`reserve?: { right }`** is room
+  the surface's own chrome covers on that edge (a detail card); the card stops
+  a gutter short of it. Overlay arrangement only, `fullBleed` type only,
+  `reserve` only with `backdrop` — each throws otherwise. Places is the
+  reference.
 - **`DataViewProps.aside?: ReactNode`** — a host panel (a facet sidebar) placed
   by `BandSurface` (`web/components/band-surface.tsx`): beside an overlay band
   a floating `Surface level="overlay"` card on the left (the panel sizes its own
@@ -2431,7 +2452,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 93 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 95 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×12
     - `primitives/css/ui-kit` ×11
     - `primitives/data-view/view-core` ×8
@@ -2453,8 +2474,10 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `primitives/sortable-list` ×2
     - `fields.Fields`
     - `ids.IdKinds`
+    - `primitives/css/clip.Clip`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/inline.Inline`
+    - `primitives/css/layer.Layer`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
@@ -2658,6 +2681,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewPagingTotal`
     - `DataViewProps`
     - `DataViewRenderProps`
+    - `DataViewReserve`
     - `DataViewRowEntry`
     - `DataViewRowsCollection`
     - `DataViewRowsComplete`

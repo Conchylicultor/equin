@@ -5,6 +5,7 @@ import type {
   DataViewGroupHeaders,
   DataViewId,
   DataViewProps,
+  DataViewReserve,
   DataViewToolbarSpec,
   ToolbarParts,
 } from "../../core";
@@ -51,6 +52,11 @@ export interface DataViewShellChrome {
   /** The surface's side panel (`DataViewProps.aside`), a surface property
    *  carried like `toolbar`. The body places it, inside the controls context. */
   aside?: ReactNode;
+  /** The surface's backdrop view type (`DataViewProps.backdrop`), a surface
+   *  property carried like `aside`. Validated by the shell. */
+  backdrop?: string;
+  /** The room the surface's own chrome covers (`DataViewProps.reserve`). */
+  reserve?: DataViewReserve;
 }
 
 /** `Omit` over each member of a union — a plain `Omit` of a union is not a union. */
@@ -62,7 +68,7 @@ export type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
  * Everything a data source supplies: the full `DataViewProps` surface minus the
  * per-surface keys the shell owns (`storageKey` / `title` / `actions` /
  * `defaultView` / `views` / `density` / `groupHeaders` / `toolbar` /
- * `searchPlaceholder` / `aside`).
+ * `searchPlaceholder` / `aside` / `backdrop` / `reserve`).
  *
  * `density` is on that list for the same reason `title` is: it describes the
  * SURFACE, not the data bundle, and the body reads it off `chrome`. Omitting it
@@ -85,6 +91,8 @@ export type DataViewSourceBundle<TRow> = DistributiveOmit<
   | "toolbar"
   | "searchPlaceholder"
   | "aside"
+  | "backdrop"
+  | "reserve"
 >;
 
 /** Props of the per-active-instance body (`DataViewBody`) — an intersection,

@@ -16,6 +16,7 @@ import {
   type DataViewGroupHeaders,
   type DataViewId,
   type DataViewProps,
+  type DataViewReserve,
   type DataViewToolbarSpec,
   isHostedToolbar,
   isSectionsToolbar,
@@ -80,6 +81,8 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
       toolbar={props.toolbar}
       searchPlaceholder={props.searchPlaceholder}
       aside={props.aside}
+      backdrop={props.backdrop}
+      reserve={props.reserve}
       pinnedView={props.pinnedView}
       renderSections={(instances, chrome, readyModel) => (
         <DataViewSectionsBody<TRow>
@@ -125,6 +128,10 @@ export function DataViewShellFrame(props: {
   searchPlaceholder?: string;
   /** The surface's side panel (`DataViewProps.aside`); the body places it. */
   aside?: ReactNode;
+  /** The surface's backdrop view type (`DataViewProps.backdrop`). */
+  backdrop?: string;
+  /** The room the surface's own chrome covers (`DataViewProps.reserve`). */
+  reserve?: DataViewReserve;
   /** Present → this host shows one named instance and paints no switcher. */
   pinnedView?: string;
   /** Renders the per-active-instance body. Receives the SETTLED model — the
@@ -159,6 +166,8 @@ export function DataViewShellFrame(props: {
     toolbar,
     searchPlaceholder,
     aside,
+    backdrop,
+    reserve,
     pinnedView,
     children,
     renderSections,
@@ -207,6 +216,19 @@ export function DataViewShellFrame(props: {
     throw new Error(
       `DataView(${storageKey}): \`aside\` needs a band toolbar — a hosted ` +
         "or sections toolbar has no band to place it beside.",
+    );
+  }
+  if (backdrop !== undefined && !overlay) {
+    throw new Error(
+      `DataView(${storageKey}): \`backdrop\` needs an overlay toolbar ` +
+        "arrangement — only a band floating over the view leaves the view " +
+        "a canvas to stay under every other view.",
+    );
+  }
+  if (reserve !== undefined && backdrop === undefined) {
+    throw new Error(
+      `DataView(${storageKey}): \`reserve\` moves the floating view card ` +
+        "of a `backdrop` surface — without a backdrop there is no card.",
     );
   }
   // The chrome of a state with no active instance (loading, or no views
@@ -362,6 +384,8 @@ export function DataViewShellFrame(props: {
     searchPlaceholder,
     stickyRef: toolbarRef,
     aside,
+    backdrop,
+    reserve,
   };
 
   return (

@@ -97,6 +97,7 @@ has the vocabulary for it.
     - `page/code-block`
     - `page/place/map-layer`
     - `primitives/css/color-picker`
+    - `primitives/data-view`
     - `primitives/overlay/image-viewer`
     - `primitives/syntax-highlight/overlay-textarea`
     - `primitives/tree`

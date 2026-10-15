@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from "react";
+import { useLayoutEffect, useMemo, type ReactNode } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type {
@@ -11,13 +11,28 @@ import type {
 import { useFlatRows } from "./use-flat-rows";
 import { DataViewSlots, type GlobalRowOrderProps } from "../slots";
 
+/** What the reader reports: the order the contributors resolved for `viewId`. */
+export interface ReportedRowOrder {
+  viewId: string;
+  order: ManualOrderConfig<unknown> | null;
+}
+
 /**
  * Host fold for the global `DataViewSlots.RowOrder` slot — the row-order twin of
  * `CollectFieldExtensions`. Reads the slot's contributions and **recursively**
  * mounts each one, threading the accumulated order through nested
  * render-callbacks: every contributor mounts (running its own hooks), hands back
  * a `ManualOrderConfig` (or `null` to abstain) via `render`, and that recurses to
- * the next contributor — finally calling `children(acc)`.
+ * the next contributor — finally REPORTING the order up through `onOrder`.
+ *
+ * It is a reader that renders nothing, mounted BESIDE the surface, never around
+ * it (the `FacetRead` pattern): the contributors are not ancestors of the
+ * band, the aside or the view, so a view switch that turns the fold on or off
+ * (gallery → list) changes no element above the surface and remounts nothing
+ * — not the aside's state, not an overlay surface's backdrop (a map's camera).
+ * The report is a layout effect, so the host re-renders with the order before
+ * the browser paints: no frame shows the view without it. On unmount (the fold
+ * turned off, the view switched) it reports `null` for its view.
  *
  * Unlike the field fold it does not accumulate a list: it folds a single
  * `ManualOrderConfig | null`, and **the first non-null wins** (`acc ?? order`).
@@ -38,7 +53,7 @@ import { DataViewSlots, type GlobalRowOrderProps } from "../slots";
  * than a pre-computed ordered set: deriving it in the host would cost every
  * DataView an extra `useFlatRows` on every render.
  */
-export function CollectRowOrder(props: {
+export function RowOrderReader(props: {
   enabled: boolean;
   storageKey: DataViewId;
   viewId: string;
@@ -50,11 +65,33 @@ export function CollectRowOrder(props: {
   state: ViewState;
   resolveOperatorSet: (typeId: string) => FilterOperatorSet | undefined;
   searchAccessor?: (row: unknown) => string;
-  children: (order: ManualOrderConfig<unknown> | null) => ReactNode;
+  /** Receives the resolved order (stable identity: it is called in effects). */
+  onOrder: (reported: ReportedRowOrder) => void;
 }): ReactNode {
-  const { enabled, children, ...rest } = props;
-  if (!enabled) return <>{children(null)}</>;
-  return <RowOrderFold {...rest} emit={children} />;
+  const { enabled, onOrder, ...rest } = props;
+  if (!enabled) return null;
+  return (
+    <RowOrderFold
+      {...rest}
+      emit={(order) => (
+        <ReportOrder viewId={rest.viewId} order={order} onOrder={onOrder} />
+      )}
+    />
+  );
+}
+
+/** The fold's base case: hands the resolved order up (renders nothing). */
+function ReportOrder(
+  props: ReportedRowOrder & {
+    onOrder: (reported: ReportedRowOrder) => void;
+  },
+): ReactNode {
+  const { viewId, order, onOrder } = props;
+  useLayoutEffect(() => {
+    onOrder({ viewId, order });
+    return () => onOrder({ viewId, order: null });
+  }, [viewId, order, onOrder]);
+  return null;
 }
 
 /** Surface coordinates every fold level threads through to each contributor. */

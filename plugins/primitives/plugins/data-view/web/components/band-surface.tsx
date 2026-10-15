@@ -4,13 +4,15 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { OverlayInteractive } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { spaceLength } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
-import { DATA_VIEW_HEADER_OFFSET_VAR } from "../../core";
+import { DATA_VIEW_HEADER_OFFSET_VAR, type DataViewReserve } from "../../core";
 import {
   DataViewControlsProvider,
   type DataViewControlsContextValue,
@@ -36,6 +38,11 @@ const GUTTER = "md";
  *   them; any other view is inset by the band's measured height
  *   (`--dv-header-offset`, which its sticky group headers also pin at) and the
  *   aside's reach, so its first row clears the cards.
+ * - **Overlay + backdrop** (`DataViewProps.backdrop`): the backdrop view fills
+ *   the surface at ONE tree position whatever view is active, so it never
+ *   remounts; any other view floats over it as a card — below the band, past
+ *   the aside, a gutter from the bottom and from the right edge's `reserve` —
+ *   scrolling inside it, its sticky headers pinned at the card's top.
  */
 export function BandSurface(props: {
   /** Whether the toolbar arrangement floats its band over the view. */
@@ -49,8 +56,15 @@ export function BandSurface(props: {
   band: (asideInset: string) => ReactNode;
   /** The view body. */
   children: ReactNode;
+  /**
+   * The backdrop view (`DataViewProps.backdrop`), already rendered, with
+   * whether the body floats over it as a card (`panel: false` while the
+   * active view IS the backdrop — the body is then not shown). Overlay only.
+   */
+  backdrop?: { node: ReactNode; panel: boolean; reserve?: DataViewReserve };
 }): ReactNode {
-  const { overlay, aside, fullBleed, controls, band, children } = props;
+  const { overlay, aside, fullBleed, controls, band, children, backdrop } =
+    props;
   const [asideRef, { width: asideWidth }] = useElementSize();
   const hasAside = aside !== undefined;
   // The floating aside's reach from the left edge: its gutter plus its own
@@ -70,6 +84,41 @@ export function BandSurface(props: {
   ) : null;
 
   if (overlay) {
+    const gutter = spaceLength(GUTTER);
+    const view = backdrop ? (
+      <>
+        {/* The backdrop: the same box a full-bleed view gets, at a position
+            no view switch changes. */}
+        <Scroll fill isolate>
+          <div className="h-full">{backdrop.node}</div>
+        </Scroll>
+        {backdrop.panel ? (
+          // The active view's card: its own scroller, so its sticky headers
+          // pin at its top (the header offset is the card's, zero).
+          <Layer
+            layer="nav"
+            style={{
+              top: `var(${DATA_VIEW_HEADER_OFFSET_VAR})`,
+              left: `calc(${asideInset} + ${gutter})`,
+              right: `calc(${backdrop.reserve?.right ?? "0px"} + ${gutter})`,
+              bottom: gutter,
+            }}
+          >
+            <Surface level="overlay" as={Clip} className="h-full">
+              <Stack
+                gap="none"
+                className="h-full"
+                style={
+                  { [DATA_VIEW_HEADER_OFFSET_VAR]: "0px" } as CSSProperties
+                }
+              >
+                <Scroll fill>{children}</Scroll>
+              </Stack>
+            </Surface>
+          </Layer>
+        ) : null}
+      </>
+    ) : null;
     const bodyStyle: CSSProperties | undefined = fullBleed
       ? undefined
       : {
@@ -81,14 +130,16 @@ export function BandSurface(props: {
         {/* The surface's one scroller (the root fills its parent, so the pane
             no longer scrolls the view). `isolate`: whatever stacking a view
             opens (a map's layers) stays under the floating band and aside. */}
-        <Scroll fill isolate>
-          <div
-            className={fullBleed ? "h-full" : "min-h-full"}
-            style={bodyStyle}
-          >
-            {children}
-          </div>
-        </Scroll>
+        {view ?? (
+          <Scroll fill isolate>
+            <div
+              className={fullBleed ? "h-full" : "min-h-full"}
+              style={bodyStyle}
+            >
+              {children}
+            </div>
+          </Scroll>
+        )}
         {bandNode}
         {asideNode ? (
           // The pin spans the surface's height (less the gutters) but is

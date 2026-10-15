@@ -72,7 +72,7 @@ import {
   useDerivedFields,
 } from "../internal/derived-fields";
 import { CollectFacetOptions } from "../internal/facet-options";
-import { CollectRowOrder } from "../internal/row-order";
+import { RowOrderReader, type ReportedRowOrder } from "../internal/row-order";
 import {
   effectiveFold,
   isTailFolded,
@@ -365,6 +365,22 @@ function DataViewBodyInner<TRow>(
     chrome,
     sectionActivation,
   } = props;
+
+  // The backdrop's view type (`DataViewProps.backdrop`): resolved from the
+  // same registry the instances resolve from, so the host names no view type.
+  const viewTypes = DataViewSlots.View.useContributions();
+  const backdropType =
+    chrome.backdrop === undefined
+      ? undefined
+      : viewTypes.find((c) => c.type === chrome.backdrop);
+  if (chrome.backdrop !== undefined && backdropType?.fullBleed !== true) {
+    throw new Error(
+      `DataView(${storageKey}): backdrop "${chrome.backdrop}" ` +
+        (backdropType === undefined
+          ? "is not a registered view type."
+          : "is not a full-bleed view type — a backdrop is the surface's canvas."),
+    );
+  }
 
   // The schema is already fully merged: `props.fields` here arrives AFTER
   // `DataViewBody` folded both the global `DataViewSlots.FieldExtension` slot
@@ -974,32 +990,54 @@ function DataViewBodyInner<TRow>(
     [paging, declaredSections],
   );
 
+  // The contributed row order, as the `RowOrderReader` beside the surface
+  // last reported it — only ever for the active view, and only while the fold
+  // is on (a report for another view, or a fold turned off, is no order).
+  const [reportedOrder, setReportedOrder] = useState<ReportedRowOrder | null>(
+    null,
+  );
+  const onRowOrder = useCallback((next: ReportedRowOrder) => {
+    setReportedOrder((prev) =>
+      prev?.viewId === next.viewId && prev.order === next.order ? prev : next,
+    );
+  }, []);
+  const contributedRowOrder =
+    rowOrderEnabled && reportedOrder?.viewId === activeViewId
+      ? reportedOrder.order
+      : null;
+
   // A hidden section still runs a sectioned origin's reads: whether it has
   // any section is what those reads answer.
   if (sectionHidden) {
     return origin?.kind === "sectioned" ? origin.readers : null;
   }
 
-  // Fold the global `RowOrder` slot around the whole render. The children-callback
-  // is a plain function call (invoked in the fold's base case), NOT a component —
-  // so it contains no hooks; every hook above stays in this component's body.
+  // The global `RowOrder` slot's fold is a reader BESIDE the surface, never
+  // around it: a view switch that turns it on or off must not change any
+  // element above the band, the aside or the view (it would remount them all).
+  // The surface below is a plain function call, NOT a component — so it
+  // contains no hooks; every hook above stays in this component's body.
   //
   // The fold takes the RAW rows and derives the ordered set itself, but only when
   // `enabled` — deriving it here would cost EVERY DataView (tree, gallery,
   // server-paginated) an extra `useFlatRows` pass per render for a set it discards.
   return (
-    <CollectRowOrder
-      enabled={rowOrderEnabled}
-      storageKey={storageKey}
-      viewId={activeViewId}
-      rowKey={rowKey as (row: unknown, index: number) => string}
-      rows={effectiveRows}
-      fields={fields as FieldDef<unknown>[]}
-      state={activeState}
-      resolveOperatorSet={filterController.resolveOperatorSet}
-      searchAccessor={searchAccessor as ((row: unknown) => string) | undefined}
-    >
-      {(contributedRowOrder) => {
+    <>
+      <RowOrderReader
+        enabled={rowOrderEnabled}
+        storageKey={storageKey}
+        viewId={activeViewId}
+        rowKey={rowKey as (row: unknown, index: number) => string}
+        rows={effectiveRows}
+        fields={fields as FieldDef<unknown>[]}
+        state={activeState}
+        resolveOperatorSet={filterController.resolveOperatorSet}
+        searchAccessor={
+          searchAccessor as ((row: unknown) => string) | undefined
+        }
+        onOrder={onRowOrder}
+      />
+      {(() => {
         // One rule everywhere — the render path never branches on where the order
         // came from. The consumer's domain order outranks any contributor.
         const cfg =
@@ -1294,6 +1332,37 @@ function DataViewBodyInner<TRow>(
 
         // Narrowed here, outside the band's closure (which would lose it).
         const arrangement = chrome.toolbar;
+        // The backdrop is the active view while the active view is of its
+        // type; otherwise it draws the active view's rows, state and
+        // selection with its type's code options, under the active view's
+        // card. A body not showing its view (loading, an error) keeps its card
+        // even then, so the state is never hidden behind the canvas.
+        const backdropIsActive =
+          backdropType !== undefined &&
+          activeInstance.viewType.type === backdropType.type;
+        const backdrop =
+          backdropType === undefined
+            ? undefined
+            : {
+                node: (
+                  <ControlSizeProvider size="xs">
+                    {renderIsolated(
+                      DataViewSlots.View,
+                      backdropType as unknown as Contribution,
+                      {
+                        ...renderProps,
+                        manualOrder: undefined,
+                        options: backdropIsActive
+                          ? mergedOptions
+                          : (viewOptions?.[backdropType.type] ??
+                            NO_VIEW_OPTIONS),
+                      },
+                    )}
+                  </ControlSizeProvider>
+                ),
+                panel: !backdropIsActive || bodyState.kind !== "view",
+                reserve: chrome.reserve,
+              };
         return (
           // The band, the surface's `aside` and the body — laid out per the
           // arrangement (in flow, or floating over the body); the controls
@@ -1302,6 +1371,7 @@ function DataViewBodyInner<TRow>(
             overlay={arrangement?.overlay === true}
             aside={chrome.aside}
             fullBleed={activeInstance.viewType.fullBleed === true}
+            backdrop={backdrop}
             controls={controlsContext}
             band={(asideInset) => (
               // The toolbar folds when the surface ASKS for it (`density`) or
@@ -1331,8 +1401,8 @@ function DataViewBodyInner<TRow>(
             {body}
           </BandSurface>
         );
-      }}
-    </CollectRowOrder>
+      })()}
+    </>
   );
 }
 
@@ -1375,6 +1445,8 @@ function PageNotices(props: {
 }
 
 const NO_ROWS: readonly unknown[] = [];
+// A backdrop type the surface gives no code options.
+const NO_VIEW_OPTIONS = {};
 
 /** Whether the section holding the entry keyed `key` is collapsed. */
 function isSectionCollapsed(
