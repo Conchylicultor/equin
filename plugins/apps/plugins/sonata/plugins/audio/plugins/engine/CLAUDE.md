@@ -8,6 +8,12 @@ clock to the music the visual cursor reads — and places each note at
 `timeline.timeAt(c)` in a bounded, timer-free look-ahead window. Sound and
 cursor therefore cannot drift: there is one mapping, not two kept in step.
 
+The clock the engine registers is `{ now: ctx.currentTime, latency }`, where
+`latency` (`output-latency.ts`) is `baseLatency + outputLatency`: how long a
+rendered sample takes to reach the ears. Notes stay on `currentTime`; the
+session shows the cursor at `now − latency`, so on Bluetooth headphones it does
+not run ~200 ms ahead of the sound.
+
 ## Engine ↔ control split
 
 The graph is split across two contributions so the volume control's visibility

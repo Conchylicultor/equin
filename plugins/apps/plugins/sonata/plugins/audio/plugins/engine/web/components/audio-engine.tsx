@@ -16,6 +16,7 @@ import {
   useTrackVolumeMap,
 } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
 import { startScheduling } from "../scheduler";
+import { createOutputLatency } from "../output-latency";
 import {
   DEFAULT_VOLUME,
   useAudioControls,
@@ -274,7 +275,13 @@ export function AudioEngine() {
     // scheduled against (no drift, correct across tab backgrounding). Stable for
     // the whole session: `ctx.currentTime` is frozen while suspended and only
     // advances after `ctx.resume()` on play — exactly when the cursor reads it.
-    const unregisterClock = registerClock({ now: () => ctx.currentTime });
+    // Its latency is the output device's, so the cursor shows the music when
+    // it is heard while the schedulers keep placing notes on `currentTime`.
+    const latency = createOutputLatency(ctx);
+    const unregisterClock = registerClock({
+      now: () => ctx.currentTime,
+      latency: () => latency.read(),
+    });
 
     // Belt-and-suspenders autoplay-gate unlock: the play button is itself a
     // gesture, but a one-time pointerdown resume covers any other entry point.

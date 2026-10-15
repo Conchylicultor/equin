@@ -178,7 +178,7 @@ describe("the playback timeline", () => {
   function manualClock(s: ReturnType<typeof renderSession>) {
     const clock = { t: 0 };
     act(() => {
-      s.session().registerClock({ now: () => clock.t });
+      s.session().registerClock({ now: () => clock.t, latency: () => 0 });
     });
     return clock;
   }
@@ -233,11 +233,11 @@ describe("registerClock", () => {
     const s = renderSession(song(16));
     act(() => {
       s.session().registerCountIn(() => 4);
-      s.session().registerClock({ now: () => 10 });
+      s.session().registerClock({ now: () => 10, latency: () => 0 });
     });
     let offB: () => void = () => {};
     act(() => {
-      offB = s.session().registerClock({ now: () => 20 });
+      offB = s.session().registerClock({ now: () => 20, latency: () => 0 });
     });
     act(() => offB());
     act(() => s.session().playWithCountIn());
@@ -419,7 +419,7 @@ describe("an A–B loop's rest", () => {
     const s = renderSession(song(16));
     const clock = { t: 0 };
     act(() => {
-      s.session().registerClock({ now: () => clock.t });
+      s.session().registerClock({ now: () => clock.t, latency: () => 0 });
       s.session().setLoopOptions({ rest: true, ahead: false });
       s.session().setLoop({ start: 4, end: 8, enabled: true });
       s.session().seekTo(4);
@@ -473,5 +473,100 @@ describe("an A–B loop's rest", () => {
     expect(s.session().loopCycle?.rest).toBe(4);
     s.drive(new FakeDriver());
     expect(s.session().loopCycle).toEqual({ start: 4, end: 8, rest: 0 });
+  });
+});
+
+describe("the output latency", () => {
+  /** 0.2 s from rendering to hearing: 0.4 beat at 120 bpm. */
+  const LATENCY = 0.2;
+
+  /** A session on a clock the test sets, whose sound is heard LATENCY late. */
+  function latent(score: Score = song(16)) {
+    const s = renderSession(score);
+    const clock = { t: 0 };
+    act(() => {
+      s.session().registerClock({ now: () => clock.t, latency: () => LATENCY });
+    });
+    return {
+      s,
+      clock,
+      at: (t: number) => {
+        clock.t = t;
+        frame();
+      },
+    };
+  }
+
+  it("draws the cursor where the music is heard, holding at the start until it is", () => {
+    const { s, at } = latent();
+    act(() => s.session().seekTo(4));
+    act(() => s.session().play());
+    at(0.1); // nothing heard yet
+    expect(s.beat()).toBe(4);
+    at(1.2); // heard: 1.0 s of music
+    expect(s.beat()).toBeCloseTo(6, 9);
+    expect(s.session().heardNow()).toBeCloseTo(1, 9);
+  });
+
+  it("holds a seek's target until its first sound is heard", () => {
+    const { s, at } = latent();
+    act(() => s.session().seekTo(0));
+    act(() => s.session().play());
+    at(1.2);
+    act(() => s.session().seekTo(10));
+    at(1.3); // the old music is still heard, but a seek shows its target
+    expect(s.beat()).toBe(10);
+    at(1.9); // heard 0.5 s past the seek
+    expect(s.beat()).toBeCloseTo(11, 9);
+  });
+
+  it("keeps the cursor continuous through a loop edit from where the music is", () => {
+    const { s, clock, at } = latent();
+    act(() => s.session().seekTo(0));
+    act(() => s.session().play());
+    clock.t = 1; // rendering beat 2, heard beat 1.6
+    act(() => s.session().setLoop({ start: 8, end: 12, enabled: true }));
+    at(1.1); // still hearing the path before the edit
+    expect(s.beat()).toBeCloseTo(1.8, 9);
+    at(1.3); // the edited path, heard from where it took over
+    expect(s.beat()).toBeCloseTo(2.2, 9);
+  });
+
+  it("follows the old tempo until a tempo change is heard", () => {
+    const { s, clock, at } = latent();
+    act(() => s.session().seekTo(0));
+    act(() => s.session().play());
+    clock.t = 1; // rendering beat 2
+    act(() => s.session().setTempoScale(0.5)); // 60 bpm from beat 2 on
+    at(1.1); // heard 0.9 s: still at 120 bpm
+    expect(s.beat()).toBeCloseTo(1.8, 9);
+    at(1.5); // heard 1.3 s: 0.3 s past the change at a beat a second
+    expect(s.beat()).toBeCloseTo(2.3, 9);
+  });
+
+  it("stops at the song's end when its last sound is heard, not rendered", () => {
+    const { s, at } = latent(song(4));
+    act(() => s.session().seekTo(0));
+    act(() => s.session().play());
+    at(2.1); // the end (beat 4, 2 s) is rendered, not heard yet
+    expect(s.session().isPlaying).toBe(true);
+    at(2.3);
+    expect(s.session().isPlaying).toBe(false);
+    expect(s.beat()).toBe(4);
+  });
+
+  it("times the synth so it is heard with a driving medium, not rendered with it", () => {
+    const { s, at } = latent();
+    const d = new FakeDriver();
+    s.drive(d);
+    act(() => s.session().play());
+    d.media = 2; // beat 4, heard now
+    d.emit({ kind: "advancing" });
+    at(5);
+    expect(s.beat()).toBe(4);
+    const state = s.session().timeline.get();
+    if (state.kind !== "running") throw new Error("timeline idle");
+    // Beat 4 is rendered one latency before now, so it is heard now.
+    expect(state.timeline.positionAt(5 - LATENCY).beat).toBeCloseTo(4, 9);
   });
 });

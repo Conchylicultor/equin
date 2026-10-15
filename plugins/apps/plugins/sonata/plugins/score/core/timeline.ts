@@ -21,9 +21,10 @@ export interface PlaybackPath {
 
 /**
  * THE mapping between clock time and the music, shared by everything that
- * follows playback: the visual cursor reads `positionAt(now)`, every audio
- * scheduler places a note at `timeAt(c)`. Because there is one mapping, the
- * cursor and the sound cannot disagree.
+ * follows playback: every audio scheduler places a note at `timeAt(c)` (render
+ * time), and the visual cursor reads the mapping at the instant being HEARD —
+ * `now − latency`, on the timeline in force then (`HeardTimeline`). Because
+ * there is one mapping, the cursor and the sound cannot disagree.
  *
  * Positions are a **path coordinate** `c`: beats walked along the path since
  * its origin, increasing forever (head beats, then cycle iterations laid end

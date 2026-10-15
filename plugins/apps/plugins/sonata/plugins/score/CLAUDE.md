@@ -18,6 +18,12 @@ Three pure pieces every loop consumer shares, so nobody re-derives the maths:
   as A with the rest to go). Immutable: `retempoTimeline` / `resyncTimeline` /
   `rebaseTimeline` derive the next one at an instant, so a tempo change never
   re-reads a sampled cursor.
+- `heard-timeline.ts` — `HeardTimeline`: which timeline was in force at each
+  recent render instant, so the cursor reads the music being *heard* (render
+  time minus the output latency) on the timeline that scheduled it. A
+  `continue` takeover (tempo, drift, a loop edit from where the music is) keeps
+  the earlier timelines until the change is heard; a `jump` (play, seek) drops
+  them and holds at its start until its first sound arrives.
 - `loop-timeline.ts` — `unrollLoop(score, cycle)` lays the song out up to B,
   then copy after copy of `[rest][A, B)` on one monotonic AXIS: an ordinary
   `Score` (notes, clipped annotations, pedal, tempo and meter copied per
@@ -53,6 +59,7 @@ Three pure pieces every loop consumer shares, so nobody re-derives the maths:
     - `ChordBar`
     - `ChordBarSegment`
     - `ChordData`
+    - `HeardTimeline`
     - `KeyEntry`
     - `KeySignature`
     - `KeySpeller`
@@ -80,6 +87,7 @@ Three pure pieces every loop consumer shares, so nobody re-derives the maths:
     - `Swing`
     - `TempoEvent`
     - `TempoIndex`
+    - `TimelineTakeover`
     - `TimeSigEvent`
     - `TrackMeta`
     - `VoicingAnnotation`
@@ -98,6 +106,7 @@ Three pure pieces every loop consumer shares, so nobody re-derives the maths:
     - `buildTempoIndex`
     - `chordBars`
     - `collectKeyEntries`
+    - `createHeardTimeline`
     - `currentLine`
     - `cycleStart`
     - `effectiveKeyAt`

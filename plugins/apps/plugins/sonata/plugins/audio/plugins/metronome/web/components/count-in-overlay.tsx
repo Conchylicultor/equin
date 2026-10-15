@@ -13,14 +13,15 @@ import "./count-in-overlay.css";
  * display) and centers with `Center`.
  *
  * The remaining count is derived from the audio clock (the same clock the clicks
- * play against): `remaining = ceil(beats − elapsed / secPerQuarter)`. A `rAF`
+ * play against, at the instant being heard): `remaining = ceil(beats − elapsed /
+ * secPerQuarter)`. A `rAF`
  * loop drives the render cadence (allowed — it's render cadence, not change
  * detection; the transport itself uses rAF for the cursor) and only commits a new
  * value when the integer flips, so the number changes once per click. Re-keying
  * the numeral on `remaining` replays the per-beat pop animation.
  */
 export function CountInOverlay() {
-  const { countIn } = useSession();
+  const { countIn, heardNow } = useSession();
   const graph = useAudioGraph();
   const ctx = graph?.ctx ?? null;
 
@@ -42,9 +43,10 @@ export function CountInOverlay() {
   if (!countIn || !ctx) return null;
 
   // Clicks remaining = ceil(total beats − elapsed beats), floored at 1. Same
-  // audio clock (`ctx.currentTime`) the clicks are scheduled against.
+  // clock the clicks are scheduled against, read at the instant being HEARD
+  // (one output latency behind), so the number flips with the click's sound.
   const secPerQuarter = countIn.durationSec / countIn.beats;
-  const elapsed = ctx.currentTime - countIn.startedAtClockSec;
+  const elapsed = heardNow() - countIn.startedAtClockSec;
   const remaining = Math.max(
     1,
     Math.ceil(countIn.beats - elapsed / secPerQuarter),

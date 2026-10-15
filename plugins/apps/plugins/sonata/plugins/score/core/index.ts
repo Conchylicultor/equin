@@ -79,6 +79,8 @@ export {
   retempoTimeline,
   startTimeline,
 } from "./timeline";
+export type { HeardTimeline, TimelineTakeover } from "./heard-timeline";
+export { createHeardTimeline } from "./heard-timeline";
 
 export {
   songPosition,

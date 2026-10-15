@@ -6471,6 +6471,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ChordBar`
               - `ChordBarSegment`
               - `ChordData`
+              - `HeardTimeline`
               - `KeyEntry`
               - `KeySignature`
               - `KeySpeller`
@@ -6498,6 +6499,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Swing`
               - `TempoEvent`
               - `TempoIndex`
+              - `TimelineTakeover`
               - `TimeSigEvent`
               - `TrackMeta`
               - `VoicingAnnotation`
@@ -6516,6 +6518,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `buildTempoIndex`
               - `chordBars`
               - `collectKeyEntries`
+              - `createHeardTimeline`
               - `currentLine`
               - `cycleStart`
               - `effectiveKeyAt`
