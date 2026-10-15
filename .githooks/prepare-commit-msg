@@ -7,9 +7,19 @@
 # (e.g. describing a `---` markdown shortcut) makes interpret-trailers stamp the
 # trailer mid-body, above the `---`, where %(trailers) can't see it — the
 # conversation-trailer check then reports it missing even though it is present.
-if [ -n "$SINGULARITY_CONVERSATION_ID" ]; then
-  if ! grep -q "^Singularity-Conversation:" "$1" 2>/dev/null; then
-    git interpret-trailers --in-place --no-divider \
-      --trailer "Singularity-Conversation=$SINGULARITY_CONVERSATION_ID" "$1"
+[ -n "$SINGULARITY_CONVERSATION_ID" ] || exit 0
+
+# "Already stamped" means: in the trailer block (the message's last paragraph),
+# which is the only place %(trailers) reads. A line anywhere else — e.g. an old
+# message reused as `-m "$(git log -1 --format=%B)` + appended note"` — is a
+# stray: drop it and stamp properly. The parse only runs when the cheap grep
+# hits (amends, rebase replays), so a fresh commit costs what it always did.
+if grep -q "^Singularity-Conversation:" "$1" 2>/dev/null; then
+  if git interpret-trailers --parse --no-divider "$1" |
+    grep -q "^Singularity-Conversation:"; then
+    exit 0
   fi
+  grep -v "^Singularity-Conversation:" "$1" >"$1.tmp" && mv "$1.tmp" "$1"
 fi
+git interpret-trailers --in-place --no-divider \
+  --trailer "Singularity-Conversation=$SINGULARITY_CONVERSATION_ID" "$1"

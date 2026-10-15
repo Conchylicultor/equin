@@ -45,6 +45,14 @@ async function commitsAheadOfMain(): Promise<
   });
 }
 
+// A commit whose message names the trailer key OUTSIDE the trailer block (the
+// last paragraph — the only place %(trailers) reads). Distinct cause from "no
+// trailer at all": the hook fired, but the line ended up in the body.
+async function hasStrayBodyTrailer(sha: string): Promise<boolean> {
+  const { stdout } = await run(["git", "show", "-s", "--format=%B", sha]);
+  return /^Singularity-Conversation:/m.test(stdout);
+}
+
 const check: Check = {
   id: "conversation-trailer",
   description:
@@ -71,13 +79,33 @@ const check: Check = {
 
     const missing = commits.filter((c) => !c.trailer);
     if (missing.length > 0) {
-      const list = missing.map((c) => `  ${c.sha.slice(0, 12)}`).join("\n");
+      const stray = new Set<string>();
+      for (const c of missing) {
+        if (await hasStrayBodyTrailer(c.sha)) stray.add(c.sha);
+      }
+      const absent = missing.filter((c) => !stray.has(c.sha));
+      const parts: string[] = [];
+      if (absent.length > 0) {
+        const list = absent.map((c) => `  ${c.sha.slice(0, 12)}`).join("\n");
+        parts.push(
+          `${absent.length} commit(s) ahead of main lack a Singularity-Conversation trailer:\n${list}\n` +
+            `The prepare-commit-msg hook did not fire for these commits (env missing at commit time, or committed from outside the pane).`,
+        );
+      }
+      if (stray.size > 0) {
+        const list = [...stray]
+          .map((sha) => `  ${sha.slice(0, 12)}`)
+          .join("\n");
+        parts.push(
+          `${stray.size} commit(s) ahead of main carry a Singularity-Conversation line in the message BODY, not in the trailer block (the last paragraph), so git does not read it as a trailer:\n${list}\n` +
+            `Typically a reused commit message with text appended after its trailers.`,
+        );
+      }
       return {
         ok: false,
         message:
-          `${missing.length} commit(s) ahead of main lack a Singularity-Conversation trailer:\n${list}\n` +
-          `The prepare-commit-msg hook did not fire for these commits (env missing at commit time, or committed from outside the pane). ` +
-          `Without the trailer, the pushes ledger cannot attribute the push and the task will stay 'attempted'.`,
+          parts.join("\n") +
+          `\nWithout the trailer, the pushes ledger cannot attribute the push and the task will stay 'attempted'.`,
         hint: STOP_MESSAGE,
       };
     }
