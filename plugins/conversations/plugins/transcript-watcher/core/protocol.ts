@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { RequestConfigSchema } from "./request-config";
+import { RequestShapeChangeSchema, RequestShapeSchema } from "./request-shape";
 
 // Wire tag the agent reads in its first user turn. Named `special_instructions`
 // (not `preprompt`) so the model reads it as an imperative to follow. The
@@ -241,6 +242,17 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     /** Calls made with these settings, this one included: the identical calls
      *  that follow it are counted here rather than emitted as rows. */
     calls: z.number().int(),
+  }),
+  z.object({
+    // The system prompt and tool set model calls were sent with —
+    // `type: "api-request-shape"` lines, written once per distinct shape the
+    // first time a call uses it. `change` is relative to the previous shape
+    // line (null on the first), so a later row reads as what changed: most
+    // often a deferred tool loaded mid-conversation.
+    kind: z.literal("request-shape"),
+    at: z.string(),
+    shape: RequestShapeSchema,
+    change: RequestShapeChangeSchema.nullable(),
   }),
   z.object({
     kind: z.literal("unknown"),

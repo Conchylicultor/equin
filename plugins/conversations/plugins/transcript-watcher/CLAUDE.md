@@ -137,6 +137,8 @@ memo degrades to a full chain re-read on every push.
     - `RequestConfig`
     - `RequestConfigChange`
     - `RequestConfigScalarField`
+    - `RequestShape`
+    - `RequestShapeChange`
     - `TeammateMessage`
     - `TokenUsage`
     - `ToolCallResult`
@@ -152,6 +154,7 @@ memo degrades to a full chain re-read on every push.
     - `QuestionAnswerSchema`
     - `requestConfigChanges`
     - `RequestConfigSchema`
+    - `requestShapeChange`
     - `stripRelayBoilerplate`
     - `tokenUsageOf`
     - `TokenUsageSchema`

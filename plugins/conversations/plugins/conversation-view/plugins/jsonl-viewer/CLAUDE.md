@@ -144,9 +144,9 @@ back.
     - `JsonlViewer.Overlay`
     - `JsonlViewer.PendingPromptAction`
     - `JsonlViewer.TranscriptEnd`
-  - Slot contributors: 55 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 56 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `JsonlViewer.ContextRole` ×29
-    - `JsonlViewer.EventRenderer` ×16
+    - `JsonlViewer.EventRenderer` ×17
     - `JsonlViewer.Overlay` ×4
     - `JsonlViewer.EventFilter` ×2
     - `JsonlViewer.PendingPrompt` ×2
@@ -229,8 +229,8 @@ back.
     - `eventKey`
     - `jsonlEvents`
 - Cross-plugin:
-  - Imported by: 42 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×41
+  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×42
     - `tasks/outcome-report`
 - Exemptions:
   - Exempts itself from: `no-db-backed-notify` — `server/internal/jsonl-events-resource.ts` (debt)
@@ -253,6 +253,7 @@ back.
   - **`preprompt`** — Renders the launch special-instructions (preprompt) block as a collapsible section in the JSONL viewer.
   - **`queue-operation`** — Renders Claude Code prompt-queue events (enqueue/dequeue/remove) in the JSONL viewer.
   - **`queued-prompt-card`** — Shared appearance for a queued prompt (a message the user parked while the agent was busy). Used by both the queued_command attachment and the prompt-queue enqueue row so the two never diverge.
+  - **`request-shape`** — Renders the system prompt and tool set Claude Code logs for model calls (api-request-shape): the agent's tools and prompt on first use, then one row per change — a deferred tool loaded, a tool…
   - **`row-actions`** — Owns WHICH actions a JSONL transcript row carries: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. The cluster itself (reveal, guards, popup-hold) is…
   - **`subagents`** — The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live…
   - **`summary`** — Renders summary separator events in the JSONL viewer.

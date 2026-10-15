@@ -11938,9 +11938,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JsonlViewer.Overlay`
               - `JsonlViewer.PendingPromptAction`
               - `JsonlViewer.TranscriptEnd`
-            - Slot contributors: 55 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Slot contributors: 56 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `JsonlViewer.ContextRole` ×29
-              - `JsonlViewer.EventRenderer` ×16
+              - `JsonlViewer.EventRenderer` ×17
               - `JsonlViewer.Overlay` ×4
               - `JsonlViewer.EventFilter` ×2
               - `JsonlViewer.PendingPrompt` ×2
@@ -12023,8 +12023,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `eventKey`
               - `jsonlEvents`
           - Cross-plugin:
-            - Imported by: 42 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
-              - `conversations` ×41
+            - Imported by: 43 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `conversations` ×42
               - `tasks/outcome-report`
           - Exemptions:
             - Exempts itself from: `no-db-backed-notify` — `server/internal/jsonl-events-resource.ts` (debt)
@@ -12500,8 +12500,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `CardHeaderAction`
                   - `CollapsibleCard`
               - Cross-plugin:
-                - Imported by: 28 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/REFERENCE.md)
-                  - `conversations` ×28
+                - Imported by: 29 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/REFERENCE.md)
+                  - `conversations` ×29
             - **`compaction`** — Renders a context compaction as one thin rule across the transcript — Context compacted · 316k → 12k — folding the summary the agent continues from (as markdown), the files it re-read, and the context the harness re-injected right after.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "compaction" → `CompactionRow`
@@ -12642,6 +12642,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/attachment/queued-command`
                   - `conversations/conversation-view/jsonl-viewer/queue-operation`
+            - **`request-shape`** — Renders the system prompt and tool set Claude Code logs for model calls (api-request-shape): the agent's tools and prompt on first use, then one row per change — a deferred tool loaded, a tool dropped, the prompt edited.
+              - Web:
+                - Contributes: `JsonlViewer.EventRenderer` "request-shape" → `RequestShapeRow`
+                - Uses:
+                  - `conversations/conversation-view/jsonl-viewer.formatTokenCount`
+                  - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                  - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                  - `primitives/collapsible.Collapsible`
+                  - `primitives/collapsible.CollapsibleChevron`
+                  - `primitives/collapsible.CollapsibleContent`
+                  - `primitives/collapsible.CollapsibleTrigger`
+                  - `primitives/css/badge.Badge`
+                  - `primitives/css/cluster.Cluster`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/markdown.Markdown`
+                  - `primitives/select-scope.ContentScope`
+                  - `ui/icons.Icon`
             - **`row-actions`** — Owns WHICH actions a JSONL transcript row carries: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. The cluster itself (reveal, guards, popup-hold) is primitives/row-actions, which EventRowActions wraps. Sits below collapsible-card so card chrome can host the strip without a cycle.
               - Web:
                 - Slots: `JsonlRowActions.Item`
@@ -14823,6 +14841,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RequestConfig`
           - `RequestConfigChange`
           - `RequestConfigScalarField`
+          - `RequestShape`
+          - `RequestShapeChange`
           - `TeammateMessage`
           - `TokenUsage`
           - `ToolCallResult`
@@ -14838,6 +14858,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `QuestionAnswerSchema`
           - `requestConfigChanges`
           - `RequestConfigSchema`
+          - `requestShapeChange`
           - `stripRelayBoilerplate`
           - `tokenUsageOf`
           - `TokenUsageSchema`
@@ -20770,11 +20791,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 160 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 161 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×50
               - `primitives` ×25
               - `page` ×24
-              - `conversations` ×19
+              - `conversations` ×20
               - `debug` ×6
               - `apps-core` ×5
               - `tasks` ×5
@@ -29733,8 +29754,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useCollapsibleContext`
           - `useExpandAll`
       - Cross-plugin:
-        - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
-          - `conversations` ×10
+        - Imported by: 49 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+          - `conversations` ×11
           - `ui` ×9
           - `apps` ×8
           - `primitives` ×8
@@ -29899,10 +29920,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Badge`
               - `formatStatusLabel`
           - Cross-plugin:
-            - Imported by: 164 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 165 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
               - `debug` ×35
-              - `conversations` ×23
+              - `conversations` ×24
               - `reports` ×11
               - `primitives` ×9
               - `tasks` ×9
@@ -30022,10 +30043,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ClusterProps`
             - Exports (values): `Cluster`
           - Cross-plugin:
-            - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
+            - Imported by: 62 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
               - `apps` ×22
               - `debug` ×11
-              - `conversations` ×6
+              - `conversations` ×7
               - `plugin-meta` ×6
               - `primitives` ×6
               - `fields` ×2
@@ -30684,9 +30705,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 390 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 391 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×98
-              - `conversations` ×62
+              - `conversations` ×63
               - `primitives` ×50
               - `debug` ×34
               - `ui` ×28
@@ -30881,9 +30902,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 361 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 362 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×95
-              - `conversations` ×71
+              - `conversations` ×72
               - `primitives` ×40
               - `debug` ×32
               - `page` ×21
@@ -33296,6 +33317,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/go`
           - `conversations/conversation-view/jsonl-viewer/assistant-text`
           - `conversations/conversation-view/jsonl-viewer/compaction`
+          - `conversations/conversation-view/jsonl-viewer/request-shape`
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/jsonl-viewer/teammate-message`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
@@ -34818,6 +34840,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations/conversation-view/jsonl-viewer/assistant-text`
           - `conversations/conversation-view/jsonl-viewer/compaction`
+          - `conversations/conversation-view/jsonl-viewer/request-shape`
           - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
           - `conversations/conversation-view/user-message`
           - `page/editor`
@@ -39467,9 +39490,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Cross-plugin:
-        - Imported by: 308 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 309 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×65
-          - `conversations` ×58
+          - `conversations` ×59
           - `page` ×41
           - `primitives` ×39
           - `fields` ×33

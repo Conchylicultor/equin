@@ -1781,6 +1781,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-queued-prompt-card",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/request-shape": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-request-shape",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-row-actions",
       "version": "0.0.1",
@@ -7473,6 +7477,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-queue-operation": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-queue-operation@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/queue-operation"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-queued-prompt-card": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-queued-prompt-card@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/queued-prompt-card"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-request-shape": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-request-shape@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/request-shape"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-row-actions": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-row-actions@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions"],
 

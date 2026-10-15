@@ -11,9 +11,15 @@ import {
   tokenUsageOf,
   QuestionAnswerSchema,
   requestConfigChanges,
+  requestShapeChange,
 } from "../../core";
-import type { JsonlEvent, QuestionAnswer, ToolCallResult } from "../../core";
-import { requestConfigOf } from "./api-request";
+import type {
+  JsonlEvent,
+  QuestionAnswer,
+  RequestShape,
+  ToolCallResult,
+} from "../../core";
+import { requestConfigOf, requestShapeOf } from "./api-request";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 type ApiRequestEvent = Extract<JsonlEvent, { kind: "api-request" }>;
@@ -396,6 +402,9 @@ async function buildEvents(
   // Keyed per caller so a side caller (compaction, a subagent) using other
   // settings does not read as the main thread flipping back and forth.
   const lastRequestBySource = new Map<string, ApiRequestEvent>();
+  // The previous `api-request-shape` line's shape: each one is diffed against
+  // it, so a later row reads as what changed (a tool loaded, the prompt edited).
+  let lastShape: RequestShape | null = null;
 
   // One home for user-turn text handling, shared by the string-content branch
   // and the array text-block branch (which previously duplicated it). Closes
@@ -765,6 +774,26 @@ async function buildEvents(
         };
         lastRequestBySource.set(source, event);
         events.push(event);
+        continue;
+      }
+    }
+
+    if (type === "api-request-shape") {
+      const shape = requestShapeOf(obj);
+      if (shape) {
+        const change = lastShape ? requestShapeChange(lastShape, shape) : null;
+        lastShape = shape;
+        // A shape differing only in what this does not read (a tool's
+        // description or schema) would be a row saying nothing changed.
+        if (
+          change &&
+          change.toolsAdded.length === 0 &&
+          change.toolsRemoved.length === 0 &&
+          !change.systemChanged
+        ) {
+          continue;
+        }
+        events.push({ kind: "request-shape", at: ts, shape, change });
         continue;
       }
     }

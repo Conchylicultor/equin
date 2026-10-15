@@ -32,3 +32,5 @@ export type {
   RequestConfigChange,
   RequestConfigScalarField,
 } from "./request-config";
+export { requestShapeChange } from "./request-shape";
+export type { RequestShape, RequestShapeChange } from "./request-shape";

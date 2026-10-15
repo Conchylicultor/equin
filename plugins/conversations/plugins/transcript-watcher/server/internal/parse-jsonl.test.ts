@@ -806,3 +806,63 @@ describe("api-request lines", () => {
     expect(events.map((e) => e.kind)).toEqual(["unknown"]);
   });
 });
+
+describe("api-request-shape lines", () => {
+  const shapeLine = (
+    at: string,
+    tools: string[],
+    system: string[] = ["You are Claude Code."],
+  ) => ({
+    type: "api-request-shape",
+    timestamp: at,
+    shapeHash: `hash-${tools.join(",")}`,
+    shape: {
+      system: system.map((text) => ({ type: "text", text })),
+      tools: tools.map((name) => ({
+        name,
+        description: `${name} does things`,
+        input_schema: { type: "object" },
+      })),
+    },
+  });
+
+  test("lifts tool names and system text, diffing each shape against the one before", async () => {
+    const path = await writeFixture([
+      shapeLine("2026-06-30T00:00:01.000Z", ["Bash", "Read"]),
+      shapeLine("2026-06-30T00:00:02.000Z", ["Bash", "Read", "mcp__x__q"]),
+      shapeLine("2026-06-30T00:00:03.000Z", ["Bash", "mcp__x__q"], ["Other."]),
+    ]);
+    const events = (await readJsonlEvents(path)).filter(
+      (e) => e.kind === "request-shape",
+    );
+    expect(events.map((e) => [e.shape.tools, e.change])).toEqual([
+      [["Bash", "Read"], null],
+      [
+        ["Bash", "Read", "mcp__x__q"],
+        { toolsAdded: ["mcp__x__q"], toolsRemoved: [], systemChanged: false },
+      ],
+      [
+        ["Bash", "mcp__x__q"],
+        { toolsAdded: [], toolsRemoved: ["Read"], systemChanged: true },
+      ],
+    ]);
+    expect(events[0]!.shape.system).toEqual(["You are Claude Code."]);
+  });
+
+  test("a shape that changes nothing this reads is not a row", async () => {
+    const path = await writeFixture([
+      shapeLine("2026-06-30T00:00:01.000Z", ["Bash"]),
+      shapeLine("2026-06-30T00:00:02.000Z", ["Bash"]),
+    ]);
+    const events = await readJsonlEvents(path);
+    expect(events.map((e) => e.kind)).toEqual(["request-shape"]);
+  });
+
+  test("a line without shape.tools stays unknown", async () => {
+    const path = await writeFixture([
+      { type: "api-request-shape", timestamp: "2026-06-30T00:00:01.000Z" },
+    ]);
+    const events = await readJsonlEvents(path);
+    expect(events.map((e) => e.kind)).toEqual(["unknown"]);
+  });
+});

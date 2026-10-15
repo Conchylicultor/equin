@@ -1,4 +1,4 @@
-import type { RequestConfig } from "../../core";
+import type { RequestConfig, RequestShape } from "../../core";
 
 const str = (v: unknown): string | undefined =>
   typeof v === "string" ? v : undefined;
@@ -36,5 +36,28 @@ export function requestConfigOf(
     permissionMode,
     betas,
     shapeHash: str(obj.shapeHash),
+  };
+}
+
+/**
+ * The reader-facing shape of one `type: "api-request-shape"` line — its tool
+ * names and system-prompt text — or null when the line does not carry the
+ * shape this reads (`shape.tools` / `shape.system` not arrays), so a format
+ * change falls through to `kind: "unknown"` like `requestConfigOf`'s.
+ */
+export function requestShapeOf(
+  obj: Record<string, unknown>,
+): RequestShape | null {
+  const shape = rec(obj.shape);
+  if (!shape || !Array.isArray(shape.tools) || !Array.isArray(shape.system)) {
+    return null;
+  }
+  return {
+    tools: shape.tools
+      .map((t) => str(rec(t)?.name))
+      .filter((n): n is string => n !== undefined),
+    system: shape.system
+      .map((b) => str(rec(b)?.text))
+      .filter((t): t is string => t !== undefined),
   };
 }

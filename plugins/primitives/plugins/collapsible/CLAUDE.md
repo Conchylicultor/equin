@@ -157,8 +157,8 @@ the scroll plugin's CLAUDE.md and the `css:no-unanchored-has` check).
     - `useCollapsibleContext`
     - `useExpandAll`
 - Cross-plugin:
-  - Imported by: 48 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×10
+  - Imported by: 49 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×11
     - `ui` ×9
     - `apps` ×8
     - `primitives` ×8
