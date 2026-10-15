@@ -3,6 +3,8 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 
+/** The data attribute every host carries — what the pressed rule keys on. */
+const HOST_ATTR = "data-hover-expand-host";
 /** The data attribute a host carries while something inside it is held open. */
 const HELD_ATTR = "data-hover-expand-held";
 
@@ -18,11 +20,11 @@ const HELD_ATTR = "data-hover-expand-held";
  */
 export function hoverExpandHost(held = false): {
   className: string;
+  [HOST_ATTR]: "";
   [HELD_ATTR]?: "true";
 } {
-  return held
-    ? { className: "group/hover-expand", [HELD_ATTR]: "true" }
-    : { className: "group/hover-expand" };
+  const host = { className: "group/hover-expand", [HOST_ATTR]: "" } as const;
+  return held ? { ...host, [HELD_ATTR]: "true" } : host;
 }
 
 /**
@@ -47,7 +49,11 @@ export function HoverExpandPanel({ children }: { children: ReactNode }) {
         "pointer-events-none grid grid-cols-[0fr] opacity-0 transition-[grid-template-columns,opacity] duration-200 ease-out motion-reduce:transition-none",
         "group-hover/hover-expand:pointer-events-auto group-hover/hover-expand:grid-cols-[1fr] group-hover/hover-expand:opacity-100",
         "group-focus-within/hover-expand:pointer-events-auto group-focus-within/hover-expand:grid-cols-[1fr] group-focus-within/hover-expand:opacity-100",
-        "group-has-[:active]/hover-expand:pointer-events-auto group-has-[:active]/hover-expand:grid-cols-[1fr] group-has-[:active]/hover-expand:opacity-100",
+        // Pressed inside: `[host]:has(:active) <this panel>`, never Tailwind's
+        // `group-has-*`, whose `:is(.group:has(…) *)` makes Chrome restyle the
+        // whole subtree under every `:has()`-flagged ancestor on each DOM
+        // insertion or removal anywhere in the app.
+        "[[data-hover-expand-host]:has(:active)_&]:pointer-events-auto [[data-hover-expand-host]:has(:active)_&]:grid-cols-[1fr] [[data-hover-expand-host]:has(:active)_&]:opacity-100",
         "group-data-[hover-expand-held=true]/hover-expand:pointer-events-auto group-data-[hover-expand-held=true]/hover-expand:grid-cols-[1fr] group-data-[hover-expand-held=true]/hover-expand:opacity-100",
       )}
     >

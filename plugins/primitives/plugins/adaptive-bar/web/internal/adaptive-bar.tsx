@@ -236,9 +236,7 @@ export type AdaptiveBarProps = AdaptiveBarBaseProps &
  * allowed below its own content width, down to the floor it reserves out of the
  * budget so that it is not the one child paying for all the others.
  */
-// `group/adaptive-bar` lets a growing `AdaptiveBar.Yield` see whether the row
-// holds an explicit slack claimant (a reorder spacer) and give the slack up.
-const BAR_ROOT = "group/adaptive-bar min-w-0 flex-1 whitespace-nowrap";
+const BAR_ROOT = "min-w-0 flex-1 whitespace-nowrap";
 /** `panel`/`clip`: what does not fit leaves the row, and the row never spills. */
 const BAR_CLIP = "overflow-hidden";
 /** `scroll`: nothing leaves the row; the row itself scrolls. */
@@ -1751,6 +1749,9 @@ function AdaptiveBarShell({
               align="center"
               gap={gap}
               className={rootClass}
+              // Lets a growing `AdaptiveBar.Yield` see whether the row holds an
+              // explicit slack claimant (a reorder spacer) and give the slack up.
+              data-adaptive-bar-root=""
               onPointerDownCapture={onPointerDownCapture}
             >
               {/*

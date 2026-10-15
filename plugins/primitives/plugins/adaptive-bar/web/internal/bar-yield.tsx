@@ -102,10 +102,15 @@ export function yieldFloorPx(el: HTMLElement | null): number {
  * A claimant INSIDE the cell (a spacer in the title's own slot, e.g. the
  * conversation header pushing its chips right) is the opposite case: that
  * spacer can only take slack the cell has, so the cell must keep growing —
- * hence `not-has-…`, or the whole title would bunch at the row's end.
+ * hence the `:not(:has(…))`, or the whole title would bunch at the row's end.
+ *
+ * Spelled as `[bar]:has(claim) <this cell>`, never Tailwind's
+ * `group-has-*`: that compiles to `:is(.group:has(…) *)`, whose `*` makes
+ * Chrome restyle the whole subtree under every `:has()`-flagged ancestor on
+ * each DOM insertion or removal (a zooming map swapped seconds of restyles).
  */
 const YIELD_TO_SLACK_CLAIM =
-  "group-has-[[data-slack-claim]]/adaptive-bar:not-has-[[data-slack-claim]]:flex-initial";
+  "[[data-adaptive-bar-root]:has([data-slack-claim])_&:not(:has([data-slack-claim]))]:flex-initial";
 
 export interface AdaptiveBarYieldProps {
   /**

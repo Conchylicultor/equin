@@ -65,6 +65,7 @@ export type ExemptableRuleId =
   | "jobs:no-raw-addjob"
   | "jobs:no-raw-addjob:task-literal"
   | "layout/no-adhoc-layout"
+  | "layout/no-universal-has"
   | "live-state/no-handrolled-result"
   | "live-state/no-ready-negation"
   | "live/no-endpoint-read"
