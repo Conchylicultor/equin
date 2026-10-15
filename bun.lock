@@ -4547,9 +4547,9 @@
       "name": "@singularity/plugin-plugin-meta-token-usage",
       "version": "0.0.1",
       "dependencies": {
-        "@tailwindcss/node": "4.2.2",
-        "@tailwindcss/oxide": "4.2.2",
-        "tailwindcss": "4.2.2",
+        "@tailwindcss/node": "^4.1.4",
+        "@tailwindcss/oxide": "^4.1.4",
+        "tailwindcss": "^4.1.4",
       },
     },
     "plugins/primitives": {

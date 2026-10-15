@@ -4,8 +4,8 @@
   "private": true,
   "description": "Which theme tokens a plugin's source uses, and which plugin owns each one: the static defineTokenGroup reader (owner + CSS vars) and the token-usage scanner (literal var(--x) plus Tailwind classes resolved by Tailwind's own design system over app.css). Feeds the cross-refs facet's tokenUses, which the closure engine turns into hard edges.",
   "dependencies": {
-    "@tailwindcss/node": "4.2.2",
-    "@tailwindcss/oxide": "4.2.2",
-    "tailwindcss": "4.2.2"
+    "@tailwindcss/node": "^4.1.4",
+    "@tailwindcss/oxide": "^4.1.4",
+    "tailwindcss": "^4.1.4"
   }
 }
