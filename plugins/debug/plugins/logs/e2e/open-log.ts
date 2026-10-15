@@ -30,7 +30,10 @@ await withBrowser(async (h) => {
   await row.click();
 
   await page.waitForURL(new RegExp(`/ch/${log}(;|$)`), { timeout: 15_000 });
-  r.ok("the URL names the opened log", new URL(page.url()).pathname.includes(`/ch/${log}`));
+  r.ok(
+    "the URL names the opened log",
+    new URL(page.url()).pathname.includes(`/ch/${log}`),
+  );
 
   // The reader's lines: rows keyed by history position (`<birth>.<offset>`).
   const line = page.locator('[data-row-key*="."]').first();
