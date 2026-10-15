@@ -6,8 +6,8 @@ const createRule = ESLintUtils.RuleCreator(
 
 /**
  * Endpoints that put user text in front of the running agent. Each is a
- * *delivery* — the transport half of a turn send — and every one of them
- * travels through the same tmux paste that can silently drop the text.
+ * *delivery* — the transport half of a turn send — or the ledger's Retry of
+ * one, which types it again.
  *
  * Matching is by imported binding name, not by module path: these names are
  * unique in the repo, and a consumer necessarily imports the binding to call
@@ -17,6 +17,7 @@ const TURN_ENDPOINTS = new Set([
   "postConversationTurn",
   "answerAskUserQuestion",
   "startPushAndExit",
+  "retryConversationTurn",
 ]);
 
 /** Only web code sends turns on a user's behalf; the server IMPLEMENTS these. */
@@ -31,20 +32,20 @@ export default createRule({
     docs: {
       description:
         "Disallow calling a turn-delivery endpoint directly from web code — " +
-        "every send must route through sendConversationTurn so it gets the " +
-        "optimistic echo, transcript confirmation, and retry.",
+        "every send must route through sendConversationTurn so it gets a " +
+        "ledger id, the optimistic echo and its card.",
     },
     schema: [],
     messages: {
       adhocTurnSend:
         "'{{name}}' delivers a turn to the agent, so calling it directly from " +
-        "web code silently opts this surface out of the whole send lifecycle: " +
-        "no optimistic echo, no transcript confirmation, no 'turn-unconfirmed' " +
-        "report when the tmux paste drops the text, and no Retry. Call " +
+        "web code silently opts this surface out of the send lifecycle: no " +
+        "client-minted ledger id (a repeated request types the turn twice), " +
+        "no optimistic echo, and no card when it fails. Call " +
         "sendConversationTurn from " +
         "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web " +
-        "instead — if your turn does not travel over POST /turn, register a " +
-        "TurnDelivery with defineTurnDelivery and pass it as `delivery`.",
+        "instead — if your turn does not travel over POST /turn, build a " +
+        "TurnDelivery and pass it as `delivery`.",
     },
   },
   defaultOptions: [],

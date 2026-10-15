@@ -1,144 +1,72 @@
 # pending-turn
 
-Owner of the **entire turn-send lifecycle**, and the **single entry point** for
-sending a turn from the browser. A caller does one thing —
-`sendConversationTurn(conversationId, { text })` — and nothing else; from there
-this plugin creates a durable record (localStorage,
-`singularity:pending-turns:<conversationId>`, persistence idiom mirrored from
-`persistent-draft`), runs the delivery (30s abort), and verifies delivery
-against the transcript — "sent" means *the text was found in the session JSONL*,
-not "the request returned 200".
+The **single entry point** for sending a turn from the browser, and the view of
+the server's turn ledger. Where a turn stands is the server's business — its
+`conversation_turns` row, moved by the CLI's own submit hook, Stop and the
+runtime's submit check: see [`turn-ledger/CLAUDE.md`](../../../turn-ledger/CLAUDE.md)
+and `research/2026-10-15-conversations-turn-ledger.md`. This plugin only
+sends, echoes and draws.
 
-## One entry point, many deliveries
+## Sending — `sendConversationTurn(conversationId, { text, delivery? })`
 
-Surfaces that send a turn (prompt input, template chips, Send/Queue/Go, Push &
-Close, AskUserQuestion answers) differ in exactly one respect — **which endpoint
-carries the request** — so that part alone is a `TurnDelivery`
-(`internal/delivery.ts`) and the rest is shared. Calling a turn endpoint
-directly from web code is a lint error
-(`turn-send-safety/no-adhoc-turn-send`, this plugin's `lint/`) outside the three
-sanctioned delivery modules: a direct call looks identical on the happy path
-while silently having no echo, no deadline, no report and no Retry.
+- Mints the turn's id (`turnIdKind`) — the id the server writes its ledger row
+  under, so a repeated request is the same turn and the live row replaces the
+  echo exactly, never by matching text.
+- Records the turn in a per-tab in-memory store (`internal/send.ts`) so the echo
+  shows at once, then runs the delivery. A failed request leaves the entry
+  `unsent`: Retry re-sends the same id, Copy to draft drops it. Once the tab
+  holds the turn's live row, the entry is dropped (`settleSentTurns`).
+- A **delivery** (`TurnDelivery`, `internal/delivery.ts`) is the one thing that
+  differs between surfaces: which endpoint carries the turn, and the ledger
+  `kind` it makes (`turn` — the default, `POST …/turn`; `push-and-exit`;
+  `answer`). It is a plain value the caller passes; nothing outlives the tab
+  but the ledger row, whose Retry is the server's.
+- `turn-send-safety/no-adhoc-turn-send` (this plugin's `lint/`) makes importing
+  a turn endpoint into web code an error outside the delivery modules each
+  plugin sanctions in its `exempt/index.ts`: a direct call would type the turn
+  with no ledger id (a repeated request types it twice), no echo and no card.
+- `useTurnSendInFlight` — a request this tab sent is still open: the
+  double-click guard of Push & Close's turn modes.
 
-A delivery is registered under a **stable id**, not passed as a closure, because
-a record outlives the tab that made it: Retry re-dispatches after a reload. The
-record stores `{ deliveryId, payload }` (both serializable); `deliveryFor()` is
-the one place a legacy record with neither field is read as a plain
-`postConversationTurn` send. **Contributor rule:** re-export your
-`defineTurnDelivery` module from your plugin's web barrel — registration must
-happen at plugin load, not at first mount of the sending component, or Retry
-after a reload finds nothing (→ `failed-post`, `failureKind: "delivery"`).
+## Reading — `usePendingTurns` and `PendingTurnCard`
 
-`echo: false` suppresses the in-flight card for a surface with its own inline
-pending state (the answer form, whose delivered turn the transcript also hides).
-It deliberately does **not** suppress the failure card: a send needing Retry must
-be reachable however it started.
+`usePendingTurns(conversationId)` is `useLive(conversationTurns, { where: {
+conversationId } })` mapped through `pendingTurnsOf` with the tab's unsettled
+sends — the cards the transcript ends with, oldest first; loading until the
+ledger answers. `jsonl-pane` holds the pane on its loader until then, and shows
+a ledger read error inline where the cards go.
 
-State machine per record: `sending → posted|held → queued/sent`, with
-`failed-post` (`http` | `network`) on a POST failure and `unconfirmed` when the
-90s confirmation deadline elapses without a transcript match (the tmux
-paste-race symptom — files one deduped `turn-unconfirmed` report on entry).
-Never-revert: the transcript is ground truth; a late POST outcome can only
-enrich a matched record. This holds **symmetrically** — a POST failure is not
-final either. `failed-post`/`unconfirmed` records stay matchable, so a turn the
-agent actually received (its *verification* failed, not its delivery: a tmux
-submit-verify timeout, a 500 raised after the paste, a torn connection) retires
-its own failure card on the next reconcile instead of stranding beside the
-delivered message. Nothing but the transcript resolves a record. Failures are
-**manual retry only** — the paste race can strand text in the CLI input box, so
-re-send must be deliberate.
+| State | Card |
+|---|---|
+| `sending` (tab only) / `held` / `typing` | dimmed echo — "Waiting for the agent to start…" when held |
+| `typed` | nothing: the box took it; only the hook refines that, so a missing hook never nags |
+| `accepted` / `returned` / `withdrawn` | nothing: the transcript (or the draft) has it |
+| `merged` | warning naming the other text (`extraText`) — only while it is the newest turn |
+| `failed` / `unverified` / `unsent` (tab only) | Retry + Copy to draft, with the error |
 
-`held` is `posted` for a conversation that was still `starting`: the turn
-endpoint answers `held: true` when the server kept the turn because the agent
-cannot take input yet (the conversations server's `held-turns.ts` delivers it
-as the launch message, or types it in once the input box first appears). It
-shares everything with `posted` — the deadline, the sweep, the matcher, all
-through `awaitsConfirmation` — and differs only in the card's caption
-("Waiting for the agent to start…"). A held turn delivered as the launch
-message lands in the transcript behind the task's preprompt block, so the
-user-text arm also accepts a row that ENDS with the record's text at a word
-boundary (`rowCarriesText`); the enqueue arm stays identity-only.
+An `answer` draws no in-flight echo (its question card is its in-flight state)
+but its failure card like any other. A ledger row's Retry is
+`retryConversationTurn`; its Copy to draft is `withdrawConversationTurn`
+(→ `withdrawn`) plus the draft write. Every state's card is one exhaustive
+Record, `CARD_OF` (`internal/pending.ts`).
 
-That same symmetry is why `createdAt` — the instant the send was dispatched,
-and the record's only notion of time — is set once and never moved, including
-across Retry. It carries two jobs at once: it is the TTL origin, and it is the
-transcript watermark described below. Keeping it fixed across Retry is more
-than simpler: it is the ground-truth rule above applied to the record's own
-history. If the original send landed and only its verification failed, the
-original send's own row is what should retire the record, so Retry must leave
-that row inside the record's matching window; re-stamping it forward on Retry
-could only hide a delivered turn behind a duplicate.
+## `useOptimisticConversationStatus`
 
-Never-revert is **enforced, not merely documented**: `toUnconfirmed` in
-`internal/reconcile.ts` is the single transition into `unconfirmed`, and it
-returns a transcript-resolved (`queued`/`sent`) record untouched. Every path
-that could otherwise strand a record — the deadline timer, the owner-tab reload
-adoption, the TTL sweep, the FIFO overflow — routes through it. Consequently
-`deadlineAt != null` means exactly "awaiting first transcript confirmation": it
-lives only on `posted` / `held` records, is cleared the moment the transcript accounts
-for the record, and is never inherited across a match. Before that, a record
-promoted `unconfirmed → queued` off an enqueue row kept its already-elapsed
-deadline and was demoted straight back, and the two rules cycled forever — one
-commit + `notify` per lap, inside the pane's render effect, until React threw
-*Maximum update depth exceeded*.
+`working` from the instant a turn is sent, while the server still says
+`waiting` and its row has not moved since (`updatedAt`). It reads the tab's
+sends and the ledger's newest rows across all conversations (the default
+window — one shared subscription for every row of a list): any `typing` /
+`typed` / `accepted` / `merged` turn newer than `updatedAt` holds it; a failure
+retracts it.
 
-## The transition is pure; the store is only side effects
+## Legacy
 
-`internal/reconcile.ts` holds the **whole** record→record transition as two pure
-passes — `matchPendingTurns` (transcript identity match) then
-`sweepPendingTurns` (reload adoption, deadline, TTL) — with no storage, timers,
-clock, or reporting. `store.ts` composes them and owns every effect. The split
-is not tidiness: the cycle above spanned the seam between a pure, tested matcher
-and an impure, untested sweep, so it was unreachable by any test.
-
-Matching: normalized-text identity (image `@<path>` tokens stripped mirroring
-the transcript parser, whitespace collapsed) against the server's
-`resolvedText`, gated by the **send watermark**: a record binds only rows the
-session log wrote at or after the instant its own send was dispatched
-(`createdAt`, minus a 1s clock-skew allowance). The gate applies to both the
-user-text arm and the queue-op enqueue arm — the enqueue arm previously had no
-gate at all — plus a per-pass consumed-index set (two identical in-flight
-messages bind distinct events; user-text → `sent` outranks queue-op enqueue →
-`queued`). The `jsonl-viewer` pane owns the events array and drives
-`reconcilePendingTurns` on every change; deadlines are absolute one-shot
-`setTimeout`s (owner tab arms them; any tab's reconcile can adopt an orphaned
-record). The TTL sweep (7d) never drops a non-terminal record silently — it
-routes through `unconfirmed` (report) first.
-
-The rule the watermark replaced stamped a baseline on the record's *first*
-pass — one past the highest row present at that instant — so only a row from
-that turn's own send could ever match, but only as long as the first pass ran
-before that row landed. When a hidden tab, a throttled render, or a batched
-commit deferred the first pass past the turn's own arrival, the row it
-stamped past **was the delivery**: the record went `unconfirmed` while the
-agent was already answering, the card told the user the message may not have
-arrived, and Retry delivered the same text a second time. The invariant the
-watermark restores: **the candidate rule is a property of the record and the
-row, never of when the pane happened to reconcile** — `(record, transcript)`
-must answer the same way no matter how many passes ran before it.
-
-**`sweep ∘ match` must be a fixed point**, and `reconcile.test.ts` asserts it
-across every state × transcript pair. The pane calls the pipeline from a render
-effect and the store notifies its `useSyncExternalStore` subscribers whenever a
-pass reports `changed`, so a transition pair that can undo each other is an
-unbounded *synchronous* update loop, not a cosmetic flip-flop. Two rules keep it
-convergent, both enforced in `reconcile.ts` rather than left to call sites: the
-never-revert chokepoint above, and `changed` **derived from record identity**
-(via `outcome()`) instead of hand-set — a pass cannot claim a change it did not
-make, so a commit is never a no-op. Adding a transition here means adding it
-to the fixed-point matrix, and adding an eligibility rule means adding a
-transcript column — the matrix went from 30 to 36 cases the day the send
-watermark arrived, the new column being a row delivered *before* the send. With
-the stamping write gone, the matcher writes nothing but state transitions, so
-a pass that matches nothing is now genuinely inert; it used to force a commit
-+ notify on every fresh record's first pass purely to record its baseline.
-
-`PendingTurnCard` renders by state (replace, never duplicate): dimmed echo card
-for `sending`/`posted`/`held`, destructive/warning card with Retry + Copy-to-draft for
-`failed-post`/`unconfirmed`, and nothing for `queued`/`sent` — the native
-queue-op row / real user-text row has taken over. `sent` is transient (dropped
-at reconcile, never persisted): a reconciled message gets no extra indicator,
-and all feedback lives inside the message card itself.
+Until the ledger, this plugin kept a localStorage state machine
+(`singularity:pending-turns:*`) that guessed delivery by matching the
+transcript's text against a 90 s deadline and filed `turn-unconfirmed`
+reports. The keys are removed once per page load (`internal/legacy-cleanup.ts`,
+this plugin's `register`); the report kind stays registered so old rows still
+render (`reports/turn-unconfirmed`).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 

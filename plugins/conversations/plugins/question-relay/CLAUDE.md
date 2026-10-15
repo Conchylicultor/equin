@@ -31,7 +31,7 @@ open ──answer (web)──────────▶ answered   relay prints
   loop; at the cap it re-reads the row, so a write that landed on another
   backend (a hot swap mid-hold) is still seen.
 - **A message sent instead of an answer** skips the question. The conversations
-  server's `sendTurn` sees `waitingFor: "question"`, releases the hold through the
+  server's `submitTurn` sees `waitingFor: "question"`, releases the hold through the
   question-hold seam (`QuestionHoldSource.release`), and types the turn with the
   runtime's `answerPrompt` — which waits for the menu the release lets the CLI
   draw, Escapes it, and sends the turn into the idle input, exactly what Escape +

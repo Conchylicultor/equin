@@ -2,7 +2,9 @@ import type {
   ConversationRuntime,
   RuntimeInfo,
   RuntimeSignal,
+  SubmitVerdict,
   TerminalMenuChoice,
+  TypedTurn,
 } from "@plugins/conversations/server";
 import type { LaunchFragment } from "@plugins/conversations/plugins/workspace/server";
 import {
@@ -31,10 +33,15 @@ import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/serve
 import { recordReport } from "@plugins/reports/server";
 import { basename } from "node:path";
 import { relayHookEntry } from "@plugins/conversations/plugins/question-relay/server";
+import {
+  promptSubmitHookEntry,
+  recordPromptHookLaunch,
+} from "@plugins/conversations/plugins/turn-ledger/server";
 import { tmuxSignalsDir } from "../../data-dirs";
 import { AGENT_SESSION_WRAPPER } from "./agent-session-env";
 import { resolveSessionState, type SessionState } from "./claude-session";
 import { parseInputDraft } from "./input-draft";
+import { clearDraft } from "./input-guard";
 import { PANE_ROW_FORMAT, parsePaneRows, type TmuxPane } from "./pane-rows";
 import { asLaunchMessage } from "./launch-message";
 import {
@@ -137,10 +144,11 @@ const MENU_APPEAR_TIMEOUT_MS = 3_000;
 // so retry is safe. Timeouts are generous because many concurrent agents slow
 // tmux/Ink.
 //
-// Both timeouts are VERIFICATION outcomes, not delivery failures: they report
-// and return, because by then the keystrokes are already in the pane and only
-// the transcript can say whether the agent took them. typeTurn throws only
-// when a tmux command itself fails — i.e. when the text provably never left us.
+// Both timeouts are VERIFICATION outcomes, not delivery failures: they return
+// `unverified`, because by then the keystrokes are already in the pane and only
+// the CLI's own UserPromptSubmit report (the turn ledger) can say whether the
+// agent took them. typeTurn throws only when a tmux command itself fails — i.e.
+// when the text provably never left us.
 const SUBMIT_POLL_INTERVAL_MS = 75;
 const SUBMIT_ENTER_RETRY_MS = 500;
 const TEXT_COMMIT_TIMEOUT_MS = 5_000;
@@ -221,10 +229,13 @@ async function sendEnter(conversationId: string): Promise<void> {
  * measurements behind the chunking.
  *
  * Shared verbatim by send() and answerPrompt() so both submit identically.
- * The pane must already be at the idle input prompt (callers clear copy mode
- * and partial input first).
+ * The pane must already be at the idle input prompt, its box verified empty
+ * (callers exit copy mode and run clearInputBox first).
  */
-async function typeTurn(conversationId: string, text: string): Promise<void> {
+async function typeTurn(
+  conversationId: string,
+  text: string,
+): Promise<SubmitVerdict> {
   // `--` so a turn that opens with `-` is read as text and not as a flag.
   for (const chunk of typedChunks(text)) {
     const keys = Bun.spawn(
@@ -263,17 +274,14 @@ async function typeTurn(conversationId: string, text: string): Promise<void> {
     // Either the box render is unrecognized (never observed) or the text never
     // surfaced. Fall back to the proven fixed-delay submit — strictly better
     // than chaining Enter into the same PTY chunk as the text.
-    if (everObserved) {
-      void recordReport({
-        kind: "crash",
-        source: "server-caught",
-        message: `tmux typeTurn for ${conversationId}: text did not surface in input box within ${TEXT_COMMIT_TIMEOUT_MS}ms; using fixed-delay fallback`,
-        data: { errorType: "TmuxSubmitError", label: "tmux-runtime.typeTurn" },
-      });
-    }
     await Bun.sleep(FALLBACK_SUBMIT_DELAY_MS);
     await sendEnter(conversationId);
-    return;
+    return {
+      kind: "unverified",
+      reason: everObserved
+        ? `the text did not surface in the input box within ${TEXT_COMMIT_TIMEOUT_MS}ms; Enter sent after a fixed delay`
+        : "the input box could not be read (unrecognized render); Enter sent after a fixed delay",
+    };
   }
 
   // Phase 2: submit and verify. Re-send Enter until the box clears (a cleared
@@ -286,28 +294,56 @@ async function typeTurn(conversationId: string, text: string): Promise<void> {
       nextEnterAt = Date.now() + SUBMIT_ENTER_RETRY_MS;
     }
     const draft = await captureInputDraft(conversationId);
-    if (draft === "") return; // box cleared → submitted
+    if (draft === "") return { kind: "submitted" }; // box cleared
     if (Date.now() + SUBMIT_POLL_INTERVAL_MS >= submitDeadline) break;
     await Bun.sleep(SUBMIT_POLL_INTERVAL_MS);
   }
 
-  // Unverified, NOT failed — and the difference is why this reports instead of
+  // Unverified, NOT failed — and the difference is why this returns instead of
   // throwing. Everything with a side effect already happened: the text is in
   // the pane and Enter has been sent (repeatedly). What ran out of time is the
   // capture-pane READ that confirms the box cleared — and under host duress
   // (spawn-bound polls, a lagging Ink render) that read loses the race against
   // a submit that did land. Throwing here surfaced a delivered turn to the
   // client as `HTTP 500 — Failed to send`, next to the message itself. The
-  // pending-turn client owns this exact verdict already: it holds the record in
-  // `posted` and resolves it against the transcript, which is the only ground
-  // truth for "did the agent get it" — routing to `unconfirmed` + its own
-  // report if it never lands. So the honest outcome is a 200 plus this report.
-  void recordReport({
-    kind: "crash",
-    source: "server-caught",
-    message: `tmux typeTurn for ${conversationId}: draft did not clear within ${SUBMIT_TIMEOUT_MS}ms despite repeated Enter; submission unverified (transcript decides)`,
-    data: { errorType: "TmuxSubmitError", label: "tmux-runtime.typeTurn" },
+  // ledger records the verdict (and files `turn-unverified`); the CLI's hook
+  // still resolves the row if the submit did land.
+  return {
+    kind: "unverified",
+    reason: `the input box did not clear within ${SUBMIT_TIMEOUT_MS}ms despite repeated Enter`,
+  };
+}
+
+/** {@link clearDraft} on the live pane (see input-guard.ts). */
+function clearInputBox(
+  conversationId: string,
+  awaitRestore: boolean,
+): Promise<string | null> {
+  return clearDraft(conversationId, awaitRestore, {
+    read: () => captureInputDraft(conversationId),
+    abortLine: async () => {
+      await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "C-c"], {
+        stdout: "pipe",
+        stderr: "pipe",
+      }).exited;
+    },
+    sleep: (ms) => Bun.sleep(ms),
+    now: () => Date.now(),
   });
+}
+
+/**
+ * Exit copy mode if the pane is in it (e.g. the user scrolled up before
+ * clicking Push & Exit). A no-op in normal mode. Without it, send-keys goes to
+ * copy mode's vi key bindings instead of the running process — 'f' triggers
+ * "Jump to char", consuming the rest of the prompt without it ever reaching
+ * Claude.
+ */
+async function exitCopyMode(conversationId: string): Promise<void> {
+  await Bun.spawn([TMUX, "copy-mode", "-q", "-t", conversationId], {
+    stdout: "pipe",
+    stderr: "pipe",
+  }).exited;
 }
 
 /**
@@ -341,7 +377,7 @@ async function awaitPromptMenu(conversationId: string): Promise<boolean> {
  *                reading it as idle) is what keeps it from being left stranded.
  *
  * Exit copy mode before each Escape so the key reaches Claude rather than
- * tmux's vi bindings (see send()). Throws if the pane never reaches idle within
+ * tmux's vi bindings (see exitCopyMode). Throws if the pane never reaches idle within
  * FORM_CLEAR_TIMEOUT_MS rather than letting the caller send into a live menu
  * (which would auto-select a wrong option and fabricate an answer).
  *
@@ -357,10 +393,7 @@ async function escapeUntilPromptCleared(conversationId: string): Promise<void> {
     // within the last gap — long enough for a prior Escape's re-render to land,
     // so we never Esc-Esc a pane that has already reached idle under render lag.
     if (Date.now() - lastEscapeAt >= ESCAPE_MIN_GAP_MS) {
-      await Bun.spawn([TMUX, "copy-mode", "-q", "-t", conversationId], {
-        stdout: "pipe",
-        stderr: "pipe",
-      }).exited;
+      await exitCopyMode(conversationId);
       await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "Escape"], {
         stdout: "pipe",
         stderr: "pipe",
@@ -431,10 +464,7 @@ async function answerOpenMenu(
   conversationId: string,
   choice: TerminalMenuChoice,
 ): Promise<void> {
-  await Bun.spawn([TMUX, "copy-mode", "-q", "-t", conversationId], {
-    stdout: "pipe",
-    stderr: "pipe",
-  }).exited;
+  await exitCopyMode(conversationId);
   const menu = await readOpenMenu(conversationId);
   if (!menu) {
     throw new TerminalMenuChangedError(
@@ -704,6 +734,7 @@ export const tmuxRuntime: ConversationRuntime = {
       launchHookSettings({
         signalDir: tmuxSignalsDir.ensure(),
         relay: relayHookEntry(),
+        promptSubmit: promptSubmitHookEntry(),
       }),
       launch.settings,
     );
@@ -793,6 +824,10 @@ export const tmuxRuntime: ConversationRuntime = {
         `tmux new-session for ${conversationId} failed (exit ${exit}): ${stderr.trim() || "<no stderr>"}`,
       );
     }
+    // This session reports every prompt it submits to the turn ledger (the
+    // UserPromptSubmit entry above), so its turns can be confirmed — a session
+    // from before the hook existed is `hookless` until a launch like this one.
+    await recordPromptHookLaunch(conversationId);
   },
 
   async delete(conversationId: string): Promise<void> {
@@ -805,49 +840,30 @@ export const tmuxRuntime: ConversationRuntime = {
   async interrupt(conversationId: string): Promise<void> {
     // Escape interrupts Claude Code's current operation (same as pressing
     // Esc in the TUI). Exit copy mode first so the key reaches Claude
-    // rather than tmux's vi bindings (see send() for the same rationale).
-    await Bun.spawn([TMUX, "copy-mode", "-q", "-t", conversationId], {
-      stdout: "pipe",
-      stderr: "pipe",
-    }).exited;
+    // rather than tmux's vi bindings.
+    await exitCopyMode(conversationId);
     await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "Escape"], {
       stdout: "pipe",
       stderr: "pipe",
     }).exited;
   },
 
-  async send(conversationId: string, text: string): Promise<void> {
-    // Exit copy mode if the pane is in it (e.g. user scrolled up before
-    // clicking Push & Exit). copy-mode -q is a no-op when already in normal
-    // mode. Without this, send-keys goes to copy mode's vi key bindings
-    // instead of the running process — 'f' triggers "Jump to char", consuming
-    // the rest of the prompt without it ever reaching Claude.
-    await Bun.spawn([TMUX, "copy-mode", "-q", "-t", conversationId], {
-      stdout: "pipe",
-      stderr: "pipe",
-    }).exited;
-    // Clear a partial draft ONLY when the input box actually holds one, asking
-    // the box directly via captureInputDraft (the same trusted read typeTurn
-    // uses to verify submission). C-c is the CLI's "abort current line": at an
-    // idle prompt it discards the draft harmlessly, but sent into a WORKING
-    // agent it interrupts the streaming response and STOPS it. So it must never
-    // reach a working agent — and the old `!paneIsWorking()` gate could not
-    // guarantee that: a process-tree heuristic with false-negatives plus a
-    // check→send race would occasionally fire C-c into a live agent (the
-    // regular-prompt "agent stopped" bug). A web-driven send leaves the terminal
-    // input empty, so this reads "" and sends no C-c; C-c fires only for a
-    // genuine hand-typed draft — exactly the text typeTurn would append to.
-    if (await captureInputDraft(conversationId)) {
-      await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "C-c"], {
-        stdout: "pipe",
-        stderr: "pipe",
-      }).exited;
-    }
-    // Typed keystrokes + a verified Enter (see typeTurn).
-    await typeTurn(conversationId, text);
+  async send(conversationId: string, text: string): Promise<TypedTurn> {
+    await exitCopyMode(conversationId);
+    // A verified-empty box, then typed keystrokes and a verified Enter.
+    const cleared = await clearInputBox(conversationId, false);
+    return { cleared, verdict: await typeTurn(conversationId, text) };
   },
 
-  async answerPrompt(conversationId: string, text: string): Promise<void> {
+  async clearInput(
+    conversationId: string,
+    opts?: { awaitRestore?: boolean },
+  ): Promise<string | null> {
+    await exitCopyMode(conversationId);
+    return clearInputBox(conversationId, opts?.awaitRestore ?? false);
+  },
+
+  async answerPrompt(conversationId: string, text: string): Promise<TypedTurn> {
     // Dismiss the active prompt form, wait until it has actually cleared, then
     // send `text` as a turn. The wait is the whole point: Escape does not clear
     // the form instantly (the TUI re-renders to the idle input in ~210ms), and
@@ -865,13 +881,11 @@ export const tmuxRuntime: ConversationRuntime = {
       await escapeUntilPromptCleared(conversationId);
     }
 
-    // 3. Type + Enter. We deliberately do NOT C-c first: the answer text comes
-    //    from the web form, so the terminal input line is empty (no draft to
-    //    clear), and an unconditional C-c here could interrupt/kill a running
-    //    agent — the same hazard send() avoids by clearing only a genuine draft
-    //    (captureInputDraft). The menu is already dismissed, so typeTurn writes
-    //    into the idle prompt.
-    await typeTurn(conversationId, text);
+    // 3. The same verified-empty box as send() — the idle input the menu
+    //    leaves behind normally reads "" and gets no C-c — then type + Enter
+    //    into it.
+    const cleared = await clearInputBox(conversationId, false);
+    return { cleared, verdict: await typeTurn(conversationId, text) };
   },
 
   waitUntilReady(conversationId: string, signal: AbortSignal) {

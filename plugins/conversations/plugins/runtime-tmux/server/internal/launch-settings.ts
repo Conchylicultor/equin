@@ -1,4 +1,5 @@
 import type { RelayHookEntry } from "@plugins/conversations/plugins/question-relay/core";
+import type { PromptSubmitHookEntry } from "@plugins/conversations/plugins/turn-ledger/server";
 import { signalDirForCommands } from "./tmux-hooks";
 
 // The one `--settings` object a launch hands Claude Code. Three contributors
@@ -22,6 +23,11 @@ import { signalDirForCommands } from "./tmux-hooks";
 // Hooks on one matcher run in parallel, so the touch still wakes the reconciler
 // at once. A `Notification` touch wakes it when the CLI draws a menu after all
 // (a released question) — the one moment nothing else signals.
+//
+// The turn ledger (conversations/turn-ledger) rides `UserPromptSubmit` beside
+// the touch: its entry writes the hook's stdin — the prompt the CLI just
+// submitted, verbatim — into the ledger's mailbox, which is how a typed turn is
+// confirmed by the CLI itself rather than guessed from the transcript.
 
 const QUESTION_TOOL = "AskUserQuestion";
 
@@ -42,7 +48,9 @@ export const LAUNCH_CLI_SETTINGS: Record<string, unknown> = {
 /**
  * The hooks settings fragment for a pane whose signal file lives in
  * `signalDir`, with the question relay's entry (`relay`, from
- * `relayHookEntry()`) beside the PreToolUse touch.
+ * `relayHookEntry()`) beside the PreToolUse touch and the turn ledger's
+ * (`promptSubmit`, from `promptSubmitHookEntry()`) beside the
+ * UserPromptSubmit one.
  * `$SINGULARITY_CONVERSATION_ID` is expanded by the shell Claude Code runs the
  * hook in — the pane delivers it (see agent-session-env.ts), so the command is
  * the same string for every conversation.
@@ -50,9 +58,11 @@ export const LAUNCH_CLI_SETTINGS: Record<string, unknown> = {
 export function launchHookSettings({
   signalDir,
   relay,
+  promptSubmit,
 }: {
   signalDir: string;
   relay: RelayHookEntry;
+  promptSubmit: PromptSubmitHookEntry;
 }): Record<string, unknown> {
   const touch = {
     type: "command",
@@ -64,7 +74,7 @@ export function launchHookSettings({
       PreToolUse: [{ matcher: QUESTION_TOOL, hooks: [touch, relay] }],
       PostToolUse: onQuestion,
       PostToolUseFailure: onQuestion,
-      UserPromptSubmit: [{ hooks: [touch] }],
+      UserPromptSubmit: [{ hooks: [touch, promptSubmit] }],
       Notification: [{ hooks: [touch] }],
     },
   };

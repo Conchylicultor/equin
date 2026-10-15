@@ -2106,6 +2106,10 @@
         "fast-xml-parser": "^4.5.0",
       },
     },
+    "plugins/conversations/plugins/turn-ledger": {
+      "name": "@singularity/plugin-conversations-turn-ledger",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/usage": {
       "name": "@singularity/plugin-conversations-usage",
       "version": "0.0.1",
@@ -3907,6 +3911,10 @@
     },
     "plugins/packages/plugins/inflight": {
       "name": "@singularity/plugin-packages-inflight",
+      "version": "0.0.1",
+    },
+    "plugins/packages/plugins/keyed-mutex": {
+      "name": "@singularity/plugin-packages-keyed-mutex",
       "version": "0.0.1",
     },
     "plugins/packages/plugins/macrotask-yield": {
@@ -7669,6 +7677,8 @@
 
     "@singularity/plugin-conversations-transcript-watcher": ["@singularity/plugin-conversations-transcript-watcher@workspace:plugins/conversations/plugins/transcript-watcher"],
 
+    "@singularity/plugin-conversations-turn-ledger": ["@singularity/plugin-conversations-turn-ledger@workspace:plugins/conversations/plugins/turn-ledger"],
+
     "@singularity/plugin-conversations-usage": ["@singularity/plugin-conversations-usage@workspace:plugins/conversations/plugins/usage"],
 
     "@singularity/plugin-conversations-workspace": ["@singularity/plugin-conversations-workspace@workspace:plugins/conversations/plugins/workspace"],
@@ -8520,6 +8530,8 @@
     "@singularity/plugin-packages-host-semaphore": ["@singularity/plugin-packages-host-semaphore@workspace:plugins/packages/plugins/host-semaphore"],
 
     "@singularity/plugin-packages-inflight": ["@singularity/plugin-packages-inflight@workspace:plugins/packages/plugins/inflight"],
+
+    "@singularity/plugin-packages-keyed-mutex": ["@singularity/plugin-packages-keyed-mutex@workspace:plugins/packages/plugins/keyed-mutex"],
 
     "@singularity/plugin-packages-macrotask-yield": ["@singularity/plugin-packages-macrotask-yield@workspace:plugins/packages/plugins/macrotask-yield"],
 

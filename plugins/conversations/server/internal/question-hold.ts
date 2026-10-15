@@ -36,7 +36,7 @@ export interface QuestionHoldSource {
   /**
    * Hand the open holds of `ids` back to the CLI, which then draws its own
    * menu: the user is sending a message instead of answering, and that menu is
-   * what the send dismisses (`sendTurn`). The write is the source's own; a
+   * what the send dismisses (`submitTurn`, turns.ts). The write is the source's own; a
    * conversation with nothing open is left alone.
    */
   release(ids: readonly string[]): Promise<void>;

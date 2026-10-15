@@ -6,19 +6,10 @@ export default [
     paths: [
       "server/internal/tables-created-event.ts",
       "server/internal/tables-turn-completed-event.ts",
-      "server/internal/tables-user-turn-sent-event.ts",
     ],
     kind: "debt",
     task: "task-1791405297096-jyzsmk",
     reason:
       "A trigger table built by infra/events' defineTriggerEvent, whose shared column set (events/server/internal/base-columns.ts) keys every *_triggers table by a bare uuid. Phase 6 of the unified prefixed ids keys them all at once (uuid -> text + a declared kind) in that one file; delete this entry then.",
-  },
-  {
-    rule: "ids:pk-declared",
-    paths: ["server/internal/tables-held-turns.ts"],
-    kind: "debt",
-    task: "task-1791405297096-jyzsmk",
-    reason:
-      "Phase-1 baseline of the unified prefixed ids: this table's `id` primary key names no id kind yet (a held turn is a transient row minted with a bare randomUUID and deleted on delivery). Declare the kind (`defineIdKind`) and key the table with `idColumn` in its migration phase, then delete this entry.",
   },
 ] satisfies Exemptions;

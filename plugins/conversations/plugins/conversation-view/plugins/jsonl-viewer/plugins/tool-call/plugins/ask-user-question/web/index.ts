@@ -7,12 +7,6 @@ import { AskUserQuestionToolView } from "./components/ask-user-question-tool-vie
 import { ChangeAnswersAction } from "./components/change-answers-action";
 import { ANSWER_MARKER } from "../shared";
 
-// Re-exported so the module EVALUATES at plugin load rather than when the
-// answer form first mounts: a persisted failed answer's Retry must find this
-// delivery in the registry after a reload, when the question is long gone and
-// the form no longer renders. See pending-turn/web/internal/delivery.ts.
-export { answerQuestionDelivery } from "./internal/delivery";
-
 // The answer surfaces another plugin composes: the question relay
 // (conversations/question-relay) owns the `"question"` pending prompt, renders
 // its held question as a `QuestionCard` holding an `AnswerForm`, and falls back to `AnswerHereButton`

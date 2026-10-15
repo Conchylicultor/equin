@@ -7,7 +7,7 @@ import { ConversationModelSchema } from "@plugins/conversations/plugins/model-pr
 import { EffortLevelSchema } from "@plugins/conversations/plugins/effort-provider/core";
 import { ClaudeCodeUnavailableError } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { Runtime } from "./runtime";
-import { emitDelivered, launchWithHeldTurn } from "./held-turns";
+import { launchWithHeldTurn } from "./turns";
 
 // Durable, self-healing conversation spawn. Mirrors `databaseForkJob`: the
 // enqueue is a committed graphile-worker row, so an interrupted spawn (backend
@@ -79,25 +79,21 @@ export const spawnConversationJob = defineJob({
       step = "runtime";
       const runtime = Runtime.get(runtimeId);
       // A retry whose earlier attempt already started the session: `create`
-      // would no-op, so a held turn claimed here would be deleted undelivered.
+      // would no-op, so a held turn claimed here would never reach the agent.
       // Leave every held turn to the flush the status flip triggers.
       if (!(await runtime.isRunning(conversationId))) {
-        // Path A of held-turn delivery (held-turns.ts): a turn the user sent
+        // Path A of held-turn delivery (turns.ts): a turn the user sent
         // while this was starting becomes the launch message, behind the baked
         // preprompt block `create.prompt` already carries, so Claude starts on
         // it directly instead of idling at an empty prompt.
-        const delivered = await launchWithHeldTurn(
-          conversationId,
-          create.prompt,
-          (prompt) =>
-            runtime.create(
-              conversationId,
-              worktreePath,
-              workspace.launch(at, { conversationId }),
-              { ...create, prompt },
-            ),
+        await launchWithHeldTurn(conversationId, create.prompt, (prompt) =>
+          runtime.create(
+            conversationId,
+            worktreePath,
+            workspace.launch(at, { conversationId }),
+            { ...create, prompt },
+          ),
         );
-        if (delivered) await emitDelivered(conversationId, [delivered]);
       }
     } catch (err) {
       // Claude Code went missing between the launch's check and this spawn.

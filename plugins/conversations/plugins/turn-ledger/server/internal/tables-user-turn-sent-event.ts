@@ -8,12 +8,10 @@ export interface UserTurnSentPayload {
   [key: string]: unknown;
 }
 
-export const {
-  event: userTurnSent,
-  table: _userTurnSentTriggers,
-} = defineTriggerEvent<UserTurnSentPayload>({
-  name: "conversation.userTurnSent",
-  filters: {
-    conversationId: text("conversation_id"),
-  },
-});
+export const { event: userTurnSent, table: _userTurnSentTriggers } =
+  defineTriggerEvent<UserTurnSentPayload>({
+    name: "conversation.userTurnSent",
+    filters: {
+      conversationId: text("conversation_id"),
+    },
+  });

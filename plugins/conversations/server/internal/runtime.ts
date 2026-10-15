@@ -10,9 +10,7 @@ import {
   rewindLastUserTurn,
   type Turn,
 } from "./claude-transcript";
-import { ensureResumed, ResumeBlockedError } from "./lifecycle";
-import { QUESTION_WAITING_FOR } from "../../core/turn-gate";
-import { releaseQuestionHolds } from "./question-hold";
+import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 
 export type { Turn };
 
@@ -54,6 +52,42 @@ export type TerminalMenuChoice =
  */
 export type RuntimeSignal =
   { conversationIds: string[] } | { worktreeName: string } | { all: true };
+
+/**
+ * The submit check's verdict on a typed turn: `submitted` — the box emptied
+ * after Enter; `unverified` — it never did (or the box could not be read), so
+ * only the CLI's own report can say whether the turn went in.
+ */
+export type SubmitVerdict =
+  { kind: "submitted" } | { kind: "unverified"; reason: string };
+
+/** What typing one turn found and did. */
+export interface TypedTurn {
+  /**
+   * The draft the box held before typing, cleared first — `""` when it was
+   * empty, `null` when the box could not be read.
+   */
+  cleared: string | null;
+  verdict: SubmitVerdict;
+}
+
+/**
+ * The input box still held text after it was cleared and the bound ran out.
+ * Nothing was typed: typing now would submit that text and the turn as one
+ * prompt.
+ */
+export class InputNotEmptyError extends Error {
+  constructor(
+    readonly conversationId: string,
+    readonly draft: string,
+  ) {
+    super(
+      `The input box of ${conversationId} still holds text after clearing it; ` +
+        "refusing to type after it",
+    );
+    this.name = "InputNotEmptyError";
+  }
+}
 
 export interface ConversationRuntime {
   readonly id: string;
@@ -98,14 +132,35 @@ export interface ConversationRuntime {
    * boot. Resolves to the unsubscribe.
    */
   subscribe(onSignal: (signal: RuntimeSignal) => void): Promise<() => void>;
-  send(conversationId: string, text: string): Promise<void>;
+  /**
+   * Type `text` into the session's input box and submit it. Implementers MUST
+   * leave the box empty before typing — clear any draft and verify it is gone
+   * ({@link clearInput}), throwing {@link InputNotEmptyError} when it will not
+   * empty — because the CLI submits whatever the box holds plus the typed text
+   * as ONE prompt. Resolves with what was cleared and the submit check's
+   * verdict; throws only when the text provably never reached the box.
+   */
+  send(conversationId: string, text: string): Promise<TypedTurn>;
+  /**
+   * Empty the input box and verify it is empty; throws
+   * {@link InputNotEmptyError} when it still holds text after the bound.
+   * `awaitRestore` first waits (bounded) for a draft to APPEAR — the CLI puts a
+   * turn interrupted before its reply back into the box asynchronously, and
+   * Stop must clear that copy, not race it. Resolves with the draft it cleared
+   * (`""` when there was none, `null` when the box could not be read).
+   */
+  clearInput(
+    conversationId: string,
+    opts?: { awaitRestore?: boolean },
+  ): Promise<string | null>;
   interrupt(conversationId: string): Promise<void>;
   /**
    * Answer a pending interactive prompt form (e.g. AskUserQuestion) by
    * sending `text` as a turn. This is a single ATOMIC operation:
    *   1. dismiss the active prompt form,
    *   2. WAIT until the form has actually cleared,
-   *   3. send `text` as a normal turn.
+   *   3. send `text` as a normal turn — into a box verified empty, exactly
+   *      as {@link send}.
    *
    * The wait in step 2 is load-bearing and the whole reason this is a
    * dedicated runtime method rather than a back-to-back interrupt()+send():
@@ -115,7 +170,7 @@ export interface ConversationRuntime {
    * cleared before sending, and MUST throw if it never clears rather than
    * sending into a live form.
    */
-  answerPrompt(conversationId: string, text: string): Promise<void>;
+  answerPrompt(conversationId: string, text: string): Promise<TypedTurn>;
   /**
    * Dismiss a pending interactive prompt form (e.g. AskUserQuestion) WITHOUT
    * sending any answer. Cancelling the form forces the CLI to flush the
@@ -132,7 +187,7 @@ export interface ConversationRuntime {
    * was just started, until the agent has drawn its input box. Resolves
    * `"timeout"` (never throws for it) when the bound or `signal` elapses first,
    * so the caller decides what an agent that never became ready means. Used to
-   * deliver turns held while the conversation was starting (held-turns.ts).
+   * deliver turns held while the conversation was starting (turns.ts).
    */
   waitUntilReady(
     conversationId: string,
@@ -177,51 +232,39 @@ export const Runtime = {
   },
 };
 
-export async function sendTurn(id: string, text: string): Promise<void> {
-  // A queued/meta-prompt turn must never be sent into a dead pane: if the
-  // conversation is hibernated, transparently resume it (`claude --resume`)
-  // before sending. No-op for live conversations.
-  //
-  // A blocked resume must abort the send. Falling through would type the turn
-  // into whatever pane happens to answer to this id — including, when the
-  // worktree checkout is gone, one that tmux silently started in $HOME.
-  const resumed = await ensureResumed(id);
-  if (resumed.kind === "blocked") {
-    throw new ResumeBlockedError(resumed.reason, resumed.message);
-  }
+// One writer per terminal. Everything that sends keys to an agent's pane —
+// a turn, an answer, an interrupt, Stop, a menu answer — runs here, so two of
+// them can never interleave their keystrokes into one input box (two sends
+// raced into one concatenated prompt). In-process is enough: the HTTP handlers
+// and the jobs that type (the held-turn flush, the spawn's launch) run in the
+// same backend process.
+const terminals = createKeyedMutex();
+
+/** Run `fn` as the conversation's only terminal writer. */
+export function withTerminal<T>(id: string, fn: () => Promise<T>): Promise<T> {
+  return terminals.run(id, fn);
+}
+
+/** The conversation's runtime row and runtime; throws when it does not exist. */
+export async function conversationRuntime(id: string): Promise<{
+  waitingFor: string | null;
+  runtime: ConversationRuntime;
+}> {
   const row = await getConversationRuntime(id);
   if (!row) throw new Error(`Conversation ${id} not found`);
-  const runtime = Runtime.get(row.runtime);
-  // A turn sent while a question waits skips the question: the user chose to
-  // say something else. Typed into the live menu, it would pick an option and
-  // fabricate an answer instead. So the question is dismissed first, as Escape
-  // in the terminal would — a held one is handed back to the CLI, which draws
-  // its menu — and the turn goes in its place (answerPrompt waits for that menu,
-  // Escapes it and types the turn once the input is idle again).
-  if (row.waitingFor === QUESTION_WAITING_FOR) {
-    await releaseQuestionHolds([id]);
-    await runtime.answerPrompt(id, text);
-    return;
-  }
-  await runtime.send(id, text);
+  return { waitingFor: row.waitingFor, runtime: Runtime.get(row.runtime) };
 }
 
 export async function interruptConversation(id: string): Promise<void> {
-  const row = await getConversationRuntime(id);
-  if (!row) throw new Error(`Conversation ${id} not found`);
-  await Runtime.get(row.runtime).interrupt(id);
-}
-
-export async function answerPrompt(id: string, text: string): Promise<void> {
-  const row = await getConversationRuntime(id);
-  if (!row) throw new Error(`Conversation ${id} not found`);
-  await Runtime.get(row.runtime).answerPrompt(id, text);
+  await withTerminal(id, async () => {
+    await (await conversationRuntime(id)).runtime.interrupt(id);
+  });
 }
 
 export async function flushInteractivePrompt(id: string): Promise<void> {
-  const row = await getConversationRuntime(id);
-  if (!row) throw new Error(`Conversation ${id} not found`);
-  await Runtime.get(row.runtime).flushInteractivePrompt(id);
+  await withTerminal(id, async () => {
+    await (await conversationRuntime(id)).runtime.flushInteractivePrompt(id);
+  });
 }
 
 export async function waitUntilReady(
@@ -237,9 +280,9 @@ export async function answerTerminalMenu(
   id: string,
   choice: TerminalMenuChoice,
 ): Promise<void> {
-  const row = await getConversationRuntime(id);
-  if (!row) throw new Error(`Conversation ${id} not found`);
-  await Runtime.get(row.runtime).answerMenu(id, choice);
+  await withTerminal(id, async () => {
+    await (await conversationRuntime(id)).runtime.answerMenu(id, choice);
+  });
 }
 
 export async function getConversationRow(id: string): Promise<{

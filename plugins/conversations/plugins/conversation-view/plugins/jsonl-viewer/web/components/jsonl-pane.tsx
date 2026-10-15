@@ -1,6 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import {
+  ResourceErrorInline,
+  ResourceView,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { jsonlEvents } from "../../core";
@@ -17,8 +21,8 @@ import { ConversationIdProvider } from "./conversation-id-context";
 import { TranscriptView } from "./transcript-view";
 import {
   usePendingTurns,
-  reconcilePendingTurns,
   PendingTurnCard,
+  type PendingTurn,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { JsonlViewer } from "../slots";
 import type { TranscriptSubject } from "./transcript-subject-context";
@@ -93,24 +97,23 @@ function StartingTranscript({ startAt }: { startAt: number | null }) {
 function JsonlPaneInner({
   conversation,
   events,
+  pending,
 }: {
   conversation: Conversation;
   events: JsonlEvent[];
+  /** The turn ledger's cards — answered (ready, or failed); see JsonlPane. */
+  pending: Exclude<ResourceResult<PendingTurn[]>, { status: "loading" }>;
 }) {
   const isWorking =
     conversation.status === "working" || conversation.status === "starting";
   const isGone =
     conversation.status === "gone" || conversation.status === "done";
 
-  // Pending-turn feedback: the store owns the send lifecycle; this pane owns
-  // the events array, so it drives the reconcile pass (transcript match,
-  // deadline adoption, TTL) on every events change. Shown while working too —
-  // that is exactly when messages queue.
-  const pendingTurns = usePendingTurns(conversation.id);
-  useEffect(() => {
-    if (pendingTurns.length === 0) return;
-    reconcilePendingTurns(conversation.id, events);
-  }, [conversation.id, events, pendingTurns]);
+  // The turn ledger's cards (echo, merged warning, Retry), shown while working
+  // too — that is exactly when messages queue. A ledger read that failed shows
+  // its error where the cards go, over the cards it last held.
+  const pendingTurns =
+    pending.status === "ready" ? pending.data : (pending.stale ?? []);
 
   // Derive when "working" started: last event's timestamp, or now if none.
   // Seeded once per working transition (snapshot of the last event present at
@@ -136,6 +139,7 @@ function JsonlPaneInner({
     isWorking &&
     events.length === 0 &&
     pendingTurns.length === 0 &&
+    pending.status === "ready" &&
     !conversation.waitingFor;
 
   return (
@@ -154,6 +158,7 @@ function JsonlPaneInner({
       // neither, it holds the starting indicator or the blank hint, centred.
       empty={
         pendingTurns.length > 0 ||
+        pending.status === "error" ||
         !!conversation.waitingFor ? null : isStarting ? (
           <StartingTranscript startAt={workingStartAt} />
         ) : (
@@ -180,13 +185,21 @@ function JsonlPaneInner({
           waitingFor={conversation.waitingFor}
         />
       )}
-      {pendingTurns.map((r) => (
+      {pendingTurns.map((turn) => (
         <PendingTurnCard
-          key={r.id}
+          key={turn.id}
           conversationId={conversation.id}
-          record={r}
+          turn={turn}
         />
       ))}
+      {pending.status === "error" && (
+        <ResourceErrorInline
+          variant="inline"
+          subject="the sent messages"
+          error={pending.error}
+          refetch={pending.refetch}
+        />
+      )}
     </TranscriptView>
   );
 }
@@ -199,6 +212,7 @@ export function JsonlPane({
   children?: ReactNode;
 }) {
   const eventsResult = useLive(jsonlEvents, { id: conversation.id });
+  const pending = usePendingTurns(conversation.id);
 
   return (
     // Declared out here as well as inside `TranscriptView`, and it is not a
@@ -211,7 +225,10 @@ export function JsonlPane({
     <ConversationIdProvider id={conversation.id}>
       <Stack gap="none" className="h-full min-h-0">
         <ResourceView
-          resource={eventsResult}
+          // Loading until the turn ledger has answered too: the cards it draws
+          // decide whether the pane is empty, starting or neither. Its failure
+          // does not hide the transcript — the inner pane shows it inline.
+          resource={pending.status === "loading" ? pending : eventsResult}
           fallback={
             // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of the transcript column (mirrors TranscriptView)
             <div className="relative min-h-0 flex-1 isolate">
@@ -235,9 +252,15 @@ export function JsonlPane({
             </div>
           )}
         >
-          {(events) => (
-            <JsonlPaneInner conversation={conversation} events={events} />
-          )}
+          {(events) =>
+            pending.status === "loading" ? null : (
+              <JsonlPaneInner
+                conversation={conversation}
+                events={events}
+                pending={pending}
+              />
+            )
+          }
         </ResourceView>
         {children}
       </Stack>

@@ -6,6 +6,6 @@ export default [
     paths: ["web/internal/delivery.ts"],
     kind: "sanctioned",
     reason:
-      "The three sanctioned deliveries — the ONLY web modules allowed to call a turn endpoint. Each is a `defineTurnDelivery` wrapper whose result the store dispatches; the lifecycle around it is never re-implemented.",
+      "The answer's TurnDelivery — with pending-turn's and push-and-exit's delivery modules, the ONLY web modules allowed to call a turn endpoint. sendConversationTurn runs it, so the ledger row is never bypassed.",
   },
 ] satisfies Exemptions;

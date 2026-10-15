@@ -1,6 +1,7 @@
 import type {
   ConversationRuntime,
   RuntimeInfo,
+  TypedTurn,
 } from "@plugins/conversations/server";
 import type { LaunchFragment } from "@plugins/conversations/plugins/workspace/server";
 
@@ -32,13 +33,16 @@ export const apiRuntime: ConversationRuntime = {
   async delete(): Promise<void> {
     throw new Error("api runtime: delete() not implemented");
   },
-  async send(): Promise<void> {
+  async send(): Promise<TypedTurn> {
     throw new Error("api runtime: send() not implemented");
+  },
+  async clearInput(): Promise<string | null> {
+    throw new Error("api runtime: clearInput() not implemented");
   },
   async interrupt(): Promise<void> {
     throw new Error("api runtime: interrupt() not implemented");
   },
-  async answerPrompt(): Promise<void> {
+  async answerPrompt(): Promise<TypedTurn> {
     throw new Error("api runtime: answerPrompt() not implemented");
   },
   async flushInteractivePrompt(): Promise<void> {

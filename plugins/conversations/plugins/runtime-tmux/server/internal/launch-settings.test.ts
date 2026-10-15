@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { resolveEffortSettings } from "@plugins/conversations/plugins/effort-provider/core";
 import type { RelayHookEntry } from "@plugins/conversations/plugins/question-relay/core";
+import type { PromptSubmitHookEntry } from "@plugins/conversations/plugins/turn-ledger/server";
 import {
   LAUNCH_CLI_SETTINGS,
   launchHookSettings,
@@ -18,8 +19,18 @@ const RELAY: RelayHookEntry = {
   statusMessage: "Waiting for your answer in Singularity…",
 };
 
+// The entry as turn-ledger builds it (its own tests pin the builder).
+const PROMPT_SUBMIT: PromptSubmitHookEntry = {
+  type: "command",
+  command: 'cat > "/srv/data/state/prompt-submits/x.json"; exit 0',
+};
+
 function hooks(signalDir = DIR) {
-  return launchHookSettings({ signalDir, relay: RELAY });
+  return launchHookSettings({
+    signalDir,
+    relay: RELAY,
+    promptSubmit: PROMPT_SUBMIT,
+  });
 }
 
 const TOUCH = {
@@ -79,7 +90,9 @@ describe("launch settings", () => {
     expect(flag.endsWith("'")).toBe(true);
     expect(json.includes("'")).toBe(false);
     const parsed = JSON.parse(json);
-    expect(parsed.hooks.UserPromptSubmit).toHaveLength(1);
+    expect(parsed.hooks.UserPromptSubmit).toEqual([
+      { hooks: [TOUCH, PROMPT_SUBMIT] },
+    ]);
     expect(parsed.hooks.PreToolUse[0].hooks[1].command).toBe(`bun "${SCRIPT}"`);
   });
 

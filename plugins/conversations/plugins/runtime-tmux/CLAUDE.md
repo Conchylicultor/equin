@@ -198,6 +198,13 @@ The signal directory is touched by two kinds of hook:
   `updatedInput`, so the menu appears only when it lets go. Its entry
   (`relayHookEntry()`, timeout ~23 days, never a timer give-up) is built by that
   plugin; this one only merges it.
+- **The turn ledger** (`conversations/turn-ledger`) rides `UserPromptSubmit`
+  beside the touch: `promptSubmitHookEntry()` writes the hook's stdin — the
+  prompt the CLI just submitted, verbatim — into the ledger's file mailbox, which
+  confirms the typed turn. `create()` records the launch
+  (`recordPromptHookLaunch`) so the ledger knows this session reports its
+  prompts; a session launched before the hook existed is `hookless` until it is
+  resumed.
 
 Because a question can now be known before its menu is painted,
 `flushInteractivePrompt` / `answerPrompt` first wait (up to 3 s) for a menu to
@@ -217,6 +224,30 @@ one constant, `AGENT_SESSION_RE` (`pane-rows.ts`), by the pane listing and every
 signal route alike: a tmux-side `-f` copy of it once kept every pane, and main
 adopted sessions no signal could name. Design:
 [`research/2026-10-02-conversations-poller-push-status.md`](../../../../research/2026-10-02-conversations-poller-push-status.md).
+
+## Typing a turn: the box must read empty first
+
+The CLI submits whatever its input box holds plus whatever is typed after it as
+ONE prompt. On 2026-10-15 a Push & Exit prompt that Stop had left in the box (the
+CLI puts a turn interrupted before its reply back) and the user's next message
+went in together. So:
+
+- `send()` / `answerPrompt()` type only into a box read empty:
+  `clearDraft` (`input-guard.ts`, unit-tested against scripted captures) sends
+  C-c once on a real draft and polls until the box reads `""`, else throws
+  `InputNotEmptyError` (conversations server) and nothing is typed. One C-c,
+  never two: a second one on a box that only reads non-empty through render lag
+  lands on an empty prompt, where it arms the CLI's exit. None at all on an empty
+  box: C-c there interrupts a working agent.
+- Both return `TypedTurn` — the draft they cleared (the ledger marks a turn
+  `returned` when the CLI handed it back; anything else is logged) and
+  `typeTurn`'s verdict, `submitted` or `unverified`. `unverified` is a verdict,
+  not a throw: the keystrokes are in the pane, and the CLI's hook still decides.
+- `clearInput(id, { awaitRestore })` is the same guard on its own, for Stop:
+  it first waits (≤ 1.5 s) for the interrupted turn to reappear, then clears it.
+- Every keystroke-sending call runs as the conversation's only terminal writer
+  (`withTerminal` in the conversations server), so two sends can never
+  interleave.
 
 ## The pane starts from an allowlisted environment
 
@@ -272,8 +303,11 @@ may be a real command (`/compact`).
 - Description: Runs Claude CLI sessions inside tmux panes.
 - Server:
   - Uses:
+    - `conversations.InputNotEmptyError`
     - `conversations.Runtime`
     - `conversations/question-relay.relayHookEntry`
+    - `conversations/turn-ledger.promptSubmitHookEntry`
+    - `conversations/turn-ledger.recordPromptHookLaunch`
     - `infra/claude-cli/availability.requireClaudeBin`
     - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileChangeEvent`

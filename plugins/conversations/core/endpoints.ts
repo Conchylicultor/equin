@@ -3,6 +3,10 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { ConversationSchema } from "@plugins/tasks/plugins/tasks-core/core";
 import { ModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { WorkspaceSpecSchema } from "@plugins/conversations/plugins/workspace/core";
+import {
+  turnIdKind,
+  TurnStateSchema,
+} from "@plugins/conversations/plugins/turn-ledger/core";
 
 // --- Body schemas ---
 
@@ -35,6 +39,11 @@ export type CreateConversationBody = z.infer<
 
 export const PostTurnBodySchema = z.object({
   text: z.string().min(1),
+  /**
+   * The turn's ledger id (conversations/turn-ledger), minted by the client so a
+   * repeated request is a no-op. Omitted by older clients: the server mints one.
+   */
+  turnId: turnIdKind.schema.optional(),
 });
 export type PostTurnBody = z.infer<typeof PostTurnBodySchema>;
 
@@ -87,8 +96,32 @@ export const postConversationTurn = defineEndpoint({
   // The pending-turn store matches THIS against the transcript — the raw draft
   // never appears verbatim in the session JSONL. `held`: the conversation was
   // still `starting`, so the server kept the turn and delivers it once the agent
-  // can take input (server/internal/held-turns.ts).
-  response: z.object({ resolvedText: z.string(), held: z.boolean() }),
+  // can take input (server/internal/turns.ts). `turnId`: the turn's ledger
+  // row — the client's own id when it sent one.
+  response: z.object({
+    resolvedText: z.string(),
+    held: z.boolean(),
+    turnId: z.string(),
+  }),
+});
+
+/**
+ * Type a `failed` or `unverified` ledger turn again (404 unknown turn, 409 any
+ * other state). Answers with where the row stands after the attempt.
+ */
+export const retryConversationTurn = defineEndpoint({
+  route: "POST /api/conversations/:id/turns/:turnId/retry",
+  response: z.object({ turnId: z.string(), state: TurnStateSchema }),
+});
+
+/**
+ * Take a `failed` or `unverified` ledger turn back instead of retrying it: it
+ * becomes `withdrawn` (the client put its text in the draft). 404 unknown turn,
+ * 409 any other state.
+ */
+export const withdrawConversationTurn = defineEndpoint({
+  route: "POST /api/conversations/:id/turns/:turnId/withdraw",
+  response: z.object({ turnId: z.string(), state: TurnStateSchema }),
 });
 
 export const stopConversation = defineEndpoint({

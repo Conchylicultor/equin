@@ -14,7 +14,7 @@ export const QUESTION_WAITING_FOR = "question";
  *
  * - `starting` / `working` stay sendable: the server holds or queues the turn.
  * - A waiting question stays sendable: the server dismisses it (as Escape in
- *   the terminal would) and sends the turn in its place (`sendTurn`), so the
+ *   the terminal would) and sends the turn in its place (`submitTurn`), so the
  *   user can ignore the question and say something else.
  * - Any other wait (a terminal menu, a permission prompt) is not: a turn typed
  *   into that menu would pick an option the user never chose.

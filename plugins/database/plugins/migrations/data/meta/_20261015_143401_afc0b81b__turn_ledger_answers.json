@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "table:conversation_prompt_hooks",
+      "entityType": "table",
+      "entityName": "conversation_prompt_hooks",
+      "action": "create"
+    },
+    {
+      "key": "table:conversation_turns",
+      "entityType": "table",
+      "entityName": "conversation_turns",
+      "action": "create"
+    }
+  ]
+}

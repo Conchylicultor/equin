@@ -654,7 +654,7 @@ export async function resumeConversation(id: string): Promise<Conversation> {
 // the exact proven resume path, then clears the hibernation flag. Status stays
 // `waiting`-class to the user (the brief "starting" is invisible — the transcript
 // renders from disk). The chokepoint before any live-process interaction
-// (viewed/select endpoint, sendTurn).
+// (viewed/select endpoint, submitTurn).
 //
 // Returns a `ResumeOutcome` rather than throwing on a blocked resume: this fires
 // on every conversation open, so its failure arm has to be something the caller

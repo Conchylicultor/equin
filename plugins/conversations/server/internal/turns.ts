@@ -1,0 +1,346 @@
+import {
+  RETRYABLE_TURN_STATES,
+  turnIdKind,
+  type TurnId,
+  type TurnKind,
+} from "@plugins/conversations/plugins/turn-ledger/core";
+import {
+  acceptTurn,
+  applyTurnEvent,
+  getTurn,
+  hasPromptHook,
+  holdIfStarting,
+  listHeldTurns,
+  reportInputNotEmpty,
+  returnTurnByText,
+  type TurnRow,
+} from "@plugins/conversations/plugins/turn-ledger/server";
+import { QUESTION_WAITING_FOR } from "../../core/turn-gate";
+import { ensureResumed, ResumeBlockedError } from "./lifecycle";
+import { releaseQuestionHolds } from "./question-hold";
+import {
+  conversationRuntime,
+  InputNotEmptyError,
+  rewindConversationTurn,
+  withTerminal,
+  type TypedTurn,
+} from "./runtime";
+
+// Every turn the app types into an agent goes through here, and every one gets
+// a row in the turn ledger (conversations/turn-ledger) first. The ledger says
+// where the turn stands; the CLI's own UserPromptSubmit hook says whether it
+// went in. See research/2026-10-15-conversations-turn-ledger.md.
+//
+// A held turn — sent while its conversation was `starting` — is delivered by
+// exactly one of two paths:
+//
+//   A. The launch message (spawn-job.ts → launchWithHeldTurn): the oldest held
+//      turn rides the launch prompt, after the baked preprompt block.
+//   B. The flush once the agent can take input (deliver-held-turns-job.ts →
+//      deliverHeldTurns), oldest first, through the ordinary verified send.
+//
+// Both claim a row with the `deliver` transition (held → typing, a conditional
+// write only one claimant wins) and both run as the conversation's terminal
+// writer (`withTerminal`), so the flush waits for the launch and never sees
+// the launch's turn as still held. Path A carries one turn: one launch
+// argument, one hook report.
+
+/** A turn as a sender hands it in. */
+export interface TurnSubmission {
+  /** The client's id, which makes a retried request a no-op; minted when absent. */
+  id?: TurnId;
+  kind: TurnKind;
+  /** What the user wrote, raw. */
+  text: string;
+  /** What reaches the CLI (attachment refs resolved). */
+  typedText: string;
+}
+
+export type SubmitOutcome =
+  | { kind: "not-found" }
+  /** The ledger row as it stands after this call. */
+  | { kind: "submitted"; turn: TurnRow };
+
+/**
+ * Record a turn and deliver it: held while the conversation is `starting`,
+ * typed now otherwise. A request repeating an id the ledger already has
+ * returns that row and types nothing. Throws when the delivery fails — the row
+ * is `failed` by then, so the caller's error and the ledger agree.
+ */
+export async function submitTurn(
+  conversationId: string,
+  turn: TurnSubmission,
+): Promise<SubmitOutcome> {
+  const accepted = await acceptTurn(conversationId, {
+    id: turn.id ?? turnIdKind.mint(),
+    kind: turn.kind,
+    text: turn.text,
+    typedText: turn.typedText,
+  });
+  switch (accepted.kind) {
+    case "not-found":
+      return accepted;
+    case "held":
+    case "duplicate":
+      return { kind: "submitted", turn: accepted.turn };
+    case "send":
+      return {
+        kind: "submitted",
+        turn: await withTerminal(conversationId, () =>
+          deliverLocked(accepted.turn),
+        ),
+      };
+  }
+}
+
+export type RetryOutcome =
+  | { kind: "not-found" }
+  | { kind: "not-retryable"; turn: TurnRow }
+  | { kind: "retried"; turn: TurnRow };
+
+/**
+ * Deliver a `failed` or `unverified` turn again, as it was typed. Manual only:
+ * an unverified turn may have landed after all, so re-sending is the user's
+ * call. Throws when the delivery fails again (the row is `failed`).
+ */
+export async function retryTurn(
+  conversationId: string,
+  turnId: string,
+): Promise<RetryOutcome> {
+  return withTerminal(conversationId, async () => {
+    const turn = await getTurn(turnId);
+    if (turn?.conversationId !== conversationId) return { kind: "not-found" };
+    if (!(RETRYABLE_TURN_STATES as readonly string[]).includes(turn.state)) {
+      return { kind: "not-retryable", turn };
+    }
+    const claimed = await applyTurnEvent(turn.id, {
+      kind: "deliver",
+      typedText: turn.typedText,
+    });
+    if (claimed.state !== "typing")
+      return { kind: "not-retryable", turn: claimed };
+    return { kind: "retried", turn: await deliverLocked(claimed) };
+  });
+}
+
+export type WithdrawOutcome =
+  | { kind: "not-found" }
+  /** The row as it stands: `withdrawn`, or the state that refused it. */
+  | { kind: "withdrawn" | "not-withdrawable"; turn: TurnRow };
+
+/**
+ * The user took a `failed` / `unverified` turn back into the draft instead of
+ * retrying it (the card's Copy to draft): the row becomes `withdrawn`, the
+ * draft its only copy. Touches no terminal — an unverified turn's text may
+ * still sit in the CLI's box, which the next send's empty-box guard clears.
+ */
+export async function withdrawTurn(
+  conversationId: string,
+  turnId: string,
+): Promise<WithdrawOutcome> {
+  const turn = await getTurn(turnId);
+  if (turn?.conversationId !== conversationId) return { kind: "not-found" };
+  const after = await applyTurnEvent(turn.id, { kind: "withdraw" });
+  return {
+    kind: after.state === "withdrawn" ? "withdrawn" : "not-withdrawable",
+    turn: after,
+  };
+}
+
+/**
+ * Path B: deliver every held turn, oldest first. Each turn gets its own
+ * verdict — a failure leaves that row `failed` (Retry) and the flush goes on to
+ * the next — and the first failure is rethrown once all were tried, so the job
+ * run reads as failed too.
+ */
+export async function deliverHeldTurns(conversationId: string): Promise<void> {
+  await withTerminal(conversationId, async () => {
+    let firstError: unknown = null;
+    for (const held of await listHeldTurns(conversationId)) {
+      const claimed = await applyTurnEvent(held.id, {
+        kind: "deliver",
+        typedText: held.typedText,
+      });
+      if (claimed.state !== "typing") continue;
+      try {
+        await deliverLocked(claimed);
+      } catch (err) {
+        firstError ??= err;
+      }
+    }
+    if (firstError !== null) throw firstError;
+  });
+}
+
+/**
+ * The launch message: the launch's own prompt (which carries the baked
+ * preprompt block first, when the task has one), then the held turn.
+ */
+export function mergeLaunchPrompt(
+  basePrompt: string | undefined,
+  heldText: string,
+): string {
+  return basePrompt ? `${basePrompt}\n\n${heldText}` : heldText;
+}
+
+/**
+ * Path A. `launch` starts the session with the prompt it is handed; the oldest
+ * held turn, if any, rides it — its row records the whole launch prompt as what
+ * was typed, which is what the CLI's hook reports for a launch argument. A
+ * launch that throws puts the turn back to held: it never left.
+ *
+ * Call it only for a session that does not exist yet: a retry whose earlier
+ * attempt already created the session must not, since `create` would no-op and
+ * the claimed turn would never reach the agent.
+ */
+export async function launchWithHeldTurn(
+  conversationId: string,
+  basePrompt: string | undefined,
+  launch: (prompt: string | undefined) => Promise<void>,
+): Promise<void> {
+  await withTerminal(conversationId, async () => {
+    const [first] = await listHeldTurns(conversationId);
+    if (!first) {
+      await launch(basePrompt);
+      return;
+    }
+    const prompt = mergeLaunchPrompt(basePrompt, first.typedText);
+    const claimed = await applyTurnEvent(first.id, {
+      kind: "deliver",
+      typedText: prompt,
+    });
+    if (claimed.state !== "typing") {
+      await launch(basePrompt);
+      return;
+    }
+    try {
+      await launch(prompt);
+    } catch (err) {
+      await applyTurnEvent(first.id, {
+        kind: "release",
+        typedText: first.typedText,
+      });
+      throw err;
+    }
+    await applyTurnEvent(first.id, {
+      kind: "typed",
+      hookless: !(await hasPromptHook(conversationId)),
+    });
+  });
+}
+
+/**
+ * Stop: interrupt the turn, rewind it out of the transcript and empty the input
+ * box — the CLI puts an interrupted turn back in the box (Step 1, E2), and that
+ * copy left there would ride the user's next send. The web's draft becomes the
+ * turn's only copy, and its ledger row is `returned`. Returns the rewound text.
+ *
+ * A box that will not empty is reported, not thrown: the interrupt and the
+ * rewind already happened, and failing here would lose the text the user is
+ * about to get back.
+ */
+export async function stopTurn(conversationId: string): Promise<string | null> {
+  return withTerminal(conversationId, async () => {
+    const { runtime } = await conversationRuntime(conversationId);
+    await runtime.interrupt(conversationId);
+    const rewound = await rewindConversationTurn(conversationId);
+    if (rewound === null) return null;
+    await returnTurnByText(conversationId, rewound);
+    try {
+      await runtime.clearInput(conversationId, { awaitRestore: true });
+    } catch (err) {
+      if (!(err instanceof InputNotEmptyError)) throw err;
+      await reportInputNotEmpty({
+        conversationId,
+        turnId: null,
+        during: "stop",
+        draft: err.draft,
+      });
+    }
+    return rewound;
+  });
+}
+
+function messageOf(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+/**
+ * Type one `typing` row into its agent and record the verdict. The caller is
+ * the conversation's terminal writer.
+ *
+ * A hibernated conversation is resumed first, which puts it back in
+ * `starting`; the row is then held like any turn sent while starting, and the
+ * flush delivers it once the input box is drawn — never typed into a TUI
+ * still booting. A resume that is refused fails the turn: falling through would
+ * type it into whatever pane answers to this id.
+ */
+async function deliverLocked(turn: TurnRow): Promise<TurnRow> {
+  const conversationId = turn.conversationId;
+  let typed: TypedTurn;
+  try {
+    const resumed = await ensureResumed(conversationId);
+    if (resumed.kind === "blocked") {
+      throw new ResumeBlockedError(resumed.reason, resumed.message);
+    }
+    if (await holdIfStarting(turn.id)) {
+      return (await getTurn(turn.id)) ?? turn;
+    }
+    typed = await typeInto(turn);
+  } catch (err) {
+    await applyTurnEvent(turn.id, { kind: "failed", error: messageOf(err) });
+    if (err instanceof InputNotEmptyError) {
+      await reportInputNotEmpty({
+        conversationId,
+        turnId: turn.id,
+        during: turn.kind === "answer" ? "answer" : "send",
+        draft: err.draft,
+      });
+    }
+    throw err;
+  }
+  if (typed.cleared) await noteClearedDraft(conversationId, typed.cleared);
+  const hookless = !(await hasPromptHook(conversationId));
+  return applyTurnEvent(
+    turn.id,
+    typed.verdict.kind === "submitted"
+      ? { kind: "typed", hookless }
+      : { kind: "unverified", hookless, reason: typed.verdict.reason },
+  );
+}
+
+/**
+ * Type the row's text. An answer goes through `answerPrompt` (dismiss the
+ * question's menu, then type). So does a turn sent while a question waits: the
+ * user chose to say something else, and typed into the live menu it would pick
+ * an option instead — so the question is dismissed first, as Escape in the
+ * terminal would, a held one being handed back to the CLI to draw.
+ */
+async function typeInto(turn: TurnRow): Promise<TypedTurn> {
+  const id = turn.conversationId;
+  const { waitingFor, runtime } = await conversationRuntime(id);
+  if (turn.kind === "answer") return runtime.answerPrompt(id, turn.typedText);
+  if (waitingFor === QUESTION_WAITING_FOR) {
+    await releaseQuestionHolds([id]);
+    return runtime.answerPrompt(id, turn.typedText);
+  }
+  return runtime.send(id, turn.typedText);
+}
+
+/**
+ * The input box held a draft the send cleared before typing. When it is a turn
+ * the CLI already took, the CLI gave it back (Escape in the terminal restores
+ * it) and the row is `returned`. Anything else — a hand-typed draft, or the
+ * unexplained leftover behind the 2026-10-15 merge — is logged with its text,
+ * the evidence the root cause still needs.
+ */
+async function noteClearedDraft(
+  conversationId: string,
+  draft: string,
+): Promise<void> {
+  if (await returnTurnByText(conversationId, draft)) return;
+  console.warn(
+    `[turns] ${conversationId}: cleared a draft from the input box before typing ` +
+      `(${draft.length} chars): ${JSON.stringify(draft.slice(0, 500))}`,
+  );
+}

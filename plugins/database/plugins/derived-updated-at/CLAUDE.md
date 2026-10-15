@@ -126,6 +126,7 @@ are in `infra/entities/server/internal/`
     - `conversations/agents`
     - `conversations/conversation-category`
     - `conversations/conversations-view/grouped`
+    - `conversations/turn-ledger`
     - `database`
     - `database/migrations`
     - `debug/profiling/op-log/op-store`

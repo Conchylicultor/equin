@@ -66,6 +66,8 @@ export const CLIENT_REPORT_SOURCES = [
   // The server permanently rejected an optimistic op or a detached write
   // (reports/optimistic-rejection) — the user's edit was lost.
   "client-optimistic-rejection",
+  // Retired: the old pending-turn store's turn-unconfirmed reports. Nothing
+  // files it now; kept so existing rows still parse.
   "client-turn-unconfirmed",
   "client-live-state-stale-drop",
   // A live read whose query gained an error (reports/resource-errors) — one per

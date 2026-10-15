@@ -1,9 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Trigger } from "@plugins/infra/plugins/events/server";
-import {
-  conversationCreated,
-  userTurnSent,
-} from "@plugins/conversations/server";
+import { conversationCreated } from "@plugins/conversations/server";
+import { userTurnSent } from "@plugins/conversations/plugins/turn-ledger/server";
 import { taskTitleChanged } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   titleOnConversationCreatedJob,

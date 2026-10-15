@@ -1,5 +1,14 @@
 # turn-unconfirmed
 
+> **Retired.** Nothing files this kind any more: the browser's pending-turn
+> store that guessed delivery from the transcript is gone, replaced by the
+> server-side turn ledger (`conversations/turn-ledger`), which files
+> `turn-merged`, `turn-unverified` and `turn-input-not-empty` where each fact is
+> learned. The kind stays registered so existing rows still validate, render and
+> can be investigated — an investigated report keeps its row past the 7-day
+> sweep. Delete this plugin once no such row is left. The rest of this page
+> describes how it worked.
+
 The report kind for **a sent conversation turn that was POSTed and acked but never
 confirmed in the transcript** — the silent paste-race symptom.
 

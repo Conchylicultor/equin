@@ -5,10 +5,11 @@ import {
   ReportKind,
   type ReportRow,
 } from "@plugins/reports/server";
-import { sendTurn, waitUntilReady } from "./runtime";
-import { deliverHeldTurns, emitDelivered, hasHeldTurns } from "./held-turns";
+import { hasHeldTurns } from "@plugins/conversations/plugins/turn-ledger/server";
+import { waitUntilReady } from "./runtime";
+import { deliverHeldTurns } from "./turns";
 
-// Path B of held-turn delivery (held-turns.ts): type every turn held while the
+// Path B of held-turn delivery (turns.ts): type every turn held while the
 // conversation was starting, once the agent can take input. Enqueued by the
 // status reconciler after it moves a row out of `starting`, and by a resume
 // (which puts the row back into `starting`) — a push trigger, never a poll.
@@ -21,8 +22,8 @@ export const deliverHeldTurnsJob = defineJob({
   // children, several seconds each. Nothing shorter than the work bounds it.
   hold: "minutes",
   inProcess:
-    "A held turn's row is deleted only once its send returns, so a run killed " +
-    "by a restart re-runs and re-sends only what was not yet delivered.",
+    "A held turn leaves `held` only as its delivery starts, so a run killed " +
+    "by a restart re-runs and types only what was still held.",
   input: z.object({ conversationId: z.string() }),
   // Direct-enqueue only (the status reconciler and respawnResume).
   event: z.never(),
@@ -48,10 +49,7 @@ export const deliverHeldTurnsJob = defineJob({
       return;
     }
 
-    const delivered = await deliverHeldTurns(conversationId, (text) =>
-      sendTurn(conversationId, text),
-    );
-    await emitDelivered(conversationId, delivered);
+    await deliverHeldTurns(conversationId);
   },
 });
 
@@ -81,7 +79,7 @@ export const heldTurnUndeliveredKind = ReportKind({
         `Conversation \`${d.conversationId}\` left \`starting\`, but its agent never ` +
           "drew its input box within 60 s, so the `conversations.deliver-held-turns` " +
           "job could not type the messages the user sent while it was starting. " +
-          "They are still in `conversation_held_turns`; the next flip out of " +
+          "They are still `held` in `conversation_turns`; the next flip out of " +
           "`starting` or a Resume delivers them.",
         "",
         "Look at the conversation's tmux pane: an unrecognized CLI render " +

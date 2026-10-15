@@ -19,7 +19,7 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import {
   sendConversationTurn,
-  usePendingTurns,
+  useTurnSendInFlight,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { pushAndExitConfig } from "../../shared";
@@ -147,17 +147,15 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   const [busy, setBusy] = useState(false);
   const draftRef = useLatestRef(draft);
   // Client-side read of the very prompt the server injects for Push & Close —
-  // the record echoes it and matches the transcript on it.
+  // the echo shows it until the ledger row arrives.
   const { prompt: pushPrompt } = useConfig(pushAndExitConfig);
   // Double-click protection for the turn-sending modes. These runs are
   // synchronous, so `busy` (which spans the thunk) no longer covers them — the
-  // shared pending-turn state does, and covers rather more: a second click
-  // while the first request is still open is blocked no matter which surface
-  // started it. `sending` only, so queueing further messages stays open once
+  // shared send state does, and covers rather more: a second click while the
+  // first request is still open is blocked no matter which surface started
+  // it. The open request only, so queueing further messages stays open once
   // the request has landed.
-  const sendInFlight = usePendingTurns(convId).some(
-    (r) => r.state === "sending",
-  );
+  const sendInFlight = useTurnSendInFlight(convId);
 
   const filesResult = useEditedFiles(convId);
   // Where this attempt stands relative to `main`, measured from git rather than
@@ -262,14 +260,12 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         return {
           verb: "Push & Close",
           run: () => {
-            // The wrap-up prompt is a turn like any other: echo it, confirm it
-            // against the transcript, report it if it never lands. The text is
-            // read from the same config the server sends verbatim, so the two
-            // sides match by construction.
+            // The wrap-up prompt is a turn like any other: echoed, recorded in
+            // the ledger, a card if it fails. The echo is read from the same
+            // config the server sends verbatim.
             sendConversationTurn(convId, {
               text: pushPrompt,
               delivery: pushAndExitDelivery,
-              payload: null,
             });
           },
         };

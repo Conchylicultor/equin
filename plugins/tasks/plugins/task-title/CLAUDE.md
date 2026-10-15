@@ -13,7 +13,7 @@
     - `trigger` "task-title.short-on-title-changed"
   - Uses:
     - `conversations.conversationCreated`
-    - `conversations.userTurnSent`
+    - `conversations/turn-ledger.userTurnSent`
     - `database.db`
     - `infra/claude-cli.runClaudePrint`
     - `infra/entity-extensions.defineExtension`

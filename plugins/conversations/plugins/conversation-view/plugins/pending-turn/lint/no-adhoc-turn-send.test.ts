@@ -71,6 +71,12 @@ ruleTester.run(
         code: `import { startPushAndExit } from "../../shared";`,
         errors: [{ messageId: "adhocTurnSend" }],
       },
+      // The ledger's Retry types the turn again.
+      {
+        filename: WEB,
+        code: `import { retryConversationTurn } from "@plugins/conversations/core";`,
+        errors: [{ messageId: "adhocTurnSend" }],
+      },
       // Mixed import: only the offending specifier is reported.
       {
         filename: WEB,

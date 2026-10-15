@@ -23,21 +23,15 @@ export function MarkerAnswerForm({
   convId: string;
   toolUseId: string;
 }) {
-  // An answer is a turn: it reaches the agent through the same tmux paste and
-  // can be lost the same way, so it goes through the one send entry point and
-  // inherits the confirmation deadline, the unconfirmed report and Retry.
-  // `echo: false` — the question card is this send's in-flight display, and the
-  // delivered turn is hidden from the transcript by our own EventFilter. The
-  // send returns synchronously and the pending-turn record owns its fate, so
-  // the answer counts as accepted at once.
+  // An answer is a turn: it reaches the agent through the same input box, so it
+  // goes through the one send entry point and gets a ledger row and, should it
+  // fail, the Retry card. An `answer` draws no in-flight echo — the question
+  // card is this send's in-flight display, and the delivered turn is hidden
+  // from the transcript by our own EventFilter. The send returns synchronously
+  // and the ledger owns its fate, so the answer counts as accepted at once.
   const submit = (answer: FormAnswer) => {
     const text = serializeMarkerAnswer(questions, answer);
-    sendConversationTurn(convId, {
-      text,
-      echo: false,
-      delivery: answerQuestionDelivery,
-      payload: { text },
-    });
+    sendConversationTurn(convId, { text, delivery: answerQuestionDelivery });
     return true;
   };
   return (

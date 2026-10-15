@@ -8,12 +8,16 @@ import { handleGet } from "./internal/handle-get";
 import { handleListTurns } from "./internal/handle-list-turns";
 import { handlePostTurn } from "./internal/handle-post-turn";
 import { handleStop } from "./internal/handle-stop";
+import { handleRetryTurn } from "./internal/handle-retry-turn";
+import { handleWithdrawTurn } from "./internal/handle-withdraw-turn";
 import {
   listConversations,
   getConversation,
   createConversation,
   deleteConversation,
   postConversationTurn,
+  retryConversationTurn,
+  withdrawConversationTurn,
   stopConversation,
   listConversationTurns,
   closeConversation,
@@ -44,7 +48,6 @@ import {
 import { autoStartModelUnavailableKind } from "./internal/auto-start-model-report";
 import { conversationCreated } from "./internal/tables-created-event";
 import { conversationTurnCompleted } from "./internal/tables-turn-completed-event";
-import { userTurnSent } from "./internal/tables-user-turn-sent-event";
 import {
   conversationStatusChanged,
   taskStatusChanged,
@@ -72,20 +75,23 @@ export {
 export type { Turn } from "./internal/claude-transcript";
 export {
   Runtime,
-  answerPrompt,
   answerTerminalMenu,
   flushInteractivePrompt,
   getConversationRow,
+  InputNotEmptyError,
   interruptConversation,
   readConversationTurns,
-  sendTurn,
 } from "./internal/runtime";
 export type {
   RuntimeInfo,
   RuntimeSignal,
   ConversationRuntime,
+  SubmitVerdict,
   TerminalMenuChoice,
+  TypedTurn,
 } from "./internal/runtime";
+export { submitTurn } from "./internal/turns";
+export type { SubmitOutcome, TurnSubmission } from "./internal/turns";
 export { requestStatusReconcile } from "./internal/status-reconciler";
 export { QuestionHolds } from "./internal/question-hold";
 export type {
@@ -97,8 +103,6 @@ export type { ConversationTurnCompletedPayload } from "./internal/tables-turn-co
 export { afterTurn } from "./internal/after-turn";
 export { conversationCreated } from "./internal/tables-created-event";
 export type { ConversationCreatedPayload } from "./internal/tables-created-event";
-export { userTurnSent } from "./internal/tables-user-turn-sent-event";
-export type { UserTurnSentPayload } from "./internal/tables-user-turn-sent-event";
 
 export default {
   description:
@@ -111,6 +115,8 @@ export default {
     [deleteConversation.route]: handleDelete,
     [postConversationTurn.route]: handlePostTurn,
     [stopConversation.route]: handleStop,
+    [retryConversationTurn.route]: handleRetryTurn,
+    [withdrawConversationTurn.route]: handleWithdrawTurn,
     [listConversationTurns.route]: handleListTurns,
     [closeConversation.route]: handleClose,
   },
@@ -161,7 +167,6 @@ export default {
     deliverHeldTurnsJob,
     conversationCreated,
     conversationTurnCompleted,
-    userTurnSent,
     conversationsStatusSweepJob,
   ],
   onReady: async () => {

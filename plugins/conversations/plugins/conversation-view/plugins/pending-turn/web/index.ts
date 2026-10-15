@@ -1,19 +1,19 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { dropLegacyPendingTurns } from "./internal/legacy-cleanup";
 
+export { sendConversationTurn, useTurnSendInFlight } from "./internal/send";
+export type { TurnSend } from "./internal/send";
 export {
-  sendConversationTurn,
-  dismissPendingTurn,
-  reconcilePendingTurns,
   usePendingTurns,
   useOptimisticConversationStatus,
-} from "./internal/store";
-export type { PendingTurnState, TurnSend } from "./internal/store";
-export { defineTurnDelivery } from "./internal/delivery";
-export type { TurnDelivery, TurnDeliveryResult } from "./internal/delivery";
+} from "./internal/pending";
+export type { PendingTurn, PendingTurnState } from "./internal/pending";
+export type { TurnDelivery } from "./internal/delivery";
 export { PendingTurnCard } from "./components/pending-turn-card";
 
 export default {
   description:
-    "The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted|held → queued/sent, failed-post, unconfirmed) that runs the turn's registered TurnDelivery, verifies delivery against the transcript (normalized-text match), reports a conversation as working from the instant a turn is sent (useOptimisticConversationStatus), files a report when an accepted turn never lands, and renders the per-record PendingTurnCard. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery; the jsonl-viewer drives reconcilePendingTurns on every events change. Contributes the turn-send-safety lint rule. No slot contributions.",
+    "The single entry point for sending a turn from the browser (sendConversationTurn: mints the turn's ledger id, shows its echo at once, then runs its delivery), and the view of the server's turn ledger (conversations/turn-ledger): usePendingTurns merges a conversation's live ledger rows with this tab's sends whose row has not arrived, PendingTurnCard renders each by state (echo while held or being typed, a warning when the CLI merged it with leftover text, Retry + Copy to draft when it failed), and useOptimisticConversationStatus reads a conversation as working from the instant a turn is sent. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery. Contributes the turn-send-safety lint rule.",
+  register: [dropLegacyPendingTurns],
   contributions: [],
 } satisfies PluginDefinition;

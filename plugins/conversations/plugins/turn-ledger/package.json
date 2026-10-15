@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-conversations-turn-ledger",
+  "description": "The turn ledger: one server-side row per turn sent to an agent (held → typing → typed → accepted | merged | returned, or failed | unverified), confirmed by the CLI's own UserPromptSubmit hook through a file mailbox rather than by matching transcript text.",
+  "private": true,
+  "version": "0.0.1"
+}

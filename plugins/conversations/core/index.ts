@@ -33,6 +33,8 @@ export {
   createConversation,
   deleteConversation,
   postConversationTurn,
+  retryConversationTurn,
+  withdrawConversationTurn,
   stopConversation,
   listConversationTurns,
   closeConversation,
