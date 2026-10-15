@@ -144,8 +144,8 @@ back.
     - `JsonlViewer.Overlay`
     - `JsonlViewer.PendingPromptAction`
     - `JsonlViewer.TranscriptEnd`
-  - Slot contributors: 56 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `JsonlViewer.ContextRole` ×29
+  - Slot contributors: 58 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `JsonlViewer.ContextRole` ×31
     - `JsonlViewer.EventRenderer` ×17
     - `JsonlViewer.Overlay` ×4
     - `JsonlViewer.EventFilter` ×2

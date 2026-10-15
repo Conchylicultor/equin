@@ -32,9 +32,11 @@ plugin.
 
 ## Plugin reference
 
-- Description: Renders the model API call settings Claude Code logs (model, effort, thinking, max tokens, permission mode, betas, tool set) as a change log: the first call's settings, then one row per call that changed them.
+- Description: Renders the model API call settings Claude Code logs (model, effort, thinking, max tokens, permission mode, betas, tool set) as a change log: the first call's settings, then one row per call that changed them. Folds with the harness context around it.
 - Web:
-  - Contributes: `JsonlViewer.EventRenderer` "api-request" → `ApiRequestRow`
+  - Contributes:
+    - `JsonlViewer.EventRenderer` "api-request" → `ApiRequestRow`
+    - `JsonlViewer.ContextRole` "api-request"
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.formatTokenCount`
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`

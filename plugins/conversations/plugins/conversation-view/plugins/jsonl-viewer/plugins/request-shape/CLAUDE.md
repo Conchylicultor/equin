@@ -28,9 +28,11 @@ event seen from the call's side; this row says what the change was.
 
 ## Plugin reference
 
-- Description: Renders the system prompt and tool set Claude Code logs for model calls (api-request-shape): the agent's tools and prompt on first use, then one row per change — a deferred tool loaded, a tool dropped, the prompt edited.
+- Description: Renders the system prompt and tool set Claude Code logs for model calls (api-request-shape): the agent's tools and prompt on first use, then one row per change — a deferred tool loaded, a tool dropped, the prompt edited. Folds with the harness context around it.
 - Web:
-  - Contributes: `JsonlViewer.EventRenderer` "request-shape" → `RequestShapeRow`
+  - Contributes:
+    - `JsonlViewer.EventRenderer` "request-shape" → `RequestShapeRow`
+    - `JsonlViewer.ContextRole` "request-shape"
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.formatTokenCount`
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`

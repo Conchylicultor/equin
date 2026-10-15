@@ -13473,8 +13473,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JsonlViewer.Overlay`
               - `JsonlViewer.PendingPromptAction`
               - `JsonlViewer.TranscriptEnd`
-            - Slot contributors: 56 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
-              - `JsonlViewer.ContextRole` ×29
+            - Slot contributors: 58 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `JsonlViewer.ContextRole` ×31
               - `JsonlViewer.EventRenderer` ×17
               - `JsonlViewer.Overlay` ×4
               - `JsonlViewer.EventFilter` ×2
@@ -13570,9 +13570,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from: `no-db-backed-notify` — `server/internal/jsonl-events-resource.ts` (debt)
           - Plugins:
-            - **`api-request`** — Renders the model API call settings Claude Code logs (model, effort, thinking, max tokens, permission mode, betas, tool set) as a change log: the first call's settings, then one row per call that changed them.
+            - **`api-request`** — Renders the model API call settings Claude Code logs (model, effort, thinking, max tokens, permission mode, betas, tool set) as a change log: the first call's settings, then one row per call that changed them. Folds with the harness context around it.
               - Web:
-                - Contributes: `JsonlViewer.EventRenderer` "api-request" → `ApiRequestRow`
+                - Contributes:
+                  - `JsonlViewer.EventRenderer` "api-request" → `ApiRequestRow`
+                  - `JsonlViewer.ContextRole` "api-request"
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.formatTokenCount`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
@@ -14397,9 +14399,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/attachment/queued-command`
                   - `conversations/conversation-view/jsonl-viewer/queue-operation`
-            - **`request-shape`** — Renders the system prompt and tool set Claude Code logs for model calls (api-request-shape): the agent's tools and prompt on first use, then one row per change — a deferred tool loaded, a tool dropped, the prompt edited.
+            - **`request-shape`** — Renders the system prompt and tool set Claude Code logs for model calls (api-request-shape): the agent's tools and prompt on first use, then one row per change — a deferred tool loaded, a tool dropped, the prompt edited. Folds with the harness context around it.
               - Web:
-                - Contributes: `JsonlViewer.EventRenderer` "request-shape" → `RequestShapeRow`
+                - Contributes:
+                  - `JsonlViewer.EventRenderer` "request-shape" → `RequestShapeRow`
+                  - `JsonlViewer.ContextRole` "request-shape"
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.formatTokenCount`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
