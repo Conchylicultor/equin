@@ -223,7 +223,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`plugin-view`** [6 sub-plugins] — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
     - **`relocate`** — `./singularity plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator…
 
-- **`primitives`** [test helpers] [exempt] [194 sub-plugins] — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
+- **`primitives`** [test helpers] [exempt] [195 sub-plugins] — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
 
 - **`release`** [3 sub-plugins] — Release engine web presence: eagerly registers the boot-critical release.previews live value so boot-snapshot can hydrate it before first paint, independent of the (lazy) Studio release UI. Local…
 

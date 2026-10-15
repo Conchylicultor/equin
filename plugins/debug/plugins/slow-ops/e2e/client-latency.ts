@@ -39,10 +39,11 @@ async function setField(key: string, value: number): Promise<void> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ storePath: STORE, key, value }),
   });
-  if (!res.ok) throw new Error(`set-field ${key} -> ${res.status}: ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`set-field ${key} -> ${res.status}: ${await res.text()}`);
 }
 
-interface Row {
+type Row = {
   operation_kind: string;
   operation: string;
   count: number;
@@ -50,7 +51,7 @@ interface Row {
   variants: unknown;
   measures: unknown;
   last_ms: number;
-}
+};
 
 const db = openDeployDb();
 try {
@@ -108,11 +109,15 @@ try {
     r.note(`confirm wait phases: ${[...cw].join(", ")}`);
     r.ok(
       "update waits name a documented phase",
-      ["server-notice", "server-deliver", "transport", "client-apply"].some((p) => uw.has(p)),
+      ["server-notice", "server-deliver", "transport", "client-apply"].some(
+        (p) => uw.has(p),
+      ),
     );
     r.ok(
       "confirm waits name a documented phase",
-      ["send-lane", "retry", "server-ack", "confirm-frame"].some((p) => cw.has(p)),
+      ["send-lane", "retry", "server-ack", "confirm-frame"].some((p) =>
+        cw.has(p),
+      ),
     );
     r.ok(
       "confirm variants look like <mode>/<edge>",
@@ -128,4 +133,4 @@ try {
 } finally {
   await db.close();
 }
-r.finish();
+await r.finish();

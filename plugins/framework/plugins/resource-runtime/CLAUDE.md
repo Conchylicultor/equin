@@ -1129,6 +1129,7 @@ and those plugins' `CLAUDE.md`.
     - `Resource`
     - `ResourceContract`
     - `ResourceDefinition`
+    - `ResourceDelivery`
     - `ResourceMode`
     - `ResourceParams`
     - `ResourceRuntime`

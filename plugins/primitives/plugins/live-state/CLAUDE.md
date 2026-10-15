@@ -1118,7 +1118,6 @@ keeps every row's identity rather than re-minting each moved row.
     - `ResourceViewProps`
     - `SlowResourceInfo`
     - `TransportInfo`
-    - `UpdateDelayInfo`
     - `WindowParams`
     - `WindowResourceDescriptor`
     - `WindowSelector`
@@ -1146,7 +1145,6 @@ keeps every row's identity rather than re-minting each moved row.
     - `ResourceView`
     - `slowResourceReportSink`
     - `subscribePendingMounts`
-    - `updateDelayReportSink`
     - `useCombinedResources`
     - `useEndpointResource`
     - `useFailingResources`

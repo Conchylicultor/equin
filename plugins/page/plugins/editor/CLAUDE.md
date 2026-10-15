@@ -4847,12 +4847,13 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `xmlTextContentLength`
     - `xmlTextToRuns`
 - Cross-plugin:
-  - Imported by: 74 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 75 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `page` ×57
     - `apps` ×8
     - `reports` ×4
     - `active-data` ×3
     - `primitives` ×2
+    - `debug/slow-ops`
   - Extended by:
     - `apps/pages/auto-icon` (table `editor_ext_auto_icon`)
     - `apps/pages/agent-origin` (table `editor_ext_origin`)

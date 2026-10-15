@@ -16058,7 +16058,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.fetchEndpoint`
           - `primitives/live-state.pendingMountSnapshot`
           - `primitives/live-state.subscribePendingMounts`
-          - `primitives/live-state.updateDelayReportSink`
           - `primitives/log-channels.clientLog`
           - `primitives/pane.currentRoutePath`
       - Server:
@@ -17304,7 +17303,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `sessionDivergenceConfig`
           - `SessionDivergencePayloadSchema`
-    - **`slow-ops`** — Records slow client operations (page load, element appearance) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates and their callers (one row per op × caller), both written through change producers, plus the slow-op report kind and the live collections the pane reads (slow-ops.ops list, slow-ops.op detail, slow-ops.callers). Subscribes to runtime-profiler slow spans and client signals; files one deduped report per distinct slow operation (investigation task filed on demand).
+    - **`slow-ops`** — Records slow client operations (page load, element appearance, and every client latency signal — a live update applied, an optimistic write confirmed — split into its phases) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates and their callers (one row per op × caller), both written through change producers, plus the slow-op report kind and the live collections the pane reads (slow-ops.ops list, slow-ops.op detail, slow-ops.callers). Subscribes to runtime-profiler slow spans and client signals; files one deduped report per distinct slow operation (investigation task filed on demand).
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "slow-op"
@@ -17375,6 +17374,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Routes: `POST /api/slow-ops/client`
       - Core:
         - Uses:
+          - `config_v2.ConfigValues`
           - `config_v2.defineConfig`
           - `debug/trace/engine.traceListRoute`
           - `fields.FieldsRecord`
@@ -17410,6 +17410,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `CallerBreakdownSchema`
           - `CallerRefSchema`
+          - `CLIENT_SIGNAL_THRESHOLD`
           - `loadSeverity`
           - `MAX_CLIENT_SLOW_OP_ITEMS`
           - `OTHER_VARIANT`
@@ -20058,6 +20059,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Resource`
           - `ResourceContract`
           - `ResourceDefinition`
+          - `ResourceDelivery`
           - `ResourceMode`
           - `ResourceParams`
           - `ResourceRuntime`
@@ -20659,13 +20661,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 160 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 161 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×50
               - `primitives` ×26
               - `page` ×24
               - `conversations` ×19
+              - `debug` ×6
               - `apps-core` ×5
-              - `debug` ×5
               - `tasks` ×5
               - `active-data` ×3
               - `config_v2` ×3
@@ -26840,12 +26842,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `xmlTextContentLength`
           - `xmlTextToRuns`
       - Cross-plugin:
-        - Imported by: 74 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Imported by: 75 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `page` ×57
           - `apps` ×8
           - `reports` ×4
           - `active-data` ×3
           - `primitives` ×2
+          - `debug/slow-ops`
         - Extended by:
           - `apps/pages/auto-icon` (table `editor_ext_auto_icon`)
           - `apps/pages/agent-origin` (table `editor_ext_origin`)
@@ -32896,7 +32899,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResourceViewProps`
           - `SlowResourceInfo`
           - `TransportInfo`
-          - `UpdateDelayInfo`
           - `WindowParams`
           - `WindowResourceDescriptor`
           - `WindowSelector`
@@ -32924,7 +32926,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResourceView`
           - `slowResourceReportSink`
           - `subscribePendingMounts`
-          - `updateDelayReportSink`
           - `useCombinedResources`
           - `useEndpointResource`
           - `useFailingResources`
@@ -34331,6 +34332,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DEFERRED_LOAD_COMPLETE_ID`
               - `FIRST_DATA_COMMIT_ID`
               - `ROUTE_CONTENT_COMMIT_ID`
+        - **`latency-signal`** — The closed vocabulary of client latency signals (update: a pushed change applied; confirm: an optimistic write confirmed), each a fixed tuple of named phases, as plain data; ClientLatencySample (a union on signal, so a missing or misspelled phase is a tsc error), the clientLatencySink observation sink producers emit into and consumers subscribe to, and splitPhases.
+          - Core:
+            - Uses: `primitives/report-sink.defineObservationSink`
+            - Exports (types):
+              - `ClientLatencySample`
+              - `ClientLatencySignal`
+              - `PhaseOf`
+            - Exports (values):
+              - `CLIENT_LATENCY_SIGNALS`
+              - `clientLatencySink`
+              - `splitPhases`
         - **`scheduler`** — Main-thread scheduling primitives (yieldToMain: scheduler.yield → postTask → setTimeout(0)) for cooperative boot/work batching.
           - Cross-plugin:
             - Imported by: `framework/web-core`
@@ -34483,11 +34495,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RelativeTime`
           - `useNow`
     - **`report-sink`** — Web presence for the report-sink primitive; the runtime-agnostic factories live in ./core so both web and server can import them. defineReportSink() is fire-and-forget and holds reports emitted before a handler registers (bounded), replaying them on register; defineRequestSink() returns the handler's answer and never holds. emit() never throws — it is called on error paths.
+      - Cross-plugin:
+        - Imported by: `primitives/perfs/latency-signal`
       - Core:
         - Exports (types):
+          - `ObservationSink`
           - `ReportSink`
           - `RequestSink`
         - Exports (values):
+          - `defineObservationSink`
           - `defineReportSink`
           - `defineRequestSink`
     - **`row-actions`** — Hover-revealed row-action cluster: a row of ordinary IconButtons revealed when their row is hovered/focused. The primitive owns the reveal (opacity↔pointer-events coupled, so a hidden action is never a live click-target), the right-edge Pin positioning, and the icon-xs sizing it applies to its children — so it ships no button of its own and stays BELOW icon-button, which is what lets css/row compose it. Reveal is driven by the primitive's own `group/row-actions` group, applied to the row via the exported `rowActionsAnchor` class — so it never piggybacks on a consumer's group name.
