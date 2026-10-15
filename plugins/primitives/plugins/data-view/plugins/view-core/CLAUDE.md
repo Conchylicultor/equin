@@ -239,6 +239,16 @@ contributions each surface passes in, and per-entry plugin id
     - `ViewTypeMeta`
   - Exports (values): `viewIdKind`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --faint-foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/sidebar-metrics --sidebar-icon-gap`
+    - `ui/tokens/sidebar-metrics --sidebar-icon-size`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-label`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --line-height-label`
   - Imported by:
     - `primitives/data-view`
     - `primitives/metrics`

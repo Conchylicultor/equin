@@ -323,9 +323,9 @@ export const compositionsConfig = defineConfig({
         // rationale as the toast host below), the liveness/readiness endpoint the
         // gateway probes, the toast HOST (forced alongside health, whose Core.Root
         // watchers dispatch toasts — without the host mounted those toasts would
-        // silently vanish), plus the runtime theme engine and the token groups that
-        // supply the base CSS variables (without these a filtered app boots
-        // unstyled and fails /api/health), and the REORDER layer that applies each
+        // silently vanish), plus the runtime theme engine (its whole subtree: the
+        // quick-theme popover and the gallery a served app switches themes with),
+        // and the REORDER layer that applies each
         // slot's committed layout (same dead-end shape again: reorder contributes
         // middleware INTO slot-render, which never imports it back, so a soft-only
         // reorder is left out of every bundle — and its absence does not remove a
@@ -353,24 +353,17 @@ export const compositionsConfig = defineConfig({
           "shell.toast",
           "reorder",
           "ui.theme-engine",
-          "ui.tokens.color-palette",
-          "ui.tokens.density",
-          "ui.tokens.shape",
-          "ui.tokens.type-scale",
-          "ui.tokens.font-family",
-          "ui.tokens.sidebar-palette",
-          "ui.tokens.shadow",
-          // `--chart-*`: a theme's chart fragment paints nothing unless this
-          // group is registered, and `ui.tokens.chart/core` (all a theme imports
-          // to spell those values) does not pull in the web half that registers
-          // it. equin.ai shipped that way — the hero's wash, its headline
-          // gradient and the developers' dot all read `--chart-1`.
-          "ui.tokens.chart",
-          // `--categorical-*`: every coloured Avatar (the tile, the badge, the
-          // gradient tile) paints from these slots, and `primitives.avatar`
-          // never imports the web half that registers them. equin.ai shipped
-          // that way — the apps gallery's tiles rendered as blank squares.
-          "ui.tokens.categorical",
+          // No token group is listed: a plugin that paints with a group's var
+          // (a `var(--x)` or a Tailwind class compiling to one) has a hard edge
+          // to the group's plugin, derived from its source (cross-refs
+          // `tokenUses` → `classifyEdges`), so every group a bundle paints with
+          // ships with it. Hand-listing them is how `--chart-*` and
+          // `--categorical-*` went missing on equin.ai.
+          //
+          // Google Fonts is not a token: it loads the families a theme names,
+          // from Core.Root, imported by nobody — the same dead-end shape as the
+          // toast host.
+          "ui.tokens.font-family.google-fonts",
           // The app's own rubber-band, installed from Core.Root and imported by
           // nobody — the same dead-end shape as the toast host and reorder. Left
           // out, a served app falls back to the browser's native bounce, which

@@ -343,6 +343,19 @@ A round nothing was typed into reads exactly like the next one, so after
     - `withChordState`
     - `withExtras`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --accent`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --card`
+    - `ui/tokens/color-palette --faint-foreground`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --input`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --secondary`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `apps/chord/progress`
     - `apps/chord/trainer`

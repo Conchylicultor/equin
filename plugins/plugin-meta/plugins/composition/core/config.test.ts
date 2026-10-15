@@ -148,13 +148,21 @@ test("served-baseline forces the overscroll hint", () => {
   expect(baseline.entryPoints).toContain("primitives.dom.overscroll-hint.**");
 });
 
-test("served-baseline forces the categorical token group", () => {
-  // Every coloured Avatar paints from `--categorical-*`, which only the
-  // categorical group's web half registers — and nothing imports it, so a
-  // served bundle drops it and those avatars render blank (equin.ai shipped
-  // that way — the apps gallery's tiles were empty squares).
+test("served-baseline lists no token group — they are derived edges", () => {
+  // A token group ships because a bundled plugin paints with its vars
+  // (cross-refs `tokenUses` → a hard edge in `classifyEdges`), never because
+  // someone remembered to list it here (equin.ai shipped blank app tiles and an
+  // unpainted headline that way). Google Fonts is a loader, not a token group.
   const baseline = byName("served-baseline");
-  expect(baseline.entryPoints).toContain("ui.tokens.categorical.**");
+  const groups = baseline.entryPoints.filter(
+    (e) =>
+      e.startsWith("ui.tokens.") &&
+      e !== "ui.tokens.font-family.google-fonts.**" &&
+      // The icons group also mounts the bridge `<Icon>` reads its style from —
+      // a runtime companion, not a var.
+      e !== "ui.tokens.icons.**",
+  );
+  expect(groups).toEqual([]);
 });
 
 test("every seed carries `excludes` and each ref resolves to a real bundle", () => {

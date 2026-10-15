@@ -22,6 +22,16 @@
     - `chordPaint`
     - `chordToneStyle`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/chord-palette --chord-1`
+    - `ui/tokens/chord-palette --chord-7`
+    - `ui/tokens/chord-palette --chord-outside`
+    - `ui/tokens/color-palette --faint-foreground`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --input`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/font-family --font-sans`
+    - `ui/tokens/font-family --font-serif`
   - Imported by:
     - `apps/chord/curriculum`
     - `apps/chord/shell`

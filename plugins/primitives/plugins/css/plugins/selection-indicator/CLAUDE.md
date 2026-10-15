@@ -30,6 +30,14 @@ of scope; they have no `--radius` rounding problem. See
     - `CheckboxIndicator`
     - `RadioIndicator`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-3xs`
+    - `ui/tokens/type-scale --line-height-3xs`
   - Imported by:
     - `active-data/go`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`

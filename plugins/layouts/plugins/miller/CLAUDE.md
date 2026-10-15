@@ -140,6 +140,21 @@ not yet supported — see the open question in
     - `MillerColumns`
     - `PaneOverlayHost`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --accent`
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-2xs`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --line-height-2xs`
   - Imported by:
     - `apps/agent-manager/shell`
     - `apps/debug/shell`

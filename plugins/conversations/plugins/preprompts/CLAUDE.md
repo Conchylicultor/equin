@@ -37,6 +37,9 @@
     - `resolvePreprompt`
     - `resolvePrepromptItem`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations`
     - `conversations/conversation-preprompt`

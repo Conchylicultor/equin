@@ -31,6 +31,7 @@ The shared **view-switching primitive**. It offers two things:
     - `useActiveViewId`
     - `ViewSwitcher`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/deploy/remote-deploy`
     - `primitives/data-view/view-core`

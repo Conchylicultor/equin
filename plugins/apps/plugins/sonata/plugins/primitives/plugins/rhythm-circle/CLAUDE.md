@@ -41,6 +41,11 @@ CSS-transitioned.
 
 - Description: Generic rotating rhythm-necklace SVG: one concentric ring per track, a bead per pulse (index 0 at 12 o'clock, clockwise), filled beads for onsets, and a playhead needle. Imports nothing from Sonata — speaks only plain numbers. The spin is driven imperatively via setPhase(phase) and costs zero React renders; beads are optionally click-to-toggle.
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/chart --chart-1`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --primary`
   - Imported by: `apps/sonata/rich/rhythm-controls`
 - Web:
   - Exports (types):

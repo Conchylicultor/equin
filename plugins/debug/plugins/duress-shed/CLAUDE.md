@@ -55,6 +55,8 @@ onto each other. No notification cooldown: each episode is a fresh row.
 - Server:
   - Contributes: `report-kind` "duress-shed"
   - Uses: `reports.ReportKind`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/color-palette --muted-foreground`
 - Core:
   - Exports (types): `DuressShedPayload`
   - Exports (values): `DuressShedPayloadSchema`

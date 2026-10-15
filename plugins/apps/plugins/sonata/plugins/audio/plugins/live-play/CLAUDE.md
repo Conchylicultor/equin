@@ -21,6 +21,7 @@
     - `useChordAudition`
     - `useLivePlay`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/sonata/piano-keyboard`
     - `apps/sonata/rich/circle-of-fifths`

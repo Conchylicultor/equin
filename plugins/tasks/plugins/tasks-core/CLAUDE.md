@@ -501,6 +501,7 @@ serves them.
     - `TaskStatusSchema`
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 64 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×26
     - `tasks` ×15

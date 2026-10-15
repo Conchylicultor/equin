@@ -89,6 +89,12 @@ entry carries the move — `server/internal/store.ts` spells neither path.
     - `wallpaperImage`
     - `WallpaperResultSchema`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/surface/floating`
     - `apps-core/surface/floating/wallpaper/from-url`

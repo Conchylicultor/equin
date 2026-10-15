@@ -34,6 +34,23 @@
     - `ui/icons.Icon`
   - Exports (values): `attemptPane`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --accent`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-2xs`
+    - `ui/tokens/type-scale --font-size-body`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-2xs`
+    - `ui/tokens/type-scale --line-height-body`
   - Imported by:
     - `active-data/attempt`
     - `debug/profiling/ops`

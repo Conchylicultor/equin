@@ -105,6 +105,13 @@ existed, draws a generic pin / neutral circle until the next refresh.
     - `placeSnapshotState`
     - `PlaceSuggestionSchema`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --pad-row-x`
+    - `ui/tokens/density --pad-row-y`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `page/place/google`
     - `page/place/map-layer`

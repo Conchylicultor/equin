@@ -23,6 +23,13 @@
     - `database.db`
     - `network/live.serveValue`
   - Resources: `studio.table-foreign-keys` (push, fixed)
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-caption`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-caption`
 - Exemptions:
   - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
 - Shared:

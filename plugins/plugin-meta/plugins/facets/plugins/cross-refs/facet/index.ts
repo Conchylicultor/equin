@@ -1,4 +1,4 @@
-import { join } from "path";
+import { dirname, join } from "path";
 import { existsSync } from "fs";
 import {
   createFacet,
@@ -9,6 +9,8 @@ import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { resolvePluginSpecifier } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   RUNTIME_FOLDERS,
+  SHIPPED_RUNTIME_FOLDERS,
+  type PluginId,
   type RuntimeFolder,
   asPath,
 } from "@plugins/framework/plugins/plugin-id/core";
@@ -16,8 +18,21 @@ import {
   walkFiles,
   readIfExists,
   findImports,
+  runWithFsSnapshot,
+  type FsSnapshot,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { type CrossRefsData, type RawUse, crossRefsFacetDef } from "../core";
+import {
+  tokenGroupsDeclaredIn,
+  tokenVarsUsedBy,
+  type SourceText,
+} from "@plugins/plugin-meta/plugins/token-usage/core";
+import {
+  type CrossRefsData,
+  type DeclaredTokenGroup,
+  type RawUse,
+  type TokenUse,
+  crossRefsFacetDef,
+} from "../core";
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -88,6 +103,42 @@ function parseRawUses(runtimeDir: string): RawUse[] {
   return uses;
 }
 
+// The token groups a plugin declares: `defineTokenGroup` calls in its `core/`,
+// the folder a group's descriptor lives in (its `web/` registers it).
+function parseTokenGroups(coreDir: string): DeclaredTokenGroup[] {
+  const files: string[] = [];
+  walkFiles(coreDir, files);
+  return files.flatMap((f) => tokenGroupsDeclaredIn(readIfExists(f) ?? "", f));
+}
+
+// The runtimes a page loads, where a word can be a Tailwind class. Elsewhere
+// (a server, a data-dir declaration) only a literal `var(--x)` is a token use.
+const STYLED_RUNTIME_FOLDERS: ReadonlySet<RuntimeFolder> = new Set([
+  "web",
+  "core",
+  "shared",
+]);
+
+// What the plugin's SHIPPED source styles with: every `.ts`/`.tsx`/`.css`
+// under the runtimes the deployed app runs — the same folders whose imports
+// are hard edges (`classifyEdges`).
+function shippedSources(dir: string): SourceText[] {
+  const out: SourceText[] = [];
+  for (const rt of SHIPPED_RUNTIME_FOLDERS) {
+    const rtDir = join(dir, rt);
+    if (!existsSync(rtDir)) continue;
+    const files: string[] = [];
+    walkFiles(rtDir, files, { css: true });
+    for (const file of files)
+      out.push({
+        file,
+        content: readIfExists(file) ?? "",
+        classes: STYLED_RUNTIME_FOLDERS.has(rt),
+      });
+  }
+  return out;
+}
+
 /**
  * `items` grouped by `labelOf`, each group at its first member's position. Both
  * lists this facet groups are sorted with the label as their prefix, so the
@@ -124,7 +175,32 @@ export default createFacet<CrossRefsData>({
       const rtDir = join(ctx.dir, rt);
       if (existsSync(rtDir)) raw[rt] = parseRawUses(rtDir);
     }
-    return { apiUses: emptyByRuntime(), importedBy: [], raw };
+    const coreDir = join(ctx.dir, "core");
+    return {
+      apiUses: emptyByRuntime(),
+      importedBy: [],
+      raw,
+      tokenGroups: existsSync(coreDir) ? parseTokenGroups(coreDir) : [],
+      tokenUses: [],
+      tokenUsedBy: [],
+    };
+  },
+
+  // Every var each plugin's shipped source reads, in ONE async pass over the
+  // whole tree: the token scanner batches every plugin into a single Tailwind
+  // extraction and yields while it compiles (see `tokenVarsUsedBy`).
+  async prepareRelate(ctx: unknown) {
+    const { tree, fs } = ctx as { tree: PluginTree; fs: FsSnapshot };
+    const nodes = [...tree.byDir.values()].filter((node) =>
+      getFacet(node, crossRefsFacetDef),
+    );
+    const sources = runWithFsSnapshot(fs, () =>
+      nodes.map((node) => shippedSources(node.dir)),
+    );
+    const used = await tokenVarsUsedBy(dirname(tree.pluginsRoot), sources);
+    nodes.forEach((node, i) => {
+      getFacet(node, crossRefsFacetDef)!.rawVars = [...used[i]!];
+    });
   },
 
   relate(ctx: unknown) {
@@ -164,6 +240,47 @@ export default createFacet<CrossRefsData>({
       data.raw = undefined;
     }
 
+    // Token pass — each var a plugin reads, resolved to the plugin whose token
+    // group supplies it. A var two groups claim throws: which plugin paints it
+    // would be a coin toss (`css-vars-single-owner` names the pair at check time).
+    const owners = new Map<string, { plugin: PluginId; group: string }>();
+    for (const node of tree.byDir.values()) {
+      for (const group of getFacet(node, crossRefsFacetDef)?.tokenGroups ?? [])
+        for (const v of group.vars) {
+          const prior = owners.get(v);
+          if (prior && prior.plugin !== node.id)
+            throw new Error(
+              `${v} is supplied by two token groups: "${prior.group}" (${asPath(prior.plugin)}) and "${group.id}" (${asPath(node.id)}).`,
+            );
+          owners.set(v, { plugin: node.id, group: group.id });
+        }
+    }
+    for (const node of tree.byDir.values()) {
+      const data = getFacet(node, crossRefsFacetDef);
+      if (!data?.rawVars) continue;
+      const byOwner = new Map<PluginId, TokenUse>();
+      for (const v of data.rawVars) {
+        const owner = owners.get(v);
+        if (!owner || owner.plugin === node.id) continue;
+        let use = byOwner.get(owner.plugin);
+        if (!use)
+          byOwner.set(
+            owner.plugin,
+            (use = { plugin: owner.plugin, group: owner.group, vars: [] }),
+          );
+        use.vars.push(v);
+      }
+      data.tokenUses = [...byOwner.values()]
+        .map((use) => ({ ...use, vars: use.vars.sort() }))
+        .sort((a, b) => a.plugin.localeCompare(b.plugin));
+      data.rawVars = undefined;
+      // An owner is a tree node by construction (`owners` was read off them).
+      for (const use of data.tokenUses)
+        getFacet(byId.get(use.plugin)!, crossRefsFacetDef)!.tokenUsedBy.push(
+          node.id,
+        );
+    }
+
     // Second pass — invert apiUses into importedBy.
     for (const importer of tree.byDir.values()) {
       const data = getFacet(importer, crossRefsFacetDef);
@@ -185,6 +302,7 @@ export default createFacet<CrossRefsData>({
       const data = getFacet(node, crossRefsFacetDef);
       if (!data) continue;
       data.importedBy.sort();
+      data.tokenUsedBy.sort();
       for (const rt of RUNTIME_FOLDERS)
         data.apiUses[rt].sort((a, b) =>
           `${a.plugin}:${a.symbol ?? ""}`.localeCompare(
@@ -215,6 +333,32 @@ export default createFacet<CrossRefsData>({
           })),
         });
       }
+    }
+    if (data.tokenUses.length > 0) {
+      // Grouped by the owning plugin: which token groups this plugin paints with.
+      facts.push({
+        folder: "cross-plugin",
+        key: "Uses tokens",
+        noun: "vars",
+        groups: data.tokenUses.map((use) => ({
+          label: `\`${asPath(use.plugin)}\``,
+          values: use.vars.map((v) => `\`${asPath(use.plugin)} ${v}\``),
+        })),
+      });
+    }
+    if (data.tokenUsedBy.length > 0) {
+      facts.push({
+        folder: "cross-plugin",
+        key: "Tokens used by",
+        noun: "plugins",
+        groups: groupInOrder(
+          data.tokenUsedBy,
+          (id) => `\`${asPath(id).split("/")[0]}\``,
+        ).map(({ label, items }) => ({
+          label,
+          values: items.map((id) => `\`${asPath(id)}\``),
+        })),
+      });
     }
     if (data.importedBy.length > 0) {
       // Grouped by the importer's top-level umbrella: 200 importers are not

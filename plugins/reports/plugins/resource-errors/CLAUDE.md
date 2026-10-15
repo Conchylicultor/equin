@@ -56,6 +56,10 @@ page-local, known from the first render.
 - Server:
   - Contributes: `report-kind` "resource-error"
   - Uses: `reports.ReportKind`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/font-family --font-mono`
 - Core:
   - Exports (types): `ResourceErrorPayload`
   - Exports (values):

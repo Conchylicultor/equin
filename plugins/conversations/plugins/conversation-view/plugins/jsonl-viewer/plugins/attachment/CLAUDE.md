@@ -22,6 +22,9 @@
     - `attachmentRenderer`
     - `JsonlViewerAttachment`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/font-family --font-mono`
   - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×27
 - Core:

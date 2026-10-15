@@ -65,6 +65,11 @@ Three aggregate chart endpoints, each `?bucket=day|week|month` (default `day`):
     - `GET /api/stats/pushes/wait-time`
     - `GET /api/stats/pushes/throughput`
     - `GET /api/stats/pushes/step-breakdown`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/components/step-breakdown-chart.tsx`, `web/components/throughput-chart.tsx`, `web/components/wait-time-chart.tsx` (debt)
 - Shared:

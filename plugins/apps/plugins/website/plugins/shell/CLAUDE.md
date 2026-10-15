@@ -133,6 +133,22 @@ hover.
     - `SOURCE_URL`
     - `websiteApp`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/chart --chart-1`
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --faint-foreground`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-foreground`
+    - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/density --space-2xl`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-bold`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `apps/website/improve`
     - `apps/website/landing/contact`

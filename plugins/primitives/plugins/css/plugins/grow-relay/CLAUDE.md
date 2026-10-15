@@ -126,6 +126,7 @@ it the same way (driven by `Scroll`) needs the ask to carry an axis.
 
 - Description: The grow request: a widget that sizes itself from the room it is given asks for that room (useRequestGrow), every box in between relays the ask upward (<GrowRelay>, render-prop), and the row stops it (<GrowRelay.Stop>). Replaces the fill flag a contribution had to declare three files away from the <AdaptiveBar> it was about — the ask travels with the widget, so there is nothing left to forget.
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/tab-bar`
     - `primitives/adaptive-bar`

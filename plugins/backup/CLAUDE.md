@@ -186,6 +186,12 @@ row with a rising count and a new source starting to fail mints its own.
     - `backupRunRoute`
     - `backupSourceWentIn`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --chrome-pad-x`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-xl`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/chord/song-index`
     - `backup/runs-arm`

@@ -297,6 +297,21 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `songsEntityRef`
     - `updateSong`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/density --control-height-lg`
+    - `ui/tokens/density --control-height-md`
+    - `ui/tokens/density --control-height-sm`
+    - `ui/tokens/density --control-height-xs`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `active-data/song`
     - `apps/sonata/audio/engine`

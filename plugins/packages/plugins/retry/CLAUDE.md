@@ -4,6 +4,8 @@
 
 ## Plugin reference
 
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
 - Core:
   - Exports (types): `DelayStrategy`
   - Exports (values):

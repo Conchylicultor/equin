@@ -20,6 +20,11 @@ complement, which keeps NULL); `is-not` swaps them.
   - Uses:
     - `primitives/css/spacing.Stack`
     - `primitives/data-view.DataViewSlots`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/density --control-height-sm`
+    - `ui/tokens/shape --spacing`
 - Test helpers:
   - Web: `@plugins/fields/plugins/bool/plugins/filter/web/testing`
     - `boolOperatorSet`

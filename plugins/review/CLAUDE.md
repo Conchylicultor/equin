@@ -59,6 +59,13 @@ contributions: [
     - `convReviewPane`
     - `ReviewSlots`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `review/code-review`
     - `review/plugin-changes`

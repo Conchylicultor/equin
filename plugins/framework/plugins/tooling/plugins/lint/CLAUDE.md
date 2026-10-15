@@ -147,6 +147,7 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `lintRuleIds`
     - `loadLintContributions`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `framework/tooling/codegen`
 - Test helpers:
   - Core: `@plugins/framework/plugins/tooling/plugins/lint/core/testing`

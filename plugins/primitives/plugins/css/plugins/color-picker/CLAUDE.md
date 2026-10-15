@@ -46,6 +46,13 @@
     - `HueSlider`
     - `SwatchGrid`
 - Cross-plugin:
+  - Uses tokens: 22 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/color-palette` ×8
+    - `ui/tokens/type-scale` ×7
+    - `ui/tokens/density` ×3
+    - `ui/tokens/shape` ×2
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shadow --shadow-sm`
   - Imported by:
     - `apps/prototypes/canvas`
     - `apps/prototypes/files`

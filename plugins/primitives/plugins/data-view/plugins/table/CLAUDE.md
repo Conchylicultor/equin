@@ -174,6 +174,16 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
     - `primitives/css/ui-kit.cn`
     - `ui/icons.Icon`
   - Exports (types): `TableViewOptions`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --ring`
+    - `ui/tokens/density --chrome-pad-x`
+    - `ui/tokens/density --tree-pill-indent`
+    - `ui/tokens/density --tree-root-gap`
+    - `ui/tokens/density --tree-row-gap`
+    - `ui/tokens/shape --spacing`
 - Core:
   - Exports (types): `TableViewOptions`
 

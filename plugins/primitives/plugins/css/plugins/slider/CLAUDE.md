@@ -79,6 +79,12 @@ rendered whether or not there is a detent, so that routing never moves.
   - Exports (types): `SliderProps`
   - Exports (values): `Slider`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --ring`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/chord/piano`
     - `apps/prototypes/canvas`

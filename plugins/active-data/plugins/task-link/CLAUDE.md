@@ -45,6 +45,10 @@ which renders `<task>prompt</task>` *block* tags as editable creation cards.
   - Uses:
     - `active-data/id-chip.idChipServer`
     - `tasks/tasks-core.getTask`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/font-family --font-mono`
 - Core:
   - Exports (values): `TASK_CHIP_SURFACES`
 

@@ -185,6 +185,7 @@ idempotent and per-file.
     - `isFormattable`
     - `listChangedFormattableFiles`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `framework/tooling/codegen`
 - Exemptions:
   - Exempts itself from: `format-safety/no-adhoc-prettier` — `.` (sanctioned)

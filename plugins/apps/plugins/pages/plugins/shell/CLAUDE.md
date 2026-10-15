@@ -35,6 +35,13 @@
   - Uses: `primitives/pane.defineApp`
   - Exports (values): `pagesApp`
 - Cross-plugin:
+  - Uses tokens: 21 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/color-palette` ×6
+    - `ui/tokens/type-scale` ×6
+    - `ui/tokens/density` ×3
+    - `ui/tokens/shadow` ×2
+    - `ui/tokens/shape` ×2
+    - `ui/tokens/sidebar-metrics` ×2
   - Imported by:
     - `apps/pages/content-search`
     - `apps/pages/page-tree`

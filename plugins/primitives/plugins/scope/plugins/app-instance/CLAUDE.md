@@ -191,6 +191,7 @@ the decision table.
     - `readAppInstance`
     - `stampAppInstance`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/surface/floating`
     - `apps-core/tabs`

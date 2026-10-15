@@ -35,6 +35,20 @@
     - `conversations.resumeConversation`
     - `infra/endpoints.implement`
   - Routes: `POST /api/conversations-recover/restore-batch`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-3xs`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-semibold`
+    - `ui/tokens/type-scale --line-height-3xs`
 - Shared:
   - Exports (types): `RestoreBatchBody`
   - Exports (values):

@@ -44,6 +44,11 @@ pane by the sub-agent's own id), `background-shells` against its shells
     - `TaskNotificationTarget`
   - Exports (values): `TaskNotification`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`

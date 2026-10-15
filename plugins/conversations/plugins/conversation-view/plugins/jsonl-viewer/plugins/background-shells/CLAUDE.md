@@ -150,6 +150,18 @@ v1 is view-only: there is no Stop (only the agent can call `TaskStop`, which the
     - `stripAnsi`
     - `terminalText`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --faint-foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
     - `conversations/conversation-view/running-agents`

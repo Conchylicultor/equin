@@ -114,6 +114,7 @@ The track is decided per filing and is NOT inherited by subtasks (it is not a
     - `TaskTrackSchema`
     - `TRACK_META`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations/conversation-view/track`
     - `tasks`

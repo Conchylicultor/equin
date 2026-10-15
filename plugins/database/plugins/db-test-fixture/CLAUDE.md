@@ -36,6 +36,8 @@ The `page/editor-collab` suite (`server/internal/doc-store.test.ts`) is the
 ## Plugin reference
 
 - Description: Shared throwaway-database fixture for DB-backed test suites.
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
 - Core:
   - Exports (types): `TestDbName`
   - Exports (values):

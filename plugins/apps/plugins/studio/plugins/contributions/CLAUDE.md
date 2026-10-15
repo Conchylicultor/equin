@@ -28,6 +28,14 @@
     - `primitives/loading.Loading`
     - `primitives/search.SearchInput`
     - `ui/icons.Icon`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/density --space-2xl`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-medium`
 - Sub-plugins:
   - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
 

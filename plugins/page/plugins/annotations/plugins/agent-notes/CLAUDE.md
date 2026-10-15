@@ -85,6 +85,10 @@ without being in it.
   - Exports (values):
     - `agentNotesBlock`
     - `agentNotesDataSchema`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --info`
+    - `ui/tokens/shape --radius`
 - Sub-plugins:
   - **`agent-page`** — Agent-authored pages in the page editor: a sub-page whose data marks it `author: "agent"` is tinted with the agent-notes wash wherever it is referenced (its row in the parent page, the Pages…
   - **`authorship`** — Reads an agent-authored block's authorship (useAgentNotesAuthors, and useAgentNotesCreator for the first writer) and renders it as the card's provenance popover — one row per contributing…

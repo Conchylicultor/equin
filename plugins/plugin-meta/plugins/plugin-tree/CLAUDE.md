@@ -105,6 +105,7 @@ dynamic value.
     - `buildStructureTreeOnce`
     - `resolvePluginSpecifier`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by:
     - `framework/tooling/boundaries`
     - `framework/tooling/checks`

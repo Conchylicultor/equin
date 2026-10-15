@@ -264,6 +264,9 @@ the outcome too, with no separate code path.
     - `SlotItemLayout`
     - `useDispatchOutcome`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/density --control-height-sm`
+    - `ui/tokens/shape --spacing`
   - Imported by: 80 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×25
     - `conversations` ×13

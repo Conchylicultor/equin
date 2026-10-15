@@ -103,6 +103,20 @@ theme CSS, so they render on a bare page as well as in the app.
     - `Sparkline`
     - `TimeChart`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --card`
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --faint-foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --ring`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-caption`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-caption`
   - Imported by: `primitives/metrics`
 - Core:
   - Exports (types):

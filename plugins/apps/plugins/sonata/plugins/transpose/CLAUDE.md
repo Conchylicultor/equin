@@ -98,6 +98,17 @@ semitones (±12), surfaced as a toolbar popover and remembered per song.
   - Exports (values): `songTranspose`
   - Resources: `sonata-transpose:rows` (keyed, point)
   - Routes: `POST /api/sonata/songs/:id/transpose`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-foreground`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-3xs`
+    - `ui/tokens/type-scale --font-weight-bold`
+    - `ui/tokens/type-scale --line-height-3xs`
 - Exemptions:
   - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/actions.ts` (sanctioned)
 

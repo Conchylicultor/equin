@@ -89,6 +89,20 @@ host owns its own inset, through `className`.
     - `CLASSIC_SYMBOL_NAMES`
     - `symbolNameForClassic`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --accent`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --ring`
+    - `ui/tokens/density --space-2xl`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-3xs`
+    - `ui/tokens/type-scale --line-height-3xs`
   - Imported by:
     - `apps/places/tag-manager`
     - `fields/avatar/config`

@@ -23,6 +23,8 @@ is bounded by construction.
 ## Plugin reference
 
 - Description: Trigger coalescer: createCoalescer / createKeyedCoalescer run a reaction at most once at a time per key and fold every trigger that lands mid-run into ONE trailing run (its items merged), so however many triggers arrive the work is bounded to one running plus one pending per key — and a trigger never joins a run that started before it.
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
 - Core:
   - Exports (types):
     - `Coalescer`

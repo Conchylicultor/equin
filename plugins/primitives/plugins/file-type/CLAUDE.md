@@ -61,6 +61,9 @@ fileTypeOf("src/index.ts");
     - `fileTypeOf`
     - `FOLDER_COLOR`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/file-type-palette --folder`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/file-explorer/browser`
     - `primitives/file-viewer`

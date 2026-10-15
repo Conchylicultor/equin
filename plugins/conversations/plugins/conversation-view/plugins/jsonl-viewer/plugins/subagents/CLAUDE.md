@@ -521,6 +521,19 @@ downstream can widen the set, because nothing downstream resolves one.
     - `workflowRunIdOf`
     - `workflowRunsOf`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/categorical --categorical-6`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-caption`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-caption`
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `conversations/conversation-view/running-agents`

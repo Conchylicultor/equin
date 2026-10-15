@@ -229,6 +229,7 @@ is recomputed in `onReady`.
     - `RollupVia`
   - Exports (values): `defineRollup`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by:
     - `conversations/agents`
     - `database`

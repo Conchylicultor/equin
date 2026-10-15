@@ -128,6 +128,21 @@ The pages sidebar filters and groups by it with no tags code of its own.
     - `tagKey`
     - `TagNameSchema`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --popover`
+    - `ui/tokens/color-palette --ring`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-caption`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-caption`
   - Imported by:
     - `apps/pages/page-tags`
     - `page/annotations/agent-access`

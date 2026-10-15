@@ -71,6 +71,10 @@ minutes for one known problem.
 - Server:
   - Contributes: `report-kind` "live-state-stale-drop"
   - Uses: `reports.ReportKind`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/font-family --font-mono`
 - Core:
   - Exports (types): `LiveStateStaleDropPayload`
   - Exports (values):

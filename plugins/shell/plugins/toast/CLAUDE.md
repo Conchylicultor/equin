@@ -21,6 +21,11 @@
     - `ToastVariant`
   - Exports (values): `showToast`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --popover`
+    - `ui/tokens/color-palette --popover-foreground`
+    - `ui/tokens/shape --radius`
   - Imported by:
     - `apps/chord/curriculum`
     - `apps/chord/trainer`

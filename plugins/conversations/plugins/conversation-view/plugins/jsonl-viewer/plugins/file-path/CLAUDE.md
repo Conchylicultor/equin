@@ -20,6 +20,14 @@
     - `FilePath`
     - `toRelativePath`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-2xs`
+    - `ui/tokens/type-scale --line-height-2xs`
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
     - `conversations/conversation-view/jsonl-viewer/attachment/directory-listing`

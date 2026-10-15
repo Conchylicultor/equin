@@ -451,6 +451,20 @@ navigation, so it starts from nothing remembered.
     - `useWindowSize`
     - `VersionStepper`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/color-palette --ring`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `active-data/prototype`
     - `apps/prototypes/compare`

@@ -29,6 +29,12 @@ The value is the `allowFiles` live value (`allow-files`, params `{ id }` — the
     - `network/live.serveValue`
     - `tasks/tasks-core.getConversation`
   - Resources: `allow-files` (push, notified)
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-semibold`
 - Exemptions:
   - Exempts itself from: `no-db-backed-notify` — `server/internal/allow-files-resource.ts` (debt)
 - Shared:

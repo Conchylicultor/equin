@@ -23,6 +23,10 @@ no-provider default is `md`.
   - Exports (types): `BouncingDotsProps`
   - Exports (values): `BouncingDots`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/deploy/deployments`
     - `apps/deploy/remote-deploy`

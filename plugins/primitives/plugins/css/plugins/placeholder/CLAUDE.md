@@ -10,6 +10,15 @@
   - Exports (types): `PlaceholderProps`
   - Exports (values): `Placeholder`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-body`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-body`
   - Imported by: 82 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×27
     - `debug` ×18

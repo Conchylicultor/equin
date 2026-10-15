@@ -40,6 +40,26 @@ disagreeing is the design, not drift.
     - `tasks/task-detail.TaskDetailSlots`
     - `tasks/task-status.STATUS_META`
     - `ui/icons.Icon`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/categorical --categorical-1`
+    - `ui/tokens/categorical --categorical-2`
+    - `ui/tokens/categorical --categorical-3`
+    - `ui/tokens/categorical --categorical-4`
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --destructive-foreground`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-foreground`
+    - `ui/tokens/shadow --shadow-sm`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-caption`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-caption`
 - Exemptions:
   - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/components/task-graph.tsx` (sanctioned)
 

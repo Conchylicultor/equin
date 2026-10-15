@@ -152,6 +152,24 @@ unbounded.
     - `savedBootTraceFields`
     - `SavedBootTraceSchema`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/categorical --categorical-1`
+    - `ui/tokens/categorical --categorical-2`
+    - `ui/tokens/categorical --categorical-3`
+    - `ui/tokens/categorical --categorical-4`
+    - `ui/tokens/categorical --categorical-5`
+    - `ui/tokens/categorical --categorical-6`
+    - `ui/tokens/categorical --categorical-7`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-2xl`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by: `debug/trace/client-boot`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)

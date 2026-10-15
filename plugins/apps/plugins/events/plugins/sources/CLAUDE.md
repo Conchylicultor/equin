@@ -227,6 +227,9 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `useEventSourceType`
     - `useEventSourceTypes`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `active-data/event-source`
     - `apps/events/sources/refresh-all`

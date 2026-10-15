@@ -81,6 +81,7 @@ header content inside is a `<Frame>`.
     - `Overlay`
     - `OverlayInteractive`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/browser/webview`
     - `apps/chord/trainer`

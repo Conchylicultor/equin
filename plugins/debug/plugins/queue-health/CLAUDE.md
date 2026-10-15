@@ -474,6 +474,16 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `QueueWedgedPayloadSchema`
     - `stuckHoldMs`
     - `waitTone`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from:
     - `timer/no-unlisted-timer` — `server/internal/watchdog.ts` (sanctioned)

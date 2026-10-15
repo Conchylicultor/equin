@@ -189,6 +189,11 @@ the code:
     - `Theme`
     - `useEnclosingAppThemeScope`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/sidebar-palette --sidebar`
+    - `ui/tokens/sidebar-palette --sidebar-accent`
   - Imported by:
     - `apps-core/app-launcher`
     - `apps-core/app-rail`

@@ -13,6 +13,10 @@
     - `ui/icons.Icon`
   - Exports (values): `QueuedPromptCard`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/attachment/queued-command`
     - `conversations/conversation-view/jsonl-viewer/queue-operation`

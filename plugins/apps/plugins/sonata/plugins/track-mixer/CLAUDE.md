@@ -169,6 +169,22 @@ plus a per-song reset.
   - Exports (types): `TrackViewRow`
   - Exports (values): `TrackViewRowSchema`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --popover`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/density --control-height-sm`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shadow --shadow-lg`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `apps/sonata/audio/engine`
     - `apps/sonata/notation`

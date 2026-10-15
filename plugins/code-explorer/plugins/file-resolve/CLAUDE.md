@@ -32,6 +32,13 @@ A path that names an existing file answers `exact` with where its bytes live: `g
     - `infra/paths.HOME_DIR`
   - Routes: `GET /api/code/:worktree/resolve`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-medium`
   - Imported by: `conversations/conversation-view/code/file-pane`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-resolved-file.ts` (debt)

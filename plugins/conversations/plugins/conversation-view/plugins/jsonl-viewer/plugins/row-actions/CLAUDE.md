@@ -89,6 +89,14 @@ event kind — that is the standard gate, not a filter on the slot.
     - `RowActionButton`
     - `rowActionClass`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --accent`
+    - `ui/tokens/color-palette --accent-foreground`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations/conversation-view/fork-session`
     - `conversations/conversation-view/jsonl-viewer`

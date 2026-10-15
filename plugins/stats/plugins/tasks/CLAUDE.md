@@ -31,6 +31,12 @@
   - Routes:
     - `GET /api/stats/tasks/cumulative`
     - `GET /api/stats/tasks/daily`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/components/tasks-cumulative-chart.tsx`, `web/components/tasks-velocity-chart.tsx` (debt)
 - Shared:

@@ -46,6 +46,7 @@ hide itself based on conversation state.
     - `ui/icons.Icon`
   - Exports (values): `ExitMenu`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations/conversation-view/drop-and-exit`
     - `conversations/conversation-view/drop-dependents`

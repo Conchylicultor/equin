@@ -367,6 +367,16 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `sentinelVitals`
     - `SentinelVitalsSchema`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by: `debug/timeline`
 - Exemptions:
   - Exempts itself from: `detached-work-safety/no-raw-set-interval` — `server/internal/worker/entry.ts` (sanctioned)

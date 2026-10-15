@@ -54,6 +54,8 @@ previous block, and it deserves its own row (and its own `destructive` badge).
 - Server:
   - Contributes: `report-kind` "caret-flight"
   - Uses: `reports.ReportKind`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/color-palette --muted-foreground`
 - Core:
   - Exports (types): `CaretFlightPayload`
   - Exports (values):

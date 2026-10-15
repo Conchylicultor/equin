@@ -358,6 +358,8 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `useHasLoadErrorUnder`
     - `useRawContributions`
     - `webCollectedDir`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/shadow --shadow`
 - Test helpers:
   - Core: `@plugins/framework/plugins/web-sdk/core/testing`
     - `resetDeferredLoadStateForTests` — TEST-ONLY: reset the module-global deferred-load state to its initial values (empty loaded/failed sets, not-yet-settled) and notify subscribers.

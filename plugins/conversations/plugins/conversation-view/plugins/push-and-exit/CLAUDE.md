@@ -47,6 +47,16 @@
     - `mcpTool('exit_clean')`
     - `mcpTool('flag_raise')`
   - Routes: `POST /api/conversations/:id/push-and-exit`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive-solid`
+    - `ui/tokens/color-palette --destructive-solid-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-foreground`
+    - `ui/tokens/color-palette --success-solid`
+    - `ui/tokens/color-palette --success-solid-foreground`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-control-strong`
 - Exemptions:
   - Exempts itself from: `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
 - Shared:

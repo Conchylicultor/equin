@@ -63,6 +63,12 @@ its shape (task-track, task-category, automations).
     - `Tasks`
     - `TasksListView`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-3xs`
+    - `ui/tokens/type-scale --line-height-3xs`
   - Imported by:
     - `tasks/auto-start`
     - `tasks/task-deps-tree`

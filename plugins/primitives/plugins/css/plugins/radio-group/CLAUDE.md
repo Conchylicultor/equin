@@ -47,6 +47,8 @@ component-named `<Input>` flow through.
     - `RadioGroupProps`
     - `RadioOption`
   - Exports (values): `RadioGroup`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/color-palette --primary`
 - Exemptions:
   - Exempts itself from: `radio/no-adhoc-radio` — `.` (sanctioned)
   - Exempted by: `primitives/css/radio-group` (0 debt)

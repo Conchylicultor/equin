@@ -4847,6 +4847,13 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `xmlTextContentLength`
     - `xmlTextToRuns`
 - Cross-plugin:
+  - Uses tokens: 29 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/color-palette` ×11
+    - `ui/tokens/type-scale` ×9
+    - `ui/tokens/density` ×5
+    - `ui/tokens/shape` ×2
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shadow --shadow`
   - Imported by: 75 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `page` ×57
     - `apps` ×8

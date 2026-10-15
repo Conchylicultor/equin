@@ -189,6 +189,7 @@ rendered chip out of a read surface puts the token back on the clipboard.
   - Exports (types): `InlineChipFields`
   - Exports (values): `inlineChipNode`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `active-data`
     - `active-data/id-chip`

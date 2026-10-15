@@ -43,6 +43,10 @@ via `FieldRenderer` — nested `objectField` instances recurse automatically.
     - `objectField`
     - `objectSample`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/surface/floating/wallpaper`
     - `config_v2`

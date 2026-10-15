@@ -47,6 +47,7 @@ stays zod-only: no React, no server code.
     - `reports.ReportKind`
     - `reports.ReportRow`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `framework/tooling/checks`
 - Core:
   - Exports (types):

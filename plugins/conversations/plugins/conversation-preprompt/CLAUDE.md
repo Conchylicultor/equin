@@ -82,6 +82,11 @@ never the reverse) and the feature fully opt-in and removable.
     - `recordPrepromptJob`
   - Register: `defineJob('conversation-preprompt.record')`
   - Resources: `conversation-preprompts:rows` (keyed, point)
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
 - Shared:
   - Exports (types):
     - `ConversationPreprompt`

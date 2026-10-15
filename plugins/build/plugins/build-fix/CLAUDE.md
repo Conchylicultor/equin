@@ -15,6 +15,8 @@
     - `primitives/css/ui-kit.Button`
     - `primitives/launch.LaunchAgentPopover`
     - `ui/icons.Icon`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/components/build-fix-section.tsx` (debt)
 

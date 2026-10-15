@@ -28,6 +28,12 @@
     - `ReadoutKeyboard`
     - `useReadoutPlane`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/chord-palette --chord-outside`
+    - `ui/tokens/color-palette --accent`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/sonata/rich/chord-list`
     - `apps/sonata/rich/chord-readout`

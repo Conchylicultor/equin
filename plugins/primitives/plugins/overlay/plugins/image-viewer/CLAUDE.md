@@ -181,6 +181,13 @@ handler, the `?` sheet and the button tooltips all read.
     - `useImageViewerTrigger`
     - `ViewerThumbnail`
 - Cross-plugin:
+  - Uses tokens: 24 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/color-palette` ×9
+    - `ui/tokens/density` ×6
+    - `ui/tokens/shadow` ×3
+    - `ui/tokens/type-scale` ×3
+    - `ui/tokens/shape` ×2
+    - `ui/tokens/font-family --font-mono`
   - Imported by:
     - `apps/pages/page-tree`
     - `conversations/conversation-view/artifacts/screenshot`

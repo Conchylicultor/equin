@@ -48,6 +48,24 @@
     - `ToolCallFrame`
     - `ToolNameLabel`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/density --pad-tool-badge-x`
+    - `ui/tokens/density --pad-tool-badge-y`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --border-tool-badge`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --radius-tool-badge`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-tag`
+    - `ui/tokens/type-scale --font-weight-tag`
+    - `ui/tokens/type-scale --font-weight-tag-strong`
+    - `ui/tokens/type-scale --line-height-tag`
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`

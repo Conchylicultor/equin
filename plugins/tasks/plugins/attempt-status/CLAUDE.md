@@ -35,6 +35,12 @@ Two stylings look under-done and must stay that way:
     - `AttemptStatusBadge`
     - `attemptStatusLabel`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --info`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `active-data/attempt`
     - `active-data/task`

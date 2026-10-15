@@ -46,6 +46,7 @@
     - `useFlushAll`
     - `useRegisterFlush`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/density --space-lg`
   - Imported by:
     - `active-data/task`
     - `active-data/task-link`

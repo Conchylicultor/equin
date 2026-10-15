@@ -106,6 +106,13 @@ top-level and untouched by this; only the Studio UI lives here.
     - `primitives/pane.defineRoute`
   - Exports (values): `releaseDetailRoute`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/studio/compositions/release/release-artifact`
     - `apps/studio/compositions/release/release-info`

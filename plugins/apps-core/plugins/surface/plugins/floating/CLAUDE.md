@@ -154,6 +154,13 @@ last desktop creates a new one; moving before the first clamps).
     - `config_v2.defineConfig`
     - `fields/bool/config.boolField`
   - Exports (values): `floatingChromeConfig`
+- Cross-plugin:
+  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/color-palette` ×8
+    - `ui/tokens/density` ×5
+    - `ui/tokens/shadow` ×4
+    - `ui/tokens/type-scale` ×4
+    - `ui/tokens/shape` ×2
 - Sub-plugins:
   - **`wallpaper`** — Floating desktop wallpaper: the Wallpaper.Provider source registry, the picker dialog + shared search panel, the desktop right-click context menu, the corner attribution credit, and the global…
 

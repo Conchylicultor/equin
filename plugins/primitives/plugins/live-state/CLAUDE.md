@@ -1159,6 +1159,10 @@ keeps every row's identity rather than re-minting each moved row.
     - `useResourceContractMismatches`
     - `useResources`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/shadow --shadow`
+    - `ui/tokens/shape --spacing`
   - Imported by: 235 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×66
     - `conversations` ×40

@@ -13,6 +13,9 @@
   - Exports (types): `FilepathBreadcrumbProps`
   - Exports (values): `FilepathBreadcrumb`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
   - Imported by:
     - `conversations/conversation-view/code/file-pane`
     - `primitives/file-viewer`

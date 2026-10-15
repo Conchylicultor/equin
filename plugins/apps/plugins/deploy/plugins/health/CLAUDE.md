@@ -102,6 +102,16 @@ verdict is loading, and the SSH-setup card seeds open.
     - `POST /api/deploy/servers/:id/ssh-check`
     - `POST /api/deploy/servers/:id/forget-host-key`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/deployments`

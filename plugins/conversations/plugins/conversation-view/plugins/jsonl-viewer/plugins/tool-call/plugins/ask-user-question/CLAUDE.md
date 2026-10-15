@@ -115,6 +115,23 @@ answer lives inside the tool result, not in a message a rewind can cut at.
     - `POST /api/conversations/:id/answer-question`
     - `POST /api/conversations/:id/flush-question`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --info`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-3xs`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --line-height-3xs`
   - Imported by: `conversations/question-relay`
 - Exemptions:
   - Exempts itself from: `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)

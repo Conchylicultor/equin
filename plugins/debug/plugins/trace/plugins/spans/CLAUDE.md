@@ -60,6 +60,27 @@ flagged orphan roots (evicted <5 ms parent, or a detached child).
 - Server:
   - Contributes: `trace-event-class` "spans"
   - Uses: `debug/trace/engine.defineTraceEventClass`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/categorical --categorical-1`
+    - `ui/tokens/categorical --categorical-2`
+    - `ui/tokens/categorical --categorical-3`
+    - `ui/tokens/categorical --categorical-4`
+    - `ui/tokens/categorical --categorical-5`
+    - `ui/tokens/categorical --categorical-6`
+    - `ui/tokens/categorical --categorical-7`
+    - `ui/tokens/categorical --categorical-8`
+    - `ui/tokens/categorical --categorical-9`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-semibold`
 - Exemptions:
   - Exempts itself from: `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
 

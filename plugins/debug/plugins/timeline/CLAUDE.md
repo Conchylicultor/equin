@@ -183,6 +183,25 @@ curl -s 'http://<wt>.localhost:9000/api/debug/timeline?fromMs=…&toMs=…'
     - `primitives/log-channels.readChannelJson`
   - Register: `mcpTool('get_timeline')`
   - Routes: `GET /api/debug/timeline`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/categorical --categorical-1`
+    - `ui/tokens/categorical --categorical-2`
+    - `ui/tokens/categorical --categorical-3`
+    - `ui/tokens/categorical --categorical-4`
+    - `ui/tokens/categorical --categorical-5`
+    - `ui/tokens/categorical --categorical-6`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-medium`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-timeline-stream.ts` (debt)
 - Core:

@@ -57,6 +57,11 @@ needing a DOM handle wraps `<Tab>` in its own element.
   - Exports (types): `TabProps`
   - Exports (values): `tabBarConfig`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/surface/floating`
     - `apps-core/tab-bar`

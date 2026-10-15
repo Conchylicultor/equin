@@ -24,6 +24,8 @@
     - `tasks/tasks-core.getConversation`
     - `tasks/tasks-core.markConversationClosed`
   - Routes: `POST /api/conversations/:id/drop-dependents`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
 - Shared:
   - Exports (values): `dropDependents`
 

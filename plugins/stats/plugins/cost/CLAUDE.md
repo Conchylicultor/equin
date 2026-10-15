@@ -247,6 +247,26 @@ override where it survives.
     - `GET /api/stats/cost/distribution`
     - `GET /api/stats/cost/avg-per-conversation`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-body`
+    - `ui/tokens/type-scale --font-size-caption`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-body`
+    - `ui/tokens/type-scale --line-height-caption`
   - Imported by: `conversations/usage`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/components/avg-cost-per-conversation-chart.tsx`, `web/components/cost-distribution-chart.tsx`, `web/components/cost-kpis.tsx`, `web/components/cumulative-cost-chart.tsx`, `web/components/daily-cost-chart.tsx`, `web/components/model-usage-chart.tsx`, `web/components/token-mix-chart.tsx`, `web/components/top-conversations-table.tsx` (debt)

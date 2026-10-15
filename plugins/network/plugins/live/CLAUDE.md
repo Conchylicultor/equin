@@ -1853,6 +1853,7 @@ never add one.
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 228 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×67
     - `conversations` ×36

@@ -84,6 +84,19 @@ directly — it is no longer re-exported here.)
     - `ConvTitle`
     - `Item`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --faint-foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/sidebar-metrics --sidebar-icon-gap`
+    - `ui/tokens/sidebar-metrics --sidebar-icon-size`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-2xs`
+    - `ui/tokens/type-scale --line-height-2xs`
   - Imported by:
     - `active-data/conv`
     - `conversations/agents`

@@ -22,7 +22,8 @@ function pushUnique(
  * Build the hard/soft cross-plugin dependency graph from facet data already
  * serialized into the tree. Pure and browser-safe — reads only `node.facets`.
  *
- * Hard edges come from `cross-refs.apiUses` imports, unioned across the runtimes
+ * Hard edges come from `cross-refs.apiUses` imports and `cross-refs.tokenUses`
+ * (styling with a token another plugin's group supplies — see below). Imports are unioned across the runtimes
  * that SHIP (`SHIPPED_RUNTIME_FOLDERS` — the deployed app's own folders; `e2e`,
  * `provision` and `cli` are developer surfaces and are not reasons to bundle
  * anything), self-edges dropped — precise & nested-aware after the cross-refs
@@ -88,6 +89,28 @@ export function classifyEdges(tree: PluginTree): EdgeGraph {
     }
   }
 
+  // ── Hard edges from token use: P paints with a var G's token group supplies ─
+  //
+  // The var exists on the page only once G's `web/` registers the group, and
+  // nothing imports that half: a Tailwind class or a `var(--x)` names the token,
+  // not the plugin. As an import-less dependency it used to drop out of every
+  // served bundle unless hand-listed in `served-baseline` (equin.ai shipped
+  // blank app tiles and an unpainted headline that way). Deriving it here makes
+  // the bundle carry every group its members paint with, by construction.
+  const viaImport = new Set<string>();
+  for (const [from, tos] of hardForward)
+    for (const to of tos) viaImport.add(`${from}\0${to}`);
+  for (const node of tree.byDir.values()) {
+    const crossRefs = getFacet(node, crossRefsFacetDef);
+    if (!crossRefs) continue;
+    for (const use of crossRefs.tokenUses) {
+      if (use.plugin === node.id) continue; // self-edge
+      if (!hardForward.has(use.plugin)) continue; // unknown target — inert
+      pushUnique(hardForward, node.id, use.plugin);
+      pushUnique(hardReverse, use.plugin, node.id);
+    }
+  }
+
   // ── Soft edges: slot-group ownership × static contributions ───────────
   // groupName → owning PluginId. Skip `_runtimeOnly` slots; first-writer-wins.
   const groupOwner = new Map<string, PluginId>();
@@ -120,7 +143,13 @@ export function classifyEdges(tree: PluginTree): EdgeGraph {
   // ── Derived flat edge list ────────────────────────────────────────────
   const edges: Edge[] = [];
   for (const [from, tos] of hardForward)
-    for (const to of tos) edges.push({ from, to, kind: "hard" });
+    for (const to of tos)
+      edges.push({
+        from,
+        to,
+        kind: "hard",
+        via: viaImport.has(`${from}\0${to}`) ? "import" : "token",
+      });
   for (const [from, tos] of softForward)
     for (const to of tos) edges.push({ from, to, kind: "soft" });
 

@@ -332,6 +332,10 @@ torch.
     - `infra/deps/updates.upgradeThisWorktree`
     - `infra/jobs/supervised-job.cliExecContext`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/chord/song-index`
     - `apps/prototypes/thumbnails`

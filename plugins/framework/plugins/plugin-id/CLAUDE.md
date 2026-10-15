@@ -6,6 +6,7 @@
 
 - Description: Canonical plugin identity: the branded PluginId type and its derived path encodings.
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `framework/tooling/boundaries`
     - `framework/tooling/codegen`

@@ -57,6 +57,11 @@ hand-rolled its own checkmarks.
     - `PickerPillValueProps`
   - Exports (values): `PickerPill`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --accent`
+    - `ui/tokens/color-palette --accent-foreground`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `tasks/auto-start/launch-option`
     - `tasks/launch-options`

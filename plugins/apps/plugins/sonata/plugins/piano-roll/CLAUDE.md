@@ -75,6 +75,18 @@ bar).
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/categorical --categorical-3`
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/shadow --shadow-sm`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-3xs`
+    - `ui/tokens/type-scale --line-height-3xs`
   - Imported by:
     - `apps/sonata/piano-roll/fx-comets`
     - `apps/sonata/piano-roll/fx-core`

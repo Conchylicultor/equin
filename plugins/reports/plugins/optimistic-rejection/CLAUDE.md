@@ -51,6 +51,10 @@ re-arms every 6h, like `optimistic-divergence`.
 - Server:
   - Contributes: `report-kind` "optimistic-rejection"
   - Uses: `reports.ReportKind`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/font-family --font-mono`
 - Core:
   - Exports (types): `OptimisticRejectionPayload`
   - Exports (values):

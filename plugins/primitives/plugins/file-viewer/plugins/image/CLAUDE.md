@@ -16,6 +16,8 @@
     - `primitives/overlay/image-viewer.MissingImage`
     - `primitives/overlay/image-viewer.useImageLoad`
     - `primitives/overlay/image-viewer.ViewerImage`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/density --space-lg`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-folder-images.ts` (debt)
 

@@ -33,6 +33,15 @@
     - `TranscriptStats`
     - `useTranscriptRead`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --measure-reading`
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/transcript-stats/token-budget`
     - `conversations/conversation-view/jsonl-viewer/transcript-stats/usage`

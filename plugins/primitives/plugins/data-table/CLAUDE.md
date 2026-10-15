@@ -268,6 +268,11 @@ Verified in Chromium only (the e2e harness drives Chromium).
     - `DATA_TABLE_VIRTUALIZE_THRESHOLD`
     - `DataTable`
 - Cross-plugin:
+  - Uses tokens: 27 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/type-scale` ×11
+    - `ui/tokens/color-palette` ×8
+    - `ui/tokens/density` ×6
+    - `ui/tokens/shape` ×2
   - Imported by:
     - `apps/studio/contributions`
     - `apps/studio/contributions/tables/columns`

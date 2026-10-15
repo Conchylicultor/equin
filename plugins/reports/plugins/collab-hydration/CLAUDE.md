@@ -61,6 +61,8 @@ recovery is a safety net, and the structural fix is tracked separately.
 - Server:
   - Contributes: `report-kind` "collab-hydration"
   - Uses: `reports.ReportKind`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/color-palette --muted-foreground`
 - Core:
   - Exports (types): `CollabHydrationPayload`
   - Exports (values):

@@ -137,6 +137,10 @@ pads sit on the paper lane rather than floating over it as an unrelated dark gri
     - `Keyboard`
     - `useSonataKeySkin`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/shadow --shadow`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/chord/piano`
     - `apps/sonata/piano-keyboard`

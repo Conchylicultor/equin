@@ -80,6 +80,7 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
 
 - Description: Canonical namespace identity: the branded Namespace type, the <composition>.<checkout> elision rule that mints one, and the URL/host encodings derived from it.
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `build`
     - `framework/tooling/codegen`

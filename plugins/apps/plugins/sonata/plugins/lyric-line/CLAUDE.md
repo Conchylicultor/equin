@@ -40,6 +40,12 @@
     - `lyricLines`
     - `sameActiveChord`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-bold`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `apps/sonata/chord-chart`
     - `apps/sonata/lyrics-hud`

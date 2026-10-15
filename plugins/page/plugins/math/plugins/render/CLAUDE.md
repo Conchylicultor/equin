@@ -9,6 +9,7 @@
   - Uses: `primitives/lazy-component.lazyComponent`
   - Exports (values): `KatexMath`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/color-palette --destructive`
   - Imported by:
     - `page/math/equation`
     - `page/math/inline`

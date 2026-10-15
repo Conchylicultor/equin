@@ -35,6 +35,7 @@ whole line. The caller owns any open/closed state for the expanded area.
   - Exports (types): `SourceLineProps`
   - Exports (values): `SourceLine`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/density --space-sm`
   - Imported by:
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/sources/ultimate-guitar/alignment`

@@ -47,6 +47,15 @@
     - `reports.recordReport`
     - `reports.ReportKind`
   - Resources: `config-orphans.report` (push, notified)
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
 - Shared:
   - Exports (values): `configOrphansReport`
 

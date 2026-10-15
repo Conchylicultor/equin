@@ -141,6 +141,23 @@ hand-roll a *button* inside the body. It just has no card to own.
     - `DataCardProps`
     - `GalleryViewOptions`
   - Exports (values): `DataCard`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/color-palette --ring`
+    - `ui/tokens/density --chrome-pad-x`
+    - `ui/tokens/density --pad-card`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xl`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-semibold`
 - Core:
   - Exports (types):
     - `CoverContent`

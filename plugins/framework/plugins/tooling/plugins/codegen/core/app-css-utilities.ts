@@ -1,4 +1,5 @@
 import { join } from "path";
+import { APP_STYLESHEET_PATH } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 
 /**
  * The one parser for app.css's `@utility` surface, shared by every generator
@@ -10,17 +11,13 @@ import { join } from "path";
  * generators exist to close, reintroduced one layer up. So the scan lives here
  * once.
  *
- * Both helpers read the file by PATH via `fs` — a generator must NOT statically
- * import the ui-kit plugin (an illegal framework→primitives cross-plugin edge),
- * which is also why the path constant lives here rather than being passed in.
+ * Both helpers read the file by PATH via `fs`; the path is ui-kit's own
+ * (`APP_STYLESHEET_PATH`, plain data in its `core`).
  */
-
-const APP_CSS_REL_PATH =
-  "plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css";
 
 /** Path to the app.css source every derived manifest reads. */
 export function appCssPath(root: string): string {
-  return join(root, APP_CSS_REL_PATH);
+  return join(root, APP_STYLESHEET_PATH);
 }
 
 /**

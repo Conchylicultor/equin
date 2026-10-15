@@ -60,8 +60,9 @@ export interface TokenGroupDescriptor<
   }): TokenGroupFragment<T>;
 }
 
-function camelToKebab(str: string): string {
-  return str.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+/** The CSS custom property a token-group schema key paints: `--` + its kebab case. */
+export function tokenVarName(key: string): string {
+  return `--${key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)}`;
 }
 
 export function defineTokenGroup<T extends TokenGroupSchema>(
@@ -70,7 +71,7 @@ export function defineTokenGroup<T extends TokenGroupSchema>(
 ): TokenGroupDescriptor<T> {
   const vars = {} as Record<string, string>;
   for (const key of Object.keys(schema)) {
-    vars[key] = `--${camelToKebab(key)}`;
+    vars[key] = tokenVarName(key);
   }
   return {
     id,

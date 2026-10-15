@@ -40,6 +40,13 @@
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/density --chrome-pad-x`
+    - `ui/tokens/density --pad-row-x`
+    - `ui/tokens/density --pad-row-y`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/sidebar-palette --sidebar-border`
   - Imported by:
     - `conversations/conversations-view`
     - `conversations/conversations-view/data-view/history`

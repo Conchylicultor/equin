@@ -49,6 +49,7 @@ the slot; it registers no instrument itself.
     - `ScheduledNote`
   - Exports (values): `SonataAudio`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/chord/piano`
     - `apps/sonata/audio/engine`

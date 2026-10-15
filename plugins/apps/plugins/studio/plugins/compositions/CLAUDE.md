@@ -150,6 +150,14 @@ are no per-interaction round-trips.
     - `compositionDetailRoute`
     - `compositionsRoute`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/studio/compositions/closure-tree`
     - `apps/studio/compositions/contributors`

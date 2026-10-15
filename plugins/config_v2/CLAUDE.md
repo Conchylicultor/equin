@@ -492,6 +492,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `validationIssues`
     - `withOverrideLegend`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 104 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×23
     - `debug` ×14

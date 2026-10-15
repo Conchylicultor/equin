@@ -70,6 +70,13 @@
     - `useProfilingContext`
     - `WaitWorkRow`
 - Cross-plugin:
+  - Uses tokens: 21 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/type-scale` ×7
+    - `ui/tokens/color-palette` ×6
+    - `ui/tokens/density` ×4
+    - `ui/tokens/shape` ×2
+    - `ui/tokens/categorical --categorical-4`
+    - `ui/tokens/font-family --font-mono`
   - Imported by:
     - `build/build-profiling`
     - `debug/boot-profile`

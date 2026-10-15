@@ -47,6 +47,8 @@ tuples that read the join.
   - Entity extension of: `apps/sonata/library` (table `library_ext_playback`)
   - Exports (values): `songPlayback`
   - Routes: `POST /api/sonata/songs/:id/play`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/components/record-play-observer.tsx` (sanctioned)
 

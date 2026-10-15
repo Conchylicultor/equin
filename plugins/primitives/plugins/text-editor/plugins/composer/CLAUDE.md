@@ -65,6 +65,10 @@ The composer names no contributor: a host decides what goes on the bar.
     - `ComposerField`
     - `ComposerRule`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/agent-manager/welcome`
     - `primitives/launch`

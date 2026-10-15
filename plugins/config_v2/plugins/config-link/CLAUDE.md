@@ -78,6 +78,12 @@ and the editor.
     - `ConfigSelectContent`
     - `useConfigLink`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-3xs`
+    - `ui/tokens/type-scale --line-height-3xs`
   - Imported by:
     - `backup`
     - `conversations/conversation-preprompt`

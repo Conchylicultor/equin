@@ -104,6 +104,27 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `POST /api/events-test/superseded`
     - `POST /api/events-test/queue-saturate`
     - `POST /api/events-test/detached-sleep`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --info`
+    - `ui/tokens/color-palette --info-foreground`
+    - `ui/tokens/color-palette --input`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xl`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-body`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-body`
 - Exemptions:
   - Exempts itself from:
     - `jobs:no-raw-addjob` — `server/internal/cron-dedup.ts` (sanctioned)

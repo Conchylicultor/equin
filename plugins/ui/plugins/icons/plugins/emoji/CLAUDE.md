@@ -52,6 +52,11 @@ An emoji as a stored value, and the picker that picks one — the sibling of
 - Server:
   - Uses: `infra/asset-mirror.defineAssetMirror`
 - Cross-plugin:
+  - Uses tokens: 22 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/type-scale` ×9
+    - `ui/tokens/color-palette` ×6
+    - `ui/tokens/density` ×5
+    - `ui/tokens/shape` ×2
   - Imported by:
     - `apps/pages/page-tree`
     - `page/editor`

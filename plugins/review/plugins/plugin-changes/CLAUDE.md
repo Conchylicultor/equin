@@ -93,6 +93,19 @@ A push's review is not live: it reads `GET /api/review/plugin-changes` once.
     - `getPluginChanges`
     - `PluginChangesSchema`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --info`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `plugin-meta/facets/contributions/render-diff`
     - `plugin-meta/facets/cross-refs/render-diff`

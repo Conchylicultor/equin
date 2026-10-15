@@ -443,6 +443,7 @@ only agreement that matters.
     - `stageDrizzleOut`
     - `UnjoinedSnapshotTipsError`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `database`
 - Exemptions:
   - Exempts itself from: `imperative-create-table-allowlisted` — `check/imperative-create-table-allowlisted.ts` (sanctioned)

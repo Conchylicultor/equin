@@ -1066,6 +1066,10 @@ See "Open questions" in the design doc.
     - `useSurfaceAppId`
     - `useSyncPaneRegistry`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/density --chrome-pane-pad-end`
+    - `ui/tokens/shape --spacing`
   - Imported by: 170 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×60
     - `conversations` ×29

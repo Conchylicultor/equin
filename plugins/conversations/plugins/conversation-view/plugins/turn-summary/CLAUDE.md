@@ -71,6 +71,17 @@ A persistent global trigger on `conversationTurnCompleted` (installed in this pl
     - `turnSummaries`
   - Register: `defineJob('turn-summary.generate')`
   - Resources: `turn-summaries:rows` (keyed, point)
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --info`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
 - Shared:
   - Exports (types): `TurnSummary`
   - Exports (values):

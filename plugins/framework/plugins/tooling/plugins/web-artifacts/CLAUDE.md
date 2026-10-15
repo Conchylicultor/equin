@@ -217,6 +217,7 @@ Key invariants:
     - `SHARED_ROOT`
     - `WORKER_ASSETS_DIR`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by: `framework/cli/build`
 - Exemptions:
   - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `core/internal/global-css.ts` (sanctioned)

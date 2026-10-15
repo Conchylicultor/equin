@@ -55,6 +55,8 @@ kind's `IdKinds.Presenter` (`useAttemptReferent` / `useAttemptTarget`).
     - `active-data/id-chip.idChipServer`
     - `tasks/tasks-core.getAttempt`
     - `tasks/tasks-core.getTask`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/color-palette --muted-foreground`
 - Core:
   - Exports (values): `ATTEMPT_CHIP_SURFACES`
 

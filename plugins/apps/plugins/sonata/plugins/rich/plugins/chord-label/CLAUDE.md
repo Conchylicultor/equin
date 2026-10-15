@@ -32,6 +32,7 @@ chord overlay and the progression strip so they label chords identically.
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `apps/sonata/chord-chart`
     - `apps/sonata/lyrics-hud`

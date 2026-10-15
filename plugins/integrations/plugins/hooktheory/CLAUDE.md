@@ -221,6 +221,7 @@ nothing calls it in a loop yet.
     - `TrendSongSchema`
     - `trendSongsEndpoint`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/chord/curriculum`
     - `apps/chord/progress`

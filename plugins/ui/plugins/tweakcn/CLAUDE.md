@@ -22,6 +22,21 @@
     - `convertTweakcnTheme`
     - `importTweakcnTheme`
     - `tweakcnPalettePreview`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/font-family --font-sans`
+    - `ui/tokens/font-family --font-serif`
+    - `ui/tokens/font-family --letter-spacing`
+    - `ui/tokens/shadow --shadow`
+    - `ui/tokens/shadow --shadow-2xl`
+    - `ui/tokens/shadow --shadow-2xs`
+    - `ui/tokens/shadow --shadow-lg`
+    - `ui/tokens/shadow --shadow-md`
+    - `ui/tokens/shadow --shadow-sm`
+    - `ui/tokens/shadow --shadow-xl`
+    - `ui/tokens/shadow --shadow-xs`
 - Sub-plugins:
   - **`community-browser`** — The tweakcn community catalog as a browsable theme source (picking a theme saves it as a saved theme), plus a customizer section that imports any tweakcn theme by URL. The tweakcn community catalog…
 

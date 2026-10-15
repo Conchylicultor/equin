@@ -57,6 +57,13 @@
     - `LinkMetaSchema`
     - `linkPreviewEndpoint`
     - `LinkPreviewSchema`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-semibold`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/components/bookmark-block.tsx` (debt)
 

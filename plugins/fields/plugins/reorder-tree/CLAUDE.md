@@ -26,6 +26,7 @@ type means adding a line there (see `reorder/node-types`).
     - `reorderTreeFieldType`
     - `reorderTreeIdentity`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `fields/reorder-tree/config`
     - `framework/tooling/codegen`

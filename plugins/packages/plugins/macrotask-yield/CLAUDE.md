@@ -47,6 +47,7 @@ runtime-neutral `core`.
     - `plugin-meta/barrel-import`
     - `plugin-meta/plugin-refs`
     - `plugin-meta/plugin-tree`
+    - `plugin-meta/token-usage`
 - Core:
   - Exports (values):
     - `createTimeSlicer`

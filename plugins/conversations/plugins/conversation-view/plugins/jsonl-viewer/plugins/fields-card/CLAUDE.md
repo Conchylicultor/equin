@@ -21,6 +21,10 @@ native task-notification row (`TaskNotificationRow`) so the two never diverge.
   - Exports (types): `FieldsCardField`
   - Exports (values): `FieldsCard`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/font-family --font-mono`
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/api-request`
     - `conversations/conversation-view/jsonl-viewer/attachment/queued-command`

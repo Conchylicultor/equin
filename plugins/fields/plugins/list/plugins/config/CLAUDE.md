@@ -59,6 +59,7 @@ external keys** (the DataView `views` list is the example — its ids key
     - `listField`
     - `listSample`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `config_v2`
     - `plugin-meta/composition`

@@ -664,6 +664,12 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `useControlPanelHost`
     - `usePanelStack`
 - Cross-plugin:
+  - Uses tokens: 25 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/color-palette` ×11
+    - `ui/tokens/type-scale` ×7
+    - `ui/tokens/density` ×4
+    - `ui/tokens/shape` ×2
+    - `ui/tokens/shadow --shadow`
   - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×14
     - `page` ×5

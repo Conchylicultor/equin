@@ -83,6 +83,26 @@ descriptor the strip renders without knowing what produced it. Header: the
     - `slowEventsPane`
     - `traceDetailPane`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/categorical --categorical-1`
+    - `ui/tokens/categorical --categorical-2`
+    - `ui/tokens/categorical --categorical-3`
+    - `ui/tokens/categorical --categorical-4`
+    - `ui/tokens/categorical --categorical-5`
+    - `ui/tokens/categorical --categorical-6`
+    - `ui/tokens/categorical --categorical-7`
+    - `ui/tokens/categorical --categorical-8`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/density --space-2xl`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `debug/slow-ops/cluster`
     - `debug/slow-ops/pane`

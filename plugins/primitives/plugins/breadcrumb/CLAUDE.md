@@ -59,6 +59,17 @@ comes back when the trail's slack covers the open run's (cached) width plus a
     - `Breadcrumb`
     - `BreadcrumbSlots`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --strong-foreground`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-body`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --font-weight-semibold`
+    - `ui/tokens/type-scale --line-height-body`
   - Imported by:
     - `apps/pages/page-tree`
     - `plugin-meta/plugin-view`

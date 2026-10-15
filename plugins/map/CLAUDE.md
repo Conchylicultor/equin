@@ -142,6 +142,14 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `MapLabel`
     - `MapView`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-foreground`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shadow --shadow-md`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/places/places-map`
     - `map/google`

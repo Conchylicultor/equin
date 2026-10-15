@@ -448,6 +448,10 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `SHEETSAGE_DUMP_FILES`
     - `sheetSageDumps`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/chord/curriculum`
     - `apps/chord/piano`

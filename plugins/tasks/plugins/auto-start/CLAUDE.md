@@ -43,6 +43,9 @@
     - `defineWarmup('tasks.auto-start-dropped-sweep')`
   - Resources: `tasks-auto-start:rows` (keyed, point)
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations`
     - `tasks`

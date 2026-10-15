@@ -85,6 +85,19 @@ reads what is on screen rather than a per-app flag.
     - `SidebarPaneSection`
     - `useBrandDrawnOn`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/density --chrome-pad-x`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/sidebar-metrics --sidebar-brand-height`
+    - `ui/tokens/sidebar-metrics --sidebar-brand-pad`
+    - `ui/tokens/sidebar-metrics --sidebar-end-pad`
+    - `ui/tokens/sidebar-metrics --sidebar-icon-size`
+    - `ui/tokens/sidebar-metrics --sidebar-rail`
+    - `ui/tokens/sidebar-palette --sidebar`
+    - `ui/tokens/sidebar-palette --sidebar-accent`
+    - `ui/tokens/sidebar-palette --sidebar-foreground`
+    - `ui/tokens/sidebar-palette --sidebar-icon`
   - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×16
     - `conversations` ×2

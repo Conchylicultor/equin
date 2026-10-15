@@ -48,6 +48,7 @@ indicator's `Pin` anchors to this surface's corner, and the app render fills it.
     - `AppTabsBody`
     - `TabSurface`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/layout`
     - `apps-core/surface`

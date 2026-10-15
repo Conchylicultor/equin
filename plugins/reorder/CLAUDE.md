@@ -185,6 +185,15 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `reorderableSlots`
     - `reorderDirectiveDescriptor`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/shadow --shadow-lg`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/app-launcher`
     - `conversations/conversation-view/artifacts`

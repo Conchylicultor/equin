@@ -870,6 +870,10 @@ rendered.
     - `adaptiveBarReportSink`
     - `AdaptiveBarYield`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/tab-bar`
     - `apps/prototypes/canvas`

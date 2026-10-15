@@ -110,6 +110,13 @@ Single source of truth for the models an agent can run, and for what the user as
     - `unavailableMessage`
     - `visibleChoices`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/categorical --categorical-1`
+    - `ui/tokens/categorical --categorical-2`
+    - `ui/tokens/categorical --categorical-4`
+    - `ui/tokens/categorical --categorical-5`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations`
     - `conversations/agents`

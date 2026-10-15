@@ -4531,6 +4531,15 @@
       "name": "@singularity/plugin-plugin-meta-relocate",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/token-usage": {
+      "name": "@singularity/plugin-plugin-meta-token-usage",
+      "version": "0.0.1",
+      "dependencies": {
+        "@tailwindcss/node": "4.2.2",
+        "@tailwindcss/oxide": "4.2.2",
+        "tailwindcss": "4.2.2",
+      },
+    },
     "plugins/primitives": {
       "name": "@singularity/plugin-primitives",
       "version": "0.0.1",
@@ -8785,6 +8794,8 @@
     "@singularity/plugin-plugin-meta-plugin-view-sub-plugins": ["@singularity/plugin-plugin-meta-plugin-view-sub-plugins@workspace:plugins/plugin-meta/plugins/plugin-view/plugins/sub-plugins"],
 
     "@singularity/plugin-plugin-meta-relocate": ["@singularity/plugin-plugin-meta-relocate@workspace:plugins/plugin-meta/plugins/relocate"],
+
+    "@singularity/plugin-plugin-meta-token-usage": ["@singularity/plugin-plugin-meta-token-usage@workspace:plugins/plugin-meta/plugins/token-usage"],
 
     "@singularity/plugin-primitives": ["@singularity/plugin-primitives@workspace:plugins/primitives"],
 

@@ -23,6 +23,8 @@
     - `tasks/tasks-core.markConversationClosed`
     - `tasks/tasks-core.updateTask`
   - Routes: `POST /api/conversations/:id/hold-and-exit`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
 - Shared:
   - Exports (values): `holdAndExit`
 

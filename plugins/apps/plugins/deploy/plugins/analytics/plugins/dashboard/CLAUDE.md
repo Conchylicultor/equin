@@ -124,6 +124,20 @@ Run with `./singularity test plugins/apps/plugins/deploy/plugins/analytics/plugi
     - `DeploymentAnalyticsBodySchema`
     - `DeploymentAnalyticsResultSchema`
     - `queryDeploymentAnalytics`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/chart --chart-1`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --popover`
+    - `ui/tokens/color-palette --popover-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-deployment-analytics.ts` (debt)
 - Test helpers:

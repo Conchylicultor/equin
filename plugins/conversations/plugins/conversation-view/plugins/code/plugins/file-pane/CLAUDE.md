@@ -34,6 +34,10 @@
     - `FilePaneView`
     - `filePeekPane`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
   - Imported by:
     - `conversations/conversation-view/artifacts/research`
     - `conversations/conversation-view/artifacts/skill`

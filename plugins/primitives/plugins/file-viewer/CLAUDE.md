@@ -101,6 +101,14 @@ checkout file.
     - `fileUrl`
     - `isBinaryPath`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/file-explorer/browser`
     - `apps/sonata/sources/midi/file-preview`

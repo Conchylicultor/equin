@@ -315,6 +315,7 @@ run everywhere.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 56 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×10
     - `infra` ×8

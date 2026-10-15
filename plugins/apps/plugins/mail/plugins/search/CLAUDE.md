@@ -84,6 +84,12 @@ composes primitives.
     - `primitives/relative-time.RelativeTime`
     - `primitives/search.SearchInput`
     - `ui/icons.Icon`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/density --space-sm`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-mail-search.ts` (debt)
 

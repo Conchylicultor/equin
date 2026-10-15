@@ -73,6 +73,10 @@ re-alert every 10 minutes for one known problem.
 - Server:
   - Contributes: `report-kind` "optimistic-divergence"
   - Uses: `reports.ReportKind`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/font-family --font-mono`
 - Core:
   - Exports (types): `OptimisticDivergencePayload`
   - Exports (values):

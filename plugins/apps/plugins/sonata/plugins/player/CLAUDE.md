@@ -97,6 +97,12 @@ the scope, so the player cannot import the shell).
     - `SonataPlayerScope`
     - `usePlayerView`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-2xl`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-xl`
   - Imported by:
     - `apps/sonata/chord-chart`
     - `apps/sonata/controls`

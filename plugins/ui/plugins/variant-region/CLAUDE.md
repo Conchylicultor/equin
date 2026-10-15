@@ -34,6 +34,12 @@
     - `VariantRegionFields`
   - Exports (values): `defineVariantRegion`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --radius`
   - Imported by:
     - `apps-core/app-rail-framing`
     - `ui/breadcrumb-separator`

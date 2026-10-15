@@ -119,6 +119,16 @@ Manual check: `scripts/smoke.sh` (needs the dep installed).
     - `infra/deps.defineDep`
     - `infra/deps/python.pythonEnv`
   - Exports (values): `transcriptionDep`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-xl`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
 - Core:
   - Exports (types): `TranscriptionStatus`
   - Exports (values): `TRANSCRIPTION_STATUSES`

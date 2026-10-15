@@ -38,6 +38,21 @@
   - Exports (values): `songSwing`
   - Resources: `sonata-swing:rows` (keyed, point)
   - Routes: `POST /api/sonata/songs/:id/swing`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shadow --shadow-sm`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-2xs`
+    - `ui/tokens/type-scale --font-weight-semibold`
+    - `ui/tokens/type-scale --line-height-2xs`
 - Exemptions:
   - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/actions.ts` (sanctioned)
 - Core:

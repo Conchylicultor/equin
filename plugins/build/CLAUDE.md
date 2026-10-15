@@ -356,6 +356,19 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `serveCompositionEndpoint`
     - `triggerBuildEndpoint`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive-solid`
+    - `ui/tokens/color-palette --destructive-solid-foreground`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --info-solid`
+    - `ui/tokens/color-palette --info-solid-foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --control-gap-sm`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/shape --pill-pad-extra`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `active-data/build-run`
     - `build/build-commits`

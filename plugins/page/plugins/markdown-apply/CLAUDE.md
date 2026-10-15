@@ -555,6 +555,9 @@ annotation in the key would make every status change look like a new block.
     - `subtractNoise`
     - `touchedBlocks`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/shadow --shadow`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `page/annotations/agent-access`
     - `page/annotations/instructions`

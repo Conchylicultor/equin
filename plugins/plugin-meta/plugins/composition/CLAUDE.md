@@ -345,6 +345,7 @@ Run with `./singularity test plugins/plugin-meta/plugins/composition`.
     - `SERVE_MODES`
     - `serveModeLabel`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/composition`

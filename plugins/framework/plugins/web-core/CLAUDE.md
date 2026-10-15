@@ -141,6 +141,14 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
     - `primitives/relative-time.ElapsedTime`
     - `reports.report`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --destructive-foreground`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by: `framework/tooling/web-artifacts`
 - Exemptions:
   - Exempts itself from: `plugin-boundaries` — `web/__tests__/plugin-render.test.tsx` (sanctioned)

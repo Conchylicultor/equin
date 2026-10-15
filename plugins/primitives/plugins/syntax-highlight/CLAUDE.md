@@ -28,6 +28,20 @@
     - `useDarkMode`
     - `useHighlightedHtml`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-caption`
+    - `ui/tokens/type-scale --font-size-code`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-caption`
+    - `ui/tokens/type-scale --line-height-code`
   - Imported by:
     - `config_v2/settings`
     - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`

@@ -45,6 +45,14 @@ padding on the track that a flex direction could reinterpret.
     - `Switch`
     - `SwitchIndicator`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --input`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-foreground`
+    - `ui/tokens/color-palette --ring`
+    - `ui/tokens/shadow --shadow-sm`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/deploy/analytics/dashboard`
     - `apps/events/sources`

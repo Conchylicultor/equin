@@ -163,6 +163,11 @@ over:
     - `MapsBrowserConfigValueSchema`
     - `setMapsBrowserConfig`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/places/place-details`
     - `apps/places/places-core`

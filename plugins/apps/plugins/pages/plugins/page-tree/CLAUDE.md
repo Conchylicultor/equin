@@ -264,6 +264,11 @@ it, so an id means the same thing wherever it is clicked.
     - `pageDetailRoute`
     - `pagesTreeRoute`
 - Cross-plugin:
+  - Uses tokens: 31 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/type-scale` ×12
+    - `ui/tokens/density` ×9
+    - `ui/tokens/color-palette` ×7
+    - `ui/tokens/shape` ×3
   - Imported by:
     - `active-data/page-link`
     - `apps/agent-manager/pages-nav`

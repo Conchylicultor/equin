@@ -136,6 +136,7 @@ built on them — see
     - `useTransport`
     - `wsUrl`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×5
     - `conversations` ×3

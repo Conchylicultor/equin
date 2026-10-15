@@ -39,6 +39,9 @@ pads the whole box (`padComposer`) can drop the row's own inset.
     - `PromptEditor`
     - `PromptEditorSlots`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/density --pad-composer-actions`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations/conversation-view/exit-menu`
     - `conversations/conversation-view/prompt-input`

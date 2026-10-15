@@ -197,6 +197,7 @@ Behavior:
     - `putBinding`
     - `putBindingBodySchema`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `active-data/commit-link`
     - `active-data/go`

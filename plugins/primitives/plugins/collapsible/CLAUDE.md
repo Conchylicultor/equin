@@ -157,6 +157,17 @@ the scroll plugin's CLAUDE.md and the `css:no-unanchored-has` check).
     - `useCollapsibleContext`
     - `useExpandAll`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --accent`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-caption`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-caption`
   - Imported by: 49 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×11
     - `ui` ×9

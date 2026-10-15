@@ -176,6 +176,7 @@ notes through the same scheduler against the same store.
     - `startScheduling`
     - `useAudioGraph`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/sonata/audio/live-play`
     - `apps/sonata/audio/metronome`

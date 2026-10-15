@@ -115,6 +115,13 @@ It must NOT import `tree` or `data-view` — the dependency graph stays a DAG
     - `useRankReorderItem`
     - `useRankSortableItem`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --accent`
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shadow --shadow`
+    - `ui/tokens/shape --radius`
   - Imported by:
     - `primitives/data-view/icons`
     - `primitives/data-view/list`

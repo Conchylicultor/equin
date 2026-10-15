@@ -64,6 +64,16 @@ that settles would stop retrying and would render as a permanent answer.
     - `editedFiles`
     - `EditedFileSchema`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/categorical --categorical-3`
+    - `ui/tokens/categorical --categorical-5`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --info`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
   - Imported by:
     - `code-explorer/code-api`
     - `conversations/conversation-view/code/file-pane`

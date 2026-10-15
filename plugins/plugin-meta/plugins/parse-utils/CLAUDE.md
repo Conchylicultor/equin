@@ -179,6 +179,7 @@ caller**. Omitting `path` keeps the `ts` loader — correct only for `.ts`-only 
     - `walkFiles`
     - `walkFilesAsync`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `framework/tooling/boundaries`
     - `framework/tooling/checks`

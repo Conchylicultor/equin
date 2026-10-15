@@ -36,6 +36,10 @@
     - `POST /api/debug/live-state-emit/start`
     - `POST /api/debug/live-state-emit/stop`
     - `GET /api/debug/live-state-emit/status`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `detached-work-safety/no-raw-set-interval` — `server/internal/emitter.ts` (sanctioned)
 - Core:

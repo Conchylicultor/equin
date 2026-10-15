@@ -63,6 +63,10 @@ fields read.
     - `primitives/pane.useOpenPane`
     - `tasks/task-status.StatusIcon`
     - `ui/icons.Icon`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted-foreground`
 - Core:
   - Exports (types): `DepsTreeRow`
   - Exports (values):

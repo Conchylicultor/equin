@@ -28,6 +28,8 @@
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
 - Shared:
   - Exports (values): `selectionAnswersConfig`
 

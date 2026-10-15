@@ -50,6 +50,9 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
   - Uses: `primitives/pane.defineApp`
   - Exports (values): `eventsApp`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/events/event-list`
     - `apps/events/sources`

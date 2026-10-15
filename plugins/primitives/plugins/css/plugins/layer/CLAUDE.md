@@ -82,6 +82,7 @@ has the vocabulary for it.
     - `Layer`
     - `layerClasses`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/surface/floating`
     - `apps/places/places-map`

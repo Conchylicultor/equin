@@ -41,6 +41,25 @@ Browse Claude Code auto-memory files for the current project. Lists all `.md` fi
   - Resources:
     - `memory.file` (push, notified)
     - `memory.files` (push, notified)
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/categorical --categorical-5`
+    - `ui/tokens/color-palette --info`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xl`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-3xs`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --line-height-3xs`
 - Shared:
   - Exports (types): `MemoryFile`
   - Exports (values):

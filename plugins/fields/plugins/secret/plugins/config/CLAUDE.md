@@ -73,6 +73,10 @@ The **secret** type's config capability, spanning all four runtimes:
     - `secretField`
     - `secretSample`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `auth/google`
     - `auth/notion`

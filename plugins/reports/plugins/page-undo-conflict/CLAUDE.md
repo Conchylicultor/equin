@@ -61,6 +61,8 @@ collector.
 - Server:
   - Contributes: `report-kind` "page-undo-conflict"
   - Uses: `reports.ReportKind`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/color-palette --muted-foreground`
 - Core:
   - Exports (types): `PageUndoConflictPayload`
   - Exports (values):

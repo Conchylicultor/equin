@@ -53,6 +53,15 @@ wraps `FolderPickerPopover`, not the other way around.
     - `FolderPickerPopover`
     - `useHostDir`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/density --space-2xl`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
   - Imported by: `fields/directory-path/config`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-host-dir.ts` (debt)

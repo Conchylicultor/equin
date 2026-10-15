@@ -73,6 +73,13 @@ Two edge kinds, both indexed forward + reverse:
   `cross-refs` facet's per-runtime `apiUses` (unioned across runtimes, self-edges
   dropped; precise & nested-aware). Importing an umbrella's barrel does **not**
   pull its children — the barrel re-exports the umbrella's own symbols.
+  Also `A → B` when A *paints with a token* B's token group supplies
+  (`cross-refs` `tokenUses`: a `var(--x)` or a Tailwind class compiling to one,
+  resolved by [`token-usage`](../token-usage/CLAUDE.md)). Such a var exists on
+  the page only once B's `web/` registers the group, and nothing imports that
+  half — so without this edge a bundle silently ships the class and not the
+  colour. `Edge.via` says which (`"import"` wins when both hold), so an
+  inclusion path can name a token instead of a phantom import.
 - **soft** (prunable) — `A → B` when A *contributes* to a slot **group** B owns.
   Slot ownership comes from the `slots` facet (`groupName`, first-writer-wins,
   `_runtimeOnly` slots skipped); contributions from `contributions.static`
@@ -288,6 +295,7 @@ Run with `./singularity test plugins/plugin-meta/plugins/closure`.
     - `EdgeGraph`
     - `EdgeKind`
     - `EntryPattern`
+    - `HardEdgeVia`
     - `InclusionPath`
     - `InclusionStep`
     - `MembershipState`
@@ -309,6 +317,7 @@ Run with `./singularity test plugins/plugin-meta/plugins/closure`.
     - `resolveComposition`
     - `serializeEdgeGraph`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `framework/tooling/codegen`
     - `plugin-meta/plugin-refs`

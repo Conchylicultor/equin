@@ -138,6 +138,27 @@ color palette.
     - `avatarSoftClass`
     - `DEFAULT_AGENT_AVATAR`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/categorical --categorical-1`
+    - `ui/tokens/categorical --categorical-10`
+    - `ui/tokens/categorical --categorical-2`
+    - `ui/tokens/categorical --categorical-3`
+    - `ui/tokens/categorical --categorical-4`
+    - `ui/tokens/categorical --categorical-5`
+    - `ui/tokens/categorical --categorical-6`
+    - `ui/tokens/categorical --categorical-7`
+    - `ui/tokens/categorical --categorical-8`
+    - `ui/tokens/categorical --categorical-9`
+    - `ui/tokens/categorical --categorical-foreground`
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --ring`
+    - `ui/tokens/place-palette --place-food`
+    - `ui/tokens/shadow --shadow`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
     - `apps-core/app-icon`
     - `apps/mail/reading-pane`

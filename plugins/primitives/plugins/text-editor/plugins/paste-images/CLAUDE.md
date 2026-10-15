@@ -72,6 +72,7 @@ a hook conditionally inside one component.
     - `isImageRef`
     - `rewriteAttachmentMarkdown`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/file-explorer/attachment-preview`
     - `apps/pages/page-tree`

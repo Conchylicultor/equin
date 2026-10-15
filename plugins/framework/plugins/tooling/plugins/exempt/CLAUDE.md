@@ -144,6 +144,7 @@ missing reason/task —, duplicate, unknown or closed rule) and
     - `resolveTarget`
     - `ruleIdProblems`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `framework/tooling/checks`
     - `framework/tooling/lint`

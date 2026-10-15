@@ -39,6 +39,26 @@
   - Contributes: `resource.declare` "file-explorer.main-checkout"
   - Uses: `network/live.serveValue`
   - Resources: `file-explorer.main-checkout` (push, fixed)
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --input`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/sidebar-metrics --sidebar-icon-gap`
+    - `ui/tokens/sidebar-metrics --sidebar-rail`
+    - `ui/tokens/sidebar-metrics --sidebar-row-pad-x`
+    - `ui/tokens/sidebar-palette --sidebar-accent`
+    - `ui/tokens/sidebar-palette --sidebar-accent-foreground`
+    - `ui/tokens/sidebar-palette --sidebar-foreground`
+    - `ui/tokens/sidebar-palette --sidebar-primary`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-label`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-label`
 - Exemptions:
   - Exempts itself from:
     - `live/no-endpoint-read` — `web/components/storage-meter.tsx` (debt)

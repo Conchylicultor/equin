@@ -158,6 +158,11 @@ DataView (`web/components/notifications-view.tsx`):
     - `notificationIdKind`
     - `notificationsRoute`
 - Cross-plugin:
+  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/color-palette` ×11
+    - `ui/tokens/type-scale` ×7
+    - `ui/tokens/density` ×4
+    - `ui/tokens/shape --spacing`
   - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×15
     - `tasks` ×6

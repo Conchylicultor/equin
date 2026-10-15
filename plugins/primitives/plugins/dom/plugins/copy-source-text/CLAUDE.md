@@ -103,6 +103,10 @@ useful than their tag source.
   - Contributes: `Core.Root` → `CopySourceTextHost`
   - Uses: `primitives/dom/dom-selection.selectionRange`
   - Exports (values): `installCopySourceText`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --ring`
 - Core:
   - Exports (types): `CopySourceProps`
   - Exports (values):

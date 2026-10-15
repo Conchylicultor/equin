@@ -27,6 +27,12 @@
     - `jsonField`
     - `jsonSample`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/events/events-core`
     - `apps/mail/mail-core`

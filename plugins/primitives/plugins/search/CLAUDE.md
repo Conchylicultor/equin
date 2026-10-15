@@ -49,6 +49,27 @@ emoji search) is drawn through `render={<Lib.Search />}`, keeping this chrome.
     - `SearchInput`
     - `useTextFilter`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --faint-foreground`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --control-height-sm`
+    - `ui/tokens/density --panel-row-h`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xl`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --radius-panel-row`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-body`
+    - `ui/tokens/type-scale --font-size-label`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-body`
+    - `ui/tokens/type-scale --line-height-label`
   - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×12
     - `primitives` ×4

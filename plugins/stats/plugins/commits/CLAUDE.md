@@ -58,6 +58,17 @@
     - `GET /api/stats/commits/lines/cumulative`
     - `GET /api/stats/commits/lines/rate`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --popover`
+    - `ui/tokens/color-palette --popover-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
     - `debug/health-monitor`
     - `stats/cost`

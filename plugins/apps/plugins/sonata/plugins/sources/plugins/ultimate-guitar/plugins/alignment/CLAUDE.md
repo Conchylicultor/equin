@@ -330,6 +330,20 @@ The job's transcript goes to the `sonata-ug-alignment` log channel.
     - `ugAlignmentShape`
     - `UgSourceRawSchema`
     - `WEAK_MATCH_THRESHOLD`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
 - Test helpers:
   - Core: `@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/core/testing`
     - `parsedSheet` — A `ParsedTab` from a terse spelling: one entry per section, each line a space-separated chord row ("C G Am F") placed over an empty lyric, or a `{ lyric }` for a lyric-only line.

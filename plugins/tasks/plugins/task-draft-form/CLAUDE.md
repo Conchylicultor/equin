@@ -160,6 +160,19 @@ silently destroy work in progress — hence a request type rather than an `initi
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary-foreground`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/shadow --shadow-lg`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `conversations/conversation-view`
     - `conversations/conversation-view/new-child-task`

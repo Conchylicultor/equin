@@ -47,6 +47,8 @@ That is "cannot tell", never "did not sleep" — a caller decides what to do wit
 ## Plugin reference
 
 - Description: How long the machine slept between two reads: the difference between the OS clock that keeps running through sleep and the one that pauses. Exact, read through bun:ffi on macOS; says so where it cannot tell.
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
 - Core:
   - Exports (types):
     - `SleepClockReading`

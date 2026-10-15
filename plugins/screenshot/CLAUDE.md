@@ -43,6 +43,19 @@
     - `GET /api/screenshots/:id`
     - `POST /api/screenshots/:id/file`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/shadow --shadow-lg`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-3xs`
+    - `ui/tokens/type-scale --line-height-3xs`
   - Imported by: `screenshot/draw-on-app`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/components/screenshot-view.tsx` (debt)

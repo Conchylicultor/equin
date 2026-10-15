@@ -169,6 +169,10 @@ non-surface mounts instead of crashing.
     - `SyncStatusProvider`
     - `useReportSync`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --warning`
   - Imported by:
     - `apps-core/tab-surface`
     - `conversations/conversation-view/pending-turn`

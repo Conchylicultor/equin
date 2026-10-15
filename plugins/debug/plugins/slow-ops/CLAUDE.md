@@ -335,6 +335,7 @@ bar).
     - `VARIANT_CAP`
     - `VariantBreakdownSchema`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/color-palette --muted-foreground`
   - Imported by:
     - `debug/boot-monitor`
     - `debug/health-monitor`

@@ -104,6 +104,7 @@ links **into** research from anywhere else are.
     - `scanReorderItemRefs`
     - `scanRuntimeExceptionRefs`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `plugin-meta/relocate`
 - Test helpers:
   - Core: `@plugins/plugin-meta/plugins/plugin-refs/core/testing`

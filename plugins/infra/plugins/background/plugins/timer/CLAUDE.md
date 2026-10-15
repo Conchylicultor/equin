@@ -75,6 +75,7 @@ implementation site.
   - Exports (values): `defineTimer`
   - Register: `defineBackgroundKind('central-timer')`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `auth`
     - `debug/health-monitor`

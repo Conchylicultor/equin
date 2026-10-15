@@ -83,6 +83,19 @@ MIDI for playback is the `getSongMidi` endpoint.
     - `infra/entity-extensions.defineExtensionShape`
   - Exports (values): `songMidiShape`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/density --space-2xl`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xl`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/sonata/sources/midi/file-preview`
     - `apps/sonata/sources/midi/folders`

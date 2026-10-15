@@ -99,6 +99,14 @@ reachable.
   - Exports (values):
     - `todoBlock`
     - `todoDataSchema`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
 - Sub-plugins:
   - **`task-link`** — Reads the task a TODO card was dispatched onto (useTodoTask / useTodoTaskState, joined live to the tasks resource; the runs come from tasks-core's useTaskConversations) and renders the card's two…
 

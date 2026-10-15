@@ -26,6 +26,8 @@ what is contributed or configured: no tab bar, and the railless framing.
     - `primitives/embed.isChromelessDocument`
     - `primitives/loading.Loading`
     - `primitives/slot-render.renderIsolated`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `apps-core/no-raw-history-nav` — `web/components/apps-layout.tsx` (sanctioned)
 

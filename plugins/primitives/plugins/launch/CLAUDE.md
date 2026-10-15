@@ -85,6 +85,12 @@ started" notification confirms it), so its props are the form's minus
     - `useLaunchConversation`
     - `useTaskLaunch`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-foreground`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
   - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×6
     - `apps` ×4

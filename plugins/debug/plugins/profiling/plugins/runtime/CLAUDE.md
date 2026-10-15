@@ -35,6 +35,15 @@
     - `GET /api/debug/profiling/runtime`
     - `POST /api/debug/profiling/runtime/reset`
     - `GET /api/debug/profiling/flight-window`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-3xs`
+    - `ui/tokens/type-scale --line-height-3xs`
 - Exemptions:
   - Exempts itself from: `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
 

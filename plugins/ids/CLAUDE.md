@@ -183,6 +183,7 @@ is reported by the schema file that exports it, which is where its plugin's
     - `parseKindLabel`
     - `storedIdSchema`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×10
     - `conversations` ×4

@@ -335,6 +335,13 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `stringList`
     - `tileValue`
     - `UNITS`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/shape --spacing`
 - Sub-plugins:
   - **`chart-kit`** — Hand-rolled SVG chart kit, knowing nothing about metrics: TimeChart (area / line / stack / mirror / net, a dashed compare line, gaps for null, partial buckets drawn lighter / dashed, hover +…
 

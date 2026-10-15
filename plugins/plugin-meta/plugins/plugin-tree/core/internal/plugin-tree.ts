@@ -468,7 +468,13 @@ export async function buildPluginTree(
       }
     }
 
-    // Step 4c: facet relate. `relate` (e.g. routes/cross-refs) also walks every
+    // Step 4c: async whole-tree passes a facet runs before ANY relate, so a
+    // relate (its own or a later facet's) reads their results.
+    for (const facet of facets) {
+      if (facet.prepareRelate)
+        await facet.prepareRelate({ tree, fs: fsSnapshot });
+    }
+    // Step 4d: facet relate. `relate` (e.g. routes/cross-refs) also walks every
     // plugin's source, so it reads from the same snapshot. Yield between facets so
     // the residual block is one facet's relate, not all of them summed.
     for (const facet of facets) {

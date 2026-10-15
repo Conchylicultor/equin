@@ -174,6 +174,16 @@ and all feedback lives inside the message card itself.
     - `useOptimisticConversationStatus`
     - `usePendingTurns`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shadow --shadow`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations/all-conversations`
     - `conversations/conversation-view/jsonl-viewer`

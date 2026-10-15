@@ -195,6 +195,9 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `useEdgeAutoScroll`
     - `useStickyScroll`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/prototypes/canvas`
     - `apps/sonata/progress/loop`

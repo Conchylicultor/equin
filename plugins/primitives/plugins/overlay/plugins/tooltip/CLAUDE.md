@@ -23,6 +23,19 @@
     - `TooltipDoc`
     - `WithTooltip`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-2xs`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --line-height-2xs`
   - Imported by: 47 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×15
     - `apps` ×11

@@ -214,6 +214,7 @@ a `SyntaxError` is skipped, anything else rethrows.
     - `toOpRecords`
     - `WAIT_KINDS`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `debug/profiling/op-log/op-store`
 - Server:
   - Exports (types):

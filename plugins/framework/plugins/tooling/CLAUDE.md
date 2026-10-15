@@ -23,6 +23,7 @@
     - `pathsUnder`
     - `repoFilesOver`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `framework/tooling/checks`
     - `framework/tooling/codegen`

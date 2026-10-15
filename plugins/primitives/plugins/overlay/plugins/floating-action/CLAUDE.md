@@ -113,6 +113,14 @@ global action bar's `e2e/focus-restore.ts` checks this in Chromium.
     - `FloatingAction`
     - `FloatingActionFadeIn`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/shadow --shadow`
+    - `ui/tokens/shadow --shadow-2xl`
+    - `ui/tokens/shadow --shadow-sm`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/sonata/track-mixer`
     - `conversations/conversation-view/prompt-templates`

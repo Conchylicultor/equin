@@ -61,6 +61,10 @@ names git. Plan: `research/2026-10-02-apps-file-explorer-git-and-code-explorer-r
     - `primitives/commit-list.tryRunGit`
   - Resources: `file-explorer.git-status` (push, notified)
   - Routes: `GET /api/file-explorer/git/checkout`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-git.ts` (debt)
 

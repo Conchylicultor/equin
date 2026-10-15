@@ -66,6 +66,8 @@ spelling for removing one.
 - Server:
   - Contributes: `report-kind` "report-storm"
   - Uses: `reports.ReportKind`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/color-palette --muted-foreground`
 - Core:
   - Exports (types): `ReportStormPayload`
   - Exports (values): `ReportStormPayloadSchema`

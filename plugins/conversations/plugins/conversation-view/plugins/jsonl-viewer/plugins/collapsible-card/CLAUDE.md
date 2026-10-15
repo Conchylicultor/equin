@@ -24,6 +24,23 @@
     - `CardHeaderAction`
     - `CollapsibleCard`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/color-palette --thread-card`
+    - `ui/tokens/color-palette --thread-card-border`
+    - `ui/tokens/density --pad-thread-card-x`
+    - `ui/tokens/density --pad-thread-card-y`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/font-family --font-sans`
+    - `ui/tokens/shape --radius-card`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-2xs`
+    - `ui/tokens/type-scale --line-height-2xs`
   - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×29
 

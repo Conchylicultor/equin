@@ -20,7 +20,8 @@ import type { FsSnapshot } from "@plugins/plugin-meta/plugins/parse-utils/core";
  * facet `extract()` functions touch zero disk.
  *
  * Coverage mirrors what the parse-utils scanners read: `walkFiles` surfaces
- * `.ts`/`.tsx`, and `readIfExists` additionally reads `package.json`. We record
+ * `.ts`/`.tsx` (and `.css` for a scanner that asks), and `readIfExists`
+ * additionally reads `package.json`. We record
  * every directory we descend into (so an absent file resolves to `null` with no
  * syscall) and read exactly those file kinds. Any directory NOT covered here is
  * transparently re-read from disk by the helpers, so the snapshot only ever
@@ -49,7 +50,7 @@ function isSkippedDir(name: string): boolean {
 // part of a plugin's API/dep surface.
 function shouldRead(name: string): boolean {
   if (name === "package.json") return true;
-  return /\.(ts|tsx)$/.test(name) && !isTestCodePath([name]);
+  return /\.(ts|tsx|css)$/.test(name) && !isTestCodePath([name]);
 }
 
 export async function buildFsSnapshot(

@@ -41,6 +41,13 @@
     - `tryRunGit`
     - `WorktreeGoneError`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/file-explorer/git`
     - `build/build-commits`

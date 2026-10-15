@@ -104,6 +104,12 @@ variables.
     - `ui/theme-engine.ThemeEngine`
   - Exports (values): `foundationsPane`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/density --chrome-pane-h`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/font-family --font-sans`
+    - `ui/tokens/shadow --shadow`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/website/landing/layers`
     - `apps/website/pages/apps`

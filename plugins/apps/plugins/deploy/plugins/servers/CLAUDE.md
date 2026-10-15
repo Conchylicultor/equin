@@ -147,6 +147,12 @@ plus `sshKey`.
     - `serverFields`
     - `serversRoute`
 - Cross-plugin:
+  - Uses tokens: 22 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/type-scale` ×9
+    - `ui/tokens/color-palette` ×6
+    - `ui/tokens/density` ×4
+    - `ui/tokens/shape` ×2
+    - `ui/tokens/font-family --font-mono`
   - Imported by:
     - `apps/deploy/deployments`
     - `apps/deploy/deployments/runs-arm`

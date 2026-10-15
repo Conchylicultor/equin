@@ -2771,6 +2771,27 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `splitFieldSections`
     - `UNGROUPED_FOLD_KEY`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --card`
+    - `ui/tokens/color-palette --faint-foreground`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/density --chrome-pad-x`
+    - `ui/tokens/density --control-height-sm`
+    - `ui/tokens/density --pad-row-compact-y`
+    - `ui/tokens/density --pad-row-x`
+    - `ui/tokens/density --pad-row-y`
+    - `ui/tokens/density --section-head-pad-bottom`
+    - `ui/tokens/density --section-head-pad-top`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shadow --shadow`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by: 90 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×30
     - `apps` ×22

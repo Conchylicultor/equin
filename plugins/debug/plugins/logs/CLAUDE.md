@@ -41,6 +41,19 @@ those channels (`tail`/`cat` the `.jsonl` files directly for raw access).
   - Exports (values):
     - `logChannelPane`
     - `logsPane`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --ring`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-xl`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-body`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-body`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/components/log-viewer.tsx` (debt)
 

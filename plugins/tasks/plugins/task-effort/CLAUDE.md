@@ -45,6 +45,7 @@
     - `tasks/launch-options.defineLaunchOption`
   - Exports (values): `effortLaunchOption`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `conversations`
 - Shared:
   - Exports (types): `TaskEffort`

@@ -53,6 +53,14 @@ therefore never depends on the current expand state — no flapping at the bound
   - Exports (types): `ExpandableProps`
   - Exports (values): `Expandable`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-caption`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-caption`
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/user-text`
     - `tasks/outcome-report`

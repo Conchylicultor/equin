@@ -20,6 +20,18 @@ Tiers: `chrome` (the app toolbar, `h-chrome-bar`), `pane` (a pane header, `h-chr
     - `BarTier`
   - Exports (values): `Bar`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --toolbar-foreground`
+    - `ui/tokens/density --chrome-bar-h`
+    - `ui/tokens/density --chrome-pad-x`
+    - `ui/tokens/density --chrome-pane-h`
+    - `ui/tokens/density --chrome-pane-pad-end`
+    - `ui/tokens/density --chrome-pane-pad-start`
+    - `ui/tokens/density --chrome-pane-rule`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/density --subpane-pad-x`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/browser/bookmarks`
     - `apps/browser/shell`

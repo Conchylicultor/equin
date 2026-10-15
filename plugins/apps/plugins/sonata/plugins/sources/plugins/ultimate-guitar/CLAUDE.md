@@ -289,6 +289,9 @@ surfacing as crash tasks, not just toasts.
     - `GET /api/sonata/songs/:id/ultimate-guitar`
     - `PUT /api/sonata/songs/:id/ultimate-guitar`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-tab-saved.ts` (debt)

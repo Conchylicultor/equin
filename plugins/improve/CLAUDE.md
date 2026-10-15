@@ -37,6 +37,9 @@
   - Exports (values): `_improvePendingGroups`
   - Register: `defineJob('improve.apply-group')`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
   - Imported by:
     - `improve/element-picker`
     - `screenshot/draw-on-app`

@@ -173,6 +173,7 @@ looks equivalent and silently discards the caller's.
     - `viewportEscapeReportSink`
     - `ViewportOverlay`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/surface`
     - `apps/prototypes/present`

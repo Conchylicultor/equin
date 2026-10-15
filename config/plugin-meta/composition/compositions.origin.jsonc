@@ -1,4 +1,4 @@
-// @hash fc60f6b29a08
+// @hash 42ec829e4e22
 {
   "manifests": [
     {
@@ -396,15 +396,7 @@
         "shell.toast.**",
         "reorder.**",
         "ui.theme-engine.**",
-        "ui.tokens.color-palette.**",
-        "ui.tokens.density.**",
-        "ui.tokens.shape.**",
-        "ui.tokens.type-scale.**",
-        "ui.tokens.font-family.**",
-        "ui.tokens.sidebar-palette.**",
-        "ui.tokens.shadow.**",
-        "ui.tokens.chart.**",
-        "ui.tokens.categorical.**",
+        "ui.tokens.font-family.google-fonts.**",
         "primitives.dom.overscroll-hint.**",
         "ui.icons.sprites.**",
         "ui.tokens.icons.**"

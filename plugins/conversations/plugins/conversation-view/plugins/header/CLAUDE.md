@@ -9,6 +9,13 @@
   - Uses: `primitives/css/badge.Badge`
   - Exports (values): `HeaderChip`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/density --pad-chip-header-x`
+    - `ui/tokens/density --pad-chip-header-y`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-tag`
+    - `ui/tokens/type-scale --font-weight-tag`
+    - `ui/tokens/type-scale --line-height-tag`
   - Imported by:
     - `conversations/conversation-view/model`
     - `conversations/conversation-view/status`

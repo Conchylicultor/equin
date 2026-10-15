@@ -124,6 +124,11 @@ React-internals coupling (fiber `flags` / `memoizedState` / `dependencies` /
     - `primitives/pane.PaneChrome`
     - `ui/icons.Icon`
   - Exports (values): `renderProfilerPane`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/shape --spacing`
 - Core:
   - Exports (types):
     - `CommitSample`

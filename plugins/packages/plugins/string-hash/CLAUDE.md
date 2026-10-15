@@ -25,6 +25,7 @@ None defends against a forged collision; they tell contents apart.
   - Imported by:
     - `framework/resource-runtime`
     - `packages/resource-protocol`
+    - `plugin-meta/token-usage`
 - Core:
   - Exports (values):
     - `hash53`

@@ -601,11 +601,24 @@ function isSkippedWalkDir(name: string): boolean {
 // source-file enumerator for every facet + codegen scan, excluding them here keeps
 // a test fixture (e.g. a `liveValue("mismatch-test", …)` in a
 // `*.test.ts`) or a test-only import from leaking into a plugin's docs.
-function isSourceFile(name: string): boolean {
-  return /\.(ts|tsx)$/.test(name) && !isTestCodePath([name]);
+function isSourceFile(name: string, css: boolean): boolean {
+  return (
+    (/\.(ts|tsx)$/.test(name) || (css && name.endsWith(".css"))) &&
+    !isTestCodePath([name])
+  );
 }
 
-export function walkFiles(dir: string, out: string[]): void {
+/**
+ * Every source file under `dir` (sub-plugin trees and test code skipped):
+ * `.ts`/`.tsx`, plus `.css` with `{ css: true }` — for a scanner that reads
+ * what a plugin styles with, not only what it imports.
+ */
+export function walkFiles(
+  dir: string,
+  out: string[],
+  opts?: { css?: boolean },
+): void {
+  const css = opts?.css ?? false;
   // Snapshot fast-path: traverse the in-memory directory map. Any subdirectory
   // not covered by the snapshot re-dispatches through `walkFiles`, which falls
   // back to disk for that subtree — so the result is identical to a pure-disk
@@ -617,8 +630,8 @@ export function walkFiles(dir: string, out: string[]): void {
         const p = join(dir, e.name);
         if (e.isDirectory()) {
           if (isSkippedWalkDir(e.name)) continue;
-          walkFiles(p, out);
-        } else if (e.isFile() && isSourceFile(e.name)) {
+          walkFiles(p, out, opts);
+        } else if (e.isFile() && isSourceFile(e.name, css)) {
           out.push(p);
         }
       }
@@ -638,8 +651,8 @@ export function walkFiles(dir: string, out: string[]): void {
     const p = join(dir, e.name);
     if (e.isDirectory()) {
       if (isSkippedWalkDir(e.name)) continue;
-      walkFiles(p, out);
-    } else if (e.isFile() && isSourceFile(e.name)) {
+      walkFiles(p, out, opts);
+    } else if (e.isFile() && isSourceFile(e.name, css)) {
       out.push(p);
     }
   }
@@ -667,7 +680,7 @@ export async function walkFilesAsync(dir: string): Promise<string[]> {
       if (e.isDirectory()) {
         if (isSkippedWalkDir(e.name)) continue;
         await walk(p);
-      } else if (e.isFile() && isSourceFile(e.name)) {
+      } else if (e.isFile() && isSourceFile(e.name, false)) {
         out.push(p);
       }
     }

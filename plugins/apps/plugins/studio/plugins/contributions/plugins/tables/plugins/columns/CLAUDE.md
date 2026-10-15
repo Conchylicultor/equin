@@ -20,6 +20,10 @@
     - `database.db`
     - `network/live.serveValue`
   - Resources: `studio.table-columns` (push, fixed)
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/font-family --font-mono`
 - Exemptions:
   - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
 - Shared:

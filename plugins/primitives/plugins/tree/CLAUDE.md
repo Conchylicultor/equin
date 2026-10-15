@@ -325,6 +325,11 @@ that layout — while row-fold moves rows with transform / clip / opacity.
     - `subtreeIds`
     - `treeKeyMove`
 - Cross-plugin:
+  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/color-palette` ×9
+    - `ui/tokens/density` ×8
+    - `ui/tokens/type-scale` ×4
+    - `ui/tokens/shape` ×2
   - Imported by:
     - `apps/pages/page-tree`
     - `page/editor`

@@ -51,6 +51,27 @@ Design rationale lives in:
     - `nodeToText`
     - `useMarkdownEnhancement`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --code-border`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/density --pad-code-x`
+    - `ui/tokens/density --pad-code-y`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xl`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --border-code`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --radius-code`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-code`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-code`
   - Imported by:
     - `active-data`
     - `active-data/go`

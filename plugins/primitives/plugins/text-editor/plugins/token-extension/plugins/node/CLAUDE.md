@@ -94,6 +94,14 @@ side.
     - `tokenDomElement`
     - `tokenDomFields`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --ring`
+    - `ui/tokens/shadow --shadow`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `page/editor`
     - `page/inline-date`

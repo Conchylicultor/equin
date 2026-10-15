@@ -48,6 +48,12 @@ specifically — the dedicated card-surface token — not the broader `bg-muted`
   - Exports (types): `CardProps`
   - Exports (values): `Card`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --card`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/density --pad-card`
+    - `ui/tokens/shadow --shadow`
   - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×12
     - `primitives` ×4

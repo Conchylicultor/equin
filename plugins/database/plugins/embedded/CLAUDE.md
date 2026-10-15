@@ -49,6 +49,7 @@ Worktree backends read connection params from `~/.singularity/state/db-config/da
 - Description: Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
 - Load-bearing: yes
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `database/query-deadline`
     - `debug/sentinel`

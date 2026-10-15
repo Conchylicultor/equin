@@ -52,6 +52,7 @@ relative specifier inside this leaf would resolve against the wrong module.
 
 - Description: Generic loader for build-time collected-dir registries (loadCollectedDir).
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `framework/central-core`
     - `framework/cli`

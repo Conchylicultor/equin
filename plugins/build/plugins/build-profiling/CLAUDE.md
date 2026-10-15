@@ -22,6 +22,16 @@
     - `infra/endpoints.implement`
     - `infra/paths.worktreeArtifacts`
   - Routes: `GET /api/build/runs/:id/profile`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/categorical --categorical-1`
+    - `ui/tokens/categorical --categorical-2`
+    - `ui/tokens/categorical --categorical-3`
+    - `ui/tokens/categorical --categorical-4`
+    - `ui/tokens/categorical --categorical-5`
+    - `ui/tokens/categorical --categorical-6`
+    - `ui/tokens/categorical --categorical-7`
+    - `ui/tokens/categorical --categorical-8`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/components/build-profiling-section.tsx` (debt)
 - Shared:

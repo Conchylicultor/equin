@@ -222,6 +222,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`plugin-tree`** — Cached, watcher-invalidated plugin-tree accessors: structure-only for the hot path and a shared full-faceted build for the two facet consumers.
     - **`plugin-view`** [6 sub-plugins] — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
     - **`relocate`** — `./singularity plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator…
+    - **`token-usage`** — Which theme tokens a plugin's source uses, and which plugin owns each one: the static defineTokenGroup reader (owner + CSS vars) and the token-usage scanner (literal var(--x) plus Tailwind classes…
 
 - **`primitives`** [test helpers] [exempt] [195 sub-plugins] — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
 

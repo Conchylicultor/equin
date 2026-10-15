@@ -14,6 +14,7 @@ export { serializeEdgeGraph, deserializeEdgeGraph } from "./serialize";
 export type { SerializedEdgeGraph } from "./serialize";
 export type {
   EdgeKind,
+  HardEdgeVia,
   Edge,
   EdgeGraph,
   CompositionManifest,

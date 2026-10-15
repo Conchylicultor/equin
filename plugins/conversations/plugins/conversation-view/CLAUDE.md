@@ -65,6 +65,14 @@
     - `usePromptComposer`
     - `useRegisterPromptComposer`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --toolbar-foreground`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xl`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --measure-reading`
   - Imported by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×51
     - `active-data` ×5

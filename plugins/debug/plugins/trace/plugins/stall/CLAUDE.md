@@ -46,6 +46,11 @@ lane that parses it.
   - Contributes: `trace-event-class` "stall"
   - Uses: `debug/trace/engine.defineTraceEventClass`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
   - Imported by: `debug/stall-monitor`
 - Core:
   - Exports (types):

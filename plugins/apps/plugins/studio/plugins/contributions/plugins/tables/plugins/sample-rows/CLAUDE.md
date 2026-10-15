@@ -23,6 +23,11 @@
     - `database.db`
     - `network/live.serveValue`
   - Resources: `studio.table-sample-rows` (invalidate, snapshot)
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
 - Shared:

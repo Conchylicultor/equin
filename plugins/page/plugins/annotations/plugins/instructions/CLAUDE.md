@@ -152,6 +152,11 @@ at a time; exclusivity with `author`, and `global` requiring `instructions`, is
     - `instructionsBlock`
     - `instructionsDataSchema`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
   - Imported by: `page/annotations/agent-access`
 - Sub-plugins:
   - **`instructions-page`** — Instructions pages in the page editor: a sub-page whose data marks it `instructions: true` is tinted with the instructions card's wash wherever it is referenced (its row in the parent page, the…

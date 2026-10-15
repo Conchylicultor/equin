@@ -229,6 +229,12 @@ back.
     - `eventKey`
     - `jsonlEvents`
 - Cross-plugin:
+  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/type-scale` ×8
+    - `ui/tokens/color-palette` ×7
+    - `ui/tokens/density` ×5
+    - `ui/tokens/shape` ×2
+    - `ui/tokens/font-family --font-mono`
   - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×42
     - `tasks/outcome-report`

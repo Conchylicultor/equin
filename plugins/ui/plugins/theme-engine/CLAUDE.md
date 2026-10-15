@@ -257,11 +257,17 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `TokenGroupFragmentSchema`
     - `TokenGroupFragmentsSchema`
     - `tokenGroupMatchesSearch`
+    - `tokenVarName`
 - Cross-plugin:
-  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens:
+    - `ui/tokens/density --chrome-pad-x`
+    - `ui/tokens/shadow --shadow`
+    - `ui/tokens/shape --spacing`
+  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui` ×26
     - `apps` ×10
     - `apps-core` ×2
+    - `plugin-meta/token-usage`
     - `reports/theme-resolution`
 - Sub-plugins:
   - **`quick-theme`** — Quick-switch theme popover on the global action bar: contributed quick sections (the theme picker, the light/dark switch), every component variant picker, and a hand-off to the full customizer pane…

@@ -33,6 +33,11 @@ Own plugin, not `runs/core`, so `runs/web` can import the chip without
     - `RunOutcomeChip`
     - `RunOutcomeDot`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
   - Imported by:
     - `infra/background/catalog`
     - `runs`

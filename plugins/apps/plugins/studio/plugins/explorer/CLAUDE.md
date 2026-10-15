@@ -66,6 +66,13 @@ The fold/unfold-this-subtree button is not the explorer's to ship either: the
     - `explorerPane`
     - `PluginTree`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-2xl`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
     - `apps/studio/compositions/closure-tree`
     - `apps/studio/explorer/child-count`

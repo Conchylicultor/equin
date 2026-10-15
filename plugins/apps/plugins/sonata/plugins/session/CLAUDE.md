@@ -160,6 +160,7 @@ clock, without stopping.
     - `useCursorSelector`
     - `useSession`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×32
 

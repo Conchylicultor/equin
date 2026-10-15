@@ -107,6 +107,7 @@ without booting the server.
     - `defineAssetMirrorPrewarm`
     - `prewarmEntries`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/sonata/audio/piano`
     - `apps/sonata/audio/soundfont`

@@ -60,6 +60,36 @@ follow.
   - Uses: `ui/theme-engine.defineTokenGroup`
   - Exports (types): `TypeScaleTokenValues`
   - Exports (values): `typeScaleGroup`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
+  - Tokens used by: 225 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×55
+    - `conversations` ×39
+    - `primitives` ×37
+    - `debug` ×17
+    - `plugin-meta` ×15
+    - `page` ×12
+    - `tasks` ×8
+    - `ui` ×8
+    - `fields` ×4
+    - `review` ×4
+    - `auth` ×3
+    - `build` ×3
+    - `stats` ×3
+    - `apps-core` ×2
+    - `code-explorer` ×2
+    - `config_v2` ×2
+    - `infra` ×2
+    - `shell` ×2
+    - `backup/runs-arm`
+    - `framework/web-core`
+    - `integrations/youtube`
+    - `layouts/miller`
+    - `reorder/editor`
+    - `screenshot`
+    - `search/quick-find`
 - Exemptions:
   - Exempts itself from: `type-scale:closed-role-ladder:raw-vars` — `.` (sanctioned)
 

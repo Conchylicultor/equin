@@ -127,6 +127,10 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
     - `RECENT_RUNS_MAX`
     - `runBackgroundNowEndpoint`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `debug/background`
     - `debug/queue`

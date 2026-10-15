@@ -27,6 +27,7 @@ intact, and `DropdownMenuContent` already self-portals + theme-forwards.
     - `CursorAnchoredMenuProps`
   - Exports (values): `CursorAnchoredMenu`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/surface/floating`
     - `apps-core/surface/floating/wallpaper`

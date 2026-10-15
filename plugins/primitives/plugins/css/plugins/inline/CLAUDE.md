@@ -51,6 +51,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
   - Exports (types): `InlineProps`
   - Exports (values): `Inline`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 86 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×16
     - `debug` ×16

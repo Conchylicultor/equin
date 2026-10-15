@@ -23,6 +23,13 @@ Single source of truth for `TaskStatus` display metadata. All plugins that rende
     - `StatusIcon`
     - `StatusSignal`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --info`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `active-data/task-link`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`

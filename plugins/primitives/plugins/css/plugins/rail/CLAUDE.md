@@ -207,6 +207,10 @@ now zero: approximately right in a screenshot, wrong in the DOM. Enforced by
     - `RAIL_START_VAR`
     - `railClass`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/density --chrome-pad-x`
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `backup`
     - `primitives/css/control-panel`

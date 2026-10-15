@@ -30,6 +30,16 @@
     - `infra/paths.worktreeArtifacts`
   - Routes: `GET /api/debug/profiling/build/:worktree/:buildId`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/categorical --categorical-1`
+    - `ui/tokens/categorical --categorical-2`
+    - `ui/tokens/categorical --categorical-3`
+    - `ui/tokens/categorical --categorical-4`
+    - `ui/tokens/categorical --categorical-5`
+    - `ui/tokens/categorical --categorical-6`
+    - `ui/tokens/categorical --categorical-7`
+    - `ui/tokens/categorical --categorical-8`
+    - `ui/tokens/shape --radius`
   - Imported by: `debug/profiling/ops`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/components/build-detail.tsx` (debt)

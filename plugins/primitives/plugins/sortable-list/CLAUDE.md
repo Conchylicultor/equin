@@ -39,6 +39,7 @@ list throws — no host could ever bind it.
 
 - Description: Generic sortable list primitive with smooth displacement animations. Wraps @dnd-kit/sortable into SortableList + SortableItem components, plus DeferredSortableList + DeferredSortableItem for a list draggable only in a mode (no drag machinery mounted while disabled, items never remounted by the toggle).
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/tab-bar`
     - `apps/sonata/rich/rhythm-controls`

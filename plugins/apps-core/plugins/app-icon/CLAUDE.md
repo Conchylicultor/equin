@@ -59,6 +59,7 @@ changes to existing `kind: "symbol"` authors.
     - `AppIconView`
     - `DEFAULT_APP_ICON`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/app-launcher`
     - `apps-core/app-rail`

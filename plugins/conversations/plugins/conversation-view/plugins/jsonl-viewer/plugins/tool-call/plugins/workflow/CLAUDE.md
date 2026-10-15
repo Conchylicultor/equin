@@ -38,6 +38,13 @@
     - `primitives/syntax-highlight.HighlightedCode`
     - `ui/icons.Icon`
 - Cross-plugin:
+  - Uses tokens: 26 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/type-scale` ×9
+    - `ui/tokens/color-palette` ×7
+    - `ui/tokens/density` ×4
+    - `ui/tokens/categorical` ×3
+    - `ui/tokens/shape` ×2
+    - `ui/tokens/font-family --font-mono`
   - Imported by: `conversations/conversation-view/jsonl-viewer/subagents`
 - Core:
   - Exports (types):

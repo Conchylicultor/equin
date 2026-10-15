@@ -158,6 +158,14 @@ remote health gate.
     - `primitives/log-channels.LiveLogChannel`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --info`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/shape --spacing`
 - Core:
   - Exports (types):
     - `ReleaseState`

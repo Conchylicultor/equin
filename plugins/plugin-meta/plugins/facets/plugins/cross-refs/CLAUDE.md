@@ -28,7 +28,9 @@ existing web slot. The diff projection (`crossRefsToComparable`, the deduped
   - Exports (types):
     - `ApiUse`
     - `CrossRefsData`
+    - `DeclaredTokenGroup`
     - `RawUse`
+    - `TokenUse`
   - Exports (values):
     - `crossRefsFacetDef`
     - `crossRefsToComparable`

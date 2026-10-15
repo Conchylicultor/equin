@@ -142,6 +142,13 @@ a steady-state reboot writes nothing).
     - `pageBacklinks`
     - `pageLinkSources`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xl`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
     - `apps/pages/page-tree`
     - `page/inline-page-link`

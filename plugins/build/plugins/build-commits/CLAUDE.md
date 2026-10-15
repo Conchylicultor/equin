@@ -30,6 +30,8 @@
     - `infra/endpoints.defineEndpoint`
     - `primitives/commit-list.CommitRowSchema`
   - Exports (values): `getBuildRunCommits`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/color-palette --primary`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/components/build-commits-section.tsx` (debt)
 - Shared:

@@ -89,6 +89,10 @@ the bell would re-alert every 10 minutes for one known problem.
 - Server:
   - Contributes: `report-kind` "viewport-escape"
   - Uses: `reports.ReportKind`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/shape --spacing`
 - Core:
   - Exports (types): `ViewportEscapePayload`
   - Exports (values):

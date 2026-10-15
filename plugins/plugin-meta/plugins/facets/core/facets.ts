@@ -89,6 +89,7 @@ export interface RenderDocContext {
 export interface Facet {
   def: FacetDef<unknown>;
   extract: (ctx: ExtractContext) => unknown;
+  prepareRelate?: (ctx: unknown) => Promise<void>;
   relate?: (ctx: unknown) => void;
   renderDoc: (data: unknown, ctx: RenderDocContext) => DocFact[];
 }
@@ -100,6 +101,14 @@ export function defineFacet<T>(id: string): FacetDef<T> {
 export function createFacet<T>(impl: {
   def: FacetDef<T>;
   extract: (ctx: ExtractContext) => T;
+  /**
+   * Async work over the whole extracted tree, before any facet's `relate` —
+   * for a pass too heavy to run in one synchronous block (it can yield) or that
+   * needs an async API. Same `{ tree }` context as `relate`, plus the build's
+   * `fs` snapshot, which a sync stretch reads under `runWithFsSnapshot(fs, …)`
+   * (the ambient snapshot does not survive an `await`).
+   */
+  prepareRelate?: (ctx: unknown) => Promise<void>;
   relate?: (ctx: unknown) => void;
   renderDoc: (data: T, ctx: RenderDocContext) => DocFact[];
 }): Facet {

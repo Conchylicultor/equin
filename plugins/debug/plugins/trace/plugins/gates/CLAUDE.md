@@ -18,6 +18,10 @@
 - Server:
   - Contributes: `trace-event-class` "gates"
   - Uses: `debug/trace/engine.defineTraceEventClass`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-sm`
 - Exemptions:
   - Exempts itself from: `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
 

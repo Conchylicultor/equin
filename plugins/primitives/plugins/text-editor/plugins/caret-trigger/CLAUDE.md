@@ -270,6 +270,7 @@ bun run test:dom plugins/primitives/plugins/text-editor/plugins/caret-trigger
     - `useCaretQuery`
     - `useForcedCaretQuery`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `page/editor`
     - `page/inline-date`

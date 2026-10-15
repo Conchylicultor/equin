@@ -25,6 +25,7 @@ required `draftKey`.
   - Exports (types): `InlinePopoverProps`
   - Exports (values): `InlinePopover`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `page` ×6
     - `conversations` ×5

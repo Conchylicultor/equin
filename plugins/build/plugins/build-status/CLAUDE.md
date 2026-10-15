@@ -44,6 +44,11 @@ disappearing.
     - `BuildStatusChip`
     - `BuildStatusDot`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
   - Imported by:
     - `build/build-info`
     - `build/build-termination`

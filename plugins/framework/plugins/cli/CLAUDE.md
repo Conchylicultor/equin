@@ -444,6 +444,7 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
     - `readMergeMarkers`
     - `resolveGitDir`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `framework/tooling/import-closure`
 - Sub-plugins:
   - **`await`** — `./singularity await` — block until this checkout's running op writes its verdict, and print it. Starts nothing; the wake-up becomes a tool result instead of a notification that may never arrive.

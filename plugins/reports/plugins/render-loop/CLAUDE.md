@@ -34,6 +34,10 @@ does not own.
 - Server:
   - Contributes: `report-kind` "render-loop"
   - Uses: `reports.ReportKind`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/font-family --font-mono`
 - Core:
   - Exports (types): `RenderLoopPayload`
   - Exports (values):

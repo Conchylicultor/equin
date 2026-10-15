@@ -70,6 +70,12 @@ barrel.
     - `ErrorBoundary`
     - `PluginErrorBoundary`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
     - `apps/prototypes/canvas`
     - `framework/web-core`

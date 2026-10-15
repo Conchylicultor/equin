@@ -41,6 +41,17 @@ table/filter capabilities from `text` via the identity `extends` chain.
     - `multilineTextField`
     - `multilineTextSample`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --input`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-body`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-body`
   - Imported by:
     - `fields/list/config`
     - `tasks/automations`

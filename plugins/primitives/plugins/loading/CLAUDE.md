@@ -61,6 +61,18 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `LoadingVariant`
   - Exports (values): `Loading`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --chrome-pad-x`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-body`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-body`
   - Imported by: 189 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×64
     - `ui` ×19

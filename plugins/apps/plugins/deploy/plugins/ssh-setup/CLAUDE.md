@@ -98,6 +98,22 @@ and
     - `SshProviderDescriptor`
   - Exports (values): `SshProvider`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --input`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-caption`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-caption`
   - Imported by: `apps/deploy/ssh-setup/hetzner`
 - Sub-plugins:
   - **`hetzner`** — Hetzner Cloud SSH provider: detects console.hetzner.com console URLs so the SSH setup section can name Hetzner and tell the user how to reach a root shell in its web terminal. Console prose only…

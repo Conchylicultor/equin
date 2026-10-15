@@ -62,6 +62,17 @@ so the pane never imports this component directly.
   - Exports (values): `listLiveForkDatabases`
   - Routes: `GET /api/slow-ops/cluster`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-3xs`
+    - `ui/tokens/type-scale --line-height-3xs`
   - Imported by: `debug/timeline`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-cluster-stream.ts` (debt)

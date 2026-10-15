@@ -27,6 +27,9 @@
     - `PageWriteReport`
     - `parsePageApplyReport`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/shape --radius`
   - Imported by:
     - `conversations/conversation-view/artifacts/page`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`

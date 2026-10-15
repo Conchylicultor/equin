@@ -170,6 +170,13 @@ measured overhead on a real worktree workload is still an open task.
     - `HealthSeriesSchema`
     - `HostSampleSchema`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `debug/latency-ledger`
     - `debug/timeline`

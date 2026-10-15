@@ -97,6 +97,13 @@ layout, graphite tone, underline tabs).
     - `chromeTheme`
     - `chromeThemeScope`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --popover`
+    - `ui/tokens/shadow --shadow`
+    - `ui/tokens/shadow --shadow-2xl`
+    - `ui/tokens/shadow --shadow-popover`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/app-launcher`
     - `apps-core/app-rail`

@@ -343,6 +343,21 @@ they describe.
     - `RejectTextBearing`
   - Exports (values): `defineContainerBlock`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --accent`
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --info`
+    - `ui/tokens/color-palette --ring`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-2xs`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-2xs`
   - Imported by:
     - `page/annotations`
     - `page/annotations/agent-notes`

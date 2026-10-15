@@ -16,6 +16,19 @@
   - Exports (types): `LinkChipProps`
   - Exports (values): `LinkChip`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --accent`
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-caption`
+    - `ui/tokens/type-scale --font-size-label`
+    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --line-height-caption`
+    - `ui/tokens/type-scale --line-height-label`
   - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `active-data` ×8
     - `apps` ×5

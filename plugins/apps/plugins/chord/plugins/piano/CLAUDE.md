@@ -205,6 +205,15 @@ one held down — the one thing a value check cannot tell you.
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/chord-palette --chord-outside`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-bold`
+    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by: `apps/chord/trainer`
 - Core:
   - Exports (types):

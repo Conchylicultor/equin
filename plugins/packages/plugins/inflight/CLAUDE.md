@@ -62,6 +62,7 @@ See `research/2026-06-15-global-live-state-cascade-contention.md` (Change 5) and
 
 - Description: In-flight request deduplicator: createInflight() collapses concurrent callers sharing a key onto one execution, plus a caller-supplied freshness floor (notBefore) that supersedes rather than joins a flight older than a change the caller already knows about.
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `framework/resource-runtime`
     - `infra/endpoints`

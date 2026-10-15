@@ -131,6 +131,26 @@ prop (middleware auto-detects; field is always `"vertical"`).
     - `SortableReorderItem`
     - `SpacerReorderItem`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --destructive-foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/density --chrome-pad-x`
+    - `ui/tokens/density --control-height-sm`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-3xs`
+    - `ui/tokens/type-scale --font-size-caption`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-3xs`
+    - `ui/tokens/type-scale --line-height-caption`
   - Imported by:
     - `fields/reorder-tree/config`
     - `reorder`

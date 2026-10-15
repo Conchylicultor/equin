@@ -384,36 +384,39 @@ function importerGraph(): EdgeGraph {
 
 // (v) Real-tree `website`-shaped manifest: `.**` minus a branch negative excludes
 // every editor-toy id and keeps the rest of the website subtree.
-test("website-shaped manifest: .** minus negatives drops the editor-toy branch", () => {
+test("website-shaped manifest: .** minus negatives drops a branch and its importers", () => {
   const websiteManifest: CompositionManifest = {
     name: "website",
     entryPoints: [
       asPluginId("apps.website.**"),
-      asPluginId("!apps.website.demos.editor-toy.**"),
+      asPluginId("!apps.website.pages.story.**"),
     ],
     selectedContributors: [],
   };
   const comp = resolveComposition(graph, websiteManifest);
 
-  // Every editor-toy id is OUT of the bundle.
-  const editorToyIds = [...tree.byDir.values()]
+  // Every story id is OUT of the bundle…
+  const storyIds = [...tree.byDir.values()]
     .map((n) => n.id)
     .filter(
       (id) =>
-        id === "apps.website.demos.editor-toy" ||
-        id.startsWith("apps.website.demos.editor-toy."),
+        id === "apps.website.pages.story" ||
+        id.startsWith("apps.website.pages.story."),
     );
-  expect(editorToyIds.length).toBeGreaterThan(0);
-  for (const id of editorToyIds) {
+  expect(storyIds.length).toBeGreaterThan(0);
+  for (const id of storyIds) {
     expect(comp.bundle.has(asPluginId(id))).toBe(false);
   }
+  // …and so is the landing section that imports it (a negative cascades to
+  // importers), while the landing itself stays.
+  expect(comp.bundle.has(asPluginId("apps.website.landing.story-link"))).toBe(
+    false,
+  );
 
   // Kept website ids ARE bundled.
   expect(comp.bundle.has(asPluginId("apps.website.shell"))).toBe(true);
   expect(comp.bundle.has(asPluginId("apps.website.landing"))).toBe(true);
-  expect(comp.bundle.has(asPluginId("apps.website.demos.app-gallery"))).toBe(
-    true,
-  );
+  expect(comp.bundle.has(asPluginId("apps.website.pages.apps"))).toBe(true);
 });
 
 test("available frontier: reviewable soft options into the bundle", () => {
@@ -641,7 +644,8 @@ test("removalClosure: pulls in transitive importers + descendants, leaves depend
 
 // ── Global exclusions: the base-exclusions row every composition inherits ──────
 
-/** The one negative the repo ships, and the twelve plugins it resolves to. */
+/** The one negative the repo ships, and the thirteen plugins it resolves to (the
+ *  plugin, its two sub-plugins, and every facet's `render-diff` adapter). */
 const PLUGIN_CHANGES = asPluginId("review.plugin-changes");
 const BASE_ROW: CompositionManifest = {
   name: BASE_EXCLUSIONS_ID,
@@ -653,6 +657,7 @@ const RENDER_DIFF_FACETS = [
   "contributions",
   "cross-refs",
   "db-schema",
+  "exemptions",
   "exports",
   "registrations",
   "resources",
@@ -841,10 +846,12 @@ test("naming an importer is NOT an opt-out: the contradiction is reported with i
 });
 
 // THE MIGRATION ITSELF. `singularity` is `entryPoints: ["**"]` plus the inherited
-// base row, and that must bundle exactly every plugin minus the twelve the
-// `singularity.disabled` flag used to remove. This is what makes the swap provable:
-// the same twelve, from a declaration instead of a package.json key.
-test("real-tree `singularity`: everything except the twelve excluded plugins", () => {
+// base row, and that must bundle exactly every plugin minus the ones the
+// `singularity.disabled` flag used to remove (twelve then; the exemptions facet's
+// `render-diff` adapter, which imports plugin-changes, has since made it
+// thirteen). This is what makes the swap provable: the same set, from a
+// declaration instead of a package.json key.
+test("real-tree `singularity`: everything except the thirteen excluded plugins", () => {
   const main: CompositionManifest = {
     name: "singularity",
     entryPoints: ["**"],
@@ -875,7 +882,7 @@ test("flattenManifest does not fold the base row into itself", () => {
   expect(flat.extends).toEqual([]);
 });
 
-// `negatedTargets` is what the author ASSERTED must leave; the twelve absent ids
+// `negatedTargets` is what the author ASSERTED must leave; the thirteen absent ids
 // are what that assertion cost. Keeping them separate is what lets a reader tell
 // "excluded on purpose" from "excluded because something else was".
 test("negatedTargets carries the asserted targets, not the cascade", () => {
@@ -944,4 +951,39 @@ test("e2e / provision / cli imports are not hard closure edges", () => {
   // genuinely imports it from a runtime the app runs, so it lands only in the
   // compositions that ship that plugin.
   expect(graph.hardReverse.get(BROWSER_FETCH)).toEqual([URL_EXTRACT]);
+});
+
+test("token use is a hard edge: a plugin painting with a group's var bundles the group", () => {
+  // `primitives.avatar` paints `from-categorical-1-deep`/`bg-categorical-N/15`
+  // and imports nothing of `ui.tokens.categorical`, whose `web/` alone
+  // registers `--categorical-*` (equin.ai once shipped blank app tiles so).
+  const AVATAR = asPluginId("primitives.avatar");
+  const CATEGORICAL = asPluginId("ui.tokens.categorical");
+  const use = getFacet(
+    [...tree.byDir.values()].find((n) => n.id === AVATAR)!,
+    crossRefsFacetDef,
+  )!.tokenUses.find((u) => u.plugin === CATEGORICAL);
+  expect(use?.group).toBe("categorical");
+  expect(use?.vars).toContain("--categorical-1");
+  expect(graph.hardForward.get(AVATAR)).toContain(CATEGORICAL);
+  expect(graph.hardReverse.get(CATEGORICAL)).toContain(AVATAR);
+  expect(
+    graph.edges.find((e) => e.from === AVATAR && e.to === CATEGORICAL)?.via,
+  ).toBe("token");
+});
+
+test("the website bundles the token groups it paints with, none listed by name", () => {
+  // Neither group is an entry of the website or of `served-baseline`: they
+  // arrive through the token edges of the plugins the site renders.
+  const comp = resolveComposition(graph, {
+    name: "website-probe",
+    entryPoints: [asPluginId("apps.website.**")],
+    selectedContributors: [],
+  });
+  for (const id of [
+    "ui.tokens.categorical",
+    "ui.tokens.chart",
+    "ui.tokens.color-palette",
+  ])
+    expect(comp.bundle.has(asPluginId(id))).toBe(true);
 });

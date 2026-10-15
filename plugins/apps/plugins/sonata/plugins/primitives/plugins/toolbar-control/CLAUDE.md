@@ -45,6 +45,11 @@ by the same rule, owned here so it is never re-spelled:
     - `HoverExpandPanel`
     - `ToolbarControl`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/sonata/audio/engine`
     - `apps/sonata/primitives/jog-wheel`

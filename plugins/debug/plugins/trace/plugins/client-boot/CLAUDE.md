@@ -52,6 +52,10 @@ never the trace window's (engine clock-domain rule).
 - Server:
   - Contributes: `trace-event-class` "client-boot"
   - Uses: `debug/trace/engine.defineTraceEventClass`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-sm`
 - Core:
   - Exports (types):
     - `AssetRollup`

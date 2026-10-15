@@ -24,6 +24,27 @@
   - Uses: `ui/theme-engine.defineTokenGroup`
   - Exports (types): `FontFamilyTokenValues`
   - Exports (values): `fontFamilyGroup`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
+  - Tokens used by: 145 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×35
+    - `apps` ×21
+    - `plugin-meta` ×21
+    - `debug` ×19
+    - `primitives` ×14
+    - `reports` ×6
+    - `ui` ×5
+    - `tasks` ×4
+    - `fields` ×3
+    - `infra` ×3
+    - `page` ×3
+    - `active-data` ×2
+    - `auth` ×2
+    - `build` ×2
+    - `code-explorer` ×2
+    - `config_v2/settings`
+    - `music/chord-box`
+    - `stats/cost`
 - Sub-plugins:
   - **`google-fonts`** — Loads the Google Fonts that the theme each scope selects asks for (the desktop's and every app's own), so a per-app font loads whether or not that app is focused.
 

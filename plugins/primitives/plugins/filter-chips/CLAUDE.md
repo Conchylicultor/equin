@@ -19,6 +19,7 @@
     - `FilterGroup`
     - `useChipFilter`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/color-palette --muted-foreground`
   - Imported by:
     - `apps/studio/contributions`
     - `apps/website/pages/apps`

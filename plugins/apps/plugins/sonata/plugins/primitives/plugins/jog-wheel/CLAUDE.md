@@ -35,6 +35,12 @@ while `drag.phase !== "idle"`. Both header wheels (speed, spread) use it.
     - `JogWheelProps`
   - Exports (values): `JogWheel`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
     - `apps/sonata/piano-roll`
     - `apps/sonata/transport-bar`

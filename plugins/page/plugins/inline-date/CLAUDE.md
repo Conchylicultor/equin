@@ -48,6 +48,11 @@
     - `REMINDER_TOKEN_PATTERN`
     - `scanReminderTokens`
     - `stripInlineTokens`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
 

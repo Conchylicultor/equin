@@ -207,6 +207,7 @@ row, or on a failed re-read the row as last seen).
     - `RunRowSchema`
     - `runs`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/color-palette --muted-foreground`
   - Imported by:
     - `apps/deploy/deployments/runs-arm`
     - `backup`

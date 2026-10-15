@@ -6,6 +6,10 @@
 
 - Description: Single source of truth for the membership-state tint + legend (shared by the Explorer membership band and the Studio graph pane).
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --info`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --success`
   - Imported by:
     - `apps/studio/explorer/membership`
     - `apps/studio/graph`

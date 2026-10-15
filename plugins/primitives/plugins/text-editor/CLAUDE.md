@@ -107,6 +107,20 @@ registry readers are headless.
     - `useInsertMarkdown`
     - `useTakeMarkdownWith`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --composer`
+    - `ui/tokens/color-palette --faint-foreground`
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --input`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/density --pad-composer`
+    - `ui/tokens/density --pad-composer-text`
+    - `ui/tokens/shape --radius-card`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-body`
+    - `ui/tokens/type-scale --font-weight-normal`
+    - `ui/tokens/type-scale --line-height-body`
   - Imported by:
     - `active-data/go`
     - `active-data/task`

@@ -548,6 +548,7 @@ any consumer — the precedent `health`'s exposed `status` field set for the ser
     - `updateDeployment`
     - `UpdateDeploymentBodySchema`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/composition`

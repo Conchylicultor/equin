@@ -161,6 +161,7 @@ default is stated twice and can therefore drift.
     - `placedClasses`
     - `placedStyle`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×16
     - `primitives` ×7

@@ -35,6 +35,10 @@
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --pad-split-arrow-x`
+    - `ui/tokens/shape --spacing`
   - Imported by: `conversations/conversation-view/selection-actions`
 - Shared:
   - Exports (values): `promptTemplatesConfig`

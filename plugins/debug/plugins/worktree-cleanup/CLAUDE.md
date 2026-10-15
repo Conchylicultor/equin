@@ -115,6 +115,13 @@ the panel until it is given something to say.
     - `GET /api/debug/worktrees`
     - `POST /api/debug/worktrees/bulk-delete`
     - `DELETE /api/debug/worktrees/:id`
+- Cross-plugin:
+  - Uses tokens: 22 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/type-scale` ×10
+    - `ui/tokens/color-palette` ×6
+    - `ui/tokens/density` ×4
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from:
     - `endpoints:no-raw-json-handlers` — `server/internal/handle-delete.ts` (sanctioned)

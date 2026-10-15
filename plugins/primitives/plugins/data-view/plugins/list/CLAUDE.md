@@ -204,6 +204,14 @@ conditional hook.
     - `primitives/tree.TreeRowChrome`
     - `primitives/virtual-rows.VirtualRows`
   - Exports (types): `ListViewOptions`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --section-body-pad-top`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xl`
+    - `ui/tokens/shape --spacing`
 - Core:
   - Exports (types): `ListViewOptions`
 

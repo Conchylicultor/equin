@@ -36,6 +36,7 @@
     - `AnswerMenuBodySchema`
     - `answerTerminalMenu`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `conversations/menu-relay/usage-limit`
 - Sub-plugins:
   - **`usage-limit`** — Claude Code's usage-limit menu, drawn by the terminal-menu card: when the limit resets (with a countdown) and Wait & continue automatically / Stop / Use usage credits buttons that answer it.
