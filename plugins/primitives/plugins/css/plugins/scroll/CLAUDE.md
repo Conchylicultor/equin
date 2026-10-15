@@ -18,9 +18,11 @@ scroller never sprouts a stray horizontal bar.
 **One exception, declared by the content:** a `y` scroller (marked
 `data-scroll-x-host`, and opening ui-kit's `SidewaysScroll` region for its
 children) also scrolls sideways — and is an inline-size container (`100cqi` =
-what it shows) — while it holds an element marked `data-scrolls-x`
-(`has-[[data-scrolls-x]]:…`). A grid `DataTable` wider than its box marks
-itself so. The pane then stays the ONE scroller on both axes, which is what
+what it shows) — while it holds an element marked `data-scrolls-x`. A grid
+`DataTable` wider than its box declares itself so with `useScrollsSideways(box,
+active)`, which marks the box `data-scrolls-x` and every box from its parent up
+to the scroller (included) `data-scroll-x-path`; the scroller's own classes key
+on that mark (`data-scroll-x-path:overflow-x-auto`). The pane then stays the ONE scroller on both axes, which is what
 lets the table's sticky header (top) and sticky first column (left) pin to the
 same scroller — a table scrolling inside a box of its own would capture the
 header's `top`, and its group headers with it.
@@ -32,6 +34,15 @@ a path box that is off the path — a stats band, the DataView's toolbar band, a
 side panel — pins `left: 0` at `max-width: 100cqi`. A positioned child
 (`absolute`, `relative`) keeps its position and scrolls instead. Unmarked,
 nothing applies. See `data-table`'s CLAUDE.md ("Wide tables").
+
+**The path is named by the table, never found by a `:has()`.** The first
+version found it in CSS — `[data-scroll-x-host]:has([data-scrolls-x])
+:has([data-scrolls-x])`. Its last compound is a bare `:has()`, so Chrome tests
+it on every element in every pane, and any DOM insertion anywhere in a pane
+(a fold mounting its content, a live row arriving) invalidated every ancestor's
+whole subtree: a full restyle of a long transcript (~37k elements, 0.3–0.7 s)
+between a click and the fold it started. The `css:no-unanchored-has` check
+rejects that shape anywhere.
 
 ## Scope
 
@@ -62,11 +73,12 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
   - Exports (values):
     - `Scroll`
     - `scrollClasses`
+    - `useScrollsSideways`
 - Cross-plugin:
-  - Imported by: 91 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 92 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×25
     - `apps` ×19
-    - `primitives` ×13
+    - `primitives` ×14
     - `debug` ×12
     - `page` ×4
     - `build` ×3

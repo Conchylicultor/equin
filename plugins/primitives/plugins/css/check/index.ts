@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import noUnanchoredHas from "./no-unanchored-has";
 import type {
   Check,
   CheckResult,
@@ -222,4 +223,4 @@ const check: Check = {
   },
 };
 
-export default check;
+export default [check, noUnanchoredHas];

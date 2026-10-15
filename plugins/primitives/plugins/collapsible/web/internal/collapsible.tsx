@@ -14,6 +14,7 @@ import {
 } from "react";
 import { useCollapsible, type UseCollapsibleOptions } from "./use-collapsible";
 import { FOLD_EASING, FOLD_MS } from "../../core";
+import { prefersReducedMotion, startFold } from "./fold-clock";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -239,10 +240,10 @@ export function FoldMotion({ open, children, ...props }: FoldMotionProps) {
  * the content snaps open: the fold-away (whose content is already mounted)
  * animated, the unfold did not. So the commit only PINS the box at its first
  * frame (inline height + opacity, clipped); the tween starts on the next
- * animation frame, measuring the natural height there — after whatever the
- * mount rendered — and its start time is set to `performance.now()` rather
- * than the stale frame stamp. A slow mount now delays the motion instead of
- * swallowing it.
+ * animation frame (`startFold`, the clock every fold shares), measuring the
+ * natural height there — after whatever the mount rendered — from
+ * `performance.now()` rather than the stale frame stamp. A slow mount delays
+ * the motion instead of swallowing it.
  */
 function useFoldMotion(open: boolean) {
   const ref = useRef<HTMLDivElement>(null);
@@ -282,7 +283,7 @@ function useFoldMotion(open: boolean) {
     running.current = null;
     el.style.overflow = "hidden";
 
-    const start = (duration: number) => {
+    const start = (duration: number, startTime: number) => {
       pinned.current = false;
       // Released first, so an unfold measures the size the box settles at.
       el.style.maxHeight = "";
@@ -305,8 +306,7 @@ function useFoldMotion(open: boolean) {
           fill: motion.opening ? "backwards" : "both",
         },
       );
-      // Now, not the frame stamp, which predates any long task this frame ran.
-      anim.startTime = performance.now();
+      anim.startTime = startTime;
       running.current = { anim, el };
       anim.onfinish = () => {
         if (!motion.opening) {
@@ -324,18 +324,17 @@ function useFoldMotion(open: boolean) {
 
     // No motion wanted: nothing to protect from a slow commit, and pinning
     // would paint one empty frame for nothing.
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      start(0);
+    if (prefersReducedMotion()) {
+      start(0, performance.now());
       return;
     }
     // Pin the first frame now (before paint), start the tween next frame.
     el.style.maxHeight = `${from.height}px`;
     el.style.opacity = String(from.opacity);
     pinned.current = true;
-    const frame = requestAnimationFrame(() => start(FOLD_MS));
     // A flip before the start re-runs this from the pinned frame; an unmount
     // drops the box with it.
-    return () => cancelAnimationFrame(frame);
+    return startFold((startTime) => start(FOLD_MS, startTime));
   }, [motion]);
 
   return { ref, present };

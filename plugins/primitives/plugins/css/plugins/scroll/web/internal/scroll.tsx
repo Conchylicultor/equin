@@ -14,13 +14,15 @@ export type ScrollAxis = "y" | "x" | "both";
 
 const OVERFLOW_CLASS: Record<ScrollAxis, string> = {
   // A vertical scroller ALSO scrolls sideways while it holds content marked
-  // `data-scrolls-x` — a grid table wider than its box (data-table). The pane
+  // `data-scrolls-x` — a grid table wider than its box (data-table), which
+  // marks the boxes up to here `data-scroll-x-path` (`useScrollsSideways`),
+  // this one included: the scroller keys on its own mark, not a `:has()`. The pane
   // stays the one scroller on both axes, so the table's sticky header (top)
   // and first column (left) pin to the same scroller; a scroller of the
   // table's own would capture the header's `top`. Meanwhile it is an
   // inline-size container, so a band pinned to its left edge sizes itself to
   // what is visible (`max-width: 100cqi`). Unmarked, nothing changes.
-  y: "overflow-y-auto overflow-x-hidden has-[[data-scrolls-x]]:overflow-x-auto has-[[data-scrolls-x]]:[container-type:inline-size]",
+  y: "overflow-y-auto overflow-x-hidden data-scroll-x-path:overflow-x-auto data-scroll-x-path:[container-type:inline-size]",
   x: "overflow-x-auto overflow-y-hidden",
   both: "overflow-auto",
 };

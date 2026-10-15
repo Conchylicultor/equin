@@ -46,7 +46,8 @@ inserted anywhere else are live data as ever.
   viewport are not animated.
 - **Clock**: the commit pins the first frame in inline style; the tween starts
   on the next animation frame, re-measured there, with `startTime =
-  performance.now()`; a no-op animation on the host is the fold's clock.
+  performance.now()` — collapsible's `startFold`, the one clock `FoldMotion`
+  starts on too; a no-op animation on the host is the fold's clock.
   `prefers-reduced-motion`: nothing folds. A new disclosure mid-fold ends the
   one in flight where it is (the hidden rows drop at once).
 - **Windowed lists** draw `inFlight` (capped) rows past the window's end
@@ -64,19 +65,22 @@ a 60 fps display paints). It passes on the tween clock.
 ## Plugin reference
 
 - Description: Disclosure motion for flat lists: useRowFold — given the rows and the open keys they were flattened under, rows a disclosure reveals grow in, rows it hides fold out (kept drawn until gone) and the rows below slide; any other change (scroll, search, live data, paging) lands as is. Owned by the flat renderers (VirtualRows, DataTable). Core: the pure disclosure diff; the fold timing is collapsible's (FOLD_MS / FOLD_EASING), one clock for every fold.
-- Cross-plugin:
-  - Imported by:
-    - `debug/trace/spans`
-    - `primitives/data-table`
-    - `primitives/tree`
-    - `primitives/virtual-rows`
 - Web:
+  - Uses:
+    - `primitives/collapsible.prefersReducedMotion`
+    - `primitives/collapsible.startFold`
   - Exports (types):
     - `RowFold`
     - `RowFoldHostProps`
     - `RowFoldProps`
     - `UseRowFoldOptions`
   - Exports (values): `useRowFold`
+- Cross-plugin:
+  - Imported by:
+    - `debug/trace/spans`
+    - `primitives/data-table`
+    - `primitives/tree`
+    - `primitives/virtual-rows`
 - Core:
   - Exports (types):
     - `AwaitedReveal`

@@ -29708,15 +29708,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CollapsibleTrigger`
           - `ExpandAllButton`
           - `FoldMotion`
+          - `prefersReducedMotion`
+          - `startFold`
           - `useCollapsible`
           - `useCollapsibleContext`
           - `useExpandAll`
       - Cross-plugin:
-        - Imported by: 47 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+        - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
           - `conversations` ×10
           - `ui` ×9
           - `apps` ×8
-          - `primitives` ×7
+          - `primitives` ×8
           - `plugin-meta` ×4
           - `review` ×3
           - `auth`
@@ -30583,11 +30585,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `Scroll`
               - `scrollClasses`
+              - `useScrollsSideways`
           - Cross-plugin:
-            - Imported by: 91 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 92 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×25
               - `apps` ×19
-              - `primitives` ×13
+              - `primitives` ×14
               - `debug` ×12
               - `page` ×4
               - `build` ×3
@@ -31245,7 +31248,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/notifications`
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
       - Web:
-        - Uses: 23 symbols — full list in [`plugins/primitives/plugins/data-table/REFERENCE.md`](../plugins/primitives/plugins/data-table/REFERENCE.md)
+        - Uses: 24 symbols — full list in [`plugins/primitives/plugins/data-table/REFERENCE.md`](../plugins/primitives/plugins/data-table/REFERENCE.md)
           - `primitives/css/ui-kit` ×4
           - `primitives/multi-select` ×3
           - `primitives/css/sticky/stack` ×2
@@ -31254,6 +31257,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/row-actions` ×2
           - `primitives/virtual-rows/row-fold` ×2
           - `primitives/css/center.Center`
+          - `primitives/css/scroll.useScrollsSideways`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/link-gesture.activationProps`
@@ -35771,19 +35775,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/tree`
       - Plugins:
         - **`row-fold`** — Disclosure motion for flat lists: useRowFold — given the rows and the open keys they were flattened under, rows a disclosure reveals grow in, rows it hides fold out (kept drawn until gone) and the rows below slide; any other change (scroll, search, live data, paging) lands as is. Owned by the flat renderers (VirtualRows, DataTable). Core: the pure disclosure diff; the fold timing is collapsible's (FOLD_MS / FOLD_EASING), one clock for every fold.
-          - Cross-plugin:
-            - Imported by:
-              - `debug/trace/spans`
-              - `primitives/data-table`
-              - `primitives/tree`
-              - `primitives/virtual-rows`
           - Web:
+            - Uses:
+              - `primitives/collapsible.prefersReducedMotion`
+              - `primitives/collapsible.startFold`
             - Exports (types):
               - `RowFold`
               - `RowFoldHostProps`
               - `RowFoldProps`
               - `UseRowFoldOptions`
             - Exports (values): `useRowFold`
+          - Cross-plugin:
+            - Imported by:
+              - `debug/trace/spans`
+              - `primitives/data-table`
+              - `primitives/tree`
+              - `primitives/virtual-rows`
           - Core:
             - Exports (types):
               - `AwaitedReveal`

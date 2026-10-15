@@ -4,6 +4,10 @@ import {
   FOLD_MS,
 } from "@plugins/primitives/plugins/collapsible/core";
 import {
+  prefersReducedMotion,
+  startFold,
+} from "@plugins/primitives/plugins/collapsible/web";
+import {
   awaitedReveal,
   detectContinuation,
   detectDisclosure,
@@ -74,9 +78,10 @@ export interface RowFold<T> {
  * site records "this change was a toggle": the flip of an open key IS the
  * signal (`detectDisclosure`).
  *
- * Same clock as `FoldMotion`: the commit pins every row at its first frame,
- * the tween starts on the next animation frame from `performance.now()` (a
- * slow mount delays it rather than swallowing it), hidden rows unmount once it
+ * Same clock as `FoldMotion` (`startFold`): the commit pins every row at its
+ * first frame, the tween starts on the next animation frame from
+ * `performance.now()` (a slow mount delays it rather than swallowing it),
+ * hidden rows unmount once it
  * ends, and under `prefers-reduced-motion` nothing folds at all. A disclosure
  * landing mid-fold ends the one in flight where it is.
  */
@@ -133,9 +138,8 @@ export function useRowFold<T>({
     // Pin the first frame now (before paint); start the tween next frame,
     // measured there — after whatever the commit mounted has laid out.
     pinned.pin(plan());
-    const frame = requestAnimationFrame(() => {
+    const cancelStart = startFold((start) => {
       pinned.release();
-      const start = performance.now();
       const timing: KeyframeAnimationOptions = {
         duration: FOLD_MS,
         easing: FOLD_EASING,
@@ -147,8 +151,6 @@ export function useRowFold<T>({
       };
       for (const { el, from, to } of plan()) {
         const anim = el.animate([rowKeyframe(from), rowKeyframe(to)], timing);
-        // Now, not the frame stamp, which predates any long task this frame
-        // ran.
         anim.startTime = start;
         running.push(anim);
       }
@@ -161,7 +163,7 @@ export function useRowFold<T>({
         setDisclosure((current) => (current === disclosure ? null : current));
     });
     return () => {
-      cancelAnimationFrame(frame);
+      cancelStart();
       for (const anim of running) anim.cancel();
       pinned.release();
     };
@@ -248,10 +250,6 @@ function sameKeys(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
   if (a.size !== b.size) return false;
   for (const key of a) if (!b.has(key)) return false;
   return true;
-}
-
-function prefersReducedMotion(): boolean {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 /**

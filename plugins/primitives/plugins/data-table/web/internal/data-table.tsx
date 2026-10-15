@@ -251,7 +251,6 @@ export function DataTable<TRow>({
     wide: pinLead,
     shown: shownColumns,
     tracks: columnTracks,
-    overflowing,
     containerRef: fitContainerRef,
     gridRef: fitGridRef,
   } = useColumnFit(columns, {
@@ -547,12 +546,9 @@ export function DataTable<TRow>({
 
   const table = (
     <ControlSizeProvider size={controlSize}>
-      {/* The table's box: what the fit measures the room in. While the grid
-          is wider, it marks itself `data-scrolls-x` — the enclosing `Scroll`
-          then scrolls sideways too (and only then), so the pane is the one
-          scroller on both axes and the sticky header and first column pin to
-          the same edges. */}
-      <div ref={fitContainerRef} data-scrolls-x={overflowing ? "" : undefined}>
+      {/* The table's box: what the fit measures the room in, and what it
+          marks `data-scrolls-x` while the grid is wider (useColumnFit). */}
+      <div ref={fitContainerRef}>
         <div
           // eslint-disable-next-line layout/no-adhoc-layout -- subgrid table host: a dynamic gridTemplateColumns grid whose rows are full-span subgrids (no Frame/Grid equivalent)
           className="grid gap-x-sm"

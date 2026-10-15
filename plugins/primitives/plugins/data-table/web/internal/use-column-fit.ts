@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import { useScrollsSideways } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { fitAlignedColumns, floorAtLabel, trackMin } from "../../core";
 import type { ColumnDef } from "./types";
 
@@ -48,8 +49,6 @@ export interface ColumnFit<TRow> {
   shown: ColumnDef<TRow>[];
   /** Each shown column's grid track (`floorAtLabel` once measured). */
   tracks: string[];
-  /** The grid is wider than the room it has: the pane must scroll sideways. */
-  overflowing: boolean;
   containerRef: (el: HTMLElement | null) => void;
   gridRef: (el: HTMLElement | null) => void;
 }
@@ -203,11 +202,18 @@ export function useColumnFit<TRow>(
       : (col.width ?? "auto"),
   );
 
+  const overflowing =
+    !!wideRoom && wideRoom.grid > wideRoom.available + 0.5;
+  // While the grid is wider, its box marks itself and the path up to the
+  // scroller: the `Scroll` then scrolls sideways too (and only then), so the
+  // pane is the one scroller on both axes and the sticky header and first
+  // column pin to the same edges.
+  useScrollsSideways(container, overflowing);
+
   return {
     wide: wideRoom !== null,
     shown,
     tracks,
-    overflowing: !!wideRoom && wideRoom.grid > wideRoom.available + 0.5,
     containerRef: setContainer,
     gridRef: setGrid,
   };
