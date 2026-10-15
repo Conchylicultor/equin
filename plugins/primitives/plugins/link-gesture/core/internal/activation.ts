@@ -15,11 +15,22 @@ export interface LinkTarget {
 }
 
 /**
- * What activating something does: a plain action, or a {@link LinkTarget}
- * whose "elsewhere" gestures open a browser tab. Switched on in one place —
- * the web barrel's `activationProps` / `runActivation`.
+ * A plain action: a function that returns NOTHING. Spelled `void | undefined`,
+ * not `void`, on purpose — TypeScript ignores the return of a function assigned
+ * to a `() => void` type, so `() => openPane.to(…)` would be accepted there and
+ * the `LinkTarget` it builds silently dropped on click. A return type that is
+ * not exactly `void` is checked for real: a function returning a value (a
+ * `LinkTarget`, a Promise) is a type error, while one returning `void` — a
+ * setter call, a `() => void` binding, a block body — still fits.
  */
-export type Activation = (() => void) | LinkTarget;
+export type Action = () => void | undefined;
+
+/**
+ * What activating something does: a plain {@link Action}, or a
+ * {@link LinkTarget} whose "elsewhere" gestures open a browser tab. Switched on
+ * in one place — the web barrel's `activationProps` / `runActivation`.
+ */
+export type Activation = Action | LinkTarget;
 
 /** Run an activation the way a plain click (or Enter) does. */
 export function runActivation(activation: Activation): void {

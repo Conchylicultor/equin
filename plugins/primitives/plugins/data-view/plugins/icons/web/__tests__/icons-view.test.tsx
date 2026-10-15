@@ -104,7 +104,11 @@ describe("data-view icons view", () => {
     const opened: string[] = [];
     const { getByText } = renderIcons([avatar, name], {
       rowActivation: (r) =>
-        r.id === "a" ? () => opened.push(r.id) : undefined,
+        r.id === "a"
+          ? () => {
+              opened.push(r.id);
+            }
+          : undefined,
     });
     const alpha = getByText("alpha").closest("[data-row-key]")!;
     const beta = getByText("beta").closest("[data-row-key]")!;

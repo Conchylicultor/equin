@@ -140,7 +140,9 @@ export function ServeTargetPanel({
             <LinkChip
               mono
               title={`Open ${live.url}`}
-              activation={() => window.open(live.url, "_blank", "noopener")}
+              activation={() => {
+                window.open(live.url, "_blank", "noopener");
+              }}
             >
               {host}
             </LinkChip>

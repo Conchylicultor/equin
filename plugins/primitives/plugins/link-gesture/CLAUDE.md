@@ -44,6 +44,15 @@ every primitive taking `onClick` / `onOpen` / `onNodeClick` instead of an
 for the cases with no gesture to read — `onSelect` (a picker), after a mutation
 (`onCreated`), keyboard shortcuts.
 
+**A dropped link is a type error.** `Activation`'s function arm is `Action =
+() => void | undefined`, not `() => void`: TypeScript ignores the return of a
+function assigned to a bare `void` return, so `() => openPane.to(…)` — or a
+resolver `(r) => () => linkTo(r.id)` — would type-check and the click would
+build a `LinkTarget` and discard it. With `void | undefined` the return is
+checked, so a function returning a value (a `LinkTarget`, a Promise) is
+rejected; pass the target itself, or `() => void promise()`. Pinned by the
+`@ts-expect-error` cases in `core/internal/activation.test.ts`.
+
 `LinkChip` makes it a type: `onClick?: never` / `onAuxClick?: never`, so a chip's
 click is its `activation` (a plain function for a chip that does something other
 than navigate — still isolated from its container).
