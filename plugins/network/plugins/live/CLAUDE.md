@@ -1605,12 +1605,11 @@ never add one.
 
 ## Plugin reference
 
-- Description: Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; LiveExposures.Register registers an entity extension's exposed fields (with their cells) for every list whose collection reaches its entity, read by useExposures. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+- Description: Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; FieldPresentation.Register presents an owner's fields — an entity's own, an extension's exposed ones, a union arm's, a collection's own — with their cells, widths and live options in every list that reaches the owner, read by useFieldPresentations. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a collection reaching an entity compiles at boot, folding every LiveColumns.Expose contribution of an extension exposing fields of it — and a `columnScope` collection every LiveColumns.Scoped set — into its rows' `$columns`) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
 - Web:
-  - Slots: `LiveExposures.Register`
-  - Slot contributors:
-    - `LiveExposures.Register` ← `conversations.usage`
-    - `LiveExposures.Register` ← `tasks.task-track`
+  - Slots: `FieldPresentation.Register`
+  - Slot contributors: 23 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `FieldPresentation.Register` ×23
   - Uses:
     - `primitives/live-state.PagedResourceResult`
     - `primitives/live-state.ResourceDerivation`
@@ -1622,9 +1621,12 @@ never add one.
     - `primitives/live-state.useResources`
     - `primitives/log-channels.clientLog`
   - Exports (types):
-    - `ExposedFieldPresentation`
+    - `FieldPresentationRegistration`
+    - `FieldPresentationSpec`
+    - `FieldsCollection`
     - `LiveAllSelect`
-    - `LiveExposureRegistration`
+    - `LiveFieldOption`
+    - `LiveFieldOptionsRead`
     - `LiveIdsQuery`
     - `LiveListResult`
     - `LivePageError`
@@ -1635,17 +1637,21 @@ never add one.
     - `LiveSnapshotResult`
     - `LiveValuePagesOptions`
     - `PagesTruncation`
+    - `PresentationOwner`
+    - `StoredFieldPresentation`
     - `VisibleRange`
   - Exports (values):
-    - `LiveExposures`
+    - `collectionPresentationKey`
+    - `FieldPresentation`
     - `mapRow`
     - `mintVisibleRange`
-    - `useExposures`
+    - `presentationOwnerKey`
+    - `useFieldPresentations`
     - `useLive`
     - `useLiveRow`
 - Server:
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/query-resource` ×23
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/query-resource` ×24
     - `database/sql-column` ×2
     - `network/live/filter.filterSql`
   - Exports (types):
@@ -1665,7 +1671,6 @@ never add one.
     - `ServeCollectionOptions`
     - `ServedAllCollection`
     - `ServedCollection`
-    - `ServedColumns`
     - `ServedExternalQueryValue`
     - `ServedExternalValue`
     - `ServedLookupCollection`
@@ -1687,31 +1692,21 @@ never add one.
     - `compileValue`
     - `LiveColumns`
     - `serveCollection`
-    - `serveColumns`
     - `serveScopedColumns`
     - `serveUnionCollection`
     - `serveValue`
     - `sliceRange`
 - Core:
-  - Uses:
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×6
+    - `network/live/filter` ×6
+    - `primitives/live-state` ×6
+    - `packages/resource-protocol` ×2
     - `infra/query-resource.KIND_RE`
-    - `network/live/filter.decodeFilter`
-    - `network/live/filter.encodeFilter`
-    - `network/live/filter.Filter`
-    - `network/live/filter.Filterable`
-    - `network/live/filter.FilterScalar`
-    - `network/live/filter.LIST_MAX`
     - `packages/canonical-params.canonicalJson`
-    - `packages/resource-protocol.ResourceContractError`
-    - `packages/resource-protocol.ResourceRefusal`
-    - `primitives/live-state.PointParams`
-    - `primitives/live-state.registerResourceDescriptor`
-    - `primitives/live-state.ResourceDescriptor`
-    - `primitives/live-state.ResourcePreload`
-    - `primitives/live-state.WindowParams`
-    - `primitives/live-state.WindowSelector`
   - Exports (types):
     - `ContributedColumns`
+    - `DomainOfValue`
     - `ExternalAllCollection`
     - `ExternalLookupCollection`
     - `ExternalNotifiedPagedValue`
@@ -1720,9 +1715,13 @@ never add one.
     - `ExternalSilentPagedValue`
     - `ExternalSilentValue`
     - `ExternalWindowCollection`
+    - `FieldsFilterable`
+    - `FieldsRow`
+    - `LabelledKeys`
     - `LiveAllCollection`
     - `LiveAllOrder`
     - `LiveAllSpec`
+    - `LiveArm`
     - `LiveArmColumnsHandle`
     - `LiveArms`
     - `LiveArmsCollection`
@@ -1742,9 +1741,7 @@ never add one.
     - `LiveColumnRef`
     - `LiveColumnRefOwner`
     - `LiveColumnsDeclaration`
-    - `LiveColumnsHandle`
     - `LiveColumnsOwner`
-    - `LiveContributedCollection`
     - `LiveCountCodec`
     - `LiveCountDescriptor`
     - `LiveCountedCollection`
@@ -1757,6 +1754,12 @@ never add one.
     - `LiveExposedColumns`
     - `LiveExposes`
     - `LiveExternalServe`
+    - `LiveField`
+    - `LiveFieldIds`
+    - `LiveFields`
+    - `LiveFieldsDefault`
+    - `LiveFieldsForm`
+    - `LiveFieldsSpec`
     - `LiveFilterable`
     - `LiveFilterableOf`
     - `LiveGroup`
@@ -1799,6 +1802,7 @@ never add one.
     - `LiveQueryValueSpec`
     - `LiveRefusals`
     - `LiveRefusalsBrand`
+    - `LiveRelated`
     - `LiveReservedColumn`
     - `LiveRowSchema`
     - `LiveRowsCollection`
@@ -1820,6 +1824,7 @@ never add one.
     - `LiveWindowCodec`
     - `LiveWindowDescriptor`
     - `LiveWindowParams`
+    - `RequireLabel`
     - `ScopedColumnMember`
     - `ServedExternalAll`
     - `ServedExternalLookup`
@@ -1841,16 +1846,15 @@ never add one.
     - `LIVE_ROW_KEY`
     - `LIVE_ROW_KEY_MAX_BYTES`
     - `LIVE_SCOPED_KEY`
-    - `liveArmColumns`
+    - `liveArm`
     - `liveCollection`
-    - `liveColumns`
     - `liveValue`
     - `scopedLiveColumns`
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
-  - Imported by: 223 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×63
+  - Imported by: 225 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×65
     - `conversations` ×35
     - `tasks` ×26
     - `debug` ×23

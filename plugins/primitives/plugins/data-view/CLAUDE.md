@@ -2444,10 +2444,10 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 84 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 90 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×12
     - `primitives/css/ui-kit` ×11
     - `primitives/data-view/view-core` ×8
-    - `network/live` ×6
     - `primitives/live-state` ×5
     - `primitives/css/control-panel` ×4
     - `primitives/slot-render` ×4
@@ -2521,6 +2521,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FieldGrouping`
     - `FieldGroupingSet`
     - `FieldOption`
+    - `FieldOverride`
+    - `FieldOverrides`
     - `FieldValue`
     - `FilterConjunction`
     - `FilterController`
@@ -2581,6 +2583,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `defineItemActions`
     - `EditableCell`
     - `FieldCell`
+    - `fieldOverrides`
     - `FilterValueInput`
     - `getDataViewDescriptor`
     - `GroupedSections`
@@ -2684,6 +2687,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FieldGroupingSet`
     - `FieldOption`
     - `FieldOptionsResult`
+    - `FieldOverride`
+    - `FieldOverrides`
     - `FieldSchemaSection`
     - `FieldValue`
     - `FilterConjunction`
@@ -2736,6 +2741,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DATA_VIEW_HEADER_OFFSET_VAR`
     - `defineDataView`
     - `exactCount`
+    - `fieldOverrides`
     - `FilterGroupSchema`
     - `filterNodeIdKind`
     - `FilterNodeSchema`
@@ -2778,6 +2784,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
 - Test helpers:
   - Web: `@plugins/primitives/plugins/data-view/web/testing`
     - `consumerPaging` — A consumer's paging (`DataViewProps.paging`): placeholders before and after the rows, every viewport report pushed to `reports`, nothing to grow.
+    - `deriveFields` — {@link useDerivedFields}, pure.
     - `describePagedConformance` — The paged-view contract every DataView view honours, run against `view` mounted through the real body on a laid-out page (`mountPagedDataView`):
     - `lowerFilterGroup` — Lower a DataView `FilterGroup` into a filter-language `Filter`, each rule through its operator's `lower` with `ctx.column` = the field id.
     - `lowersToMatch` — Does a rule `op(operand)` keep a row whose field projects to `value`? — the in-memory evaluator's exact path for one rule: `op.lower` over a column of `domain` (an incomplete rule, `undefined`, keeps every row), the DataView domain adapter, then the filter language's `matchesFilter`.

@@ -20,9 +20,9 @@ import {
 import {
   liveBoolean,
   liveInstant,
-  liveStringArray,
   liveText,
 } from "@plugins/network/plugins/live/plugins/filter/core";
+import { liveStringArray } from "@plugins/network/plugins/live/plugins/filter/core/testing";
 import { type FieldDef, type FilterOperatorSet } from "../../core";
 import { liveDataSource } from "./live-data-source";
 import {

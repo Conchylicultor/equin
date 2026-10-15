@@ -271,6 +271,7 @@ so a stray `defineEntity(` outside a schema-glob file is flagged.
 - Cross-plugin:
   - Imported by:
     - `apps/browser/bookmarks`
+    - `apps/deploy/servers`
     - `apps/events/events-core`
     - `apps/mail/mail-core`
     - `apps/places/places-core`
@@ -285,6 +286,7 @@ so a stray `defineEntity(` outside a schema-glob file is flagged.
     - `infra/claude-cli`
     - `infra/entity-extensions`
     - `infra/events`
+    - `page/block-entity`
     - `page/tags`
     - `plugin-meta/plugin-health`
     - `tasks/tasks-core`

@@ -342,6 +342,8 @@ describe("exposed columns — the window", () => {
               createdAt: created,
               [STARRED]: true,
               [ORIGIN]: "user",
+              __row_key_0: "2026-10-12 10:00:00+00",
+              __row_key_1: "c1",
             },
           ],
     );

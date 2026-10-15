@@ -163,12 +163,11 @@ the title — a chord-grid save endpoint physically cannot carry one.
 
 ## Plugin reference
 
-- Description: Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the `sonata.songs` live collection (sortable and filterable by the columns other plugins contribute). Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
+- Description: Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the `sonata.songs` live collection (sortable and filterable by every field an extension exposes on the songs entity). Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
 - Web:
   - Slots:
     - `Library.Source`
     - `Library.SongActions`
-    - `Library.Fields`
     - `sonataLibraryPane.Actions`
     - `sonataPlayerPane.Actions`
   - Slot contributors:
@@ -178,10 +177,6 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Library.Source` ← `apps.sonata.sources.ultimate-guitar`
     - `Library.Source` ← `apps.sonata.transcription`
     - `Library.SongActions` ← `apps.sonata.library`
-    - `Library.Fields` ← `apps.sonata.playback-history`
-    - `Library.Fields` ← `apps.sonata.sources.midi`
-    - `Library.Fields` ← `apps.sonata.sources.midi.folders`
-    - `Library.Fields` ← `apps.sonata.transcription`
     - `sonataLibraryPane.Actions` ← `primitives.pane`
     - `sonataPlayerPane.Actions` ← `apps.sonata.audio.engine`
     - `sonataPlayerPane.Actions` ← `apps.sonata.audio.metronome`
@@ -192,6 +187,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `sonataPlayerPane.Actions` ← `primitives.pane`
   - Contributes:
     - `IdKinds.Kind` "song|seed"
+    - `FieldPresentation.Register` "entity:sonata_songs"
     - `Sonata.Home` "library" → `SongLibrary`
     - `sonataPlayerPane.Actions` "back" → `BackToLibrary`
     - `sonataPlayerPane.Actions` "display-picker" → `DisplayPicker`
@@ -200,14 +196,14 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Library.SongActions` "delete" → `DeleteSongAction`
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
-  - Uses: 63 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 65 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×10
+    - `network/live` ×6
     - `primitives/data-view` ×6
     - `apps/sonata/player` ×5
     - `primitives/css/ui-kit` ×5
     - `apps/sonata/document` ×4
     - `apps/sonata/shell` ×4
-    - `network/live` ×4
     - `primitives/css/spacing` ×2
     - `primitives/latest-ref` ×2
     - `primitives/live-state` ×2
@@ -284,10 +280,9 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `ids.idKindField`
     - `ids.IdOf`
     - `infra/endpoints.defineEndpoint`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
-    - `network/live/filter.liveInstant`
-    - `network/live/filter.liveNumber`
-    - `network/live/filter.liveText`
+    - `network/live.LiveRowsCollection`
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `Song`
@@ -299,6 +294,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `songIdKind`
     - `songLibrary`
     - `SongSchema`
+    - `songsEntityRef`
     - `updateSong`
 - Cross-plugin:
   - Imported by:
@@ -313,7 +309,6 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/sources/chord-grid`
     - `apps/sonata/sources/midi`
     - `apps/sonata/sources/midi/file-preview`
-    - `apps/sonata/sources/midi/folders`
     - `apps/sonata/sources/musicxml`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/sources/ultimate-guitar/alignment`
@@ -322,16 +317,16 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/transport-bar`
     - `apps/sonata/transpose`
   - Extended by:
-    - `apps/sonata/sources/chord-grid` (table `sonata_songs_ext_chord_grid`)
-    - `apps/sonata/rich/chord-mode` (table `sonata_songs_ext_chord_mode`)
-    - `apps/sonata/rich/key-mode` (table `sonata_songs_ext_key_auto_detect`)
-    - `apps/sonata/sources/midi` (table `sonata_songs_ext_midi`)
-    - `apps/sonata/sources/musicxml` (table `sonata_songs_ext_musicxml`)
-    - `apps/sonata/playback-history` (table `sonata_songs_ext_playback`)
-    - `apps/sonata/rich/rhythm-controls` (table `sonata_songs_ext_rhythm`)
-    - `apps/sonata/transcription` (table `sonata_songs_ext_transcription`)
-    - `apps/sonata/transpose` (table `sonata_songs_ext_transpose`)
-    - `apps/sonata/sources/ultimate-guitar/alignment` (table `sonata_songs_ext_ug_alignment`)
-    - `apps/sonata/sources/ultimate-guitar` (table `sonata_songs_ext_ultimate_guitar`)
+    - `apps/sonata/sources/chord-grid` (table `library_ext_chord_grid`)
+    - `apps/sonata/rich/chord-mode` (table `library_ext_chord_mode`)
+    - `apps/sonata/rich/key-mode` (table `library_ext_key_auto_detect`)
+    - `apps/sonata/sources/midi` (table `library_ext_midi`)
+    - `apps/sonata/sources/musicxml` (table `library_ext_musicxml`)
+    - `apps/sonata/playback-history` (table `library_ext_playback`)
+    - `apps/sonata/rich/rhythm-controls` (table `library_ext_rhythm`)
+    - `apps/sonata/transcription` (table `library_ext_transcription`)
+    - `apps/sonata/transpose` (table `library_ext_transpose`)
+    - `apps/sonata/sources/ultimate-guitar/alignment` (table `library_ext_ug_alignment`)
+    - `apps/sonata/sources/ultimate-guitar` (table `library_ext_ultimate_guitar`)
 
 <!-- AUTOGENERATED:END -->

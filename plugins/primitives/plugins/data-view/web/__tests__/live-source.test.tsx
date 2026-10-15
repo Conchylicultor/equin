@@ -54,11 +54,11 @@ import {
   clause,
   liveBoolean,
   liveInstant,
-  liveStringArray,
   liveText,
   or,
   type Filter,
 } from "@plugins/network/plugins/live/plugins/filter/core";
+import { liveStringArray } from "@plugins/network/plugins/live/plugins/filter/core/testing";
 import {
   type FieldDef,
   type FieldGrouping,

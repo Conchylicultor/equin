@@ -254,6 +254,9 @@ Never hand-edit the generated SQL to interleave the DML: the push-time hand-edit
     - `ExposedField`
     - `ExposedFieldDecl`
     - `ExposedOption`
+    - `ExposedPresence`
+    - `ExposedPresenceDecl`
+    - `ExposedPresenceValues`
     - `ExposesDecl`
     - `ExposureRow`
     - `ExposureRowSchema`

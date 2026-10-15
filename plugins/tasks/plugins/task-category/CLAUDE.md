@@ -69,12 +69,15 @@ Consumers read only the generic aggregate:
 
 ## Plugin reference
 
-- Description: Per-task category (registry-driven, system-set only): contributes the `category` enum field into the tasks DataView so the task list can group by it. Owns the tasks_ext_category side-table: the per-task category (registry-driven via the TaskCategory contribution, system-set only), its live collection (the whole ordered set, routed and L2-persisted), and the live category registry (fixed per process).
+- Description: Per-task category (registry-driven, system-set only): presents the exposed `category` field of every list whose rows reach a task (the task list groups by it), its options read from the live category registry. Owns the tasks_ext_category side-table: the per-task category (registry-driven via the TaskCategory contribution, system-set only), its live collection (the whole ordered set, routed and L2-persisted), the live category registry (fixed per process), and the category exposed to every list whose rows reach a task (LiveColumns.Expose).
 - Web:
-  - Contributes: `Tasks.Fields` "category" → `CategoryField`
+  - Contributes: `FieldPresentation.Register` "exposure:tasks_ext_category"
   - Uses:
+    - `network/live.FieldPresentation`
+    - `network/live.LiveFieldOption`
+    - `network/live.LiveFieldOptionsRead`
     - `network/live.useLive`
-    - `tasks/task-list.Tasks`
+    - `primitives/live-state.mapResource`
   - Exports (types): `TaskCategoryMap`
   - Exports (values):
     - `useTaskCategories`
@@ -84,15 +87,17 @@ Consumers read only the generic aggregate:
     - `resource.declare` "task-categories"
     - `resource.declare` "task-categories:rows"
     - `resource.declare` "task-category.registry"
+    - `live.columns.expose` "tasks ← tasks_ext_category"
   - Uses:
     - `database.db`
     - `database.DbExecutor`
     - `infra/entity-extensions.defineExtension`
+    - `network/live.LiveColumns`
     - `network/live.serveCollection`
     - `network/live.serveValue`
     - `tasks/tasks-core._tasks`
   - DB schema: `plugins/tasks/plugins/task-category/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_category`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_category`)
   - Exports (values):
     - `getTaskCategory`
     - `setTaskCategory`

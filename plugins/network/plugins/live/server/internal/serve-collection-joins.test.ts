@@ -46,11 +46,11 @@ import {
   type LiveWindowParams,
 } from "@plugins/network/plugins/live/core";
 import {
+  type Filter,
   and,
-  or,
   liveNumber,
   liveText,
-  type Filter,
+  or,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import { compileCollection } from "./serve-collection";
 

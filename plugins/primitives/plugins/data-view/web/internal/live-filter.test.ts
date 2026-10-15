@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
-  clause,
   FilterError,
+  clause,
   liveNumber,
   liveText,
   or,

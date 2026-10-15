@@ -27,7 +27,6 @@ export {
   liveBoolean,
   liveInstant,
   liveNumber,
-  liveStringArray,
   liveText,
   or,
 } from "./internal/expr";

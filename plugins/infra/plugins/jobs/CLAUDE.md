@@ -654,12 +654,15 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `DELETE /api/jobs/:id`
 - Core:
   - Uses:
+    - `fields.fieldsToZodObject`
+    - `fields.nullable`
+    - `fields/date/config.dateField`
+    - `fields/int/config.intField`
+    - `fields/json/config.jsonField`
+    - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveCollection`
     - `network/live.liveValue`
-    - `network/live/filter.liveInstant`
-    - `network/live/filter.liveNumber`
-    - `network/live/filter.liveText`
   - Exports (types):
     - `DeadJobRow`
     - `DeadJobsPayload`

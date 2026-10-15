@@ -32,7 +32,6 @@ import { z } from "zod";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import { liveNumber } from "@plugins/network/plugins/live/plugins/filter/core";
 import type {
   DataViewPaging,
   DataViewRenderProps,
@@ -47,6 +46,7 @@ import {
   PAGED_VIEWPORT_PX as VIEW,
   type PagedDataView,
 } from "../testing";
+import { liveNumber } from "@plugins/network/plugins/live/plugins/filter/core";
 
 const Item = z.object({ id: z.string(), n: z.number() });
 type Item = z.infer<typeof Item>;

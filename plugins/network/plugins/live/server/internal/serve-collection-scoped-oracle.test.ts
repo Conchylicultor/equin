@@ -64,10 +64,10 @@ import {
   liveValue,
   scopedLiveColumns,
 } from "@plugins/network/plugins/live/core";
-import { liveNumber } from "@plugins/network/plugins/live/plugins/filter/core";
 import { compileCollection } from "./serve-collection";
 import { serveScopedColumns, type ScopedMemberRead } from "./serve-columns";
 import { serveValue } from "./serve-value";
+import { liveNumber } from "@plugins/network/plugins/live/plugins/filter/core";
 
 const HOST = "sco_hosts";
 const VALUES = "sco_custom_values";

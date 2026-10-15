@@ -18,6 +18,7 @@ import { transcriptionProfile } from "./internal/profile";
 import { submitTranscriptionTool } from "./internal/mcp-tool";
 import { transcriptionConversationEndedJob } from "./internal/conversation-ended";
 import { SONATA_CATEGORY_ID } from "./internal/launch";
+import { songTranscription } from "./internal/tables";
 
 export default {
   description:

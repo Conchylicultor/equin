@@ -31,7 +31,7 @@ export const songLibrary = liveCollection("sonata.songs", {
     duration: floatField({ label: "Length" }),
     added: dateField({ label: "Added" }),
   },
-  carry: { pick: ["id"] },
+  carry: { pick: ["id", "sourcesChangedAt"] },
   id: "id",
   sortable: ["title", "composer", "source", "duration", "added"],
   default: { orderBy: [["added", "desc"]], limit: 100 },

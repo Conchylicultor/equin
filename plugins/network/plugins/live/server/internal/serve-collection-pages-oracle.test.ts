@@ -69,7 +69,6 @@ import {
   liveCollection,
   LIVE_ROW_KEY,
 } from "@plugins/network/plugins/live/core";
-import { liveNumber } from "@plugins/network/plugins/live/plugins/filter/core";
 import { PROTOCOL } from "@plugins/packages/plugins/resource-protocol/core";
 import {
   assemble,
@@ -84,6 +83,7 @@ import {
   type PageViewport,
 } from "../../shared/page-plan";
 import { compileCollection } from "./serve-collection";
+import { liveNumber } from "@plugins/network/plugins/live/plugins/filter/core";
 
 const TABLE = "pgo_items";
 const items = pgTable(TABLE, {

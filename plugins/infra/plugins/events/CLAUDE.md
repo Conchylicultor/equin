@@ -134,14 +134,12 @@ insert and the ring's inline prune reach it through the change feed. The
     - `fields/date/config.dateField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
+    - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
     - `fields/uuid/config.uuidField`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveCollection`
     - `network/live.liveValue`
-    - `network/live/filter.liveInstant`
-    - `network/live/filter.liveNumber`
-    - `network/live/filter.liveText`
   - Exports (types):
     - `EmissionListRow`
     - `EmissionMatch`

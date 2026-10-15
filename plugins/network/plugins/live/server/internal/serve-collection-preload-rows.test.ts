@@ -41,7 +41,7 @@ const scoresCollection = () =>
     filterable: {},
     sortable: ["score"],
     default: { orderBy: [["score", "asc"]], limit: 10 },
-    maxLimit: 10,
+    maxLimit: 20,
   });
 
 describe("preloadRows", () => {

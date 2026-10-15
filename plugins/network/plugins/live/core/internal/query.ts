@@ -34,7 +34,7 @@ type DomainsFor<T> = {
 /**
  * The declared filterable columns: row field → its domain constructor
  * (`liveText(StatusSchema)`, `liveBoolean()` …). The domain must fit the row
- * field's type — a `liveNumber()` over a string field is a tsc error.
+ * field's type — a `liveInstant()` over a string field is a tsc error.
  */
 export type LiveFilterable<Row> = {
   readonly [K in keyof Row & string]?: FilterColumn<

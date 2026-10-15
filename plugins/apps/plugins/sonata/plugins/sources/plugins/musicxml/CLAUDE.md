@@ -54,7 +54,7 @@ Swing (`meta.swing`) is read here but applied at playback only — see
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
   - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/musicxml/server/internal/tables.ts`
-  - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_musicxml`)
+  - Entity extension of: `apps/sonata/library` (table `library_ext_musicxml`)
   - Exports (types): `ImportMusicXmlForSongInput`
   - Exports (values):
     - `importMusicXmlForSong`
