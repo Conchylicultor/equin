@@ -1,4 +1,10 @@
-import { useEffect, useMemo, type KeyboardEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import type { LatLng } from "@plugins/map/core";
@@ -8,6 +14,12 @@ import type { LatLng } from "@plugins/map/core";
  * Advanced Marker's), or a cluster disc's middle.
  */
 export type OverlayAnchor = "bottom" | "center";
+
+/**
+ * The hovered pin's z-index: above every other pin, whatever their stack
+ * order, so the label it shows on hover is never buried under a neighbour.
+ */
+const HOVERED_Z_INDEX = 2_147_483_647;
 
 const ANCHOR_TRANSFORM: Record<OverlayAnchor, string> = {
   bottom: "translate(-50%, -100%)",
@@ -34,7 +46,9 @@ interface OverlayPinProps {
  *
  * The content is anchored at its bottom centre, as an Advanced Marker's is
  * (or at its centre, for a cluster), and the pin is a button: click, Enter or
- * Space activates it.
+ * Space activates it. While hovered it stacks above every other pin, so
+ * whatever it reveals on hover (its name) draws over its neighbours. It sets
+ * no `title`: pins show their own name, and the browser's tooltip would repeat it.
  */
 export function OverlayPin({
   position,
@@ -46,6 +60,7 @@ export function OverlayPin({
   children,
 }: OverlayPinProps) {
   const map = useMap();
+  const [hovered, setHovered] = useState(false);
   const maps = useMapsLibrary("maps");
   // Built, not attached: attaching is the effect below.
   const overlay = useMemo(
@@ -64,8 +79,8 @@ export function OverlayPin({
   }, [overlay, position]);
 
   useEffect(() => {
-    overlay?.stackAt(zIndex);
-  }, [overlay, zIndex]);
+    overlay?.stackAt(hovered ? HOVERED_Z_INDEX : zIndex);
+  }, [overlay, zIndex, hovered]);
 
   useEffect(() => {
     overlay?.anchorAt(anchor);
@@ -83,11 +98,16 @@ export function OverlayPin({
       role="button"
       tabIndex={0}
       aria-label={label}
-      title={label}
       onClick={onActivate}
       onKeyDown={onKeyDown}
-      onPointerEnter={onHoverChange && (() => onHoverChange(true))}
-      onPointerLeave={onHoverChange && (() => onHoverChange(false))}
+      onPointerEnter={() => {
+        setHovered(true);
+        onHoverChange?.(true);
+      }}
+      onPointerLeave={() => {
+        setHovered(false);
+        onHoverChange?.(false);
+      }}
     >
       {children}
     </div>,
