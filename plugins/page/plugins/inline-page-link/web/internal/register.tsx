@@ -6,6 +6,7 @@ import { PAGE_LINK_TOKEN_PATTERN } from "../../core";
 import { pageLinkInlineWebNode } from "../components/page-link-inline-node";
 import { InlinePageLinkPlugin } from "../components/inline-page-link-plugin";
 import { PageLinkChip } from "../components/page-link-chip";
+import { BlockIdPastePlugin } from "../components/block-id-paste-plugin";
 
 // Side-effect: teach every block text editor about inline page links — the node
 // (whose token format and fields are declared once in `core/node.ts`, so the
@@ -24,3 +25,10 @@ registerBlockTextExtension(
     Plugin: InlinePageLinkPlugin,
   }),
 );
+
+// Side-effect: a pasted bare block id becomes a page reference — the empty
+// block turns into a page-link block, otherwise an inline chip at the caret.
+registerBlockTextExtension({
+  id: "page-id-paste",
+  Plugin: BlockIdPastePlugin,
+});

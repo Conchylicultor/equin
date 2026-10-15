@@ -20617,10 +20617,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 159 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 160 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×50
               - `primitives` ×26
-              - `page` ×23
+              - `page` ×24
               - `conversations` ×19
               - `apps-core` ×5
               - `debug` ×5
@@ -27134,7 +27134,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stripInlineTokens`
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
-    - **`inline-page-link`** — Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[page:<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[page:<pageId>]]` page links embedded in any block's text.
+    - **`inline-page-link`** — Inline page links: type [[ in any text block (or paste a bare block id) to drop a clickable page reference — a pasted id into an empty block turns it into a link-to-page block; stored as a [[page:<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[page:<pageId>]]` page links embedded in any block's text.
       - Server:
         - Contributes:
           - `page.links.extractor` "* (all blocks)"
@@ -27147,27 +27147,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/links.PageLinks`
           - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
       - Web:
-        - Uses:
+        - Uses: 23 symbols — full list in [`plugins/page/plugins/inline-page-link/REFERENCE.md`](../plugins/page/plugins/inline-page-link/REFERENCE.md)
+          - `page/editor` ×9
+          - `primitives/live-state` ×3
+          - `primitives/text-editor/caret-trigger` ×3
           - `infra/endpoints.fetchEndpoint`
           - `network/live.useLiveRow`
-          - `page/editor.BlockTextPluginProps`
-          - `page/editor.blockTextTokenExtension`
-          - `page/editor.PageIcon`
-          - `page/editor.PageOption`
-          - `page/editor.PageOptionsList`
-          - `page/editor.registerBlockTextExtension`
-          - `page/editor.usePageOptions`
           - `page/page-reference.usePageNavigation`
           - `primitives/css/center.Center`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/placeholder.Placeholder`
-          - `primitives/live-state.foldResource`
-          - `primitives/live-state.matchResource`
-          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/latest-ref.useEventCallback`
           - `primitives/loading.Loading`
-          - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
-          - `primitives/text-editor/caret-trigger.useCaretMenu`
-          - `primitives/text-editor/caret-trigger.useCaretQuery`
       - Core:
         - Uses: `primitives/text-editor/token-extension/node.defineInlineTokenNode`
         - Exports (types): `PageLinkFields`
@@ -32700,10 +32691,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SortDirection`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 67 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 68 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×32
           - `apps` ×20
-          - `page` ×3
+          - `page` ×4
           - `apps-core` ×2
           - `conversations` ×2
           - `build/serve-composition`

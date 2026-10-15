@@ -43,7 +43,7 @@ cannot paint itself outside Lexical is a tsc error.
 
 ## Plugin reference
 
-- Description: Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[page:<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[page:<pageId>]]` page links embedded in any block's text.
+- Description: Inline page links: type [[ in any text block (or paste a bare block id) to drop a clickable page reference — a pasted id into an empty block turns it into a link-to-page block; stored as a [[page:<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[page:<pageId>]]` page links embedded in any block's text.
 - Server:
   - Contributes:
     - `page.links.extractor` "* (all blocks)"
@@ -56,27 +56,18 @@ cannot paint itself outside Lexical is a tsc error.
     - `page/links.PageLinks`
     - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
 - Web:
-  - Uses:
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/editor` ×9
+    - `primitives/live-state` ×3
+    - `primitives/text-editor/caret-trigger` ×3
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLiveRow`
-    - `page/editor.BlockTextPluginProps`
-    - `page/editor.blockTextTokenExtension`
-    - `page/editor.PageIcon`
-    - `page/editor.PageOption`
-    - `page/editor.PageOptionsList`
-    - `page/editor.registerBlockTextExtension`
-    - `page/editor.usePageOptions`
     - `page/page-reference.usePageNavigation`
     - `primitives/css/center.Center`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/latest-ref.useEventCallback`
     - `primitives/loading.Loading`
-    - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
-    - `primitives/text-editor/caret-trigger.useCaretMenu`
-    - `primitives/text-editor/caret-trigger.useCaretQuery`
 - Core:
   - Uses: `primitives/text-editor/token-extension/node.defineInlineTokenNode`
   - Exports (types): `PageLinkFields`
