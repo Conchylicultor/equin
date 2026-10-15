@@ -1,20 +1,26 @@
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { turnIntoPage, type RichText } from "@plugins/page/plugins/editor/core";
+import {
+  turnIntoPage,
+  type TurnIntoPageBody,
+} from "@plugins/page/plugins/editor/core";
 import { textBlock } from "@plugins/page/plugins/text/core";
-import { agentPageTitle } from "./title";
 
 /**
- * `/agent-page`: turn the caret's line into an agent-authored page, in place —
- * the same atomic server op as "Turn into → Page", with the page marked
- * `author: "agent"` at birth (`kind: agent-page`). The server's turn-into-page is the one place a
+ * Turn block `blockId` into an agent-authored page, in place — the same atomic
+ * server op as "Turn into → Page", with the page marked `author: "agent"` at
+ * birth (`kind: agent-page`). The server's turn-into-page is the one place a
  * page's author is chosen; every later data write keeps it.
  *
- * The line's own words become the title, exactly as "Turn into → Page" makes a
- * block's text its title — so `notes /agent-page` is an agent page titled
- * `notes`, and nothing the user typed disappears. `text` is the line with the
- * query already cut out (the menu hands it over); only an otherwise-empty line
- * gives an untitled page, the slot a human makes for an agent to fill and name.
- * Trimmed, because the cut leaves the space that stood before the `/`.
+ * Two callers, differing only in where the title comes from:
+ *
+ * - `/agent-page` passes the caret line's own words (`agentPageTitle`), exactly
+ *   as "Turn into → Page" makes a block's text its title — so `notes
+ *   /agent-page` is an agent page titled `notes`, and nothing the user typed
+ *   disappears; an otherwise-empty line gives an untitled page, the slot a
+ *   human makes for an agent to fill and name.
+ * - the agent card's Turn into → Agent page passes `{ fromFirstChild: true }`:
+ *   a card owns no line of its own, so its FIRST line (its first child) becomes
+ *   the title and leaves the content, the rest of the card becoming the page.
  *
  * `seedChild` comes from here for the reason `turn-into-page` gives: the editor
  * may not import a concrete block type, and a page with no child renders nothing
@@ -22,14 +28,14 @@ import { agentPageTitle } from "./title";
  */
 export async function turnIntoAgentPage(
   blockId: string,
-  text: RichText,
+  title: TurnIntoPageBody["title"],
 ): Promise<void> {
   await fetchEndpoint(
     turnIntoPage,
     { id: blockId },
     {
       body: {
-        title: agentPageTitle(text),
+        title,
         kind: { kind: "agent-page" },
         seedChild: {
           type: textBlock.type,

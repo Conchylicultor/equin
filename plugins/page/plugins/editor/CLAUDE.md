@@ -465,11 +465,16 @@ Four rules, each closing a failure the naive version has:
 fact about the seat's owner — `BlockHandle.anchor`, never by whether a plugin
 contributed sections:
 
-- ordinary owner → *Turn into* (+ `Editor.TurnInto` contributions) + *Delete*;
-- **container** owner → its `BlockFrameMeta.menu` sections, then *Collapse/Expand*
+- ordinary owner → *Turn into* (+ the `Editor.TurnInto` contributions with no
+  `from`, or `from` its type) + *Delete*;
+- **container** owner → its `BlockFrameMeta.menu` sections, then a *Turn into*
+  holding ONLY the `Editor.TurnInto` contributions declared `from` its type (no
+  section when there are none), then *Collapse/Expand*
   (`RailSeat.owner.childCount > 1`), *Remove `<label>`* (`unwrapBlock`), *Delete*.
-  No *Turn into*: a void container owns no text, so converting it away has nowhere
-  to put its children.
+  No block-type list: a void container owns no text, so a type conversion has
+  nowhere to put its children — a target written for the container's type knows
+  where they go (the agent card's *Agent page*: its first line becomes the
+  title, via turn-into-page's `title: { fromFirstChild: true }`).
 
 Both structural halves are **generic**: `Remove callout` derives its wording from
 `handle.label`, so a new container type wires nothing here. `menu` is a second
@@ -4392,13 +4397,13 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `Editor.BlockMenuItem`
     - `Editor.FormatAction`
     - `Editor.InsertAction`
-  - Slot contributors: 50 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 51 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Editor.Block` ×30
     - `Editor.BlockFrame` ×8
     - `Editor.FormatAction` ×7
     - `Editor.InsertAction` ×3
+    - `Editor.TurnInto` ×2
     - `Editor.BlockMenuItem` ← `page.open-as-page`
-    - `Editor.TurnInto` ← `page.turn-into-page`
   - Contributes: `IdKinds.Kind` "block"
   - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/text-editor/caret-trigger` ×5

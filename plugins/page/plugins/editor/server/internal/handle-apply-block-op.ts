@@ -47,7 +47,7 @@ import { blocksChanged } from "./tables-events";
  * filters over a couple of dozen handles (see `block-registry.ts` on why no
  * eager mirror lives there).
  */
-function blockOpCtx(): BlockOpContext {
+export function blockOpCtx(): BlockOpContext {
   return blockOpContextOf(BlockRegistry.BlockData.getContributions());
 }
 

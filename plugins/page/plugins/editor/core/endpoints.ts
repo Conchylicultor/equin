@@ -154,7 +154,22 @@ export const moveBlocks = defineEndpoint({
 });
 
 export const TurnIntoPageBodySchema = z.object({
-  title: z.string(),
+  /**
+   * The new page's title: a literal string (Turn into → Page passes the
+   * block's own text, `/page` the line's other words), or `{ fromFirstChild:
+   * true }` — the block's FIRST CHILD (by rank, live rows only) is CONSUMED:
+   * its plain text, trimmed, becomes the title, the child row goes (a trash,
+   * in the same transaction), and its own children take its slot at the head
+   * of the page, order preserved. That is how a void container, whose first
+   * line is its first child (an `<agent-inline>` card), becomes a page titled
+   * with that line. A first child that holds no text (a sub-page, a nested
+   * container, a media block) is not consumed and the title is `""`, as for a
+   * childless block — its content is never dropped for a title it cannot give.
+   */
+  title: z.union([
+    z.string(),
+    z.object({ fromFirstChild: z.literal(true) }).strict(),
+  ]),
   /**
    * Type + data for the empty content block seeded when the target block has no
    * children (a page with zero children renders nothing typeable). Supplied by
@@ -175,7 +190,8 @@ export const TurnIntoPageBodySchema = z.object({
 export type TurnIntoPageBody = z.infer<typeof TurnIntoPageBodySchema>;
 
 // Turn an existing block into a sub-page **in place**: set `type="page"` and
-// `data={title, icon:null}`, seed `seedChild` when it had no children, and
+// `data={title, icon:null}` (the title literal, or consumed from the block's
+// first child), seed `seedChild` when it is left with no children, and
 // recompute `pageId` across the new page boundary for its whole subtree. The
 // page row *is* the inline link — no separate `page-link` row is created.
 export const turnIntoPage = defineEndpoint({

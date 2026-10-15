@@ -1,4 +1,4 @@
-// @hash 5a521288dbb3
+// @hash 8ee44cf00f32
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,6 +7,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "page.annotations.agent-notes.agent-page:agent-page",
     "page.turn-into-page:page"
   ]
 }

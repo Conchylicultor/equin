@@ -4,6 +4,7 @@ import type { PageReferenceDecorationContribution } from "@plugins/page/plugins/
 import { agentNotesBlock } from "@plugins/page/plugins/annotations/plugins/agent-notes/core";
 import { AgentPageCreatorChip } from "../components/agent-page-creator-chip";
 import { turnIntoAgentPage } from "./turn-into-agent-page";
+import { agentPageTitle } from "./title";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const autoAwesomeIcon = symbol("auto-awesome");
@@ -40,6 +41,6 @@ export const agentPageInsertAction: InsertAction = {
   aliases: ["agent", "agent-page", "agent page", "ai page"],
   after: agentNotesBlock.type,
   run: ({ blockId, text }) => {
-    void turnIntoAgentPage(blockId, text);
+    void turnIntoAgentPage(blockId, agentPageTitle(text));
   },
 };

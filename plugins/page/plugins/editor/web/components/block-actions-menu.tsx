@@ -30,12 +30,15 @@ const unfoldMoreIcon = symbol("unfold-more");
  * Two arms, and which one renders is decided by a CORE fact about the owner:
  *
  * - **an ordinary block** — a "Turn into" section listing insertable block types
- *   (→ `api.convertTo`) plus any `Editor.TurnInto` contributions, then "Delete"
- *   (→ `api.remove`). Sub-page rows get only "Delete" — see `convertible`.
+ *   (→ `api.convertTo`) plus the `Editor.TurnInto` contributions that apply to
+ *   it (no `from`, or `from` its type), then "Delete" (→ `api.remove`). Sub-page
+ *   rows get only "Delete" — see `convertible`.
  * - **a void CONTAINER** (`BlockHandle.anchor`) — its contributed appearance
- *   sections, then the STRUCTURAL actions: Collapse/Expand, Remove `<label>`,
- *   Delete. No "Turn into": a container owns no text, so converting it away has
- *   nowhere to put its children and is not an offer this menu can honour.
+ *   sections, a "Turn into" section holding ONLY the `Editor.TurnInto`
+ *   contributions declared `from` its type (none, no section), then the
+ *   STRUCTURAL actions: Collapse/Expand, Remove `<label>`, Delete. No block-type
+ *   list: a container owns no text, so a type conversion has nowhere to put its
+ *   children. A target written for that container type knows where they go.
  *
  * The container arm is selected by `handle.anchor === true` and **not** by the
  * presence of a `menu` contribution: `context` contributes no sections (its
@@ -81,6 +84,18 @@ export function BlockActionsMenu({
   const ContainerMenu = useBlockFrameMenus().get(block.type);
   const isContainer = handle?.anchor === true;
   const isScopeRoot = block.id === scope.rootId;
+  // A `TurnInto` contribution converts a block into something the editor's own
+  // pure `convertTo` cannot express — a server-backed transition (into a
+  // sub-page, re-partitioning `page_id` across a page boundary). None of that
+  // exists without rows, so the whole zone is gated on `serverSync` rather than
+  // per-contributor, and it re-partitions the zoom root's subtree, so never
+  // there.
+  const turnIntoZone = serverSync && !isScopeRoot;
+  // The targets written for THIS block's type — the container arm's whole
+  // "Turn into", which renders only when there is one.
+  const typedTurnInto = Editor.TurnInto.useContributions().some(
+    (c) => c.from === block.type,
+  );
 
   // Turn-into stays flat: it keeps its own "Turn into" eyebrow (below), so it
   // passes one label-less section and ignores the config's group boundaries
@@ -163,6 +178,17 @@ export function BlockActionsMenu({
             // eslint-disable-next-line react-hooks/static-components -- not a component CREATED during render: `ContainerMenu` is a registry LOOKUP into the memoized `useBlockFrameMenus()` map, whose values are module-level slot contributions. Its identity is stable across renders, so no state can reset.
             <ContainerMenu block={block} api={api} close={close} />
           ) : null}
+          {turnIntoZone && typedTurnInto ? (
+            <ControlPanel.Section label="Turn into">
+              <Editor.TurnInto.Render>
+                {(a) =>
+                  a.from === block.type ? (
+                    <a.component block={block} api={api} close={close} />
+                  ) : null
+                }
+              </Editor.TurnInto.Render>
+            </ControlPanel.Section>
+          ) : null}
           <ControlPanel.Section>
             {/* Collapse/Expand is the fold's FALLBACK. The primary affordance is
                 the chevron on the container's borrowed line, which cannot always
@@ -219,14 +245,15 @@ export function BlockActionsMenu({
               close();
             }}
           />
-          {/* A `TurnInto` contribution converts a block into something the
-              editor's own pure `convertTo` cannot express — a server-backed
-              transition (today: into a sub-page, re-partitioning `page_id`
-              across a page boundary). None of that exists without rows, so the
-              whole zone is gated on `serverSync` rather than per-contributor. */}
-          {serverSync && !isScopeRoot ? (
+          {/* The server-backed targets (`turnIntoZone`): the ones offered on
+              every block, and the ones written for this block's type. */}
+          {turnIntoZone ? (
             <Editor.TurnInto.Render>
-              {(a) => <a.component block={block} api={api} close={close} />}
+              {(a) =>
+                a.from === undefined || a.from === block.type ? (
+                  <a.component block={block} api={api} close={close} />
+                ) : null
+              }
             </Editor.TurnInto.Render>
           ) : null}
         </ControlPanel.Section>

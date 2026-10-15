@@ -441,11 +441,24 @@ export const Editor = {
   }),
   /**
    * Extra "Turn into" targets in the block-actions menu, contributed by plugins
-   * that span more than the editor can know (e.g. turn-into-page, which creates
-   * a page + a page-link). Rendered inside the menu's "Turn into" section. The
+   * that span more than the editor can know — a server-backed transition such
+   * as turn-into-page, which turns the block into a sub-page in place,
+   * re-partitioning its subtree. Rendered inside the menu's "Turn into"
+   * section, only on a `serverSync` editor and never on the zoom root. The
    * contribution receives the block, its editor API, and a `close` callback.
+   *
+   * `from` says which blocks the target is offered on:
+   *
+   * - **absent** — every ordinary (non-container) block, beside the block-type
+   *   list (turn-into-page's "Page");
+   * - **a block type** — blocks of that type ONLY, in either arm of the menu. On
+   *   a void CONTAINER this is the only "Turn into" there is: the container
+   *   owns no text, so a type conversion has nowhere to put its children, but
+   *   a target written for that container type knows what to do with them (the
+   *   agent card's "Agent page", whose first line becomes the page's title).
    */
   TurnInto: defineRenderSlot<{
+    from?: string;
     component: ComponentType<{
       block: Block;
       api: BlockEditorAPI;

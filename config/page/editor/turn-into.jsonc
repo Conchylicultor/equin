@@ -1,4 +1,4 @@
-// @hash 5a521288dbb3
+// @hash 8ee44cf00f32
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -11,6 +11,7 @@
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "page.turn-into-page:page"
+    "page.turn-into-page:page",
+    "page.annotations.agent-notes.agent-page:agent-page"
   ]
 }

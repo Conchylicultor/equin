@@ -12,7 +12,9 @@ both (`research/2026-09-11-page-agent-pages.md`):
   whose `data.author === "agent"` (`page/editor`'s `pageBlockAuthor`) — so what
   lives here is only its appearance: the
   [`agent-page`](./plugins/agent-page/CLAUDE.md) sub-plugin (the blue tint and the
-  creator chip on the sub-page row and the sidebar, and the `/agent-page` insert).
+  creator chip on the sub-page row and the sidebar, the `/agent-page` insert, and
+  the card's own Turn into → Agent page, which turns a card into one in place —
+  its first line the title, the rest the content, its authorship kept).
 
 The card is a void container (`z.object({})`, content IS its children), built on
 [`page/container`](../../../container/CLAUDE.md) exactly like its

@@ -25803,11 +25803,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `agentNotesBlock`
               - `agentNotesDataSchema`
           - Plugins:
-            - **`agent-page`** — Agent-authored pages in the page editor: a sub-page whose data marks it `author: "agent"` is tinted with the agent-notes wash wherever it is referenced (its row in the parent page, the Pages sidebar), carries a chip naming the conversation that created it, and can be made from the caret's line with `/agent-page` (the line's other words become its title). Declares no block type — the page is an ordinary `page` row.
+            - **`agent-page`** — Agent-authored pages in the page editor: a sub-page whose data marks it `author: "agent"` is tinted with the agent-notes wash wherever it is referenced (its row in the parent page, the Pages sidebar), carries a chip naming the conversation that created it, and can be made from the caret's line with `/agent-page` (the line's other words become its title) or from an agent card with Turn into → Agent page (its first line becomes the title, its other lines the content, and the card's id — so its authorship — carries over). Declares no block type — the page is an ordinary `page` row.
               - Web:
                 - Contributes:
                   - `PageReference.Decoration` → `AgentPageCreatorChip`
                   - `Editor.InsertAction` "Agent page"
+                  - `Editor.TurnInto` → `TurnIntoAgentPageItem`
                 - Uses:
                   - `conversations.useConversation`
                   - `conversations/conversation-ui/chip.ConversationChip`
@@ -25815,8 +25816,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `page/annotations/agent-notes/authorship.useAgentNotesCreator`
                   - `page/editor.Editor`
                   - `page/page-reference.PageReference`
+                  - `primitives/css/row.Row`
                   - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
+                  - `ui/icons.Icon`
             - **`authorship`** — Reads an agent-authored block's authorship (useAgentNotesAuthors, and useAgentNotesCreator for the first writer) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card live read behind the card's provenance popover; a copied block keeps its authors.
               - Server:
                 - Contributes:
@@ -26370,13 +26373,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.BlockMenuItem`
           - `Editor.FormatAction`
           - `Editor.InsertAction`
-        - Slot contributors: 50 contributors — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Slot contributors: 51 contributors — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `Editor.Block` ×30
           - `Editor.BlockFrame` ×8
           - `Editor.FormatAction` ×7
           - `Editor.InsertAction` ×3
+          - `Editor.TurnInto` ×2
           - `Editor.BlockMenuItem` ← `page.open-as-page`
-          - `Editor.TurnInto` ← `page.turn-into-page`
         - Contributes: `IdKinds.Kind` "block"
         - Uses: 83 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `primitives/text-editor/caret-trigger` ×5
@@ -30409,10 +30412,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Row`
               - `SectionHeaderRow`
           - Cross-plugin:
-            - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
+            - Imported by: 62 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
               - `apps` ×15
               - `ui` ×11
-              - `page` ×9
+              - `page` ×10
               - `primitives` ×9
               - `conversations` ×5
               - `plugin-meta` ×3
@@ -39265,10 +39268,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Cross-plugin:
-        - Imported by: 308 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 309 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×65
           - `conversations` ×58
-          - `page` ×40
+          - `page` ×41
           - `primitives` ×40
           - `fields` ×33
           - `debug` ×15
