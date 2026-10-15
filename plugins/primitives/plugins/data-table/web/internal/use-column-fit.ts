@@ -202,8 +202,7 @@ export function useColumnFit<TRow>(
       : (col.width ?? "auto"),
   );
 
-  const overflowing =
-    !!wideRoom && wideRoom.grid > wideRoom.available + 0.5;
+  const overflowing = !!wideRoom && wideRoom.grid > wideRoom.available + 0.5;
   // While the grid is wider, its box marks itself and the path up to the
   // scroller: the `Scroll` then scrolls sideways too (and only then), so the
   // pane is the one scroller on both axes and the sticky header and first
