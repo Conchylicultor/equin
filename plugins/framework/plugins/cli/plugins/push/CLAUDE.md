@@ -66,8 +66,17 @@ mutex the order is load-bearing:
    - **otherwise** → `git rebase main --exec <stamp>`, unchanged.
 4. `ensureDeps({ frozenLockfile: true })` — install what the rebase brought in
 5. `normalizeGeneratedArtifacts(…, { force: true })` — re-derive and amend
-6. `check --scope tree` in a subprocess, under an **interactive** CPU grant
+6. `check --scope tree` in a subprocess, handed the section's grant (below)
 7. push the branch (publish mode only), ff `main`, push `main` (publish mode only)
+
+**Steps 3–7 run under ONE interactive CPU grant**, taken by `withPushLock` as
+the first thing inside the mutex and passed to its body (and from there to the
+check subprocess). Every queued push waits on the holder for its whole hold, so
+the whole hold is human-blocking: the interactive lane runs it in the foreground
+(`withHostGrant`). Taken only around the checks, as it once was, the rebase,
+install and normalize ran at the agent session's inherited darwinbg tier —
+normalize, ~13 s of work, took a median 109 s on the E-cores
+([`research/2026-10-15-global-push-lock-holder-foreground.md`](../../../../../../research/2026-10-15-global-push-lock-holder-foreground.md)).
 
 4 before 5 on purpose: the regen must run against a `node_modules` matching the
 tree it regenerates. Push's own rebases set `SKIP_POST_REWRITE_ENV` so the

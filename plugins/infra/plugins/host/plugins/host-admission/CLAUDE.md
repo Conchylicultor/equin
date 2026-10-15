@@ -221,10 +221,12 @@ spend it per child instead of acquiring again.
 
 `pushPool = defineHostPool({ id: "push", size: 1 })` is the global push
 serialization, folded onto the primitive: `size: 1` says at most one push runs
-host-wide, and that is all it says. The push itself mostly waits on git and the
-network, and it takes an interactive CPU grant separately for its nested
-checks — the pool bounds how many pushes there are, the grant pays for their
-work.
+host-wide, and that is all it says. The push takes an interactive CPU grant
+separately, as the first thing inside the mutex, and holds it for the whole
+critical section (rebase, install, normalize, checks, merge) — the pool bounds
+how many pushes there are, the grant pays for their work and, being
+interactive, runs all of it in the foreground: every queued push waits on the
+holder for its whole hold, not only its checks.
 
 Its single slot file IS the push mutex. Nothing outside the pool reads it: who
 holds the mutex and who queues on it is the op log's answer (a push's

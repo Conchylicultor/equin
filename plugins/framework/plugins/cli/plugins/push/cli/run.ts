@@ -21,7 +21,10 @@ import {
   repoPushLock,
   withHostGrant,
 } from "@plugins/infra/plugins/host/plugins/host-admission/server";
-import { cpuBudget } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import {
+  cpuBudget,
+  type Grant,
+} from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { markWorktreeOpStart } from "@plugins/infra/plugins/worktree/server";
 import {
   spawnCaptured,
@@ -219,20 +222,11 @@ async function installRebasedDeps(root: string): Promise<void> {
   }
 }
 
-// Run the rebased-tree checks. A push is human-blocking, so it takes an
-// INTERACTIVE host CPU grant (its reserved floor is unreachable by agent work,
-// so it never queues behind agent builds) — even though the checks execute on
-// the rebased AGENT branch, where a branch-based gate would wrongly demote them.
-// The grant is acquired here (inside the already-held push mutex — acyclic: the
-// mutex holder waits for CPU units, a unit holder never waits for the push
-// mutex) and handed to the child via `grant.env()`.
-//
-// This acquire is POST-`markGranted` — the push already holds its entry ticket
-// (the mutex) and is doing its own work — which is exactly why its wait was
-// invisible: with no hooks, the grant queue was folded into the `checks` step's
-// wall clock, so a slow `checks` was indistinguishably queue time or real check
-// time. `grantHooks()` lands it as its own `host-grant` wait, nested inside the
-// step.
+// Run the rebased-tree checks under the push's own grant — the one
+// `withPushLock` holds for the whole critical section (see there), handed to the
+// child via `grant.env()`. Taking the grant as a parameter rather than acquiring
+// one here is what keeps "the checks run under an interactive grant" true by
+// construction: there is no call that runs them without it.
 //
 // The spawn itself is `../check-subprocess.ts` — read its docblock for why a
 // check pass is a separate process at all and why the selection is expressed as
@@ -245,24 +239,19 @@ async function installRebasedDeps(root: string): Promise<void> {
 // actually re-lints, so there is no lint scope env to thread through.
 async function runRebasedChecks(
   root: string,
+  grant: Grant,
   profiler: OpProfiler<"push">,
 ): Promise<boolean> {
   profiler.stepStart("checks");
   console.log("Running checks...");
-  const ok = await withHostGrant(
-    { lane: "interactive", max: cpuBudget().B, hooks: profiler.grantHooks() },
-    async (grant) => {
-      const result = await runCheckSubprocess({
-        root,
-        grant,
-        select: { scope: "tree" },
-        output: "inherit",
-      });
-      return result.ok;
-    },
-  );
+  const result = await runCheckSubprocess({
+    root,
+    grant,
+    select: { scope: "tree" },
+    output: "inherit",
+  });
   profiler.stepEnd("checks");
-  return ok;
+  return result.ok;
 }
 
 async function getWorktreeRoot(): Promise<string> {
@@ -374,9 +363,24 @@ async function pushLockFor(
 // to the pool's `onWaitStart` hook. `onLockRequested` fires before the acquire
 // (so a blocked push shows as waiting); `onLockAcquired` fires once the slot is
 // held, as the first thing inside the run body.
+//
+// **The critical section is ONE interactive host grant.** Every queued push
+// waits on whoever holds the mutex, so the holder is human-blocking for its
+// whole hold — not only while its checks run. The grant is taken as the first
+// thing inside the mutex and `fn` receives it: the rebase, the install, the
+// normalize, the checks and the merge all run under it, so they are admitted
+// CPU and — the interactive lane's other half (`withHostGrant`) — run in the
+// foreground instead of at the agent session's inherited darwinbg tier. Taken
+// only around the checks, everything else in the hold ran on the E-cores beside
+// the whole fleet: normalize is ~13 s of work that took a median 109 s (p90
+// 255 s) there (research/2026-10-15-global-push-lock-holder-foreground.md).
+// Mutex then grant is acyclic: a grant holder never waits for the push mutex.
+// `grantHooks()` lands the grant queue as its own `host-grant` wait, right after
+// `granted`, rather than inside any step.
 async function withPushLock<T>(
   lock: PushLock,
-  fn: () => Promise<T>,
+  profiler: OpProfiler<"push">,
+  fn: (grant: Grant) => Promise<T>,
   onLockRequested: () => void,
   onLockAcquired: () => void,
 ): Promise<T> {
@@ -384,7 +388,14 @@ async function withPushLock<T>(
   return lock.run(
     async () => {
       onLockAcquired();
-      return await fn();
+      return await withHostGrant(
+        {
+          lane: "interactive",
+          max: cpuBudget().B,
+          hooks: profiler.grantHooks(),
+        },
+        fn,
+      );
     },
     {
       onWaitStart: () =>
@@ -516,8 +527,9 @@ const pushAction: CliAction<
   };
   const onLockAcquired = (): void => {
     // The mutex — this push's ENTRY ticket — is held and its own work
-    // starts. It is not done waiting: `runRebasedChecks` still queues for a
-    // host grant, which lands as a further `host-grant` wait.
+    // starts. It is not done waiting: `withPushLock` next queues for the
+    // section's interactive host grant, which lands as a further `host-grant`
+    // wait before the first step.
     profiler.waitEnd();
     profiler.markGranted();
   };
@@ -579,7 +591,8 @@ const pushAction: CliAction<
     try {
       await withPushLock(
         pushLock,
-        async () => {
+        profiler,
+        async (grant) => {
           // Both steps are about the REMOTE's main. In local mode there is no
           // such thing: nothing else writes to this trunk, so there is nothing
           // to catch up with and nothing to replay onto. The commit above
@@ -629,7 +642,7 @@ const pushAction: CliAction<
           });
           profiler.stepEnd("normalize");
 
-          const ok = await runRebasedChecks(fromMainRoot, profiler);
+          const ok = await runRebasedChecks(fromMainRoot, grant, profiler);
           if (!ok) {
             console.error(
               "Checks failed after rebase. Fix the issue and re-run ./singularity push " +
@@ -679,7 +692,8 @@ const pushAction: CliAction<
   try {
     await withPushLock(
       pushLock,
-      async () => {
+      profiler,
+      async (grant) => {
         // 2. Pull main to ensure it's up to date before merging.
         // Use explicit fetch + merge instead of `git pull --ff-only` because FETCH_HEAD
         // is shared across all worktrees; a prior fetch in another worktree can leave
@@ -857,7 +871,7 @@ const pushAction: CliAction<
         //    Spawned as a subprocess so the check code comes from the rebased
         //    tree, not the (potentially stale) module cache of this process.
         const root = await getWorktreeRoot();
-        const ok = await runRebasedChecks(root, profiler);
+        const ok = await runRebasedChecks(root, grant, profiler);
         if (!ok) {
           console.error(
             `Checks failed after rebasing ${branch} onto main. ` +
