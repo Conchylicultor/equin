@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-infra-background-catalog",
-  "description": "Background activity catalog: one list of everything the app runs on its own, merged from registered providers (defineBackgroundKind), with recent runs and Run now, shown in Debug → Background activity.",
+  "description": "Background activity catalog: one list of everything the app runs on its own, merged from registered providers (defineBackgroundKind), with recent runs and Run now, shown by Debug → Background activity (debug/background).",
   "private": true,
   "version": "0.0.1"
 }

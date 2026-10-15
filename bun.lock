@@ -2207,6 +2207,10 @@
       "name": "@singularity/plugin-debug",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/background": {
+      "name": "@singularity/plugin-debug-background",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/boot-budget": {
       "name": "@singularity/plugin-debug-boot-budget",
       "version": "0.0.1",
@@ -7659,6 +7663,8 @@
     "@singularity/plugin-database-sql-rows": ["@singularity/plugin-database-sql-rows@workspace:plugins/database/plugins/sql-rows"],
 
     "@singularity/plugin-debug": ["@singularity/plugin-debug@workspace:plugins/debug"],
+
+    "@singularity/plugin-debug-background": ["@singularity/plugin-debug-background@workspace:plugins/debug/plugins/background"],
 
     "@singularity/plugin-debug-boot-budget": ["@singularity/plugin-debug-boot-budget@workspace:plugins/debug/plugins/boot-budget"],
 

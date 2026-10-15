@@ -39,12 +39,13 @@
     - `primitives/pane` ×8
     - `primitives/live-state` ×6
     - `primitives/data-view` ×5
-    - `infra/background/catalog` ×2
     - `infra/endpoints` ×2
     - `network/live` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
     - `apps/debug/shell.DebugApp`
+    - `debug/background.backgroundEntryPane`
+    - `infra/background/catalog.useBackgroundEntry`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`

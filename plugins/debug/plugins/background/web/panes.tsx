@@ -8,10 +8,12 @@ import {
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
-import { backgroundEntryKey } from "../core";
-import { useEntry } from "./internal/use-entries";
-import { BackgroundView } from "./components/background-view";
-import { EntryDetail } from "./components/entry-detail";
+import { backgroundEntryKey } from "@plugins/infra/plugins/background/plugins/catalog/core";
+import {
+  BackgroundView,
+  EntryDetail,
+  useBackgroundEntry,
+} from "@plugins/infra/plugins/background/plugins/catalog/web";
 
 const backgroundRoute = defineRoute({
   id: "debug-background",
@@ -52,7 +54,7 @@ function useResolveEntry({
   kind: string;
   name: string;
 }): ResolveResult {
-  return resolveFrom(useEntry(kind, name), (entry) => entry !== null);
+  return resolveFrom(useBackgroundEntry(kind, name), (entry) => entry !== null);
 }
 
 // Detail (/debug/background/activity/<kind>/<name>): one entry — its trigger,

@@ -23,11 +23,11 @@
   - Exports (values): `debugApp`
 - Cross-plugin:
   - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `debug` ×17
-    - `infra` ×2
+    - `debug` ×18
     - `backup`
     - `build`
     - `conversations/recover`
+    - `infra/events-test`
     - `plugin-meta/exhibits`
     - `shell/notifications`
 

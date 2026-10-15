@@ -1446,11 +1446,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `debugApp`
           - Cross-plugin:
             - Imported by: 24 plugins — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
-              - `debug` ×17
-              - `infra` ×2
+              - `debug` ×18
               - `backup`
               - `build`
               - `conversations/recover`
+              - `infra/events-test`
               - `plugin-meta/exhibits`
               - `shell/notifications`
     - **`deploy`** — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
@@ -15590,6 +15590,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`debug`** — Debug tools umbrella plugin.
   - Plugins:
+    - **`background`** — Debug → Background activity: the list pane over the background catalog (everything this backend and the central runtime run on their own) and a detail pane per entry, with the Debug sidebar entry.
+      - Web:
+        - Slots:
+          - `background.actions`
+          - `backgroundEntryPane.Actions`
+        - Slot contributors:
+          - `background.actions` ← `primitives.pane`
+          - `backgroundEntryPane.Actions` ← `primitives.pane`
+        - Contributes:
+          - `Pane.Register` "debug-background"
+          - `Pane.Register` "debug-background-entry"
+          - `DebugApp.Sidebar` "Background activity"
+        - Uses:
+          - `apps/debug/shell.DebugApp`
+          - `infra/background/catalog.BackgroundView`
+          - `infra/background/catalog.EntryDetail`
+          - `infra/background/catalog.useBackgroundEntry`
+          - `primitives/pane.defineRoute`
+          - `primitives/pane.Pane`
+          - `primitives/pane.PaneChrome`
+          - `primitives/pane.resolveFrom`
+          - `primitives/pane.ResolveResult`
+          - `primitives/pane.useOpenPane`
+        - Exports (values): `backgroundEntryPane`
+      - Cross-plugin:
+        - Imported by: `debug/queue`
     - **`boot-budget`** — Boot-budget report renderer: a one-line Debug → Reports summary for the boot-budget kind, plus the per-phase budget config registration. Boot-budget monitor: a cheap per-worktree scheduled job that reads the post-boot profile once and files a deduped boot-budget report per server boot hook (onReadyBlocking / onReady / onAllReady) or warmup span whose wall-time exceeds its per-phase budget, so a heavy boot hook is loud immediately instead of invisible-until-threshold.
       - Web:
         - Contributes:
@@ -16783,12 +16809,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane` ×8
           - `primitives/live-state` ×6
           - `primitives/data-view` ×5
-          - `infra/background/catalog` ×2
           - `infra/endpoints` ×2
           - `network/live` ×2
           - `primitives/css/spacing` ×2
           - `primitives/css/ui-kit` ×2
           - `apps/debug/shell.DebugApp`
+          - `debug/background.backgroundEntryPane`
+          - `infra/background/catalog.useBackgroundEntry`
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/badge.Badge`
           - `primitives/css/cluster.Cluster`
@@ -21499,40 +21526,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
     - **`background`** — Umbrella for what the app runs on its own: the catalog every background mechanism reports into, and the page that lists it.
       - Plugins:
-        - **`catalog`** — Debug → Background activity: a DataView over the pushed background.catalog — everything this backend runs on its own, grouped by kind, with a status dot, the trigger in words and its next run, and the last run — and a detail pane per entry with its scope, declaring plugin, recent runs and Run now. Background activity catalog: defineBackgroundKind registers a provider (a mechanism that runs things on its own: jobs, warm-ups, timers) that lists its entries with trigger, scope and latest run, its recent runs and an optional Run now; the catalog merges every provider into the pushed background.catalog value (throttled), serves background.recent-runs per entry and POST /api/background/run-now, fills event-triggered entries' event names from contributed BackgroundTriggerSource annotations, and names no provider. Background activity catalog, central half: defineBackgroundKind registers a provider for what the machine-wide central runtime runs on its own, merged into the pushed background.central-catalog value (every entry scope central) with background.central-recent-runs per entry.
-          - Web:
-            - Slots:
-              - `background.actions`
-              - `backgroundEntryPane.Actions`
-            - Slot contributors:
-              - `background.actions` ← `primitives.pane`
-              - `backgroundEntryPane.Actions` ← `primitives.pane`
-            - Contributes:
-              - `Pane.Register` "debug-background"
-              - `Pane.Register` "debug-background-entry"
-              - `DebugApp.Sidebar` "Background activity"
-            - Uses: 32 symbols — full list in [`plugins/infra/plugins/background/plugins/catalog/REFERENCE.md`](../plugins/infra/plugins/background/plugins/catalog/REFERENCE.md)
-              - `primitives/pane` ×6
-              - `primitives/live-state` ×5
-              - `primitives/data-view` ×3
-              - `infra/endpoints` ×2
-              - `primitives/css/status-dot` ×2
-              - `primitives/css/ui-kit` ×2
-              - `primitives/relative-time` ×2
-              - `apps/debug/shell.DebugApp`
-              - `network/live.useLive`
-              - `primitives/css/fill.Fill`
-              - `primitives/css/line.Line`
-              - `primitives/css/placeholder.Placeholder`
-              - `primitives/css/rigid.rigidClass`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `primitives/loading.Loading`
-              - `runs/run-outcome.RUN_OUTCOME_META`
-            - Exports (values):
-              - `backgroundEntryPane`
-              - `NextRun`
-              - `useBackgroundEntry`
+        - **`catalog`** — Background activity catalog, browser half: the live read of one entry across both halves of the catalog, the countdown to its next run, and the catalog list (a DataView grouped by kind, with status, trigger in words, next and last run) and entry detail (scope, declaring plugin, recent runs, Run now) components — mounted as panes by Debug → Background activity. Background activity catalog: defineBackgroundKind registers a provider (a mechanism that runs things on its own: jobs, warm-ups, timers) that lists its entries with trigger, scope and latest run, its recent runs and an optional Run now; the catalog merges every provider into the pushed background.catalog value (throttled), serves background.recent-runs per entry and POST /api/background/run-now, fills event-triggered entries' event names from contributed BackgroundTriggerSource annotations, and names no provider. Background activity catalog, central half: defineBackgroundKind registers a provider for what the machine-wide central runtime runs on its own, merged into the pushed background.central-catalog value (every entry scope central) with background.central-recent-runs per entry.
           - Server:
             - Contributes:
               - `resource.declare` "background.catalog"
@@ -21552,6 +21546,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `background.catalog` (push, notified)
               - `background.recent-runs` (push, notified)
             - Routes: `POST /api/background/run-now`
+          - Web:
+            - Uses: 25 symbols — full list in [`plugins/infra/plugins/background/plugins/catalog/REFERENCE.md`](../plugins/infra/plugins/background/plugins/catalog/REFERENCE.md)
+              - `primitives/live-state` ×5
+              - `primitives/data-view` ×3
+              - `infra/endpoints` ×2
+              - `primitives/css/status-dot` ×2
+              - `primitives/css/ui-kit` ×2
+              - `primitives/relative-time` ×2
+              - `network/live.useLive`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/loading.Loading`
+              - `runs/run-outcome.RUN_OUTCOME_META`
+            - Exports (values):
+              - `BackgroundView`
+              - `EntryDetail`
+              - `NextRun`
+              - `useBackgroundEntry`
           - Central:
             - Uses: `network/live.serveValue`
             - Exports (types):
@@ -21594,6 +21610,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `runBackgroundNowEndpoint`
           - Cross-plugin:
             - Imported by:
+              - `debug/background`
               - `debug/queue`
               - `infra/background/timer`
               - `infra/events`
@@ -34189,15 +34206,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: 170 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×60
           - `conversations` ×29
-          - `debug` ×24
+          - `debug` ×25
           - `active-data` ×10
           - `tasks` ×9
           - `plugin-meta` ×6
           - `apps-core` ×5
           - `auth` ×4
           - `layouts` ×4
-          - `infra` ×3
           - `primitives` ×3
+          - `infra` ×2
           - `stats` ×2
           - `backup`
           - `build`

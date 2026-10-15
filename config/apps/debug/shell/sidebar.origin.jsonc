@@ -1,4 +1,4 @@
-// @hash 6188d31cf811
+// @hash f056c759f224
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,6 +10,7 @@
     "backup:backup",
     "build:build",
     "conversations.recover:conversations-recover",
+    "debug.background:background",
     "debug.boot-profile:boot-profile",
     "debug.boot-profile:boot-profiles-list",
     "debug.broadcasts:broadcasts",
@@ -28,7 +29,6 @@
     "debug.reports:reports",
     "debug.trace.pane:trace-slow-events",
     "debug.worktree-cleanup:worktree-cleanup",
-    "infra.background.catalog:background",
     "infra.events-test:events-test",
     "plugin-meta.exhibits:exhibits",
     "shell.notifications:notifications"

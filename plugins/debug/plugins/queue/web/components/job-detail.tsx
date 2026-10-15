@@ -1,9 +1,7 @@
 import type { ReactNode } from "react";
 import { HOLD_SPECS } from "@plugins/infra/plugins/jobs/core";
-import {
-  backgroundEntryPane,
-  useBackgroundEntry,
-} from "@plugins/infra/plugins/background/plugins/catalog/web";
+import { useBackgroundEntry } from "@plugins/infra/plugins/background/plugins/catalog/web";
+import { backgroundEntryPane } from "@plugins/debug/plugins/background/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";

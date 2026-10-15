@@ -1067,15 +1067,15 @@ See "Open questions" in the design doc.
   - Imported by: 170 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×60
     - `conversations` ×29
-    - `debug` ×24
+    - `debug` ×25
     - `active-data` ×10
     - `tasks` ×9
     - `plugin-meta` ×6
     - `apps-core` ×5
     - `auth` ×4
     - `layouts` ×4
-    - `infra` ×3
     - `primitives` ×3
+    - `infra` ×2
     - `stats` ×2
     - `backup`
     - `build`
