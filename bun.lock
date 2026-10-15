@@ -1929,6 +1929,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-pending-turn",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/pin": {
+      "name": "@singularity/plugin-conversations-conversation-view-pin",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/prompt-input": {
       "name": "@singularity/plugin-conversations-conversation-view-prompt-input",
       "version": "0.0.1",
@@ -7547,6 +7551,8 @@
     "@singularity/plugin-conversations-conversation-view-open-app": ["@singularity/plugin-conversations-conversation-view-open-app@workspace:plugins/conversations/plugins/conversation-view/plugins/open-app"],
 
     "@singularity/plugin-conversations-conversation-view-pending-turn": ["@singularity/plugin-conversations-conversation-view-pending-turn@workspace:plugins/conversations/plugins/conversation-view/plugins/pending-turn"],
+
+    "@singularity/plugin-conversations-conversation-view-pin": ["@singularity/plugin-conversations-conversation-view-pin@workspace:plugins/conversations/plugins/conversation-view/plugins/pin"],
 
     "@singularity/plugin-conversations-conversation-view-prompt-input": ["@singularity/plugin-conversations-conversation-view-prompt-input@workspace:plugins/conversations/plugins/conversation-view/plugins/prompt-input"],
 

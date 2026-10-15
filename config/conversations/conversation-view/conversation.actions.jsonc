@@ -1,4 +1,4 @@
-// @hash a9050ce03316
+// @hash 6ba9329f01fe
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -10,6 +10,7 @@
   "items": [
     "conversations.agents:agent-avatar",
     "primitives.pane:title",
+    "conversations.conversation-view.pin:pin",
     // Pushes the chips to the right edge (Mist, proto-1789643584-ldt6).
     { "type": "spacer", "id": "title-end" },
     "conversations.conversation-preprompt:preprompt",

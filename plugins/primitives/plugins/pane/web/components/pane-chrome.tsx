@@ -5,6 +5,7 @@ import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
 import { PaneScroll } from "./pane-scroll";
 import { FloatingHeaderScroll } from "./floating-header-scroll";
 import { PaneIconAction } from "./pane-icon-action";
@@ -136,7 +137,10 @@ export function PaneChrome({
     <Bar
       tier="pane"
       endSafeArea={reserveEnd}
+      // The header row is a hover-reveal anchor: a header item may wear
+      // `hoverRevealTargetInAnchor` to show only while the row is hovered.
       className={cn(
+        hoverRevealGroup,
         layoutCtx?.dragHandleProps && "cursor-grab active:cursor-grabbing",
         floatingHeader && "transition-colors",
         atTop && "border-transparent",

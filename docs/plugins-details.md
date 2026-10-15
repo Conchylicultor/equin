@@ -10779,8 +10779,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `RewindRefusalSchema`
       - `stopConversation`
   - Cross-plugin:
-    - Imported by: 64 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `conversations` ×49
+    - Imported by: 65 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `conversations` ×50
       - `tasks` ×4
       - `apps` ×3
       - `review` ×3
@@ -11363,6 +11363,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversationPane.Actions` ← `conversations.conversation-progress`
           - `conversationPane.Actions` ← `conversations.conversation-view.allow-monitor`
           - `conversationPane.Actions` ← `conversations.conversation-view.model`
+          - `conversationPane.Actions` ← `conversations.conversation-view.pin`
           - `conversationPane.Actions` ← `conversations.conversation-view.status`
           - `conversationPane.Actions` ← `conversations.conversation-view.track`
           - `conversationPane.Actions` ← `primitives.pane`
@@ -11400,8 +11401,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `usePromptComposer`
           - `useRegisterPromptComposer`
       - Cross-plugin:
-        - Imported by: 61 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
-          - `conversations` ×50
+        - Imported by: 62 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
+          - `conversations` ×51
           - `active-data` ×5
           - `tasks` ×2
           - `debug/profiling/ops`
@@ -13571,6 +13572,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question` (0 debt)
               - `conversations/conversation-view/pending-turn` (0 debt)
               - `conversations/conversation-view/push-and-exit` (0 debt)
+        - **`pin`** — Pin / unpin button beside the conversation title in the pane header — the same queue pin as the sidebar Queue row's, lifting the conversation's task group into the Pinned section.
+          - Web:
+            - Contributes: `conversationPane.Actions` "pin" → `PinButton`
+            - Uses:
+              - `conversations.useConversationById`
+              - `conversations/conversation-view.conversationPane`
+              - `infra/endpoints.fetchEndpoint`
+              - `network/live.useLiveRow`
+              - `primitives/hover-reveal.hoverRevealTargetInAnchor`
+              - `primitives/icon-button.IconButton`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/loading.Loading`
         - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.
           - Web:
             - Contributes: `Conversation.PromptInput` → `PromptInput`
@@ -22260,9 +22273,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `multipart`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 201 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 202 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×52
-          - `conversations` ×26
+          - `conversations` ×27
           - `debug` ×18
           - `infra` ×16
           - `page` ×14
@@ -25418,9 +25431,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 226 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 227 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×66
-          - `conversations` ×35
+          - `conversations` ×36
           - `tasks` ×26
           - `debug` ×23
           - `active-data` ×12
@@ -32732,12 +32745,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hoverRevealTargetWithGroupFocus`
           - `useHoverReveal`
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
+        - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
           - `apps` ×9
           - `page` ×8
-          - `primitives` ×6
+          - `primitives` ×7
           - `ui` ×4
           - `apps-core/surface/floating`
+          - `conversations/conversation-view/pin`
           - `integrations/youtube`
           - `layouts/miller`
           - `tasks/task-description`
@@ -32756,10 +32770,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `IconButtonProps`
         - Exports (values): `IconButton`
       - Cross-plugin:
-        - Imported by: 115 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 116 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×42
           - `primitives` ×21
-          - `conversations` ×15
+          - `conversations` ×16
           - `page` ×7
           - `tasks` ×7
           - `debug` ×5
@@ -33052,9 +33066,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 234 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 235 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×66
-          - `conversations` ×39
+          - `conversations` ×40
           - `tasks` ×22
           - `ui` ×22
           - `debug` ×20
@@ -33131,11 +33145,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LoadingVariant`
         - Exports (values): `Loading`
       - Cross-plugin:
-        - Imported by: 188 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 189 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×64
           - `ui` ×19
+          - `conversations` ×17
           - `primitives` ×17
-          - `conversations` ×16
           - `debug` ×16
           - `tasks` ×13
           - `page` ×8
@@ -34203,7 +34217,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `welcomePane.Actions` "title" → `PaneTitleItem`
           - `workflow-node.actions` "title" → `PaneTitleItem`
           - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
-        - Uses: 32 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Uses: 33 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `primitives/css/ui-kit` ×4
           - `primitives/live-state` ×3
           - `primitives/slot-render` ×3
@@ -34219,6 +34233,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/dom/in-view.useInView`
+          - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/loading.Loading`

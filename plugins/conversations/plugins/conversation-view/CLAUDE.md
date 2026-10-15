@@ -27,6 +27,7 @@
     - `conversationPane.Actions` ← `conversations.conversation-progress`
     - `conversationPane.Actions` ← `conversations.conversation-view.allow-monitor`
     - `conversationPane.Actions` ← `conversations.conversation-view.model`
+    - `conversationPane.Actions` ← `conversations.conversation-view.pin`
     - `conversationPane.Actions` ← `conversations.conversation-view.status`
     - `conversationPane.Actions` ← `conversations.conversation-view.track`
     - `conversationPane.Actions` ← `primitives.pane`
@@ -64,8 +65,8 @@
     - `usePromptComposer`
     - `useRegisterPromptComposer`
 - Cross-plugin:
-  - Imported by: 61 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×50
+  - Imported by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×51
     - `active-data` ×5
     - `tasks` ×2
     - `debug/profiling/ops`
@@ -99,6 +100,7 @@
   - **`op-status`** — Banner above the prompt input showing the worktree's in-flight op (build / push / check / test / e2e) from the op-store in-flight collection: the wait it is parked in (reason, requeue cycle, its own…
   - **`open-app`** — Opens the conversation's namespace (`http://<id>.localhost:9000`) on the page its task was filed from when one was attached (else `/`) — in a new browser tab by default, or framed in a pane beside…
   - **`pending-turn`** — The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted|held →…
+  - **`pin`** — Pin / unpin button beside the conversation title in the pane header — the same queue pin as the sidebar Queue row's, lifting the conversation's task group into the Pinned section.
   - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.
   - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked…
   - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
