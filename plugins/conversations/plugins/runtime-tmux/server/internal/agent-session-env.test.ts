@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
   AGENT_SESSION_ENV_ALLOWLIST,
@@ -50,15 +53,20 @@ describe("the agent-session wrapper", () => {
   });
 
   test("interpolates nothing, so a command needs no escaping", () => {
-    expect(AGENT_SESSION_WRAPPER).toContain('zsh -l -c "$cmd" zsh "$@"');
-    expect(AGENT_SESSION_WRAPPER).not.toContain("'");
+    // The shims, the command and the prompt all ride as positional words.
+    expect(AGENT_SESSION_WRAPPER).toContain('zsh "$shims" "$cmd" "$@"');
+    expect(AGENT_SESSION_WRAPPER).toContain('eval "$cmd"');
   });
 });
 
 // Drives the real shells with the exact argv shape tmux execs, minus tmux:
-// `zsh -l -c <wrapper> zsh <claudeCmd> [prompt]`, under an environment that
-// carries the leak.
-async function runWrapper(claudeCmd: string, prompt?: string) {
+// `zsh -l -c <wrapper> zsh <shimsDir> <claudeCmd> [prompt]`, under an
+// environment that carries the leak.
+async function runWrapper(
+  claudeCmd: string,
+  prompt?: string,
+  shims = "/fixture/mise/shims",
+) {
   // Every value is a fixture. The question this test asks is which KEYS come
   // out the far side, so none of them needs to name anything real — and the
   // inner login shell reads the system profile either way.
@@ -88,6 +96,7 @@ async function runWrapper(claudeCmd: string, prompt?: string) {
       "-c",
       AGENT_SESSION_WRAPPER,
       "zsh",
+      shims,
       claudeCmd,
       ...(prompt === undefined ? [] : [prompt]),
     ],
@@ -121,6 +130,27 @@ describe("the wrapper, executed", () => {
     expect(res.stdout).not.toContain(LEAKED_NAMESPACE_VAR);
     expect(res.stdout).not.toContain("SOCKET_PATH=");
     expect(res.stdout).not.toContain("ZZ_ENVTEST_PROBE");
+  });
+
+  test("puts the shims first, so the pane finds mise's bun", async () => {
+    // A login shell that is not interactive never reads ~/.zshrc, where
+    // `mise activate` lives: the pane must find `bun` without it.
+    const shims = mkdtempSync(join(tmpdir(), "agent-session-shims-"));
+    try {
+      const bun = join(shims, "bun");
+      writeFileSync(bun, "#!/bin/sh\nexit 0\n");
+      chmodSync(bun, 0o755);
+      const res = await runWrapper(
+        'printf "PATH<%s>\\nBUN<%s>\\n" "$PATH" "$(command -v bun)"',
+        undefined,
+        shims,
+      );
+      expect(res.exitCode).toBe(0);
+      expect(res.stdout).toContain(`PATH<${shims}:`);
+      expect(res.stdout).toContain(`BUN<${bun}>`);
+    } finally {
+      rmSync(shims, { recursive: true, force: true });
+    }
   });
 
   test("runs with no prompt at all", async () => {

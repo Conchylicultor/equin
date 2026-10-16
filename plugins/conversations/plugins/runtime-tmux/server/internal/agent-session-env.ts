@@ -13,7 +13,8 @@
 // `env -i <allowlist> zsh -l -c '<claude command>'`: the outer shell exists
 // only to expand `$NAME` (it is the one process that can still see tmux's
 // injected TMUX / TMUX_PANE and the two `-e` values), and the inner login shell
-// starts from exactly this list, rebuilding PATH from the user's own profile.
+// starts from exactly this list, rebuilding PATH from the user's own profile
+// and then putting mise's shims first (see AGENT_SESSION_INNER).
 //
 // Why an allowlist and not `tmux set-environment -g -u` per bad variable: the
 // set of things a backend's ambient environment may carry is open-ended, so
@@ -58,17 +59,37 @@ export const AGENT_SESSION_ENV_ALLOWLIST = [
 // The inner login shell replaces this with the user's real PATH.
 export const AGENT_SESSION_PATH_SEED = "/usr/bin:/bin:/usr/sbin:/sbin";
 
-// The command string tmux execs, as `zsh -l -c <wrapper> zsh <claudeCmd> [prompt]`.
+// What the inner login shell runs once its profile has built PATH: put mise's
+// shims FIRST, then run the Claude command.
 //
-// Nothing is interpolated into it: the Claude command rides in as `$1` and the
-// prompt as `$2`, so a command containing single quotes (`--settings '{…}'`)
-// needs no escaping and cannot be re-parsed on the way through. After `shift`,
-// `"$@"` is the prompt when there is one and expands to nothing when there is
-// not — which is what keeps the existing contract that a short prompt reaches
-// Claude as the inner shell's `$1`.
+// The login profile alone is not enough. `zsh -l -c` is a login shell but not
+// an interactive one, so it reads ~/.zprofile and never ~/.zshrc — which is
+// exactly where `mise activate` lives on a stock setup. On 2026-10-16 that left
+// every pane without `bun` (mise's only copy), and every hook Claude Code ran
+// as `bun …` — the PreToolUse guards, the subagent stop guard, the question
+// relay — failed with exit 127, which Claude Code treats as non-blocking: the
+// guards were silently off. So the pane resolves its tools the way the runtime
+// tree does (`runtimePath`, launcher/core): through mise's shims, first, from
+// the directory the backend itself resolves them from, whatever the user's
+// dotfiles say. Shims first and not last for the runtime's reason too: a
+// Homebrew or rustup copy ahead of them would win over `mise.toml`.
+//
+// `$1` is the shims directory, `$2` the Claude command; after `shift 2` the
+// prompt (when there is one) is `$1`, as the command expects.
+const AGENT_SESSION_INNER = 'PATH="$1:$PATH"; cmd="$2"; shift 2; eval "$cmd"';
+
+// The command string tmux execs, as
+// `zsh -l -c <wrapper> zsh <shimsDir> <claudeCmd> [prompt]`.
+//
+// Nothing is interpolated into it: the shims directory, the Claude command and
+// the prompt ride in as positional words, so a command containing single quotes
+// (`--settings '{…}'`) needs no escaping and cannot be re-parsed on the way
+// through. After `shift 2`, `"$@"` is the prompt when there is one and expands
+// to nothing when there is not — which is what keeps the existing contract that
+// a short prompt reaches Claude as the command's `$1`.
 export const AGENT_SESSION_WRAPPER = [
-  'cmd="$1"; shift; exec env -i',
+  'shims="$1"; cmd="$2"; shift 2; exec env -i',
   ...AGENT_SESSION_ENV_ALLOWLIST.map((name) => `${name}="$${name}"`),
   `PATH=${AGENT_SESSION_PATH_SEED}`,
-  'zsh -l -c "$cmd" zsh "$@"',
+  `zsh -l -c '${AGENT_SESSION_INNER}' zsh "$shims" "$cmd" "$@"`,
 ].join(" ");

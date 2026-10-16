@@ -22,6 +22,7 @@ import {
   type EffortLevel,
 } from "@plugins/conversations/plugins/effort-provider/core";
 import { TMUX } from "@plugins/infra/plugins/paths/server";
+import { runtimeShimsDir } from "@plugins/infra/plugins/launcher/core";
 import { requireClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import {
@@ -784,8 +785,16 @@ export const tmuxRuntime: ConversationRuntime = {
     // can expand `$VAR` against what tmux hands the pane (its injected TMUX /
     // TMUX_PANE plus the two `-e` values). That shell immediately re-execs into
     // an allowlisted environment; see agent-session-env.ts for why the pane's
-    // inherited environment cannot be trusted. The Claude command and the
-    // prompt ride as positional words, never interpolated into the wrapper.
+    // inherited environment cannot be trusted. The shims directory, the Claude
+    // command and the prompt ride as positional words, never interpolated into
+    // the wrapper. The shims are the ones this backend resolves its own tools
+    // through, so the pane runs the same `bun` its hooks need.
+    const shims = runtimeShimsDir(process.env);
+    if (shims === undefined) {
+      throw new Error(
+        `cannot launch ${conversationId}: no mise shims directory (HOME unset?) — the pane would have no bun for its hooks`,
+      );
+    }
     const proc = Bun.spawn(
       [
         TMUX,
@@ -807,6 +816,7 @@ export const tmuxRuntime: ConversationRuntime = {
         "-c",
         AGENT_SESSION_WRAPPER,
         "zsh",
+        shims,
         claudeCmd,
         ...(launchMessage !== undefined && !useTempFile ? [launchMessage] : []),
         // Re-arm the global session hooks in the same invocation: a tmux server
