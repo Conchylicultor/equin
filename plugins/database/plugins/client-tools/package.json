@@ -4,9 +4,40 @@
   "private": true,
   "version": "0.0.1",
   "optionalDependencies": {
-    "@equin/pg-client-darwin-arm64": "18.3.0",
-    "@equin/pg-client-darwin-x64": "18.3.0",
-    "@equin/pg-client-linux-x64": "18.3.0",
-    "@equin/pg-client-linux-arm64": "18.3.0"
+    "@equin/pg-client-darwin-arm64": "^18.3.0",
+    "@equin/pg-client-darwin-x64": "^18.3.0",
+    "@equin/pg-client-linux-x64": "^18.3.0",
+    "@equin/pg-client-linux-arm64": "^18.3.0"
+  },
+  "dependencyPolicy": {
+    "groups": [
+      {
+        "id": "pg-client",
+        "members": [
+          "@equin/pg-client-darwin-arm64",
+          "@equin/pg-client-darwin-x64",
+          "@equin/pg-client-linux-x64",
+          "@equin/pg-client-linux-arm64"
+        ],
+        "agree": "version",
+        "reason": "one client-tools build per platform"
+      },
+      {
+        "id": "postgres-release",
+        "members": [
+          "@equin/pg-client-darwin-arm64",
+          "@equin/pg-client-darwin-x64",
+          "@equin/pg-client-linux-x64",
+          "@equin/pg-client-linux-arm64",
+          "@embedded-postgres/darwin-arm64",
+          "@embedded-postgres/darwin-x64",
+          "@embedded-postgres/linux-x64",
+          "@embedded-postgres/linux-arm64"
+        ],
+        "agree": "major.minor",
+        "reason": "pg_dump / pg_restore must come from the same Postgres release (major.minor) as the embedded server",
+        "prerequisite": "publish @equin/pg-client-* for the new Postgres release from github.com/equinai/pg-client-embedded (bump PG_VERSION in scripts/build.sh and EMBEDDED_POSTGRES_VERSION in the workflow, then tag v<major>.<minor>.0), then upgrade again — the two move together"
+      }
+    ]
   }
 }

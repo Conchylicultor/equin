@@ -403,7 +403,6 @@ export const uvUpdater: Updater = {
   },
 
   holds: {
-    entries: UV_HOLDS,
     file: "plugins/infra/plugins/deps/plugins/python/plugins/uv-updater/server/internal/uv-updater.ts",
   },
 };

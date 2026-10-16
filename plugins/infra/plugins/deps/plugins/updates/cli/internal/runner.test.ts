@@ -28,7 +28,7 @@ function fakeUpdater(moves: Move[]): Updater {
         writeFileSync(join(r, "fake.lock"), `${m.name} = ${m.to}\n`);
     },
     smoke: async () => [{ name: "fake smoke", argv: ["true"], timeoutMs: 1 }],
-    holds: { entries: [], file: "fake.ts" },
+    holds: { file: "fake.ts" },
   };
 }
 

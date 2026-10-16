@@ -46,6 +46,7 @@ delete it once none can be open.
   - Imported by:
     - `infra/deps`
     - `infra/deps/mise`
+    - `infra/deps/npm`
     - `infra/deps/python/uv-updater`
     - `toolchain`
 - Core:
@@ -54,11 +55,13 @@ delete it once none can be open.
     - `Move`
     - `Outdated`
     - `OutdatedUpdater`
+    - `OutdatedWaiting`
     - `Updater`
     - `UpdaterHold`
     - `UpdaterSmoke`
   - Exports (values):
     - `DEPS_UPGRADE_PROMPT`
+    - `isActionable`
     - `outdatedSections`
     - `upgradeTaskTitle`
 - Cli:

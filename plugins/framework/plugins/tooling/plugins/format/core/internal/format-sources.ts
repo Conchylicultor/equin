@@ -1,7 +1,8 @@
 // The two drivers over the changed set: one that WRITES (build,
 // `./singularity format`) and one that never does (the `format-clean` check).
-// Both read the same set from `changed-files.ts` and format through the same
-// `formatSource`, so they cannot disagree about what "formatted" means.
+// Both read the same set from `changed-files.ts` and decide the bytes through
+// the same `formatInScope` over the same `formatSource`, so they cannot
+// disagree about what "formatted" means.
 
 import { readFile, writeFile } from "fs/promises";
 import { join } from "path";
@@ -13,42 +14,74 @@ import {
   type DirectiveDisplacement,
 } from "./directive-displacement";
 import { formatOffThread } from "./format-thread";
+import { formatInScope, type ChangedFile } from "./line-scope";
 import { formatSource, type SourceBytes } from "./prettier";
 
 /**
- * Read → format → compare. NEVER writes. Returns the subset of `files` (paths
- * relative to `root`) whose on-disk bytes differ from prettier's output.
+ * Read → format in scope → compare. NEVER writes. Returns the paths (relative
+ * to `root`) of the `changed` files whose on-disk bytes are not what
+ * `formatInScope` makes of them.
  *
- * `files` must already be formattable — pass {@link listChangedFormattableFiles}
+ * `changed` must already be formattable — pass {@link listChangedFormattableFiles}
  * output, which is filtered by `isFormattable`. A held-out path THROWS out of
  * `formatSource` rather than being silently reported as already-formatted.
  */
 export async function findUnformatted(
   root: string,
-  files: string[],
+  changed: ChangedFile[],
 ): Promise<string[]> {
-  // Formatted on the format thread (`./format-thread`): prettier's load and its
-  // parse + print of one file are each one synchronous run that no yield can
-  // split, and this runs inside a check pass whose checks share one thread.
-  const sources = await readSources(root, files);
-  const formatted = await formatOffThread(sources);
+  const sources = await readSources(root, changed);
+  const expected = await scopedOffThread(sources);
   return sources
-    .filter((source, i) => formatted[i] !== source.content)
+    .filter((source, i) => expected[i] !== source.content)
     .map((source) => source.file);
 }
 
-/** Each of `files` (relative to `root`) with its current bytes. */
+type ScopedSource = SourceBytes & Pick<ChangedFile, "scope">;
+
+/** Each of `changed` (relative to `root`) with its current bytes. */
 async function readSources(
   root: string,
-  files: string[],
-): Promise<SourceBytes[]> {
+  changed: ChangedFile[],
+): Promise<ScopedSource[]> {
   // One at a time: a branch's first build can change hundreds of files, and a
   // raw `readFile` per file all at once would open them all together.
-  const sources: SourceBytes[] = [];
-  for (const file of files) {
-    sources.push({ file, content: await readFile(join(root, file), "utf8") });
+  const sources: ScopedSource[] = [];
+  for (const { file, scope } of changed) {
+    sources.push({
+      file,
+      scope,
+      content: await readFile(join(root, file), "utf8"),
+    });
   }
   return sources;
+}
+
+/**
+ * `formatInScope` for each source, formatting on the format thread
+ * (`./format-thread`): prettier's load and its parse + print of one file are
+ * each one synchronous run that no yield can split, and the readers run inside
+ * a check pass whose checks share one thread. The first round is sent as one
+ * batch; the thread remembers it, so each file's own first round is free.
+ */
+async function scopedOffThread(sources: ScopedSource[]): Promise<string[]> {
+  await formatOffThread(
+    sources.map(({ file, content }) => ({ file, content })),
+  );
+  const slice = createTimeSlicer();
+  const out: string[] = [];
+  for (const { file, content, scope } of sources) {
+    await slice();
+    out.push(
+      await formatInScope({
+        file,
+        content,
+        scope,
+        format: async (bytes) => (await formatOffThread([bytes]))[0]!,
+      }),
+    );
+  }
+  return out;
 }
 
 /**
@@ -66,13 +99,13 @@ async function readSources(
  */
 export async function findDisplacedDirectives(
   root: string,
-  files: string[],
+  changed: ChangedFile[],
 ): Promise<DirectiveDisplacement[]> {
   // Formatting runs on the format thread, as in `findUnformatted` (and shares
   // its remembered results, so a pass formats each file once). Comparing the
   // directive targets stays here, pausing between files.
-  const sources = await readSources(root, files);
-  const formatted = await formatOffThread(sources);
+  const sources = await readSources(root, changed);
+  const formatted = await scopedOffThread(sources);
   const slice = createTimeSlicer();
   const displaced: DirectiveDisplacement[] = [];
   for (const [i, source] of sources.entries()) {
@@ -89,8 +122,9 @@ export async function findDisplacedDirectives(
 }
 
 /**
- * Read → format → write-iff-different, over the branch's changed set. Returns
- * the paths actually rewritten.
+ * Read → format in scope → write-iff-different, over the branch's changed set:
+ * prettier's changes to the lines the branch changed, never to the rest of a
+ * file (`./line-scope`). Returns the paths actually rewritten.
  *
  * Three properties are load-bearing:
  *
@@ -125,10 +159,15 @@ export async function formatChangedSources(opts: {
   const formatted: string[] = [];
   const displaced: DirectiveDisplacement[] = [];
 
-  for (const rel of files) {
+  for (const { file: rel, scope } of files) {
     const abs = join(root, rel);
     const content = await readFile(abs, "utf8");
-    const next = await formatSource({ file: rel, content });
+    const next = await formatInScope({
+      file: rel,
+      content,
+      scope,
+      format: formatSource,
+    });
     if (next === content) continue;
 
     const moved = await findDirectiveDisplacements({

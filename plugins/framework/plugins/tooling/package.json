@@ -4,6 +4,6 @@
   "private": true,
   "version": "0.0.1",
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "^1.4.0"
   }
 }

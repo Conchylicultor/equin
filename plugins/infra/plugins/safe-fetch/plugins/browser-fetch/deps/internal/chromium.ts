@@ -19,5 +19,7 @@ export const chromium = defineDep({
     "Headless Chromium (and its headed pair) for browser-backed page reads, prototype thumbnails, the layout-geometry check and e2e scripts",
   sizeHint: "≈600 MB",
   source: playwrightBrowser({ browser: "chromium" }),
-  updates: { none: "follows the playwright npm pin" },
+  updates: {
+    none: "follows the playwright npm package, which the npm updater moves",
+  },
 });

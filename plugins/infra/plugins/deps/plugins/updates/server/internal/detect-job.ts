@@ -7,6 +7,7 @@ import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { tasksCategory } from "@plugins/tasks/plugins/task-category/server";
 import { defineAutomation } from "@plugins/tasks/plugins/automations/server";
 import {
+  isActionable,
   outdatedSections,
   upgradeTaskTitle,
   type OutdatedUpdater,
@@ -65,7 +66,7 @@ export const depsUpgradesAutomation = defineAutomation({
   label: "Dependency upgrades",
   icon: symbol("upgrade"),
   description:
-    "Checks each tracked toolchain for a newer release and files one upgrade task covering every outdated one.",
+    "Checks each declared updater for a newer release and files one upgrade task covering every outdated one.",
   categoryId: DEPS_CATEGORY_ID,
   config: depsUpgradesConfig,
   triggers: { kinds: ["schedule"] },
@@ -86,7 +87,9 @@ export const depsUpgradesAutomation = defineAutomation({
       if (!included.has(updater.id)) continue;
       try {
         const outdated = await updater.detect(REPO_ROOT);
-        if (outdated.length > 0)
+        // Held rows ride along with work but never file a task on their own:
+        // a hold is bounded by its `until`, after which its row is actionable.
+        if (outdated.some(isActionable))
           batch.push({
             updaterId: updater.id,
             outdated,

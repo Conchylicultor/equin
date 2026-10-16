@@ -3,9 +3,24 @@
   "private": true,
   "version": "0.0.1",
   "optionalDependencies": {
-    "@embedded-postgres/darwin-arm64": "18.3.0-beta.17",
-    "@embedded-postgres/darwin-x64": "18.3.0-beta.17",
-    "@embedded-postgres/linux-x64": "18.3.0-beta.17",
-    "@embedded-postgres/linux-arm64": "18.3.0-beta.17"
+    "@embedded-postgres/darwin-arm64": "^18.3.0-beta.17",
+    "@embedded-postgres/darwin-x64": "^18.3.0-beta.17",
+    "@embedded-postgres/linux-x64": "^18.3.0-beta.17",
+    "@embedded-postgres/linux-arm64": "^18.3.0-beta.17"
+  },
+  "dependencyPolicy": {
+    "groups": [
+      {
+        "id": "embedded-postgres",
+        "members": [
+          "@embedded-postgres/darwin-arm64",
+          "@embedded-postgres/darwin-x64",
+          "@embedded-postgres/linux-x64",
+          "@embedded-postgres/linux-arm64"
+        ],
+        "agree": "version",
+        "reason": "one Postgres build per platform: every machine must run the same server release"
+      }
+    ]
   }
 }

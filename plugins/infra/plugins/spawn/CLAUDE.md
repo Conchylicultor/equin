@@ -251,6 +251,7 @@ presence only — **no re-exports**; import from `core/`.
     - `framework/tooling/checks`
     - `framework/tooling/format`
     - `infra/deps/mise`
+    - `infra/deps/npm`
     - `infra/git/remotes`
     - `infra/paths`
     - `reports/outbox`

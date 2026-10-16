@@ -193,6 +193,10 @@ module eval).
   updaters take part are the automation's settings (Agent manager →
   Automations); the push policy decides whether the task's text authorizes a
   push.
+- `npm` — every npm package a workspace `package.json` declares, as an
+  updater (ranges + `bun.lock`, 3-day cooldown), plus the `dependencyPolicy`
+  (lockstep groups, holds bounded to 90 days) and the `deps-npm:*` checks that
+  forbid exact pins. See its `CLAUDE.md`.
 - `mise` — the toolchain as the first updater (`toolchain upgrade` is its
   alias; `toolchain:resolved` stays in `plugins/toolchain`).
 - `python` — the `python` kind (`pythonEnv`, `runPython`, `PythonEntryError`,
@@ -230,8 +234,8 @@ module eval).
   then a one-line child records the headed and headless-shell executables as
   Playwright's registry reports them; `isIntact` = both still exist.
   `launchChromium(ready, opts)` launches the headless shell (or, with
-  `headless: false`, the headed binary). No updater: it follows the
-  `playwright` npm pin (user: `safe-fetch/browser-fetch`'s `chromium`, ~280 MB
+  `headless: false`, the headed binary). No updater of its own: it
+  follows the `playwright` npm package, which the `npm` updater moves (user: `safe-fetch/browser-fetch`'s `chromium`, ~280 MB
   download, ~600 MB on disk). The shared `~/Library/Caches/ms-playwright` is
   not used; the deps sweep replaces Playwright's stale-browser GC.
 
@@ -243,9 +247,9 @@ torch.
 
 ## Not done yet (by design, follow-ups)
 
-- The `npm` updater, and a way for a `download` declaration to name an updater
-  (IP-country is blocked: db-ip serves only the current and previous month, so
-  a pinned month would 404 within ~2 months) — see
+- A way for a `download` declaration to name an updater (IP-country is
+  blocked: db-ip serves only the current and previous month, so a pinned month
+  would 404 within ~2 months) — see
   `research/2026-09-30-infra-deps-migrate-adhoc-deps.md`. Every dependency is
   on demand; no at-install policy is planned (Chromium is on demand too).
 
@@ -383,6 +387,7 @@ torch.
   - **`build`** — The build installer kind of infra/deps: build({ inputs, tool, output, run }) (its deps barrel) declares something built from this checkout's own source — identity = sha256 of every file the git…
   - **`download`** — The download installer kind of infra/deps: download({ files: [{ name, url, sha256 }], derive? }) (its deps barrel) declares a dependency on pinned files — identity = every url + sha256 plus…
   - **`mise`** — The mise toolchain as an updater: contributes `mise` to the updater registry, so the Dependency upgrades automation includes it in the batched upgrade task and `./singularity deps upgrade mise`…
+  - **`npm`** — The `npm` updater: moves every npm package a workspace package.json declares (its range and bun.lock) to the newest release past a 3-day cooldown, lockstep groups together, honouring expiring holds…
   - **`playwright-browser`** — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that…
   - **`python`** — The python installer kind of infra/deps (pythonEnv, runPython, PythonEntryError) over uv, with its caches as declared data dirs Its uv-updater sub-plugin keeps every python/ project's uv.lock and…
   - **`sweep`** — The daily deps.sweep job: removes installed optional-dependency identities that no checkout of this repo declares and that sat unused for 14 days (sweepUnusedDeps over the git worktree list).

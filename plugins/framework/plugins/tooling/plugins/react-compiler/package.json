@@ -4,6 +4,6 @@
   "private": true,
   "description": "Enables the React Compiler (Babel) across the frontend via a vite/ build contribution; presence of this folder is the on/off switch.",
   "devDependencies": {
-    "babel-plugin-react-compiler": "1.0.0"
+    "babel-plugin-react-compiler": "^1.0.0"
   }
 }

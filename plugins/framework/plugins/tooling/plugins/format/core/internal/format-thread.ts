@@ -20,6 +20,7 @@
 // evaluates prettier for this.
 
 import { Worker } from "node:worker_threads";
+import { FormatSyntaxError } from "./format-error";
 import type { SourceBytes } from "./prettier";
 
 /** Calling thread → worker. */
@@ -31,8 +32,17 @@ export interface FormatRequest {
 /** Worker → calling thread: one reply per request. */
 export type FormatReply =
   | { id: number; type: "formatted"; formatted: string[] }
-  /** `formatSource` threw on the worker; `stack` is the worker's own. */
-  | { id: number; type: "error"; message: string; stack: string | undefined };
+  /**
+   * `formatSource` threw on the worker; `stack` is the worker's own. `syntax`:
+   * it was a {@link FormatSyntaxError}, re-created as one here.
+   */
+  | {
+      id: number;
+      type: "error";
+      message: string;
+      stack: string | undefined;
+      syntax: boolean;
+    };
 
 const WORKER_URL = new URL("./format-worker.ts", import.meta.url);
 
@@ -78,7 +88,9 @@ function openFormatThread(): FormatThread {
     }
     if (reply.type === "error") {
       // The worker's own stack: the frames that matter are inside prettier.
-      const err = new Error(reply.message);
+      const err = reply.syntax
+        ? new FormatSyntaxError(reply.message)
+        : new Error(reply.message);
       if (reply.stack !== undefined) err.stack = reply.stack;
       p.reject(err);
       return;

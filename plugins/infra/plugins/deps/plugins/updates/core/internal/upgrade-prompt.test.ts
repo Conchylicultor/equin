@@ -6,6 +6,7 @@ import {
 import {
   DEPS_UPGRADE_PROMPT,
   outdatedSections,
+  upgradeTaskTitle,
   type OutdatedUpdater,
 } from "./upgrade-prompt";
 
@@ -40,5 +41,43 @@ describe("DEPS_UPGRADE_PROMPT", () => {
     if (!rendered.ok) return;
     expect(rendered.text).not.toContain("authorized to push");
     expect(rendered.text).toContain("Do NOT push.");
+  });
+});
+
+describe("held and blocked rows", () => {
+  const mixed: OutdatedUpdater[] = [
+    {
+      updaterId: "npm",
+      holdsFile: "package.json",
+      outdated: [
+        { name: "vite", current: "6.4.2", latest: "7.1.0" },
+        {
+          name: "react",
+          current: "19.1.0",
+          latest: "20.0.0",
+          waiting: { kind: "held", reason: "waits on x", until: "2026-12-01" },
+        },
+        {
+          name: "@embedded-postgres/darwin-arm64",
+          current: "18.3.0-beta.17",
+          latest: "18.4.0-beta.1",
+          waiting: { kind: "blocked", prerequisite: "publish pg-client 18.4" },
+        },
+      ],
+    },
+  ];
+
+  test("the task text names why each waits", () => {
+    const text = outdatedSections(mixed);
+    expect(text).toContain("- vite 6.4.2 → 7.1.0\n");
+    expect(text).toContain("HELD until 2026-12-01: waits on x");
+    expect(text).toContain("BLOCKED, do this first: publish pg-client 18.4");
+  });
+
+  test("the title lists only the actionable rows", () => {
+    const title = upgradeTaskTitle(mixed);
+    expect(title).toContain("vite");
+    expect(title).toContain("@embedded-postgres/darwin-arm64");
+    expect(title).not.toContain("react");
   });
 });

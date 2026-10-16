@@ -18,7 +18,7 @@ const MAX_LISTED = 20;
 const check: Check = {
   id: "format-clean",
   description:
-    "every .ts/.tsx changed on this branch matches prettier's output (`./singularity build` and `./singularity format` write exactly this)",
+    "every line of .ts/.tsx this branch changed matches prettier's output (`./singularity build` and `./singularity format` write exactly this; untouched lines are left as they are)",
 
   // Deliberately NOT `inputKeyed`: that contract requires the check's ENTIRE
   // transitive read surface to route through the recording FileSystemView, and
@@ -63,7 +63,7 @@ const check: Check = {
       bad.length > MAX_LISTED ? `\n  …and ${bad.length - MAX_LISTED} more` : "";
     return {
       ok: false,
-      message: `${bad.length} changed file(s) do not match prettier's output:\n  ${listed}${more}`,
+      message: `${bad.length} changed file(s) have changed lines that do not match prettier's output:\n  ${listed}${more}`,
       hint: "Run `./singularity format` (seconds) and commit the result, or `./singularity build`, which runs the same pass.",
     };
   },

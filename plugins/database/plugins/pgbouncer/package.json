@@ -4,9 +4,24 @@
   "private": true,
   "version": "0.0.1",
   "optionalDependencies": {
-    "@equin/pgbouncer-darwin-arm64": "1.25.7",
-    "@equin/pgbouncer-darwin-x64": "1.25.7",
-    "@equin/pgbouncer-linux-x64": "1.25.7",
-    "@equin/pgbouncer-linux-arm64": "1.25.7"
+    "@equin/pgbouncer-darwin-arm64": "^1.25.7",
+    "@equin/pgbouncer-darwin-x64": "^1.25.7",
+    "@equin/pgbouncer-linux-x64": "^1.25.7",
+    "@equin/pgbouncer-linux-arm64": "^1.25.7"
+  },
+  "dependencyPolicy": {
+    "groups": [
+      {
+        "id": "pgbouncer",
+        "members": [
+          "@equin/pgbouncer-darwin-arm64",
+          "@equin/pgbouncer-darwin-x64",
+          "@equin/pgbouncer-linux-x64",
+          "@equin/pgbouncer-linux-arm64"
+        ],
+        "agree": "version",
+        "reason": "one PgBouncer build per platform"
+      }
+    ]
   }
 }

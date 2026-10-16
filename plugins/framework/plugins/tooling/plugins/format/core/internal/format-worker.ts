@@ -8,6 +8,7 @@
 
 import { parentPort } from "node:worker_threads";
 import type { FormatReply, FormatRequest } from "./format-thread";
+import { FormatSyntaxError } from "./format-error";
 import { formatSource } from "./prettier";
 
 if (!parentPort) {
@@ -31,12 +32,14 @@ async function handle(request: FormatRequest): Promise<FormatReply> {
           type: "error",
           message: err.message,
           stack: err.stack,
+          syntax: err instanceof FormatSyntaxError,
         }
       : {
           id: request.id,
           type: "error",
           message: String(err),
           stack: undefined,
+          syntax: false,
         };
   }
 }

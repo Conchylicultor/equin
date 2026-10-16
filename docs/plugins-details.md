@@ -25227,6 +25227,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `miseUpdater`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
+        - **`npm`** — The `npm` updater: moves every npm package a workspace package.json declares (its range and bun.lock) to the newest release past a 3-day cooldown, lockstep groups together, honouring expiring holds — contributed to the infra/deps updater registry.
+          - Server:
+            - Contributes: `updater` "npm"
+            - Uses: `infra/deps/updates.UpdaterDeclare`
+          - Core:
+            - Uses: `infra/spawn.spawnCaptured`
+            - Exports (types):
+              - `Packument`
+              - `Plan`
+              - `Workspace`
+            - Exports (values):
+              - `groupProblems`
+              - `installedVersions`
+              - `planNpm`
+              - `policyProblems`
+              - `rangeAt`
+              - `readWorkspace`
+              - `unrangedSpecs`
+              - `utcDay`
+              - `workspaceManifests`
         - **`playwright-browser`** — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that version (resolved through this plugin's module graph) plus the platform — installed by the workspace's own playwright CLI with PLAYWRIGHT_BROWSERS_PATH = the install's env/, which then records the headed and headless-shell executables as Playwright reports them in env/executables.json (what isIntact checks); launchChromium(ready, opts) launches the recorded binary for the mode.
           - Cross-plugin:
             - Imported by: `infra/safe-fetch/browser-fetch`
@@ -25304,6 +25324,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `infra/deps`
               - `infra/deps/mise`
+              - `infra/deps/npm`
               - `infra/deps/python/uv-updater`
               - `toolchain`
           - Core:
@@ -25312,11 +25333,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Move`
               - `Outdated`
               - `OutdatedUpdater`
+              - `OutdatedWaiting`
               - `Updater`
               - `UpdaterHold`
               - `UpdaterSmoke`
             - Exports (values):
               - `DEPS_UPGRADE_PROMPT`
+              - `isActionable`
               - `outdatedSections`
               - `upgradeTaskTitle`
           - Cli:
@@ -27442,6 +27465,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/checks`
           - `framework/tooling/format`
           - `infra/deps/mise`
+          - `infra/deps/npm`
           - `infra/git/remotes`
           - `infra/paths`
           - `reports/outbox`

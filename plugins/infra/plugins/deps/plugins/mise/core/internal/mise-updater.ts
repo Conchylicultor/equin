@@ -202,12 +202,6 @@ export const miseUpdater: Updater = {
     ),
 
   holds: {
-    entries: HOLDS.map((h) => ({
-      name: h.tool,
-      version: h.version,
-      reason: h.reason,
-      issue: h.issue,
-    })),
     file: "plugins/toolchain/core/internal/tools.ts",
   },
 };

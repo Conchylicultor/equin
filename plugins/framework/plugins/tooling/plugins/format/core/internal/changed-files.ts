@@ -11,6 +11,7 @@
 import { existsSync } from "fs";
 import { join } from "path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import type { ChangedFile } from "./line-scope";
 import { COUPLED_FORMAT_SETS, isFormattable } from "./prettier";
 
 // Wedge-breaker for the metadata-only git reads below (`status`, `diff
@@ -39,28 +40,36 @@ function splitNul(out: string): string[] {
 }
 
 /**
- * Paths changed in the working tree, from `git status --porcelain -z`.
- *
- * Each record is `XY <path>`; for a rename/copy (`R`/`C`) the ORIGIN path
- * follows as its own NUL-terminated record and must be consumed, not read as a
- * changed path. Working-tree deletions are dropped — they have no bytes to
- * format, and the reader would ENOENT on them.
+ * Untracked paths, from `git status --porcelain -z`. Every other change against
+ * the merge-base is in `git diff <base>`, which compares the base with the
+ * working tree (staged and unstaged alike); only a file git does not track yet
+ * is invisible to it.
  */
-function parseStatusZ(out: string): string[] {
-  const records = out.split("\0");
-  const paths: string[] = [];
+function parseUntrackedZ(out: string): string[] {
+  return splitNul(out)
+    .filter((rec) => rec.startsWith("?? "))
+    .map((rec) => rec.slice(3));
+}
+
+/**
+ * `git diff -M -z --name-status` records: `M\0path`, `A\0path`, and for a
+ * rename or copy `R<score>\0old\0new`. Maps each current path to the path its
+ * bytes had at the base, or `null` when the base has no such file.
+ */
+function parseNameStatusZ(out: string): Map<string, string | null> {
+  const records = splitNul(out);
+  const origins = new Map<string, string | null>();
   for (let i = 0; i < records.length; i++) {
-    const rec = records[i]!;
-    if (rec.length === 0) continue;
-    const x = rec[0]!;
-    const y = rec[1]!;
-    const path = rec.slice(3);
-    // A rename/copy record is followed by its origin path; skip that record.
-    if (x === "R" || x === "C" || y === "R" || y === "C") i++;
-    const goneFromWorkingTree = y === "D" || (x === "D" && y === " ");
-    if (!goneFromWorkingTree && path.length > 0) paths.push(path);
+    const status = records[i]!;
+    if (status.startsWith("R") || status.startsWith("C")) {
+      origins.set(records[i + 2]!, records[i + 1]!);
+      i += 2;
+    } else {
+      origins.set(records[i + 1]!, status === "A" ? null : records[i + 1]!);
+      i += 1;
+    }
   }
-  return paths;
+  return origins;
 }
 
 /**
@@ -71,27 +80,38 @@ function parseStatusZ(out: string): string[] {
  * loudly on exactly that drift — formatting must not ENOENT-crash the build
  * ahead of the check that can actually explain it. (`COUPLED_FORMAT_SETS` is
  * empty today; see its doc-comment.)
+ *
+ * Returns every member of a touched set: they are formatted whole, since a set
+ * held byte-identical cannot be formatted line by line, each by its own diff.
  */
-function expandCoupledSets(root: string, files: Set<string>): void {
+function expandCoupledSets(root: string, files: Set<string>): string[] {
+  const members: string[] = [];
   for (const set of COUPLED_FORMAT_SETS) {
     if (!set.some((member) => files.has(member))) continue;
     for (const member of set) {
-      if (existsSync(join(root, member))) files.add(member);
+      if (existsSync(join(root, member))) {
+        files.add(member);
+        members.push(member);
+      }
     }
   }
+  return members;
 }
 
 /**
- * Formattable files changed vs `merge-base(HEAD, main)`, plus dirty and
- * untracked working-tree files, sorted.
+ * Formattable files changed vs `merge-base(HEAD, main)` (committed, staged,
+ * unstaged or untracked), each with its {@link FormatScope}, sorted by path.
+ *
+ * A file the base has is scoped to the lines that differ from its bytes there
+ * (its rename origin's); a file the base lacks, and every member of a coupled
+ * set, is scoped to the whole file.
  *
  * On `main`, `merge-base(HEAD, main) === HEAD`, so the set is just the dirty and
- * untracked files. That is correct: main is formatted inductively, because every
- * branch formats its own diff before landing.
+ * untracked files.
  */
 export async function listChangedFormattableFiles(
   root: string,
-): Promise<string[]> {
+): Promise<ChangedFile[]> {
   // A git failure here must NOT be conflated with "no merge-base": a
   // manufactured fallback ref (or an absorbed empty diff) would silently format
   // nothing and let `format-clean` fail later with no explanation.
@@ -100,18 +120,17 @@ export async function listChangedFormattableFiles(
     throw new Error(`git merge-base HEAD main produced no sha in ${root}`);
   }
 
-  const files = new Set<string>();
-
   // -M resolves renames to the new path; --diff-filter=ACMR excludes deletions.
-  const diff = await git(root, [
-    "diff",
-    "-M",
-    "-z",
-    "--name-only",
-    "--diff-filter=ACMR",
-    base,
-  ]);
-  for (const path of splitNul(diff)) files.add(path);
+  const origins = parseNameStatusZ(
+    await git(root, [
+      "diff",
+      "-M",
+      "-z",
+      "--name-status",
+      "--diff-filter=ACMR",
+      base,
+    ]),
+  );
 
   // An agent's brand-new `.tsx` is invisible to the diff above. `git status`
   // honors `.gitignore`, so `node_modules/` and `dist/` are excluded for free.
@@ -121,9 +140,30 @@ export async function listChangedFormattableFiles(
     "-z",
     "--untracked-files=all",
   ]);
-  for (const path of parseStatusZ(status)) files.add(path);
+  for (const path of parseUntrackedZ(status)) {
+    if (!origins.has(path)) origins.set(path, null);
+  }
 
-  expandCoupledSets(root, files);
+  const files = new Set(origins.keys());
+  const whole = new Set(
+    [...origins].filter(([, origin]) => origin === null).map(([p]) => p),
+  );
+  for (const member of expandCoupledSets(root, files)) whole.add(member);
 
-  return [...files].filter(isFormattable).sort();
+  const changed: ChangedFile[] = [];
+  for (const file of [...files].filter(isFormattable).sort()) {
+    const origin = origins.get(file);
+    changed.push({
+      file,
+      scope:
+        whole.has(file) || origin === undefined || origin === null
+          ? { kind: "file" }
+          : {
+              kind: "lines",
+              // Bytes at the base, exactly: `git show` adds no trailing newline.
+              base: await git(root, ["show", `${base}:${origin}`]),
+            },
+    });
+  }
+  return changed;
 }

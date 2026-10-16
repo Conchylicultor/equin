@@ -97,13 +97,40 @@ spawning prettier anywhere else, which is what keeps that guarantee true.
 `format-clean` computed different sets, the build would format one and the check
 would assert another. It is `git merge-base HEAD main` (a failure **throws** — a
 manufactured fallback ref would silently format nothing), then
-`git diff -M -z --name-only --diff-filter=ACMR <base>`, then
-`git status --porcelain -z --untracked-files=all` for the not-yet-committed
-files, union, filtered by `isFormattable`, sorted.
+`git diff -M -z --name-status --diff-filter=ACMR <base>` (the base against the
+working tree: committed, staged and unstaged alike), plus the untracked files
+from `git status --porcelain -z --untracked-files=all`, filtered by
+`isFormattable`, sorted. Each file carries its **scope**: `lines` with its bytes
+at the base (its rename origin's), or `file` when the base has no such file
+(added, untracked) or it is a coupled-set member.
 
 On `main` the merge-base is HEAD, so the set is just dirty + untracked files.
-That is correct: main is formatted inductively, because every branch formats its
-own diff before landing.
+
+## Only the lines a branch changed are formatted
+
+`formatInScope` (`core/internal/line-scope.ts`) decides the bytes for every
+writer and reader: prettier formats the WHOLE file (it needs the whole program;
+`rangeStart`/`rangeEnd` widens unpredictably), then only the hunks of
+`content → formatted` that overlap a line the branch changed against the base
+are applied (the `darker` / `git-clang-format` shape), repeated to a fixed
+point. A one-for-one run of rewritten lines is split into per-line hunks, so an
+edit never drags in its untouched neighbours; a hunk that joins or splits lines
+stays whole.
+
+**Why:** prettier is not pinned (`^3`), so its output moves with its releases.
+Formatting whole files would turn every one-line edit after a prettier upgrade
+into a whole-file reformat — review noise and merge conflicts with every other
+branch touching the file. Line scope makes an upgrade cost nothing: lines nobody
+touches keep their bytes, and lines someone touches get the current prettier.
+The repo is therefore NOT fully prettier-formatted at any moment, by design.
+
+**Writer and readers agree by construction.** `formatInScope` is a pure
+function of `(content, base)` and stops at its fixed point, so a file the build
+left as `X` is one where `format-clean`'s `formatInScope(X)` is `X`. Two
+endings settle on the whole-file answer instead, which is equally reproducible:
+a file that has not converged after 8 rounds, and a partial selection prettier
+cannot parse (`FormatSyntaxError` — a reflow split across hunks). A syntax
+error in the content itself still throws.
 
 ## Coupled sets
 

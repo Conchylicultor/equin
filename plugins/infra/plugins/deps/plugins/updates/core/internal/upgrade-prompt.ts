@@ -1,4 +1,4 @@
-import type { Outdated } from "./updater";
+import { isActionable, type Outdated } from "./updater";
 
 /** One updater's share of an upgrade task: what it found outdated. */
 export interface OutdatedUpdater {
@@ -8,15 +8,30 @@ export interface OutdatedUpdater {
   holdsFile: string;
 }
 
-/** The title of the batched upgrade task. */
+/** The title of the batched upgrade task: its actionable rows only. */
 export function upgradeTaskTitle(batch: readonly OutdatedUpdater[]): string {
   return `Upgrade ${batch
-    .map((u) => `${u.updaterId}: ${u.outdated.map(formatOutdated).join(", ")}`)
+    .filter((u) => u.outdated.some(isActionable))
+    .map(
+      (u) =>
+        `${u.updaterId}: ${u.outdated
+          .filter(isActionable)
+          .map((o) => `${o.name} ${o.current ?? "(new)"} → ${o.latest}`)
+          .join(", ")}`,
+    )
     .join("; ")}`;
 }
 
 function formatOutdated(o: Outdated): string {
-  return `${o.name} ${o.current ?? "(new)"} → ${o.latest}`;
+  const move = `${o.name} ${o.current ?? "(new)"} → ${o.latest}`;
+  switch (o.waiting?.kind) {
+    case undefined:
+      return move;
+    case "held":
+      return `${move} — HELD until ${o.waiting.until}: ${o.waiting.reason}`;
+    case "blocked":
+      return `${move} — BLOCKED, do this first: ${o.waiting.prerequisite}`;
+  }
 }
 
 /**
@@ -64,6 +79,13 @@ Move this worktree to them, all in this one task. You own proving it works.
    Then run \`./singularity deps upgrade\` again over everything, and go back to step 2 on its verdict.
 
 4. Verdict \`current\`: nothing to do. Everything is already on its latest release.
+
+A row marked BLOCKED is a release the upgrade cannot move to on its own: do the prerequisite it names (or, when it
+is not doable from this worktree, file it as a task with \`add_task\` and say so), then upgrade again. A row marked
+HELD is listed so a hold is never silent: leave it unless its reason no longer stands, in which case delete the
+hold and let the upgrade move it. A hold you add or renew always carries a reason and an \`until\` date at most 90
+days out (\`npm\` holds live in the \`dependencyPolicy\` of the package.json that declares the dependency); once it
+expires the updater stops honouring it.
 
 If you cannot reach a clear verdict (the command itself fails, a regression you cannot attribute, a flaky gate that
 never settles), do NOT push: raise a flag describing what you saw.`;

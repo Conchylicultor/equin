@@ -20,12 +20,36 @@ export interface UpdaterSmoke {
   timeoutMs: number;
 }
 
-/** Something newer than what the lock records, as the daily detection sees it. */
+/**
+ * Why a newer release is reported but not moved to by this upgrade.
+ *
+ * `held`: a hold the updater honours until `until` (a date at most 90 days out
+ * when it was set) — reported so a hold is never silent, and inert once it
+ * expires. `blocked`: a move the updater cannot make on its own (a lockstep
+ * group whose members have not all published the release, a patched package
+ * whose patch must be ported) — `prerequisite` is the work that unblocks it,
+ * which the upgrade task asks for.
+ */
+export type OutdatedWaiting =
+  | { kind: "held"; reason: string; until: string }
+  | { kind: "blocked"; prerequisite: string };
+
+/** Something newer than what the lock records, as the scheduled detection sees it. */
 export interface Outdated {
   name: string;
   /** `null` when nothing is recorded yet (a newly declared tool). */
   current: string | null;
   latest: string;
+  /** Present when this upgrade will not move it; see {@link OutdatedWaiting}. */
+  waiting?: OutdatedWaiting;
+}
+
+/**
+ * Whether a detected row is work for an upgrade task: a move it makes, or a
+ * blocked one whose prerequisite it does. A held row only rides along.
+ */
+export function isActionable(o: Outdated): boolean {
+  return o.waiting?.kind !== "held";
 }
 
 /** One input the upgrade moves. `from` is `null` for an input added fresh. */
@@ -80,10 +104,9 @@ export interface Updater {
   ): Promise<void>;
   /** The smoke tests the moved inputs must pass, run before and after the move. */
   smoke(root: string, moves: readonly Move[]): Promise<readonly UpdaterSmoke[]>;
-  /** Releases skipped on purpose, and where the agent adds one. */
+  /** Where the agent adds a hold (a release skipped on purpose) for this updater. */
   readonly holds: {
-    readonly entries: readonly UpdaterHold[];
-    /** Repo-relative file holding the entries. */
+    /** Repo-relative file holding them, or where to find them. */
     readonly file: string;
   };
 }

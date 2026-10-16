@@ -6,6 +6,7 @@
 // readers cannot produce different bytes.
 
 import { extname } from "path";
+import { FormatSyntaxError } from "./format-error";
 
 /**
  * The allowlist. Nothing is formatted by default; a file type opts in HERE and
@@ -218,11 +219,9 @@ export async function formatSource({
       parser: "typescript",
     });
   } catch (err) {
-    throw new Error(
+    throw new FormatSyntaxError(
       `prettier failed to format ${file}: ${(err as Error).message}`,
-      {
-        cause: err,
-      },
+      { cause: err },
     );
   }
 }
