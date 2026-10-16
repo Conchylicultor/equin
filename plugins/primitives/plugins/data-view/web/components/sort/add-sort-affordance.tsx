@@ -36,6 +36,7 @@ export function AddSortRow(): ReactNode {
       push={{
         key: "add-sort",
         title: "Add sort",
+        size: "inherit",
         render: () => <AddSortPanel />,
       }}
     >

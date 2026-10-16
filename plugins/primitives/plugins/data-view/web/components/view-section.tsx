@@ -264,6 +264,7 @@ function SectionRootPanel(props: {
           push={{
             key: "section-settings",
             title: "Section settings",
+            size: "inherit",
             render: () => (
               <ViewSettingsPopover
                 instance={instance}
@@ -280,6 +281,7 @@ function SectionRootPanel(props: {
           push={{
             key: "add-section",
             title: "Add section",
+            size: "inherit",
             render: () => <AddSectionPanel actions={actions} onDone={close} />,
           }}
         >

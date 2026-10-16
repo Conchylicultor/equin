@@ -104,14 +104,24 @@ export default function MenuSheetExhibit() {
             <ControlPanel.Section>
               <ControlPanel.Row
                 icon={<Icon icon={icons.filter} />}
-                push={{ key: "filter", title: "Filter", render: () => null }}
+                push={{
+                  key: "filter",
+                  title: "Filter",
+                  render: () => null,
+                  size: "builder",
+                }}
               >
                 Filter
               </ControlPanel.Row>
               <ControlPanel.Row
                 icon={<Icon icon={icons.sort} />}
                 trailing="Last updated"
-                push={{ key: "sort", title: "Sort", render: () => null }}
+                push={{
+                  key: "sort",
+                  title: "Sort",
+                  render: () => null,
+                  size: "builder",
+                }}
               >
                 Sort
               </ControlPanel.Row>
@@ -120,6 +130,7 @@ export default function MenuSheetExhibit() {
                 push={{
                   key: "settings",
                   title: "View settings",
+                  size: "inherit",
                   render: () => null,
                 }}
               >

@@ -116,6 +116,7 @@ export function SortControlPanel(): ReactNode {
             push={{
               key: "save-sort-preset",
               title: "Save as preset",
+              size: "inherit",
               render: () => <SortSavePresetPanel />,
             }}
           >

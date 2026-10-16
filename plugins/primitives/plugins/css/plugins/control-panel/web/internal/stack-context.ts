@@ -21,14 +21,16 @@ export interface PanelStackEntry {
   title: string;
   render: () => React.ReactNode;
   /**
-   * The width role this page needs, when it is not the panel's own — a filter
-   * builder pushed from a 248px menu needs the 524px builder. The surface takes
-   * the showing page's role (`ControlPanelPopover`), so a menu is no longer
-   * drawn builder-wide just because one of its rows opens a builder. Omitted:
-   * the panel's own size. A host with no width of its own to change (a pane)
-   * ignores it.
+   * The width role this page needs. REQUIRED, because the surface takes the
+   * showing page's role (`ControlPanelPopover`) and the page is the only thing
+   * that knows it: a filter builder pushed from a 248px menu needs the 524px
+   * builder, and an omitted role once drew the fold editor's builder rows inside
+   * a menu-wide panel. `"inherit"` keeps the role of the page it is pushed FROM
+   * (the nearest entry below that names one, else the panel's own) — a drill-down
+   * inside a builder stays builder-wide. A host with no width of its own to
+   * change (a pane) ignores it.
    */
-  size?: ControlPanelSize;
+  size: ControlPanelSize | "inherit";
 }
 
 /**

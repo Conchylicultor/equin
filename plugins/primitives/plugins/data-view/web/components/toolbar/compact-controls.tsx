@@ -197,7 +197,7 @@ export function CompactRootPanel({
                 // The page takes the control's own width role — a builder
                 // opened from a menu-wide panel widens it — and a control
                 // with none keeps the panel's.
-                size: control.size,
+                size: control.size ?? "inherit",
               }}
             >
               {control.label}

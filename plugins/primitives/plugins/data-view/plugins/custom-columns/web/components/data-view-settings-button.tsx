@@ -90,6 +90,7 @@ export function CustomColumnsFields({
             push={{
               key: `custom-column:${def.id}`,
               title: def.label,
+              size: "inherit",
               render: () => <CustomColumnPanel columnId={def.id} />,
             }}
           >
@@ -103,6 +104,7 @@ export function CustomColumnsFields({
         push={{
           key: "custom-column:new",
           title: "New field",
+          size: "inherit",
           render: () => <CustomColumnPanel columnId={null} />,
         }}
       >

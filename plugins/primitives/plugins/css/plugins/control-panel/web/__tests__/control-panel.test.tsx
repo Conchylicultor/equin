@@ -963,6 +963,7 @@ describe("ControlPanel.Row — push", () => {
                   key: "sort",
                   title: "Sort",
                   render: () => <div>Sort page</div>,
+                  size: "inherit",
                 }}
               >
                 Sort
@@ -989,7 +990,12 @@ describe("ControlPanel.Row — push", () => {
       render(
         <ControlPanel>
           <ControlPanel.Row
-            push={{ key: "x", title: "Nowhere", render: () => null }}
+            push={{
+              key: "x",
+              title: "Nowhere",
+              render: () => null,
+              size: "inherit",
+            }}
           >
             Nowhere
           </ControlPanel.Row>
@@ -1048,6 +1054,50 @@ describe("ControlPanelPopover — the showing page's width role", () => {
 
     fireEvent.click(row);
     await screen.findByText("Filter builder");
+    expect(panel.className).toContain("w-(--popover-width-builder)");
+  });
+
+  it("keeps the pushing page's role for an inherit sub-page", async () => {
+    render(
+      <ControlPanelPopover
+        open
+        onOpenChange={vi.fn()}
+        size="menu"
+        label="Section options"
+        trigger={<button type="button">More</button>}
+      >
+        <ControlPanel.Section>
+          <ControlPanel.Row
+            push={{
+              key: "filter",
+              title: "Filter",
+              size: "builder",
+              render: () => (
+                <ControlPanel.Section>
+                  <ControlPanel.Row
+                    push={{
+                      key: "group",
+                      title: "Filter group",
+                      size: "inherit",
+                      render: () => <div>Nested group</div>,
+                    }}
+                  >
+                    Open group
+                  </ControlPanel.Row>
+                </ControlPanel.Section>
+              ),
+            }}
+          >
+            Filter
+          </ControlPanel.Row>
+        </ControlPanel.Section>
+      </ControlPanelPopover>,
+    );
+    const row = await screen.findByRole("button", { name: /Filter/ });
+    const panel = row.closest('[data-slot="popover-content"]')!;
+    fireEvent.click(row);
+    fireEvent.click(await screen.findByRole("button", { name: /Open group/ }));
+    await screen.findByText("Nested group");
     expect(panel.className).toContain("w-(--popover-width-builder)");
   });
 });

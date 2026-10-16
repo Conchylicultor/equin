@@ -495,10 +495,16 @@ six-track rule row, `picker` = a panel whose body is a grid — each a density
 token, `popoverWidth*`, so a theme sizes them), the padding is the body's, and
 there is nowhere to smuggle a measurement through.
 
-**The width is the SHOWING page's role.** A page pushed onto the stack may
-declare its own `size` (`PanelStackEntry.size`): a menu whose Filter row opens
-the filter builder is drawn menu-wide, and widens to `builder` only while that
-page shows. The popover owns the stack's state (`usePanelStackState`) for
+**The width is the SHOWING page's role.** Every page pushed onto the stack
+declares its `size` (`PanelStackEntry.size`, **required**): a menu whose Filter
+row opens the filter builder is drawn menu-wide, and widens to `builder` only
+while that page shows. `"inherit"` takes the role of the page it is pushed
+from (the nearest entry below naming one, else the root's), so a drill-down
+inside a builder stays builder-wide. It is required because it used to be
+optional with "omitted = the ROOT panel's role": the view-settings menu's Fold
+rows page (the filter builder) silently opened menu-wide, its rule rows
+overflowing the panel, and every filter sub-page (nested group, Add filter)
+snapped back to menu width when opened from a menu. The popover owns the stack's state (`usePanelStackState`) for
 exactly this — the width is the surface's, so the showing page's role has to
 reach `PopoverContent` in the same render that shows the page — and returns to
 the root once the panel has finished closing. A pane ignores the field.

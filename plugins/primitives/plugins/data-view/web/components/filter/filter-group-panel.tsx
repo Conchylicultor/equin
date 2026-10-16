@@ -109,6 +109,7 @@ function NestedGroupRow(props: {
             push({
               key: group.id,
               title: "Filter group",
+              size: "inherit",
               render: () => <FilterGroupPanel groupId={group.id} />,
             })
           }

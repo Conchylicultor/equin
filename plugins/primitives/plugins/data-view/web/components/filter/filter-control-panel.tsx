@@ -64,6 +64,7 @@ export function FilterEditorPanel({
                   push({
                     key: "save-filter-preset",
                     title: "Save as preset",
+                    size: "inherit",
                     render: () => <FilterSavePresetPanel />,
                   })
                 }

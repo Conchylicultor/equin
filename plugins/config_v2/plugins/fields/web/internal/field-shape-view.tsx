@@ -465,7 +465,12 @@ function ChoicePicker({
         icon={current?.icon}
         label={summaryOf(current)}
         onClick={() =>
-          stack.push({ key: entryKey, title, render: () => rows(stack.pop) })
+          stack.push({
+            key: entryKey,
+            title,
+            render: () => rows(stack.pop),
+            size: "inherit",
+          })
         }
       />
     );

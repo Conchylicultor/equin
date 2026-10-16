@@ -32,6 +32,7 @@ export function AddFilterRow({ groupId }: { groupId: string }): ReactNode {
         push({
           key: `add-filter:${groupId}`,
           title: "Add filter",
+          size: "inherit",
           render: () => <AddFilterPanel groupId={groupId} />,
         })
       }

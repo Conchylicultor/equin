@@ -10,7 +10,7 @@ import type { ComponentProps } from "react";
 import { ControlPanel } from "./control-panel";
 import { ControlPanelHostProvider, type ControlPanelHost } from "./host";
 import { ControlPanelStack } from "./panel-stack";
-import { usePanelStackState } from "./stack-context";
+import { usePanelStackState, type PanelStackEntry } from "./stack-context";
 import type { ControlPanelSize } from "./size";
 
 type Positioning = Pick<
@@ -120,7 +120,7 @@ export function ControlPanelPopover({
   // the page. It returns to the root once the panel has finished closing —
   // the same fresh start `resetOnClose` gave the stack when it owned its state.
   const stack = usePanelStackState();
-  const width = stack.entries.at(-1)?.size ?? size;
+  const width = showingSize(stack.entries, size);
   return (
     <Popover
       open={open}
@@ -154,3 +154,17 @@ const POPOVER_HOST: ControlPanelHost = {
   inlineDepth: 0,
   descriptions: "hint",
 };
+
+/** The showing page's width role: the top entry's, where an `"inherit"` entry
+ *  takes the role of the page it was pushed from — so a sub-page of a builder
+ *  stays builder-wide instead of snapping back to the root panel's role. */
+function showingSize(
+  entries: readonly PanelStackEntry[],
+  root: ControlPanelSize,
+): ControlPanelSize {
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const size = entries[i]!.size;
+    if (size !== "inherit") return size;
+  }
+  return root;
+}
