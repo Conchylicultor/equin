@@ -39,7 +39,7 @@
     - `report-kind` "claude-code-unavailable-at-spawn"
     - `report-kind` "conversation-spawn-failed"
     - `report-kind` "held-turn-undelivered"
-  - Uses: 74 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 75 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×27
     - `conversations/turn-ledger` ×10
     - `conversations/transcript-watcher` ×7
@@ -55,6 +55,7 @@
     - `tasks/task-category` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
     - `conversations/preprompts.resolvePreprompt`
+    - `conversations/workspace/launch-option.getTaskWorkspace`
     - `infra/attachments.getAttachment`
     - `infra/jobs.defineJob`
     - `shell/notifications.recordNotification`
@@ -323,8 +324,9 @@
   - **`transcript-watcher`** — Foreign-session report renderer: a one-line Debug, Reports summary for the conversation-foreign-session kind — which conversation holds a session id that belongs to another, and how it was seen.…
   - **`turn-ledger`** [exempt] — Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent…
   - **`usage`** — Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side. Per-conversation usage — cost…
-  - **`workspace`** [test helpers] — Agent workspaces — where a conversation runs (a git worktree, or a scratch directory): the WorkspaceImpl contract and the per-kind registry the conversation lifecycle calls through (path, commit…
+  - **`workspace`** [test helpers] — Workspace web presence: eagerly registers the boot-preloaded workspace.catalog live value (every workspace a task can name) so boot-snapshot can hydrate it before first paint. Agent workspaces…
     - Plugins:
+      - **`launch-option`** — Workspace picker as a launch option: where the task's agent runs — the worktree, or one of the registered scratch profiles — on the task-draft composer (a pill whose menu lists every workspace…
       - **`scratch`** — The scratch workspace: a conversation runs in a plain directory (`state/workspaces/<attemptId>`) holding only its scratch profile's CLAUDE.md and inputs — no git, DB fork or build. Launched with the…
       - **`worktree`** [test helpers] — The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out in the spawn job, resumable while the…
 

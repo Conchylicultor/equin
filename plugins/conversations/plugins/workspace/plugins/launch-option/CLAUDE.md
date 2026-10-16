@@ -67,6 +67,12 @@ default, stored as no row) or one registered scratch profile. Design:
     - `tasks/launch-options.defineLaunchOption`
   - Exports (values): `workspaceLaunchOption`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-medium`
   - Imported by: `conversations`
 - Shared:
   - Exports (types): `TaskWorkspace`

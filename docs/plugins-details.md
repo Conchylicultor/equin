@@ -12133,7 +12133,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "claude-code-unavailable-at-spawn"
       - `report-kind` "conversation-spawn-failed"
       - `report-kind` "held-turn-undelivered"
-    - Uses: 74 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 75 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×27
       - `conversations/turn-ledger` ×10
       - `conversations/transcript-watcher` ×7
@@ -12149,6 +12149,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/task-category` ×2
       - `conversations/model-provider/catalog.getModelCatalog`
       - `conversations/preprompts.resolvePreprompt`
+      - `conversations/workspace/launch-option.getTaskWorkspace`
       - `infra/attachments.getAttachment`
       - `infra/jobs.defineJob`
       - `shell/notifications.recordNotification`
@@ -17310,9 +17311,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineWarmup('conversations.usage.backfill')`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-    - **`workspace`** — Agent workspaces — where a conversation runs (a git worktree, or a scratch directory): the WorkspaceImpl contract and the per-kind registry the conversation lifecycle calls through (path, commit, prepare, finish, launch fragment, resumability), the scratch-profile registry feature plugins contribute to, and the conversation → workspace lookup.
+    - **`workspace`** — Workspace web presence: eagerly registers the boot-preloaded workspace.catalog live value (every workspace a task can name) so boot-snapshot can hydrate it before first paint. Agent workspaces — where a conversation runs (a git worktree, or a scratch directory): the WorkspaceImpl contract and the per-kind registry the conversation lifecycle calls through (path, commit, prepare, finish, launch fragment, resumability), the scratch-profile registry feature plugins contribute to, the workspace.catalog live value (every workspace a task can name), and the conversation → workspace lookup.
       - Server:
-        - Uses: `database.db`
+        - Contributes: `resource.declare` "workspace.catalog"
+        - Uses:
+          - `database.db`
+          - `network/live.serveValue`
         - Exports (types):
           - `LaunchContext`
           - `LaunchFragment`
@@ -17327,18 +17331,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Workspace`
           - `workspaceOfAttempt`
           - `workspaceOfConversation`
-      - Cross-plugin:
-        - Imported by:
-          - `apps/sonata/transcription`
-          - `conversations`
-          - `conversations/conversation-view/code`
-          - `conversations/workspace/scratch`
-          - `conversations/workspace/worktree`
-          - `debug/scratch-hello`
-          - `tasks/tasks-core`
+        - Resources: `workspace.catalog` (push, fixed)
       - Core:
+        - Uses: `network/live.liveValue`
         - Exports (types):
           - `WorkspaceCapability`
+          - `WorkspaceChoice`
           - `WorkspaceKind`
           - `WorkspaceKindState`
           - `WorkspaceSpec`
@@ -17347,16 +17345,94 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DEFAULT_WORKSPACE`
           - `hasCapability`
           - `satisfiesCapabilities`
+          - `WORKSPACE_CAPABILITIES`
           - `WORKSPACE_KINDS`
           - `workspaceAllows`
+          - `WorkspaceCapabilitySchema`
+          - `workspaceCatalog`
+          - `WorkspaceChoiceSchema`
           - `WorkspaceKindSchema`
           - `WorkspaceSpecSchema`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/sonata/transcription`
+          - `conversations`
+          - `conversations/conversation-view/code`
+          - `conversations/workspace/launch-option`
+          - `conversations/workspace/scratch`
+          - `conversations/workspace/worktree`
+          - `debug/scratch-hello`
+          - `tasks/tasks-core`
       - Test helpers:
         - Server: `@plugins/conversations/plugins/workspace/server/testing`
           - `installWorkspaceImpl` — Sets `impl` as its kind's workspace, replacing any registered one — for a test, which runs without the plugin register phase and may share the module with other suites.
           - `resetScratchProfiles` — Clears the profile registry (tests).
           - `resetWorkspaceRegistry` — Clears the registry.
       - Plugins:
+        - **`launch-option`** — Workspace picker as a launch option: where the task's agent runs — the worktree, or one of the registered scratch profiles — on the task-draft composer (a pill whose menu lists every workspace, details on hover) and the task detail's Prompt card. Owns the tasks_ext_workspace side-table: the workspace (worktree, or a scratch profile) a task's next attempt runs in, read when the attempt is created.
+          - Web:
+            - Contributes: `TaskLaunch.Option` "Workspace" → `WorkspaceLaunchControl`
+            - Uses:
+              - `infra/endpoints.fetchEndpoint`
+              - `network/live.mapRow`
+              - `network/live.useLive`
+              - `network/live.useLiveRow`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Select`
+              - `primitives/css/ui-kit.SelectContent`
+              - `primitives/css/ui-kit.SelectItem`
+              - `primitives/css/ui-kit.SelectTrigger`
+              - `primitives/css/ui-kit.SelectValue`
+              - `primitives/live-state.combineResources`
+              - `primitives/live-state.mapResource`
+              - `primitives/loading.Loading`
+              - `primitives/text-editor/composer/picker-pill.PickerPill`
+              - `shell/notifications.toast`
+              - `tasks/launch-options.TaskLaunch`
+              - `tasks/tasks-core.useTaskAttempts`
+              - `ui/icons.Icon`
+          - Server:
+            - Contributes:
+              - `resource.declare` "task-workspaces:rows"
+              - `taskLaunchServer` "workspace"
+            - Uses:
+              - `conversations/workspace.Workspace`
+              - `infra/endpoints.implement`
+              - `infra/entity-extensions.defineExtension`
+              - `network/live.serveCollection`
+              - `tasks/launch-options.TaskLaunchServer`
+              - `tasks/tasks-core._tasks`
+            - DB schema: `plugins/conversations/plugins/workspace/plugins/launch-option/server/internal/tables.ts`
+            - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_workspace`)
+            - Exports (values):
+              - `getTaskWorkspace`
+              - `tasksWorkspace`
+            - Resources: `task-workspaces:rows` (keyed, point)
+            - Routes:
+              - `PUT /api/task-workspaces/:taskId`
+              - `DELETE /api/task-workspaces/:taskId`
+          - Core:
+            - Uses:
+              - `conversations/workspace.WorkspaceSpec`
+              - `conversations/workspace.WorkspaceSpecSchema`
+              - `tasks/launch-options.defineLaunchOption`
+            - Exports (values): `workspaceLaunchOption`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/density --space-2xs`
+              - `ui/tokens/font-family --font-mono`
+              - `ui/tokens/shape --spacing`
+              - `ui/tokens/type-scale --font-weight-medium`
+            - Imported by: `conversations`
+          - Shared:
+            - Exports (types): `TaskWorkspace`
+            - Exports (values):
+              - `deleteTaskWorkspace`
+              - `putTaskWorkspace`
+              - `taskWorkspaces`
+              - `taskWorkspaceShape`
         - **`scratch`** — The scratch workspace: a conversation runs in a plain directory (`state/workspaces/<attemptId>`) holding only its scratch profile's CLAUDE.md and inputs — no git, DB fork or build. Launched with the user's own settings, the app's MCP server scoped to the profile's tool allowlist, and the profile's permissions; reaped a week after its task is done or dropped.
           - Server:
             - Uses:
@@ -25407,9 +25483,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `multipart`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 202 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 203 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×53
-          - `conversations` ×27
+          - `conversations` ×28
           - `debug` ×17
           - `infra` ×16
           - `page` ×14
@@ -25564,10 +25640,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 37 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+        - Imported by: 38 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
           - `apps` ×16
           - `tasks` ×11
-          - `conversations` ×6
+          - `conversations` ×7
           - `page` ×3
           - `plugin-meta/plugin-health`
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger(). Contributes a BackgroundTriggerSource so the Background activity catalog names the events that start each job.
@@ -28803,9 +28879,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 235 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 237 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×68
-          - `conversations` ×38
+          - `conversations` ×40
           - `tasks` ×27
           - `debug` ×24
           - `active-data` ×12
@@ -34847,9 +34923,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 393 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 394 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×100
-              - `conversations` ×63
+              - `conversations` ×64
               - `primitives` ×50
               - `debug` ×34
               - `ui` ×28
@@ -35069,9 +35145,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 365 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 366 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×97
-              - `conversations` ×72
+              - `conversations` ×73
               - `primitives` ×40
               - `debug` ×33
               - `page` ×21
@@ -35349,10 +35425,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 405 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 406 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×102
               - `apps` ×82
-              - `conversations` ×53
+              - `conversations` ×54
               - `page` ×25
               - `debug` ×22
               - `ui` ×22
@@ -37581,9 +37657,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 239 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 240 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×67
-          - `conversations` ×41
+          - `conversations` ×42
           - `tasks` ×22
           - `ui` ×22
           - `debug` ×21
@@ -37673,10 +37749,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 187 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 188 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×62
           - `ui` ×19
-          - `conversations` ×17
+          - `conversations` ×18
           - `primitives` ×17
           - `debug` ×16
           - `tasks` ×13
@@ -40018,6 +40094,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density --space-lg`
                   - `ui/tokens/shape --spacing`
                 - Imported by:
+                  - `conversations/workspace/launch-option`
                   - `tasks/auto-start/launch-option`
                   - `tasks/launch-options`
                   - `tasks/task-draft-form`
@@ -42411,8 +42488,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×7
           - `ui/tokens/density` ×4
           - `ui/tokens/shape --spacing`
-        - Imported by: 34 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
-          - `conversations` ×15
+        - Imported by: 35 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+          - `conversations` ×16
           - `tasks` ×6
           - `apps` ×2
           - `build` ×2
@@ -43383,6 +43460,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Slots: `TaskLaunch.Option`
         - Slot contributors:
+          - `TaskLaunch.Option` ← `conversations.workspace.launch-option`
           - `TaskLaunch.Option` ← `tasks.auto-start.launch-option`
           - `TaskLaunch.Option` ← `tasks.task-effort`
           - `TaskLaunch.Option` ← `tasks.task-preprompt`
@@ -43426,6 +43504,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-medium`
         - Imported by:
           - `apps/agent-manager/welcome`
+          - `conversations/workspace/launch-option`
           - `plugin-meta/plugin-health`
           - `primitives/launch`
           - `tasks`
@@ -44653,8 +44732,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 67 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×27
+        - Imported by: 68 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×28
           - `tasks` ×16
           - `debug` ×6
           - `active-data` ×5
@@ -44687,6 +44766,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-track` (table `tasks-core_ext_track`)
           - `conversations/conversation-view/turn-summary` (table `tasks-core_ext_turn_summary`)
           - `conversations/usage` (table `tasks-core_ext_usage`)
+          - `conversations/workspace/launch-option` (table `tasks-core_ext_workspace`)
       - Exemptions:
         - Exempts itself from:
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
@@ -44795,9 +44875,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 308 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 309 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×65
-          - `conversations` ×59
+          - `conversations` ×60
           - `page` ×40
           - `primitives` ×40
           - `fields` ×33
@@ -45888,9 +45968,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 476 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 477 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×101
-              - `conversations` ×86
+              - `conversations` ×87
               - `primitives` ×74
               - `debug` ×33
               - `page` ×32
@@ -45947,10 +46027,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 313 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 314 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×65
               - `apps` ×64
-              - `conversations` ×47
+              - `conversations` ×48
               - `debug` ×25
               - `page` ×20
               - `ui` ×16
@@ -46020,8 +46100,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 146 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
-              - `conversations` ×35
+            - Tokens used by: 147 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+              - `conversations` ×36
               - `apps` ×21
               - `plugin-meta` ×21
               - `debug` ×20
@@ -46234,10 +46314,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 655 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 656 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `apps` ×136
               - `primitives` ×123
-              - `conversations` ×101
+              - `conversations` ×102
               - `page` ×46
               - `debug` ×37
               - `ui` ×34
@@ -46372,9 +46452,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 224 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 225 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×55
-              - `conversations` ×39
+              - `conversations` ×40
               - `primitives` ×37
               - `debug` ×16
               - `plugin-meta` ×15

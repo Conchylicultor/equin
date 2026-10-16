@@ -43,6 +43,7 @@ Ordering for both surfaces lives in
 - Web:
   - Slots: `TaskLaunch.Option`
   - Slot contributors:
+    - `TaskLaunch.Option` ← `conversations.workspace.launch-option`
     - `TaskLaunch.Option` ← `tasks.auto-start.launch-option`
     - `TaskLaunch.Option` ← `tasks.task-effort`
     - `TaskLaunch.Option` ← `tasks.task-preprompt`
@@ -86,6 +87,7 @@ Ordering for both surfaces lives in
     - `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
     - `apps/agent-manager/welcome`
+    - `conversations/workspace/launch-option`
     - `plugin-meta/plugin-health`
     - `primitives/launch`
     - `tasks`

@@ -27,6 +27,6 @@ export type TaskWorkspace = z.infer<typeof TaskWorkspaceSchema>;
 // launch option's picker reads and writes this row), so a point read keyed by
 // the task id. `found: false` = the default worktree.
 export const taskWorkspaces = liveCollection("task-workspaces", {
-  row: TaskWorkspaceSchema,
+  from: taskWorkspaceShape,
   id: "taskId",
 });
