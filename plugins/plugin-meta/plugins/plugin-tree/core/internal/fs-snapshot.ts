@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import type { Dirent } from "node:fs";
+import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   isTestCodePath,
   TESTS_DIR,
@@ -26,6 +27,16 @@ import type { FsSnapshot } from "@plugins/plugin-meta/plugins/parse-utils/core";
  * syscall) and read exactly those file kinds. Any directory NOT covered here is
  * transparently re-read from disk by the helpers, so the snapshot only ever
  * speeds things up — it can never change a scanner's result.
+ *
+ * Membership is git's, not the disk's: a file `.gitignore` covers (a build's
+ * gitignored `*.generated.ts`) is left out of both `files` and its directory's
+ * entries, so no scanner sees it. Docgen output is committed and checked by
+ * `plugins-doc-in-sync`, so it must be a function of the checkout — the same
+ * universe (tracked + untracked-not-ignored) the check cache keys on. Reading
+ * the disk instead made the doc depend on whether a build had already written
+ * such a file: `config_v2/web/internal/git-layer.generated.ts`, written by a
+ * codegen step that runs after docgen, failed main's first build after it
+ * landed and passed every later one.
  */
 
 // Same directory-skip rules as `walkFiles` (`node_modules` / `plugins` /
@@ -54,8 +65,11 @@ function shouldRead(name: string): boolean {
 }
 
 export async function buildFsSnapshot(
+  root: string,
   pluginDirs: string[],
 ): Promise<FsSnapshot> {
+  const repo = await loadRepoFiles(root);
+  const inRepo = (p: string) => repo.has(relative(root, p));
   const files = new Map<string, string>();
   const dirs = new Map<string, Dirent[]>();
 
@@ -68,6 +82,7 @@ export async function buildFsSnapshot(
       if ((err as NodeJS.ErrnoException).code == null) throw err;
       return;
     }
+    entries = entries.filter((e) => !e.isFile() || inRepo(join(dir, e.name)));
     dirs.set(dir, entries);
     const tasks: Promise<void>[] = [];
     for (const e of entries) {

@@ -85,6 +85,7 @@ dynamic value.
     - `framework/plugin-id.TESTS_DIR`
     - `framework/slot-declaration.declaredSlotSources`
     - `framework/slot-declaration.declarePluginSlots`
+    - `framework/tooling.loadRepoFiles`
     - `packages/macrotask-yield.createTimeSlicer`
     - `packages/macrotask-yield.yieldMacrotask`
     - `plugin-meta/barrel-import.importBarrel`

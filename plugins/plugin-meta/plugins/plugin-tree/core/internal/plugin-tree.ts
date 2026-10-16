@@ -410,7 +410,7 @@ export async function buildPluginTree(
     // snapshot build runs in parallel with the (async) facet-module load.
     const [facets, fsSnapshot] = await Promise.all([
       loadFacets(),
-      buildFsSnapshot(dirs),
+      buildFsSnapshot(join(pluginsRoot, ".."), dirs),
     ]);
     tree.facets = facets;
 

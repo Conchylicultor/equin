@@ -525,9 +525,7 @@ write endpoints stay unserved in a demo and fail loudly. Design:
     - `validationIssues`
     - `withOverrideLegend`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/shadow --shadow`
-    - `ui/tokens/shape --spacing`
+  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 104 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×23
     - `debug` ×14

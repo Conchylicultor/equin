@@ -11834,9 +11834,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Uses tokens:
-      - `ui/tokens/shadow --shadow`
-      - `ui/tokens/shape --spacing`
+    - Uses tokens: `ui/tokens/shape --spacing`
     - Imported by: 104 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×23
       - `debug` ×14
@@ -23379,6 +23377,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `framework/tooling/checks`
           - `framework/tooling/codegen`
+          - `plugin-meta/plugin-tree`
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
@@ -33038,6 +33037,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/plugin-id.TESTS_DIR`
           - `framework/slot-declaration.declaredSlotSources`
           - `framework/slot-declaration.declarePluginSlots`
+          - `framework/tooling.loadRepoFiles`
           - `packages/macrotask-yield.createTimeSlicer`
           - `packages/macrotask-yield.yieldMacrotask`
           - `plugin-meta/barrel-import.importBarrel`
@@ -46194,7 +46194,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 62 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 61 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×22
               - `primitives` ×17
               - `framework` ×4
@@ -46203,7 +46203,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×2
               - `screenshot` ×2
               - `tasks` ×2
-              - `config_v2`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `database/derived-tables`
               - `map`

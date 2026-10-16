@@ -27,6 +27,7 @@
   - Imported by:
     - `framework/tooling/checks`
     - `framework/tooling/codegen`
+    - `plugin-meta/plugin-tree`
 - Sub-plugins:
   - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
   - **`checks`** — Check runner and built-in checks for ./singularity check
