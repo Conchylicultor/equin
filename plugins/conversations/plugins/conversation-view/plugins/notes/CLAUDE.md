@@ -7,10 +7,12 @@
 - Description: Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
 - Web:
   - Contributes:
+    - `Demo.Resource` "conversation-notes"
     - `Conversation.AbovePromptInput` → `NotesArea`
     - `Conversation.PromptBar` "Notes" → `NotesToggleButton`
   - Uses:
     - `conversations/conversation-view.Conversation`
+    - `framework/browser-server/demo.demoResource`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.LiveRowResult`
     - `network/live.useLiveRow`

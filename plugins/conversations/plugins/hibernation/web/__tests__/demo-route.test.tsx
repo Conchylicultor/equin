@@ -78,6 +78,8 @@ describe("hibernation in a demo scope", () => {
         <DemoScope
           scenario={{
             id: "hibernation-test",
+            app: "test-app",
+            route: "/",
             pack: () => Promise.resolve({ default: definePack(() => []) }),
           }}
         >

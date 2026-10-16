@@ -14,6 +14,7 @@ import { fieldsToZodObject } from "@plugins/fields/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { createHarness } from "@plugins/framework/plugins/resource-runtime/core/testing";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { liveCollection } from "./live-collection";
 import { liveValue } from "./live-value";
 import { serveCollectionOn, serveValueOn } from "./serve-on";
@@ -402,6 +403,75 @@ describe("serveCollectionOn — an `all` collection", () => {
     const pushes = h.pushesFor(c.key);
     expect(pushes.map((f) => f.kind)).toEqual(["delta"]);
     expect(pushes[0]!.deletes).toEqual(["a"]);
+  });
+});
+
+describe("serveCollectionOn — an exposing collection", () => {
+  // The fold of the exposures served on the host — none on an external one —
+  // so every row carries `$columns: {}`, and a source cannot spell a slice.
+  // `from` an entity: its exposures fold into the rows (`exposes.base`).
+  const itemsRef = entityRef("test_serve_on_items", { ...LISTED, ...CARRIED });
+  const E = {
+    from: itemsRef,
+    pick: ["title"],
+    carry: { pick: ["id", "rank"] },
+    id: "id",
+  } as const;
+  const exposing = () =>
+    liveCollection(key("exposing"), {
+      ...E,
+      all: { orderBy: [["rank", "asc"]], unbounded: { reason: "a test set" } },
+    });
+
+  test("its rows carry an empty fold, through `all` and `:rows`", async () => {
+    const c = exposing();
+    const src = source(initial);
+    const served = serveCollectionOn(createHarness().runtime, c, {
+      source: "external",
+      changes: { fixed: { reason: "a test set" } },
+      all: () => src.all(),
+      rows: (ids) => src.byIds(ids),
+    });
+    const folded = initial.map((r) => ({ ...r, $columns: {} }));
+    expect(await served.all.load({})).toEqual(folded);
+    expect(await served.rows.load(c.rows.point.encode(["b"]))).toEqual(
+      folded.slice(1, 2),
+    );
+  });
+
+  test("a window collection folds the same", async () => {
+    const c = liveCollection(key("exposing-window"), {
+      ...E,
+      sortable: ["rank"],
+      default: { orderBy: [["rank", "asc"]], limit: 10 },
+      maxLimit: 50,
+    });
+    const src = source(initial);
+    const served = serveCollectionOn(createHarness().runtime, c, {
+      source: "external",
+      changes: { fixed: { reason: "a test set" } },
+      keyText,
+      window: (q) => src.window(q.limit),
+      rows: (ids) => src.byIds(ids),
+    });
+    expect(await served.window.load(c.window.defaultParams)).toEqual(
+      initial.map((r) => ({ ...keyed(r), $columns: {} })),
+    );
+  });
+
+  test("a source row carrying `$columns` is refused", async () => {
+    const c = exposing();
+    const served = serveCollectionOn(createHarness().runtime, c, {
+      source: "external",
+      changes: { fixed: { reason: "a test set" } },
+      // A cast past `ExternalSourceRow`: a source spelling another plugin's slice.
+      all: () =>
+        initial.map((r) => ({ ...r, $columns: { slice: { f: 1 } } })) as Row[],
+      rows: () => [],
+    });
+    expect((await rejection(served.all.load({}))).message).toMatch(
+      /carries "\$columns"/,
+    );
   });
 });
 

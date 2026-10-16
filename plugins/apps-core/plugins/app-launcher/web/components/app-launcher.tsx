@@ -9,8 +9,8 @@ import {
 } from "@plugins/apps-core/web";
 import { isNodeData, useReorderedEntries } from "@plugins/reorder/web";
 import {
-  appLinkProps,
   useActivateApp,
+  useAppLinkProps,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
 import {
@@ -132,6 +132,7 @@ export function AppLauncher({ form }: { form: AppShellBrandForm }) {
   const active = useActiveApp();
   const activeId = active?.id;
   const activate = useActivateApp();
+  const appLinkProps = useAppLinkProps();
   // No home app registered: nothing to launch, and nowhere to go.
   if (!gallery) return null;
   const galleryLink = appLinkProps(gallery.app.basePath);

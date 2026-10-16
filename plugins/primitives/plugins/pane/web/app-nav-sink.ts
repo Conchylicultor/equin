@@ -1,3 +1,9 @@
+import {
+  createContext,
+  createElement,
+  useContext,
+  type ReactNode,
+} from "react";
 import { defineInstallSink } from "@plugins/primitives/plugins/scope/plugins/install-sink/web";
 
 /**
@@ -46,4 +52,49 @@ export const appNavSink = defineInstallSink<AppNavigator>({
  */
 export function navigateApp(url: string, opts?: { newTab?: boolean }): void {
   appNavSink.peekOrThrow()(url, opts);
+}
+
+/**
+ * A navigation boundary: the subtree reaches other apps through `navigator`
+ * instead of the installed one. An in-process app embed mounts one, so a
+ * cross-app hop from inside it (a pane's Expand, the app brand, the launcher,
+ * an app link read through a hook) is the embed's to decide — it never drives
+ * the host's tabs.
+ */
+export function AppNavBoundary({
+  navigator,
+  children,
+}: {
+  navigator: AppNavigator;
+  children: ReactNode;
+}): ReactNode {
+  return createElement(
+    AppNavBoundaryContext.Provider,
+    { value: navigator },
+    children,
+  );
+}
+
+const AppNavBoundaryContext = createContext<AppNavigator | null>(null);
+
+/**
+ * The navigator this subtree reaches another app through: the nearest
+ * {@link AppNavBoundary}'s, else the installed one, else `null` (nowhere to
+ * go). Subscribed, like `appNavSink.useInstalled()`: a late install
+ * re-renders the caller.
+ */
+export function useAppNavigator(): AppNavigator | null {
+  const bound = useContext(AppNavBoundaryContext);
+  const installed = appNavSink.useInstalled();
+  if (bound !== null) return bound;
+  return installed ? navigateApp : null;
+}
+
+/**
+ * The nearest {@link AppNavBoundary}'s navigator, or `null` outside any — for
+ * a higher layer's own navigation hooks (tabs' `useNavigate`), which fall back
+ * to their own global rather than to the installed sink.
+ */
+export function useAppNavBoundary(): AppNavigator | null {
+  return useContext(AppNavBoundaryContext);
 }

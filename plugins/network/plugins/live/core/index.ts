@@ -119,6 +119,7 @@ export {
 export type {
   ExternalAllCollection,
   ExternalLookupCollection,
+  ExternalSourceRow,
   ExternalWindowCollection,
   ExternalNotifiedPagedValue,
   ExternalNotifiedQueryValue,

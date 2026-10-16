@@ -9,11 +9,12 @@ export type {
   SubagentStatus,
   SubagentEntry,
 } from "./internal/use-subagent-statuses";
+import { subagentActivityDemo } from "./internal/demo-resource";
 export { subagentStateDisplay } from "./internal/run-state-display";
 export type { SubagentStateDisplay } from "./internal/run-state-display";
 
 export default {
   description:
     "The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live transcript, drawn by the conversation's own TranscriptView.",
-  contributions: [],
+  contributions: [subagentActivityDemo],
 } satisfies PluginDefinition;

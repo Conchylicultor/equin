@@ -177,6 +177,7 @@ Everything that could make the standing merely *unknown* is kept out of that arm
     - `standingOf`
 - Cross-plugin:
   - Imported by:
+    - `apps/agent-manager/demo`
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/drop-and-exit`
     - `tasks/outcome-report`

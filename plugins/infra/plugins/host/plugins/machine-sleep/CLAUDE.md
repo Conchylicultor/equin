@@ -29,18 +29,20 @@ reaches the browser within one tick.
 ## Plugin reference
 
 - Description: useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. Serves the machine.sleep live value (this box's sleep clock: boot, cumulative asleepMs, last wake) and publishSleepReading(), which re-reads the clock and pushes only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own.
-- Server:
-  - Contributes: `resource.declare` "machine.sleep"
-  - Uses: `network/live.serveValue`
-  - Exports (values): `publishSleepReading`
-  - Resources: `machine.sleep` (push, notified)
 - Web:
+  - Contributes: `Demo.Resource` "machine-sleep"
   - Uses:
+    - `framework/browser-server/demo.demoResource`
     - `network/live.useLive`
     - `primitives/live-state.foldResource`
   - Exports (values):
     - `useSleepNow`
     - `useSleepNowForFold`
+- Server:
+  - Contributes: `resource.declare` "machine.sleep"
+  - Uses: `network/live.serveValue`
+  - Exports (values): `publishSleepReading`
+  - Resources: `machine.sleep` (push, notified)
 - Core:
   - Uses: `network/live.liveValue`
   - Exports (types): `SleepNow`

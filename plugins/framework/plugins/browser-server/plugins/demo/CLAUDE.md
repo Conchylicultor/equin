@@ -21,10 +21,11 @@ const server = createBrowserServer({ serve: servePack(pack), unserved: (k) => ne
 - **Typed against the declaration.** Each builder is generic over the
   `liveValue` / `liveCollection` it is handed (tsc checks params, value, rows
   and `count`). The collection builders take network/live's
-  `External{All,Lookup,Window}Collection`, so a contributed, `exposes` or union
-  collection is a tsc error (its rows fold Postgres columns — no external
-  spelling); a `columnScope` one, which no type tells apart, and a paged or
-  central value throw `DemoPackError` when recorded.
+  `External{All,Lookup,Window}Collection`, so a union collection is a tsc
+  error; a `columnScope` one, which no type tells apart, and a paged or
+  central value throw `DemoPackError` when recorded. An exposing collection's
+  rows are recorded WITHOUT `$columns` (`ExternalSourceRow`): the host folds
+  the exposures it serves — none — so every exposed field reads its default.
 - **Parsed on load.** The builders run inside the pack's thunk, which
   `servePack(pack, { now? })` evaluates: every value and row is parsed with its
   declaration's schema (the parsed output is what is served), a window query
@@ -43,7 +44,8 @@ const server = createBrowserServer({ serve: servePack(pack), unserved: (k) => ne
   breaking ties), answers a page's `(after, until]` cut from them and the
   first `q.limit`. `$key` text is derived generically for every sortable field
   (`keyText`): text as is, a `Date` as ISO, a number as its order-preserving
-  float bits, a boolean by name. `:rows` answers any id subset from every row
+  float bits, a boolean by name, a value object by its
+  text wire form (`toJSON()` — a `Rank`'s key). `:rows` answers any id subset from every row
   the declaration's entries list (absent ids omitted). A collection declared
   `count: true` answers `:count` at each window entry's `where` (default: the
   rows listed). `:groups` is never served (the browser server fails it as
@@ -51,7 +53,9 @@ const server = createBrowserServer({ serve: servePack(pack), unserved: (k) => ne
   which the client sees as `loader-failed`.
 - **One serve call per declaration**, `changes: { fixed: { reason: "demo pack" } }`
   (`{ snapshot }` for a `load: "snapshot"` value).
-- **`DemoScenario`** = `{ id, pack: () => import("./pack") }`.
+- **`DemoScenario`** = `{ id, app, route, pack: () => import("./pack") }` —
+  the `Apps.App` id and app-relative route an `<AppEmbed>` opens, declared by
+  the app's owner (`apps/<app>/plugins/demo`).
 
 ## web/: the `Demo` slots
 
@@ -61,6 +65,13 @@ every demo scope — `useServe: Hook<() => DemoServe>`) and
 leaf barrel, not in `demo/scope`: the scope imports UI (toast, loading) that
 reaches config_v2, a contributor, so the slots there would be a cycle. Read by
 `<DemoScope>` (`demo/scope`), which documents the contract.
+
+`demoResource(id, serve)` is the one-line `Demo.Resource` for an answer that
+depends on nothing in the scope's tree — a plugin's NEUTRAL demo answer, the
+same for every scenario ("no ops in flight", "no notes", the baseline model
+catalog). The story (conversations, tasks, transcripts) is a scenario's pack;
+a neutral answer is its owner's, so no pack restates it. A key served by both
+throws.
 
 Tests: `core/internal/pack.test.ts` — through a real `createBrowserServer`'s
 HTTP read, with tuples spelled by the declarations' own codecs (the client's).
@@ -76,11 +87,30 @@ HTTP read, with tuples spelled by the declarations' own codecs (the client's).
     - `Demo.Route`
   - Slot contributors:
     - `Demo.Resource` ← `config_v2`
+    - `Demo.Resource` ← `conversations.agents`
+    - `Demo.Resource` ← `conversations.conversation-preprompt`
+    - `Demo.Resource` ← `conversations.conversation-progress`
+    - `Demo.Resource` ← `conversations.conversation-view.allow-monitor`
+    - `Demo.Resource` ← `conversations.conversation-view.code`
+    - `Demo.Resource` ← `conversations.conversation-view.jsonl-viewer.subagents`
+    - `Demo.Resource` ← `conversations.conversation-view.notes`
+    - `Demo.Resource` ← `conversations.conversation-view.turn-summary`
+    - `Demo.Resource` ← `conversations.model-provider`
+    - `Demo.Resource` ← `debug.profiling.op-log.op-store`
+    - `Demo.Resource` ← `infra.claude-cli.availability`
+    - `Demo.Resource` ← `infra.host.machine-sleep`
+    - `Demo.Resource` ← `plugin-meta.plugin-view`
+    - `Demo.Resource` ← `primitives.usage-rank`
+    - `Demo.Resource` ← `tasks.outcome-report`
+    - `Demo.Resource` ← `tasks.task-track`
     - `Demo.Route` ← `conversations.hibernation`
   - Exports (types): `DemoServe`
-  - Exports (values): `Demo`
+  - Exports (values):
+    - `Demo`
+    - `demoResource`
 - Core:
   - Uses:
+    - `network/live.LIVE_COLUMNS_KEY`
     - `packages/canonical-params.canonicalJson`
     - `packages/canonical-params.canonicalParams`
   - Exports (types):
@@ -101,9 +131,26 @@ HTTP read, with tuples spelled by the declarations' own codecs (the client's).
     - `servePack`
 - Cross-plugin:
   - Imported by:
+    - `apps/agent-manager/demo`
     - `config_v2`
+    - `conversations/agents`
+    - `conversations/conversation-preprompt`
+    - `conversations/conversation-progress`
+    - `conversations/conversation-view/allow-monitor`
+    - `conversations/conversation-view/code`
+    - `conversations/conversation-view/jsonl-viewer/subagents`
+    - `conversations/conversation-view/notes`
+    - `conversations/conversation-view/turn-summary`
     - `conversations/hibernation`
+    - `conversations/model-provider`
+    - `debug/profiling/op-log/op-store`
     - `framework/browser-server/demo/scope`
+    - `infra/claude-cli/availability`
+    - `infra/host/machine-sleep`
+    - `plugin-meta/plugin-view`
+    - `primitives/usage-rank`
+    - `tasks/outcome-report`
+    - `tasks/task-track`
 - Test helpers:
   - Core: `@plugins/framework/plugins/browser-server/plugins/demo/core/testing`
     - `definePack` — Declare a pack — lazily: nothing is evaluated until `servePack` loads it, so `ago` is relative to load time, and a pack module costs nothing to import.

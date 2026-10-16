@@ -50,12 +50,14 @@ On submit, in order:
 - Description: The outcome report an automated task's agent submitted: a card at the end of the transcript of the conversation that wrote it (scrolling with it, not pinned over it) (markdown body, pushed / branch-waiting / no-changes standing, and its question as one-click answers sent as the next turn), and OutcomeReportDetail — the same report read-only, shown in an expanded row of an automation's History (Automations.TaskDetail). Outcome reports for automated tasks: the submit_outcome_report MCP tool (visible only to conversations whose task an automation filed or launched) stores one report per task in tasks_ext_outcome_report — markdown body, the attempt's git-measured standing, an optional question with one-click answers — releases the task's automation slot, and rings the bell when a question waits. Serves the outcome-reports lookup collection.
 - Web:
   - Contributes:
+    - `Demo.Resource` "outcome-reports"
     - `JsonlViewer.TranscriptEnd` "outcome-report" → `OutcomeReportCard`
     - `Automations.TaskDetail` → `OutcomeReportDetail`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/pending-turn.sendConversationTurn`
     - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
+    - `framework/browser-server/demo.demoResource`
     - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
     - `primitives/css/badge.BadgeVariant`

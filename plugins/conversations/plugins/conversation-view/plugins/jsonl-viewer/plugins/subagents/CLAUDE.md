@@ -413,33 +413,16 @@ downstream can widen the set, because nothing downstream resolves one.
 ## Plugin reference
 
 - Description: The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live transcript, drawn by the conversation's own TranscriptView. Discovers a conversation's sub-agents from the `subagents/` directory beside each of its anchored session transcripts, and serves two live resources: what every sub-agent is doing right now (one bounded tail read per change), and one sub-agent's own transcript, parsed by the same reader as the main conversation.
-- Server:
-  - Contributes:
-    - `resource.declare` "subagent-activity"
-    - `resource.declare` "subagent-transcript"
-  - Uses:
-    - `conversations/transcript-watcher.conversationChainTag`
-    - `conversations/transcript-watcher.readChainLines`
-    - `conversations/transcript-watcher.readJsonlEventsFromChain`
-    - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
-    - `conversations/transcript-watcher.transcriptChainSignature`
-    - `conversations/transcript-watcher.watchPaths`
-    - `infra/git/git-read-cache.createSignedMemo`
-    - `network/live.serveValue`
-  - Exports (values):
-    - `listSubagentEntries`
-    - `subagentDirOf`
-  - Resources:
-    - `subagent-activity` (push, notified)
-    - `subagent-transcript` (push, notified)
 - Web:
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: `Demo.Resource` "subagents"
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×4
     - `primitives/relative-time` ×3
     - `conversations/conversation-view/jsonl-viewer` ×2
     - `primitives/css/spacing` ×2
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `conversations.useConversationById`
+    - `framework/browser-server/demo.demoResource`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
@@ -462,6 +445,25 @@ downstream can widen the set, because nothing downstream resolves one.
     - `subagentStateDisplay`
     - `useConversationSubagents`
     - `useSubagentStatus`
+- Server:
+  - Contributes:
+    - `resource.declare` "subagent-activity"
+    - `resource.declare` "subagent-transcript"
+  - Uses:
+    - `conversations/transcript-watcher.conversationChainTag`
+    - `conversations/transcript-watcher.readChainLines`
+    - `conversations/transcript-watcher.readJsonlEventsFromChain`
+    - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
+    - `conversations/transcript-watcher.transcriptChainSignature`
+    - `conversations/transcript-watcher.watchPaths`
+    - `infra/git/git-read-cache.createSignedMemo`
+    - `network/live.serveValue`
+  - Exports (values):
+    - `listSubagentEntries`
+    - `subagentDirOf`
+  - Resources:
+    - `subagent-activity` (push, notified)
+    - `subagent-transcript` (push, notified)
 - Core:
   - Uses:
     - `conversations.hasLiveProcess`

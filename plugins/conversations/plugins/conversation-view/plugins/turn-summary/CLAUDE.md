@@ -29,11 +29,13 @@ A persistent global trigger on `conversationTurnCompleted` (installed in this pl
 - Description: Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
 - Web:
   - Contributes:
+    - `Demo.Resource` "turn-summaries"
     - `Conversation.AbovePromptInput` → `TurnSummaryCard`
     - `ConfigV2.WebRegister` "config"
   - Uses:
     - `config_v2.ConfigV2`
     - `conversations/conversation-view.Conversation`
+    - `framework/browser-server/demo.demoResource`
     - `network/live.useLiveRow`
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.FoldMotion`

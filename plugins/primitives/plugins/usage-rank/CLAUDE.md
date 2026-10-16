@@ -63,6 +63,20 @@ the ranked things are config entries with no parent row to cascade from.
 ## Plugin reference
 
 - Description: Frecency usage ranking for any (namespace, key) set: recordUsage() fires one atomic decay-and-increment, useUsageOrder() returns the most-used-first order — one coalesced id-set subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort — and useRecentUsage() lists a namespace's most recently used keys (a bounded window), for a Recent row with no candidate set to rank. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a lookup-only live collection read by id set, and swept by a nightly 1-year retention job.
+- Web:
+  - Contributes: `Demo.Resource` "usage-rank"
+  - Uses:
+    - `framework/browser-server/demo.demoResource`
+    - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
+    - `primitives/persistent-draft.readDraft`
+    - `primitives/persistent-draft.writeDraft`
+  - Exports (values):
+    - `recordUsage`
+    - `useRecentUsage`
+    - `useUsageOrder`
 - Server:
   - Contributes:
     - `resource.declare` "usage-stats"
@@ -81,18 +95,6 @@ the ranked things are config entries with no parent row to cascade from.
     - `usage-stats:groups` (push)
     - `usage-stats:rows` (keyed, point)
   - Routes: `POST /api/usage-rank/record`
-- Web:
-  - Uses:
-    - `infra/endpoints.fetchEndpoint`
-    - `network/live.useLive`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/persistent-draft.readDraft`
-    - `primitives/persistent-draft.writeDraft`
-  - Exports (values):
-    - `recordUsage`
-    - `useRecentUsage`
-    - `useUsageOrder`
 - Core:
   - Uses:
     - `fields.fieldsToZodObject`

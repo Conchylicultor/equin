@@ -27,6 +27,15 @@ that settles would stop retrying and would render as a permanent answer.
 ## Plugin reference
 
 - Description: Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
+- Web:
+  - Contributes: `Demo.Resource` "edited-files"
+  - Uses:
+    - `framework/browser-server/demo.demoResource`
+    - `network/live.useLive`
+  - Exports (values):
+    - `gitStatusBadge`
+    - `gitStatusDot`
+    - `useEditedFiles`
 - Server:
   - Contributes: `resource.declare` "edited-files"
   - Uses:
@@ -44,12 +53,6 @@ that settles would stop retrying and would render as a permanent answer.
     - `editedFilesSignature`
     - `getEditedFiles`
   - Resources: `edited-files` (invalidate, notified)
-- Web:
-  - Uses: `network/live.useLive`
-  - Exports (values):
-    - `gitStatusBadge`
-    - `gitStatusDot`
-    - `useEditedFiles`
 - Core:
   - Uses:
     - `network/live.liveValue`

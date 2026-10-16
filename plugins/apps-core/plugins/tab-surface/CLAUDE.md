@@ -34,6 +34,7 @@ indicator's `Pin` anchors to this surface's corner, and the app render fills it.
     - `primitives/css/ui-kit.appThemeScope`
     - `primitives/overlay/surface-overlay.SurfaceOverlayHost`
     - `primitives/pane.PaneBasePathContext`
+    - `primitives/pane.PaneStore`
     - `primitives/pane.PaneSurfaceProvider`
     - `primitives/pane.useIndexMatch`
     - `primitives/pane.usePaneTitle`
@@ -46,10 +47,12 @@ indicator's `Pin` anchors to this surface's corner, and the app render fills it.
     - `primitives/undo-redo.useUndoRedoShortcuts`
   - Exports (values):
     - `AppTabsBody`
+    - `SurfaceCore`
     - `TabSurface`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps-core/app-embed`
     - `apps-core/layout`
     - `apps-core/surface`
 

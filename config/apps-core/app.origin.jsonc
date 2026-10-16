@@ -1,4 +1,4 @@
-// @hash 3b6dc12b557f
+// @hash b3a492bc3275
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -11,6 +11,7 @@
     "apps.browser.shell:browser",
     "apps.chord.shell:chord",
     "apps.debug.shell:debug",
+    "apps.demo.shell:demo",
     "apps.deploy.shell:deploy",
     "apps.events.shell:events",
     "apps.file-explorer.shell:file-explorer",

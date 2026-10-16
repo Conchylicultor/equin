@@ -51,10 +51,13 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.source-path`
     - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.sub-plugins`
     - `pluginViewPane.Actions` ← `primitives.pane`
-  - Contributes: `Pane.Register` "plugin-view"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes:
+    - `Demo.Resource` "plugin-view"
+    - `Pane.Register` "plugin-view"
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collapsible` ×4
     - `primitives/pane` ×4
+    - `framework/browser-server/demo.demoResource`
     - `network/live.useLive`
     - `primitives/breadcrumb.Breadcrumb`
     - `primitives/css/badge.Badge`

@@ -1015,6 +1015,7 @@ See "Open questions" in the design doc.
     - `SurfaceChrome`
     - `TypeMarker`
   - Exports (values):
+    - `AppNavBoundary`
     - `appNavSink`
     - `clearRoute`
     - `createPaneStore`
@@ -1052,6 +1053,7 @@ See "Open questions" in the design doc.
     - `stripBasePath`
     - `SurfaceChromeContext`
     - `type`
+    - `useAppNavBoundary`
     - `useCurrentPane`
     - `useIndexMatch`
     - `useOpenPane`
@@ -1070,14 +1072,14 @@ See "Open questions" in the design doc.
     - `ui/tokens/color-palette --background`
     - `ui/tokens/density --chrome-pane-pad-end`
     - `ui/tokens/shape --spacing`
-  - Imported by: 170 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×60
+  - Imported by: 172 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×61
     - `conversations` ×29
     - `debug` ×25
     - `active-data` ×10
     - `tasks` ×9
+    - `apps-core` ×6
     - `plugin-meta` ×6
-    - `apps-core` ×5
     - `auth` ×4
     - `layouts` ×4
     - `primitives` ×3

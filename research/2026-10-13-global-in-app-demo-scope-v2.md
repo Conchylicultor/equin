@@ -269,6 +269,8 @@ would be a loud 404.
 | Plugin | Status |
 |---|---|
 | `conversations/hibernation` (`markConversationViewed` → `useMarkConversationViewed()`, bound through `useFetchEndpoint()`; its demo answer is the `Demo.Route` for `markViewed`) | migrated |
+| Mount-time reads of `/agents/c/<id>` (2026-10-15, `research/2026-10-15-global-app-embed-and-agent-manager-demo.md`): every live read is answered in the scope (pack or owner `Demo.Resource`); after mount no server-side log carries a demo id (the gateway keeps no access log — not a full proof) | clean as observed |
+| Click-triggered writes the route reaches (`conversation-list.tsx` close, `queue-item-actions.tsx`, `use-queue-rows.ts` reorder, push-and-exit, notes, rewind, dependencies, launch-prompts, ask-user-question, agents) | open — demo ids do not exist on the real server, so a click fails there; ship gate holds |
 
 ## Where it lives
 

@@ -10,6 +10,7 @@
   - **`browser`** — Minimal iframe-based web browser app.
   - **`chord`** — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
   - **`debug`** — Debug app.
+  - **`demo`** — Demo — a temporary sandbox app hosting the in-app demo (the Agent Manager on made-up data) while it is prototyped, before it ships on the website.
   - **`deploy`** — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
   - **`events`** — Events — track events from pluggable sources in one database.
   - **`file-explorer`** — File explorer app.

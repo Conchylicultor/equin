@@ -43,6 +43,8 @@ const late = defineConfig({
 
 const scenario: DemoScenario = {
   id: "config-test",
+  app: "test-app",
+  route: "/",
   pack: () => Promise.resolve({ default: definePack(() => []) }),
 };
 

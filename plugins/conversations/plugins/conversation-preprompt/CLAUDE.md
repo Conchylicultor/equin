@@ -37,6 +37,7 @@ never the reverse) and the feature fully opt-in and removable.
 - Description: Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Sidebar rows show the preprompt's icon (resolved live from the library, with a default-glyph fallback). Snapshots the launching task's selected preprompt (id + title + text) onto each newly created conversation, surfaced as a chip in the conversation header.
 - Web:
   - Contributes:
+    - `Demo.Resource` "conversation-preprompts"
     - `conversationPane.Actions` "preprompt" → `PrepromptChip`
     - `Item.Chips` → `PrepromptListIcon`
   - Uses:
@@ -46,6 +47,7 @@ never the reverse) and the feature fully opt-in and removable.
     - `conversations/preprompts.PrepromptGlyph`
     - `conversations/preprompts.prepromptsConfig`
     - `conversations/preprompts.usePreprompt`
+    - `framework/browser-server/demo.demoResource`
     - `network/live.LiveRowResult`
     - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`

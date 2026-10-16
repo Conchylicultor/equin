@@ -1,4 +1,4 @@
-// @hash 3b6dc12b557f
+// @hash b3a492bc3275
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -23,6 +23,8 @@
   // the same family as Mail — so it sits with them, directly after Mail.
   // Chord (the chord ear trainer) is a music app: it sits beside Sonata.
   // Places (saved places on a map) is personal content: it sits after Events.
+  // Demo (temporary: the in-app demo before it ships on the website) sits
+  // right after Website, the surface it is headed for.
   "items": [
     "apps.home.shell:home",
     "apps.agent-manager.shell:agent-manager",
@@ -38,6 +40,7 @@
     "apps.studio.shell:studio",
     "apps.prototypes.shell:prototypes",
     "apps.website.shell:website",
+    "apps.demo.shell:demo",
     "apps.deploy.shell:deploy",
     "apps.settings.shell:settings",
     "apps.debug.shell:debug"

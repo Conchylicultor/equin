@@ -31,3 +31,16 @@ export const Demo = {
     route: readonly [key: string, handler: RouteHandler];
   }>({ docLabel: (c) => c.route[0] }),
 };
+
+/**
+ * A `Demo.Resource` whose answers depend on nothing in the scope's tree — a
+ * plugin's neutral demo answer ("no ops in flight", "no notes"), the same for
+ * every scenario. `serve` is module-level, so it is stable by construction.
+ */
+export function demoResource(
+  id: string,
+  serve: DemoServe,
+): ReturnType<typeof Demo.Resource> {
+  const useServe = (): DemoServe => serve;
+  return Demo.Resource({ id, useServe });
+}

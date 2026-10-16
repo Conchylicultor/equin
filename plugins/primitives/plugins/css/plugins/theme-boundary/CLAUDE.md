@@ -195,6 +195,7 @@ the code:
     - `ui/tokens/sidebar-palette --sidebar`
     - `ui/tokens/sidebar-palette --sidebar-accent`
   - Imported by:
+    - `apps-core/app-embed`
     - `apps-core/app-launcher`
     - `apps-core/app-rail`
     - `apps-core/surface`

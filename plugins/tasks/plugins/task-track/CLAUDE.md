@@ -54,8 +54,11 @@ The track is decided per filing and is NOT inherited by subtasks (it is not a
 
 - Description: Per-task track (main | sidequest): the track badge, the clickable Track control the task detail header renders to switch it, and the exposed `track` field of every list whose rows reach a task (the task list, the conversation lists). Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (the whole set for the task list, point reads for one task), the endpoint that switches a task's track, the tasks.trackChanged trigger event every track write emits, and the track exposed to every list whose rows reach a task (LiveColumns.Expose).
 - Web:
-  - Contributes: `FieldPresentation.Register` "exposure:tasks_ext_track"
+  - Contributes:
+    - `Demo.Resource` "task-tracks"
+    - `FieldPresentation.Register` "exposure:tasks_ext_track"
   - Uses:
+    - `framework/browser-server/demo.demoResource`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.FieldPresentation`
     - `network/live.mapRow`

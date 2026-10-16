@@ -91,6 +91,7 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `agentSidePane.Actions` ← `conversations.agents`
     - `agentSidePane.Actions` ← `primitives.pane`
   - Contributes:
+    - `Demo.Resource` "agents"
     - `IdKinds.Kind` "agent"
     - `IdKinds.Kind` "launch"
     - `Pane.Register` "agent-detail"
@@ -102,7 +103,7 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `Item.Avatar` → `AgentAvatarRow`
     - `conversationPane.Actions` "agent-avatar" → `AgentAvatarTitlePrefix`
     - `Agents.AgentActions` "delete" → `DeleteAgentAction`
-  - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×8
     - `primitives/avatar` ×4
     - `primitives/collapsible` ×4
@@ -118,6 +119,7 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `conversations/model-provider.ModelSelect`
     - `conversations.useConversationById`
     - `fields/avatar/table.avatarFieldDef`
+    - `framework/browser-server/demo.demoResource`
     - `ids.IdKinds`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/app-shell.opensPane`

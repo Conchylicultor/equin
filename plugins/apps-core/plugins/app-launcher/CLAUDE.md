@@ -73,7 +73,7 @@ never draw their own header (the shell places it; see
     - `primitives/embed.isChromelessDocument`
     - `primitives/link-gesture.linkProps`
     - `primitives/overlay/hover-popover.HoverPopover`
-    - `primitives/pane.currentRoutePath`
+    - `primitives/pane.usePaneStore`
     - `ui/icons.Icon`
   - Exports (types): `AppRow`
   - Exports (values):

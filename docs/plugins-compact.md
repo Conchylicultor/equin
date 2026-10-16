@@ -8,10 +8,13 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`apps`** — Container for the installed apps (agent-manager, pages, settings, …). The switcher infrastructure lives in apps-core.
   - Plugins:
-    - **`agent-manager`** [3 sub-plugins] — Agent manager app shell and layout.
+    - **`agent-manager`** [4 sub-plugins] — Agent manager app shell and layout.
     - **`browser`** [exempt] [9 sub-plugins] — Minimal iframe-based web browser app.
     - **`chord`** [exempt] [8 sub-plugins] — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
     - **`debug`** [1 sub-plugin] — Debug app.
+    - **`demo`** — Demo — a temporary sandbox app hosting the in-app demo (the Agent Manager on made-up data) while it is prototyped, before it ships on the website.
+      - Plugins:
+        - **`shell`** — App shell for the Demo sandbox: registers the /demo app entry, whose one page is the Agent Manager rendered in-process on made-up data (DemoScope + AppEmbed over the agent manager's demo scenario).
     - **`deploy`** [test helpers] [exempt] [17 sub-plugins] — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
     - **`events`** [exempt] [22 sub-plugins] — Events — track events from pluggable sources in one database.
     - **`file-explorer`** [exempt] [5 sub-plugins] — File explorer app.
@@ -27,6 +30,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`apps-core`** [load-bearing] [test helpers] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
   - Plugins:
+    - **`app-embed`** — <AppEmbed app route onLeave? />: one app surface rendered in-process — the SurfaceCore a tab mounts — with its own non-live pane store (seeded with route, never touching the page URL), its app theme…
     - **`app-icon`** — Canonical, serializable app-icon descriptor (a Material Symbols glyph now, image variant later), drawn by the icons primitive.
     - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of…
     - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.

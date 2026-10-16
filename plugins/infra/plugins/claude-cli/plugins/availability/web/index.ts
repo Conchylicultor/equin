@@ -12,11 +12,13 @@ export {
   useClaudeCodeStatus,
   useClaudeCodeLaunchBlock,
 } from "./internal/use-claude-code";
+import { claudeCodeStatusDemo } from "./internal/demo-resource";
 
 export default {
   description:
     "Claude Code availability, shown: the health report's Claude Code row (critical while the CLI is missing or signed out, with the install / sign-in commands and Check again), useClaudeCodeLaunchBlock() for launch controls to disable themselves with the fix, and a re-check when the user returns to the window while it is blocked.",
   contributions: [
+    claudeCodeStatusDemo,
     Core.Root({ component: RecheckOnReturn }),
     HealthReport.Row({
       kind: "status",

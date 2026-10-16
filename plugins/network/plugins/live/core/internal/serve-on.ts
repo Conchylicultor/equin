@@ -28,7 +28,7 @@ import {
   type ServeValueOptions,
   type SnapshotPairing,
 } from "./compile-value";
-import type { LIVE_COLUMNS_KEY } from "./live-columns";
+import { LIVE_COLUMNS_KEY } from "./live-columns";
 import type {
   LiveAllCollection,
   LiveCollection,
@@ -298,18 +298,19 @@ export type LiveCollectionChanges = Exclude<
 type Answer<T> = Promise<T> | T;
 
 /**
- * A collection whose rows carry another plugin's columns (`$columns`: a
- * contributed, exposing or union collection) folds them from Postgres joins —
- * it has no external spelling (tsc; a throw for a cast, and for a
- * `columnScope`, which no type tells apart).
+ * What an external source answers for a row: the row WITHOUT `$columns`. An
+ * exposing collection's `$columns` is the fold of every exposure served on the
+ * host (`LiveColumns.Expose`), as the SQL arm folds them — and an external
+ * host serves none, so the served half adds `$columns: {}` itself (exactly the
+ * SQL arm's row on a host with no exposing extension). A source can therefore
+ * never spell another plugin's slice. A union's arm columns are `$columns`
+ * too, but a union is refused (`arms: null`).
  */
-type Unfolded<Row> = typeof LIVE_COLUMNS_KEY extends keyof Row
-  ? {
-      readonly __externalCollection: "a contributed, exposing or union collection folds Postgres-served columns — serve it from a table";
-    }
-  : unknown;
+export type ExternalSourceRow<Row> = typeof LIVE_COLUMNS_KEY extends keyof Row
+  ? Omit<Row, typeof LIVE_COLUMNS_KEY>
+  : Row;
 
-/** The window collections an external source serves: single-table, nothing folded in. */
+/** The window collections an external source serves: single-table (no union). */
 export type ExternalWindowCollection<
   Row,
   F,
@@ -318,14 +319,13 @@ export type ExternalWindowCollection<
 > = LiveCollection<Row, F, S> & {
   arms: null;
   count: Cn;
-} & Unfolded<Row>;
+};
 
-/** An `all` collection an external source serves: nothing folded in. */
-export type ExternalAllCollection<Row> = LiveAllCollection<Row> & Unfolded<Row>;
+/** An `all` collection an external source serves. */
+export type ExternalAllCollection<Row> = LiveAllCollection<Row>;
 
-/** A lookup-only collection an external source serves: nothing folded in. */
-export type ExternalLookupCollection<Row> = LiveLookupCollection<Row> &
-  Unfolded<Row>;
+/** A lookup-only collection an external source serves. */
+export type ExternalLookupCollection<Row> = LiveLookupCollection<Row>;
 
 /** A sortable field whose row type is not text: its `$key` part needs `keyText`. */
 type NonTextSortable<Row, S extends string> = {
@@ -512,7 +512,7 @@ export function serveCollectionOn<
 >(
   rt: LiveRuntime,
   collection: ExternalAllCollection<Row>,
-  opts: ServeExternalAllOptions<NoInfer<Row>, C>,
+  opts: ServeExternalAllOptions<ExternalSourceRow<NoInfer<Row>>, C>,
 ): ServedExternalAll<Row, C>;
 export function serveCollectionOn<
   Row,
@@ -520,7 +520,7 @@ export function serveCollectionOn<
 >(
   rt: LiveRuntime,
   collection: ExternalLookupCollection<Row>,
-  opts: ServeExternalLookupOptions<NoInfer<Row>, C>,
+  opts: ServeExternalLookupOptions<ExternalSourceRow<NoInfer<Row>>, C>,
 ): ServedExternalLookup<Row, C>;
 export function serveCollectionOn<
   Row,
@@ -532,7 +532,7 @@ export function serveCollectionOn<
   rt: LiveRuntime,
   collection: ExternalWindowCollection<Row, F, S, Cn>,
   opts: ServeExternalWindowOptions<
-    NoInfer<Row>,
+    ExternalSourceRow<NoInfer<Row>>,
     NoInfer<F>,
     NoInfer<S>,
     NoInfer<Cn>,
@@ -674,8 +674,8 @@ export function compileExternalCollection(
       `serveCollectionOn serves \`source: "external"\` — got ${JSON.stringify(opts.source)} (a table-backed collection is the Bun serveCollection's).`,
     );
   }
-  // Typed away (`Unfolded`, `arms: null`); refused against a cast, and for a
-  // column scope, which no type tells apart.
+  // A union is typed away (`arms: null`) and refused against a cast; a column
+  // scope, which no type tells apart, is refused here.
   if ((collection.arms ?? null) !== null) {
     fail(
       "a union collection (declared with `arms`) reads several tables — it has no external spelling.",
@@ -686,11 +686,9 @@ export function compileExternalCollection(
       "a `columnScope` collection folds scoped column sets from Postgres — it has no external spelling.",
     );
   }
-  if ((collection.exposes ?? null) !== null) {
-    fail(
-      "an `exposes` collection folds exposed extension fields from Postgres — it has no external spelling.",
-    );
-  }
+  // An exposing collection's rows carry the fold of the exposures served on
+  // this host — none on an external one (`ExternalSourceRow`).
+  const folds = (collection.exposes ?? null) !== null;
   const changes = checkCollectionChanges(fail, opts.changes);
   const notified = changes === "notified";
   const freshness = freshnessOf(changes);
@@ -775,7 +773,21 @@ export function compileExternalCollection(
       fail(`${what} returned ${rows.length} rows for at most ${limit}.`);
     }
     const seen = new Set<string>();
-    return rows.map((row, i) => {
+    return rows.map((source, i) => {
+      if (
+        folds &&
+        typeof source === "object" &&
+        source !== null &&
+        LIVE_COLUMNS_KEY in source
+      ) {
+        fail(
+          `${what} row ${i} carries "${LIVE_COLUMNS_KEY}" — an exposing collection's columns are the fold of the exposures served on the host (none on an external one), never the source's.`,
+        );
+      }
+      const row: unknown =
+        folds && typeof source === "object" && source !== null
+          ? { ...source, [LIVE_COLUMNS_KEY]: {} }
+          : source;
       const parsed = collection.row.safeParse(row);
       if (!parsed.success) {
         const issue = parsed.error.issues[0];
@@ -799,6 +811,8 @@ export function compileExternalCollection(
       for (const k of collection.rowKeys) {
         if (k in fields) out[k] = fields[k];
       }
+      // `rowKeys` are the author's fields; the fold rides beside them.
+      if (folds) out[LIVE_COLUMNS_KEY] = {};
       return out;
     });
   };
@@ -1170,11 +1184,11 @@ export interface LiveExternalServe<O extends LiveValueOrigin> {
   serveCollection: {
     <Row, const C extends LiveCollectionChanges = "notified">(
       collection: ExternalAllCollection<Row>,
-      opts: ServeExternalAllOptions<NoInfer<Row>, C>,
+      opts: ServeExternalAllOptions<ExternalSourceRow<NoInfer<Row>>, C>,
     ): ServedExternalAll<Row, C>;
     <Row, const C extends LiveCollectionChanges = "notified">(
       collection: ExternalLookupCollection<Row>,
-      opts: ServeExternalLookupOptions<NoInfer<Row>, C>,
+      opts: ServeExternalLookupOptions<ExternalSourceRow<NoInfer<Row>>, C>,
     ): ServedExternalLookup<Row, C>;
     <
       Row,
@@ -1185,7 +1199,7 @@ export interface LiveExternalServe<O extends LiveValueOrigin> {
     >(
       collection: ExternalWindowCollection<Row, F, S, Cn>,
       opts: ServeExternalWindowOptions<
-        NoInfer<Row>,
+        ExternalSourceRow<NoInfer<Row>>,
         NoInfer<F>,
         NoInfer<S>,
         NoInfer<Cn>,

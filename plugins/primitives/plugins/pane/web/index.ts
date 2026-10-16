@@ -75,7 +75,12 @@ export type {
 export { resolveFrom, resolveRow, rowOrStale } from "./resolve";
 export type { ResolveResult } from "./resolve";
 export { setHistoryAdapter } from "./history-sink";
-export { appNavSink, type AppNavigator } from "./app-nav-sink";
+export {
+  appNavSink,
+  AppNavBoundary,
+  useAppNavBoundary,
+  type AppNavigator,
+} from "./app-nav-sink";
 export type {
   HistoryAdapter,
   LocationChange,

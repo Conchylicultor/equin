@@ -501,14 +501,14 @@ serves them.
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 66 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 67 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×27
     - `tasks` ×16
     - `debug` ×6
     - `active-data` ×5
     - `page` ×3
+    - `apps` ×2
     - `stats` ×2
-    - `apps/sonata/transcription`
     - `backup/sources/transcripts`
     - `code-explorer`
     - `database/query`

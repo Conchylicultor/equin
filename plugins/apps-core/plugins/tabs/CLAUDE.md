@@ -158,8 +158,8 @@ same browser tab from finding the blob. Both call sites are marked for removal.
 
 - Description: Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, and the surface-written placement-capabilities registry.
 - Web:
-  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×16
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×17
     - `primitives/scope/app-instance` ×7
     - `apps-core` ×6
     - `primitives/embed` ×3
@@ -189,14 +189,17 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `setSurfaceMode`
     - `TabsProvider`
     - `useActivateApp`
+    - `useAppLink`
+    - `useAppLinkProps`
     - `useDefaultPlacement`
+    - `useNavigate`
     - `usePlacementCapabilities`
     - `useSurfaceFocused`
     - `useSurfaceMode`
     - `useTabs`
 - Cross-plugin:
-  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps-core` ×9
+  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps-core` ×10
     - `apps` ×7
     - `debug` ×7
     - `primitives` ×2

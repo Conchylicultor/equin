@@ -340,11 +340,20 @@ useLive(graphNodes, { select: countNodes });                          // a slice
       tuple ships an empty one). The subscribed tuples are tracked from the
       runtime's 0→1 / N→0 hooks, so nothing is re-read for a tuple nobody
       holds.
-    - **Refused** (tsc where a type tells it apart, and a throw): a
-      `exposes` or union collection (their rows fold Postgres
-      columns), a `columnScope` collection (throw only), a stray answer for
-      the form (`window` on a lookup, `count` without `count: true`), and an
-      empty `changes` reason. Tests: `core/internal/serve-on.test.ts`.
+    - **An exposing collection** (`exposes`, from `from` / `related`) is
+      served: its `$columns` is the fold of the exposures served on THIS
+      host, as the SQL arm's is — and an external host serves none, so the
+      arm adds `$columns: {}` to every row (each exposed field then reads
+      its declared default). The source answers `ExternalSourceRow<Row>`,
+      the row WITHOUT `$columns` (tsc; a row carrying one throws), so no
+      source ever spells another plugin's slice. A native fold
+      (`serveExposure` on a browser server, or the server halves on
+      PGlite) is the track's later step.
+    - **Refused** (tsc where a type tells it apart, and a throw): a union
+      collection (its rows fold several tables), a `columnScope`
+      collection (throw only), a stray answer for the form (`window` on a
+      lookup, `count` without `count: true`), and an empty `changes`
+      reason. Tests: `core/internal/serve-on.test.ts`.
 - **Read — `useLive(c, query?)`.** The query's SHAPE picks the resource; there is
   one hook for every list read, and a separate hook only where the result has
   different STATES (`useLiveRow`).
@@ -1785,6 +1794,7 @@ never add one.
     - `ExternalNotifiedValue`
     - `ExternalSilentPagedValue`
     - `ExternalSilentValue`
+    - `ExternalSourceRow`
     - `ExternalWindowCollection`
     - `FieldsFilterable`
     - `FieldsRow`
@@ -1924,7 +1934,7 @@ never add one.
     - `serveValueOn`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 234 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 235 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×68
     - `conversations` ×38
     - `tasks` ×27
@@ -1940,13 +1950,13 @@ never add one.
     - `review` ×3
     - `apps-core` ×2
     - `config_v2` ×2
+    - `framework` ×2
     - `history` ×2
     - `release` ×2
     - `search` ×2
     - `backup/runs-arm`
     - `database/query-deadline`
     - `fields/secret/config`
-    - `framework/browser-server`
     - `integrations/google-maps`
     - `reports`
     - `runs`

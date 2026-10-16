@@ -26,25 +26,17 @@
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --popover-foreground`
     - `ui/tokens/shape --radius`
-  - Imported by:
-    - `apps/chord/curriculum`
-    - `apps/chord/trainer`
-    - `apps/events/sources/refresh-all`
-    - `apps/file-explorer/browser`
-    - `apps/pages/page-tree`
-    - `apps/prototypes/canvas`
-    - `apps/sonata/sources/midi/file-preview`
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×7
+    - `conversations` ×2
+    - `page` ×2
+    - `primitives` ×2
+    - `apps-core/app-embed`
     - `build/serve-composition`
     - `config_v2/settings`
-    - `conversations/conversation-view`
-    - `conversations/conversation-view/pending-turn`
     - `debug/profiling/ops`
     - `framework/browser-server/demo/scope`
     - `infra/health`
-    - `page/editor`
-    - `page/url-paste`
-    - `primitives/data-view`
-    - `primitives/file-viewer`
     - `reports/optimistic-rejection`
     - `shell/notifications`
 - Core:

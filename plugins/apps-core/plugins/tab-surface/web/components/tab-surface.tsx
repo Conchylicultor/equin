@@ -1,4 +1,4 @@
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, type ReactNode } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import {
@@ -8,6 +8,7 @@ import {
   useRouteState,
   useIndexMatch,
   usePaneTitle,
+  type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
 import {
   SyncStatusProvider,
@@ -46,24 +47,63 @@ export function TabSurface({ tab }: { tab: Tab }) {
   const app = apps.find((a) => a.id === tab.appId);
   if (!app) return null;
   return (
-    <PaneSurfaceProvider
-      store={tab.store}
-      basePath={appPathFor(tab.appId, apps)}
+    <SurfaceCore
       appId={tab.appId}
+      store={tab.store}
       surfaceId={tab.tabId}
+      beside={
+        <>
+          <TabTitleReporter tabId={tab.tabId} />
+          <UndoRedoKeys />
+        </>
+      }
+    />
+  );
+}
+
+/**
+ * One app surface, whoever hosts it: the app's `PaneSurfaceProvider` (its
+ * store, base path, app id, surface id and load-scope prefix), one
+ * `<SyncStatusProvider>` and `<UndoRedoProvider>` per surface, and the overlay
+ * host around the app render. A tab adds its title reporter and its `mod+z`
+ * bindings (`beside`, rendered inside the undo provider); an in-process app
+ * embed adds neither — it is not a tab, and a second same-id `mod+z`
+ * registration would race the host's in the page-global `ShortcutManager`.
+ * Throws for an app id no `Apps.App` registers (a tab filters those first).
+ */
+export function SurfaceCore({
+  appId,
+  store,
+  surfaceId,
+  beside,
+}: {
+  appId: string;
+  store: PaneStore;
+  surfaceId: string;
+  beside?: ReactNode;
+}) {
+  const apps = Apps.App.useContributions();
+  const app = apps.find((a) => a.id === appId);
+  if (!app) throw new Error(`SurfaceCore: no app "${appId}" is registered.`);
+  return (
+    <PaneSurfaceProvider
+      store={store}
+      basePath={appPathFor(appId, apps)}
+      appId={appId}
+      surfaceId={surfaceId}
       loadScopePrefix={loadScopePrefixFor(app._pluginId)}
     >
-      <TabTitleReporter tabId={tab.tabId} />
       <SyncStatusProvider>
         <UndoRedoProvider>
-          <UndoRedoKeys />
+          {beside}
           {/* Owns the surface's outer box — `relative` so the indicator's Pin
               anchors to this surface's corner, `size-full` so the app render
               still fills it. It is also every surface's overlay host, so a pane
-              can fill its own tab (leaving the tab bar and rail on screen)
+              can fill its own surface (leaving the tab bar and rail on screen)
               instead of escaping to the viewport — and because the host sits
-              INSIDE whatever box the placement hands the tab, that overlay
-              lands correctly under docked, floating-window and solo alike. */}
+              INSIDE whatever box the placement hands the surface, that overlay
+              lands correctly under docked, floating-window, solo and an embed
+              alike. */}
           <SurfaceOverlayHost>
             {renderIsolated(Apps.App, app as unknown as Contribution)}
             <SyncStatusIndicator />

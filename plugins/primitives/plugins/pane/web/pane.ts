@@ -36,7 +36,7 @@ import {
   liveStoreAccessorSink,
   type SerializedSlot,
 } from "./history-sink";
-import { appNavSink, navigateApp } from "./app-nav-sink";
+import { useAppNavigator } from "./app-nav-sink";
 import {
   linkProps,
   type LinkGestureProps,
@@ -720,8 +720,9 @@ export interface PaneStore {
    * `history.state = { pending: rawPath }` + the URL, dispatching
    * `popstate`/`shell:navigate` like `setRoute`. Pushes a new history entry by
    * default; pass `replace` to mirror the URL in place (no stray entry — used by
-   * the tab activate() to assert a freshly-focused pending tab's URL). No-ops the
-   * history part when the store is not `live`.
+   * the tab activate() to assert a freshly-focused pending tab's URL). A store
+   * that is not `live` writes no history and resolves the path against the
+   * registry at once instead (nothing else would re-parse it).
    */
   navigatePending(rawPath: string, replace?: boolean): void;
   /** Re-derive the route from a (base-path-stripped) URL pathname. */
@@ -901,6 +902,10 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
         state: { pending: rawPath },
         mode: replace ? "replace" : "push",
       });
+    } else {
+      // No history round-trip will re-parse it: resolve the path now when a
+      // registered pane already matches (an embed's in-app link).
+      syncRouteFromUrl("/" + rawPath);
     }
     notifyRouteListeners();
   }
@@ -1005,8 +1010,17 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     // this gate they would all overwrite their in-memory route with the
     // *focused* tab's URL — destroying keep-alive. Background stores receive
     // their route only from `restoreRoute` (persistence) or from being
-    // navigated while focused (held in memory).
-    if (!store.live) return;
+    // navigated while focused (held in memory), or from a seeded pending
+    // path. A pending path is the store's OWN location: re-parse it (never
+    // the page URL), so a registry sync upgrades it to `resolved` the moment
+    // its pane registers — an in-process app embed, or a background tab
+    // restored before its target's plugin loaded.
+    if (!store.live) {
+      if (currentState.kind === "unresolved") {
+        syncRouteFromUrl("/" + currentState.rawPath);
+      }
+      return;
+    }
     const state = window.history.state as {
       route?: Array<{
         paneId: string;
@@ -2469,10 +2483,9 @@ function makePaneObject(
     const surfaceAppId = useSurfaceAppId();
     // Subscribed, not sampled: the navigator is installed in an effect, so a
     // pane that mounted in the same commit as the tab provider would otherwise
-    // cache "nowhere to go" for its whole life (the memo below has the sink in
-    // no dependency array). `useInstalled()` is the only presence answer the
-    // sink offers a render path, for exactly this reason.
-    const canNavigate = appNavSink.useInstalled();
+    // cache "nowhere to go" for its whole life. An embed's `AppNavBoundary`
+    // answers first, so an embedded pane never drives the host's tabs.
+    const navigator = useAppNavigator();
     return useMemo(() => {
       if (instanceId === undefined) return null;
       const idx = slots.findIndex((s) => s.instanceId === instanceId);
@@ -2483,14 +2496,14 @@ function makePaneObject(
       // decision: a pane with no linkable URL from here has no cross-app
       // destination, exactly as one with no installed navigator has none.
       const url =
-        home.id !== surfaceAppId && canNavigate
+        home.id !== surfaceAppId && navigator !== null
           ? crossAppUrl(route, home, slots, idx)
           : null;
-      if (url !== null) {
+      if (url !== null && navigator !== null) {
         return {
           kind: "cross-app",
           app: home,
-          open: () => navigateApp(url),
+          open: () => navigator(url),
           href: () => url,
         };
       }
@@ -2507,7 +2520,7 @@ function makePaneObject(
           return store.routeUrl(next ? next.route : current);
         },
       };
-    }, [store, instanceId, slots, surfaceAppId, canNavigate]);
+    }, [store, instanceId, slots, surfaceAppId, navigator]);
   }
 
   function useSetParams(): (params: Record<string, string>) => void {

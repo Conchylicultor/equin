@@ -65,6 +65,8 @@ Tests (jsdom, the real `NotificationsClient`): `web/__tests__/demo-scope.test.ts
     - `primitives/networking.TransportProvider`
     - `shell/toast.showToast`
   - Exports (values): `DemoScope`
+- Cross-plugin:
+  - Imported by: `apps/demo/shell`
 - Test helpers:
   - Web: `@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web/testing`
     - `DemoScope` — Renders `children` against a browser server of its own, built once the scenario's pack has loaded: the pack's recorded answers, every `Demo.Resource` contribution's serves and every `Demo.Route` handler.

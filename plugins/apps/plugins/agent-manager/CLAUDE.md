@@ -6,6 +6,7 @@
 
 - Description: Agent manager app shell and layout.
 - Sub-plugins:
+  - **`demo`** — The Agent Manager's demo scenario (core: agentManagerDemo — the app, the route /c/conv-demo-dark-mode and its pack: a queue of agents and one conversation fixing a bug, every id carrying `demo`) and…
   - **`pages-nav`** — Pages entry point in the agent manager: a conversation-toolbar toggle that opens the Pages tree as a column beside the conversation.
   - **`shell`** — App shell for the agent manager. Registers the /agents app entry, renders the main Shell layout, and contributes the app's own theme (Mist), which the agent manager selects.
   - **`welcome`** — Landing pane (agent-manager index) shown at `/agents`.

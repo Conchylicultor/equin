@@ -77,6 +77,7 @@ barrel.
     - `ui/tokens/shape --radius`
     - `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
+    - `apps-core/app-embed`
     - `apps/prototypes/canvas`
     - `framework/web-core`
     - `layouts/full-pane`

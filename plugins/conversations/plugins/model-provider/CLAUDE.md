@@ -22,6 +22,7 @@ Single source of truth for the models an agent can run, and for what the user as
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "config"
+    - `Demo.Resource` "model-provider"
     - `DynamicEnum.Options` "Default model"
     - `DynamicFlags.Options` "Models shown in the launch dropdown"
     - `Core.Root` → `ModelCorruptionReporter`
@@ -31,6 +32,7 @@ Single source of truth for the models an agent can run, and for what the user as
     - `config_v2.useSetConfig`
     - `fields/dynamic-enum/config.DynamicEnum`
     - `fields/dynamic-flags/config.DynamicFlags`
+    - `framework/browser-server/demo.Demo`
     - `network/live.useLive`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.Select`
@@ -118,6 +120,7 @@ Single source of truth for the models an agent can run, and for what the user as
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps/agent-manager/demo`
     - `conversations`
     - `conversations/agents`
     - `conversations/all-conversations`

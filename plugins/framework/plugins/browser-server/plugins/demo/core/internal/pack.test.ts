@@ -18,6 +18,7 @@ import {
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import {
   definePack,
   DemoMissingError,
@@ -324,6 +325,40 @@ describe("servePack through a browser server", () => {
     if (!r.ok) throw new Error("read failed");
     expect((r.value as Item[])[0]!.at).toBe("2026-10-14T11:59:00.000Z");
     server.dispose();
+  });
+});
+
+describe("an exposing collection", () => {
+  // `from` an entity: its exposures fold into the rows (`exposes.base`).
+  const exposing = liveCollection(key("exposing"), {
+    from: entityRef("test_demo_pack_items", {
+      ...ITEM_SPEC.fields,
+      ...ITEM_SPEC.carry.fields,
+    }),
+    pick: ["kind"],
+    carry: { pick: ["id", "title", "rank", "at"] },
+    id: "id",
+    all: { orderBy: [["rank", "asc"]], unbounded: { reason: "test fixture" } },
+  });
+
+  test("is recorded without `$columns` and served with the empty fold", async () => {
+    const server = serverOf(
+      definePack(() => [packAll(exposing, [item("e1", 1, "a")])]),
+    );
+    expect(await read(server, exposing.key, {})).toEqual({
+      ok: true,
+      value: [{ ...item("e1", 1, "a"), $columns: {} }],
+    });
+  });
+
+  test("a recorded `$columns` is a DemoPackError", () => {
+    const p = definePack(() => [
+      // A cast past `ExternalSourceRow`: a pack spelling another plugin's slice.
+      packAll(exposing, [
+        { ...item("e1", 1, "a"), $columns: { s: { f: 1 } } } as Item,
+      ]),
+    ]);
+    expect(() => servePack(p, { now: NOW })).toThrow(/carries "\$columns"/);
   });
 });
 

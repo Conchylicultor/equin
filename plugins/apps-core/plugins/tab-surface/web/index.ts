@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { TabSurface } from "./components/tab-surface";
+export { SurfaceCore, TabSurface } from "./components/tab-surface";
 export { AppTabsBody } from "./components/app-tabs-body";
 
 export default {

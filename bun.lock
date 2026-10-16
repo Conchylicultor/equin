@@ -134,6 +134,10 @@
       "name": "@singularity/plugin-apps-core",
       "version": "0.0.1",
     },
+    "plugins/apps-core/plugins/app-embed": {
+      "name": "@singularity/plugin-apps-core-app-embed",
+      "version": "0.0.1",
+    },
     "plugins/apps-core/plugins/app-icon": {
       "name": "@singularity/plugin-apps-core-app-icon",
       "version": "0.0.1",
@@ -220,6 +224,10 @@
     },
     "plugins/apps/plugins/agent-manager": {
       "name": "@singularity/plugin-apps-agent-manager",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/agent-manager/plugins/demo": {
+      "name": "@singularity/plugin-apps-agent-manager-demo",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/agent-manager/plugins/pages-nav": {
@@ -319,6 +327,14 @@
     },
     "plugins/apps/plugins/debug/plugins/shell": {
       "name": "@singularity/plugin-apps-debug-shell",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/demo": {
+      "name": "@singularity/plugin-apps-demo",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/demo/plugins/shell": {
+      "name": "@singularity/plugin-apps-demo-shell",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/deploy": {
@@ -6717,6 +6733,8 @@
 
     "@singularity/plugin-apps-agent-manager": ["@singularity/plugin-apps-agent-manager@workspace:plugins/apps/plugins/agent-manager"],
 
+    "@singularity/plugin-apps-agent-manager-demo": ["@singularity/plugin-apps-agent-manager-demo@workspace:plugins/apps/plugins/agent-manager/plugins/demo"],
+
     "@singularity/plugin-apps-agent-manager-pages-nav": ["@singularity/plugin-apps-agent-manager-pages-nav@workspace:plugins/apps/plugins/agent-manager/plugins/pages-nav"],
 
     "@singularity/plugin-apps-agent-manager-shell": ["@singularity/plugin-apps-agent-manager-shell@workspace:plugins/apps/plugins/agent-manager/plugins/shell"],
@@ -6763,6 +6781,8 @@
 
     "@singularity/plugin-apps-core": ["@singularity/plugin-apps-core@workspace:plugins/apps-core"],
 
+    "@singularity/plugin-apps-core-app-embed": ["@singularity/plugin-apps-core-app-embed@workspace:plugins/apps-core/plugins/app-embed"],
+
     "@singularity/plugin-apps-core-app-icon": ["@singularity/plugin-apps-core-app-icon@workspace:plugins/apps-core/plugins/app-icon"],
 
     "@singularity/plugin-apps-core-app-launcher": ["@singularity/plugin-apps-core-app-launcher@workspace:plugins/apps-core/plugins/app-launcher"],
@@ -6808,6 +6828,10 @@
     "@singularity/plugin-apps-debug": ["@singularity/plugin-apps-debug@workspace:plugins/apps/plugins/debug"],
 
     "@singularity/plugin-apps-debug-shell": ["@singularity/plugin-apps-debug-shell@workspace:plugins/apps/plugins/debug/plugins/shell"],
+
+    "@singularity/plugin-apps-demo": ["@singularity/plugin-apps-demo@workspace:plugins/apps/plugins/demo"],
+
+    "@singularity/plugin-apps-demo-shell": ["@singularity/plugin-apps-demo-shell@workspace:plugins/apps/plugins/demo/plugins/shell"],
 
     "@singularity/plugin-apps-deploy": ["@singularity/plugin-apps-deploy@workspace:plugins/apps/plugins/deploy"],
 

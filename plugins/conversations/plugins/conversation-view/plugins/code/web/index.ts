@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { editedFilesDemo } from "./internal/demo-resource";
 
 export { useEditedFiles } from "./use-edited-files";
 export { gitStatusDot, gitStatusBadge } from "./internal/git-status-colors";
@@ -6,4 +7,5 @@ export { gitStatusDot, gitStatusBadge } from "./internal/git-status-colors";
 export default {
   description:
     "Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.).",
+  contributions: [editedFilesDemo],
 } satisfies PluginDefinition;

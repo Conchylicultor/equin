@@ -5,6 +5,7 @@ import type {
 import type {
   ExternalAllCollection,
   ExternalLookupCollection,
+  ExternalSourceRow,
   ExternalWindowCollection,
   LiveDecodedCountQuery,
   LiveDecodedQuery,
@@ -12,6 +13,7 @@ import type {
   LiveQuery,
   LiveQueryValue,
 } from "@plugins/network/plugins/live/core";
+import { LIVE_COLUMNS_KEY } from "@plugins/network/plugins/live/core";
 import {
   canonicalJson,
   canonicalParams,
@@ -133,19 +135,42 @@ function issueOf(r: ParseResult): string {
   return `field "${issue?.path.join(".") ?? "?"}" — ${issue?.message ?? "invalid"}`;
 }
 
-/** Each row parsed with the collection's row schema, its id a string. */
+/**
+ * Each row parsed with the collection's row schema, its id a string. An
+ * exposing collection's rows are recorded WITHOUT `$columns` (the external
+ * arm folds the exposures served on its host — none — itself), so each is
+ * parsed with the empty fold and served without it.
+ */
 function parseRows(
   decl: AnyCollection,
   tuple: string,
   rows: readonly unknown[],
 ): Row[] {
   refuseFolded(decl);
+  const folds = (decl.exposes ?? null) !== null;
   return rows.map((row, i) => {
-    const r = decl.row.safeParse(row);
+    if (
+      folds &&
+      typeof row === "object" &&
+      row !== null &&
+      LIVE_COLUMNS_KEY in row
+    ) {
+      throw new DemoPackError(
+        decl.key,
+        tuple,
+        `row ${i} carries "${LIVE_COLUMNS_KEY}" — an exposing collection's columns are folded by the host from the exposures it serves, never recorded.`,
+      );
+    }
+    const r = decl.row.safeParse(
+      folds && typeof row === "object" && row !== null
+        ? { ...row, [LIVE_COLUMNS_KEY]: {} }
+        : row,
+    );
     if (!r.success) {
       throw new DemoPackError(decl.key, tuple, `row ${i}: ${issueOf(r)}.`);
     }
     const parsed = r.data as Row;
+    if (folds) delete parsed[LIVE_COLUMNS_KEY];
     if (typeof parsed[decl.id] !== "string") {
       throw new DemoPackError(
         decl.key,
@@ -158,10 +183,10 @@ function parseRows(
 }
 
 /**
- * A collection whose rows fold Postgres columns has no external spelling
- * (`serveCollectionOn` refuses it). The builders' types exclude the
- * contributed, exposing and union ones; a `columnScope` one no type tells
- * apart — refused here, while the pack loads.
+ * A collection whose rows fold Postgres columns per tuple has no external
+ * spelling (`serveCollectionOn` refuses it): a union's builder types exclude
+ * it; a `columnScope` one, which no type tells apart, is refused here, while
+ * the pack loads.
  */
 function refuseFolded(decl: AnyCollection): void {
   const why =
@@ -171,9 +196,7 @@ function refuseFolded(decl: AnyCollection): void {
         ? "a `contributed: true` collection"
         : (decl.columnScope ?? null) !== null
           ? "a `columnScope` collection"
-          : (decl.exposes ?? null) !== null
-            ? "an `exposes` collection"
-            : null;
+          : null;
   if (why !== null) {
     throw new DemoPackError(
       decl.key,
@@ -264,7 +287,7 @@ function valueTupleOfQuestion(q: string): string {
 /** Every row of a collection declared `all` (its `key`, and its `:rows`). Any order: the pack orders them. */
 export function packAll<Row>(
   collection: ExternalAllCollection<Row>,
-  rows: readonly NoInfer<Row>[],
+  rows: readonly ExternalSourceRow<NoInfer<Row>>[],
 ): PackEntry {
   const decl = collection as unknown as AnyCollection;
   return entry({ kind: "all", decl, rows: parseRows(decl, "(all)", rows) });
@@ -273,15 +296,15 @@ export function packAll<Row>(
 /** Rows a collection's `:rows` answers by id — on a lookup-only collection, its one answer. */
 export function packRows<Row>(
   collection: ExternalLookupCollection<Row>,
-  rows: readonly NoInfer<Row>[],
+  rows: readonly ExternalSourceRow<NoInfer<Row>>[],
 ): PackEntry;
 export function packRows<Row>(
   collection: ExternalAllCollection<Row>,
-  rows: readonly NoInfer<Row>[],
+  rows: readonly ExternalSourceRow<NoInfer<Row>>[],
 ): PackEntry;
 export function packRows<Row, F, S extends string, Cn>(
   collection: ExternalWindowCollection<Row, F, S, Cn>,
-  rows: readonly NoInfer<Row>[],
+  rows: readonly ExternalSourceRow<NoInfer<Row>>[],
 ): PackEntry;
 export function packRows(
   collection: object,
@@ -308,7 +331,7 @@ export type PackWindowOptions<Cn> = [Cn] extends [null]
 export function packWindow<Row, F, S extends string, Cn>(
   collection: ExternalWindowCollection<Row, F, S, Cn>,
   query: Omit<LiveQuery<NoInfer<F>, NoInfer<S>>, "columns">,
-  rows: readonly NoInfer<Row>[],
+  rows: readonly ExternalSourceRow<NoInfer<Row>>[],
   opts?: PackWindowOptions<Cn>,
 ): PackEntry {
   const decl = collection as unknown as AnyCollection;
@@ -384,7 +407,8 @@ function numberKeyText(n: number): string {
  * The exact text a sortable field's value sorts by — the `keyText` the pack
  * hands `serveCollection` for every sortable field, so its code-point order
  * is the value's order: text as is, an instant's ISO string, a number's
- * order-preserving bits, a boolean's name (`false` < `true`), NULL as NULL.
+ * order-preserving bits, a boolean's name (`false` < `true`), a value object
+ * by its text wire form (`toJSON()`, a `Rank`'s key), NULL as NULL.
  * Anything else has no order text: a `DemoPackError`.
  */
 function keyTextOf(
@@ -402,6 +426,10 @@ function keyTextOf(
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
     return value.toISOString();
   }
+  // A value object whose wire form is text (a `Rank`: its fractional-index
+  // key) sorts by that text — the `::text` a table's `$key` is cut on.
+  const json = (value as { toJSON?: () => unknown }).toJSON?.();
+  if (typeof json === "string") return json;
   throw new DemoPackError(
     decl.key,
     tuple,
@@ -517,9 +545,17 @@ export function definePack(
   return thunk as unknown as DemoPack;
 }
 
-/** A demo: its pack, loaded on demand. (AppEmbed adds the app and route.) */
+/**
+ * A demo: the app it shows, the route it opens at, and its pack, loaded on
+ * demand. Declared by the app's owner (`apps/<app>/plugins/demo`), so nothing
+ * generic names a scenario.
+ */
 export interface DemoScenario {
   id: string;
+  /** The `Apps.App` id the demo renders (an `<AppEmbed app>`). */
+  app: string;
+  /** The app-relative route it opens at (`/c/<id>`). */
+  route: string;
   pack: () => Promise<{ default: DemoPack }>;
 }
 

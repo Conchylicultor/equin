@@ -479,6 +479,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Plugins:
     - **`agent-manager`** — Agent manager app shell and layout.
       - Plugins:
+        - **`demo`** — The Agent Manager's demo scenario (core: agentManagerDemo — the app, the route /c/conv-demo-dark-mode and its pack: a queue of agents and one conversation fixing a bug, every id carrying `demo`) and its exhibit, the app rendered in-process on that pack.
+          - Core:
+            - Uses:
+              - `conversations/conversation-view/jsonl-viewer.jsonlEvents`
+              - `conversations/conversations-view/queue.queueRanks`
+              - `conversations/model-provider.ConversationModelSchema`
+              - `framework/browser-server/demo.definePack`
+              - `framework/browser-server/demo.packAll`
+              - `framework/browser-server/demo.packRows`
+              - `framework/browser-server/demo.packValue`
+              - `framework/browser-server/demo.packWindow`
+              - `primitives/rank.Rank`
+              - `tasks/attempt-work.attemptWork`
+              - `tasks/task-source-url.attemptSourceUrl`
+              - `tasks/tasks-core.attemptRows`
+              - `tasks/tasks-core.attemptWorkspaces`
+              - `tasks/tasks-core.conversationsActive`
+              - `tasks/tasks-core.conversationsById`
+              - `tasks/tasks-core.conversationsGone`
+              - `tasks/tasks-core.conversationsSystem`
+              - `tasks/tasks-core.pushRows`
+              - `tasks/tasks-core.taskRows`
+            - Exports (values):
+              - `agentManagerDemo`
+              - `DEMO_CONVERSATION_ID`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/shape --spacing`
         - **`pages-nav`** — Pages entry point in the agent manager: a conversation-toolbar toggle that opens the Pages tree as a column beside the conversation.
           - Web:
             - Contributes: `Conversation.ActionBar` → `PagesTreeButton`
@@ -1560,6 +1587,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/events-test`
               - `plugin-meta/exhibits`
               - `shell/notifications`
+    - **`demo`** — Demo — a temporary sandbox app hosting the in-app demo (the Agent Manager on made-up data) while it is prototyped, before it ships on the website.
+      - Plugins:
+        - **`shell`** — App shell for the Demo sandbox: registers the /demo app entry, whose one page is the Agent Manager rendered in-process on made-up data (DemoScope + AppEmbed over the agent manager's demo scenario).
+          - Web:
+            - Contributes: `Apps.App` "Demo" → `DemoLayout`
+            - Uses:
+              - `apps-core.Apps`
+              - `apps-core/app-embed.AppEmbed`
+              - `framework/browser-server/demo/scope.DemoScope`
+              - `layouts/miller.PaneOverlayHost`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+          - Core:
+            - Uses: `primitives/pane.defineApp`
+            - Exports (values): `demoApp`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --background`
+              - `ui/tokens/density --space-lg`
+              - `ui/tokens/shape --radius`
+              - `ui/tokens/shape --spacing`
     - **`deploy`** — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
       - Server:
         - Contributes: `taskCategory` "deploy"
@@ -9488,8 +9536,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Apps.TabBar`
       - `Apps.TabBarActions`
       - `Apps.Overlay`
-    - Slot contributors: 21 contributors — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
-      - `Apps.App` ×16
+    - Slot contributors: 22 contributors — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+      - `Apps.App` ×17
       - `Apps.Overlay` ← `apps-core.app-launcher`
       - `Apps.RailFraming` ← `apps-core.app-rail-framing`
       - `Apps.Surface` ← `apps-core.surface`
@@ -9523,9 +9571,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useHomeApp`
       - `usePathname`
   - Cross-plugin:
-    - Imported by: 40 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
-      - `apps` ×20
-      - `apps-core` ×11
+    - Imported by: 42 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+      - `apps` ×21
+      - `apps-core` ×12
       - `ui` ×5
       - `config_v2` ×2
       - `shell/global-action-bar`
@@ -9543,6 +9591,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Web: `@plugins/apps-core/web/testing`
       - `getFocusedAppId`
   - Plugins:
+    - **`app-embed`** — <AppEmbed app route onLeave? />: one app surface rendered in-process — the SurfaceCore a tab mounts — with its own non-live pane store (seeded with route, never touching the page URL), its app theme scope (transform-gpu, so a fixed sidebar stays in the embed) and an AppNavBoundary: same-app URLs move the embed's route, any other app is onLeave (default: a toast). Knows nothing about demos or where data comes from.
+      - Web:
+        - Uses:
+          - `apps-core.Apps`
+          - `apps-core/tab-surface.SurfaceCore`
+          - `apps-core/tabs.appPathFor`
+          - `primitives/css/theme-boundary.Theme`
+          - `primitives/css/ui-kit.appThemeScope`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/error-boundary.PluginErrorBoundary`
+          - `primitives/pane.AppNavBoundary`
+          - `primitives/pane.AppNavigator`
+          - `primitives/pane.createPaneStore`
+          - `primitives/pane.stripBasePath`
+          - `shell/toast.showToast`
+        - Exports (types): `AppEmbedLeave`
+        - Exports (values): `AppEmbed`
+      - Cross-plugin:
+        - Imported by: `apps/demo/shell`
     - **`app-icon`** — Canonical, serializable app-icon descriptor (a Material Symbols glyph now, image variant later), drawn by the icons primitive.
       - Web:
         - Uses:
@@ -9595,7 +9662,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/embed.isChromelessDocument`
           - `primitives/link-gesture.linkProps`
           - `primitives/overlay/hover-popover.HoverPopover`
-          - `primitives/pane.currentRoutePath`
+          - `primitives/pane.usePaneStore`
           - `ui/icons.Icon`
         - Exports (types): `AppRow`
         - Exports (values):
@@ -10059,6 +10126,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.appThemeScope`
           - `primitives/overlay/surface-overlay.SurfaceOverlayHost`
           - `primitives/pane.PaneBasePathContext`
+          - `primitives/pane.PaneStore`
           - `primitives/pane.PaneSurfaceProvider`
           - `primitives/pane.useIndexMatch`
           - `primitives/pane.usePaneTitle`
@@ -10071,16 +10139,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/undo-redo.useUndoRedoShortcuts`
         - Exports (values):
           - `AppTabsBody`
+          - `SurfaceCore`
           - `TabSurface`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
+          - `apps-core/app-embed`
           - `apps-core/layout`
           - `apps-core/surface`
     - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, and the surface-written placement-capabilities registry.
       - Web:
-        - Uses: 38 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `primitives/pane` ×16
+        - Uses: 39 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `primitives/pane` ×17
           - `primitives/scope/app-instance` ×7
           - `apps-core` ×6
           - `primitives/embed` ×3
@@ -10110,14 +10180,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `setSurfaceMode`
           - `TabsProvider`
           - `useActivateApp`
+          - `useAppLink`
+          - `useAppLinkProps`
           - `useDefaultPlacement`
+          - `useNavigate`
           - `usePlacementCapabilities`
           - `useSurfaceFocused`
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 32 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `apps-core` ×9
+        - Imported by: 33 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `apps-core` ×10
           - `apps` ×7
           - `debug` ×7
           - `primitives` ×2
@@ -12215,6 +12288,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `agentSidePane.Actions` ← `conversations.agents`
           - `agentSidePane.Actions` ← `primitives.pane`
         - Contributes:
+          - `Demo.Resource` "agents"
           - `IdKinds.Kind` "agent"
           - `IdKinds.Kind` "launch"
           - `Pane.Register` "agent-detail"
@@ -12226,7 +12300,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Item.Avatar` → `AgentAvatarRow`
           - `conversationPane.Actions` "agent-avatar" → `AgentAvatarTitlePrefix`
           - `Agents.AgentActions` "delete" → `DeleteAgentAction`
-        - Uses: 57 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
+        - Uses: 58 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
           - `primitives/pane` ×8
           - `primitives/avatar` ×4
           - `primitives/collapsible` ×4
@@ -12242,6 +12316,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/model-provider.ModelSelect`
           - `conversations.useConversationById`
           - `fields/avatar/table.avatarFieldDef`
+          - `framework/browser-server/demo.demoResource`
           - `ids.IdKinds`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/app-shell.opensPane`
@@ -12565,6 +12640,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`conversation-preprompt`** — Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Sidebar rows show the preprompt's icon (resolved live from the library, with a default-glyph fallback). Snapshots the launching task's selected preprompt (id + title + text) onto each newly created conversation, surfaced as a chip in the conversation header.
       - Web:
         - Contributes:
+          - `Demo.Resource` "conversation-preprompts"
           - `conversationPane.Actions` "preprompt" → `PrepromptChip`
           - `Item.Chips` → `PrepromptListIcon`
         - Uses:
@@ -12574,6 +12650,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/preprompts.PrepromptGlyph`
           - `conversations/preprompts.prepromptsConfig`
           - `conversations/preprompts.usePreprompt`
+          - `framework/browser-server/demo.demoResource`
           - `network/live.LiveRowResult`
           - `network/live.useLiveRow`
           - `primitives/css/badge.Badge`
@@ -12625,12 +12702,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`conversation-progress`** — 4-step progress bar (started → designed → implemented → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
       - Web:
         - Contributes:
+          - `Demo.Resource` "conversation-progress"
           - `conversationPane.Actions` "progress" → `ProgressBarToolbar`
           - `Item.Chips` → `ProgressBarRow`
         - Uses:
           - `conversations.useConversationById`
           - `conversations/conversation-ui/item.Item`
           - `conversations/conversation-view.conversationPane`
+          - `framework/browser-server/demo.demoResource`
           - `network/live.LiveRowResult`
           - `network/live.useLiveRow`
           - `primitives/css/inline.Inline`
@@ -12896,9 +12975,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/attempt-view`
         - **`allow-monitor`** — Flags when an agent has created a guard-bypass file (.allow-main, .allow-postgres, …) in its worktree.
           - Web:
-            - Contributes: `conversationPane.Actions` "allow-monitor" → `AllowMonitorChip`
+            - Contributes:
+              - `Demo.Resource` "allow-monitor"
+              - `conversationPane.Actions` "allow-monitor" → `AllowMonitorChip`
             - Uses:
               - `conversations/conversation-view.conversationPane`
+              - `framework/browser-server/demo.demoResource`
               - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/text.Text`
@@ -13076,6 +13158,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
+          - Web:
+            - Contributes: `Demo.Resource` "edited-files"
+            - Uses:
+              - `framework/browser-server/demo.demoResource`
+              - `network/live.useLive`
+            - Exports (values):
+              - `gitStatusBadge`
+              - `gitStatusDot`
+              - `useEditedFiles`
           - Server:
             - Contributes: `resource.declare` "edited-files"
             - Uses:
@@ -13093,12 +13184,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `editedFilesSignature`
               - `getEditedFiles`
             - Resources: `edited-files` (invalidate, notified)
-          - Web:
-            - Uses: `network/live.useLive`
-            - Exports (values):
-              - `gitStatusBadge`
-              - `gitStatusDot`
-              - `useEditedFiles`
           - Core:
             - Uses:
               - `network/live.liveValue`
@@ -13568,8 +13653,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×5
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 43 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Imported by: 44 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `conversations` ×42
+              - `apps/agent-manager/demo`
               - `tasks/outcome-report`
           - Exemptions:
             - Exempts itself from: `no-db-backed-notify` — `server/internal/jsonl-events-resource.ts` (debt)
@@ -14483,33 +14569,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/user-text`
                   - `conversations/conversation-view/rewind`
             - **`subagents`** — The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live transcript, drawn by the conversation's own TranscriptView. Discovers a conversation's sub-agents from the `subagents/` directory beside each of its anchored session transcripts, and serves two live resources: what every sub-agent is doing right now (one bounded tail read per change), and one sub-agent's own transcript, parsed by the same reader as the main conversation.
-              - Server:
-                - Contributes:
-                  - `resource.declare` "subagent-activity"
-                  - `resource.declare` "subagent-transcript"
-                - Uses:
-                  - `conversations/transcript-watcher.conversationChainTag`
-                  - `conversations/transcript-watcher.readChainLines`
-                  - `conversations/transcript-watcher.readJsonlEventsFromChain`
-                  - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
-                  - `conversations/transcript-watcher.transcriptChainSignature`
-                  - `conversations/transcript-watcher.watchPaths`
-                  - `infra/git/git-read-cache.createSignedMemo`
-                  - `network/live.serveValue`
-                - Exports (values):
-                  - `listSubagentEntries`
-                  - `subagentDirOf`
-                - Resources:
-                  - `subagent-activity` (push, notified)
-                  - `subagent-transcript` (push, notified)
               - Web:
-                - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/REFERENCE.md)
+                - Contributes: `Demo.Resource` "subagents"
+                - Uses: 25 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/REFERENCE.md)
                   - `primitives/live-state` ×4
                   - `primitives/relative-time` ×3
                   - `conversations/conversation-view/jsonl-viewer` ×2
                   - `primitives/css/spacing` ×2
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                   - `conversations.useConversationById`
+                  - `framework/browser-server/demo.demoResource`
                   - `network/live.useLive`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/fill.Fill`
@@ -14532,6 +14601,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `subagentStateDisplay`
                   - `useConversationSubagents`
                   - `useSubagentStatus`
+              - Server:
+                - Contributes:
+                  - `resource.declare` "subagent-activity"
+                  - `resource.declare` "subagent-transcript"
+                - Uses:
+                  - `conversations/transcript-watcher.conversationChainTag`
+                  - `conversations/transcript-watcher.readChainLines`
+                  - `conversations/transcript-watcher.readJsonlEventsFromChain`
+                  - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
+                  - `conversations/transcript-watcher.transcriptChainSignature`
+                  - `conversations/transcript-watcher.watchPaths`
+                  - `infra/git/git-read-cache.createSignedMemo`
+                  - `network/live.serveValue`
+                - Exports (values):
+                  - `listSubagentEntries`
+                  - `subagentDirOf`
+                - Resources:
+                  - `subagent-activity` (push, notified)
+                  - `subagent-transcript` (push, notified)
               - Core:
                 - Uses:
                   - `conversations.hasLiveProcess`
@@ -15453,10 +15541,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`notes`** — Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
           - Web:
             - Contributes:
+              - `Demo.Resource` "conversation-notes"
               - `Conversation.AbovePromptInput` → `NotesArea`
               - `Conversation.PromptBar` "Notes" → `NotesToggleButton`
             - Uses:
               - `conversations/conversation-view.Conversation`
+              - `framework/browser-server/demo.demoResource`
               - `infra/endpoints.fetchEndpoint`
               - `network/live.LiveRowResult`
               - `network/live.useLiveRow`
@@ -16003,11 +16093,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
           - Web:
             - Contributes:
+              - `Demo.Resource` "turn-summaries"
               - `Conversation.AbovePromptInput` → `TurnSummaryCard`
               - `ConfigV2.WebRegister` "config"
             - Uses:
               - `config_v2.ConfigV2`
               - `conversations/conversation-view.Conversation`
+              - `framework/browser-server/demo.demoResource`
               - `network/live.useLiveRow`
               - `primitives/collapsible.CollapsibleChevron`
               - `primitives/collapsible.FoldMotion`
@@ -16328,7 +16420,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `rerankQueue`
               - `stepDownQueue`
           - Cross-plugin:
-            - Imported by: `conversations/conversations-view/data-view/queue`
+            - Imported by:
+              - `apps/agent-manager/demo`
+              - `conversations/conversations-view/data-view/queue`
     - **`effort-provider`** — Registry mapping thinking-mode (effort) levels to Claude CLI delivery (--effort flag / --settings ultracode) and display metadata. Reusable EffortSelect picker.
       - Web:
         - Uses:
@@ -16436,6 +16530,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "config"
+          - `Demo.Resource` "model-provider"
           - `DynamicEnum.Options` "Default model"
           - `DynamicFlags.Options` "Models shown in the launch dropdown"
           - `Core.Root` → `ModelCorruptionReporter`
@@ -16445,6 +16540,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2.useSetConfig`
           - `fields/dynamic-enum/config.DynamicEnum`
           - `fields/dynamic-flags/config.DynamicFlags`
+          - `framework/browser-server/demo.Demo`
           - `network/live.useLive`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.Select`
@@ -16532,6 +16628,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/shape --spacing`
         - Imported by:
+          - `apps/agent-manager/demo`
           - `conversations`
           - `conversations/agents`
           - `conversations/all-conversations`
@@ -19211,6 +19308,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readSleepNow`
           - Plugins:
             - **`op-store`** — Op-store web presence: eagerly registers the boot-critical op-store.in-flight.all live collection so boot-snapshot can hydrate it before first paint. Op-log read model: every serving backend ingests the host-global op-log.jsonl (and its rotations) into its own op_log_ops table behind a durable (inode, offset) cursor committed with the rows, reconciles in-flight ops whose process is gone (main appends a reconciler terminal to the log; a worktree closes locally only after an ingest gap), and serves the rows as the opsInFlight and opsHistory live collections, with a 30-day retention sweep.
+              - Web:
+                - Contributes: `Demo.Resource` "op-store"
+                - Uses: `framework/browser-server/demo.demoResource`
               - Server:
                 - Contributes:
                   - `resource.declare` "op-store.history"
@@ -22522,11 +22622,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Demo.Route`
             - Slot contributors:
               - `Demo.Resource` ← `config_v2`
+              - `Demo.Resource` ← `conversations.agents`
+              - `Demo.Resource` ← `conversations.conversation-preprompt`
+              - `Demo.Resource` ← `conversations.conversation-progress`
+              - `Demo.Resource` ← `conversations.conversation-view.allow-monitor`
+              - `Demo.Resource` ← `conversations.conversation-view.code`
+              - `Demo.Resource` ← `conversations.conversation-view.jsonl-viewer.subagents`
+              - `Demo.Resource` ← `conversations.conversation-view.notes`
+              - `Demo.Resource` ← `conversations.conversation-view.turn-summary`
+              - `Demo.Resource` ← `conversations.model-provider`
+              - `Demo.Resource` ← `debug.profiling.op-log.op-store`
+              - `Demo.Resource` ← `infra.claude-cli.availability`
+              - `Demo.Resource` ← `infra.host.machine-sleep`
+              - `Demo.Resource` ← `plugin-meta.plugin-view`
+              - `Demo.Resource` ← `primitives.usage-rank`
+              - `Demo.Resource` ← `tasks.outcome-report`
+              - `Demo.Resource` ← `tasks.task-track`
               - `Demo.Route` ← `conversations.hibernation`
             - Exports (types): `DemoServe`
-            - Exports (values): `Demo`
+            - Exports (values):
+              - `Demo`
+              - `demoResource`
           - Core:
             - Uses:
+              - `network/live.LIVE_COLUMNS_KEY`
               - `packages/canonical-params.canonicalJson`
               - `packages/canonical-params.canonicalParams`
             - Exports (types):
@@ -22547,9 +22666,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `servePack`
           - Cross-plugin:
             - Imported by:
+              - `apps/agent-manager/demo`
               - `config_v2`
+              - `conversations/agents`
+              - `conversations/conversation-preprompt`
+              - `conversations/conversation-progress`
+              - `conversations/conversation-view/allow-monitor`
+              - `conversations/conversation-view/code`
+              - `conversations/conversation-view/jsonl-viewer/subagents`
+              - `conversations/conversation-view/notes`
+              - `conversations/conversation-view/turn-summary`
               - `conversations/hibernation`
+              - `conversations/model-provider`
+              - `debug/profiling/op-log/op-store`
               - `framework/browser-server/demo/scope`
+              - `infra/claude-cli/availability`
+              - `infra/host/machine-sleep`
+              - `plugin-meta/plugin-view`
+              - `primitives/usage-rank`
+              - `tasks/outcome-report`
+              - `tasks/task-track`
           - Test helpers:
             - Core: `@plugins/framework/plugins/browser-server/plugins/demo/core/testing`
               - `definePack` — Declare a pack — lazily: nothing is evaluated until `servePack` loads it, so `ago` is relative to load time, and a pack module costs nothing to import.
@@ -22568,6 +22704,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/networking.TransportProvider`
                   - `shell/toast.showToast`
                 - Exports (values): `DemoScope`
+              - Cross-plugin:
+                - Imported by: `apps/demo/shell`
               - Test helpers:
                 - Web: `@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web/testing`
                   - `DemoScope` — Renders `children` against a browser server of its own, built once the scenario's pack has loaded: the pack's recorded answers, every `Demo.Resource` contribution's serves and every `Demo.Route` handler.
@@ -24821,9 +24959,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`availability`** — Claude Code availability, shown: the health report's Claude Code row (critical while the CLI is missing or signed out, with the install / sign-in commands and Check again), useClaudeCodeLaunchBlock() for launch controls to disable themselves with the fix, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the user's Claude Code CLI is installed and signed in (`claude --version` + `claude auth status --json`, under the agent panes' host env), serves it as the claude-code-status push resource and POST /api/claude-code/recheck, and gives every launch path assertClaudeCodeReady() and requireClaudeBin() — so an agent that cannot run is refused up front with the fix, never started as `command not found`. onClaudeCodeProbed hands every fresh answer to work keyed off the installed CLI's version.
           - Web:
             - Contributes:
+              - `Demo.Resource` "claude-code-status"
               - `Core.Root` → `RecheckOnReturn`
               - `HealthReport.Row` "Claude Code" → `ClaudeCodeDetail`
             - Uses:
+              - `framework/browser-server/demo.demoResource`
               - `infra/endpoints.fetchEndpoint`
               - `network/live.useLive`
               - `primitives/icon-button.IconButton`
@@ -25997,18 +26137,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/attempt-work`
               - `tasks/tasks-core`
         - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. Serves the machine.sleep live value (this box's sleep clock: boot, cumulative asleepMs, last wake) and publishSleepReading(), which re-reads the clock and pushes only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own.
-          - Server:
-            - Contributes: `resource.declare` "machine.sleep"
-            - Uses: `network/live.serveValue`
-            - Exports (values): `publishSleepReading`
-            - Resources: `machine.sleep` (push, notified)
           - Web:
+            - Contributes: `Demo.Resource` "machine-sleep"
             - Uses:
+              - `framework/browser-server/demo.demoResource`
               - `network/live.useLive`
               - `primitives/live-state.foldResource`
             - Exports (values):
               - `useSleepNow`
               - `useSleepNowForFold`
+          - Server:
+            - Contributes: `resource.declare` "machine.sleep"
+            - Uses: `network/live.serveValue`
+            - Exports (values): `publishSleepReading`
+            - Resources: `machine.sleep` (push, notified)
           - Core:
             - Uses: `network/live.liveValue`
             - Exports (types): `SleepNow`
@@ -28051,6 +28193,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/agent-manager/shell`
           - `apps/debug/shell`
+          - `apps/demo/shell`
           - `apps/deploy/shell`
           - `apps/events/shell`
           - `apps/home/shell`
@@ -28440,6 +28583,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ExternalNotifiedValue`
           - `ExternalSilentPagedValue`
           - `ExternalSilentValue`
+          - `ExternalSourceRow`
           - `ExternalWindowCollection`
           - `FieldsFilterable`
           - `FieldsRow`
@@ -28579,7 +28723,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 234 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 235 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×68
           - `conversations` ×38
           - `tasks` ×27
@@ -28595,13 +28739,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review` ×3
           - `apps-core` ×2
           - `config_v2` ×2
+          - `framework` ×2
           - `history` ×2
           - `release` ×2
           - `search` ×2
           - `backup/runs-arm`
           - `database/query-deadline`
           - `fields/secret/config`
-          - `framework/browser-server`
           - `integrations/google-maps`
           - `reports`
           - `runs`
@@ -32864,10 +33008,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.source-path`
           - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.sub-plugins`
           - `pluginViewPane.Actions` ← `primitives.pane`
-        - Contributes: `Pane.Register` "plugin-view"
-        - Uses: 21 symbols — full list in [`plugins/plugin-meta/plugins/plugin-view/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-view/REFERENCE.md)
+        - Contributes:
+          - `Demo.Resource` "plugin-view"
+          - `Pane.Register` "plugin-view"
+        - Uses: 22 symbols — full list in [`plugins/plugin-meta/plugins/plugin-view/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-view/REFERENCE.md)
           - `primitives/collapsible` ×4
           - `primitives/pane` ×4
+          - `framework/browser-server/demo.demoResource`
           - `network/live.useLive`
           - `primitives/breadcrumb.Breadcrumb`
           - `primitives/css/badge.Badge`
@@ -34616,8 +34763,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 392 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×99
+            - Imported by: 393 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×100
               - `conversations` ×63
               - `primitives` ×50
               - `debug` ×34
@@ -34838,8 +34985,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 364 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×96
+            - Imported by: 365 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×97
               - `conversations` ×72
               - `primitives` ×40
               - `debug` ×33
@@ -34902,6 +35049,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/sidebar-palette --sidebar`
               - `ui/tokens/sidebar-palette --sidebar-accent`
             - Imported by:
+              - `apps-core/app-embed`
               - `apps-core/app-launcher`
               - `apps-core/app-rail`
               - `apps-core/surface`
@@ -35117,7 +35265,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 404 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 405 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×102
               - `apps` ×82
               - `conversations` ×53
@@ -35125,7 +35273,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug` ×22
               - `ui` ×22
               - `tasks` ×15
-              - `apps-core` ×13
+              - `apps-core` ×14
               - `fields` ×12
               - `plugin-meta` ×9
               - `build` ×5
@@ -36553,6 +36701,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --radius`
           - `ui/tokens/type-scale --font-weight-medium`
         - Imported by:
+          - `apps-core/app-embed`
           - `apps/prototypes/canvas`
           - `framework/web-core`
           - `layouts/full-pane`
@@ -38692,6 +38841,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SurfaceChrome`
           - `TypeMarker`
         - Exports (values):
+          - `AppNavBoundary`
           - `appNavSink`
           - `clearRoute`
           - `createPaneStore`
@@ -38729,6 +38879,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stripBasePath`
           - `SurfaceChromeContext`
           - `type`
+          - `useAppNavBoundary`
           - `useCurrentPane`
           - `useIndexMatch`
           - `useOpenPane`
@@ -38747,14 +38898,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --background`
           - `ui/tokens/density --chrome-pane-pad-end`
           - `ui/tokens/shape --spacing`
-        - Imported by: 170 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×60
+        - Imported by: 172 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×61
           - `conversations` ×29
           - `debug` ×25
           - `active-data` ×10
           - `tasks` ×9
+          - `apps-core` ×6
           - `plugin-meta` ×6
-          - `apps-core` ×5
           - `auth` ×4
           - `layouts` ×4
           - `primitives` ×3
@@ -38995,6 +39146,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withRank`
       - Cross-plugin:
         - Imported by:
+          - `apps/agent-manager/demo`
           - `apps/studio/explorer`
           - `conversations/agents`
           - `conversations/conversations-view/grouped`
@@ -40250,6 +40402,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/tags`
           - `primitives/text-editor`
     - **`usage-rank`** — Frecency usage ranking for any (namespace, key) set: recordUsage() fires one atomic decay-and-increment, useUsageOrder() returns the most-used-first order — one coalesced id-set subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort — and useRecentUsage() lists a namespace's most recently used keys (a bounded window), for a Recent row with no candidate set to rank. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a lookup-only live collection read by id set, and swept by a nightly 1-year retention job.
+      - Web:
+        - Contributes: `Demo.Resource` "usage-rank"
+        - Uses:
+          - `framework/browser-server/demo.demoResource`
+          - `infra/endpoints.fetchEndpoint`
+          - `network/live.useLive`
+          - `primitives/live-state.mapResource`
+          - `primitives/live-state.ResourceResult`
+          - `primitives/persistent-draft.readDraft`
+          - `primitives/persistent-draft.writeDraft`
+        - Exports (values):
+          - `recordUsage`
+          - `useRecentUsage`
+          - `useUsageOrder`
       - Server:
         - Contributes:
           - `resource.declare` "usage-stats"
@@ -40268,18 +40434,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `usage-stats:groups` (push)
           - `usage-stats:rows` (keyed, point)
         - Routes: `POST /api/usage-rank/record`
-      - Web:
-        - Uses:
-          - `infra/endpoints.fetchEndpoint`
-          - `network/live.useLive`
-          - `primitives/live-state.mapResource`
-          - `primitives/live-state.ResourceResult`
-          - `primitives/persistent-draft.readDraft`
-          - `primitives/persistent-draft.writeDraft`
-        - Exports (values):
-          - `recordUsage`
-          - `useRecentUsage`
-          - `useUsageOrder`
       - Core:
         - Uses:
           - `fields.fieldsToZodObject`
@@ -42215,25 +42369,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --popover`
           - `ui/tokens/color-palette --popover-foreground`
           - `ui/tokens/shape --radius`
-        - Imported by:
-          - `apps/chord/curriculum`
-          - `apps/chord/trainer`
-          - `apps/events/sources/refresh-all`
-          - `apps/file-explorer/browser`
-          - `apps/pages/page-tree`
-          - `apps/prototypes/canvas`
-          - `apps/sonata/sources/midi/file-preview`
+        - Imported by: 21 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
+          - `apps` ×7
+          - `conversations` ×2
+          - `page` ×2
+          - `primitives` ×2
+          - `apps-core/app-embed`
           - `build/serve-composition`
           - `config_v2/settings`
-          - `conversations/conversation-view`
-          - `conversations/conversation-view/pending-turn`
           - `debug/profiling/ops`
           - `framework/browser-server/demo/scope`
           - `infra/health`
-          - `page/editor`
-          - `page/url-paste`
-          - `primitives/data-view`
-          - `primitives/file-viewer`
           - `reports/optimistic-rejection`
           - `shell/notifications`
       - Core:
@@ -42841,6 +42987,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `standingOf`
       - Cross-plugin:
         - Imported by:
+          - `apps/agent-manager/demo`
           - `conversations/conversation-view/commits-graph`
           - `conversations/conversation-view/drop-and-exit`
           - `tasks/outcome-report`
@@ -43204,12 +43351,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`outcome-report`** — The outcome report an automated task's agent submitted: a card at the end of the transcript of the conversation that wrote it (scrolling with it, not pinned over it) (markdown body, pushed / branch-waiting / no-changes standing, and its question as one-click answers sent as the next turn), and OutcomeReportDetail — the same report read-only, shown in an expanded row of an automation's History (Automations.TaskDetail). Outcome reports for automated tasks: the submit_outcome_report MCP tool (visible only to conversations whose task an automation filed or launched) stores one report per task in tasks_ext_outcome_report — markdown body, the attempt's git-measured standing, an optional question with one-click answers — releases the task's automation slot, and rings the bell when a question waits. Serves the outcome-reports lookup collection.
       - Web:
         - Contributes:
+          - `Demo.Resource` "outcome-reports"
           - `JsonlViewer.TranscriptEnd` "outcome-report" → `OutcomeReportCard`
           - `Automations.TaskDetail` → `OutcomeReportDetail`
         - Uses:
           - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
           - `conversations/conversation-view/pending-turn.sendConversationTurn`
           - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
+          - `framework/browser-server/demo.demoResource`
           - `network/live.useLiveRow`
           - `primitives/css/badge.Badge`
           - `primitives/css/badge.BadgeVariant`
@@ -43973,6 +44122,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskSourceUrlShape`
       - Cross-plugin:
         - Imported by:
+          - `apps/agent-manager/demo`
           - `conversations/conversation-view/open-app`
           - `tasks`
     - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
@@ -44097,8 +44247,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks`
     - **`task-track`** — Per-task track (main | sidequest): the track badge, the clickable Track control the task detail header renders to switch it, and the exposed `track` field of every list whose rows reach a task (the task list, the conversation lists). Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (the whole set for the task list, point reads for one task), the endpoint that switches a task's track, the tasks.trackChanged trigger event every track write emits, and the track exposed to every list whose rows reach a task (LiveColumns.Expose).
       - Web:
-        - Contributes: `FieldPresentation.Register` "exposure:tasks_ext_track"
+        - Contributes:
+          - `Demo.Resource` "task-tracks"
+          - `FieldPresentation.Register` "exposure:tasks_ext_track"
         - Uses:
+          - `framework/browser-server/demo.demoResource`
           - `infra/endpoints.fetchEndpoint`
           - `network/live.FieldPresentation`
           - `network/live.mapRow`
@@ -44409,14 +44562,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 66 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 67 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×27
           - `tasks` ×16
           - `debug` ×6
           - `active-data` ×5
           - `page` ×3
+          - `apps` ×2
           - `stats` ×2
-          - `apps/sonata/transcription`
           - `backup/sources/transcripts`
           - `code-explorer`
           - `database/query`
@@ -45644,8 +45797,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 475 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
-              - `apps` ×100
+            - Tokens used by: 476 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×101
               - `conversations` ×86
               - `primitives` ×74
               - `debug` ×33
@@ -45703,9 +45856,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 312 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 313 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×65
-              - `apps` ×63
+              - `apps` ×64
               - `conversations` ×47
               - `debug` ×25
               - `page` ×20
@@ -45990,8 +46143,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 653 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `apps` ×134
+            - Tokens used by: 655 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+              - `apps` ×136
               - `primitives` ×123
               - `conversations` ×101
               - `page` ×46

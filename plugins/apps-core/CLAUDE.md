@@ -51,8 +51,8 @@ keeps reading the old location until then.
     - `Apps.TabBar`
     - `Apps.TabBarActions`
     - `Apps.Overlay`
-  - Slot contributors: 21 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Apps.App` ×16
+  - Slot contributors: 22 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Apps.App` ×17
     - `Apps.Overlay` ← `apps-core.app-launcher`
     - `Apps.RailFraming` ← `apps-core.app-rail-framing`
     - `Apps.Surface` ← `apps-core.surface`
@@ -86,9 +86,9 @@ keeps reading the old location until then.
     - `useHomeApp`
     - `usePathname`
 - Cross-plugin:
-  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×20
-    - `apps-core` ×11
+  - Imported by: 42 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×21
+    - `apps-core` ×12
     - `ui` ×5
     - `config_v2` ×2
     - `shell/global-action-bar`
@@ -106,6 +106,7 @@ keeps reading the old location until then.
   - Web: `@plugins/apps-core/web/testing`
     - `getFocusedAppId`
 - Sub-plugins:
+  - **`app-embed`** — <AppEmbed app route onLeave? />: one app surface rendered in-process — the SurfaceCore a tab mounts — with its own non-live pane store (seeded with route, never touching the page URL), its app theme…
   - **`app-icon`** — Canonical, serializable app-icon descriptor (a Material Symbols glyph now, image variant later), drawn by the icons primitive.
   - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of…
   - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.

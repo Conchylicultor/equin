@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-demo",
+  "description": "Demo — a temporary sandbox app hosting the in-app demo (the Agent Manager on made-up data) while it is prototyped, before it ships on the website.",
+  "private": true,
+  "version": "0.0.1"
+}

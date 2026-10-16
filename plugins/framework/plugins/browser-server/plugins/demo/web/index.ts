@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Demo } from "./slots";
 
-export { Demo } from "./slots";
+export { Demo, demoResource } from "./slots";
 export type { DemoServe } from "./slots";
 
 export default {

@@ -156,3 +156,30 @@ describe("background store ignores global navigation", () => {
     expect(background.getRoute()[0]!.params.id).toBe("bg");
   });
 });
+
+describe("a background store's pending path", () => {
+  it("resolves against the registry from its own path, never the page URL", () => {
+    const live = createPaneStore({ live: true });
+    setLiveStore(live);
+    live.restoreRoute([{ paneId: "iso-test", params: { id: "page" } }]);
+
+    // An in-process embed (or a background tab restored early) seeds a path
+    // of its own; the registry sync's `handleLocationChange` upgrades it.
+    const background = createPaneStore({ live: false });
+    background.seedPending("iso/seeded");
+    background.handleLocationChange();
+
+    expect(background.getRouteState().kind).toBe("resolved");
+    expect(background.getRoute()[0]!.params.id).toBe("seeded");
+  });
+
+  it("stays pending while no registered pane matches it", () => {
+    const background = createPaneStore({ live: false });
+    background.seedPending("nowhere/x");
+    background.handleLocationChange();
+    expect(background.getRouteState()).toEqual({
+      kind: "unresolved",
+      rawPath: "nowhere/x",
+    });
+  });
+});

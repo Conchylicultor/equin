@@ -104,6 +104,8 @@ const pack = definePack(() => [
 
 const scenarioOf = (p: DemoPack, id = "test"): DemoScenario => ({
   id,
+  app: "test-app",
+  route: "/",
   pack: () => Promise.resolve({ default: p }),
 });
 
