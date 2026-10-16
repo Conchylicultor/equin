@@ -219,14 +219,19 @@ priority cannot be skipped or disagree:
    could each run one, and on 2026-10-14 two to four overlapped on a swapping
    host, each burning 718–2211 CPU-s on a 99.9 %-warm program (29–162 alone).
    Step 1 is the bound; this is the CPU accounting.
-3. **The lane's scheduling tier.** `background` → `taskpolicy -b`;
-   `interactive` → the holder's own tier, which `withHostGrant` lifted out of
-   darwinbg for the grant's lifetime (an agent session is darwinbg as a whole,
-   so without that a push's lock-holding worker ran on the E-cores). Never the
-   branch: a push checks the rebased agent branch and is interactive.
+3. **The foreground, as the slot's holder — in either lane.** The pool is
+   `holder: "foreground"`, and the worker is spawned through the held slot
+   (`slot.spawn`), which starts it out of darwinbg even from a darwinbg agent
+   session and has no spelling for demoting it. The lane picks only the slot
+   window (background's stays 1, so at most 2 foreground workers exist), never
+   the tier: a background holder used to run `taskpolicy -b` on the E-cores,
+   and the whole fleet waited out its stretched hold (slot wait median
+   13.5 min, p90 38 min on 2026-10-15). Never the branch: a push checks the
+   rebased agent branch and is interactive.
 
 Design and the simulation behind the sizes:
 `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`; the
+foreground holder: `research/2026-10-16-global-scarce-slot-holders-run-foreground.md`; the
 original fleet-thrash bound: `research/2026-07-09-global-type-check-worker-host-budget.md`.
 
 ## The program is skipped when it is unchanged
@@ -387,17 +392,17 @@ lines per run, and they are the instrument every claim about this check is made 
   files the worker lints, how many whole (every group stale, or a directive
   file) vs only some groups, and the groups with the most stale files. The
   instrument for "did that rule edit cost its group or the repo".
-- `type-check worker repo: cpu 186.6s (sys 12.0s), maxRSS 7.2 GB, slot wait 3.1s`
+- `type-check worker repo: cpu 186.6s (sys 12.0s), wall 95.2s, maxRSS 7.2 GB, slot wait 3.1s`
   — only when the worker RAN (a skipped run has no line, by construction). These
   are the numbers `TYPE_CHECK_WORKER_UNITS` is measured from, so a grep over many
   runs is how the weight gets re-derived. A large `sys` share is the host's
-  memory pressure, not this program's work; `slot wait` is what the
+  memory pressure, not this program's work; `wall` is the slot's hold time
+  (every queued worker waits it out); `slot wait` is what the
   `type-check-worker` cap cost this run.
-- `type-check worker repo: lane interactive, priority foreground` — when the
-  worker is about to run: the grant's lane and the tier it gets (`background
-  (taskpolicy -b)`, `background (inherited)` from a darwinbg holder, or
-  `foreground`), read from this process itself. `interactive` with
-  `background (inherited)` means the holder failed to leave darwinbg — a bug.
+- `type-check worker repo: lane background, priority foreground (slot holder)` —
+  when the worker is about to run: the grant's lane (which slot window it
+  queued in) and its tier — always the foreground as the slot's holder, or
+  `unknown (<reason>)` on a host with no darwinbg tier.
 - `type-check: warm base repo: …` — every run, saying which incremental base it
   started from and how much of it still matches: `seeded 6701/6858 from pool
   <entry>` (cold worktree, took a pooled base), `pool <entry> matched 6701/6858

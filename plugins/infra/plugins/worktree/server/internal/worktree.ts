@@ -390,7 +390,7 @@ async function discardPartialCheckout(
   const pruned = await spawnCaptured(
     [GIT, "-C", repoRoot, "worktree", "prune"],
     {
-      background: true,
+      tier: "background",
       timeoutMs: PRUNE_TIMEOUT_MS,
     },
   );
@@ -416,11 +416,11 @@ export async function addCheckout(
   signal?: AbortSignal,
 ): Promise<void> {
   const argv = [...checkoutGit(repoRoot), "worktree", "add", ...rest];
-  // Demoted (`background: true` applies backgroundArgv/darwinbg): a checkout
+  // Demoted (`tier: "background"` applies backgroundArgv/darwinbg): a checkout
   // runs in a deferred job — always background work relative to the
   // interactive backends.
   const r = await spawnCaptured(argv, {
-    background: true,
+    tier: "background",
     timeoutMs: ADD_TIMEOUT_MS,
     signal,
   });
@@ -498,7 +498,7 @@ async function switchToAttemptBranch(
     ? [...sw, branch]
     : [...sw, "-c", branch, "main"];
   const r = await spawnCaptured(argv, {
-    background: true,
+    tier: "background",
     timeoutMs: ADD_TIMEOUT_MS,
     signal,
   });
@@ -559,7 +559,7 @@ async function claimSpare(
     if (unlocked.exitCode !== 0) continue;
     const moveArgv = [GIT, "-C", repoRoot, "worktree", "move", spare, wtPath];
     const moved = await spawnCaptured(moveArgv, {
-      background: true,
+      tier: "background",
       timeoutMs: MOVE_TIMEOUT_MS,
       signal,
     });
@@ -808,7 +808,7 @@ export async function removeWorktree(
       const pruned = await spawnCaptured(
         [GIT, "-C", repoRoot, "worktree", "prune"],
         {
-          background: true,
+          tier: "background",
           timeoutMs: PRUNE_TIMEOUT_MS,
         },
       );
@@ -826,7 +826,7 @@ export async function removeWorktree(
     // a lock, and `git worktree unlock` on one fails with "is not a working
     // tree" — a confusing warning for a state that cannot be locked.
     await unlockWorktreeForRemoval(repoRoot, wtPath, signal);
-    // Demoted (`background: true` applies backgroundArgv/darwinbg): removal is
+    // Demoted (`tier: "background"` applies backgroundArgv/darwinbg): removal is
     // cleanup/reap work, never interactive.
     //
     // This is the site of the 2026-08-17 outage: it holds a host-wide
@@ -836,7 +836,7 @@ export async function removeWorktree(
     // that a wedged hourly reap frees the flock within its own tick.
     const r = await spawnCaptured(
       [GIT, "-C", repoRoot, "worktree", "remove", wtPath, "--force"],
-      { background: true, timeoutMs: REMOVE_TIMEOUT_MS, signal },
+      { tier: "background", timeoutMs: REMOVE_TIMEOUT_MS, signal },
     );
     if (r.timedOut) {
       throw new WorktreeGitTimeoutError({

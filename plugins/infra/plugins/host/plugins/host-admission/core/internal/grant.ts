@@ -28,8 +28,8 @@ export interface Grant {
    * The lane the holder was admitted in — `interactive` (a human is blocked:
    * main build, push) or `background` (agent build, agent check). It is the ONE
    * classification a holder's children read for everything lane-shaped:
-   * which slots it may take, and which scheduling tier its heavy children run
-   * in. A child never re-derives it from the branch — a push checks an agent
+   * which slots it may take, and (through `withHostGrant`'s interactive lift)
+   * which scheduling tier the holder's process runs in. A child never re-derives it from the branch — a push checks an agent
    * branch yet is interactive, which is exactly what a branch gate gets wrong.
    */
   readonly lane: Lane;

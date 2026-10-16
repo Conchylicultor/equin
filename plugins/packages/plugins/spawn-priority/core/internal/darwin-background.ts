@@ -80,6 +80,10 @@ function setDarwinBg(lib: Lib, background: boolean): void {
  * the isolation this plugin exists for. Today its one caller is the
  * interactive lane of host-admission's `withHostGrant` — a human is blocked on
  * that holder, and the lane is bounded (one push at a time, the reserved floor).
+ *
+ * It lifts the WHOLE process for as long as `fn` runs, so anything else this
+ * process does meanwhile is lifted too. To start one child in the foreground
+ * without that, use `spawnInForeground`.
  */
 export async function withForegroundPriority<T>(
   fn: () => Promise<T>,
@@ -98,4 +102,61 @@ export async function withForegroundPriority<T>(
     setDarwinBg(symbols, true);
     close();
   }
+}
+
+/**
+ * Run ONE synchronous spawn call with this process out of darwinbg, and put it
+ * back before returning. darwinbg is inherited AT SPAWN, so the child (and its
+ * whole subtree) starts in the foreground and stays there, while this process
+ * is darwinbg again before any other callback of its event loop runs.
+ *
+ * That is the difference from `withForegroundPriority`, which lifts the whole
+ * process for an async body: in a process running many things at once (the
+ * check runner runs every check concurrently), that lift would leak to all of
+ * them for as long as the body runs. Here the lifted window is one synchronous
+ * call — `Bun.spawn` forks before it returns — so nothing else on this thread
+ * can run inside it. (A Bun worker thread spawning in that same microsecond
+ * window would be lifted too; nothing here spawns from worker threads.)
+ *
+ * `spawn` MUST be synchronous. A promise would mean the lift had already been
+ * undone before the async part ran, so whatever it spawned started demoted —
+ * the exact failure this exists to remove — and the call throws instead of
+ * returning it. The type rejects a promise-returning callback up front.
+ *
+ * Who may call it is the caller's contract, as for `withForegroundPriority`:
+ * its caller is a holder of a scarce host-pool slot (host-admission's
+ * `holder: "foreground"` pools), whose hold time everyone queued on the pool
+ * waits out — demoting that holder stretches every wait behind it. A process
+ * already in the foreground, or a host with no darwinbg tier, spawns untouched.
+ */
+export function spawnInForeground<T>(spawn: () => NotPromise<T>): T {
+  if (process.platform !== "darwin") return synchronous(spawn());
+  const { symbols, close } = libSystem();
+  try {
+    if (!isDarwinBg(symbols)) return synchronous(spawn());
+    setDarwinBg(symbols, false);
+    try {
+      return synchronous(spawn());
+    } finally {
+      setDarwinBg(symbols, true);
+    }
+  } finally {
+    close();
+  }
+}
+
+/** `T`, unless it is a promise — then nothing, so tsc rejects an async spawn. */
+export type NotPromise<T> = T extends PromiseLike<unknown> ? never : T;
+
+function synchronous<T>(value: T): T {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { then?: unknown }).then === "function"
+  ) {
+    throw new Error(
+      "spawnInForeground: the spawn callback returned a promise. The lift is undone when the callback returns, so anything it spawns asynchronously starts in darwinbg — pass the synchronous spawn call itself.",
+    );
+  }
+  return value;
 }

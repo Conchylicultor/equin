@@ -25,15 +25,20 @@ render, two DB forks, one push — and claims no CPU and reserves no memory. So 
 entry in `HOST_POOLS` is `{ size }`; there is no cost to declare, and nothing a
 pool says can move any other pool's capacity:
 
-| pool | size | what the cap bounds |
-| --- | --- | --- |
-| `heavy-read` | `max(1, cpus/4)` = 4 | concurrent heavy git/fs reads across all backends |
-| `worktree-mutate` | `max(2, cpus/6)` = 3 | concurrent worktree checkout mutations |
-| `db-fork` | 2 | concurrent Postgres template forks |
-| `browser-fetch` | 2 | concurrent headless-Chromium page fetches |
-| `layout-geometry` | 1 | the geometry suite's Vite build + Chromium launch |
-| `push` | 1 | the global push mutex |
-| `type-check-worker` | 2 | live repo-program type-check workers (7–14 GB each); laned by its owner (`type-check/server`): background may hold 1 |
+| pool | size | holder | what the cap bounds |
+| --- | --- | --- | --- |
+| `heavy-read` | `max(1, cpus/4)` = 4 | inherit | concurrent heavy git/fs reads across all backends |
+| `worktree-mutate` | `max(2, cpus/6)` = 3 | inherit | concurrent worktree checkout mutations |
+| `db-fork` | 2 | inherit | concurrent Postgres template forks |
+| `browser-fetch` | 2 | inherit | concurrent headless-Chromium page fetches |
+| `layout-geometry` | 1 | inherit | the geometry suite's Vite build + Chromium launch |
+| `push` | 1 | foreground | the global push mutex |
+| `type-check-worker` | 2 | foreground | live repo-program type-check workers (7–14 GB each); laned by its owner (`type-check/server`): background may hold 1 |
+
+The `holder` column is declared at each `defineHostPool` call (see *A scarce
+slot's holder runs in the foreground* below), not in `HOST_POOLS`. The
+`inherit` pools are decided from their measured waits (op log `waits[]` by
+kind).
 
 `HOST_POOLS` is the single source both the pools and the `host-budget` check
 read, so their numbers can never drift. **Every key stays listed** even for a
@@ -123,7 +128,7 @@ that warning is for the next change, not for this one.
 
 ## `defineHostPool` (`server`)
 
-`defineHostPool({ id, size, laned? })` wraps `createHostSemaphore` and
+`defineHostPool({ id, size, holder, laned? })` wraps `createHostSemaphore` and
 returns a `HostPool` (`run` / `acquireShare` / `depth` / `slots`). It is a **registry**:
 one handle per id per process, so a repeat call for the same id — an occupant
 contending for the same physical slots — returns the one handle rather than
@@ -136,6 +141,33 @@ host-wide occupancy** — probed from the flock files across every backend, not
 this process's local held count. The ported pools deleted their hand-rolled
 `heldByThisProcess` counter and the false "host-wide occupancy is not cheaply
 readable" comment along with it.
+
+### A scarce slot's holder runs in the foreground
+
+**Invariant:** a process holding a slot of a pool others queue on does its held
+work in the foreground. Every waiter waits out the whole hold, and an agent
+session is darwinbg as a whole, so a demoted holder on the E-cores stretches
+every wait behind it — the push lock's normalize took 109 s instead of 13 s,
+and the background `type-check-worker` slot (a single-server queue) reached a
+median 13.5 min wait for a median 153 CPU-s job.
+
+So `holder: "foreground" | "inherit"` is **required** on every spec — tsc makes
+every pool decide — and `pool.run(fn)` hands `fn` the held `Slot`, whose
+`spawn(argv, opts)` (`spawnCaptured`) is the spawn the holder's work goes
+through:
+
+- `foreground` → a `ForegroundSlot`: `spawn` takes no `tier` and starts the
+  child at `tier: "foreground"` — `spawn-priority`'s `spawnInForeground`, a
+  lift of this process around the synchronous fork alone, so the child (and
+  its subtree) leaves darwinbg while nothing else this process runs is lifted.
+  A holder of a scarce slot has no spelling for spawning its work demoted.
+- `inherit` → an `InheritSlot`: `spawnCaptured` as the caller asks, the tier
+  left to the spawner — unchanged behaviour. The elastic `cpu` pool is
+  `inherit` by construction: it IS the fleet, and lifting it would lift every
+  agent (its interactive lane is lifted through `withHostGrant` instead).
+
+A repeat `defineHostPool` for an id must state the same holder (it throws
+otherwise). See `research/2026-10-16-global-scarce-slot-holders-run-foreground.md`.
 
 ### Where the slot files live
 
@@ -177,8 +209,8 @@ the returned `slots` in an in-process `createSemaphore(slots)`
   child (a type-check worker, tsc, vite, the Chromium suite) goes through it.
   `grant.run(fn, { units })` spends more than one — see *Weighted spend* below.
 - `grant.lane` — the lane it was admitted in. Children read lane-shaped
-  decisions off it (the type-check worker's slot lane and scheduling tier),
-  never off the branch.
+  decisions off it (the type-check worker's slot window), never off the
+  branch.
 - `grant.env()` — `{ SINGULARITY_HOST_GRANT, SINGULARITY_LANE }`, inherited by a
   subprocess child so its `inheritedGrant()` rebuilds the SAME budget and spends
   those units — acquiring NOTHING host-wide, because the parent holds the slots
@@ -219,7 +251,7 @@ spend it per child instead of acquiring again.
 
 ## The push mutex (`server`)
 
-`pushPool = defineHostPool({ id: "push", size: 1 })` is the global push
+`pushPool = defineHostPool({ id: "push", size: 1, holder: "foreground" })` is the global push
 serialization, folded onto the primitive: `size: 1` says at most one push runs
 host-wide, and that is all it says. The push takes an interactive CPU grant
 separately, as the first thing inside the mutex, and holds it for the whole
@@ -260,10 +292,14 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `packages/host-semaphore.HostShare`
     - `packages/spawn-priority.withForegroundPriority`
   - Exports (types):
+    - `ForegroundSlot`
     - `HostPool`
     - `HostPoolSpec`
+    - `InheritSlot`
+    - `PoolHolder`
     - `PoolOccupancy`
     - `RepoPushLock`
+    - `Slot`
   - Exports (values):
     - `cpuPool`
     - `defineHostPool`

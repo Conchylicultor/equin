@@ -1,3 +1,5 @@
+import type { SpawnTier } from "@plugins/packages/plugins/spawn-priority/core";
+
 // The shared shapes of the wedge-proof spawn primitive.
 //
 // `core/` here means RUNTIME-NEUTRAL NODE, not web-safe: the impls next door
@@ -73,8 +75,13 @@ export interface SpawnBaseOptions {
    * pull is the exact machinery this plugin exists to remove.
    */
   stdin?: string | Uint8Array;
-  /** Demote the child (and its whole subtree): argv := backgroundArgv(argv). */
-  background?: boolean;
+  /**
+   * The scheduling tier the child (and its whole subtree) starts in. Omitted =
+   * `inherit`. `background` demotes it (`taskpolicy -b`); `foreground` starts it
+   * out of darwinbg even from a darwinbg parent — for a scarce host-pool slot's
+   * holder, which reaches it through its pool's `Slot` rather than spelling it.
+   */
+  tier?: SpawnTier;
   /** Redirect stderr into the stdout fd (2>&1). `result.stderr` is then `""`. */
   mergeStderr?: boolean;
 }
@@ -199,7 +206,8 @@ export interface SpawnedChild {
 export interface SpawnPassthroughOptions {
   cwd?: string;
   env?: Record<string, string | undefined>;
-  background?: boolean;
+  /** The child's scheduling tier, as for `SpawnBaseOptions.tier`. */
+  tier?: SpawnTier;
   /**
    * The child's stdin. Defaults to `"ignore"`: the exec-shaped build/push steps
    * read no input, and an inherited stdin would let a child silently consume the

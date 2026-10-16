@@ -713,9 +713,10 @@ export async function fastValidationJobs(opts: {
     // the shared pool inflicts that on whoever picks it up next.
     //
     // Admitted exactly like the check's worker — the host-wide
-    // `type-check-worker` slot, then the measured grant weight, priority from
-    // the grant's lane — because `spawnTypeCheckWorker` is the one place a
-    // worker is admitted and takes the grant itself.
+    // `type-check-worker` slot in the grant's lane, then the measured grant
+    // weight, the worker in the foreground as the slot's holder — because
+    // `spawnTypeCheckWorker` is the one place a worker is admitted and takes
+    // the grant itself.
     const run = await spawnTypeCheckWorker({
       root,
       name: program.name,

@@ -76,7 +76,7 @@ export async function backupDatabase(
     ],
     {
       env: { ...process.env, ...libpqSubprocessEnv() },
-      background: true,
+      tier: "background",
       unbounded:
         "supervised backup child: nothing shorter than the dump itself bounds it",
     },

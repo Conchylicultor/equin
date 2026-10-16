@@ -362,10 +362,10 @@ test("spawnExpectOk propagates the abort reason, not SpawnFailedError", async ()
   expect(await rejection(promise)).toBe(reason);
 }, 15_000);
 
-test("background: true demotes without breaking the capture", async () => {
+test('tier: "background" demotes without breaking the capture', async () => {
   const result = await spawnCaptured(["echo", "demoted"], {
     ...BOUND,
-    background: true,
+    tier: "background",
   });
   expect(result.exitCode).toBe(0);
   expect(result.stdout).toBe("demoted\n");

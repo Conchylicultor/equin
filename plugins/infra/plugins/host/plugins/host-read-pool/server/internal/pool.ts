@@ -34,7 +34,12 @@ function localSize(): number {
 }
 
 const perWorktreeGate = createSemaphore(localSize());
-const pool = defineHostPool({ id: "heavy-read", size: heavyReadSize });
+const pool = defineHostPool({
+  id: "heavy-read",
+  size: heavyReadSize,
+  // `inherit`: decided from measured waits (op log `waits[]` by kind).
+  holder: "inherit",
+});
 
 // The host-gate occupancy gauge (`heavy-read-acquire`) is auto-registered by
 // `defineHostPool` with TRUE host-wide occupancy. Only the LOCAL per-worktree

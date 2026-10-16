@@ -26211,10 +26211,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/host-semaphore.HostShare`
               - `packages/spawn-priority.withForegroundPriority`
             - Exports (types):
+              - `ForegroundSlot`
               - `HostPool`
               - `HostPoolSpec`
+              - `InheritSlot`
+              - `PoolHolder`
               - `PoolOccupancy`
               - `RepoPushLock`
+              - `Slot`
             - Exports (values):
               - `cpuPool`
               - `defineHostPool`
@@ -27534,7 +27538,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses:
           - `packages/flock.holdParentLifeline`
-          - `packages/spawn-priority.backgroundArgv`
+          - `packages/spawn-priority.spawnAtTier`
         - Exports (types):
           - `ChildResourceUsage`
           - `SpawnBaseOptions`
@@ -29276,8 +29280,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createSmoothClockModel`
           - `SMOOTH_CLOCK_MAX_SLEW`
           - `SMOOTH_CLOCK_SNAP_SEC`
-    - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts, type-check workers) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
+    - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; spawnInForeground starts a scarce slot holder's child out of darwinbg; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
       - Cross-plugin:
+        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `conversations/runtime-tmux`
           - `infra/host/host-admission`
@@ -29291,9 +29296,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readDarwinBackground`
           - `withForegroundPriority`
       - Core:
+        - Exports (types):
+          - `DarwinBackground`
+          - `SpawnTier`
         - Exports (values):
           - `backgroundArgv`
           - `backgroundPrefix`
+          - `readDarwinBackground`
+          - `spawnAtTier`
+          - `spawnInForeground`
+          - `withForegroundPriority`
     - **`string-hash`** — Portable, non-cryptographic string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex) and hash64 (a 64-bit bigint).
       - Cross-plugin:
         - Imported by:
@@ -46314,7 +46326,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 656 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 657 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `apps` ×136
               - `primitives` ×123
               - `conversations` ×102
@@ -46327,7 +46339,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×17
               - `fields` ×16
               - `apps-core` ×13
-              - `packages` ×7
+              - `packages` ×8
               - `stats` ×6
               - `review` ×5
               - `active-data` ×4

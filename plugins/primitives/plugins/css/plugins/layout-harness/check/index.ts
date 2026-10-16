@@ -114,6 +114,8 @@ const SUITE_REL =
 const browserPool = defineHostPool({
   id: "layout-geometry",
   size: HOST_POOLS["layout-geometry"].size,
+  // `inherit`: decided from measured waits (op log `waits[]` by kind).
+  holder: "inherit",
 });
 
 function sha256(s: string): string {

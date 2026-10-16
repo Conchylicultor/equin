@@ -15,6 +15,15 @@ import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admissi
 // agent workers run one at a time. Simulated against the incident's load, the
 // cap plus foreground priority took mean push latency 119 → 9 min and made
 // background checks faster too (research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md).
+//
+// HOLDER FOREGROUND, in both lanes: the lane picks WHICH slot (the background
+// window stays 1, so at most 2 foreground workers exist host-wide), never the
+// tier. The background slot is a single-server queue every agent build waits
+// on; its holder used to run darwinbg (`taskpolicy -b`), on the E-cores, so each
+// hold was stretched while the fleet queued behind it — slot wait median
+// 13.5 min, p90 38 min on 2026-10-15 for a worker costing a median 153 CPU-s.
+// The worker is spawned through the slot, which starts it out of darwinbg
+// (research/2026-10-16-global-scarce-slot-holders-run-foreground.md).
 const { size } = HOST_POOLS["type-check-worker"];
 
 export const typeCheckWorkerPool = defineHostPool({
@@ -22,4 +31,5 @@ export const typeCheckWorkerPool = defineHostPool({
   size,
   laned: true,
   backgroundLimit: size - 1,
+  holder: "foreground",
 });

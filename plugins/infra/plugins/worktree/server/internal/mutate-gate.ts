@@ -31,7 +31,12 @@ const { size: mutateSize } = HOST_POOLS["worktree-mutate"];
 
 // The `worktree-mutate-acquire` occupancy gauge is auto-registered by
 // `defineHostPool` with TRUE host-wide occupancy.
-const gate = defineHostPool({ id: "worktree-mutate", size: mutateSize });
+const gate = defineHostPool({
+  id: "worktree-mutate",
+  size: mutateSize,
+  // `inherit`: decided from measured waits (op log `waits[]` by kind).
+  holder: "inherit",
+});
 
 // Wrap the heavy `git worktree add`/`remove` subprocess. The acquire-wait is charged
 // to the enclosing profiler entry (job/http) so a saturated gate stays attributable

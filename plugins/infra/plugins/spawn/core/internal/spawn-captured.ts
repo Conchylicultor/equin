@@ -9,7 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { holdParentLifeline } from "@plugins/packages/plugins/flock/core";
-import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/core";
+import { spawnAtTier } from "@plugins/packages/plugins/spawn-priority/core";
 import { childEnv } from "./child-env";
 import { trackLiveChild } from "./live-children";
 import { readResourceUsage } from "./resource-usage";
@@ -136,13 +136,17 @@ export async function spawnCaptured(
       }
       outFd = openSync(outPath, "w");
       errFd = opts.mergeStderr ? outFd : openSync(errPath, "w");
-      const child = Bun.spawn(opts.background ? backgroundArgv(argv) : argv, {
-        cwd: opts.cwd,
-        env: childEnv(opts.env, lifeline),
-        stdin: inFd ?? "ignore",
-        stdout: outFd,
-        stderr: errFd,
-      });
+      // The tier wraps exactly the synchronous `Bun.spawn` call: a
+      // `foreground` lift (`spawnInForeground`) lasts only as long as the fork.
+      const child = spawnAtTier(opts.tier ?? "inherit", argv, (tiered) =>
+        Bun.spawn(tiered, {
+          cwd: opts.cwd,
+          env: childEnv(opts.env, lifeline),
+          stdin: inFd ?? "ignore",
+          stdout: outFd,
+          stderr: errFd,
+        }),
+      );
       proc = child;
       untrack = trackLiveChild(child);
       // ONE escalation, shared by the deadline and the abort. The

@@ -2,6 +2,7 @@ import { test, expect } from "bun:test";
 import { dlopen } from "bun:ffi";
 import {
   readDarwinBackground,
+  spawnInForeground,
   withForegroundPriority,
 } from "./darwin-background";
 
@@ -85,3 +86,34 @@ test.skipIf(!isDarwin)(
     }
   },
 );
+
+test.skipIf(!isDarwin)(
+  "spawnInForeground starts the child in the foreground and leaves the parent darwinbg",
+  () => {
+    const before = readDarwinBackground();
+    setSelfDarwinBg(true);
+    const probe = `
+      const { dlopen } = require("bun:ffi");
+      const { symbols } = dlopen("libSystem.dylib", { getpriority: { args: ["i32", "u32"], returns: "i32" } });
+      process.stdout.write(String(symbols.getpriority(${PRIO_DARWIN_PROCESS}, 0)));
+    `;
+    // Bun.spawnSync: no stream to race (spawn-safety bans only async Bun.spawn).
+    const childState = () =>
+      Bun.spawnSync([process.execPath, "-e", probe]).stdout.toString();
+    try {
+      expect(childState()).toBe("1");
+      expect(spawnInForeground(childState)).toBe("0");
+      // Restored before the call returned: nothing else ran lifted.
+      expect(readDarwinBackground()).toEqual({ kind: "darwinbg" });
+    } finally {
+      setSelfDarwinBg(before.kind === "darwinbg");
+    }
+  },
+);
+
+test("spawnInForeground rejects an async spawn callback", () => {
+  expect(() =>
+    // @ts-expect-error — a promise-returning callback has no spelling.
+    spawnInForeground(async () => 1),
+  ).toThrow(/returned a promise/);
+});

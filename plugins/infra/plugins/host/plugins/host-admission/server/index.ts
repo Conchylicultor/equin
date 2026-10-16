@@ -2,6 +2,12 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 
 export { defineHostPool, hostOccupancy } from "./internal/pool";
 export type { HostPool, HostPoolSpec, PoolOccupancy } from "./internal/pool";
+export type {
+  ForegroundSlot,
+  InheritSlot,
+  PoolHolder,
+  Slot,
+} from "./internal/slot";
 export { cpuPool, withHostGrant, inheritedGrant } from "./internal/grant";
 export { pushPool, repoPushLock } from "./internal/push";
 export type { RepoPushLock } from "./internal/push";

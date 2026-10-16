@@ -101,7 +101,7 @@ export async function getGitHygiene(
           ],
           {
             timeoutMs: 30_000,
-            background: opts.background,
+            tier: opts.background ? "background" : "inherit",
           },
         );
         if (r.timedOut || r.exitCode !== 0) return HYGIENE_UNKNOWN;

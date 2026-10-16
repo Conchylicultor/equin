@@ -6,16 +6,16 @@
  * once (`../../shared/worker.ts`) and cannot drift apart.
  *
  * It is also the one place a worker is ADMITTED, so neither producer can spawn
- * one outside the bound: a host-wide `type-check-worker` slot, then the
- * holder's grant units, and the scheduling tier, all read off the caller's
- * `Grant`. See ./worker-pool.ts.
+ * one outside the bound: a host-wide `type-check-worker` slot in the caller's
+ * `Grant` lane, then the holder's grant units. The worker is spawned through
+ * that slot, so it runs in the foreground. See ./worker-pool.ts.
  */
 import { writeFileSync } from "fs";
 import os from "os";
 import { join } from "path";
 import { fileURLToPath } from "url";
 import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
-import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import type { ForegroundSlot } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import {
   TYPE_CHECK_WORKER_UNITS,
   type TypeCheckWorkerJob,
@@ -50,6 +50,12 @@ export interface TypeCheckWorkerRun {
    * the host, not checking more code.
    */
   cpuSystemMicros: number | undefined;
+  /**
+   * Wall time of the worker process, spawn to reap — the slot's HOLD time
+   * (every holder queued behind this one waits it out), read beside
+   * `cpuTimeMicros` so a hold stretched by the host shows as wall ≫ cpu.
+   */
+  wallMs: number;
   /** How long the worker queued for its host-wide `type-check-worker` slot. */
   slotWaitMs: number;
 }
@@ -66,11 +72,11 @@ export interface TypeCheckWorkerRun {
  *    holds none of its holder's units, which the holder's other children use;
  * 2. `TYPE_CHECK_WORKER_UNITS` of the holder's grant — the CPU share.
  *
- * The scheduling tier is the lane's: a `background` holder's worker is
- * demoted (`taskpolicy -b`); an `interactive` one runs in whatever tier its
- * holder is in, which `withHostGrant` has already lifted to the foreground.
- * Nothing here reads the branch — a push checks an agent branch and is
- * interactive.
+ * The lane picks only the slot window. The scheduling tier is the pool's:
+ * the worker is spawned through the held slot (`holder: "foreground"`), so it
+ * starts out of darwinbg in either lane — even from a darwinbg agent session —
+ * and nothing here can spawn it demoted. Nothing here reads the branch — a push
+ * checks an agent branch and is interactive.
  */
 export async function spawnTypeCheckWorker(opts: {
   root: string;
@@ -83,7 +89,7 @@ export async function spawnTypeCheckWorker(opts: {
   const { root, name, tsconfigPath, buildInfoPath, lintFiles, grant } = opts;
   const queuedAt = performance.now();
   return typeCheckWorkerPool.run(
-    () => {
+    (slot) => {
       const slotWaitMs = performance.now() - queuedAt;
       return grant.run(
         async () => ({
@@ -91,7 +97,7 @@ export async function spawnTypeCheckWorker(opts: {
             root,
             name,
             job: { root, name, tsconfigPath, buildInfoPath, lintFiles },
-            background: grant.lane === "background",
+            slot,
           })),
           slotWaitMs,
         }),
@@ -106,14 +112,14 @@ async function spawnWorker(opts: {
   root: string;
   name: string;
   job: TypeCheckWorkerJob;
-  background: boolean;
+  slot: ForegroundSlot;
 }): Promise<Omit<TypeCheckWorkerRun, "slotWaitMs">> {
-  const { root, name, job, background } = opts;
+  const { root, name, job, slot } = opts;
   const jobPath = join(os.tmpdir(), `type-check-${name}-${process.pid}.json`);
   writeFileSync(jobPath, JSON.stringify(job));
-  const spawned = await spawnCaptured([process.execPath, WORKER, jobPath], {
+  const startedAt = performance.now();
+  const spawned = await slot.spawn([process.execPath, WORKER, jobPath], {
     cwd: root,
-    background,
     // A type-check worker builds a whole TypeScript program; cold, that is
     // minutes of unavoidable CPU, and on a saturated box it is longer still by
     // an amount nothing here can predict. There is no shorter deadline to
@@ -123,6 +129,7 @@ async function spawnWorker(opts: {
     unbounded:
       "a cold type-check worker legitimately runs for minutes of TS program construction, and the CLI run it belongs to owns no shorter deadline",
   });
+  const wallMs = performance.now() - startedAt;
   if (spawned.exitCode !== 0) {
     throw new Error(
       `type-check worker for "${name}" exited ${spawned.exitCode}:\n${spawned.stderr.trim() || spawned.stdout.trim()}`,
@@ -135,5 +142,6 @@ async function spawnWorker(opts: {
     maxRssBytes: spawned.resourceUsage.maxRssBytes,
     cpuTimeMicros: spawned.resourceUsage.cpuTimeMicros,
     cpuSystemMicros: spawned.resourceUsage.cpuSystemMicros,
+    wallMs,
   };
 }

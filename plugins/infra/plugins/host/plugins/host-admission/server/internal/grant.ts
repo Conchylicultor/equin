@@ -27,6 +27,9 @@ export const cpuPool = defineHostPool({
   size: cpuBudget().B,
   laned: true,
   backgroundLimit: cpuBudget().backgroundLimit,
+  // The elastic fleet itself: lifting its holders would lift every agent. Its
+  // interactive lane is lifted per holder by `withHostGrant` instead.
+  holder: "inherit",
 });
 
 // Build a grant over a fixed unit count, backed by an in-process semaphore. Used

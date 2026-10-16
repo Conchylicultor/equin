@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { holdParentLifeline } from "@plugins/packages/plugins/flock/core";
-import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/core";
+import { spawnAtTier } from "@plugins/packages/plugins/spawn-priority/core";
 import { childEnv } from "./child-env";
 import { trackLiveChild } from "./live-children";
 import { readResourceUsage } from "./resource-usage";
@@ -29,13 +29,15 @@ export async function spawnPassthrough(
   try {
     const lifeline = holdParentLifeline(dir);
     try {
-      const proc = Bun.spawn(opts.background ? backgroundArgv(argv) : argv, {
-        cwd: opts.cwd,
-        env: childEnv(opts.env, lifeline),
-        stdin: opts.stdin ?? "ignore",
-        stdout: "inherit",
-        stderr: "inherit",
-      });
+      const proc = spawnAtTier(opts.tier ?? "inherit", argv, (tiered) =>
+        Bun.spawn(tiered, {
+          cwd: opts.cwd,
+          env: childEnv(opts.env, lifeline),
+          stdin: opts.stdin ?? "ignore",
+          stdout: "inherit",
+          stderr: "inherit",
+        }),
+      );
       const untrack = trackLiveChild(proc);
       try {
         opts.onSpawn?.({ pid: proc.pid, kill: (signal) => proc.kill(signal) });

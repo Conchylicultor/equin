@@ -68,8 +68,12 @@ functions on purpose: they are meant to outlive any one call.
 - **`spawnCaptured(argv, opts) → Promise<SpawnResult>`** — capture-shaped
   spawn. `opts` is REQUIRED (see *A bound is mandatory* below): `cwd`, `env`
   (FULL replacement, same contract as `Bun.spawn`), `stdin` (whole
-  `string | Uint8Array` buffer, EOF at the end), `background` (argv :=
-  `backgroundArgv(argv)` from `spawn-priority/core`), `mergeStderr` (2>&1;
+  `string | Uint8Array` buffer, EOF at the end), `tier` (the child's
+  scheduling tier, `spawnAtTier` from `spawn-priority/core`: `background` =
+  argv := `backgroundArgv(argv)`, `foreground` = started out of darwinbg by a
+  lift around the synchronous `Bun.spawn` alone, omitted = `inherit`; a scarce
+  host-pool slot's holder gets `foreground` from its pool's `Slot`, see
+  `host-admission`), `mergeStderr` (2>&1;
   `result.stderr === ""`), plus exactly one bound — `timeoutMs`, `signal`, or
   the prose `unbounded`. The result's `exitCode` **≠ 0 is a
   legitimate result** — the caller branches. `stdout`/`stderr` are lazy cached
@@ -86,7 +90,7 @@ functions on purpose: they are meant to outlive any one call.
 - **`spawnExpectOk(argv, opts)`** — the same, but THROWS `SpawnFailedError`
   (carrying argv/exitCode/signalCode/stdout/stderr) on non-zero exit, so a
   failed command can never be read as empty success.
-- **`spawnPassthrough(argv, { cwd, env, background, stdin, onSpawn }?)`** —
+- **`spawnPassthrough(argv, { cwd, env, tier, stdin, onSpawn }?)`** —
   exec-shaped spawn: stdout/stderr `"inherit"`, stdin `"ignore"` unless
   `stdin: "inherit"` (only for a child that must be indistinguishable from the
   parent — the CLI's post-install re-exec). `onSpawn` exposes `{ pid, kill }`
@@ -226,7 +230,7 @@ presence only — **no re-exports**; import from `core/`.
 - Core:
   - Uses:
     - `packages/flock.holdParentLifeline`
-    - `packages/spawn-priority.backgroundArgv`
+    - `packages/spawn-priority.spawnAtTier`
   - Exports (types):
     - `ChildResourceUsage`
     - `SpawnBaseOptions`

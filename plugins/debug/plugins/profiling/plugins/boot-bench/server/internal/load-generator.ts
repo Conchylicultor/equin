@@ -56,7 +56,12 @@ export async function startHostGateLoad(
   // Per-id registry ⇒ this returns the live `heavy-read` handle (defined by
   // host-read-pool at load): the same physical slots, no second semaphore, no
   // duplicate gauge.
-  const sem = defineHostPool({ id: "heavy-read", size: slots });
+  // The holder tier must match host-read-pool's definition of the same id.
+  const sem = defineHostPool({
+    id: "heavy-read",
+    size: slots,
+    holder: "inherit",
+  });
 
   // Barrier: resolve once the gate is first fully held (saturated). Capped at the
   // slot count because no more than that many occupants can hold a slot at once.

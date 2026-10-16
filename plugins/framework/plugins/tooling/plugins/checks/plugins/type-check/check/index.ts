@@ -55,6 +55,7 @@ interface WorkerResult extends TypeCheckWorkerResult {
   maxRssBytes: number | undefined;
   cpuTimeMicros: number | undefined;
   cpuSystemMicros: number | undefined;
+  wallMs: number;
   slotWaitMs: number;
 }
 
@@ -77,40 +78,35 @@ async function runWorker(
     maxRssBytes: run.maxRssBytes,
     cpuTimeMicros: run.cpuTimeMicros,
     cpuSystemMicros: run.cpuSystemMicros,
+    wallMs: run.wallMs,
     slotWaitMs: run.slotWaitMs,
   };
 }
 
-// Which scheduling tier the worker ran in, and why — one greppable line beside
+// Which scheduling tier the worker runs in, and why — one greppable line beside
 // the cost line, e.g.
-// "type-check worker repo: lane interactive, priority background (inherited)".
+// "type-check worker repo: lane background, priority foreground (slot holder)".
 //
-// darwinbg reaches a worker two ways: its spawn's own `taskpolicy -b` (a
-// background-lane grant), or INHERITANCE — an agent session runs entirely
-// under darwinbg, so a worker spawned with no demotion at all is still on the
-// E-cores unless its holder left darwinbg (an interactive grant does). The
-// second is invisible from the spawn site, which is how a push's lock-holding
-// check ran demoted for months while every reading of the code said "push is
-// interactive" (research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md).
-// So this process's own state is read, not inferred from the lane.
+// The worker is spawned through its `type-check-worker` slot, a
+// `holder: "foreground"` pool, so it starts out of darwinbg whatever its lane
+// and whatever tier this process is in — an agent session runs entirely under
+// darwinbg, which the worker would otherwise inherit. The lane picks only the
+// slot window. A host with no darwinbg tier says so instead
+// (research/2026-10-16-global-scarce-slot-holders-run-foreground.md).
 function workerPriorityLine(
   label: string,
   lane: Lane,
   parent: DarwinBackground,
 ): string {
   const priority =
-    lane === "background"
-      ? "background (taskpolicy -b)"
-      : parent.kind === "darwinbg"
-        ? "background (inherited)"
-        : parent.kind === "foreground"
-          ? "foreground"
-          : `unknown (${parent.reason})`;
+    parent.kind === "unsupported"
+      ? `unknown (${parent.reason})`
+      : "foreground (slot holder)";
   return `${label}: lane ${lane}, priority ${priority}`;
 }
 
 // One greppable line for the worker, e.g.
-// "type-check worker repo: cpu 186.6s, maxRSS 7.2 GB".
+// "type-check worker repo: cpu 186.6s (sys 12.0s), wall 95.2s, maxRSS 7.2 GB, slot wait 3.1s".
 // THIS process is the class host-admission's `PER_UNIT_BYTES` (3.6e9) claims to
 // size — "one type-check-class worker's resident set" — and it had never
 // actually been observed; the budget's RAM quantum was calibrated on vite
@@ -130,12 +126,14 @@ function workerPriorityLine(
 // cost this worker has: the identical program build measured 105s at load 12.8
 // and 266s at load 14.0, so a wall-clock before/after on a shared box measures
 // the neighbours. Every claim about what this check costs — and the skip's
-// whole payoff — is read off these numbers.
+// whole payoff — is read off these numbers. Wall time rides beside them
+// anyway, as the slot's HOLD time: every worker queued for the slot waits it
+// out, so wall ≫ cpu is a hold stretched by the host, not more work.
 //
-// `null` when the runtime reported NEITHER measurement — an unavailable
-// reading, not a swallowed failure: the line is omitted and nothing else
-// changes. Either half alone still prints, so one missing number never hides
-// the other.
+// `null` when there is nothing to report — no worker ran, or the runtime
+// reported no rusage and no wall time was measured — an unavailable reading,
+// not a swallowed failure: the line is omitted and nothing else changes. Any
+// part alone still prints, so one missing number never hides the others.
 //
 // The system share rides in parentheses: memory pressure is charged there (page
 // faults, compressor decompressions), so it is what tells a worker that did
@@ -145,6 +143,7 @@ function workerCostLine(
   maxRssBytes: number | undefined,
   cpuTimeMicros: number | undefined,
   cpuSystemMicros: number | undefined,
+  wallMs: number | undefined,
   slotWaitMs: number | undefined,
 ): string | null {
   const parts: string[] = [];
@@ -152,6 +151,7 @@ function workerCostLine(
     parts.push(
       `cpu ${(cpuTimeMicros / 1e6).toFixed(1)}s${cpuSystemMicros != null ? ` (sys ${(cpuSystemMicros / 1e6).toFixed(1)}s)` : ""}`,
     );
+  if (wallMs != null) parts.push(`wall ${seconds(wallMs)}s`);
   if (maxRssBytes != null) {
     const gb = maxRssBytes / 1e9;
     parts.push(
@@ -273,8 +273,8 @@ const check: Check = {
         // `type-check-worker` slot in the grant's lane — the memory bound the
         // grant's clamped weight could not express — then
         // `TYPE_CHECK_WORKER_UNITS` of the CPU grant the invoking
-        // build/check/push already holds (`ctx.grant`), and the lane's
-        // scheduling tier.
+        // build/check/push already holds (`ctx.grant`). The worker runs in the
+        // foreground as the slot's holder, whatever the lane.
         try {
           result = await runWorker(root, program, lintFiles, ctx.grant);
         } catch (err) {
@@ -295,6 +295,7 @@ const check: Check = {
         result?.maxRssBytes,
         result?.cpuTimeMicros,
         result?.cpuSystemMicros,
+        result?.wallMs,
         result?.slotWaitMs,
       );
       if (costLine !== null) ctx.log?.(costLine, "stderr");

@@ -8,6 +8,7 @@ import {
 import { registerGateGauge } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { DataDir } from "@plugins/infra/plugins/paths/core";
 import { poolLockDir } from "../../data-dirs";
+import { slotFor, type PoolHolder, type Slot } from "./slot";
 
 // The one place a host pool comes into existence. `createHostSemaphore` is
 // imported HERE ONLY — the `host-pools-declared` check makes that the structural
@@ -56,8 +57,10 @@ function probeOccupancy(slots: DataDir, size: number): number {
 }
 
 /** A host-wide concurrency pool handle. */
-export interface HostPool {
+export interface HostPool<H extends PoolHolder = PoolHolder> {
   readonly id: string;
+  /** The tier its holder does its held work in (`HostPoolSpec.holder`). */
+  readonly holder: H;
   /** The size this process was BUILT for — the pool table's number, and the pool's registry identity. */
   readonly size: number;
   /**
@@ -76,6 +79,10 @@ export interface HostPool {
   /**
    * Run `fn` holding exactly one slot; release in a `finally`.
    *
+   * `fn` is handed the held `Slot`: its `spawn` is the spawn the holder's work
+   * goes through, at the pool's holder tier — for a `foreground` pool, out of
+   * darwinbg with no way to ask otherwise (see `HostPoolSpec.holder`).
+   *
    * `hooks.signal` is threaded straight through to the primitive: it cancels a
    * pending acquire, and an abort while `fn` is still running releases the slot
    * immediately rather than at settle. See `AcquireHooks.signal` — a job handler
@@ -83,7 +90,7 @@ export interface HostPool {
    * holding a HOST-WIDE flock, so an abort that cannot reach it leaves every other
    * backend on the box waiting on a handler nobody is waiting for any more.
    */
-  run<T>(fn: () => Promise<T>, hooks?: AcquireHooks): Promise<T>;
+  run<T>(fn: (slot: Slot<H>) => Promise<T>, hooks?: AcquireHooks): Promise<T>;
   /**
    * Acquire a whole share up front (`1 … min(max, size)` slots). `hooks.signal`
    * cancels the acquire only — the returned share's lifetime is the caller's.
@@ -94,7 +101,7 @@ export interface HostPool {
 }
 
 /** Declares a host pool: how many holders of its kind may run at once, host-wide. */
-export interface HostPoolSpec {
+export interface HostPoolSpec<H extends PoolHolder = PoolHolder> {
   /**
    * The pool's identity. It must have a lock directory declared for it in this
    * plugin's `data-dirs/index.ts` — which, since those are derived from
@@ -108,6 +115,20 @@ export interface HostPoolSpec {
    * the `layout-geometry` check does exactly that — is not paying twice.
    */
   size: number;
+  /**
+   * The tier the pool's HOLDER does its held work in — required, so every pool
+   * decides. The invariant: a holder of a slot others queue on does its held
+   * work in the foreground, because every waiter waits out the whole hold and a
+   * darwinbg holder runs on the E-cores. `foreground` makes `run`'s `Slot`
+   * spawn out of darwinbg (`spawn-priority`'s `spawnInForeground`, a lift around
+   * the fork alone — never the holder's whole process, which may be running
+   * other work at the same time). `inherit` leaves the tier to the spawner, as
+   * before: for a pool nobody measurably waits on, and for the elastic `cpu`
+   * pool, which IS the fleet (its interactive lane lifts through
+   * `withHostGrant` instead). See
+   * research/2026-10-16-global-scarce-slot-holders-run-foreground.md.
+   */
+  holder: H;
   /**
    * Reserved-floor partition (only the CPU pool, and only `cpu`, today). When
    * set, `backgroundLimit` MUST be supplied — the pool reserves its high
@@ -129,16 +150,18 @@ export interface HostPoolSpec {
 // gauge. A mismatching spec is a wiring bug — fail loudly.
 const registry = new Map<string, HostPool>();
 
-export function defineHostPool(spec: HostPoolSpec): HostPool {
+export function defineHostPool<H extends PoolHolder>(
+  spec: HostPoolSpec<H>,
+): HostPool<H> {
   const existing = registry.get(spec.id);
   if (existing) {
-    if (existing.size !== spec.size) {
+    if (existing.size !== spec.size || existing.holder !== spec.holder) {
       throw new Error(
         `defineHostPool(${spec.id}): already defined as size ${existing.size}, ` +
-          `re-defined as size ${spec.size}`,
+          `holder ${existing.holder}, re-defined as size ${spec.size}, holder ${spec.holder}`,
       );
     }
-    return existing;
+    return existing as HostPool<H>;
   }
 
   // A `laned` pool MUST carry an explicit `backgroundLimit` — omitting it would
@@ -187,12 +210,14 @@ export function defineHostPool(spec: HostPoolSpec): HostPool {
     max: sem.liveSize(),
   }));
 
-  const pool: HostPool = {
+  const slot = slotFor(spec.holder);
+  const pool: HostPool<H> = {
     id: spec.id,
+    holder: spec.holder,
     size: spec.size,
     liveSize: () => sem.liveSize(),
     slots,
-    run: (fn, hooks) => sem.run(fn, hooks),
+    run: (fn, hooks) => sem.run(() => fn(slot), hooks),
     acquireShare: (max, hooks) => sem.acquireShare(max, hooks),
     depth: () => sem.depth(),
   };

@@ -22,7 +22,12 @@ const { size: hostSize } = HOST_POOLS["browser-fetch"];
 // a render costs: launch + render + close saturates roughly a core.
 const perWorktreeGate = createSemaphore(1);
 
-const pool = defineHostPool({ id: "browser-fetch", size: hostSize });
+const pool = defineHostPool({
+  id: "browser-fetch",
+  size: hostSize,
+  // `inherit`: decided from measured waits (op log `waits[]` by kind).
+  holder: "inherit",
+});
 
 // The host-gate occupancy gauge (`browser-fetch-acquire`) is auto-registered by
 // `defineHostPool` with TRUE host-wide occupancy. Only the LOCAL per-worktree

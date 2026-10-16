@@ -294,7 +294,7 @@ async function addCheckout(
 ): Promise<void> {
   const argv = [GIT, "-C", repoRoot, "worktree", "add", "--detach", root, sha];
   const r = await spawnCaptured(argv, {
-    background: true,
+    tier: "background",
     timeoutMs: ADD_TIMEOUT_MS,
   });
   if (r.timedOut || r.exitCode !== 0) {
@@ -389,7 +389,7 @@ export async function removeCheckoutArtifacts(
     if (await isRegistered(repoRoot, root)) {
       const argv = [GIT, "-C", repoRoot, "worktree", "remove", "--force", root];
       const r = await spawnCaptured(argv, {
-        background: true,
+        tier: "background",
         timeoutMs: REMOVE_TIMEOUT_MS,
       });
       if (r.timedOut) {
@@ -453,7 +453,7 @@ async function isRegistered(repoRoot: string, root: string): Promise<boolean> {
  */
 async function pruneWorktrees(repoRoot: string, root: string): Promise<void> {
   const r = await spawnCaptured([GIT, "-C", repoRoot, "worktree", "prune"], {
-    background: true,
+    tier: "background",
     timeoutMs: PRUNE_TIMEOUT_MS,
   });
   if (r.timedOut || r.exitCode !== 0) {

@@ -29,7 +29,12 @@ const { size: forkSize } = HOST_POOLS["db-fork"];
 
 // The `db-fork-acquire` occupancy gauge is auto-registered by `defineHostPool`
 // with TRUE host-wide occupancy.
-const gate = defineHostPool({ id: "db-fork", size: forkSize });
+const gate = defineHostPool({
+  id: "db-fork",
+  size: forkSize,
+  // `inherit`: decided from measured waits (op log `waits[]` by kind).
+  holder: "inherit",
+});
 
 // `signal` is optional and ambient (no current caller passes one). It cancels a pending acquire and, once held, releases the slot as
 // soon as the body is abandoned rather than when it finally settles.
