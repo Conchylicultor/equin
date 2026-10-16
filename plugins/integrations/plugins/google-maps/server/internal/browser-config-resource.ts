@@ -1,19 +1,24 @@
 import { basename } from "node:path";
 import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
-import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { googleMapsDir } from "../../data-dirs";
 import {
   clearMapsBrowserConfig,
+  clearMapsMapId,
   mapsBrowserConfig,
   setMapsBrowserConfig,
+  setMapsMapId,
 } from "../../core";
 import {
   BROWSER_CONFIG_FILENAME,
   clearBrowserConfig,
+  clearMapId,
+  NoBrowserKeyError,
   readBrowserConfig,
-  writeBrowserConfig,
+  writeBrowserKey,
+  writeMapId,
 } from "./browser-config-store";
 
 /** Open only while a tab is subscribed to the browser config (see below). */
@@ -57,10 +62,25 @@ export const mapsBrowserConfigServed = serveValue(mapsBrowserConfig, {
 export const handleSetBrowserConfig = implement(
   setMapsBrowserConfig,
   async ({ body }) => {
-    await writeBrowserConfig(body);
+    await writeBrowserKey(body.browserKey);
     mapsBrowserConfigServed.notify();
   },
 );
+
+export const handleSetMapId = implement(setMapsMapId, async ({ body }) => {
+  try {
+    await writeMapId(body.mapId);
+  } catch (err) {
+    if (err instanceof NoBrowserKeyError) throw new HttpError(409, err.message);
+    throw err;
+  }
+  mapsBrowserConfigServed.notify();
+});
+
+export const handleClearMapId = implement(clearMapsMapId, async () => {
+  await clearMapId();
+  mapsBrowserConfigServed.notify();
+});
 
 export const handleClearBrowserConfig = implement(
   clearMapsBrowserConfig,

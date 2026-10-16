@@ -8,8 +8,9 @@ function easeInOutCubic(t: number): number {
 /**
  * Flies the map to `target` along the core's smooth path, one `moveCamera`
  * per animation frame. Google zooms raster maps by whole levels only, so
- * fractional zoom is switched on for the flight and back off once it lands
- * (on a whole zoom — `viewFor` picks one). Any press, wheel or drag of the
+ * fractional zoom is switched on for the flight and put back as it was once
+ * it lands (a raster map back to whole levels, on a whole zoom — `viewFor`
+ * picks one; a vector map stays fractional, its default). Any press, wheel or drag of the
  * user's stops it where it is: the camera is theirs again. Returns the stop.
  */
 export function flyCamera(
@@ -33,6 +34,11 @@ export function flyCamera(
     return () => {};
   }
 
+  // The vector map's default is fractional; `get` answers undefined when
+  // nothing set it, which reads back as the default.
+  const wasFractional =
+    (map.get("isFractionalZoomEnabled") as boolean | null | undefined) ??
+    map.getRenderingType() === "VECTOR";
   map.setOptions({ isFractionalZoomEnabled: true });
   let frame = 0;
   let done = false;
@@ -42,7 +48,7 @@ export function flyCamera(
     cancelAnimationFrame(frame);
     div.removeEventListener("pointerdown", stop, true);
     div.removeEventListener("wheel", stop, true);
-    map.setOptions({ isFractionalZoomEnabled: false });
+    map.setOptions({ isFractionalZoomEnabled: wasFractional });
   };
   div.addEventListener("pointerdown", stop, true);
   div.addEventListener("wheel", stop, { capture: true, passive: true });

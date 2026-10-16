@@ -1,12 +1,15 @@
 // How smooth wheel-zooming the /places map is on THIS checkout's deploy: zooms
-// in and out with the wheel over the map's middle, recording every frame's
-// interval (rAF), the browser's own work counters (script, style, layout) and a
-// CPU profile, then prints the frame-time distribution and the heaviest
-// functions.
+// in and out with the wheel over the map's middle, recording through the map
+// zoom probe (`@plugins/map/e2e`: every frame's interval, long frames split by
+// script origin, each gesture's input-to-motion latency and settle tail), the
+// browser's own work counters (script, style, layout) and a CPU profile.
+// It prints what it ran on first: headless shell = software GPU, an agent
+// session = darwinbg CPU — such numbers compare runs, never the user's Chrome
+// (research/2026-10-16-map-zoom-smoothness.md).
 //
 // Usage:
 //   ./singularity run plugins/apps/plugins/places/plugins/places-map/e2e/zoom-perf.ts \
-//     [--out /tmp/places-zoom] [--top 15] [--steps 8] [--hide-pins] [--no-profile] [--trace] [--css "<rules>"]
+//     [--out /tmp/places-zoom] [--top 15] [--steps 8] [--hide-pins] [--no-profile] [--trace] [--css "<rules>"] [--headed]
 //
 // `--hide-pins` hides every pin (the pin canvas and any lifted pin, display: none) before zooming — the
 // baseline of Google's map alone, so the pins' share of the cost reads as the
@@ -14,11 +17,19 @@
 
 import {
   arg,
+  describeRenderEnv,
   numArg,
   pathUrl,
+  renderEnvLines,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import { listedPins, pinsOnScreen } from "@plugins/map/e2e";
+import {
+  listedPins,
+  pinsOnScreen,
+  startZoomProbe,
+  stopZoomProbe,
+  zoomProbeLines,
+} from "@plugins/map/e2e";
 import { writeFileSync } from "node:fs";
 
 const out = arg("out", "/tmp/places-zoom");
@@ -124,6 +135,9 @@ await withBrowser(async (h) => {
   await page.goto(pathUrl("/places"), { waitUntil: "commit" });
   await overlays.first().waitFor({ state: "attached", timeout: 120_000 });
   await page.waitForTimeout(5000);
+  for (const line of renderEnvLines(await describeRenderEnv(page))) {
+    console.log(line);
+  }
   console.log(`[setup] pin overlays on map ${await overlays.count()}`);
   const visible = (await pinsOnScreen(page)).length;
   console.log(`[setup] of which in the viewport ${visible}`);
@@ -144,19 +158,7 @@ await withBrowser(async (h) => {
   if (map === null) throw new Error("no map on the page");
   await page.mouse.move(map.x + map.width / 2, map.y + map.height / 2);
 
-  // Every frame's interval while zooming.
-  await page.evaluate(() => {
-    const w = window as unknown as { __frames: number[]; __stop: boolean };
-    w.__frames = [];
-    w.__stop = false;
-    let last = performance.now();
-    const tick = (t: number) => {
-      w.__frames.push(t - last);
-      last = t;
-      if (!w.__stop) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  });
+  await startZoomProbe(page);
   const before = await metrics();
   if (profiling) await cdp.send("Profiler.start");
   const browser = page.context().browser();
@@ -187,25 +189,15 @@ await withBrowser(async (h) => {
     : null;
   const after = await metrics();
   if (tracing && browser !== null) printTrace(await browser.stopTracing());
-  const frames = await page.evaluate(() => {
-    const w = window as unknown as { __frames: number[]; __stop: boolean };
-    w.__stop = true;
-    return w.__frames.slice(1);
-  });
+  const probe = await stopZoomProbe(page);
   if (profile !== null) {
     writeFileSync(`${out}.cpuprofile`, JSON.stringify(profile));
   }
 
-  const sorted = [...frames].sort((a, b) => a - b);
-  const pct = (p: number) =>
-    sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))] ?? 0;
-  const janky = frames.filter((f) => f > 34).length;
   console.log(
-    `[zoom] ${elapsed} ms, ${frames.length} frames (${((frames.length / elapsed) * 1000).toFixed(1)} fps)`,
+    `[zoom] ${elapsed} ms, ${probe.frames} frames (${((probe.frames / elapsed) * 1000).toFixed(1)} fps)`,
   );
-  console.log(
-    `[zoom] frame ms p50 ${pct(0.5).toFixed(1)} p90 ${pct(0.9).toFixed(1)} p99 ${pct(0.99).toFixed(1)} max ${(sorted.at(-1) ?? 0).toFixed(1)}; >34 ms: ${janky}`,
-  );
+  for (const line of zoomProbeLines(probe)) console.log(line);
   for (const m of METRICS) {
     const d = (after[m] ?? 0) - (before[m] ?? 0);
     const v = m.endsWith("Duration") ? `${(d * 1000).toFixed(0)} ms` : `${d}`;

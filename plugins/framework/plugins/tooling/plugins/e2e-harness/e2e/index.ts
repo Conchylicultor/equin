@@ -50,5 +50,7 @@ export type {
   Swatch,
 } from "./color-report";
 export { pushDiagnostic } from "./diagnostics";
+export { describeRenderEnv, renderEnvLines } from "./render-env";
+export type { RenderEnv } from "./render-env";
 export { detectOsColorScheme } from "./color-scheme";
 export type { ColorScheme } from "./color-scheme";

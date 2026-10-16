@@ -19,17 +19,27 @@ The only map-vendor code in the repo. Everything else draws maps through
   pins, Google's shops, museums and restaurants read as more pins. The canvas
   turns POI labels off with an inline map style (`BASEMAP_STYLES`), keeping
   streets, districts, transit and park greenery as context.
-- **No Map ID, so no Advanced Markers.** Google ignores inline `styles` on a map
-  that has a Map ID, and Advanced Markers require one (and are a DOM element
-  per pin anyway — the cost below).
+- **Two basemaps, chosen by the stored Map ID**
+  (`integrations/google-maps`, `useMapsBrowserConfig().mapId`):
+  - **None: the raster map.** It is styled inline (`BASEMAP_STYLE`) and zooms
+    by whole levels.
+  - **A Map ID: the vector map.** It zooms fractionally (wheel and pinch
+    glide), is styled by the Map ID's cloud style (`styles` is not passed,
+    since Google ignores it), and has tilt and heading interaction off.
+  - A Map ID is fixed at creation, so `GoogleMapCanvas` is keyed by it.
+  - `ReportRendering` reports `getRenderingType()` to the integration's check,
+    and shows `MapIdRasterNotice` when a Map ID still drew raster.
+  - No Advanced Markers either way: they are a DOM element per pin, the cost
+    below.
 - **Pins: one canvas** (`components/pin-canvas.tsx`). A single `OverlayView`
   holds a viewport-sized `<canvas data-map-pin-canvas>` in the `overlayLayer`
   pane and repaints it through `map/pin-layer`'s `PinLayer` on every `draw()`
   (each frame of a zoom) and each `bounds_changed` (a drag, coalesced to one
   frame): the canvas sits at the container's top-left in div pixels, each pin
   is projected with `fromLatLngToContainerPixel`. The plan (`planPins`: spots,
-  clusters, stacking) is recomputed in world pixels on `zoom_changed`, never on
-  a pan; marks are cached per (pin, scale). **Lifting**: a `pointermove` on the
+  clusters, stacking) is recomputed in world pixels at the **plan zoom**
+  (`usePlanZoom`: the zoom rounded to a whole level), so a vector map's
+  fractional zoom re-plans once per level crossed, never per frame or pan; marks are cached per (pin, scale). **Lifting**: a `pointermove` on the
   map div hit-tests the canvas; the hovered item and the active pin render as
   `OverlayPin`s (`renderPin` / `renderCluster`) at their mark's anchor and are
   left off the canvas — so a click always lands on a real button. A tap with
@@ -56,7 +66,8 @@ The only map-vendor code in the repo. Everything else draws maps through
   surface, placed with `MapControl` at `RIGHT_BOTTOM` above Google's camera
   control — flies there on click (`internal/fly-camera.ts`: one `moveCamera`
   per animation frame along the core's `flyPath`, fractional zoom switched on
-  for the flight only, since a raster map otherwise snaps to whole zooms; a
+  for the flight and put back as it was (a raster map snaps to whole zooms, a
+  vector map stays fractional); a
   press, wheel or drag stops it). Both target `frameView` → core `viewFor`.
   With an `initialCamera` (a remembered view) the map opens there and
   `FitCamera` is not mounted; `ReportCameraRest` reports Google's `idle`
@@ -80,7 +91,9 @@ The only map-vendor code in the repo. Everything else draws maps through
 - Web:
   - Contributes: `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
   - Uses:
+    - `integrations/google-maps.MapIdRasterNotice`
     - `integrations/google-maps.MapsMapAccessAction`
+    - `integrations/google-maps.reportMapRendering`
     - `integrations/google-maps.useMapsAccess`
     - `integrations/google-maps.useMapsBrowserConfig`
     - `map.GeoMap`

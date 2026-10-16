@@ -19,7 +19,7 @@ import {
   type SceneItem,
 } from "@plugins/map/plugins/pin-layer/web";
 import { OverlayPin } from "./overlay-pin";
-import { useMapProjection, useProjectedZoom } from "../internal/projected-zoom";
+import { useMapProjection, usePlanZoom } from "../internal/projected-zoom";
 import { GOOGLE_TILES } from "../internal/tiles";
 
 /** How far a click on a cluster whose pins share one spot zooms in. */
@@ -78,7 +78,7 @@ export function PinCanvas({
 }: PinCanvasProps) {
   const map = useMap();
   const maps = useMapsLibrary("maps");
-  const zoom = useProjectedZoom(map);
+  const zoom = usePlanZoom(map);
   const text = useMapTextStyle();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [layerError, setLayerError] = useState<unknown>(null);
@@ -185,7 +185,10 @@ export function PinCanvas({
   );
 
   const zoomTo = (members: readonly MapPin[]) => {
-    if (map === null || zoom === undefined) return;
+    // The exact zoom, not the plan's rounded one: the step is from where the
+    // camera really is.
+    const exact = map?.getZoom();
+    if (map === null || exact === undefined) return;
     const camera = cameraFor(members.map((m) => m.position));
     switch (camera.kind) {
       case "none":
@@ -193,7 +196,7 @@ export function PinCanvas({
       case "point":
         // Every member is on the same spot: no zoom separates them, so step in.
         map.setCenter(camera.center);
-        map.setZoom(zoom + STACKED_CLUSTER_ZOOM_STEP);
+        map.setZoom(exact + STACKED_CLUSTER_ZOOM_STEP);
         return;
       case "bounds":
         map.fitBounds(camera.bounds, fitPadding);

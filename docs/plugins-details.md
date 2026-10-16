@@ -27842,7 +27842,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `GMAIL_SCOPES`
           - `GOOGLE_PROVIDER_ID`
-    - **`google-maps`** — Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup pane. Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key) as a live value, with its write/clear endpoints.
+    - **`google-maps`** — Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup pane (browser key, plus the optional vector-map Map ID, checked against how Google actually drew the map). Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key) as a live value, with its write/clear endpoints for the key and the vector map's Map ID.
       - Web:
         - Slots: `google-maps-live-map-setup.actions`
         - Slot contributors: `google-maps-live-map-setup.actions` ← `primitives.pane`
@@ -27860,20 +27860,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/loading.Loading`
         - Exports (types):
+          - `MapRendering`
           - `MapsAccess`
           - `MapsAccessBlocker`
           - `MapsAccessCapability`
           - `MapsBrowserConfigState`
         - Exports (values):
+          - `MapIdRasterNotice`
           - `MAPS_BLOCKER_BODY`
           - `MapsAccessAction`
           - `MapsMapAccessAction`
+          - `reportMapRendering`
           - `useMapsAccess`
           - `useMapsBrowserConfig`
       - Server:
         - Contributes: `resource.declare` "google-maps.browser-config"
         - Uses:
           - `auth.getTokenFromCentral`
+          - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/file-watcher.defineFileWatcher`
           - `network/live.serveValue`
@@ -27884,6 +27888,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Routes:
           - `POST /api/google-maps/browser-config`
           - `DELETE /api/google-maps/browser-config`
+          - `POST /api/google-maps/map-id`
+          - `DELETE /api/google-maps/map-id`
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
@@ -27891,13 +27897,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `MapsBrowserConfigInput`
           - `MapsBrowserConfigValue`
+          - `MapsMapIdInput`
         - Exports (values):
+          - `BASEMAP_STYLE`
+          - `BASEMAP_STYLE_JSON`
           - `BROWSER_KEY_PATTERN`
           - `clearMapsBrowserConfig`
+          - `clearMapsMapId`
+          - `MAP_ID_PATTERN`
           - `mapsBrowserConfig`
           - `MapsBrowserConfigInputSchema`
           - `MapsBrowserConfigValueSchema`
+          - `MapsMapIdInputSchema`
           - `setMapsBrowserConfig`
+          - `setMapsMapId`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
@@ -28393,7 +28406,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes: `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
         - Uses:
+          - `integrations/google-maps.MapIdRasterNotice`
           - `integrations/google-maps.MapsMapAccessAction`
+          - `integrations/google-maps.reportMapRendering`
           - `integrations/google-maps.useMapsAccess`
           - `integrations/google-maps.useMapsBrowserConfig`
           - `map.GeoMap`

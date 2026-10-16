@@ -29,9 +29,12 @@ import {
 } from "@plugins/map/core";
 import type { MapRendererProps } from "@plugins/map/web";
 import {
+  MapIdRasterNotice,
   MapsMapAccessAction,
+  reportMapRendering,
   useMapsBrowserConfig,
 } from "@plugins/integrations/plugins/google-maps/web";
+import { BASEMAP_STYLE } from "@plugins/integrations/plugins/google-maps/core";
 import { useGoogleAuthRefused } from "../internal/auth-failure";
 import {
   DEFAULT_TONE,
@@ -44,22 +47,15 @@ import { PinCanvas } from "./pin-canvas";
 import { flyCamera } from "../internal/fly-camera";
 
 /**
- * Google's own places (shops, museums, restaurants, parks' names) are hidden:
- * on a map whose content is the user's pins, they read as more pins and crowd
- * the real ones out. Streets, districts and transit stay as context, and parks
- * keep their green.
- *
- * Inline styles only apply to a map WITHOUT a Map ID, which is why pins are
- * drawn by the pin canvas (and lifted into `OverlayPin`s) rather than Advanced
- * Markers.
+ * The raster map's inline style: the shared `BASEMAP_STYLE` (Google's own
+ * places hidden — on a map whose content is the user's pins they read as more
+ * pins). A vector map gets the same rule from the cloud style attached to its
+ * Map ID; Google ignores inline styles there.
  */
-const BASEMAP_STYLES: google.maps.MapTypeStyle[] = [
-  {
-    featureType: "poi",
-    elementType: "labels",
-    stylers: [{ visibility: "off" }],
-  },
-];
+const RASTER_STYLES: google.maps.MapTypeStyle[] = BASEMAP_STYLE.map((s) => ({
+  ...s,
+  stylers: [...s.stylers],
+}));
 /** Room kept around fitted overlays, so an edge pin's bubble is not clipped. */
 const FIT_PADDING_PX = 48;
 /** Stroke width when an overlay does not say. */
@@ -94,12 +90,21 @@ export function GoogleMapRenderer(props: MapRendererProps) {
         </Center>
       );
     case "set":
-      return <GoogleMapCanvas {...props} browserKey={config.browserKey} />;
+      // A Map ID is fixed at map creation: a changed one is a new map.
+      return (
+        <GoogleMapCanvas
+          key={config.mapId ?? "raster"}
+          {...props}
+          browserKey={config.browserKey}
+          mapId={config.mapId}
+        />
+      );
   }
 }
 
 function GoogleMapCanvas({
   browserKey,
+  mapId,
   overlays,
   renderPin,
   markPin,
@@ -113,7 +118,7 @@ function GoogleMapCanvas({
   pick,
   initialCamera,
   onCameraRest,
-}: MapRendererProps & { browserKey: string }) {
+}: MapRendererProps & { browserKey: string; mapId: string | null }) {
   // Held in state, not a ref: the tone colours are read off this element, and
   // a ref cannot trigger the render that reads them.
   const [host, setHost] = useState<HTMLDivElement | null>(null);
@@ -138,7 +143,18 @@ function GoogleMapCanvas({
         }
       >
         <GoogleMap
-          styles={BASEMAP_STYLES}
+          // Two basemaps. Without a Map ID: Google's raster map, styled
+          // inline, zooming by whole levels. With one: the vector map, which
+          // zooms fractionally (wheel and pinch glide, as on google.com/maps)
+          // and is styled in the cloud. Tilt and rotation stay off — the pin
+          // canvas projects flat.
+          {...(mapId === null
+            ? { styles: RASTER_STYLES }
+            : {
+                mapId,
+                tiltInteractionEnabled: false,
+                headingInteractionEnabled: false,
+              })}
           colorScheme={GOOGLE_COLOR_SCHEME[GOOGLE_TILES]}
           defaultCenter={opening.center}
           defaultZoom={opening.zoom}
@@ -175,6 +191,7 @@ function GoogleMapCanvas({
             />
           )}
           <FitControl overlays={overlays} fitPadding={fitPadding} />
+          {mapId === null ? null : <ReportRendering mapId={mapId} />}
           <FocusCamera
             overlays={overlays}
             focusId={focusId}
@@ -259,6 +276,40 @@ function ReportCameraRest({
   }, [map, report, active]);
 
   return null;
+}
+
+/**
+ * With a Map ID: reports how Google actually drew the map (the Live map
+ * setup's check), and says so on the map when it is NOT the vector map — a
+ * Map ID of the wrong type, another project's, or a deleted one silently gives
+ * the raster map otherwise.
+ */
+function ReportRendering({ mapId }: { mapId: string }) {
+  const map = useMap();
+  const [raster, setRaster] = useState(false);
+
+  useEffect(() => {
+    if (map === null) return;
+    const read = () => {
+      const type = map.getRenderingType();
+      if (type === "UNINITIALIZED") return;
+      const rendering = type === "VECTOR" ? "vector" : "raster";
+      reportMapRendering(mapId, rendering);
+      setRaster(rendering === "raster");
+    };
+    read();
+    const listener = map.addListener("renderingtype_changed", read);
+    return () => listener.remove();
+  }, [map, mapId]);
+
+  if (!raster) return null;
+  return (
+    <MapControl position={ControlPosition.TOP_CENTER}>
+      <Inset pad="sm">
+        <MapIdRasterNotice />
+      </Inset>
+    </MapControl>
+  );
 }
 
 /**

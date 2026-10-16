@@ -11,9 +11,36 @@ import { liveValue } from "@plugins/network/plugins/live/core";
 export const BROWSER_KEY_PATTERN = /^AIza[0-9A-Za-z_-]{35}$/;
 
 /**
- * What the user submits: the browser key. There is no Map ID: the renderer
- * styles the map inline, which Google only honours on a map without one.
+ * A Map ID as the Cloud Console shows it (hex, or Google's `DEMO_MAP_ID`).
+ * Lenient on purpose: a wrong-but-well-formed id is caught where it matters —
+ * the map reports how Google drew it (vector or not), see `useMapIdCheck`.
  */
+export const MAP_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
+
+/**
+ * The basemap style every Google map here wears: Google's own places (shops,
+ * museums, restaurants) hidden, since the map's content is the user's pins.
+ * ONE rule, two spellings: the raster map passes it inline (`styles`), and the
+ * vector map's cloud style is created from it — the Live map setup hands
+ * `BASEMAP_STYLE_JSON` to the Cloud Console's JSON import — so the two cannot
+ * drift apart.
+ */
+export const BASEMAP_STYLE = [
+  {
+    featureType: "poi",
+    elementType: "labels",
+    stylers: [{ visibility: "off" }],
+  },
+] as const satisfies readonly {
+  featureType: string;
+  elementType: string;
+  stylers: readonly { visibility: "off" | "on" | "simplified" }[];
+}[];
+
+/** `BASEMAP_STYLE` as the JSON the Cloud Console's style import takes. */
+export const BASEMAP_STYLE_JSON = JSON.stringify(BASEMAP_STYLE, null, 2);
+
+/** What the user submits for the key: the browser key alone. */
 export const MapsBrowserConfigInputSchema = z.object({
   browserKey: z
     .string()
@@ -34,6 +61,13 @@ export const MapsBrowserConfigValueSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("set"),
     browserKey: z.string(),
+    /**
+     * The vector map's Map ID, or `null`: without one the map is the raster
+     * map, styled inline by `BASEMAP_STYLE`. With one it is Google's vector
+     * map (fractional, animated zoom), styled by the cloud style attached to
+     * the Map ID — Google ignores inline styles there.
+     */
+    mapId: z.string().nullable(),
   }),
 ]);
 export type MapsBrowserConfigValue = z.infer<
@@ -50,7 +84,7 @@ export const mapsBrowserConfig = liveValue("google-maps.browser-config", {
 });
 
 /**
- * Store (or replace) the browser config.
+ * Store (or replace) the browser key. A stored Map ID is kept.
  *
  * There is no server-side verification, unlike the Places key: a browser key is
  * restricted to HTTP referrers, and a request from the server either carries no
@@ -64,7 +98,31 @@ export const setMapsBrowserConfig = defineEndpoint({
   body: MapsBrowserConfigInputSchema,
 });
 
-/** Remove the browser config, turning every live map back into its setup prompt. */
+/**
+ * Store (or replace) the Map ID. Refused (409) while no browser key is stored:
+ * a Map ID without a key has no map to draw, so it is not a state to hold.
+ * Like the key, nothing is verified here — the renderer reports how Google
+ * actually drew the map.
+ */
+export const MapsMapIdInputSchema = z.object({
+  mapId: z
+    .string()
+    .trim()
+    .regex(MAP_ID_PATTERN, "Not a Map ID (letters, digits, - and _)"),
+});
+export type MapsMapIdInput = z.infer<typeof MapsMapIdInputSchema>;
+
+export const setMapsMapId = defineEndpoint({
+  route: "POST /api/google-maps/map-id",
+  body: MapsMapIdInputSchema,
+});
+
+/** Remove the Map ID: every map goes back to the raster map. */
+export const clearMapsMapId = defineEndpoint({
+  route: "DELETE /api/google-maps/map-id",
+});
+
+/** Remove the browser config (key and Map ID), turning every live map back into its setup prompt. */
 export const clearMapsBrowserConfig = defineEndpoint({
   route: "DELETE /api/google-maps/browser-config",
 });

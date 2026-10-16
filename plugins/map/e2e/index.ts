@@ -8,6 +8,14 @@
 
 import type { Locator, Page } from "playwright";
 
+export {
+  startZoomProbe,
+  stopZoomProbe,
+  zoomProbeLines,
+  zoomProbeSource,
+} from "./zoom-probe";
+export type { ProbeGesture, ProbeLoaf, ZoomProbeSummary } from "./zoom-probe";
+
 /** One pin on screen: its accessible name and where the pointer finds it (viewport px). */
 export interface PinOnScreen {
   label: string;
