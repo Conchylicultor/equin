@@ -2134,6 +2134,10 @@
       "name": "@singularity/plugin-conversations-workspace",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/workspace/plugins/launch-option": {
+      "name": "@singularity/plugin-conversations-workspace-launch-option",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/workspace/plugins/scratch": {
       "name": "@singularity/plugin-conversations-workspace-scratch",
       "version": "0.0.1",
@@ -7714,6 +7718,8 @@
     "@singularity/plugin-conversations-usage": ["@singularity/plugin-conversations-usage@workspace:plugins/conversations/plugins/usage"],
 
     "@singularity/plugin-conversations-workspace": ["@singularity/plugin-conversations-workspace@workspace:plugins/conversations/plugins/workspace"],
+
+    "@singularity/plugin-conversations-workspace-launch-option": ["@singularity/plugin-conversations-workspace-launch-option@workspace:plugins/conversations/plugins/workspace/plugins/launch-option"],
 
     "@singularity/plugin-conversations-workspace-scratch": ["@singularity/plugin-conversations-workspace-scratch@workspace:plugins/conversations/plugins/workspace/plugins/scratch"],
 

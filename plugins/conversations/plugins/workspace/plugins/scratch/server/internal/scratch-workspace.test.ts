@@ -18,6 +18,7 @@ const scratchWorkspace = createScratchWorkspace({
 const order: string[] = [];
 const profile = defineScratchProfile({
   id: "test.scratch",
+  label: "Scratch test",
   description: "test",
   inputSchema: z.object({ note: z.string().default("hi") }),
   instructions: (input) => `# note\n${input.note}`,

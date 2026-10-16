@@ -105,6 +105,8 @@ export function DependencyPill({
     <PickerPill
       icon={chosen ? chosen.icon : adjustIcon}
       placeholder="Dependency"
+      // A bare icon until it links the task — it sits on the card's narrow bar.
+      unset="icon"
       highlight={value !== undefined}
       disabled={disabled}
       ariaLabel="Relation to current task"

@@ -20,6 +20,11 @@ hand-rolled its own checkmarks.
   one heading and one checked row per group. A pill with one group is the same
   component with one child, not a different case.
 - **No `Value` children ⇒ the muted `placeholder`.** That is the unset look.
+  `unset="icon"` makes it the bare icon instead (a crowded bar, e.g. the
+  task-draft card): the tooltip and accessible name still say what it is.
+- **`Item`'s `info`** is a hover card beside the menu, for rows that need more
+  than a label (the workspace menu). It hangs off a wrapper, not the row, so a
+  disabled row — which takes no pointer events — still shows it.
 - **`highlight`** paints the accent-tinted set state. One pill, one highlight —
   so a fused pill never tints (which group would it be claiming?).
 - **A `Check` row toggles without closing the menu** — an independent on/off

@@ -1,7 +1,9 @@
 export {
   WorkspaceKindSchema,
+  WorkspaceCapabilitySchema,
   WorkspaceSpecSchema,
   WORKSPACE_KINDS,
+  WORKSPACE_CAPABILITIES,
   DEFAULT_WORKSPACE,
   hasCapability,
   assertCapability,
@@ -14,3 +16,5 @@ export type {
   WorkspaceSpec,
   WorkspaceKindState,
 } from "./workspace";
+export { WorkspaceChoiceSchema, workspaceCatalog } from "./catalog";
+export type { WorkspaceChoice } from "./catalog";

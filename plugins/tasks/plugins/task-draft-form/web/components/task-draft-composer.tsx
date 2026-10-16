@@ -169,11 +169,14 @@ function CardBarStart({
           <ComposerRule />
         </>
       )}
+      {/* A bare icon while on its default: the card's bar is narrow, and an
+          unset setting should take no room. */}
       <LaunchOptionPills
         side="start"
         values={values}
         onChange={onChange}
         disabled={disabled}
+        unset="icon"
       />
       {relate && (
         <DependencyPill

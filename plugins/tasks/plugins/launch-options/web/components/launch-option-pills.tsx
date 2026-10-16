@@ -36,6 +36,11 @@ export interface LaunchOptionPillsProps {
   disabled: boolean;
   /** Which half of the bar to draw — the leading one, or the trailing one. */
   side: BarSide;
+  /**
+   * How a pill reads while its option is on its default — the word, or the
+   * bare icon (a crowded bar). See `PickerPill`'s `unset`.
+   */
+  unset?: "placeholder" | "icon";
 }
 
 /**
@@ -58,6 +63,7 @@ export function LaunchOptionPills({
   onChange,
   disabled,
   side,
+  unset,
 }: LaunchOptionPillsProps) {
   const options = TaskLaunch.Option.useContributions();
   const groups = useMemo(() => groupOptions(options), [options]);
@@ -72,6 +78,7 @@ export function LaunchOptionPills({
             values={values}
             onChange={onChange}
             disabled={disabled}
+            unset={unset}
           />
         ))}
     </>
@@ -115,11 +122,13 @@ function LaunchOptionGroup({
   values,
   onChange,
   disabled,
+  unset,
 }: {
   group: PillGroup;
   values: LaunchOptionValues;
   onChange: (next: LaunchOptionValues) => void;
   disabled: boolean;
+  unset: "placeholder" | "icon" | undefined;
 }) {
   const configLink = useConfigLink();
   const members = group.members;
@@ -150,6 +159,7 @@ function LaunchOptionGroup({
     <PickerPill
       icon={pill.icon}
       placeholder={lead.label}
+      unset={unset}
       highlight={isChanged(members, values)}
       disabled={disabled}
       tooltip={<PillTooltip members={members} />}

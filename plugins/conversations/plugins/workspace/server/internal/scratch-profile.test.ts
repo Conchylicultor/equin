@@ -8,6 +8,7 @@ import {
 
 const hello = defineScratchProfile({
   id: "test.hello",
+  label: "Hello",
   description: "test",
   inputSchema: z.object({ note: z.string() }),
   instructions: (input) => `note: ${input.note}`,

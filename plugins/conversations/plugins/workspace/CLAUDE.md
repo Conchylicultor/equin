@@ -19,7 +19,13 @@ scratch profile provides. Design:
   — argv and a `--settings` fragment the runtime merges), `checkResumable`.
   Also the open set: `ScratchProfile.define(defineScratchProfile({…}))`, and
   `workspaceOfConversation` for a profile's MCP tools.
+- `workspace.catalog` (core declaration, served here) — every workspace a task
+  can name: the worktree, then one choice per scratch profile (label, owner
+  plugin via `registeringPlugin()`, MCP tool count, `unavailable` when its
+  input has no defaults). Readers never name a profile.
 - `plugins/<kind>/` — one impl per kind, registered with `Workspace.define`.
+- `plugins/launch-option/` — the Workspace task launch option (which workspace
+  a task's next attempt runs in).
 
 **A workspace path is `<root of its kind>/<attemptId>`** — impls declare only
 their `root()`; `Workspace.pathFor` / `Workspace.resolvePath` derive the path
@@ -46,9 +52,12 @@ Orthogonal to the runtime (tmux | api): a runtime sees only the cwd and the
 
 ## Plugin reference
 
-- Description: Agent workspaces — where a conversation runs (a git worktree, or a scratch directory): the WorkspaceImpl contract and the per-kind registry the conversation lifecycle calls through (path, commit, prepare, finish, launch fragment, resumability), the scratch-profile registry feature plugins contribute to, and the conversation → workspace lookup.
+- Description: Workspace web presence: eagerly registers the boot-preloaded workspace.catalog live value (every workspace a task can name) so boot-snapshot can hydrate it before first paint. Agent workspaces — where a conversation runs (a git worktree, or a scratch directory): the WorkspaceImpl contract and the per-kind registry the conversation lifecycle calls through (path, commit, prepare, finish, launch fragment, resumability), the scratch-profile registry feature plugins contribute to, the workspace.catalog live value (every workspace a task can name), and the conversation → workspace lookup.
 - Server:
-  - Uses: `database.db`
+  - Contributes: `resource.declare` "workspace.catalog"
+  - Uses:
+    - `database.db`
+    - `network/live.serveValue`
   - Exports (types):
     - `LaunchContext`
     - `LaunchFragment`
@@ -63,18 +72,12 @@ Orthogonal to the runtime (tmux | api): a runtime sees only the cwd and the
     - `Workspace`
     - `workspaceOfAttempt`
     - `workspaceOfConversation`
-- Cross-plugin:
-  - Imported by:
-    - `apps/sonata/transcription`
-    - `conversations`
-    - `conversations/conversation-view/code`
-    - `conversations/workspace/scratch`
-    - `conversations/workspace/worktree`
-    - `debug/scratch-hello`
-    - `tasks/tasks-core`
+  - Resources: `workspace.catalog` (push, fixed)
 - Core:
+  - Uses: `network/live.liveValue`
   - Exports (types):
     - `WorkspaceCapability`
+    - `WorkspaceChoice`
     - `WorkspaceKind`
     - `WorkspaceKindState`
     - `WorkspaceSpec`
@@ -83,16 +86,31 @@ Orthogonal to the runtime (tmux | api): a runtime sees only the cwd and the
     - `DEFAULT_WORKSPACE`
     - `hasCapability`
     - `satisfiesCapabilities`
+    - `WORKSPACE_CAPABILITIES`
     - `WORKSPACE_KINDS`
     - `workspaceAllows`
+    - `WorkspaceCapabilitySchema`
+    - `workspaceCatalog`
+    - `WorkspaceChoiceSchema`
     - `WorkspaceKindSchema`
     - `WorkspaceSpecSchema`
+- Cross-plugin:
+  - Imported by:
+    - `apps/sonata/transcription`
+    - `conversations`
+    - `conversations/conversation-view/code`
+    - `conversations/workspace/launch-option`
+    - `conversations/workspace/scratch`
+    - `conversations/workspace/worktree`
+    - `debug/scratch-hello`
+    - `tasks/tasks-core`
 - Test helpers:
   - Server: `@plugins/conversations/plugins/workspace/server/testing`
     - `installWorkspaceImpl` — Sets `impl` as its kind's workspace, replacing any registered one — for a test, which runs without the plugin register phase and may share the module with other suites.
     - `resetScratchProfiles` — Clears the profile registry (tests).
     - `resetWorkspaceRegistry` — Clears the registry.
 - Sub-plugins:
+  - **`launch-option`** — Workspace picker as a launch option: where the task's agent runs — the worktree, or one of the registered scratch profiles — on the task-draft composer (a pill whose menu lists every workspace…
   - **`scratch`** — The scratch workspace: a conversation runs in a plain directory (`state/workspaces/<attemptId>`) holding only its scratch profile's CLAUDE.md and inputs — no git, DB fork or build. Launched with the…
   - **`worktree`** — The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out in the spawn job, resumable while the…
 

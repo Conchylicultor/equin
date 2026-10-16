@@ -54,6 +54,7 @@ import { resolveAttachmentRefs } from "./resolve-prompt-attachments";
 import { resolvePreprompt } from "@plugins/conversations/plugins/preprompts/server";
 import { getTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";
 import { getTaskEffort } from "@plugins/tasks/plugins/task-effort/server";
+import { getTaskWorkspace } from "@plugins/conversations/plugins/workspace/plugins/launch-option/server";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { wrapPreprompt } from "@plugins/conversations/plugins/transcript-watcher/core";
@@ -281,8 +282,13 @@ export async function prepareConversation(
     effectiveTaskId = opts.taskId;
     const newId = attemptIdKind.mint();
     // Validated before anything is written: an unknown scratch profile, or an
-    // input its profile refuses, throws here.
-    const spec = parseWorkspaceSpec(opts.workspace ?? DEFAULT_WORKSPACE);
+    // input its profile refuses, throws here. An explicit workspace wins; else
+    // the launching task's own choice (the workspace launch option) — the
+    // default worktree when it has none, or when the commit creates the task.
+    const spec = parseWorkspaceSpec(
+      opts.workspace ??
+        (opts.taskId ? await getTaskWorkspace(opts.taskId) : DEFAULT_WORKSPACE),
+    );
     // Derived purely from the id, so the path is known before the workspace
     // dir exists. Its `prepare` (for a worktree, the multi-second `git worktree
     // add` checkout) is deferred to the durable `conversations.spawn` job — off

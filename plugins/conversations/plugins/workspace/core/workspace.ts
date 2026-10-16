@@ -8,18 +8,45 @@ export const WorkspaceKindSchema = z.enum(["worktree", "scratch"]);
 export type WorkspaceKind = z.infer<typeof WorkspaceKindSchema>;
 
 /** What a workspace offers the agent and the surfaces around it. */
-export type WorkspaceCapability =
-  "git" | "db-fork" | "build" | "project-context";
+export const WorkspaceCapabilitySchema = z.enum([
+  "git",
+  "db-fork",
+  "build",
+  "project-context",
+]);
+export type WorkspaceCapability = z.infer<typeof WorkspaceCapabilitySchema>;
 
 export const WORKSPACE_KINDS: Record<
   WorkspaceKind,
-  { capabilities: readonly WorkspaceCapability[] }
+  {
+    label: string;
+    description: string;
+    capabilities: readonly WorkspaceCapability[];
+  }
 > = {
-  // A git checkout of this repo, with its own forked DB and deploy.
-  worktree: { capabilities: ["git", "db-fork", "build", "project-context"] },
-  // A plain directory holding only what its profile provides.
-  scratch: { capabilities: [] },
+  worktree: {
+    label: "Worktree",
+    description:
+      "A git checkout of this repo, with its own forked database and deploy.",
+    capabilities: ["git", "db-fork", "build", "project-context"],
+  },
+  scratch: {
+    label: "Scratch",
+    description: "A plain directory holding only what its profile provides.",
+    capabilities: [],
+  },
 };
+
+/** Every capability, in display order, with its human label. */
+export const WORKSPACE_CAPABILITIES: readonly {
+  id: WorkspaceCapability;
+  label: string;
+}[] = [
+  { id: "git", label: "git" },
+  { id: "db-fork", label: "DB fork" },
+  { id: "build", label: "build" },
+  { id: "project-context", label: "repo context" },
+];
 
 /**
  * The workspace an attempt runs in, as stored on the attempt row. Every

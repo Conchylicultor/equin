@@ -13,6 +13,7 @@ export const SCRATCH_HELLO = "scratch.hello";
  */
 export const scratchHelloProfile = defineScratchProfile({
   id: SCRATCH_HELLO,
+  label: "Hello",
   description:
     "Debug profile: a scratch agent with a note file, one profile-only tool and flag_raise.",
   inputSchema: z.object({

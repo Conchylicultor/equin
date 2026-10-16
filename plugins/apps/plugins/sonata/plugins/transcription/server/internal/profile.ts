@@ -61,6 +61,7 @@ async function copyInputs(
  */
 export const transcriptionProfile = defineScratchProfile({
   id: TRANSCRIPTION_PROFILE_ID,
+  label: "Transcription",
   description:
     "Sonata transcription: sheet music in a video, images or a PDF → MusicXML, by a render-and-compare loop with the `st` toolkit.",
   inputSchema: ProfileInputSchema,

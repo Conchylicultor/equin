@@ -31,6 +31,13 @@ export interface PickerPillProps {
    */
   placeholder: string;
   /**
+   * How the trigger reads while nothing is picked: `placeholder` (default) —
+   * icon, muted placeholder, chevron — or `icon`: the bare icon alone, for a
+   * crowded bar where an unset setting should take no room. The tooltip and
+   * accessible name still say what it is.
+   */
+  unset?: "placeholder" | "icon";
+  /**
    * Paint the accent-tinted "this is set" state. One pill, one highlight —
    * a fused pill (several groups) deliberately never tints, because "set"
    * would be ambiguous across its groups.
@@ -73,6 +80,12 @@ export interface PickerPillItemProps {
   selected?: boolean;
   /** Dim trailing hint ("default", a shortcut, …), shown when not selected. */
   note?: string;
+  /**
+   * What this row is, in more words than its label — shown in a card beside
+   * the menu while the row is hovered, so a plain menu can still explain its
+   * choices.
+   */
+  info?: React.ReactNode;
   onSelect: () => void;
   disabled?: boolean;
   children: React.ReactNode;
@@ -107,6 +120,7 @@ export interface PickerPillCheckProps {
 export function PickerPill({
   icon,
   placeholder,
+  unset = "placeholder",
   highlight,
   disabled,
   ariaLabel,
@@ -114,6 +128,7 @@ export function PickerPill({
   children,
 }: PickerPillProps) {
   const { values, groups } = partition(children);
+  const bare = values.length === 0 && unset === "icon";
 
   return (
     <DropdownMenu>
@@ -122,6 +137,7 @@ export function PickerPill({
           render={
             <Button
               shape="pill"
+              aspect={bare ? "icon" : "text"}
               variant={highlight ? "frame" : "ghost"}
               disabled={disabled}
               aria-label={ariaLabel ?? placeholder}
@@ -137,12 +153,17 @@ export function PickerPill({
             values.map((value, i) =>
               cloneElement(value, { key: value.key ?? i }),
             )
-          ) : (
+          ) : bare ? null : (
             <Text variant="control" tone="muted">
               {placeholder}
             </Text>
           )}
-          <Icon icon={keyboardArrowDownIcon} className="size-3.5 opacity-70" />
+          {!bare && (
+            <Icon
+              icon={keyboardArrowDownIcon}
+              className="size-3.5 opacity-70"
+            />
+          )}
         </DropdownMenuTrigger>
       </WithTooltip>
       <DropdownMenuContent align="start">
@@ -184,11 +205,12 @@ function PickerPillItem({
   icon,
   selected,
   note,
+  info,
   onSelect,
   disabled,
   children,
 }: PickerPillItemProps) {
-  return (
+  const row = (
     <DropdownMenuItem disabled={disabled} onClick={onSelect} className="gap-lg">
       {/* The label is the row's one flexible cell, so the check / note below
           sits in its own track flush right instead of floating over it. */}
@@ -210,6 +232,15 @@ function PickerPillItem({
         </Text>
       ) : null}
     </DropdownMenuItem>
+  );
+  if (info == null) return row;
+  // The card hangs off a wrapper, not the row: a disabled row takes no pointer
+  // events, and its card — often the one place saying WHY it is disabled —
+  // must still show. The hover falls through the disabled row to the wrapper.
+  return (
+    <WithTooltip content={info} side="right" className="max-w-72">
+      <span className="block">{row}</span>
+    </WithTooltip>
   );
 }
 

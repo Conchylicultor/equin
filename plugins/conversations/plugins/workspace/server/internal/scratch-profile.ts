@@ -1,4 +1,7 @@
-import type { Registration } from "@plugins/framework/plugins/server-core/core";
+import {
+  registeringPlugin,
+  type Registration,
+} from "@plugins/framework/plugins/server-core/core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 /**
@@ -11,6 +14,8 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 export interface ScratchProfileDef<I> {
   /** Unique, e.g. `sonata.transcription`. */
   id: string;
+  /** What a picker calls it, beside the kind ("Transcription"). */
+  label: string;
   description: string;
   /** Validates the launch's `input` when the attempt is created. */
   inputSchema: ZodParser<I>;
@@ -44,6 +49,9 @@ export function defineScratchProfile<I>(
 }
 
 const profiles = new Map<string, ScratchProfileDef<unknown>>();
+// The plugin each profile was registered by — `null` for one registered by
+// hand outside the register phase (a test).
+const owners = new Map<string, string | null>();
 
 export const ScratchProfile = {
   /**
@@ -57,6 +65,7 @@ export const ScratchProfile = {
           throw new Error(`Scratch profile "${profile.id}" already registered`);
         }
         profiles.set(profile.id, profile as ScratchProfileDef<unknown>);
+        owners.set(profile.id, registeringPlugin());
       },
     };
   },
@@ -68,9 +77,15 @@ export const ScratchProfile = {
   all(): ScratchProfileDef<unknown>[] {
     return Array.from(profiles.values());
   },
+  /** The plugin that registered profile `id` (`null` outside the register phase). */
+  ownerOf(id: string): string | null {
+    if (!owners.has(id)) throw new Error(`Unknown scratch profile "${id}"`);
+    return owners.get(id) ?? null;
+  },
 };
 
 /** Clears the profile registry (tests). */
 export function resetScratchProfiles(): void {
   profiles.clear();
+  owners.clear();
 }
