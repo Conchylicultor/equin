@@ -236,6 +236,7 @@ Possible follow-ups:
 - **Items with columns → a table inside `<go>`**, each row's first cell starting `[ ]` / `[x]` (`| [x] **Themes** | problem | proposal |`). The table is the choice — never follow a table with a checklist repeating its rows. A picked row comes back as `- [x] <first cell>`.
 - **One choice per item — never cluster.** `- [ ] File the 3 follow-ups` is wrong: list each follow-up on its own `- [ ]` line.
 - **A `<go>` in a USER message is the part of your answer the user picked** (possibly reworded) — do it, don't answer it as a question. A checklist comes back as just the picked `- [x]` lines; anything you listed that is missing was declined. Text around it is the user's own addition and wins over it.
+- **…unless it's a quote.** Inside a question or remark ("why <go>X</go>?"), a `<go>` just points at your text — answer the remark, don't do X. Infer from context.
 
 Details: [`plugins/active-data/plugins/go/CLAUDE.md`](plugins/active-data/plugins/go/CLAUDE.md).
 
