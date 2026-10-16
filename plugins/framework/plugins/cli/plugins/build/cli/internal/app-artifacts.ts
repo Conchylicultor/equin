@@ -138,7 +138,8 @@ import {
  *     `@review` markers into the checkout — today's behaviour for a release
  *     too, since a release reaches it through this same pipeline. Only the
  *     config git-layer bundle (`generateConfigGitLayer`) follows it: it reads
- *     the seeded tree, and stage 3's web build inlines what it writes.
+ *     the seeded tree and writes one layer per resident web registry, which
+ *     stage 3 serves from each composition's registry artifact.
  *   - stage 3 LAST, under ONE host CPU grant covering every heavy child
  *     (checks, tsc, vite / web-artifacts). Nothing inside re-acquires host-wide.
  *
@@ -594,9 +595,11 @@ export async function generateAppSources(opts: {
   }
 
   // 4b''. Bundle the committed config layer for the browser server (a demo
-  // scope answers `config-v2.values` from it, never from the host). After the
-  // seeder, so it reads the same git layer the caller then propagates; before
-  // stage 3, whose web build inlines it into config_v2's artifact.
+  // scope answers `config-v2.values` from it, never from the host), once per
+  // composition registry stage 1 left resident, each restricted to that
+  // composition's plugins and apps. After the seeder, so it reads the same git
+  // layer the caller then propagates; before stage 3, which serves each one
+  // from its composition's registry artifact (`@composition-config-layer`).
   endSpan = hooks.span(
     "configGitLayer",
     "build:codegen",

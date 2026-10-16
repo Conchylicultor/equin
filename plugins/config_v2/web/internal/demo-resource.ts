@@ -31,11 +31,15 @@ export type LoadGitLayer = () => Promise<GitLayer>;
 
 /**
  * The git layer `./singularity build` bundles from the repo's `config/`
- * (codegen's `config-git-layer-gen.ts`). A dynamic import, so it is its own
- * chunk: fetched by the first demo scope that reads config, never by the app.
+ * (codegen's `config-git-layer-gen.ts`), restricted to the DEPLOYED
+ * composition's plugins and apps. It is not part of this plugin's artifact: the
+ * import map points `@composition-config-layer` at the composition's own
+ * registry artifact (`web-artifacts`' composition modules), so a deploy never
+ * ships another composition's config. A dynamic import: fetched by the first
+ * demo scope that reads config, never by the app.
  */
 const loadBundledGitLayer: LoadGitLayer = () =>
-  import("./git-layer.generated").then((m) => m.gitLayer);
+  import("@composition-config-layer").then((m) => m.gitLayer);
 
 /** What the serve function served, kept to `notify()` later. */
 interface ServedConfig {

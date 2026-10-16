@@ -182,6 +182,7 @@ export async function runWebArtifactsPipeline(
             dirName: plan.registryTarget.dirName,
             inputsHash: plan.registryTarget.inputsHash,
             registryFile: plan.registryTarget.registryFile,
+            configLayerFile: plan.registryTarget.configLayerFile,
             minify: opts.minify,
           });
           metas.set(plan.registryTarget.dirName, meta);

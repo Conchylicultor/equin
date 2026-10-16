@@ -29,6 +29,12 @@ export default defineConfig({
         __dirname,
         "plugins/framework/plugins/web-sdk/core/web.generated.ts",
       ),
+      // The other composition module (config_v2's demo serve reads it): an
+      // empty committed layer — suites inject the layer they need.
+      "@composition-config-layer": path.resolve(
+        __dirname,
+        "plugins/config_v2/web/testing/empty-config-layer.ts",
+      ),
     },
   },
   test: {

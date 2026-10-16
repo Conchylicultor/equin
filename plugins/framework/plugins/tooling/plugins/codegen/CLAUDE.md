@@ -28,7 +28,7 @@ rather than reading as "not preloaded". A factory's own declaration
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 86 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 89 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2` ×14
     - `framework/plugin-id` ×12
     - `plugin-meta/parse-utils` ×12
@@ -39,6 +39,7 @@ rather than reading as "not preloaded". A factory's own declaration
     - `plugin-meta/closure` ×4
     - `plugin-meta/plugin-tree` ×4
     - `framework/slot-declaration` ×3
+    - `framework/tooling/web-artifacts` ×3
     - `config_v2/ledger` ×2
     - `framework/tooling/format` ×2
     - `framework/tooling` ×2
@@ -98,7 +99,6 @@ rather than reading as "not preloaded". A factory's own declaration
     - `compositionRegistryPath`
     - `compositionRegistryRedirects`
     - `computeEagerTier`
-    - `CONFIG_GIT_LAYER_FILE`
     - `customUtilitiesManifestPath`
     - `dataViewsManifestPath`
     - `declareSlotsFromBarrels`

@@ -75,6 +75,10 @@ async function buildPage(outDir: string): Promise<void> {
           PLUGINS_DIR,
           "framework/plugins/web-sdk/core/web.generated.ts",
         ),
+        "@composition-config-layer": join(
+          PLUGINS_DIR,
+          "../.generated/composition-modules/config-layer.singularity.ts",
+        ),
       },
     },
     build: {

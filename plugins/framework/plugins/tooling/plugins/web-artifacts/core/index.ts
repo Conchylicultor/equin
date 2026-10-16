@@ -11,6 +11,12 @@ export {
   packageNameOf,
   WORKER_ASSETS_DIR,
 } from "./constants";
+export {
+  COMPOSITION_CONFIG_LAYER_SPECIFIER,
+  COMPOSITION_MODULES_REL,
+  COMPOSITION_SPECIFIERS,
+  compositionConfigLayerFileName,
+} from "./composition-modules";
 export { makeArtifactExternal } from "./externals";
 export {
   computeIdentityHash,

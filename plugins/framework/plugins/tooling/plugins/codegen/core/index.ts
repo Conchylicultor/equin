@@ -97,9 +97,9 @@ export {
 } from "./config-origin-gen";
 
 // Build-ONLY: the committed config layer resolved and bundled for the browser
-// server (gitignored, config_v2's web folder). Runs after seeding.
+// server, one per resident composition (gitignored, beside the web
+// registries). Runs after seeding.
 export {
-  CONFIG_GIT_LAYER_FILE,
   collectConfigGitLayer,
   generateConfigGitLayer,
   renderConfigGitLayer,

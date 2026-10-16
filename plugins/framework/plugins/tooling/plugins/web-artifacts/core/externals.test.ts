@@ -53,6 +53,7 @@ describe("makeArtifactExternal (web artifact of tasks/plugins/task-detail)", () 
 
   test("the registry alias is external (import-map entry)", () => {
     expect(external("@composition-web-registry")).toBe(true);
+    expect(external("@composition-config-layer")).toBe(true);
   });
 
   test("CSS specifiers stay in-graph (never module URLs)", () => {

@@ -39,7 +39,19 @@ function stringProp(argsText: string, key: string): string | null {
  * literal `id` throws — an app the build cannot name is not one to guess at.
  */
 export function readDefineApp(node: PluginNode): DeclaredApp | null {
-  const coreDir = join(node.dir, "core");
+  return readDefineAppIn(node.dir, node.id);
+}
+
+/**
+ * `readDefineApp` for a plugin named by its directory and id rather than a tree
+ * node — for callers that know a plugin set (a composition's registry) without
+ * having walked the tree.
+ */
+export function readDefineAppIn(
+  pluginDir: string,
+  plugin: PluginId,
+): DeclaredApp | null {
+  const coreDir = join(pluginDir, "core");
   if (!existsSync(coreDir)) return null;
   for (const f of readdirSync(coreDir).sort()) {
     if (!f.endsWith(".ts") || isTestCodePath([f])) continue;
@@ -58,7 +70,7 @@ export function readDefineApp(node: PluginNode): DeclaredApp | null {
           `Composition homes and releases read app ids statically — write it as a literal.`,
       );
     }
-    return { id, iconKey: stringProp(body, "iconKey"), plugin: node.id, file };
+    return { id, iconKey: stringProp(body, "iconKey"), plugin, file };
   }
   return null;
 }

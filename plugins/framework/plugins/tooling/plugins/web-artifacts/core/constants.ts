@@ -1,5 +1,7 @@
 // Shared constants of the per-plugin web-artifact engine.
 
+import { COMPOSITION_SPECIFIERS } from "./composition-modules";
+
 /**
  * Bump to invalidate EVERY stored artifact fleet-wide (hash input). Use when the
  * builder's semantics change in a way the other hash inputs can't see (config
@@ -76,7 +78,7 @@ export function isBareSpecifier(id: string): boolean {
     !id.startsWith("/") &&
     !id.startsWith("\0") &&
     !id.startsWith("@plugins/") &&
-    !id.startsWith("@composition-web-registry")
+    !COMPOSITION_SPECIFIERS.has(id)
   );
 }
 

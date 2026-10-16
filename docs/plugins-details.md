@@ -23675,7 +23675,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses tokens: `ui/tokens/shape --spacing`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 86 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 89 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `config_v2` ×14
               - `framework/plugin-id` ×12
               - `plugin-meta/parse-utils` ×12
@@ -23686,6 +23686,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/closure` ×4
               - `plugin-meta/plugin-tree` ×4
               - `framework/slot-declaration` ×3
+              - `framework/tooling/web-artifacts` ×3
               - `config_v2/ledger` ×2
               - `framework/tooling/format` ×2
               - `framework/tooling` ×2
@@ -23745,7 +23746,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `compositionRegistryPath`
               - `compositionRegistryRedirects`
               - `computeEagerTier`
-              - `CONFIG_GIT_LAYER_FILE`
               - `customUtilitiesManifestPath`
               - `dataViewsManifestPath`
               - `declareSlotsFromBarrels`
@@ -24250,6 +24250,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BROWSER_UNREACHABLE_DYNAMIC_KINDS`
               - `BUILDER_VERSION`
               - `buildImportMap`
+              - `COMPOSITION_CONFIG_LAYER_SPECIFIER`
+              - `COMPOSITION_MODULES_REL`
+              - `COMPOSITION_SPECIFIERS`
+              - `compositionConfigLayerFileName`
               - `compositionFleetSource`
               - `computeIdentityHash`
               - `computeInputsHash`
@@ -24275,7 +24279,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WORKER_ASSETS_DIR`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shadow --shadow`
-            - Imported by: `framework/cli/build`
+            - Imported by:
+              - `framework/cli/build`
+              - `framework/tooling/codegen`
           - Exemptions:
             - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `core/internal/global-css.ts` (sanctioned)
           - Cli:

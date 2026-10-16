@@ -61,6 +61,10 @@ There is a new generator, `config-git-layer-gen.ts`, in `tooling/plugins/codegen
   backfills defaults through the descriptor's schema, so it would recompute the same value. The
   output is keyed by storePath (`<hier>/<name>.jsonc`), the same key the server registry and
   `storePathOf` use.
+> **Superseded (per composition):** the layer is now one file per composition, served from the
+> composition's registry artifact, not config_v2's. See
+> `research/2026-10-16-global-config-git-layer-per-composition.md`.
+
 - **Where it writes.** `plugins/config_v2/web/internal/git-layer.generated.ts`, as
   `export const gitLayer: Record<string, GitLayerDocument> = …`. The file is **gitignored**, like the
   per-composition registries. Committing it would make every config edit a second, conflicting

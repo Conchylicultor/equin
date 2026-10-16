@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync } from "fs";
+import { COMPOSITION_SPECIFIERS } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
 import { join, resolve } from "path";
 import { type PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
@@ -551,13 +552,13 @@ async function collectImportSpecifiers(
   return specifiers;
 }
 
-/** True for npm-style bare specifiers (neither relative/absolute nor `@plugins/*`). */
+/** True for npm-style bare specifiers (neither relative/absolute, `@plugins/*`, nor a composition module). */
 function isBareNpmSpecifier(mod: string): boolean {
   return (
     !mod.startsWith(".") &&
     !mod.startsWith("/") &&
     !mod.startsWith("@plugins/") &&
-    !mod.startsWith("@composition-web-registry")
+    !COMPOSITION_SPECIFIERS.has(mod)
   );
 }
 

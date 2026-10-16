@@ -32,7 +32,11 @@ test("keeps only what the committed layer arranges, keyed by storePath", () => {
   write("c/theme/theme.jsonc", "000000000000", { views: ["x"], on: true });
   write("c/theme/@app/pages/theme.jsonc", h, { on: false });
 
-  expect(collectConfigGitLayer(root)).toEqual({
+  const everything = {
+    plugins: new Set(["a.plain", "b.sidebar", "c.theme"]),
+    apps: new Set(["pages"]),
+  };
+  expect(collectConfigGitLayer(root, everything)).toEqual({
     "b/sidebar/list.jsonc": {
       base: { views: ["queue"], on: true },
       scopes: {},
@@ -40,6 +44,39 @@ test("keeps only what the committed layer arranges, keyed by storePath", () => {
     "c/theme/theme.jsonc": {
       base: origin,
       scopes: { pages: { views: [], on: false } },
+    },
+  });
+});
+
+test("carries only the composition's own plugins and apps", () => {
+  const origin = { views: [], on: true };
+  const h = computeHash(origin);
+  write("in/sidebar/list.origin.jsonc", h, origin);
+  write("in/sidebar/list.jsonc", h, { views: ["queue"], on: true });
+  // Plugin outside the composition: its override never ships.
+  write("out/mail/list.origin.jsonc", h, origin);
+  write("out/mail/list.jsonc", h, { views: ["inbox"], on: true });
+  // Included plugin, one scope for an included app and one for an absent app.
+  write("in/theme/theme.origin.jsonc", h, origin);
+  write("in/theme/@app/agent-manager/theme.jsonc", h, { on: false });
+  write("in/theme/@app/mail/theme.jsonc", h, { views: ["m"] });
+  // Included plugin whose ONLY arrangement is an absent app's scope: dropped.
+  write("in/tree/tree.origin.jsonc", h, origin);
+  write("in/tree/@app/mail/tree.jsonc", h, { on: false });
+
+  expect(
+    collectConfigGitLayer(root, {
+      plugins: new Set(["in.sidebar", "in.theme", "in.tree"]),
+      apps: new Set(["agent-manager"]),
+    }),
+  ).toEqual({
+    "in/sidebar/list.jsonc": {
+      base: { views: ["queue"], on: true },
+      scopes: {},
+    },
+    "in/theme/theme.jsonc": {
+      base: origin,
+      scopes: { "agent-manager": { views: [], on: false } },
     },
   });
 });

@@ -105,7 +105,7 @@ export async function scanStagedModules(opts: {
       const distRel = join("artifacts", linkName, abs.slice(linkDir.length + 1));
       const src = readFileSync(abs, "utf8");
       const [imports, exports] = esLexerParse(src, distRel);
-      if (isRegistry) registryFile ??= distRel;
+      if (isRegistry && dirent.name === "index.js") registryFile ??= distRel;
       const self: StagedFile = { exports: new Set(exports.map((e) => e.n)), opaque: false };
       files.set(distRel, self);
       for (const imp of imports) {

@@ -12,10 +12,22 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
 import type { Plugin as VitePlugin } from "vite";
 import { init as esLexerInit, parse as esLexerParse } from "es-module-lexer";
 import type { BabelPluginItem } from "@plugins/framework/plugins/web-core/core";
+import {
+  COMPOSITION_REGISTRY_SPECIFIER,
+  CONFIG_LAYER_ARTIFACT_FILE,
+} from "../composition-modules";
 import { WORKER_ASSETS_DIR } from "../constants";
 import { makeArtifactExternal } from "../externals";
 import { inlinedRootsFor } from "../own-roots";
@@ -510,36 +522,46 @@ export async function buildArtifact(
 }
 
 /**
- * The registry artifact: `web.generated.ts` type-stripped to plain ESM with its
- * `() => import("@plugins/…/web")` dynamic imports preserved as bare specifiers
- * (the import map resolves them). No bundling — the file has no static imports.
+ * The registry artifact — the composition artifact (`composition-modules.ts`):
+ * one file per composition module, each type-stripped to plain ESM. No bundling
+ * — neither file has a static import.
+ *
+ * - `index.js` ← `web.generated.ts`, its `() => import("@plugins/…/web")`
+ *   dynamic imports preserved as bare specifiers (the import map resolves them).
+ * - `config-layer.js` ← the composition's config layer (pure data).
  */
 export async function buildRegistryArtifact(opts: {
   dirName: string;
   inputsHash: string;
   registryFile: string;
+  configLayerFile: string;
   minify: boolean;
 }): Promise<ArtifactMeta> {
   const { transform } = await import("esbuild");
-  const source = readFileSync(opts.registryFile, "utf8");
-  const result = await transform(source, {
-    loader: "ts",
-    format: "esm",
-    minify: opts.minify,
-    keepNames: true,
-    sourcemap: true,
-    sourcefile: "web.generated.ts",
-  });
   const tmpDir = artifactTmpDir(opts.dirName);
-  writeFileSync(
-    join(tmpDir, "index.js"),
-    result.code + "\n//# sourceMappingURL=index.js.map\n",
-  );
-  writeFileSync(join(tmpDir, "index.js.map"), result.map);
+  const modules = [
+    { file: opts.registryFile, out: "index.js" },
+    { file: opts.configLayerFile, out: CONFIG_LAYER_ARTIFACT_FILE },
+  ];
+  for (const m of modules) {
+    const result = await transform(readFileSync(m.file, "utf8"), {
+      loader: "ts",
+      format: "esm",
+      minify: opts.minify,
+      keepNames: true,
+      sourcemap: true,
+      sourcefile: basename(m.file),
+    });
+    writeFileSync(
+      join(tmpDir, m.out),
+      `${result.code}\n//# sourceMappingURL=${m.out}.map\n`,
+    );
+    writeFileSync(join(tmpDir, `${m.out}.map`), result.map);
+  }
   const { staticImportsByFile, dynamicImports } =
     await parseEmittedImports(tmpDir);
   const meta: ArtifactMeta = {
-    specifier: "@composition-web-registry",
+    specifier: COMPOSITION_REGISTRY_SPECIFIER,
     kind: "registry",
     pluginPath: null,
     inputsHash: opts.inputsHash,

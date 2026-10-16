@@ -82,6 +82,16 @@ Key invariants:
   joins the modulepreload closure — asserted per build by
   `assertCoEntriesOffHostPath` (`index.js` must not statically reach a
   co-entry file).
+- **What depends on the composition lives only in the registry artifact.**
+  A plugin artifact is shared by every composition holding the plugin, so it
+  must not carry anything composition-specific. The modules that are
+  (`core/composition-modules.ts`: `@composition-web-registry` →
+  `index.js`, the web registry; `@composition-config-layer` →
+  `config-layer.js`, the committed config of the composition's own plugins and
+  apps) are type-stripped into the ONE per-composition registry artifact, whose
+  address hashes both sources. Each sits behind a fixed bare specifier that is
+  external to every build (`COMPOSITION_SPECIFIERS`) and mapped to the deployed
+  composition's file — so a config edit rebuilds only that cheap artifact.
 - **A worker is bundled whole, from its own plugin only.** A
   `new SharedWorker(new URL("./x.worker.ts", import.meta.url), { type: "module" })`
   (networking's shared socket is the one user) is built by vite's nested
@@ -193,6 +203,10 @@ Key invariants:
     - `BROWSER_UNREACHABLE_DYNAMIC_KINDS`
     - `BUILDER_VERSION`
     - `buildImportMap`
+    - `COMPOSITION_CONFIG_LAYER_SPECIFIER`
+    - `COMPOSITION_MODULES_REL`
+    - `COMPOSITION_SPECIFIERS`
+    - `compositionConfigLayerFileName`
     - `compositionFleetSource`
     - `computeIdentityHash`
     - `computeInputsHash`
@@ -218,7 +232,9 @@ Key invariants:
     - `WORKER_ASSETS_DIR`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: `framework/cli/build`
+  - Imported by:
+    - `framework/cli/build`
+    - `framework/tooling/codegen`
 - Exemptions:
   - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `core/internal/global-css.ts` (sanctioned)
 - Cli:
