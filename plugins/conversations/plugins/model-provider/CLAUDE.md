@@ -32,7 +32,7 @@ Single source of truth for the models an agent can run, and for what the user as
     - `config_v2.useSetConfig`
     - `fields/dynamic-enum/config.DynamicEnum`
     - `fields/dynamic-flags/config.DynamicFlags`
-    - `framework/browser-server/demo.Demo`
+    - `framework/browser-server/demo.demoResource`
     - `network/live.useLive`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.Select`

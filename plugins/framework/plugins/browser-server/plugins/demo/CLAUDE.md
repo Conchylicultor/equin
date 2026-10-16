@@ -59,9 +59,11 @@ const server = createBrowserServer({ serve: servePack(pack), unserved: (k) => ne
 
 ## web/: the `Demo` slots
 
-`Demo.Resource({ id, useServe })` (a plugin answering its own live keys in
-every demo scope — `useServe: Hook<() => DemoServe>`) and
-`Demo.Route({ route: [ep.route, implement(ep, h)] })`. Declared here, in a
+`Demo.Resource({ id, useBackend })` (a plugin's backend in every demo scope —
+`useBackend: Hook<() => DemoBackend>`, `DemoBackend = { serve, routes? }`: the
+live keys it answers and the endpoint handlers sharing its per-scope state,
+e.g. config_v2's in-memory user layer and its `set-field` write) and
+`Demo.Route({ route: [ep.route, implement(ep, h)] })` (a STATELESS handler). Declared here, in a
 leaf barrel, not in `demo/scope`: the scope imports UI (toast, loading) that
 reaches config_v2, a contributor, so the slots there would be a cycle. Read by
 `<DemoScope>` (`demo/scope`), which documents the contract.
@@ -80,7 +82,7 @@ HTTP read, with tuples spelled by the declarations' own codecs (the client's).
 
 ## Plugin reference
 
-- Description: Demo packs (core) and the two slots a plugin answers its own keys in every demo scope through (web): Demo.Resource (a useServe hook returning a browser server serve function) and Demo.Route ([ep.route, implement(ep, handler)]). A leaf: the scope that reads them lives in demo/scope, so a low plugin (config_v2) can contribute without depending on the scope's UI.
+- Description: Demo packs (core) and the two slots a plugin answers its own keys in every demo scope through (web): Demo.Resource (a useBackend hook returning a plugin's per-scope backend: a browser server serve function plus endpoint routes sharing its state) and Demo.Route (a stateless [ep.route, implement(ep, handler)]). A leaf: the scope that reads them lives in demo/scope, so a low plugin (config_v2) can contribute without depending on the scope's UI.
 - Web:
   - Slots:
     - `Demo.Resource`
@@ -104,7 +106,10 @@ HTTP read, with tuples spelled by the declarations' own codecs (the client's).
     - `Demo.Resource` ← `tasks.outcome-report`
     - `Demo.Resource` ← `tasks.task-track`
     - `Demo.Route` ← `conversations.hibernation`
-  - Exports (types): `DemoServe`
+  - Exports (types):
+    - `DemoBackend`
+    - `DemoRoute`
+    - `DemoServe`
   - Exports (values):
     - `Demo`
     - `demoResource`

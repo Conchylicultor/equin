@@ -133,6 +133,7 @@ import { withRank } from "@plugins/primitives/plugins/rank/server";
   - Imported by:
     - `apps/agent-manager/demo`
     - `apps/studio/explorer`
+    - `config_v2`
     - `conversations/agents`
     - `conversations/conversations-view/grouped`
     - `conversations/conversations-view/queue`

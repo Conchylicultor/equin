@@ -9,26 +9,42 @@ import type {
 /** A browser server's `serve` half: serve declarations on `s`, return what was served. */
 export type DemoServe = (s: BrowserServe) => readonly BrowserServed[];
 
+/** One endpoint handler: `[ep.route, implement(ep, handler)]`. */
+export type DemoRoute = readonly [key: string, handler: RouteHandler];
+
+/**
+ * A plugin's backend inside ONE demo scope: what it serves, and the endpoint
+ * handlers that share its state (a write handler notifying what `serve`
+ * served). Both are built by the same `useBackend` call, so a plugin's
+ * per-scope state (config's in-memory user layer) lives exactly as long as the
+ * scope's mount.
+ */
+export interface DemoBackend {
+  serve: DemoServe;
+  routes?: readonly DemoRoute[];
+}
+
 export const Demo = {
   /**
-   * A plugin answering its own live keys inside every demo scope. `useServe`
-   * runs once per scope mount, inside the scope's React tree (it may read
-   * slots, config…), and returns the serve function the scope's browser server
-   * calls when it is built. Return a STABLE function (read changing inputs
-   * through a ref): a new identity rebuilds the scope's server. To push a
-   * change later, keep what `s.serveValue` / `s.serveCollection` returned and
-   * call its `notify()`.
+   * A plugin answering its own live keys (and, optionally, its own endpoints)
+   * inside every demo scope. `useBackend` runs once per scope mount, inside the
+   * scope's React tree (it may read slots, config…), and returns the
+   * `DemoBackend` the scope's browser server is built from. Return a STABLE
+   * object (read changing inputs through a ref): a new identity rebuilds the
+   * scope's server. To push a change later, keep what `s.serveValue` /
+   * `s.serveCollection` returned and call its `notify()`.
    */
   Resource: defineSlot<{
     id: string;
-    useServe: Hook<() => DemoServe>;
+    useBackend: Hook<() => DemoBackend>;
   }>({ docLabel: (c) => c.id }),
   /**
-   * A plugin's in-browser handler for one of its endpoints, answered inside
-   * every demo scope: `[ep.route, implement(ep, handler)]`.
+   * A plugin's STATELESS in-browser handler for one of its endpoints, answered
+   * inside every demo scope: `[ep.route, implement(ep, handler)]`. A handler
+   * with per-scope state is a `DemoBackend` route instead.
    */
   Route: defineSlot<{
-    route: readonly [key: string, handler: RouteHandler];
+    route: DemoRoute;
   }>({ docLabel: (c) => c.route[0] }),
 };
 
@@ -41,6 +57,7 @@ export function demoResource(
   id: string,
   serve: DemoServe,
 ): ReturnType<typeof Demo.Resource> {
-  const useServe = (): DemoServe => serve;
-  return Demo.Resource({ id, useServe });
+  const backend: DemoBackend = { serve };
+  const useBackend = (): DemoBackend => backend;
+  return Demo.Resource({ id, useBackend });
 }

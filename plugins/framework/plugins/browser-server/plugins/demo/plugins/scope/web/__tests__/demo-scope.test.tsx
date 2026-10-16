@@ -64,6 +64,8 @@ import {
 } from "@plugins/primitives/plugins/networking/web";
 import {
   Demo,
+  demoResource,
+  type DemoBackend,
   type DemoServe,
 } from "@plugins/framework/plugins/browser-server/plugins/demo/web";
 import { DemoScope } from "../components/demo-scope";
@@ -204,7 +206,7 @@ describe("<DemoScope>", () => {
     await renderAsync(
       <PluginProvider
         plugins={plugins([
-          Demo.Resource({ id: "note", useServe: () => contributed.serve }),
+          demoResource("note", contributed.serve),
           Demo.Route({
             route: [
               echo.route,
@@ -314,16 +316,13 @@ describe("<DemoScope>", () => {
     const view = await renderAsync(
       <PluginProvider
         plugins={plugins([
-          Demo.Resource({
-            id: "greeter",
-            useServe: () => (s) => [
-              s.serveValue(greeting, {
-                source: "external",
-                changes: "notified",
-                loader: () => ({ text: "again" }),
-              }),
-            ],
-          }),
+          demoResource("greeter", (s) => [
+            s.serveValue(greeting, {
+              source: "external",
+              changes: "notified",
+              loader: () => ({ text: "again" }),
+            }),
+          ]),
         ])}
       >
         <Boundary>
@@ -336,6 +335,72 @@ describe("<DemoScope>", () => {
     await waitFor(() =>
       expect(view.getByTestId("boundary").textContent).toBe(
         `demo scope "twice": "${greeting.key}" is served by both the pack of "twice" and Demo.Resource "greeter".`,
+      ),
+    );
+  });
+
+  it("a backend's own route is answered beside its serves", async () => {
+    let fetchIn: ReturnType<typeof useFetchEndpoint> | null = null;
+    const backend: DemoBackend = {
+      serve: () => [],
+      routes: [
+        [
+          echo.route,
+          implement(echo, ({ params, body }) => ({
+            id: params.id,
+            doubled: body.n * 3,
+          })),
+        ],
+      ],
+    };
+    await renderAsync(
+      <PluginProvider
+        plugins={plugins([
+          Demo.Resource({ id: "echoer", useBackend: () => backend }),
+        ])}
+      >
+        <DemoScope scenario={scenarioOf(pack, "backend-route")}>
+          <Probe
+            read={() => useFetchEndpoint()}
+            onRead={(f) => (fetchIn = f)}
+          />
+        </DemoScope>
+      </PluginProvider>,
+    );
+    await waitFor(() => expect(fetchIn).not.toBeNull());
+    expect(await fetchIn!(echo, { id: "x" }, { body: { n: 2 } })).toEqual({
+      id: "x",
+      doubled: 6,
+    });
+  });
+
+  it("a route answered by both a Demo.Route and a backend throws, naming both", async () => {
+    console.error = () => {};
+    const handler = implement(echo, ({ params }) => ({
+      id: params.id,
+      doubled: 0,
+    }));
+    const backend: DemoBackend = {
+      serve: () => [],
+      routes: [[echo.route, handler]],
+    };
+    const view = await renderAsync(
+      <PluginProvider
+        plugins={plugins([
+          Demo.Route({ route: [echo.route, handler] }),
+          Demo.Resource({ id: "echoer", useBackend: () => backend }),
+        ])}
+      >
+        <Boundary>
+          <DemoScope scenario={scenarioOf(pack, "route-twice")}>
+            <p>never</p>
+          </DemoScope>
+        </Boundary>
+      </PluginProvider>,
+    );
+    await waitFor(() =>
+      expect(view.getByTestId("boundary").textContent).toBe(
+        `demo scope "route-twice": route "${echo.route}" is answered by both a Demo.Route and Demo.Resource "echoer".`,
       ),
     );
   });

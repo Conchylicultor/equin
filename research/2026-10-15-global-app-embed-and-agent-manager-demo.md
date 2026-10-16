@@ -160,7 +160,9 @@ Two kinds of answers, with a clear owner each:
   `config/conversations/conversations-view/data-view/conversations-sidebar.jsonc`). Serving the
   committed layer (override ⊕ origin ⊕ `@app` scopes) in the browser needs build infrastructure (no
   build path ships `config/` to the web today); the goal is config_v2 fully supported by the browser
-  server. Filed as the next task.
+  server. Filed as the next task. **Closed** by
+  `research/2026-10-16-global-config-git-layer-in-browser-server.md`: the build bundles the
+  committed layer for the browser server, and a demo scope's writes land in an in-memory user layer.
 - **Leak check.** After mount, no server-side log carries a demo id (they appear only in the browser's
   own `live-state` client log channel). The gateway keeps no access log, so this is not a full proof.
 

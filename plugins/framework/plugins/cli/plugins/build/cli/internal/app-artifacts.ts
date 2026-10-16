@@ -7,6 +7,7 @@ import {
   regenerateManifestCodegen,
   regenerateRegistryCodegen,
   seedAuthoredOverrides,
+  generateConfigGitLayer,
   type CodegenStep,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
@@ -135,7 +136,9 @@ import {
  *     `regenerateManifestCodegen`) and must land before the caller propagates
  *     config, so the user layer never sees a half-seeded git layer. NB it mints
  *     `@review` markers into the checkout — today's behaviour for a release
- *     too, since a release reaches it through this same pipeline.
+ *     too, since a release reaches it through this same pipeline. Only the
+ *     config git-layer bundle (`generateConfigGitLayer`) follows it: it reads
+ *     the seeded tree, and stage 3's web build inlines what it writes.
  *   - stage 3 LAST, under ONE host CPU grant covering every heavy child
  *     (checks, tsc, vite / web-artifacts). Nothing inside re-acquires host-wide.
  *
@@ -589,6 +592,18 @@ export async function generateAppSources(opts: {
       `[config-v2] re-marked stale override config/${rel} (marked @review)`,
     );
   }
+
+  // 4b''. Bundle the committed config layer for the browser server (a demo
+  // scope answers `config-v2.values` from it, never from the host). After the
+  // seeder, so it reads the same git layer the caller then propagates; before
+  // stage 3, whose web build inlines it into config_v2's artifact.
+  endSpan = hooks.span(
+    "configGitLayer",
+    "build:codegen",
+    "bundle the committed config layer",
+  );
+  await generateConfigGitLayer({ root });
+  endSpan();
 }
 
 /**

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { normalizeCollectionItems } from "./registry";
-import { computeHash } from "../../core";
+import { normalizeCollectionItems } from "./collections";
+import { computeHash } from "./config-proxy";
 import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
 import { objectField } from "@plugins/fields/plugins/object/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";

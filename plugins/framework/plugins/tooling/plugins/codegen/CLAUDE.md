@@ -28,10 +28,10 @@ rather than reading as "not preloaded". A factory's own declaration
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 86 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `config_v2` ×14
     - `framework/plugin-id` ×12
     - `plugin-meta/parse-utils` ×12
-    - `config_v2` ×11
     - `plugin-meta/barrel-import` ×6
     - `plugin-meta/composition` ×5
     - `plugin-meta/facets` ×5
@@ -82,6 +82,7 @@ rather than reading as "not preloaded". A factory's own declaration
     - `buildRegistryGenContext`
     - `collectAllPlugins`
     - `collectBareSpecifiers`
+    - `collectConfigGitLayer`
     - `collectDataViews`
     - `collectedDirNamedCompositionRegistryPath`
     - `collectedDirRegistryPath`
@@ -97,6 +98,7 @@ rather than reading as "not preloaded". A factory's own declaration
     - `compositionRegistryPath`
     - `compositionRegistryRedirects`
     - `computeEagerTier`
+    - `CONFIG_GIT_LAYER_FILE`
     - `customUtilitiesManifestPath`
     - `dataViewsManifestPath`
     - `declareSlotsFromBarrels`
@@ -111,6 +113,7 @@ rather than reading as "not preloaded". A factory's own declaration
     - `formatGenerated`
     - `generateBarrelStubs`
     - `generateCompositionRegistry`
+    - `generateConfigGitLayer`
     - `generateConfigOrigins`
     - `generateCustomUtilities`
     - `generateDataViews`
@@ -149,6 +152,7 @@ rather than reading as "not preloaded". A factory's own declaration
     - `renderBarrelStubs`
     - `renderCollectedDirRegistry`
     - `renderCompactDoc`
+    - `renderConfigGitLayer`
     - `renderConfigOriginContent`
     - `renderCustomUtilities`
     - `renderDataViewsManifest`

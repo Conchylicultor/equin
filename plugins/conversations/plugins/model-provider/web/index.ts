@@ -3,8 +3,8 @@ import { Core } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
 import { DynamicFlags } from "@plugins/fields/plugins/dynamic-flags/plugins/config/web";
-import { Demo } from "@plugins/framework/plugins/browser-server/plugins/demo/web";
-import { useModelCatalogDemoServe } from "./internal/demo-resource";
+import { demoResource } from "@plugins/framework/plugins/browser-server/plugins/demo/web";
+import { serveDemoCatalog } from "./internal/demo-resource";
 import { modelProviderConfig } from "../shared/config";
 import { ModelCorruptionReporter } from "./components/corruption-reporter";
 import {
@@ -32,7 +32,7 @@ export default {
   contributions: [
     ConfigV2.WebRegister({ descriptor: modelProviderConfig }),
     // Inside a demo scope, the catalog is the code baseline, never this machine's.
-    Demo.Resource({ id: "model-provider", useServe: useModelCatalogDemoServe }),
+    demoResource("model-provider", serveDemoCatalog),
     // Both settings offer the live catalog, so neither config lists a model.
     DynamicEnum.Options({
       field: modelProviderConfig.fields.defaultModel,

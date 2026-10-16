@@ -96,6 +96,15 @@ export {
   type OriginDefaultsPreparer,
 } from "./config-origin-gen";
 
+// Build-ONLY: the committed config layer resolved and bundled for the browser
+// server (gitignored, config_v2's web folder). Runs after seeding.
+export {
+  CONFIG_GIT_LAYER_FILE,
+  collectConfigGitLayer,
+  generateConfigGitLayer,
+  renderConfigGitLayer,
+} from "./config-git-layer-gen";
+
 // Build-ONLY seeding of the mandatory (`requiresAuthoredOverride`) config
 // overrides, plus the marker scan `regen-generated` asserts on. Deliberately NOT
 // part of `regenerateManifestCodegen` — see the note in regen-pipeline.ts.

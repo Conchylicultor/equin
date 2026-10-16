@@ -57,6 +57,10 @@ export {
   validationIssues,
 } from "./internal/tier-logic";
 export type { ResolvedLayer, ResolvedConfig } from "./internal/tier-logic";
+export { resolveGitLayer } from "./internal/git-layer";
+export type { GitLayerDocument } from "./internal/git-layer";
+export { createMemoryConfigStore } from "./internal/memory-config-store";
+export type { ConfigStore } from "./internal/memory-config-store";
 export {
   setConfigField,
   forkScope,
@@ -68,7 +72,10 @@ export { REVIEW_MARKER, hasReviewMarker } from "./internal/review-marker";
 export { withOverrideLegend } from "./internal/override-legend";
 export { APP_SCOPE_DIR, scopeAppId, appScopeId } from "./internal/scope-format";
 export { configFileOwner } from "./internal/config-file-owner";
-export { mapConfigLists } from "./internal/collections";
+export {
+  mapConfigLists,
+  normalizeCollectionItems,
+} from "./internal/collections";
 export type { ConfigListVisitor } from "./internal/collections";
 export {
   orphanFileRoleSchema,

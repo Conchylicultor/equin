@@ -18,6 +18,7 @@ import {
   propagate,
   readonlyProxy,
   readTypedConfig,
+  resolveGitLayer,
   stringifyConfigValue,
   APP_SCOPE_DIR,
   configFileOwner,
@@ -695,10 +696,29 @@ export async function propagateConfigToUser(opts: {
       join(opts.root, "config", hierarchyPath, `${descriptor.name}.jsonc`),
     );
 
-    const gitEff = effective(gitOrigin, gitOverwrites);
-    if (gitEff === undefined) continue;
+    // Per-app scoped overrides expressed in git: config/<hier>/@app/<id>/<name>.jsonc.
+    // Each is a base-anchored DELTA (only the fields that differ for that app),
+    // resolved over the base-effective config by `resolveGitLayer` and propagated
+    // as the user scoped origin, mirroring the base layer — so a committed scope
+    // reaches a fresh install. No scoped origin is ever committed (codegen has no
+    // scoped defaults; the base origin is the hash anchor for the scoped override).
+    const gitAppDir = join(opts.root, "config", hierarchyPath, APP_SCOPE_DIR);
+    const gitScopedDeltas = new Map<string, ConfigProxy>();
+    if (existsSync(gitAppDir)) {
+      for (const appEntry of readdirSync(gitAppDir, { withFileTypes: true })) {
+        if (!appEntry.isDirectory()) continue;
+        gitScopedDeltas.set(
+          appEntry.name,
+          fileConfigProxy(
+            join(gitAppDir, appEntry.name, `${descriptor.name}.jsonc`),
+          ),
+        );
+      }
+    }
+    const gitLayer = resolveGitLayer(gitOrigin, gitOverwrites, gitScopedDeltas);
+    if (gitLayer === undefined) continue;
 
-    const gitEffProxy = readonlyProxy(gitEff);
+    const gitEffProxy = readonlyProxy(gitLayer.base);
     const userOrigin = fileConfigProxy(
       join(userConfigDir, hierarchyPath, `${descriptor.name}.origin.jsonc`),
     );
@@ -732,66 +752,37 @@ export async function propagateConfigToUser(opts: {
       unlinkSync(ancestorPath);
     }
 
-    // Per-app scoped overrides expressed in git: config/<hier>/@app/<id>/<name>.jsonc.
-    // Each is a base-anchored DELTA (only the fields that differ for that app). Resolve
-    // it over the base-effective config and propagate the merged document as the user
-    // scoped origin, mirroring the base layer above — so a committed scope reaches a
-    // fresh install. No scoped origin is ever committed (codegen has no scoped defaults;
-    // the base origin is the hash anchor for the scoped override).
-    const baseEff =
-      gitEff && typeof gitEff === "object" && !Array.isArray(gitEff)
-        ? (gitEff as Record<string, JsonValue>)
-        : {};
-    const gitAppDir = join(opts.root, "config", hierarchyPath, APP_SCOPE_DIR);
-    const gitScopedAppIds = new Set<string>();
-    if (existsSync(gitAppDir)) {
-      for (const appEntry of readdirSync(gitAppDir, { withFileTypes: true })) {
-        if (!appEntry.isDirectory()) continue;
-        const appId = appEntry.name;
-        const gitScopedDelta = fileConfigProxy(
-          join(gitAppDir, appId, `${descriptor.name}.jsonc`),
-        );
-        const delta = gitScopedDelta.read();
-        if (!delta) continue;
-        gitScopedAppIds.add(appId);
-        const scopedDelta =
-          delta.content &&
-          typeof delta.content === "object" &&
-          !Array.isArray(delta.content)
-            ? (delta.content as Record<string, JsonValue>)
-            : {};
-        const mergedProxy = readonlyProxy({ ...baseEff, ...scopedDelta });
+    const gitScopedAppIds = new Set(Object.keys(gitLayer.scopes));
+    for (const [appId, scoped] of Object.entries(gitLayer.scopes)) {
+      const userScopedOrigin = fileConfigProxy(
+        join(
+          userConfigDir,
+          hierarchyPath,
+          APP_SCOPE_DIR,
+          appId,
+          `${descriptor.name}.origin.jsonc`,
+        ),
+      );
+      const userScopedOverwrites = fileConfigProxy(
+        join(
+          userConfigDir,
+          hierarchyPath,
+          APP_SCOPE_DIR,
+          appId,
+          `${descriptor.name}.jsonc`,
+        ),
+      );
 
-        const userScopedOrigin = fileConfigProxy(
-          join(
-            userConfigDir,
-            hierarchyPath,
-            APP_SCOPE_DIR,
-            appId,
-            `${descriptor.name}.origin.jsonc`,
-          ),
+      const { conflict: scopedConflict } = propagate(
+        readonlyProxy(scoped),
+        userScopedOrigin,
+        userScopedOverwrites,
+      );
+      if (scopedConflict) {
+        console.warn(
+          `[config-v2] conflict: user scoped override for "${descriptor.name}" @app/${appId} at ${hierarchyPath} ` +
+            `was based on a different upstream. Review ${join(userConfigDir, hierarchyPath, APP_SCOPE_DIR, appId, `${descriptor.name}.jsonc`)}`,
         );
-        const userScopedOverwrites = fileConfigProxy(
-          join(
-            userConfigDir,
-            hierarchyPath,
-            APP_SCOPE_DIR,
-            appId,
-            `${descriptor.name}.jsonc`,
-          ),
-        );
-
-        const { conflict: scopedConflict } = propagate(
-          mergedProxy,
-          userScopedOrigin,
-          userScopedOverwrites,
-        );
-        if (scopedConflict) {
-          console.warn(
-            `[config-v2] conflict: user scoped override for "${descriptor.name}" @app/${appId} at ${hierarchyPath} ` +
-              `was based on a different upstream. Review ${join(userConfigDir, hierarchyPath, APP_SCOPE_DIR, appId, `${descriptor.name}.jsonc`)}`,
-          );
-        }
       }
     }
 

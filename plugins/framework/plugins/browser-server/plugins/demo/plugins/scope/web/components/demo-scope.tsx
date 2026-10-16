@@ -28,6 +28,8 @@ import { TransportProvider } from "@plugins/primitives/plugins/networking/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
   Demo,
+  type DemoBackend,
+  type DemoRoute,
   type DemoServe,
 } from "@plugins/framework/plugins/browser-server/plugins/demo/web";
 
@@ -48,28 +50,28 @@ function loadPack(scenario: DemoScenario): Promise<DemoServe> {
   return pending;
 }
 
-// ── Contributed serves, each hook at a stable position ────────────────
+// ── Contributed backends, each hook at a stable position ──────────────
 
-interface ContributedServe {
+interface ContributedBackend {
   /** Who serves it, for the served-twice error. */
   source: string;
-  serve: DemoServe;
+  backend: DemoBackend;
 }
 
 type ResourceContribution = ReturnType<
   typeof Demo.Resource.useContributions
 >[number];
 
-const NO_SERVES: readonly ContributedServe[] = [];
+const NO_BACKENDS: readonly ContributedBackend[] = [];
 
 /**
- * Calls every `Demo.Resource` contribution's `useServe`, one component per
- * contribution (never a `.map` over hooks), threading the collected serves
+ * Calls every `Demo.Resource` contribution's `useBackend`, one component per
+ * contribution (never a `.map` over hooks), threading the collected backends
  * down to `children` — the `CollectFieldExtensions` fold. The contribution
  * list is static per mount, so the recursion depth (and every hook position)
  * is stable.
  */
-function CollectServes({
+function CollectBackends({
   resources,
   index,
   acc,
@@ -77,50 +79,50 @@ function CollectServes({
 }: {
   resources: readonly ResourceContribution[];
   index: number;
-  acc: readonly ContributedServe[];
-  children: (serves: readonly ContributedServe[]) => ReactNode;
+  acc: readonly ContributedBackend[];
+  children: (backends: readonly ContributedBackend[]) => ReactNode;
 }): ReactNode {
   const r = resources[index];
   if (r === undefined) return children(acc);
   return (
-    <ServeStep
+    <BackendStep
       key={r.id}
       id={r.id}
-      useServe={r.useServe}
+      useBackend={r.useBackend}
       resources={resources}
       index={index}
       acc={acc}
     >
       {children}
-    </ServeStep>
+    </BackendStep>
   );
 }
 
-function ServeStep({
+function BackendStep({
   id,
-  useServe,
+  useBackend,
   resources,
   index,
   acc,
   children,
 }: {
   id: string;
-  useServe: Hook<() => DemoServe>;
+  useBackend: Hook<() => DemoBackend>;
   resources: readonly ResourceContribution[];
   index: number;
-  acc: readonly ContributedServe[];
-  children: (serves: readonly ContributedServe[]) => ReactNode;
+  acc: readonly ContributedBackend[];
+  children: (backends: readonly ContributedBackend[]) => ReactNode;
 }): ReactNode {
-  const serve = useServe();
-  // Stable while every serve is: the server is rebuilt only when one changes.
+  const backend = useBackend();
+  // Stable while every backend is: the server is rebuilt only when one changes.
   const next = useMemo(
-    () => [...acc, { source: `Demo.Resource "${id}"`, serve }],
-    [acc, id, serve],
+    () => [...acc, { source: `Demo.Resource "${id}"`, backend }],
+    [acc, id, backend],
   );
   return (
-    <CollectServes resources={resources} index={index + 1} acc={next}>
+    <CollectBackends resources={resources} index={index + 1} acc={next}>
       {children}
-    </CollectServes>
+    </CollectBackends>
   );
 }
 
@@ -169,11 +171,39 @@ function claiming(
   };
 }
 
+/**
+ * Every route the scope answers: the stateless `Demo.Route` handlers plus each
+ * backend's own. A route key claimed twice throws naming both sources.
+ */
+function scopeRoutes(
+  scenarioId: string,
+  routeContributions: readonly DemoRoute[],
+  backends: readonly ContributedBackend[],
+): [string, RouteHandler][] {
+  const owners = new Map<string, string>();
+  const out: [string, RouteHandler][] = [];
+  const add = (source: string, [key, handler]: DemoRoute) => {
+    const prev = owners.get(key);
+    if (prev !== undefined) {
+      throw new Error(
+        `demo scope "${scenarioId}": route "${key}" is answered by both ${prev} and ${source}.`,
+      );
+    }
+    owners.set(key, source);
+    out.push([key, handler]);
+  };
+  for (const r of routeContributions) add("a Demo.Route", r);
+  for (const { source, backend } of backends) {
+    for (const r of backend.routes ?? []) add(source, r);
+  }
+  return out;
+}
+
 function buildServer(
   scenario: DemoScenario,
   packServe: DemoServe,
-  serves: readonly ContributedServe[],
-  routes: readonly (readonly [string, RouteHandler])[],
+  backends: readonly ContributedBackend[],
+  routes: readonly DemoRoute[],
   lastToastAt: { current: number | null },
 ): BrowserServer {
   return createBrowserServer({
@@ -182,16 +212,13 @@ function buildServer(
       const all: BrowserServed[] = [];
       for (const { source, serve } of [
         { source: `the pack of "${scenario.id}"`, serve: packServe },
-        ...serves,
+        ...backends.map((b) => ({ source: b.source, serve: b.backend.serve })),
       ]) {
         all.push(...serve(claiming(s, source, owners, scenario.id)));
       }
       return all;
     },
-    routes: routes.map(([key, handler]): [string, RouteHandler] => [
-      key,
-      handler,
-    ]),
+    routes: scopeRoutes(scenario.id, routes, backends),
     unserved: (key) =>
       new DemoMissingError(
         key,
@@ -221,13 +248,13 @@ function buildServer(
 
 function ScopeServer({
   scenario,
-  serves,
+  backends,
   routes,
   children,
 }: {
   scenario: DemoScenario;
-  serves: readonly ContributedServe[];
-  routes: readonly (readonly [string, RouteHandler])[];
+  backends: readonly ContributedBackend[];
+  routes: readonly DemoRoute[];
   children: ReactNode;
 }): ReactNode {
   const packServe = use(loadPack(scenario));
@@ -240,10 +267,16 @@ function ScopeServer({
     // resource owned by this mount, so StrictMode's mount → unmount → mount
     // disposes the first and keeps the second (an initialiser would build one
     // a discarded render never disposes).
-    const built = buildServer(scenario, packServe, serves, routes, lastToastAt);
+    const built = buildServer(
+      scenario,
+      packServe,
+      backends,
+      routes,
+      lastToastAt,
+    );
     setServer(built);
     return () => built.dispose();
-  }, [scenario, packServe, serves, routes]);
+  }, [scenario, packServe, backends, routes]);
   const transport = useMemo(
     () => (server === null ? null : browserServerTransport(server)),
     [server],
@@ -259,12 +292,13 @@ function ScopeServer({
 /**
  * Renders `children` against a browser server of its own, built once the
  * scenario's pack has loaded: the pack's recorded answers, every
- * `Demo.Resource` contribution's serves and every `Demo.Route` handler. Any
+ * `Demo.Resource` contribution's backend (its serves and its routes) and every
+ * `Demo.Route` handler. Any
  * other known live key fails `loader-failed` (`DemoMissingError`); any other
  * `/api` request is refused (`unsupportedEndpointResponse`) with one
  * "Not available in the demo" toast at a time. The pack loading renders
- * `<Loading/>`; a pack that fails to load or parse, or a key served twice,
- * throws to the error boundary.
+ * `<Loading/>`; a pack that fails to load or parse, or a key served (or a
+ * route answered) twice, throws to the error boundary.
  */
 export function DemoScope({
   scenario,
@@ -280,14 +314,14 @@ export function DemoScope({
     [routeContributions],
   );
   return (
-    <CollectServes resources={resources} index={0} acc={NO_SERVES}>
-      {(serves) => (
+    <CollectBackends resources={resources} index={0} acc={NO_BACKENDS}>
+      {(backends) => (
         <Suspense fallback={<Loading />}>
-          <ScopeServer scenario={scenario} serves={serves} routes={routes}>
+          <ScopeServer scenario={scenario} backends={backends} routes={routes}>
             {children}
           </ScopeServer>
         </Suspense>
       )}
-    </CollectServes>
+    </CollectBackends>
   );
 }

@@ -11673,7 +11673,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `framework/browser-server/demo.Demo`
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
-      - `primitives/latest-ref.useLatestRef`
       - `primitives/live-state.combineResources`
       - `primitives/live-state.foldResource`
       - `primitives/live-state.mapResource`
@@ -11750,12 +11749,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fields/object/config.isObjectFieldDef`
       - `infra/endpoints.defineEndpoint`
       - `network/live.liveValue`
+      - `primitives/rank.Rank`
     - Exports (types):
       - `ConfigDescriptor`
       - `ConfigListVisitor`
       - `ConfigMigration`
       - `ConfigProxy`
       - `ConfigSource`
+      - `ConfigStore`
       - `ConfigV2ConflictEntry`
       - `ConfigV2ConflictLocations`
       - `ConfigV2ConflictMap`
@@ -11768,6 +11769,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ConfigV2Values`
       - `ConfigValues`
       - `Disposable`
+      - `GitLayerDocument`
       - `JsonValue`
       - `OriginDefaultsFrom`
       - `OrphanEntry`
@@ -11801,6 +11803,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `configV2ValidationIssueSchema`
       - `configV2ValuesSchema`
       - `configValues`
+      - `createMemoryConfigStore`
       - `defineConfig`
       - `defineConfigMigration`
       - `deleteScope`
@@ -11810,6 +11813,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `hasConflict`
       - `hasReviewMarker`
       - `mapConfigLists`
+      - `normalizeCollectionItems`
       - `orphanEntrySchema`
       - `orphanFileRoleSchema`
       - `orphanFileSchema`
@@ -11821,6 +11825,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `readTypedConfig`
       - `readTypedConfigWithLayer`
       - `removeDescriptorScope`
+      - `resolveGitLayer`
       - `REVIEW_MARKER`
       - `scopeAppId`
       - `setConfigField`
@@ -11829,7 +11834,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Uses tokens: `ui/tokens/shape --spacing`
+    - Uses tokens:
+      - `ui/tokens/shadow --shadow`
+      - `ui/tokens/shape --spacing`
     - Imported by: 104 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×23
       - `debug` ×14
@@ -11854,7 +11861,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `shell/global-action-bar`
   - Test helpers:
     - Web: `@plugins/config_v2/web/testing`
-      - `useConfigDemoServe` — Config inside a demo scope (`Demo.Resource`): every web-registered descriptor's code `defaults`, as if the user had configured nothing.
+      - `useConfigDemoBackend` — Config inside a demo scope (`Demo.Resource`): the server's tier cascade over two browser layers, so a demo surface reads exactly what a fresh user of the committed repo would — and can change it.
+      - Types: `GitLayer`, `LoadGitLayer`
     - Core: `@plugins/config_v2/core/testing`
       - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
   - Plugins:
@@ -16557,7 +16565,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2.useSetConfig`
           - `fields/dynamic-enum/config.DynamicEnum`
           - `fields/dynamic-flags/config.DynamicFlags`
-          - `framework/browser-server/demo.Demo`
+          - `framework/browser-server/demo.demoResource`
           - `network/live.useLive`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.Select`
@@ -22632,7 +22640,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `framework/browser-server/demo/scope`
       - Plugins:
-        - **`demo`** — Demo packs (core) and the two slots a plugin answers its own keys in every demo scope through (web): Demo.Resource (a useServe hook returning a browser server serve function) and Demo.Route ([ep.route, implement(ep, handler)]). A leaf: the scope that reads them lives in demo/scope, so a low plugin (config_v2) can contribute without depending on the scope's UI.
+        - **`demo`** — Demo packs (core) and the two slots a plugin answers its own keys in every demo scope through (web): Demo.Resource (a useBackend hook returning a plugin's per-scope backend: a browser server serve function plus endpoint routes sharing its state) and Demo.Route (a stateless [ep.route, implement(ep, handler)]). A leaf: the scope that reads them lives in demo/scope, so a low plugin (config_v2) can contribute without depending on the scope's UI.
           - Web:
             - Slots:
               - `Demo.Resource`
@@ -22656,7 +22664,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Demo.Resource` ← `tasks.outcome-report`
               - `Demo.Resource` ← `tasks.task-track`
               - `Demo.Route` ← `conversations.hibernation`
-            - Exports (types): `DemoServe`
+            - Exports (types):
+              - `DemoBackend`
+              - `DemoRoute`
+              - `DemoServe`
             - Exports (values):
               - `Demo`
               - `demoResource`
@@ -22715,6 +22726,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `framework/browser-server.browserServerTransport`
                   - `framework/browser-server/demo.Demo`
+                  - `framework/browser-server/demo.DemoBackend`
+                  - `framework/browser-server/demo.DemoRoute`
                   - `framework/browser-server/demo.DemoServe`
                   - `primitives/live-state.NotificationsProvider`
                   - `primitives/loading.Loading`
@@ -22725,7 +22738,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by: `apps/demo/shell`
               - Test helpers:
                 - Web: `@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web/testing`
-                  - `DemoScope` — Renders `children` against a browser server of its own, built once the scenario's pack has loaded: the pack's recorded answers, every `Demo.Resource` contribution's serves and every `Demo.Route` handler.
+                  - `DemoScope` — Renders `children` against a browser server of its own, built once the scenario's pack has loaded: the pack's recorded answers, every `Demo.Resource` contribution's backend (its serves and its routes) and every `Demo.Route` handler.
     - **`central-core`**
       - Core:
         - Uses:
@@ -23585,10 +23598,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses tokens: `ui/tokens/shape --spacing`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 83 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 86 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+              - `config_v2` ×14
               - `framework/plugin-id` ×12
               - `plugin-meta/parse-utils` ×12
-              - `config_v2` ×11
               - `plugin-meta/barrel-import` ×6
               - `plugin-meta/composition` ×5
               - `plugin-meta/facets` ×5
@@ -23639,6 +23652,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `buildRegistryGenContext`
               - `collectAllPlugins`
               - `collectBareSpecifiers`
+              - `collectConfigGitLayer`
               - `collectDataViews`
               - `collectedDirNamedCompositionRegistryPath`
               - `collectedDirRegistryPath`
@@ -23654,6 +23668,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `compositionRegistryPath`
               - `compositionRegistryRedirects`
               - `computeEagerTier`
+              - `CONFIG_GIT_LAYER_FILE`
               - `customUtilitiesManifestPath`
               - `dataViewsManifestPath`
               - `declareSlotsFromBarrels`
@@ -23668,6 +23683,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `formatGenerated`
               - `generateBarrelStubs`
               - `generateCompositionRegistry`
+              - `generateConfigGitLayer`
               - `generateConfigOrigins`
               - `generateCustomUtilities`
               - `generateDataViews`
@@ -23706,6 +23722,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `renderBarrelStubs`
               - `renderCollectedDirRegistry`
               - `renderCompactDoc`
+              - `renderConfigGitLayer`
               - `renderConfigOriginContent`
               - `renderCustomUtilities`
               - `renderDataViewsManifest`
@@ -37301,14 +37318,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SortDirection`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 67 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×31
           - `apps` ×20
           - `page` ×4
           - `apps-core` ×2
           - `conversations` ×2
           - `build/serve-composition`
-          - `config_v2`
           - `debug/slow-ops`
           - `integrations/youtube`
           - `layouts/miller`
@@ -39212,6 +39228,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/agent-manager/demo`
           - `apps/studio/explorer`
+          - `config_v2`
           - `conversations/agents`
           - `conversations/conversations-view/grouped`
           - `conversations/conversations-view/queue`
@@ -46177,7 +46194,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 61 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 62 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×22
               - `primitives` ×17
               - `framework` ×4
@@ -46186,6 +46203,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×2
               - `screenshot` ×2
               - `tasks` ×2
+              - `config_v2`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `database/derived-tables`
               - `map`

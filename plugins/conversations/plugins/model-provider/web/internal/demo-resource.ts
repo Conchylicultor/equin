@@ -12,7 +12,7 @@ import {
  * catalog of a machine that never probed its Claude CLI — never this
  * machine's discovered one. Module-level, so the serve function is stable.
  */
-function serveDemoCatalog(s: BrowserServe): readonly BrowserServed[] {
+export function serveDemoCatalog(s: BrowserServe): readonly BrowserServed[] {
   return [
     s.serveValue(modelCatalog, {
       source: "external",
@@ -20,10 +20,4 @@ function serveDemoCatalog(s: BrowserServe): readonly BrowserServed[] {
       loader: () => BASELINE_MODELS,
     }),
   ];
-}
-
-export function useModelCatalogDemoServe(): (
-  s: BrowserServe,
-) => readonly BrowserServed[] {
-  return serveDemoCatalog;
 }
