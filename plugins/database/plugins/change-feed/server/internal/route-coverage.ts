@@ -181,3 +181,30 @@ export function assertRouteTablesCovered(
     throw new Error(formatUncoveredRouteError(dead));
   }
 }
+
+/** One table a reach plan reads outside the change feed (server-core's `unfedResourceTables`). */
+export interface UnfedResourceTable {
+  key: string;
+  table: string;
+}
+
+/**
+ * A reach plan's `unfed` tables are read outside the change feed BY
+ * DECLARATION, so each must be one the feed was told to skip
+ * (`ExcludeFromChangeFeed`). A covered or produced table there is a write the
+ * feed reports and the resource drops — a missed change dressed as a declared
+ * one; any other name (a typo, a view) declares nothing real. Throws (blocks
+ * boot), like A1′.
+ */
+export function assertUnfedTablesOptedOut(
+  unfed: readonly UnfedResourceTable[],
+  optedOut: ReadonlySet<string>,
+): void {
+  const wrong = unfed.filter((u) => !optedOut.has(u.table));
+  if (wrong.length === 0) return;
+  throw new Error(
+    `[change-feed] resources declare reads outside the change feed of tables the feed was not told to skip — ` +
+      `each must be opted out (ExcludeFromChangeFeed), or routed as an ordinary read:\n` +
+      wrong.map((u) => `  - ${u.key}: "${u.table}"`).join("\n"),
+  );
+}

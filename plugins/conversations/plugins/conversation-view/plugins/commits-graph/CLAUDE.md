@@ -61,7 +61,10 @@ The chip renders a muted `—` (reason as tooltip) both for an unresolved payloa
     - `tasks/attempt-work.readBranch`
     - `tasks/attempt-work.readLandedShas`
     - `tasks/attempt-work.readMergeBase`
+    - `tasks/tasks-core._attempts`
+    - `tasks/tasks-core._conversations`
     - `tasks/tasks-core.getAttemptRow`
+    - `tasks/tasks-core.pushes`
   - Resources: `commits-graph.graph` (push)
 - Cross-plugin:
   - Uses tokens:

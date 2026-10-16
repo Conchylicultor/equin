@@ -912,11 +912,13 @@ importing `db` never touches a worktree — no test env shim needed.
     - `UnionCuts`
     - `UnionGroupsQuery`
     - `UnionOrderKey`
+    - `ValueReads`
     - `WindowOrderKey`
     - `WindowQueryResourceSpec`
   - Exports (values):
     - `compileAllCollection`
     - `compileCountQuery`
+    - `compiledValueReach`
     - `compileGroupsQuery`
     - `compileJoins`
     - `compileUnionCollection`

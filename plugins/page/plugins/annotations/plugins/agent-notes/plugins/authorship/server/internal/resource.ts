@@ -4,9 +4,8 @@ import { serveValue } from "@plugins/network/plugins/live/server";
 import { agentNotesAuthors } from "../../shared/schemas";
 import { _pageBlocksAgentAuthors as t } from "./tables";
 
-// Server half of the per-card authorship read: a db-arm value, so the loader's
-// read-set (this table) is captured at the pool chokepoint and a stamp
-// recomputes every subscribed card's tuple — a FULL recompute, with no scope
+// Server half of the per-card authorship read: a db-arm value declaring this table
+// as its reads, so a stamp recomputes every subscribed card's tuple — a FULL recompute, with no scope
 // policy to route on. That is correct, and the right trade: the table's key is
 // the composite `(block_id, conversation_id)`, and a surrogate id column would
 // buy per-row routing at the price of a meaningless key and a separate unique
@@ -20,6 +19,11 @@ import { _pageBlocksAgentAuthors as t } from "./tables";
 // the same rows must not come back in two orders.
 export const agentNotesAuthorsServed = serveValue(agentNotesAuthors, {
   source: "db",
+  reads: {
+    tables: [t],
+    reason:
+      "one card's authors; the table has a composite key, so any stamp may change any subscribed card — whole-table until it reads through a collection",
+  },
   unbounded: {
     reason: "one card's authors — the conversations that wrote into one block",
   },

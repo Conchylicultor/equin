@@ -348,9 +348,10 @@ type MetaOption<Meta, Q> = [Meta] extends [undefined]
 export type PagedChanges = Exclude<LiveValueChanges, { snapshot: unknown }>;
 
 /**
- * A value's two-arg runtime options: never routed (`reach`) — a value's
- * loader is opaque, so the read-set it captures routes it (`source: "db"`), or
- * its own `notify` does (`"external"`).
+ * A value's two-arg runtime options. This compilation never sets `reach`: a
+ * db value's plan comes from its declared `reads`, which only the Bun host can
+ * compile (query-resource reads drizzle tables) — its `serveValue` adds it at
+ * registration. An external value's own `notify` reaches it.
  */
 type ValueOptions<T, P extends Record<string, string>> = ServerResourceOptions<
   T,

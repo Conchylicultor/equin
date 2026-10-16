@@ -1,5 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { idChipServer } from "@plugins/active-data/plugins/id-chip/server";
+import { _eventSources } from "@plugins/apps/plugins/events/plugins/events-core/server";
 import { eventSourceIdKind } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import { EVENT_SOURCE_CHIP_SURFACES } from "../core";
 import { resolveEventSourceReferent } from "./internal/referent";
@@ -10,6 +11,7 @@ export default {
   contributions: [
     ...idChipServer({
       kind: eventSourceIdKind,
+      tables: [_eventSources],
       surfaces: EVENT_SOURCE_CHIP_SURFACES,
       resolve: resolveEventSourceReferent,
     }),

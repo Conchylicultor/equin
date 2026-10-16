@@ -1768,7 +1768,7 @@ describe("registration and the legacy path", () => {
     ).toThrow(/was not minted/);
   });
 
-  test("a routed entry takes no cascade: routes or reach beside dependsOn throws", () => {
+  test("a keyed routed entry takes no cascade: routes beside dependsOn throws", () => {
     const h = createHarness();
     // External, so the only thing refused is the cascade into a routed entry.
     const upstream = h.runtime.defineExternalResource({
@@ -1793,17 +1793,6 @@ describe("registration and the legacy path", () => {
         } as never,
       ),
     ).toThrow(/"routes" and "dependsOn" are exclusive/);
-    expect(() =>
-      h.runtime.defineResource(
-        { key: "reach-down", schema: z.number(), validateParams: () => {} },
-        {
-          mode: "push",
-          reach: mintReachPlan({ routes: [], usesOf: () => new Map() }),
-          dependsOn: [{ resource: upstream }],
-          loader: () => 1,
-        } as never,
-      ),
-    ).toThrow(/"reach" and "dependsOn" are exclusive/);
   });
 
   test("a routed entry is served by routeTableChange only — the legacy read-set path never reaches it", async () => {
@@ -1959,6 +1948,56 @@ describe("reach — a non-keyed entry routed by full routes", () => {
     ).toEqual([["tx-9"]]);
   });
 
+  test("reach may sit beside dependsOn: an upstream notify and a routed change in one flush load the tuple once", async () => {
+    const loads: ResourceParams[] = [];
+    const h = createHarness();
+    const upstream = h.runtime.defineExternalResource({
+      key: "head",
+      mode: "push",
+      schema: z.number(),
+      loader: () => 1,
+    });
+    h.runtime.defineResource(
+      { key: "work", schema: z.number(), validateParams: () => {} },
+      {
+        mode: "push",
+        reach: mintReachPlan({
+          routes: [
+            {
+              id: "hosts",
+              table: "hosts",
+              map: { kind: "full", reason: "whole table" },
+              columns: ["id"],
+            },
+          ],
+          usesOf: () => new Map([["hosts", { role: "membership" as const }]]),
+        }),
+        dependsOn: [{ resource: upstream, toSubscribed: true }],
+        loader: (p) => {
+          loads.push(p);
+          return loads.length;
+        },
+      },
+    );
+    await h.subscribe("work", { id: "a" });
+    loads.length = 0;
+    upstream.notify({});
+    await settle();
+    expect(loads).toEqual([{ id: "a" }]);
+    loads.length = 0;
+    upstream.notify({});
+    h.runtime.routeTableChange({
+      source: "feed",
+      table: "hosts",
+      op: "U",
+      ids: ["x"],
+      keys: null,
+      unchanged: null,
+    });
+    await settle();
+    expect(loads).toEqual([{ id: "a" }]);
+  });
+
   test("reach is the non-keyed, full-only, table-routed arm: every other spelling throws", () => {
     const h = createHarness();
     const full = {
@@ -2083,6 +2122,131 @@ describe("A8 — a routed loader reading a table no route names", () => {
     d.stray("mail_accounts");
     await d.h.subscribe("win", { id: "a" });
     expect(d.h.frames.map((f) => f.kind)).toEqual(["sub-error"]);
+  });
+
+  test("in a running server a drifted table fails open: its next change recomputes every target FULL", async () => {
+    const d = drifting(false);
+    d.stray("mail_accounts");
+    await d.h.subscribe("win", { id: "a" });
+    const before = d.h.frames.length;
+    d.h.runtime.routeTableChange({
+      source: "feed",
+      table: "mail_accounts",
+      op: "U",
+      ids: ["m1"],
+      keys: null,
+      unchanged: null,
+    });
+    await settle();
+    // The point tuple re-read in FULL: its value frame went out again.
+    expect(d.h.frames.length).toBeGreaterThan(before);
+  });
+});
+
+describe("A8 fail-open — a drifted relation reaches the entry through its bases", () => {
+  test("a drifted view fails open on its base tables, never on its own name", async () => {
+    const loads: ResourceParams[] = [];
+    const reports: string[] = [];
+    const h = createHarness({
+      reportError: (ctx) => reports.push(ctx),
+      lastReadSet: () => ["state", "things_v"],
+      relationBases: (r) => (r === "things_v" ? ["things", "owners"] : [r]),
+      strictRoutes: false,
+    });
+    h.runtime.defineResource(
+      { key: "summary", schema: z.number(), validateParams: () => {} },
+      {
+        mode: "push",
+        reach: mintReachPlan({
+          routes: [
+            {
+              id: "state",
+              table: "state",
+              map: { kind: "full", reason: "a singleton" },
+              columns: ["id"],
+            },
+          ],
+          usesOf: () => new Map([["state", { role: "membership" as const }]]),
+        }),
+        loader: (p) => {
+          loads.push(p);
+          return loads.length;
+        },
+      },
+    );
+    await h.subscribe("summary", { id: "a" });
+    expect(reports).toEqual(["route drift for summary"]);
+    const change = (table: string) =>
+      h.runtime.routeTableChange({
+        source: "feed",
+        table,
+        op: "U",
+        ids: ["x"],
+        keys: null,
+        unchanged: null,
+      });
+    loads.length = 0;
+    change("owners");
+    await settle();
+    expect(loads).toEqual([{ id: "a" }]);
+    loads.length = 0;
+    change("things_v");
+    await settle();
+    expect(loads).toEqual([]);
+  });
+});
+
+describe("unfed reads — a reach plan's tables read outside the change feed", () => {
+  function unfedValue(unfed: readonly { table: string; reason: string }[]) {
+    return mintReachPlan({
+      routes: [
+        {
+          id: "state",
+          table: "state",
+          map: { kind: "full", reason: "a singleton" },
+          columns: ["id"],
+        },
+      ],
+      usesOf: () => new Map([["state", { role: "membership" as const }]]),
+      unfed,
+    });
+  }
+
+  test("the drift guard accepts a declared unfed table, even under strictRoutes", async () => {
+    const h = createHarness({
+      lastReadSet: () => ["state", "cache"],
+      strictRoutes: true,
+    });
+    h.runtime.defineResource(
+      { key: "catalog", schema: z.number(), validateParams: () => {} },
+      {
+        mode: "push",
+        reach: unfedValue([
+          { table: "cache", reason: "a memo keyed on state" },
+        ]),
+        loader: () => 1,
+      },
+    );
+    await h.subscribe("catalog", {});
+    expect(h.frames.map((f) => f.kind)).toEqual(["sub-ack"]);
+    expect(h.runtime.unfedResourceTables()).toEqual([
+      { key: "catalog", table: "cache" },
+    ]);
+  });
+
+  test("minting refuses an unfed table a route names, one listed twice, or one with no reason", () => {
+    expect(() => unfedValue([{ table: "state", reason: "x" }])).toThrow(
+      /both routed and read outside the feed/,
+    );
+    expect(() =>
+      unfedValue([
+        { table: "cache", reason: "x" },
+        { table: "cache", reason: "y" },
+      ]),
+    ).toThrow(/listed twice/);
+    expect(() => unfedValue([{ table: "cache", reason: " " }])).toThrow(
+      /no reason/,
+    );
   });
 });
 

@@ -71,6 +71,7 @@ each kind's bell variant), `minCount` (occurrences, default 3) and
     - `resource.declare` "report-investigations.scope"
   - Uses:
     - `network/live.serveValue`
+    - `reports._reports`
     - `reports.linkReportsToTask`
     - `reports.renderReportTask`
     - `reports.reportInvestigationSink`

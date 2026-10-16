@@ -36,7 +36,7 @@ export const claudeCliCallsServed = serveCollection(claudeCliCalls, {
   },
 });
 
-// One record's calls (`claude-cli.calls-for`): the loader reads only
+// One record's calls (`claude-cli.calls-for`): the declared reads are only
 // `claude_cli_calls`, so a call recorded for the record — or the recorder's
 // trim aging one out, which can flip `none` to `not-retained` — recomputes the
 // subscribed tuples through the change feed. The log is a ring of
@@ -44,6 +44,11 @@ export const claudeCliCallsServed = serveCollection(claudeCliCalls, {
 // open tuple on each insert stays cheap.
 export const claudeCliCallsForServed = serveValue(claudeCliCallsFor, {
   source: "db",
+  reads: {
+    tables: [_claudeCliCalls],
+    reason:
+      "a call recorded for the record, or the ring's trim aging one out, changes the answer; whole-table until it reads through a collection",
+  },
   loader: ({ correlationId, occurredAt }) =>
     listCallsFor(correlationId, parseOccurredAt(occurredAt)),
 });

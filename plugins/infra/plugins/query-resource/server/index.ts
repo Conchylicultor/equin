@@ -25,6 +25,8 @@ export type {
   UnionOrderKey,
 } from "./internal/compile-union-window";
 export { compileJoins, joinRefs, presenceExpr } from "./internal/joins";
+export { compiledValueReach } from "./internal/routes";
+export type { ValueReads } from "./internal/routes";
 export type { ReadColumn } from "./internal/joins";
 export type { CompiledGroups } from "./internal/compile-groups";
 export type {

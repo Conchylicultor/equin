@@ -93,6 +93,7 @@ a steady-state reboot writes nothing).
     - `page/editor.DeletedBlockRow`
     - `page/editor.liveBlocks`
     - `page/editor.PAGE_BLOCK_TYPE`
+    - `primitives/text-editor/inline-chip.inlineTokenReferentTables`
     - `primitives/text-editor/inline-chip.inlineTokensAsText`
   - DB schema: `plugins/page/plugins/links/server/internal/tables.ts`
   - Exports (types):

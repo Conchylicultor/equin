@@ -1,4 +1,5 @@
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
+import type { RoutedSource } from "@plugins/infra/plugins/query-resource/server";
 
 /**
  * What one inline token names, answered on the server: the thing it points at
@@ -19,16 +20,37 @@ export type InlineTokenReferent =
  * `kind` is the tag name the token expands to (`<prototype id="…" title="…"/>`);
  * `pattern` is the SAME regex the chip declares, imported from the family's
  * `core/`, so the two readings cannot drift.
+ *
+ * `tables` are the BASE tables `resolve` reads (`[]` when it reads none — a
+ * file-backed referent). A live value that renders text through
+ * {@link inlineTokensAsText} declares them as its reads
+ * ({@link inlineTokenReferentTables}), so a rename of the referent recomputes
+ * it. Never a view: a resolver reads the base table's column itself.
  */
 export const InlineTokenReferentSource = defineServerContribution<{
   kind: string;
   pattern: RegExp;
+  readonly tables: readonly RoutedSource[];
   resolve(token: string): Promise<InlineTokenReferent>;
 }>("primitives.text-editor.inline-chip.referent", {
   // The pattern's source, as `Editor.InlineToken`'s: the join key the
   // `active-data:resolved-chip-has-referent` check matches chips against.
   docLabel: (s) => s.pattern.source,
 });
+
+/**
+ * The base tables every contributed referent resolver reads, deduped — what a
+ * live value built on {@link inlineTokensAsText} adds to its own declared
+ * reads. Read at CALL time (a `reads` thunk): families contribute as the plugin
+ * tiers load. Generic: names no family.
+ */
+export function inlineTokenReferentTables(): RoutedSource[] {
+  return [
+    ...new Set(
+      InlineTokenReferentSource.getContributions().flatMap((s) => s.tables),
+    ),
+  ];
+}
 
 function escapeAttr(value: string): string {
   return value

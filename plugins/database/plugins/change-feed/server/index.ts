@@ -1,5 +1,6 @@
 import {
   scopedResourceTables,
+  unfedResourceTables,
   routedTableRequirements,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
@@ -116,6 +117,7 @@ export default {
       },
       layouts: routedTableRequirements(),
       scoped: scopedResourceTables(),
+      unfed: unfedResourceTables(),
     };
     // The trigger rebuild and the boot invariants it is checked against (A1′,
     // A2′, A3, A3p, D35 — see ./internal/install-feed). Per-table DROP+CREATE

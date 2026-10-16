@@ -1,8 +1,18 @@
 import {
+  defineDeferredResource,
   defineExternalResource,
   defineResource,
   Resource as ResourceContribution,
 } from "@plugins/framework/plugins/server-core/core";
+import type {
+  ReachPlan,
+  ResourceParams,
+  ResourceRuntime,
+} from "@plugins/framework/plugins/resource-runtime/core";
+import {
+  compiledValueReach,
+  type ValueReads,
+} from "@plugins/infra/plugins/query-resource/server";
 import {
   type LivePagedParams,
   type LivePagedPages,
@@ -19,6 +29,7 @@ import type {
   AnyServeOptions,
   BytesPairing,
   ExternalServed,
+  LiveRuntime,
   LiveValueChanges,
   PagedChanges,
   ServedFor,
@@ -34,10 +45,12 @@ import type {
 // declaration opts into `load: "on-demand"` (declared there because the client
 // reads it too).
 //
-// - `source: "db"` — the truth is Postgres. The read-set is captured at the DB
-//   pool chokepoint, and a change to any table the loader read recomputes every
-//   subscribed tuple (a FULL recompute — no scope policy: a value is one
-//   payload, a keyed payload is a collection). There is no `notify`.
+// - `source: "db"` — the truth is Postgres. The value declares the tables its
+//   loader reads (`reads`, with a reason); a change to any of them recomputes
+//   every subscribed tuple (a FULL recompute — whole tables only: the loader's
+//   SQL is hand-written, so no per-row filter could be kept in step with it; a
+//   keyed payload is a collection). The runtime's drift guard holds the loader
+//   to the declaration. There is no `notify`.
 // - `source: "external"` — the truth lives outside Postgres (git, files, an
 //   in-memory registry), which no change feed can see. It must declare how its
 //   answer changes (`changes`, `LiveValueChanges`): `"notified"` — the served
@@ -99,6 +112,22 @@ export type ServedSilentPagedValue<Item> = ServedValueBase<
   declare: ReturnType<typeof ResourceContribution.Declare>[];
 };
 
+/**
+ * What a db value's loader reads, declared (see query-resource's `ValueReads`):
+ * whole tables and why, compiled to the value's routing plan. A thunk when the
+ * tables come from a registry that is complete only once contributions are
+ * collected (the value is then bound at `bindDeferredResources`, before the
+ * change feed builds its triggers) — such a value must be pushed (`load` not
+ * `"on-demand"`).
+ */
+export type ServedValueReads = ValueReads | (() => ValueReads);
+
+/** The db arm's declaration of what its loader reads. Required. */
+interface DbReadsOption {
+  /** Every table the loader reads, and why a write to any row may change any tuple. */
+  reads: ServedValueReads;
+}
+
 /** Any other worktree value: its `serveValue` takes no `preloadParams`. */
 type PlainValue<T, P extends Record<string, string>> = LiveValue<T, P> & {
   preloadsParams?: never;
@@ -123,6 +152,7 @@ interface PreloadParamsOption<P> {
  * ```ts
  * export const unreadServed = serveValue(notificationsUnread, {
  *   source: "db",
+ *   reads: { tables: [notifications], reason: "the badge counts every row" },
  *   loader: countUnread,
  * });
  * // contributions: [...unreadServed.declare]
@@ -179,7 +209,7 @@ export function serveValue<
   value: LiveQueryValue<T, Q, QIn> &
     SnapshotPairing<"notified"> &
     BytesPairing<"db">,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "db", R>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "db", R> & DbReadsOption,
 ): ServedValue<T, LiveQueryParams>;
 export function serveValue<
   T,
@@ -202,6 +232,7 @@ export function serveValue<
 >(
   value: LivePreloadedParamValue<T, P>,
   opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R> &
+    DbReadsOption &
     PreloadParamsOption<NoInfer<P>>,
 ): ServedValue<T, P>;
 export function serveValue<
@@ -220,9 +251,10 @@ export function serveValue<
   const R extends readonly ExternalServed[] = [],
 >(
   value: PlainValue<T, P> & SnapshotPairing<"notified"> & BytesPairing<"db">,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R> & {
-    preloadParams?: never;
-  },
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R> &
+    DbReadsOption & {
+      preloadParams?: never;
+    },
 ): ServedValue<T, P>;
 export function serveValue<
   T,
@@ -246,6 +278,7 @@ export function serveValue<T, P extends Record<string, string>>(
     | LivePagedPages<any, any, any>,
   opts: AnyServeOptions & {
     preloadParams?: () => P[] | Promise<P[]>;
+    reads?: ServedValueReads;
   },
 ):
   | ServedValue<T, P>
@@ -274,7 +307,7 @@ export function serveValue<T, P extends Record<string, string>>(
   // Erased: the overloads checked the options against the declaration's
   // form, and the compilation dispatches on the declaration itself.
   const served = serveValueOn<T, P, "db+external">(
-    { defineResource, defineExternalResource },
+    runtimeFor(value.key, opts),
     value as LiveValue<T, P, LiveValueOrigin>,
     opts,
     { sources: "db+external" },
@@ -322,6 +355,72 @@ export function serveValue<T, P extends Record<string, string>>(
   } as ServedValue<T, P> | ServedExternalValue<T, P>;
 }
 
+/** The register primitives a value's runtime is built over — server-core's in production. */
+export type ValueHost = Pick<
+  ResourceRuntime,
+  "defineResource" | "defineDeferredResource" | "defineExternalResource"
+>;
+
+const SERVER_HOST: ValueHost = {
+  defineResource,
+  defineDeferredResource,
+  defineExternalResource,
+};
+
+/** The runtime a served value registers on: server-core's (see {@link valueRuntime}). */
+function runtimeFor(
+  key: string,
+  opts: { reads?: ServedValueReads },
+): LiveRuntime {
+  return valueRuntime(key, opts, SERVER_HOST);
+}
+
+/**
+ * The runtime a value registers on: `host`'s, with a db value's declared
+ * `reads` compiled into the routing plan (`reach`) its registration carries —
+ * at once, or at the host's `bindDeferredResources` for a thunk. Checked when
+ * the value registers, after its other options: a db value without `reads`, or
+ * an external one with them, is refused (tsc pairs them; this is the untyped
+ * caller's check).
+ */
+export function valueRuntime(
+  key: string,
+  opts: { reads?: ServedValueReads },
+  host: ValueHost,
+): LiveRuntime {
+  const { defineResource, defineDeferredResource, defineExternalResource } =
+    host;
+  const label = `serveValue("${key}")`;
+  const { reads } = opts;
+  const define = (contract: never, options: object) => {
+    if (reads === undefined) {
+      throw new Error(
+        `${label}: a database-backed value declares the tables its loader reads (\`reads: { tables, reason }\`).`,
+      );
+    }
+    const routed = (reach: ReachPlan<ResourceParams>) =>
+      ({ ...options, reach }) as never;
+    return typeof reads === "function"
+      ? defineDeferredResource(contract, () =>
+          routed(compiledValueReach(reads(), label)),
+        )
+      : defineResource(contract, routed(compiledValueReach(reads, label)));
+  };
+  const defineExternal = (contract: never, options: never) => {
+    if (reads !== undefined) {
+      throw new Error(
+        `${label}: \`reads\` is the db arm's — an external value is told of its changes by its own notify.`,
+      );
+    }
+    return defineExternalResource(contract, options);
+  };
+  return {
+    defineResource: define as LiveRuntime["defineResource"],
+    defineExternalResource:
+      defineExternal as LiveRuntime["defineExternalResource"],
+  };
+}
+
 /**
  * A paged value: its pages and — declared `paged.meta` — its meta sibling,
  * registered together over one per-question lifecycle (`serveValueOn`), each
@@ -329,7 +428,10 @@ export function serveValue<T, P extends Record<string, string>>(
  */
 function servePaged(
   value: LivePagedValue<unknown, unknown, unknown, unknown>,
-  opts: AnyServeOptions & { preloadParams?: unknown },
+  opts: AnyServeOptions & {
+    preloadParams?: unknown;
+    reads?: ServedValueReads;
+  },
 ): ServedPagedValue<unknown, unknown> | ServedSilentPagedValue<unknown> {
   if (opts.preloadParams !== undefined) {
     // Unreachable from typed code (a paged value is never preloaded).
@@ -338,7 +440,7 @@ function servePaged(
     );
   }
   const { meta, ...served } = serveValueOn(
-    { defineResource, defineExternalResource },
+    runtimeFor(value.key, opts),
     value,
     opts,
     { sources: "db+external" },

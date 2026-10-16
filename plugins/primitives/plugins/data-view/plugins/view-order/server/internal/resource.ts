@@ -7,15 +7,20 @@ import { _dataViewRowOrder } from "./tables";
 
 /**
  * Serves `rowOrder` from `data_view_row_order`, scoped by `(dataViewId,
- * viewId)` — the twin of custom-columns' `customColumnValuesServed`. The loader
- * reads the table, so the change feed recomputes the tuple on every write
- * (read-set match) — the endpoint notifies nothing.
+ * viewId)` — the twin of custom-columns' `customColumnValuesServed`. The
+ * declared `reads` name the table, so the change feed recomputes the tuple on
+ * every write — the endpoint notifies nothing.
  *
  * Rows are emitted rank-ascending — the client's `seedRanks` reads the whole map
  * anyway, but a rank-ordered payload keeps the wire shape self-describing.
  */
 export const rowOrderServed = serveValue(rowOrder, {
   source: "db",
+  reads: {
+    tables: [_dataViewRowOrder],
+    reason:
+      "a write to any row-order row may change the manual order of the view instance it belongs to; whole-table until it reads through a collection",
+  },
   unbounded: {
     reason:
       "one view instance's manual order — the rows a user dragged plus the seeds ahead of them; the key is the composite (dataViewId, viewId, rowKey), so no single-id :rows read fits",

@@ -112,8 +112,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page.inline-token` "(?<!\/)(?<![A-Za-z0-9_-])(?:att-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
         - Uses:
           - `active-data/id-chip.idChipServer`
-          - `tasks/tasks-core.getAttempt`
-          - `tasks/tasks-core.getTask`
+          - `database.db`
+          - `tasks/tasks-core._attempts`
+          - `tasks/tasks-core._tasks`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
       - Core:
@@ -184,9 +185,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page.inline-token` "(?<!\/)(?<![A-Za-z0-9_-])(?:conv-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
         - Uses:
           - `active-data/id-chip.idChipServer`
-          - `tasks/tasks-core.getAttempt`
-          - `tasks/tasks-core.getConversation`
-          - `tasks/tasks-core.getTask`
+          - `database.db`
+          - `tasks/tasks-core._attempts`
+          - `tasks/tasks-core._conversations`
+          - `tasks/tasks-core._tasks`
       - Core:
         - Exports (values): `CONV_CHIP_SURFACES`
     - **`event-source`** — Renders a bare `evs-<id>` in a transcript as the generic id chip (the source's name) that opens the event source's detail pane, and presents the event-source id kind to the id registry. The event-source id chip's server half (idChipServer): resolves an `evs-<id>` to the source's name for the id registry and for model-read text.
@@ -319,6 +321,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `active-data/id-chip.idChipServer`
           - `database.db`
+          - `page/editor._blocks`
           - `page/editor.liveBlocks`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
@@ -389,6 +392,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?<![A-Za-z0-9_-])(?:report-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
         - Uses:
           - `active-data/id-chip.idChipServer`
+          - `reports._reports`
           - `reports.getReportTitle`
       - Core:
         - Exports (values): `REPORT_CHIP_SURFACES`
@@ -467,7 +471,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page.inline-token` "(?<!\/)(?<![A-Za-z0-9_-])(?:task-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
         - Uses:
           - `active-data/id-chip.idChipServer`
-          - `tasks/tasks-core.getTask`
+          - `database.db`
+          - `tasks/tasks-core._tasks`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
@@ -877,6 +882,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "chord.catalog"
               - `resource.declare` "chord.curriculum"
             - Uses:
+              - `apps/chord/song-index._chordIndexRequest`
+              - `apps/chord/song-index._chordIndexState`
+              - `apps/chord/song-index._chordLoopWindows`
               - `apps/chord/song-index.countTokenSets`
               - `apps/chord/song-index.loadReadyIndexIdentity`
               - `database.db`
@@ -1088,6 +1096,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `apps/chord/curriculum.isListedChord`
               - `apps/chord/curriculum.loadListedChords`
+              - `apps/chord/song-index._chordIndexRequest`
+              - `apps/chord/song-index._chordIndexState`
+              - `apps/chord/song-index._chordLoopWindows`
               - `database.db`
               - `database/sql-column.parsedText`
               - `infra/endpoints.implement`
@@ -1205,6 +1216,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/log-channels.defineLogSink`
             - DB schema: `plugins/apps/plugins/chord/plugins/song-index/server/internal/tables.ts`
             - Exports (values):
+              - `_chordIndexRequest`
+              - `_chordIndexState`
+              - `_chordLoopWindows`
               - `countLoopsByNextChord`
               - `countLoopsInSet`
               - `countTokenSets`
@@ -13297,7 +13311,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/attempt-work.readBranch`
               - `tasks/attempt-work.readLandedShas`
               - `tasks/attempt-work.readMergeBase`
+              - `tasks/tasks-core._attempts`
+              - `tasks/tasks-core._conversations`
               - `tasks/tasks-core.getAttemptRow`
+              - `tasks/tasks-core.pushes`
             - Resources: `commits-graph.graph` (push)
           - Cross-plugin:
             - Uses tokens:
@@ -17394,14 +17411,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `quotedRelationsIn`
   - Cross-plugin:
     - Uses tokens: `ui/tokens/shape --spacing`
-    - Imported by: 114 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 117 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×32
       - `page` ×15
       - `conversations` ×13
       - `infra` ×12
       - `tasks` ×10
+      - `active-data` ×8
       - `debug` ×6
-      - `active-data` ×5
       - `primitives` ×4
       - `database` ×3
       - `build` ×2
@@ -23147,6 +23164,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TableChange`
           - `TableLayoutRequirement`
           - `TupleUse`
+          - `UnfedRead`
+          - `UnfedResourceTable`
           - `WsData`
           - `WsHandler`
         - Exports (values):
@@ -23274,6 +23293,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `setRelationBases`
           - `triggerResourcePush`
           - `unboundedWindowKeys`
+          - `unfedResourceTables`
           - `validatePersistedValue`
           - `withNotifyBatch`
       - Cross-plugin:
@@ -27027,11 +27047,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UnionCuts`
           - `UnionGroupsQuery`
           - `UnionOrderKey`
+          - `ValueReads`
           - `WindowOrderKey`
           - `WindowQueryResourceSpec`
         - Exports (values):
           - `compileAllCollection`
           - `compileCountQuery`
+          - `compiledValueReach`
           - `compileGroupsQuery`
           - `compileJoins`
           - `compileUnionCollection`
@@ -28515,8 +28537,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useLive`
           - `useLiveRow`
       - Server:
-        - Uses: 27 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `infra/query-resource` ×24
+        - Uses: 29 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `infra/query-resource` ×26
           - `database/sql-column` ×2
           - `network/live/filter.filterSql`
         - Exports (types):
@@ -29752,6 +29774,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database.db`
           - `database/sql-projection.nullable`
           - `database/sql-projection.parsed`
+          - `page/editor._blocks`
           - `page/editor.Editor`
           - `page/editor.liveBlocks`
           - `ui/icons/sprites.defineSavedIconSource`
@@ -30772,6 +30795,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives.text-editor.inline-chip.referent` "\[\[(?:page:([^[\]\n]+)|(block-\d+-[a-z0-9]+))\]\]"
         - Uses:
           - `database.db`
+          - `page/editor._blocks`
           - `page/editor.Editor`
           - `page/editor.liveBlocks`
           - `page/links.PageLinks`
@@ -30828,6 +30852,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.DeletedBlockRow`
           - `page/editor.liveBlocks`
           - `page/editor.PAGE_BLOCK_TYPE`
+          - `primitives/text-editor/inline-chip.inlineTokenReferentTables`
           - `primitives/text-editor/inline-chip.inlineTokensAsText`
         - DB schema: `plugins/page/plugins/links/server/internal/tables.ts`
         - Exports (types):
@@ -39995,6 +40020,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `expandInlineTokenReferents`
               - `InlineTokenReferentSource`
+              - `inlineTokenReferentTables`
               - `inlineTokensAsText`
         - **`paste-images`** — File paste/drop/pick support for the text editor. Uploads files via the attachments primitive and renders them inline: an image as a thumbnail chip that opens the full-window image viewer, any other file as a file chip; AttachFilesButton is the composer bar's "+" picker.
           - Web:
@@ -41009,6 +41035,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `StormRosterEntry`
       - `StormSummary`
     - Exports (values):
+      - `_reports`
       - `DEFAULT_REPORT_DEBOUNCE_MS`
       - `getReportTitle`
       - `isReportKindRegistered`
@@ -42949,9 +42976,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/commit-list.runGit`
           - `primitives/commit-list.tryRunGit`
           - `primitives/commit-list.WorktreeGoneError`
+          - `tasks/tasks-core._attempts`
+          - `tasks/tasks-core._conversations`
           - `tasks/tasks-core.getAttemptRow`
           - `tasks/tasks-core.listConversationIdsForAttempt`
           - `tasks/tasks-core.listPushesForAttempt`
+          - `tasks/tasks-core.pushes`
         - Exports (values):
           - `attemptWorkEtag`
           - `attemptWorkServed`
@@ -43435,6 +43465,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "report-investigations.scope"
         - Uses:
           - `network/live.serveValue`
+          - `reports._reports`
           - `reports.linkReportsToTask`
           - `reports.renderReportTask`
           - `reports.reportInvestigationSink`
@@ -44445,6 +44476,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `markConversationClosed`
           - `markConversationGone`
           - `orphanedAttemptSink`
+          - `pushes`
           - `pushLanded`
           - `PushSchema`
           - `RECENT_GONE_LIMIT`

@@ -308,6 +308,9 @@ sample is every song whose slugs hash into bucket 0 of 20, plus
     - `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/apps/plugins/chord/plugins/song-index/server/internal/tables.ts`
   - Exports (values):
+    - `_chordIndexRequest`
+    - `_chordIndexState`
+    - `_chordLoopWindows`
     - `countLoopsByNextChord`
     - `countLoopsInSet`
     - `countTokenSets`

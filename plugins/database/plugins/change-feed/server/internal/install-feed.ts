@@ -7,7 +7,9 @@ import {
 } from "./triggers";
 import {
   assertRouteTablesCovered,
+  assertUnfedTablesOptedOut,
   type ScopedResourceTable,
+  type UnfedResourceTable,
 } from "./route-coverage";
 import { assertRouteLayoutsInstalled } from "./route-layout";
 import {
@@ -27,6 +29,8 @@ export interface FeedInstallInputs {
   layouts: readonly TableLayoutRequirement[];
   /** Every table a routed resource's routes name (`scopedResourceTables()`). */
   scoped: readonly ScopedResourceTable[];
+  /** Every table a reach plan reads outside the feed (`unfedResourceTables()`). */
+  unfed: readonly UnfedResourceTable[];
   /** The views' and rollups' read graph, which relation bases expand through. */
   relations: RelationGraph;
 }
@@ -43,7 +47,9 @@ export interface FeedInstallInputs {
  *  2. The trigger rebuild (`rebuildTriggers`), produced tables denylisted.
  *  3. A2′ (catalog): no `live_state_*` trigger survived on a produced table.
  *  4. A1′: every route table of a routed resource has a change source — a
- *     trigger the rebuild installed, or a mounted change producer.
+ *     trigger the rebuild installed, or a mounted change producer — and every
+ *     table a reach plan reads outside the feed is one the feed was told to
+ *     skip.
  *  5. D35: every base table a view or rollup reaches has a change source, or
  *     is opted out.
  *  6. A3: every routed table's installed triggers carry what its routes read.
@@ -52,7 +58,7 @@ export async function installFeed(
   db: NodePgDatabase,
   inputs: FeedInstallInputs,
 ): Promise<void> {
-  const { exclusions, layouts, scoped, relations } = inputs;
+  const { exclusions, layouts, scoped, unfed, relations } = inputs;
   assertProducedTablesDeclared(
     exclusions.produced,
     exclusions.optedOut,
@@ -78,6 +84,7 @@ export async function installFeed(
     exclusions.optedOut,
     exclusions.feedExempt,
   );
+  assertUnfedTablesOptedOut(unfed, exclusions.optedOut);
   // D35: a legacy loader reading a view or rollup is reached through the
   // relation's bases (the legacy router expands its read-set through them), so
   // each base must itself produce changes: a trigger, a producer — or an

@@ -496,12 +496,19 @@ reaches each entry exactly once and resources move over one at a time. Design:
   cast let through, and the `resource-runtime:compiled-routes` check (`check/`)
   allows the minters only in `infra/query-resource`'s `routes.ts` and test code.
 - **A non-keyed entry routes through `reach`** (`ReachPlan`, on
-  `ServerResourceOptions`, exclusive with `dependsOn`): the same per-tuple
-  `usesOf`, but every route is `full` — a push value has no host ids to refill, so
-  a change to a table the tuple reads recomputes it and a change to any other
-  reaches nothing (at most an ack). A collection's `:groups` is the caller. A keyed
-  entry, a non-`full` route, `routes` beside it or an external resource throws in
-  `createResource`.
+  `ServerResourceOptions`): the same per-tuple `usesOf`, but every route is
+  `full` — a push value has no host ids to refill, so a change to a table the
+  tuple reads recomputes it and a change to any other reaches nothing (at most
+  an ack). The callers: a collection's `:groups` / `:count`, and every
+  `source: "db"` served value (its declared `reads`, compiled by
+  query-resource's `compiledValueReach`). Unlike `routes` it may sit beside
+  `dependsOn` (a served value's `recomputeOn`): with no scoped refill, a
+  cascade and a routed change merge into the tuple's one FULL pending. A keyed
+  entry, a non-`full` route, `routes` beside it or an external resource
+  throws in `createResource`. **`unfed`** (`UnfedRead`): tables the loader
+  reads that the feed skips by declaration — never routed, accepted by the
+  drift guard, listed by `unfedResourceTables()` (change-feed's boot check
+  refuses one the feed covers) and in `_debug` as `unfedReads`.
 - **Every `serveCollection` resource is routed** (window, `:rows` and `:groups`,
   compiled by `infra/query-resource`), so none of them depends on the loader
   read-set to be reached.
@@ -531,9 +538,15 @@ reaches each entry exactly once and resources move over one at a time. Design:
   or of its plan's `derivedReads` (A22): a rollup no route may name (A1), every
   source of which `mintRoutePlan` asserts is a route table of the plan.
   A miss is reported once per table (`route drift for <key>`), or fails the load
-  under `strictRoutes` (server-core sets it under a test runner). With no capture
-  wired (central, the DB-free harness) the guard is off; routing never depends on
-  it.
+  under `strictRoutes` (server-core sets it under a test runner). In a running
+  server it also **fails open**: the drifted relation's bases (a table is its
+  own; a view or rollup expands through `opts.relationBases`, since a change
+  names only base tables) join `routedByTable` for the entry, and each later
+  change to one recomputes every target FULL (`routeEntryChange`) — so a plan
+  missing a relation is never staler than a whole-table read of it. It lives
+  in memory: a restart forgets it until the next load drifts again. A reach plan's `unfed` tables pass. With no capture
+  wired (central, the DB-free harness) the guard is off; routing never depends
+  on it.
 - **Targets** are the subscribed tuples (`entry.tracked`, pk → params, maintained
   with `subCounts` — no socket scan), plus `{}` for a persisted entry; a param'd
   window or point set with no subscriber gets nothing.
@@ -1147,6 +1160,8 @@ and those plugins' `CLAUDE.md`.
     - `TableChange`
     - `TableLayoutRequirement`
     - `TupleUse`
+    - `UnfedRead`
+    - `UnfedResourceTable`
     - `WsData`
     - `WsHandler`
   - Exports (values):

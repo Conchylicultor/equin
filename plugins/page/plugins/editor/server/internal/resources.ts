@@ -87,12 +87,17 @@ export const pagesTreeServed = serveCollection(pagesTree, pageRowsServeOptions);
 // is one real, rendered ordering — the sidebar's page tree is a filtered
 // subsequence of it, not a separate ordering space.
 //
-// A db-arm value: the loader's read-set (`page_blocks`, through the `liveBlocks`
-// subquery) is captured at the pool chokepoint, so every structural write, text
-// projection and trash/restore recomputes the subscribed pages; push drops a
-// byte-identical result.
+// A db-arm value: it declares `page_blocks` (the loader reads it through the
+// `liveBlocks` subquery), so every structural write, text projection and
+// trash/restore recomputes the subscribed pages; push drops a byte-identical
+// result.
 export const pageBlocksServed = serveValue(pageBlocks, {
   source: "db",
+  reads: {
+    tables: [_blocks],
+    reason:
+      "one page's content forest; any block write may change a subscribed page — whole-table until it reads through a collection",
+  },
   unbounded: {
     reason:
       "one page's content forest — the reducer, the optimistic overlay and document order need every block of the page, never a window",

@@ -356,6 +356,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `setRelationBases`
     - `triggerResourcePush`
     - `unboundedWindowKeys`
+    - `unfedResourceTables`
     - `validatePersistedValue`
     - `withNotifyBatch`
 - Cross-plugin:

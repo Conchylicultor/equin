@@ -262,6 +262,74 @@ function encodedMap(
 }
 
 /**
+ * What a hand-written loader declares it reads (a served value's `reads` —
+ * `network/live`'s `serveValue`). Whole tables only: a loader's SQL is not
+ * compiled here, so nothing could keep a per-row filter in step with it — a
+ * write to any row of a declared table recomputes every tuple. Row-level
+ * narrowing exists only where the SQL is compiled from the same declaration
+ * (a collection).
+ */
+export interface ValueReads {
+  /** Every table the loader reads — base tables or entities, never a view (A1). */
+  tables: readonly RoutedSource[];
+  /** Why a write to any row of them may change any tuple (the pane shows it). */
+  reason: string;
+  /**
+   * Tables the loader reads that the change feed skips by declaration
+   * (`ExcludeFromChangeFeed`) — a bulk cache read through a memo keyed on a
+   * table it does route. Accepted by the drift guard, never routed; change-feed
+   * refuses at boot one it does cover.
+   */
+  outsideFeed?: { tables: readonly RoutedSource[]; reason: string };
+}
+
+/**
+ * A served value's plan from its declared `reads`: one `full` route per table,
+ * reading every column (so no update is skipped by the gate — a hand-written
+ * loader's columns are unknown), read by every tuple. The drift guard (A8)
+ * holds the loader to it: a captured table outside it is reported and, in a
+ * running server, routed FULL from then on.
+ */
+export function compiledValueReach<P extends ResourceParams>(
+  reads: ValueReads,
+  label: string,
+): ReachPlan<P> {
+  const where = `${label}: reads`;
+  if (reads.reason.trim() === "") {
+    throw new Error(
+      `${where}.reason is empty — say why a write to any row may change any tuple.`,
+    );
+  }
+  const routes: FullRoute[] = [];
+  for (const source of reads.tables) {
+    const base = routedBase(source, label);
+    if (routes.some((r) => r.table === base.name)) {
+      throw new Error(`${where}.tables lists "${base.name}" twice.`);
+    }
+    routes.push({
+      id: base.name,
+      table: base.name,
+      map: { kind: "full", reason: reads.reason },
+      columns: Object.values(
+        getTableColumns(base.table) as Record<string, PgColumn>,
+      ).map((c) => c.name),
+    });
+  }
+  const outside = reads.outsideFeed;
+  if (outside !== undefined && outside.tables.length === 0) {
+    throw new Error(`${where}.outsideFeed.tables is empty — omit it.`);
+  }
+  const unfed = (outside?.tables ?? []).map((source) => ({
+    table: routedBase(source, label).name,
+    reason: outside!.reason,
+  }));
+  const uses: ReadonlyMap<string, TupleUse> = new Map(
+    routes.map((r) => [r.id, { role: "membership" as const }]),
+  );
+  return mintReachPlan<P>({ routes, usesOf: () => uses, unfed });
+}
+
+/**
  * Mint a non-keyed aggregate's plan (a collection's `:groups`): `full` routes
  * only — any written row may move any count, so a relevant change recomputes
  * the tuple, and a change to a table the tuple does not read reaches nothing.

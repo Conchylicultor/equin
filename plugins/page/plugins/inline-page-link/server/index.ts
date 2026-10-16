@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { PageLinks } from "@plugins/page/plugins/links/server";
-import { Editor } from "@plugins/page/plugins/editor/server";
+import { _blocks, Editor } from "@plugins/page/plugins/editor/server";
 import { InlineTokenReferentSource } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
 import { PAGE_LINK_TOKEN_PATTERN, pageLinkInlineNode } from "../core";
 import { extractInlinePageLinks } from "./internal/extract-inline-links";
@@ -37,6 +37,7 @@ export default {
     InlineTokenReferentSource({
       kind: "page",
       pattern: PAGE_LINK_TOKEN_PATTERN,
+      tables: [_blocks],
       resolve: resolvePageLinkReferent,
     }),
   ],

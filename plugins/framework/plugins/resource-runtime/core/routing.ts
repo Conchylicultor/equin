@@ -280,12 +280,32 @@ export type FullRoute = Route & {
   map: Extract<HostMap, { kind: "full" }>;
 };
 
+/**
+ * A table a non-keyed entry's loader reads that has NO change source by
+ * declaration — opted out of the feed (`ExcludeFromChangeFeed`): a bulk cache
+ * the value reads through a memo keyed on something it does route (a served
+ * value's `reads.outsideFeed`). No route names it (a route on an untriggered
+ * table is refused at boot, A1′); the drift guard (A8) accepts it in a capture,
+ * and change-feed's boot check refuses one that DOES have a change source — a
+ * table the feed reports would be a missed write, not a declared one.
+ */
+export interface UnfedRead {
+  /** The table's name, as a captured read-set records it. */
+  table: string;
+  /** Why the value may read it without being told of its writes. */
+  reason: string;
+}
+
 /** The fields of a `ReachPlan`, before it is minted (see `mintReachPlan`). */
 export interface ReachPlanInput<
   P extends Record<string, string> = Record<string, string>,
 > extends RoutePlanInput<P> {
   routes: readonly FullRoute[];
-  /** A non-keyed (`:groups`) entry is never L2-persisted, so it has no definition. */
+  /**
+   * No L2 fingerprint: a hand-written loader (a served value) has no compiled
+   * SQL to fingerprint, and a `:groups` aggregate is never persisted. A
+   * persisted reach value's rows carry a NULL definition, as a legacy one's did.
+   */
   definition?: never;
   /**
    * A grouping joins no rollup (C9 / D24 of
@@ -294,6 +314,8 @@ export interface ReachPlanInput<
    * its sources — cannot be.
    */
   derivedReads?: never;
+  /** Tables read outside the change feed by declaration — see `UnfedRead`. */
+  unfed?: readonly UnfedRead[];
 }
 
 /**
@@ -310,6 +332,7 @@ export interface ReachPlan<
   routes: readonly FullRoute[];
   definition?: never;
   derivedReads?: never;
+  unfed?: readonly UnfedRead[];
 }
 
 /**
@@ -379,11 +402,36 @@ export function mintRoutePlan<P extends Record<string, string>>(
   };
 }
 
-/** Mint a non-keyed entry's reach plan (see `mintRoutePlan`). */
+/**
+ * Mint a non-keyed entry's reach plan (see `mintRoutePlan`). Throws on an
+ * `unfed` table a route names (it is either routed or read outside the feed),
+ * listed twice, or with no reason.
+ */
 export function mintReachPlan<P extends Record<string, string>>(
   plan: ReachPlanInput<P>,
 ): ReachPlan<P> {
-  return { routes: plan.routes, usesOf: plan.usesOf, [MINTED]: true };
+  const unfed = plan.unfed ?? [];
+  const routed = new Set(plan.routes.map((r) => r.table));
+  const seen = new Set<string>();
+  for (const u of unfed) {
+    if (routed.has(u.table) || seen.has(u.table)) {
+      throw new Error(
+        `mintReachPlan: "${u.table}" is ${routed.has(u.table) ? "both routed and read outside the feed" : "listed twice as read outside the feed"} — a table is one or the other, once.`,
+      );
+    }
+    if (u.reason.trim() === "") {
+      throw new Error(
+        `mintReachPlan: "${u.table}" is read outside the feed with no reason.`,
+      );
+    }
+    seen.add(u.table);
+  }
+  return {
+    routes: plan.routes,
+    usesOf: plan.usesOf,
+    ...(unfed.length > 0 ? { unfed } : {}),
+    [MINTED]: true,
+  };
 }
 
 /** Whether `plan` came from `mintRoutePlan` / `mintReachPlan` (not a cast literal). */

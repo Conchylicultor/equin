@@ -19,14 +19,20 @@ function bump(): void {
 }
 
 /**
- * The resident saved-icon sprites. DB-backed: every DB source's read is
- * captured, so a change to its tables recomputes the value; a config source
+ * The resident saved-icon sprites. DB-backed: the tables every source declares
+ * are the value's reads (a thunk — sources register at module eval, after this
+ * value is declared), so a change to them recomputes the value; a config source
  * bumps the tick while the value has a subscriber. The first subscriber also
  * bumps it once — a value restored from the persisted snapshot is recomputed
  * against config that changed while the backend was down.
  */
 export const savedIconSpritesServed = serveValue(savedIconSprites, {
   source: "db",
+  reads: () => ({
+    tables: [...new Set(savedIconSources().flatMap((s) => s.tables))],
+    reason:
+      "one resident value draws every name any saved-icon source holds, so a write to any row of a source's table may change it",
+  }),
   recomputeOn: [savedIconsChangedServed],
   loader: async () => {
     const names = new Set<string>();

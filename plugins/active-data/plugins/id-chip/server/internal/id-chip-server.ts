@@ -1,5 +1,6 @@
 import type { ServerContribution } from "@plugins/framework/plugins/server-core/core";
 import type { AnyIdKind } from "@plugins/ids/core";
+import type { RoutedSource } from "@plugins/infra/plugins/query-resource/server";
 import { IdKinds, type IdReferent } from "@plugins/ids/server";
 import { Editor } from "@plugins/page/plugins/editor/server";
 import { inlineChipNode } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/core";
@@ -27,6 +28,8 @@ import { idChipPattern, idReferentTag, type IdChipSurface } from "../../core";
 export function idChipServer(spec: {
   kind: AnyIdKind;
   surfaces: readonly IdChipSurface[];
+  /** The base tables `resolve` reads (`[]` when none) — never a view. */
+  tables: readonly RoutedSource[];
   resolve(id: string): Promise<IdReferent>;
   referentTag?: string;
 }): ServerContribution[] {
@@ -37,6 +40,7 @@ export function idChipServer(spec: {
     InlineTokenReferentSource({
       kind: spec.referentTag ?? idReferentTag(kind),
       pattern,
+      tables: spec.tables,
       resolve,
     }),
   ];

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   assertRouteTablesCovered,
+  assertUnfedTablesOptedOut,
   findUncoveredRouteTables,
   formatUncoveredRouteError,
   type ScopedResourceTable,
@@ -322,5 +323,25 @@ describe("formatUncoveredRouteError", () => {
     expect(msg).not.toContain("ExcludeFromChangeFeed");
     expect(msg).not.toContain("rollup");
     expect(msg).toContain("VIEW");
+  });
+});
+
+describe("assertUnfedTablesOptedOut — tables read outside the feed by declaration", () => {
+  test("an opted-out table passes", () => {
+    expect(() =>
+      assertUnfedTablesOptedOut(
+        [{ key: "chord.catalog", table: "chord_sections" }],
+        new Set(["chord_sections"]),
+      ),
+    ).not.toThrow();
+  });
+
+  test("a table the feed was not told to skip blocks boot, naming the resource", () => {
+    expect(() =>
+      assertUnfedTablesOptedOut(
+        [{ key: "chord.catalog", table: "chord_index_state" }],
+        new Set(["chord_sections"]),
+      ),
+    ).toThrow(/chord\.catalog: "chord_index_state"/);
   });
 });

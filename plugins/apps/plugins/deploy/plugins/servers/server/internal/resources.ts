@@ -18,12 +18,17 @@ export const serversServed = serveCollection(servers, {
 });
 
 // One server's key, derived: the stored public key parsed, only when a
-// private half exists in the central secrets store. The loader's read of the
-// row routes its changes here; storing a key also writes the row's
+// private half exists in the central secrets store. The loader reads the
+// row (declared in `reads`), so its changes route here; storing a key also writes the row's
 // `ssh_public_key` (`store-ssh-key.ts`), and that update is the change the
 // feed sees — so a key change needs no hand-notify.
 export const serverSshKeyServed = serveValue(serverSshKey, {
   source: "db",
+  reads: {
+    tables: [_deployServers],
+    reason:
+      "the key derives from a server row's stored public key; whole-table until it reads through a collection",
+  },
   loader: async ({ serverId }) => {
     const [row] = await db
       .select()

@@ -1,5 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { idChipServer } from "@plugins/active-data/plugins/id-chip/server";
+import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { taskIdKind } from "@plugins/tasks/plugins/task-ids/core";
 import { TASK_CHIP_SURFACES } from "../core";
 import { resolveTaskReferent } from "./internal/referent";
@@ -10,6 +11,7 @@ export default {
   contributions: [
     ...idChipServer({
       kind: taskIdKind,
+      tables: [_tasks],
       surfaces: TASK_CHIP_SURFACES,
       resolve: resolveTaskReferent,
     }),

@@ -1,5 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { idChipServer } from "@plugins/active-data/plugins/id-chip/server";
+import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
 import { buildRunIdKind } from "@plugins/build/plugins/run-ledger/core";
 import { BUILD_RUN_CHIP_SURFACES } from "../core";
 import { resolveBuildRunReferent } from "./internal/referent";
@@ -10,6 +11,7 @@ export default {
   contributions: [
     ...idChipServer({
       kind: buildRunIdKind,
+      tables: [_buildRuns],
       surfaces: BUILD_RUN_CHIP_SURFACES,
       resolve: resolveBuildRunReferent,
     }),

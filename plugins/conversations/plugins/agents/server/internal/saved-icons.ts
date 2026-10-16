@@ -6,6 +6,7 @@ import { _agents } from "./tables";
 /** Every agent's avatar icon, so agent avatars are drawable at first paint. */
 export const agentIconsSource = defineSavedIconSource({
   id: "conversations.agents",
+  tables: [_agents],
   names: async () =>
     (
       await db

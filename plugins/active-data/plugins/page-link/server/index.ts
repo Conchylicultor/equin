@@ -1,5 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { idChipServer } from "@plugins/active-data/plugins/id-chip/server";
+import { _blocks } from "@plugins/page/plugins/editor/server";
 import { blockIdKind } from "@plugins/page/plugins/editor/core";
 import { BLOCK_CHIP_SURFACES } from "../core";
 import { resolveBlockReferent } from "./internal/referent";
@@ -10,6 +11,7 @@ export default {
   contributions: [
     ...idChipServer({
       kind: blockIdKind,
+      tables: [_blocks],
       surfaces: BLOCK_CHIP_SURFACES,
       resolve: resolveBlockReferent,
       // The tag a model has always read a block id as: it resolves to its page.

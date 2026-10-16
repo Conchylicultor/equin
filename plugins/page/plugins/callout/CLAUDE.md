@@ -160,6 +160,7 @@ keeps the origin's id and caret; the wrap is ONE undo entry).
     - `database.db`
     - `database/sql-projection.nullable`
     - `database/sql-projection.parsed`
+    - `page/editor._blocks`
     - `page/editor.Editor`
     - `page/editor.liveBlocks`
     - `ui/icons/sprites.defineSavedIconSource`

@@ -205,10 +205,10 @@ import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
   never yields two elements with one id).
 - **Resident at boot:** `icons.saved-sprites` (sprites plugin, `boot-and-keep`)
   carries the default style's drawing of every name a saved-icon source
-  reports. A source is `defineSavedIconSource({ id, names, watch? })` (sprites
+  reports. A source is `defineSavedIconSource({ id, tables, names, watch? })` (sprites
   server barrel; the sprites plugin knows no source): DB-backed ones read
-  through `db` so their tables' changes recompute the value (agents, callout
-  blocks, preprompt launch snapshots), config ones pass `watch`
+  through `db` and list their `tables` (the value's declared reads) so changes recompute the value (agents, callout
+  blocks, preprompt launch snapshots), config ones pass `tables: []` and `watch`
   (conversation-category, preprompts).
 - **On demand:** a name/style no chunk holds is a want; the sprites plugin's
   loader batches every want of a frame into one

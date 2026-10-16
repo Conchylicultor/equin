@@ -60,6 +60,7 @@ export {
   recomputeResource,
   routeTableChange,
   scopedResourceTables,
+  unfedResourceTables,
   routedTableRequirements,
   boundedMembershipKeys,
   persistedKeys,

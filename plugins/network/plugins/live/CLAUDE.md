@@ -1231,6 +1231,7 @@ export const configValues = liveValue("config-v2.values", {
 // server/ — serve
 export const unreadServed = serveValue(notificationsUnread, {
   source: "db",                          // or "external" + `changes` (below)
+  reads: { tables: [notifications], reason: "the badge counts every unread row" },
   loader: countUnread,                   // (params: P) => Promise<T> | T
 });
 // contributions: [...unreadServed.declare]
@@ -1354,10 +1355,39 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));  // MANY tuples → on
   of the key, hydrated or observed) — for small values read
   by surfaces that mount late.
 - **Serve.** `source` is required and says where the truth lives:
-  - `"db"`: the loader's read-set is captured at the DB pool chokepoint; a change
-    to any table it read recomputes every subscribed tuple (full recompute, no
-    scope policy — a keyed payload is a collection). No `notify`, at runtime
-    too.
+  - `"db"`: the value declares what its loader reads — **`reads: { tables,
+    reason, outsideFeed? }`**, required (tsc, and a throw when it registers)
+    — and a change to any declared table recomputes every subscribed tuple
+    (full recompute, no scope policy — a keyed payload is a collection). No
+    `notify`, at runtime too. Design:
+    `research/2026-10-15-global-live-declared-reads-for-db-values-v2.md`.
+    - **Whole tables only, with a reason.** The loader's SQL is hand-written,
+      so nothing could keep a per-row filter in step with it: a wrong one
+      would miss writes silently. Row-level narrowing exists only where the
+      SQL is compiled from the same declaration — a collection. The `reason`
+      says why a write to any row may change any tuple (a singleton, a total,
+      "whole-table until it reads through a collection"); the read-set pane
+      lists it under Routed FULL.
+    - `tables` are drizzle tables or entities — never a view (a throw):
+      every table the loader can read on ANY path (helpers, branches, memo
+      misses). Compiled by query-resource's `compiledValueReach` (in the Bun
+      wrapper — core has no drizzle) into the value's `reach` plan: one
+      `full` route per table, every column (no update is skipped).
+    - `outsideFeed: { tables, reason }` — tables the loader reads that the
+      change feed skips by declaration (`ExcludeFromChangeFeed`; a bulk cache
+      read through a memo keyed on a routed table). Never routed; the drift
+      guard accepts them; change-feed refuses at boot one it does cover.
+    - **A thunk** — `reads: () => ({ tables, reason })` — when the tables come
+      from a registry complete only once contributions are collected (one
+      table per trigger event, per link owner, per saved-icon source): the
+      value registers deferred and its plan compiles at
+      `bindDeferredResources`, before the change feed builds its triggers.
+      Such a value must be pushed (`load` not `"on-demand"`).
+    - **The drift guard holds the loader to it** (resource-runtime's A8): a
+      captured table outside `reads` fails the load under a test runner, and
+      in a running server is reported once and routed FULL from then on (a
+      view or rollup through its base tables) — a missing table is never
+      staler than a whole-table read of it, until a restart forgets it.
   - `"external"`: truth outside Postgres. It must declare **`changes`** — how
     its answer changes (`LiveValueChanges`, tsc; a throw for an untyped
     caller), so a value nobody tells of a change cannot be written without
@@ -1726,8 +1756,8 @@ never add one.
     - `useLive`
     - `useLiveRow`
 - Server:
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/query-resource` ×24
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/query-resource` ×26
     - `database/sql-column` ×2
     - `network/live/filter.filterSql`
   - Exports (types):

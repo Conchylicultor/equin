@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { pgTable, pgView, text } from "drizzle-orm/pg-core";
 import type {
   HostMap,
   TupleUse,
@@ -6,6 +7,7 @@ import type {
 import {
   compiledRoutePlan,
   compiledUnionRoutePlan,
+  compiledValueReach,
   unionRouteId,
   type RawRoute,
 } from "./routes";
@@ -228,5 +230,87 @@ describe("compiledUnionRoutePlan", () => {
         usesOf,
       ),
     ).toThrow(/identity route "base" reads "uid"/);
+  });
+});
+
+describe("compiledValueReach — a served value's declared whole-table reads", () => {
+  const notes = pgTable("vr_notes", {
+    id: text("id").primaryKey(),
+    body: text("body"),
+  });
+  const tags = pgTable("vr_tags", { id: text("id").primaryKey() });
+  const cache = pgTable("vr_cache", { id: text("id").primaryKey() });
+  const view = pgView("vr_notes_v").as((qb) => qb.select().from(notes));
+
+  test("one full route per table, every column, read by every tuple", () => {
+    const plan = compiledValueReach(
+      { tables: [notes, tags], reason: "a count of every note" },
+      "v",
+    );
+    expect(plan.routes).toEqual([
+      {
+        id: "vr_notes",
+        table: "vr_notes",
+        map: { kind: "full", reason: "a count of every note" },
+        columns: ["id", "body"],
+      },
+      {
+        id: "vr_tags",
+        table: "vr_tags",
+        map: { kind: "full", reason: "a count of every note" },
+        columns: ["id"],
+      },
+    ]);
+    expect([...plan.usesOf({ any: "tuple" }).keys()]).toEqual([
+      "vr_notes",
+      "vr_tags",
+    ]);
+    expect(plan.unfed).toBeUndefined();
+  });
+
+  test("outsideFeed tables are carried as unfed reads, never routed", () => {
+    const plan = compiledValueReach(
+      {
+        tables: [notes],
+        reason: "r",
+        outsideFeed: { tables: [cache], reason: "a memo keyed on vr_notes" },
+      },
+      "v",
+    );
+    expect(plan.routes.map((r) => r.table)).toEqual(["vr_notes"]);
+    expect(plan.unfed).toEqual([
+      { table: "vr_cache", reason: "a memo keyed on vr_notes" },
+    ]);
+  });
+
+  test("an empty table list is a plan with no route — a registry that holds none (the drift guard still holds the loader to it)", () => {
+    expect(compiledValueReach({ tables: [], reason: "r" }, "v").routes).toEqual(
+      [],
+    );
+  });
+
+  test("refuses an empty reason, a duplicate, a view, and a table both routed and unfed", () => {
+    expect(() =>
+      compiledValueReach({ tables: [notes], reason: " " }, "v"),
+    ).toThrow(/reason is empty/);
+    expect(() =>
+      compiledValueReach({ tables: [notes, notes], reason: "r" }, "v"),
+    ).toThrow(/lists "vr_notes" twice/);
+    expect(() =>
+      compiledValueReach(
+        { tables: [view as unknown as typeof notes], reason: "r" },
+        "v",
+      ),
+    ).toThrow(/never a view/);
+    expect(() =>
+      compiledValueReach(
+        {
+          tables: [notes],
+          reason: "r",
+          outsideFeed: { tables: [notes], reason: "x" },
+        },
+        "v",
+      ),
+    ).toThrow(/both routed and read outside the feed/);
   });
 });

@@ -6,7 +6,12 @@ import {
   unresolved,
 } from "@plugins/primitives/plugins/live-state/core";
 import { refHeadServed } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
-import { getAttemptRow } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  _attempts,
+  _conversations,
+  getAttemptRow,
+  pushes,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { assertCapability } from "@plugins/conversations/plugins/workspace/core";
 import {
   probeHeadMain,
@@ -62,11 +67,18 @@ function evictWorktreeFor(attemptId: string): void {
   );
 }
 
-// A db-arm value: the loader's DB read (the attempt row's worktree path) is
-// captured by the change feed, and a git ref advance (local commit / rebase /
+// A db-arm value: the loader's DB reads are declared in `reads`, and a git ref advance (local commit / rebase /
 // sync-to-head, or main moving) changes the graph of every visible attempt.
 export const commitsGraphServed = serveValue(commitsGraph, {
   source: "db",
+  // The attempt row's worktree path, plus `readLandedShas` — attempt-work's memo,
+  // which reads the attempt's conversation set and the push-ledger freshness
+  // reconcile. A memo hit reads nothing, so the tables are declared, not captured.
+  reads: {
+    tables: [_attempts, _conversations, pushes],
+    reason:
+      "the graph reads the attempt's worktree path and, through attempt-work, its conversations and push ledger; any write to them may change any subscribed attempt, whole-table until it reads through a collection",
+  },
   // A `main` or branch advance is the COMPLETE refresh signal, and the bare form
   // recomputes every subscribed attempt — exactly the panes on screen. The landed
   // set is derived from `main`'s own history (attempt-work greps the

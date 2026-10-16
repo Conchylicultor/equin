@@ -461,6 +461,9 @@ export const {
   // entry) — the change-feed cross-checks these against the tables it installed
   // triggers on at boot to reject a route no change can ever reach.
   scopedResourceTables,
+  // Every table a reach plan reads outside the change feed by declaration —
+  // the change-feed refuses one it covers (a write it reports would be missed).
+  unfedResourceTables,
   // The trigger layout each routed table needs (carried key columns, the
   // column sets its routes read) — the change feed installs the richer
   // trigger from it.

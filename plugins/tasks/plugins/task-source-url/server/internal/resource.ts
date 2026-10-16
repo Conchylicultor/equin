@@ -6,10 +6,15 @@ import { splitUiContext } from "@plugins/primitives/plugins/ui-context/core";
 import { attemptSourceUrl } from "../../core";
 import { tasksSourceUrl } from "./tables";
 
-// Change-feed driven: the loader reads the attempt, its task and the side
-// table, so a write to any of them recomputes the subscribed attempts.
+// The loader reads the attempt, its task and the side table; `reads` declares
+// them, so a write to any of them recomputes the subscribed attempts.
 export const attemptSourceUrlServed = serveValue(attemptSourceUrl, {
   source: "db",
+  reads: {
+    tables: [_attempts, _tasks, tasksSourceUrl.table],
+    reason:
+      "the source url joins an attempt to its task and the task's source-url row; a write to any row may change any subscribed attempt, whole-table until it reads through a collection",
+  },
   loader: async ({ attemptId }) => {
     const [row] = await db
       .select({

@@ -19,11 +19,16 @@ export const historyVersionsServed = serveCollection(historyVersions, {
   from: _entityVersions,
 });
 
-// One version with its snapshot. Read-set tracked (`entity_versions`), so a
+// One version with its snapshot. Reads `entity_versions` (declared in `reads`), so a
 // coalesce into the version while its merge window is open, or its deletion,
 // recomputes the open previews.
 export const historyVersionServed = serveValue(historyVersion, {
   source: "db",
+  reads: {
+    tables: [_entityVersions],
+    reason:
+      "a coalesce into or deletion of the version changes its snapshot; whole-table until it reads through a collection",
+  },
   loader: async ({ sourceId, entityId, versionId }) => {
     const [row] = await db
       .select()

@@ -370,9 +370,11 @@ export interface ResourceDefinition<
    * one declaring `routes` (served by `routeTableChange`, never by the legacy
    * read-set path): a change to a table a tuple reads recomputes that tuple,
    * and a change to any other table reaches nothing. Exclusive with
-   * `routes` and `dependsOn`; refused on a keyed or external
-   * entry (a throw in `createResource`). Compiler-minted (`mintReachPlan`),
-   * like `routes`.
+   * `routes`; refused on a keyed or external entry (a throw in
+   * `createResource`). Unlike `routes` it may sit beside `dependsOn`: every
+   * reach route is `full`, so a cascade's FULL has no scoped refill to
+   * override — both land in the tuple's one pending (a served value's
+   * `recomputeOn`). Compiler-minted (`mintReachPlan`), like `routes`.
    */
   reach?: ReachPlan<P>;
   /**
@@ -774,15 +776,17 @@ interface ServerResourceOptionsBase<
  * `defineExternalResource` form. `mode` is required — `push` or `invalidate`,
  * stated where the resource is declared; the runtime has no default. Never a
  * membership: that is keyed-only. A compiler may declare `reach` (`ReachPlan`),
- * which routes the entry by the tables each tuple reads — exclusive with
- * `dependsOn`, since a routed entry takes no cascade.
+ * which routes the entry by the tables each tuple reads — beside `dependsOn`
+ * if it likes: every reach route is `full`, so there is no scoped refill for a
+ * cascade to override.
  */
 export type ServerResourceOptions<
   T,
   P extends ResourceParams = ResourceParams,
 > = ServerResourceOptionsBase<T, P> & {
   mode: "push" | "invalidate";
-} & ({ reach?: never } | { reach: ReachPlan<P>; dependsOn?: never });
+  reach?: ReachPlan<P>;
+};
 
 /**
  * Server-only half of a KEYED resource declaration, paired with a
@@ -1075,8 +1079,16 @@ interface RoutingRecord {
    */
   derived: ReadonlySet<string>;
   /**
+   * The tables a reach plan reads outside the change feed by declaration
+   * (`ReachPlan.unfed`): no change source, so no route — the drift guard
+   * accepts them in a capture, and change-feed's boot check refuses one that
+   * does have a change source.
+   */
+  unfed: ReadonlySet<string>;
+  /**
    * A8: the tables a loader run read that no route names, each reported once
-   * (see `checkRouteDrift`).
+   * and — in a running server — indexed for the router as a FULL read of the
+   * entry (see `checkRouteDrift`).
    */
   drifted: Set<string>;
   /**
@@ -1674,6 +1686,12 @@ export interface ScopedResourceTable {
   via: `route "${string}"`;
 }
 
+/** One table a reach plan reads outside the change feed (see `unfedResourceTables`). */
+export interface UnfedResourceTable {
+  key: string;
+  table: string;
+}
+
 /**
  * One resource key's notify provenance (the `_debug` payload's `notifyStats`):
  * hand-`notify()` calls, change-feed deliveries, and in-process change-producer
@@ -1894,6 +1912,13 @@ export interface ResourceRuntime {
    * enforce the invariant without the runtime importing a specific DB plugin.
    */
   scopedResourceTables: () => ScopedResourceTable[];
+  /**
+   * Every table a reach plan reads outside the change feed by declaration
+   * (`ReachPlan.unfed`), with its resource key — change-feed's boot check
+   * refuses one the feed does cover (its writes would be missed, not declared
+   * away). Call after `bindDeferredResources()`.
+   */
+  unfedResourceTables: () => UnfedResourceTable[];
   /**
    * The change-feed trigger layout every ROUTED table needs, derived from the
    * routes of every bound routed entry (`tableLayoutRequirements`): the key
@@ -2507,8 +2532,13 @@ export function createResourceRuntime(
   // rollup no route may name (A1), whose every source the plan routes
   // (`mintRoutePlan` asserted it), so a write moving its rows reaches the entry.
   // A miss is reported once per table — or thrown, under `strictRoutes`
-  // (tests). With no capture wired (central, the DB-free harness) the guard is
-  // off; routing never depends on it.
+  // (tests). In a running server it also FAILS OPEN: the relation's bases (a
+  // table is its own; a view or rollup the tables that feed it — the capture
+  // records relations, a change names only base tables) join the router's
+  // index for this entry, and every later change to one recomputes every
+  // target FULL (`routeEntryChange`), so a plan missing a relation is never
+  // staler than a whole-table read of it. With no capture wired (central, the
+  // DB-free harness) the guard is off; routing never depends on it.
   function checkRouteDrift(entry: RegistryEntry): (value: unknown) => unknown {
     return (value) => {
       const routing = entry.routing!;
@@ -2516,6 +2546,7 @@ export function createResourceRuntime(
         (table) =>
           !routing.byTable.has(table) &&
           !routing.derived.has(table) &&
+          !routing.unfed.has(table) &&
           !routing.drifted.has(table),
       );
       if (unrouted.length === 0) return value;
@@ -2523,10 +2554,37 @@ export function createResourceRuntime(
         `routed resource "${entry.key}" read ${unrouted.map((t) => `"${t}"`).join(", ")}, which none of its routes names — a write there never reaches it. Its compiler must emit a route for every table the SQL reads.`,
       );
       if (opts.strictRoutes) throw err;
-      for (const table of unrouted) routing.drifted.add(table);
+      for (const relation of unrouted) {
+        routing.drifted.add(relation);
+        for (const base of driftBasesOf(relation)) {
+          if (!routing.byTable.has(base) && !indexedUnder(base, entry)) {
+            indexTable(base, entry);
+          }
+        }
+      }
       reportLoaderError(`route drift for ${entry.key}`, err);
       return value;
     };
+  }
+
+  // The bases a drifted relation fails open on. Server-core's bases holder
+  // throws until change-feed installs the graph (boot): a load drifting before
+  // then fails open on the relation's own name and says why, rather than not
+  // at all.
+  function driftBasesOf(relation: string): readonly string[] {
+    try {
+      return relationBasesOf(relation);
+    } catch (err) {
+      reportLoaderError(
+        `route drift: relation bases unknown for "${relation}"`,
+        err,
+      );
+      return [relation];
+    }
+  }
+
+  function indexedUnder(table: string, entry: RegistryEntry): boolean {
+    return routedByTable.get(table)?.includes(entry) ?? false;
   }
 
   // The one call site of a window's ids-only membership query. `wrapMembership`
@@ -3062,13 +3120,15 @@ export function createResourceRuntime(
         `defineExternalResource: "${field}" on key "${key}" — an external resource's truth lives outside Postgres, so no table change may route into it`,
       );
     }
-    // A routed entry takes no cascade: it is reached only through the tables
-    // its routes name. An upstream's cascade would serve it a second time, on a
-    // path the router cannot see — a FULL cascade overriding a scoped routed
-    // refill of the same tuple. Route the upstream's tables instead.
-    if (def.dependsOn?.length) {
+    // A keyed routed entry takes no cascade: it is reached only through the
+    // tables its routes name. An upstream's cascade would serve it a second
+    // time, on a path the router cannot see — a FULL cascade overriding a
+    // scoped routed refill of the same tuple. Route the upstream's tables
+    // instead. A `reach` entry may take one: every reach route is `full`, so
+    // a cascade and a routed change merge into the tuple's one FULL pending.
+    if (field === "routes" && def.dependsOn?.length) {
       throw new Error(
-        `defineResource: "${field}" and "dependsOn" are exclusive for key "${key}" — a routed entry takes no cascade; route the tables "${def.dependsOn.map((d) => d.resource.key).join('", "')}" read instead`,
+        `defineResource: "routes" and "dependsOn" are exclusive for key "${key}" — a keyed routed entry takes no cascade; route the tables "${def.dependsOn.map((d) => d.resource.key).join('", "')}" read instead`,
       );
     }
     const plan = (def.routes ?? def.reach)!;
@@ -3119,6 +3179,13 @@ export function createResourceRuntime(
       routeIds,
       matchOf,
       derived: new Set((plan.derivedReads ?? []).map((d) => d.table)),
+      unfed: new Set(
+        field === "reach"
+          ? ((plan as ReachPlan<ResourceParams>).unfed ?? []).map(
+              (u) => u.table,
+            )
+          : [],
+      ),
       drifted: new Set(),
       uses: new Map(),
     };
@@ -3161,11 +3228,13 @@ export function createResourceRuntime(
   /** Put a routed entry on the index `routeTableChange` reads, once per table it routes. */
   function indexRouting(entry: RegistryEntry): void {
     if (!entry.routing) return;
-    for (const table of entry.routing.byTable.keys()) {
-      const list = routedByTable.get(table);
-      if (list) list.push(entry);
-      else routedByTable.set(table, [entry]);
-    }
+    for (const table of entry.routing.byTable.keys()) indexTable(table, entry);
+  }
+
+  function indexTable(table: string, entry: RegistryEntry): void {
+    const list = routedByTable.get(table);
+    if (list) list.push(entry);
+    else routedByTable.set(table, [entry]);
   }
 
   /** The handle `defineResource` / `defineExternalResource` return for an entry. */
@@ -6684,6 +6753,7 @@ export function createResourceRuntime(
         reason?: string;
       }> | null;
       derivedReads: string[];
+      unfedReads: string[];
       routeDrifted: string[];
       tuples: number;
       persisted: boolean;
@@ -6767,6 +6837,9 @@ export function createResourceRuntime(
         // table whose writes never reach the entry. Raw-table space, as the
         // guard judged them. `[]` for a legacy entry (and on central).
         derivedReads: entry.routing ? [...entry.routing.derived].sort() : [],
+        // A reach plan's tables read outside the change feed by declaration
+        // (`ReachPlan.unfed`). `[]` otherwise.
+        unfedReads: entry.routing ? [...entry.routing.unfed].sort() : [],
         routeDrifted: entry.routing ? [...entry.routing.drifted].sort() : [],
         // Tracked params-tuples (`entry.tracked`): the subscribed tuples a
         // change recomputes — a legacy-full entry's fan-out per change.
@@ -6954,7 +7027,15 @@ export function createResourceRuntime(
 
   function routeEntryChange(entry: RegistryEntry, change: TableChange): void {
     const routing = entry.routing!;
-    const routes = routing.byTable.get(change.table)!;
+    const routes = routing.byTable.get(change.table);
+    if (routes === undefined) {
+      // A table only the drift guard indexed (A8 fail-open): no route names it,
+      // so nothing scopes it — every target recomputes FULL.
+      for (const [pk, params] of routedTargets(entry)) {
+        deliverRouted(entry, pk, params, { kind: "full" }, change);
+      }
+      return;
+    }
     for (const [pk, params] of routedTargets(entry)) {
       let outcome: ShapedRouting;
       try {
@@ -7216,6 +7297,18 @@ export function createResourceRuntime(
     return out;
   }
 
+  // Every table a reach plan reads outside the change feed by declaration
+  // (`ReachPlan.unfed`) — what change-feed's boot check holds to its opt-outs.
+  function unfedResourceTables(): UnfedResourceTable[] {
+    const out: UnfedResourceTable[] = [];
+    for (const entry of registry.values()) {
+      for (const table of entry.routing?.unfed ?? []) {
+        out.push({ key: entry.key, table });
+      }
+    }
+    return out;
+  }
+
   // Every routed entry's routes, folded into one layout per table.
   function routedTableRequirements(): TableLayoutRequirement[] {
     const routes: Route[] = [];
@@ -7366,6 +7459,7 @@ export function createResourceRuntime(
     recomputeResource,
     notifyStatsFor,
     scopedResourceTables,
+    unfedResourceTables,
     routedTableRequirements,
     boundedMembershipKeys,
     persistedKeys,

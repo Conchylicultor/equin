@@ -8,7 +8,12 @@ import {
   RUN_EVENTS_LIMIT,
   runEvents,
 } from "../../core";
-import { _eventSources, _eventSourceRuns } from "./tables";
+import {
+  _events,
+  _eventSources,
+  _eventSourceRuns,
+  _eventSourceRunEvents,
+} from "./tables";
 import { listRunEvents, runExists } from "./sources-repo";
 
 // The sources collection over `event_sources`: the whole ordered set and its
@@ -33,13 +38,17 @@ export const eventSourceRunsServed = serveCollection(eventSourceRuns, {
   from: _eventSourceRuns,
 });
 
-// One run's events (`events.run-events`). The loader reads the run, its
-// run-events rows, the events and their sources, so the change feed recomputes
-// an open tuple when the run's set lands (one transaction at the end of the
+// One run's events (`events.run-events`). The declared reads are the run, its
+// run-events rows, the events and their sources, so an open tuple recomputes when the run's set lands (one transaction at the end of the
 // run), when a listed event or its source changes, and when retention or a
 // source delete removes the run — which then answers `missing`, never `[]`.
 export const runEventsServed = serveValue(runEvents, {
   source: "db",
+  reads: {
+    tables: [_eventSourceRuns, _eventSourceRunEvents, _events, _eventSources],
+    reason:
+      "one run's events joined to their sources, and the run's existence check; whole-table until it reads through a collection",
+  },
   unbounded: {
     reason:
       "one run's closed event set — a single extraction, tens of events — and the loader caps it at RUN_EVENTS_LIMIT rows",

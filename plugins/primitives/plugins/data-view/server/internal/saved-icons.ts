@@ -15,6 +15,7 @@ interface ParsedViewRow {
  */
 export const viewIconsSource = defineSavedIconSource({
   id: "data-view.view-icons",
+  tables: [],
   names: (): SavedSymbolName[] =>
     [...dataViewDescriptors.values()].flatMap((descriptor) =>
       (getConfig(descriptor).views as ParsedViewRow[]).flatMap((row) =>

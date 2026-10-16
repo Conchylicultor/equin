@@ -31,10 +31,15 @@ async function loadRecents(): Promise<BrowserRecent[]> {
     .limit(RECENTS_LIMIT);
 }
 
-// Recomputed (and pushed whole) on every write to `browser_history`, which the
-// loader's captured read-set routes here.
+// Recomputed (and pushed whole) on every write to `browser_history`, the table
+// its declared `reads` name.
 export const browserRecentsServed = serveValue(browserRecents, {
   source: "db",
+  reads: {
+    tables: [browserHistory],
+    reason:
+      "the latest visit per distinct url, so any visit written may change the 12 most recent",
+  },
   loader: loadRecents,
   unbounded: {
     reason:

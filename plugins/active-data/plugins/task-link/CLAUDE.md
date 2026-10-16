@@ -44,7 +44,8 @@ which renders `<task>prompt</task>` *block* tags as editable creation cards.
     - `page.inline-token` "(?<!\/)(?<![A-Za-z0-9_-])(?:task-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
   - Uses:
     - `active-data/id-chip.idChipServer`
-    - `tasks/tasks-core.getTask`
+    - `database.db`
+    - `tasks/tasks-core._tasks`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

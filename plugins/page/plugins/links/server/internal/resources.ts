@@ -9,14 +9,17 @@ import {
   serveValue,
 } from "@plugins/network/plugins/live/server";
 import { EmojiSchema } from "@plugins/ui/plugins/icons/plugins/emoji/core";
-import { liveBlocks } from "@plugins/page/plugins/editor/server";
+import { _blocks, liveBlocks } from "@plugins/page/plugins/editor/server";
 import {
   inDocumentOrder,
   pageData,
   textOf,
   type BlockNode,
 } from "@plugins/page/plugins/editor/core";
-import { inlineTokensAsText } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
+import {
+  inlineTokenReferentTables,
+  inlineTokensAsText,
+} from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
 import { pageBacklinks, pageLinkSources } from "../../core/resources";
 import type { BacklinkRow } from "../../core/schemas";
 import { linkSourceRowsServeOptions } from "./link-source-rows";
@@ -38,12 +41,21 @@ const iconExpr = sql`${liveBlocks.data} ->> 'icon'`.mapWith(
 
 // The source pages that link TO `pageId`, ordered by title, each with the
 // snippet of its first linking block in document order. A db-arm value: the
-// loader's read-set (`page_links` and `page_blocks`) is captured at the pool
-// chokepoint, so every edge write — the reindexer's insert/delete, the trash
+// declared reads (`page_links`, `page_blocks`, and the tables the snippets'
+// chip titles come from) route
+// every edge write — the reindexer's insert/delete, the trash
 // hook's drop, an FK cascade — and every source page's title / icon / text edit
+// — or a rename of a task, song, … a snippet's chip shows —
 // recomputes the subscribed tuples; push drops a byte-identical result.
 export const pageBacklinksServed = serveValue(pageBacklinks, {
   source: "db",
+  // A thunk: chip families contribute their referent tables as the plugin tiers
+  // load, after this value is declared.
+  reads: () => ({
+    tables: [...new Set([_pageLinks, _blocks, ...inlineTokenReferentTables()])],
+    reason:
+      "the backlinks of one page join every edge and every source page's title, icon and text, and each snippet shows the titles its chips resolve to (tasks, songs, pages, …) — whole-table until it reads through a collection",
+  }),
   unbounded: {
     reason:
       "the pages that link to one page — a join over page_links and the live page blocks, not the rows of one table",

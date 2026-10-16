@@ -1,3 +1,4 @@
+import type { RoutedSource } from "@plugins/infra/plugins/query-resource/server";
 import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 
 /**
@@ -9,9 +10,10 @@ export interface SavedIconSource {
   readonly id: string;
   /**
    * The saved names this source holds right now. A DB-backed source reads
-   * through the `db` pool: the served value captures those tables and
-   * recomputes when they change.
+   * through the `db` pool and lists those tables in `tables`: the served value
+   * declares them as its reads and recomputes when they change.
    */
+  readonly tables: readonly RoutedSource[];
   names(): Promise<readonly SavedSymbolName[]> | readonly SavedSymbolName[];
   /**
    * For a source whose truth is NOT in Postgres (a config): start watching it,

@@ -10,11 +10,16 @@ const t = _appUsageDaily;
 // which is the user's: one instance per user, on their machine.
 const IN_LAST_7_DAYS = sql`${t.day} > current_date - 7`;
 
-// Push over `app_usage_daily`: the loader reads the table, so the change feed
-// recomputes the summary on every flush — the route notifies nothing. Flushes
+// Push over `app_usage_daily`: a write to it recomputes the summary on every
+// flush (the declared `reads`) — the route notifies nothing. Flushes
 // come in bursts (an app switch in two windows), hence the throttle.
 export const appUsageSummaryServed = serveValue(appUsageSummary, {
   source: "db",
+  reads: {
+    tables: [_appUsageDaily],
+    reason:
+      "the summary folds every day's row into one row per app, so a write to any row of the table may change any app's totals",
+  },
   throttleMs: 2000,
   unbounded: {
     reason:

@@ -31,6 +31,7 @@ Transcript-only: a report is not something a page document links to.
     - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?<![A-Za-z0-9_-])(?:report-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
   - Uses:
     - `active-data/id-chip.idChipServer`
+    - `reports._reports`
     - `reports.getReportTitle`
 - Core:
   - Exports (values): `REPORT_CHIP_SURFACES`

@@ -64,9 +64,14 @@ export async function countUnreadNotifications(
 }
 
 // A whole-table value: recomputed (and pushed whole) on every write to
-// `notifications`, which the loader's captured read-set routes here.
+// `notifications`, which the declared `reads` below route here.
 export const notificationsUnreadServed = serveValue(notificationsUnread, {
   source: "db",
+  reads: {
+    tables: [_notifications],
+    reason:
+      "the badge counts every unread, undismissed row, so a write to any notification may change the counts",
+  },
   loader: () => countUnreadNotifications(),
   // Every write to `notifications` re-runs the count. A burst (a build or a
   // crash storm filing hundreds of rows) is one count per window, not one per

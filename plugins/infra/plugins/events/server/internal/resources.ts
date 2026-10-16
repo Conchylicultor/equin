@@ -94,13 +94,19 @@ export const eventEmissionsServed = serveCollection(eventEmissions, {
   },
 });
 
-// The loader's read-set is every per-event trigger table, so a write to any of
+// The declared reads are every per-event trigger table (a thunk: the registry
+// fills as events register, after module eval), so a write to any of
 // them (a trigger() binding, a ctx.waitFor's oneShot binding and its deletion
 // on dispatch, the Triggers tab's enable / delete, the boot re-projection)
 // recomputes and pushes the whole list. `dangling` reads the job registry,
 // which is fixed once boot has registered every job.
 export const eventTriggersServed = serveValue(eventTriggers, {
   source: "db",
+  reads: () => ({
+    tables: [...triggerTableRegistry.values()],
+    reason:
+      "the value lists every binding of every event's trigger table, so a write to any row of any of them changes the one tuple",
+  }),
   loader: loadTriggers,
   unbounded: {
     reason:

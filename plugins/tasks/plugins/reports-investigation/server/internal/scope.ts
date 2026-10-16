@@ -1,18 +1,25 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
 import {
+  _reports,
   ReportKind,
   uninvestigatedReportCounts,
 } from "@plugins/reports/server";
 import { reportInvestigationsScope } from "../../shared/live";
 
-// The loader reads `reports` (and whatever marks one investigated), so the
-// change feed recomputes every held question on a report write. Reports land
+// The loader reads `reports` (the task link and noise flag that mark one
+// investigated are columns of it), so a report write recomputes every held
+// question (the declared `reads`). Reports land
 // in bursts (one failure recorded by many tabs), hence the throttle. The kind
 // list itself is the `ReportKind` contribution registry, fixed per process.
 export const reportInvestigationsScopeServed = serveValue(
   reportInvestigationsScope,
   {
     source: "db",
+    reads: {
+      tables: [_reports],
+      reason:
+        "the open count per kind is over every uninvestigated report, so a write to any report may change any tuple; whole-table until it reads through a collection",
+    },
     throttleMs: 1000,
     loader: async ({ minCount }) => {
       const counts = new Map(

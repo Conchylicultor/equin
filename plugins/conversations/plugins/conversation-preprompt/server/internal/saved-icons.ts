@@ -6,7 +6,7 @@ import {
   nullable,
   parsed,
 } from "@plugins/database/plugins/sql-projection/server";
-import { _conversationPrepromptTable } from "./tables";
+import { _conversationPrepromptTable, conversationPreprompt } from "./tables";
 
 const iconExpr = sql`${_conversationPrepromptTable.icon} ->> 'icon'`.mapWith(
   nullable(parsed(SavedSymbolNameSchema, "saved-icons.icon")),
@@ -18,6 +18,7 @@ const iconExpr = sql`${_conversationPrepromptTable.icon} ->> 'icon'`.mapWith(
  */
 export const prepromptSnapshotIconsSource = defineSavedIconSource({
   id: "conversation-preprompt.snapshots",
+  tables: [conversationPreprompt],
   names: async () =>
     (
       await db

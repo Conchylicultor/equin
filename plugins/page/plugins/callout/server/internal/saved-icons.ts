@@ -1,6 +1,6 @@
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { liveBlocks } from "@plugins/page/plugins/editor/server";
+import { _blocks, liveBlocks } from "@plugins/page/plugins/editor/server";
 import { defineSavedIconSource } from "@plugins/ui/plugins/icons/plugins/sprites/server";
 import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import {
@@ -16,6 +16,7 @@ const iconExpr = sql`${liveBlocks.data} ->> 'icon'`.mapWith(
 /** Every live callout's saved icon, so callouts are drawable at first paint. */
 export const calloutIconsSource = defineSavedIconSource({
   id: "page.callout-icons",
+  tables: [_blocks],
   names: async () =>
     (
       await db

@@ -134,6 +134,9 @@ that are real.
   - Uses:
     - `apps/chord/curriculum.isListedChord`
     - `apps/chord/curriculum.loadListedChords`
+    - `apps/chord/song-index._chordIndexRequest`
+    - `apps/chord/song-index._chordIndexState`
+    - `apps/chord/song-index._chordLoopWindows`
     - `database.db`
     - `database/sql-column.parsedText`
     - `infra/endpoints.implement`

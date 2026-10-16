@@ -42,6 +42,12 @@ export {
   countTokenSets,
 } from "./internal/find";
 export { loadIndexStatus, loadReadyIndexIdentity } from "./internal/state";
+// The tables those reads touch, for a reader's declared `reads`.
+export {
+  _chordIndexRequest,
+  _chordIndexState,
+  _chordLoopWindows,
+} from "./internal/tables";
 
 export default {
   description:
@@ -98,8 +104,10 @@ export default {
       reason:
         "Left out with the index rows it describes: a restored `ready` over empty tables would never reload. With no state row, the next `ensure` or boot (where the app was opened) reloads the index from the snapshot file.",
     }),
-    // A load inserts ~184k windows in batches, and no live resource reads these
-    // two tables: the status reads only `chord_index_state`.
+    // A load inserts ~184k windows in batches. No live resource is told of
+    // their writes: `chord.catalog` and `chord.progress` read the windows only
+    // through a memo keyed on the index identity (declared `outsideFeed`), and
+    // a load's `chord_index_state` writes announce the change.
     ExcludeFromChangeFeed({
       table: _chordSections,
       reason:
@@ -108,7 +116,7 @@ export default {
     ExcludeFromChangeFeed({
       table: _chordLoopWindows,
       reason:
-        "Bulk-loaded song index cache; no live-state resource reads it (the loop queries are plain endpoints).",
+        "Bulk-loaded song index cache; live values read it only through a memo keyed on the index identity, whose state row announces a load (the loop queries are plain endpoints).",
     }),
   ],
   // Only where the app was opened (the request row exists), and only when the

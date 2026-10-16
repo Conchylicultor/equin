@@ -27,6 +27,7 @@ export type {
   PersistedValueCheck,
   NotifyCounts,
   ScopedResourceTable,
+  UnfedResourceTable,
   RoutedRecomputeOn,
   WsData,
   WsHandler,
@@ -49,6 +50,7 @@ export type {
   TableChange,
   TableLayoutRequirement,
   TupleUse,
+  UnfedRead,
 } from "./routing";
 export { diffKeyedScopedMembership, retainSnapEncoder } from "./keyed-diff";
 export type {

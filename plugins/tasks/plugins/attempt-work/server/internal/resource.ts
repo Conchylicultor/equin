@@ -1,10 +1,15 @@
+import {
+  _attempts,
+  _conversations,
+  pushes,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { refHeadServed } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import { attemptWork } from "../../core/resources";
 import { attemptWorkSignature, evictAttemptWork, getAttemptWork } from "./work";
 
-// A db-arm value: the loader's DB reads (the attempt row, the push ledger) are
-// captured by the change feed, and a git ref advance (local commit / rebase /
+// A db-arm value: the loader's DB reads (the attempt row, its conversation set,
+// the push ledger) are declared in `reads`, and a git ref advance (local commit / rebase /
 // sync-to-head, or main moving) changes the standing of every visible attempt —
 // so `recomputeOn: [refHeadServed]` recomputes every subscribed attempt.
 // git-watcher only tracks `main` + this worktree's own branch, so a notify
@@ -18,6 +23,13 @@ import { attemptWorkSignature, evictAttemptWork, getAttemptWork } from "./work";
 // invalidates on the next read.
 export const attemptWorkServed = serveValue(attemptWork, {
   source: "db",
+  reads: {
+    // The memo's inputs and the push-ledger freshness reconcile: the attempt
+    // row, its conversation ids (the signature folds them in), the ledger count.
+    tables: [_attempts, _conversations, pushes],
+    reason:
+      "an attempt's standing reads its attempt row, conversation set and push ledger; any write to them may move any subscribed attempt, whole-table until it reads through a collection",
+  },
   recomputeOn: [refHeadServed],
   // A missing worktree is NOT automatically unresolved here, unlike
   // commits-graph's `onWorktree` collapse: `landed` is measurable from the main

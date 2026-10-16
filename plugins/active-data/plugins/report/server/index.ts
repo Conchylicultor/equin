@@ -1,7 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { idChipServer } from "@plugins/active-data/plugins/id-chip/server";
+import { _reports, getReportTitle } from "@plugins/reports/server";
 import { reportIdKind } from "@plugins/reports/core";
-import { getReportTitle } from "@plugins/reports/server";
 import { REPORT_CHIP_SURFACES } from "../core";
 
 export default {
@@ -10,6 +10,7 @@ export default {
   contributions: [
     ...idChipServer({
       kind: reportIdKind,
+      tables: [_reports],
       surfaces: REPORT_CHIP_SURFACES,
       resolve: async (id) => {
         const title = await getReportTitle(id);

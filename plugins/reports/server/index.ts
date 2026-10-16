@@ -23,6 +23,7 @@ import { submitReport, investigateReport } from "../shared/endpoints";
 import { IdKinds } from "@plugins/ids/server";
 import { reportIdKind } from "../core";
 
+export { _reports } from "./internal/tables";
 export { reportInvestigationSink } from "./internal/investigation-sink";
 export { reportRecordedSignal } from "./internal/recorded-signal";
 export {

@@ -7,6 +7,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { pgTable, text } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import {
   createResourceRuntime,
@@ -14,10 +15,13 @@ import {
 } from "@plugins/framework/plugins/resource-runtime/core";
 import { notificationsWsHandler } from "@plugins/framework/plugins/server-core/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import { compileValue } from "../../core/internal/compile-value";
-import { serveValue } from "./serve-value";
+import { compileValue, registerValue } from "../../core/internal/compile-value";
+import { serveValue, valueRuntime } from "./serve-value";
 
 const Count = z.object({ n: z.number() });
+const counts = pgTable("test_serve_value_counts", {
+  id: text("id").primaryKey(),
+});
 const Names = z.array(z.string());
 
 let seq = 0;
@@ -233,7 +237,11 @@ describe("compileValue", () => {
 describe("serveValue", () => {
   test("the db arm: push by default, one Declare carrying preload, keys, and no notify", () => {
     const v = liveValue(key("served-db"), { schema: Count, preload: "boot" });
-    const served = serveValue(v, { source: "db", loader: () => ({ n: 1 }) });
+    const served = serveValue(v, {
+      source: "db",
+      reads: { tables: [counts], reason: "a test count" },
+      loader: () => ({ n: 1 }),
+    });
     expect(served.key).toBe(v.key);
     expect(served.mode).toBe("push");
     expect(served.source).toBe("db");
@@ -248,6 +256,79 @@ describe("serveValue", () => {
     expect("notify" in served).toBe(false);
     // @ts-expect-error — a Postgres-backed value is driven by the change feed alone
     expect(served.notify).toBeUndefined();
+  });
+
+  test("the db arm declares what its loader reads: required (tsc and a throw), refused on the external arm", () => {
+    const v = liveValue(key("served-reads"), { schema: Count });
+    // Never called — the assertions are the `@ts-expect-error`s.
+    const typeOnly = () => {
+      // @ts-expect-error — a db value declares its reads
+      serveValue(v, { source: "db", loader: () => ({ n: 1 }) });
+      serveValue(v, {
+        source: "external",
+        changes: "notified",
+        loader: () => ({ n: 1 }),
+        // @ts-expect-error — an external value is told of changes by its notify
+        reads: { tables: [counts], reason: "r" },
+      });
+    };
+    expect(typeof typeOnly).toBe("function");
+    const untyped = serveValue as (v: unknown, o: unknown) => unknown;
+    expect(() =>
+      untyped(liveValue(key("served-reads-missing"), { schema: Count }), {
+        source: "db",
+        loader: () => ({ n: 1 }),
+      }),
+    ).toThrow(/declares the tables its loader reads/);
+    expect(() =>
+      untyped(liveValue(key("served-reads-external"), { schema: Count }), {
+        source: "external",
+        changes: "notified",
+        loader: () => ({ n: 1 }),
+        reads: { tables: [counts], reason: "r" },
+      }),
+    ).toThrow(/`reads` is the db arm's/);
+    expect(() =>
+      serveValue(liveValue(key("served-reads-empty"), { schema: Count }), {
+        source: "db",
+        reads: { tables: [counts], reason: "  " },
+        loader: () => ({ n: 1 }),
+      }),
+    ).toThrow(/reason is empty/);
+  });
+
+  test("a thunk's reads compile at bindDeferredResources — the value is not served before", async () => {
+    const v = liveValue(key("served-reads-thunk"), { schema: Count });
+    // Its own runtime: a process-global bind would bind every other suite's
+    // deferred resources too.
+    const runtime = createResourceRuntime();
+    const opts = {
+      source: "db" as const,
+      reads: () => ({ tables: [counts], reason: "a registry's tables" }),
+      loader: () => ({ n: 7 }),
+    };
+    const { resource } = registerValue(
+      valueRuntime(v.key, opts, runtime),
+      v,
+      opts,
+    );
+    const unbound = await Promise.resolve()
+      .then(() => resource.load({}))
+      .then(
+        () => null,
+        (err: unknown) => err,
+      );
+    expect(unbound).toBeInstanceOf(Error);
+    expect((unbound as Error).message).toMatch(/deferred and not bound yet/);
+    runtime.bindDeferredResources();
+    expect(await resource.load({})).toEqual({ n: 7 });
+    expect(runtime.scopedResourceTables()).toEqual([
+      {
+        key: v.key,
+        table: "test_serve_value_counts",
+        via: 'route "test_serve_value_counts"',
+      },
+    ]);
   });
 
   test("types: a central value is not served here", () => {

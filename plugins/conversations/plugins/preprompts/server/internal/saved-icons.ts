@@ -9,6 +9,7 @@ import { prepromptsConfig } from "../../shared/config";
  */
 export const savedIconsSource = defineSavedIconSource({
   id: "preprompts.icons",
+  tables: [],
   names: (): SavedSymbolName[] =>
     getConfig(prepromptsConfig).preprompts.flatMap((p) =>
       p.icon.icon === null ? [] : [p.icon.icon],

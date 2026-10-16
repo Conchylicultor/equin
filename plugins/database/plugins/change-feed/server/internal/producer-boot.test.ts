@@ -54,6 +54,7 @@ function inputs(
     },
     layouts: [identityLayout],
     scoped: [{ key: "items.list", table: "pb_items", via: 'route "items"' }],
+    unfed: [],
     relations: { views: new Map(), rollups: new Map() },
     ...rest,
   };

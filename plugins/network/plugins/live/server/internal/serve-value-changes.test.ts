@@ -8,6 +8,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { pgTable, text } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { createResourceRuntime } from "@plugins/framework/plugins/resource-runtime/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
@@ -20,6 +21,9 @@ import {
 import { serveValue } from "./serve-value";
 
 const Count = z.object({ n: z.number() });
+const counts = pgTable("test_serve_value_changes_counts", {
+  id: text("id").primaryKey(),
+});
 const Query = z.object({ metric: z.string() });
 const Item = z.object({ id: z.string() });
 
@@ -304,6 +308,7 @@ describe("changes — runtime (an untyped caller)", () => {
     expect(served.changes).toEqual(FIXED);
     const db = serveValue(liveValue(key("rec-db"), { schema: Count }), {
       source: "db",
+      reads: { tables: [counts], reason: "a test count" },
       loader: () => ({ n: 1 }),
     });
     expect(db.changes).toBeUndefined();

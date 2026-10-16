@@ -51,6 +51,7 @@ cannot paint itself outside Lexical is a tsc error.
     - `primitives.text-editor.inline-chip.referent` "\[\[(?:page:([^[\]\n]+)|(block-\d+-[a-z0-9]+))\]\]"
   - Uses:
     - `database.db`
+    - `page/editor._blocks`
     - `page/editor.Editor`
     - `page/editor.liveBlocks`
     - `page/links.PageLinks`

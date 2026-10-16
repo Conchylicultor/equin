@@ -207,6 +207,9 @@ A round nothing was typed into reads exactly like the next one, so after
     - `resource.declare` "chord.catalog"
     - `resource.declare` "chord.curriculum"
   - Uses:
+    - `apps/chord/song-index._chordIndexRequest`
+    - `apps/chord/song-index._chordIndexState`
+    - `apps/chord/song-index._chordLoopWindows`
     - `apps/chord/song-index.countTokenSets`
     - `apps/chord/song-index.loadReadyIndexIdentity`
     - `database.db`

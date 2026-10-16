@@ -141,6 +141,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `StormRosterEntry`
     - `StormSummary`
   - Exports (values):
+    - `_reports`
     - `DEFAULT_REPORT_DEBOUNCE_MS`
     - `getReportTitle`
     - `isReportKindRegistered`

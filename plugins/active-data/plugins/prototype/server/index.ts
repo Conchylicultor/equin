@@ -10,6 +10,8 @@ export default {
   contributions: [
     ...idChipServer({
       kind: protoIdKind,
+      // Prototypes live on disk (the host-global prototypes dir), not in Postgres.
+      tables: [],
       surfaces: PROTOTYPE_CHIP_SURFACES,
       resolve: readPrototypeTitle,
     }),

@@ -6,11 +6,16 @@ import { _dataViewCustomValues } from "./tables";
 
 /**
  * Serves `customColumnValues` from `data_view_custom_values`, scoped by
- * `dataViewId`. The loader reads the table, so the change feed recomputes the
- * tuple on every write (read-set match) — the handlers notify nothing.
+ * `dataViewId`. The declared `reads` name the table, so the change feed
+ * recomputes the tuple on every write — the handlers notify nothing.
  */
 export const customColumnValuesServed = serveValue(customColumnValues, {
   source: "db",
+  reads: {
+    tables: [_dataViewCustomValues],
+    reason:
+      "a write to any custom-value row may change the cells of the surface it belongs to; whole-table until it reads through a collection",
+  },
   unbounded: {
     reason:
       "one DataView surface's custom-column cells, indexed client-side onto every rendered row; the key is the composite (dataViewId, rowKey, columnId), so no single-id :rows read fits",
