@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { appLinkProps } from "@plugins/apps-core/plugins/tabs/web";
+import { settingsApp } from "@plugins/apps/plugins/settings/plugins/shell/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { liveMapSetupPane } from "../panes";
 
@@ -10,11 +11,10 @@ import { liveMapSetupPane } from "../panes";
  * Live map setup, whose Map ID step shows the same finding.
  */
 export function MapIdRasterNotice(): ReactElement {
-  const openPane = useOpenPane();
   return (
     <Button
       variant="outline"
-      {...openPane.link(liveMapSetupPane, {}, { mode: "root" })}
+      {...appLinkProps(liveMapSetupPane.link(settingsApp, {}))}
     >
       Map ID isn't a vector map — fix in setup
     </Button>

@@ -5,6 +5,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { PaneScroll } from "@plugins/primitives/plugins/pane/web";
 import {
   Steps,
   Step,
@@ -74,6 +75,7 @@ export function GoogleMapsSetupPane() {
   }
 
   return (
+    <PaneScroll>
     <Stack gap="xl" className="p-lg max-w-lg">
       <Stack gap="xs">
         <Text as="label" variant="label">
@@ -193,5 +195,6 @@ export function GoogleMapsSetupPane() {
         </Step>
       </Steps>
     </Stack>
+    </PaneScroll>
   );
 }

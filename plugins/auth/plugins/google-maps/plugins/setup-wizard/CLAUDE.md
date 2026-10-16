@@ -25,6 +25,7 @@
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
+    - `primitives/pane.PaneScroll`
     - `primitives/setup-steps.Step`
     - `primitives/setup-steps.StepDone`
     - `primitives/setup-steps.StepLink`

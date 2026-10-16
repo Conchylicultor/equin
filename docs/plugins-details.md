@@ -10203,7 +10203,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 33 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Imported by: 34 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `apps-core` ×10
           - `apps` ×7
           - `debug` ×7
@@ -10212,6 +10212,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/song`
           - `build`
           - `config_v2/config-link`
+          - `integrations/google-maps`
           - `tasks/worktree-identity`
           - `ui/theme-engine/quick-theme`
     - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the :root token layer, and useAppSettingsScope — the app:<id> config scope per-app theme settings (variants) are read in: the nearest app theme boundary's (a pane's home app), else the focused app's.
@@ -10557,6 +10558,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
+              - `primitives/pane.PaneScroll`
               - `primitives/setup-steps.Step`
               - `primitives/setup-steps.StepDone`
               - `primitives/setup-steps.StepLink`
@@ -27863,13 +27865,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `google-maps-live-map-setup.actions`
         - Slot contributors: `google-maps-live-map-setup.actions` ← `primitives.pane`
         - Contributes: `Pane.Register` "google-maps-live-map-setup"
-        - Uses: 24 symbols — full list in [`plugins/integrations/plugins/google-maps/REFERENCE.md`](../plugins/integrations/plugins/google-maps/REFERENCE.md)
+        - Uses: 25 symbols — full list in [`plugins/integrations/plugins/google-maps/REFERENCE.md`](../plugins/integrations/plugins/google-maps/REFERENCE.md)
           - `primitives/setup-steps` ×7
           - `primitives/live-state` ×3
           - `primitives/pane` ×3
           - `auth` ×2
           - `infra/endpoints` ×2
           - `primitives/css/ui-kit` ×2
+          - `apps-core/tabs.appLinkProps`
           - `auth/google-maps/setup-wizard.googleMapsSetupPane`
           - `network/live.useLive`
           - `primitives/css/spacing.Stack`

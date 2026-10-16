@@ -6,6 +6,7 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { PaneScroll } from "@plugins/primitives/plugins/pane/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   Steps,
@@ -108,7 +109,10 @@ function LiveMapSetupSteps({
     }
   }
 
+  // The pane body's one scroll viewport: the key steps plus the Map ID steps
+  // run past a laptop screen.
   return (
+    <PaneScroll>
     <Stack gap="xl" className="p-lg max-w-lg">
       <Stack gap="xs">
         {saved ? (
@@ -211,6 +215,7 @@ function LiveMapSetupSteps({
 
       {saved ? <MapIdSetupSteps mapId={config.mapId} /> : null}
     </Stack>
+    </PaneScroll>
   );
 }
 

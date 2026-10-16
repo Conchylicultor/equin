@@ -147,13 +147,14 @@ over:
   - Slots: `google-maps-live-map-setup.actions`
   - Slot contributors: `google-maps-live-map-setup.actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "google-maps-live-map-setup"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/setup-steps` ×7
     - `primitives/live-state` ×3
     - `primitives/pane` ×3
     - `auth` ×2
     - `infra/endpoints` ×2
     - `primitives/css/ui-kit` ×2
+    - `apps-core/tabs.appLinkProps`
     - `auth/google-maps/setup-wizard.googleMapsSetupPane`
     - `network/live.useLive`
     - `primitives/css/spacing.Stack`
