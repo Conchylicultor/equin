@@ -4890,13 +4890,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Pane.Register` "places-map"
               - `GeoMap.Pin` → `SavedPlacePin`
-            - Uses: 74 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 79 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `apps/places/places-core` ×9
+              - `map` ×6
               - `primitives/data-view` ×6
               - `primitives/collapsible` ×5
               - `primitives/css/ui-kit` ×4
-              - `map` ×3
               - `primitives/live-state` ×3
+              - `ui/icons` ×3
               - `apps/places/tag-manager` ×2
               - `integrations/google-maps` ×2
               - `primitives/css/control-panel` ×2
@@ -4934,15 +4935,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/relative-time.useNow`
               - `primitives/search.SearchInput`
               - `primitives/shortcuts.useSurfaceShortcuts`
-              - `ui/icons.Icon`
           - Cross-plugin:
-            - Uses tokens: 28 vars — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses tokens: 27 vars — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `ui/tokens/color-palette` ×11
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/density` ×5
-              - `ui/tokens/shadow` ×2
               - `ui/tokens/shape` ×2
               - `ui/tokens/categorical --categorical-foreground`
+              - `ui/tokens/shadow --shadow`
         - **`shell`** — The Places app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the map's index pane is shown, and the app's own light-only theme, which the places app selects.
           - Web:
             - Contributes:
@@ -28088,6 +28088,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses:
       - `primitives/css/center.Center`
       - `primitives/css/coords.Placed`
+      - `primitives/css/layer.Layer`
       - `primitives/css/line.Line`
       - `primitives/css/pin.Pin`
       - `primitives/css/placeholder.Placeholder`
@@ -28100,39 +28101,39 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/persistent-draft.writeDraft`
       - `primitives/slot-render.defineDispatchSlot`
       - `primitives/slot-render.renderIsolated`
+      - `ui/icons.useIconMarkup`
     - Exports (types):
+      - `MapClusterMarkFn`
       - `MapClusterProps`
       - `MapLabelProps`
+      - `MapMarkEnv`
+      - `MapPinMarkFn`
+      - `MapPinMarkInput`
       - `MapPinProps`
       - `MapPinScale`
       - `MapPinState`
       - `MapRendererContribution`
       - `MapRendererProps`
       - `MapRendererReadiness`
+      - `MapTextStyle`
       - `MapViewProps`
     - Exports (values):
       - `GeoMap`
+      - `MAP_LABEL_HALO_PX`
+      - `MAP_LABEL_PAINT`
       - `MapLabel`
+      - `MapMarkImage`
       - `MapView`
-  - Cross-plugin:
-    - Uses tokens:
-      - `ui/tokens/color-palette --background`
-      - `ui/tokens/color-palette --primary`
-      - `ui/tokens/color-palette --primary-foreground`
-      - `ui/tokens/density --space-md`
-      - `ui/tokens/density --space-xs`
-      - `ui/tokens/shadow --shadow-md`
-      - `ui/tokens/shape --spacing`
-    - Imported by:
-      - `apps/places/places-map`
-      - `map/google`
-      - `page/map`
-      - `page/place/map-layer`
-      - `primitives/data-view/map`
+      - `useMapMarkEnv`
+      - `useMapTextStyle`
   - Core:
+    - Uses: `packages/string-hash.hash53`
     - Exports (types):
       - `CameraView`
       - `ClusterPoint`
+      - `DropHeadInput`
+      - `DropIcon`
+      - `DropShape`
       - `FlyPath`
       - `LatLng`
       - `MapArea`
@@ -28140,6 +28141,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `MapCamera`
       - `MapCrowd`
       - `MapCrowdRequest`
+      - `MapMark`
+      - `MapMarkPending`
+      - `MapMarkResult`
+      - `MapMarkText`
       - `MapOverlay`
       - `MapPadding`
       - `MapPath`
@@ -28158,16 +28163,42 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `DEFAULT_CLUSTER_RADIUS_PX`
       - `DEFAULT_SPOT_NEAR_ZOOM`
       - `DEFAULT_SPOT_RADIUS_PX`
+      - `dropHeadSvg`
+      - `dropTipPx`
+      - `escapeSvg`
       - `flyPath`
       - `groupSpots`
       - `MAP_TONE_TOKEN`
+      - `MARK_PENDING`
+      - `MARK_SHADOW_PAD`
+      - `markIdPrefix`
+      - `markShadow`
+      - `markSvg`
+      - `markSvgProblem`
       - `MIXED_PIN_TYPE`
       - `NO_MAP_PADDING`
       - `overlayPositions`
       - `pinStackOrder`
       - `resolveCrowd`
       - `SINGLE_POINT_ZOOM`
+      - `sliceWedges`
       - `viewFor`
+  - Cross-plugin:
+    - Uses tokens:
+      - `ui/tokens/color-palette --background`
+      - `ui/tokens/color-palette --primary`
+      - `ui/tokens/color-palette --primary-foreground`
+      - `ui/tokens/density --space-md`
+      - `ui/tokens/shadow --shadow`
+      - `ui/tokens/shadow --shadow-md`
+      - `ui/tokens/shape --spacing`
+    - Imported by:
+      - `apps/places/places-map`
+      - `map/google`
+      - `map/pin-layer`
+      - `page/map`
+      - `page/place/map-layer`
+      - `primitives/data-view/map`
   - Plugins:
     - **`google`** — Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them once and then only from its Fit control, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Lazily loaded off the boot wave.
       - Web:
@@ -28177,6 +28208,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/google-maps.useMapsAccess`
           - `integrations/google-maps.useMapsBrowserConfig`
           - `map.GeoMap`
+          - `map.MapRendererProps`
+          - `map.useMapTextStyle`
+          - `map/pin-layer.createCanvas2dPainter`
+          - `map/pin-layer.PinLayer`
+          - `map/pin-layer.SceneItem`
           - `primitives/css/center.Center`
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
@@ -28190,6 +28226,42 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
+    - **`pin-layer`** — The map's pin layer, vendor-neutral: PinLayer holds every pin at rest as a scene of marks and draws a frame from a projection — one sprite per pin on one surface (marks rasterized once per look, a new scene swapped in whole once its sprites are ready), texts beside or inside marks in map-label paint, and hit testing from the last frame's boxes; drawing goes through the PinPainter seam (createCanvas2dPainter today). A renderer hosts it on its map and lifts only the pins being interacted with into the DOM.
+      - Web:
+        - Uses:
+          - `map.MAP_LABEL_HALO_PX`
+          - `map.MAP_LABEL_PAINT`
+          - `map.MapTextStyle`
+        - Exports (types):
+          - `LayerFrame`
+          - `PaintText`
+          - `PinPainter`
+          - `SceneItem`
+        - Exports (values):
+          - `createCanvas2dPainter`
+          - `PinLayer`
+      - Core:
+        - Uses:
+          - `map.clusterPins`
+          - `map.ClusterPoint`
+          - `map.groupSpots`
+          - `map.LatLng`
+          - `map.MapCrowd`
+          - `map.MapPin`
+          - `map.pinStackOrder`
+          - `map.SpotPoint`
+        - Exports (types):
+          - `HitBox`
+          - `PlanInput`
+          - `PlannedItem`
+          - `WorldPoint`
+        - Exports (values):
+          - `clusterItemId`
+          - `hitTest`
+          - `planPins`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/shape --spacing`
+        - Imported by: `map/google`
 
 - **`music`** — Umbrella for music building blocks shared across apps, knowing pitch classes and strings only: the chord box (a chord's degree colour, numeral and tile).
   - Plugins:
@@ -28926,6 +28998,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `framework/resource-runtime`
+          - `map`
           - `packages/resource-protocol`
           - `plugin-meta/token-usage`
       - Core:
@@ -31127,19 +31200,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `map.GeoMap`
               - `map.MapLabel`
+              - `map.MapMarkImage`
+              - `map.MapPinMarkFn`
               - `map.MapPinProps`
+              - `map.useMapMarkEnv`
               - `page/map.PageMap`
               - `page/place.placeFamilyFill`
               - `page/place.placeKindGlyph`
-              - `primitives/css/center.Center`
               - `primitives/css/coords.Placed`
-              - `primitives/css/layer.Layer`
               - `primitives/css/ui-kit.cn`
-              - `ui/icons.Icon`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/categorical --categorical-foreground`
-              - `ui/tokens/shadow --shadow-md`
               - `ui/tokens/shape --spacing`
     - **`prompt`** — Umbrella for the `/prompt` page block: the task↔block link data layer and the block type that launches agents from a page.
       - Plugins:
@@ -33732,10 +33804,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 110 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×28
               - `primitives` ×23
-              - `page` ×18
+              - `page` ×17
               - `conversations` ×7
               - `debug` ×6
               - `ui` ×6
@@ -34115,8 +34187,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/progress/loop`
               - `apps/sonata/progress/scrubber`
               - `integrations/youtube`
+              - `map`
               - `page/code-block`
-              - `page/place/map-layer`
               - `primitives/css/color-picker`
               - `primitives/data-view`
               - `primitives/overlay/image-viewer`
@@ -44482,7 +44554,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: 308 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×65
           - `conversations` ×59
-          - `page` ×41
+          - `page` ×40
           - `primitives` ×40
           - `fields` ×33
           - `debug` ×14
@@ -44504,6 +44576,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/events-test`
           - `integrations/youtube`
           - `layouts/miller`
+          - `map`
           - `reports/launch-fix`
           - `screenshot`
       - Exemptions:
@@ -44511,6 +44584,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempted by: `ui/icons` (0 debt)
       - Web:
         - Exports (types):
+          - `IconMarkup`
+          - `IconMarkupReader`
           - `IconProps`
           - `RuntimeSymbolEntry`
         - Exports (values):
@@ -44522,6 +44597,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installRuntimeSymbolLoader`
           - `provideRuntimeSymbols`
           - `provideSprite`
+          - `useIconMarkup`
           - `useIconStyle`
           - `usePublishIconStyle`
           - `useWantedSprites`
@@ -45877,13 +45953,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 62 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 61 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×22
               - `primitives` ×17
               - `framework` ×4
               - `ui` ×4
               - `apps-core` ×3
-              - `page` ×3
+              - `page` ×2
               - `screenshot` ×2
               - `tasks` ×2
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
@@ -45914,7 +45990,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 652 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 653 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `apps` ×134
               - `primitives` ×123
               - `conversations` ×101
@@ -45939,11 +46015,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell` ×4
               - `auth` ×3
               - `config_v2` ×3
+              - `map` ×3
               - `screenshot` ×3
               - `backup` ×2
               - `code-explorer` ×2
               - `layouts` ×2
-              - `map` ×2
               - `network` ×2
               - `history/dialog`
               - `ids`

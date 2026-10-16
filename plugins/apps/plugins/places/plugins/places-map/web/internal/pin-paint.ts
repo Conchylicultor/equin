@@ -50,6 +50,9 @@ export function dropFill(colors: readonly string[]): string {
 export const PALE_WASH =
   "linear-gradient(rgb(255 255 255 / 0.78), rgb(255 255 255 / 0.78))";
 
+/** The white veil's opacity over a pale head — {@link PALE_WASH}'s, as a number for SVG. */
+export const PALE_VEIL_OPACITY = 0.78;
+
 /** The icon ink on a washed (pale) head: the main colour, darkened. */
 export function washInk(mainColor: string): string {
   return `color-mix(in srgb, ${mainColor} 72%, black)`;

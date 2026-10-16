@@ -19,7 +19,6 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
   cameraFor,
   overlayPositions,
-  pinStackOrder,
   viewFor,
   type CameraView,
   type MapArea,
@@ -41,9 +40,7 @@ import {
 } from "../internal/tone-colors";
 import { MapErrorCard } from "./map-error-card";
 import { GOOGLE_COLOR_SCHEME, GOOGLE_TILES } from "../internal/tiles";
-import { OverlayPin } from "./overlay-pin";
-import { ClusteredPins } from "./clustered-pins";
-import { SpotPins } from "./spot-pins";
+import { PinCanvas } from "./pin-canvas";
 import { flyCamera } from "../internal/fly-camera";
 
 /**
@@ -53,7 +50,8 @@ import { flyCamera } from "../internal/fly-camera";
  * keep their green.
  *
  * Inline styles only apply to a map WITHOUT a Map ID, which is why pins are
- * `OverlayPin`s rather than Advanced Markers.
+ * drawn by the pin canvas (and lifted into `OverlayPin`s) rather than Advanced
+ * Markers.
  */
 const BASEMAP_STYLES: google.maps.MapTypeStyle[] = [
   {
@@ -104,10 +102,12 @@ function GoogleMapCanvas({
   browserKey,
   overlays,
   renderPin,
+  markPin,
   onActivate,
   activeId,
   crowd,
   renderCluster,
+  markCluster,
   focusId,
   fitPadding,
   pick,
@@ -121,7 +121,6 @@ function GoogleMapCanvas({
   const [loadError, setLoadError] = useState<string | null>(null);
   const colors = useToneColors(host, overlays);
   const pins = overlays.filter((o): o is MapPin => o.kind === "pin");
-  const stackOrder = pinStackOrder(pins, activeId);
 
   if (refused) return <MapErrorCard reason={{ kind: "refused" }} />;
   if (loadError !== null) {
@@ -182,41 +181,23 @@ function GoogleMapCanvas({
             fitPadding={fitPadding}
           />
           {overlays.map((o) =>
-            // Crowded pins are drawn together below, not one by one.
-            crowd !== undefined && o.kind === "pin" ? null : (
-              <OverlayNode
-                key={o.id}
-                overlay={o}
-                colors={colors}
-                active={o.id === activeId}
-                zIndex={stackOrder.get(o.id) ?? 1}
-                renderPin={renderPin}
-                onActivate={onActivate}
-              />
+            // Pins are drawn together, on the pin canvas.
+            o.kind === "pin" ? null : (
+              <OverlayNode key={o.id} overlay={o} colors={colors} />
             ),
           )}
-          {crowd?.kind === "cluster" ? (
-            <ClusteredPins
-              pins={pins}
-              radiusPx={crowd.radiusPx}
-              activeId={activeId}
-              stackOrder={stackOrder}
-              renderPin={renderPin}
-              renderCluster={renderCluster}
-              onActivate={onActivate}
-              fitPadding={fitBoundsPadding(fitPadding)}
-            />
-          ) : crowd?.kind === "spots" ? (
-            <SpotPins
-              pins={pins}
-              radiusPx={crowd.radiusPx}
-              nearZoom={crowd.nearZoom}
-              activeId={activeId}
-              stackOrder={stackOrder}
-              renderPin={renderPin}
-              onActivate={onActivate}
-            />
-          ) : null}
+          <PinCanvas
+            pins={pins}
+            crowd={crowd}
+            activeId={activeId}
+            renderPin={renderPin}
+            renderCluster={renderCluster}
+            markPin={markPin}
+            markCluster={markCluster}
+            onActivate={onActivate}
+            fitPadding={fitBoundsPadding(fitPadding)}
+            picking={pick !== undefined}
+          />
         </GoogleMap>
       </APIProvider>
     </div>
@@ -502,38 +483,14 @@ function paddedCenter(
   return projection.fromPointToLatLng(shifted) ?? position;
 }
 
-interface OverlayNodeProps {
-  overlay: MapOverlay;
-  colors: ToneColors;
-  active: boolean;
-  /** The pin's z-index (`pinStackOrder`); unused by paths and areas. */
-  zIndex: number;
-  renderPin: MapRendererProps["renderPin"];
-  onActivate: MapRendererProps["onActivate"];
-}
-
 function OverlayNode({
   overlay,
   colors,
-  active,
-  zIndex,
-  renderPin,
-  onActivate,
-}: OverlayNodeProps) {
+}: {
+  overlay: MapPath | MapArea;
+  colors: ToneColors;
+}) {
   switch (overlay.kind) {
-    case "pin":
-      return (
-        <OverlayPin
-          position={overlay.position}
-          label={overlay.label}
-          // The active pin sits above its neighbours, so a grown bubble is
-          // never half-hidden under the next one (`pinStackOrder`).
-          zIndex={zIndex}
-          onActivate={() => onActivate(overlay.id)}
-        >
-          {renderPin(overlay, { active, scale: "near" })}
-        </OverlayPin>
-      );
     case "path":
       return <PathNode path={overlay} colors={colors} />;
     case "area":

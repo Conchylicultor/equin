@@ -95,8 +95,8 @@ has the vocabulary for it.
     - `apps/sonata/progress/loop`
     - `apps/sonata/progress/scrubber`
     - `integrations/youtube`
+    - `map`
     - `page/code-block`
-    - `page/place/map-layer`
     - `primitives/css/color-picker`
     - `primitives/data-view`
     - `primitives/overlay/image-viewer`

@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { GeoMap } from "@plugins/map/web";
 import { PageMap } from "@plugins/page/plugins/map/web";
-import { PlacePin } from "./components/place-pin";
+import { PlacePin, placePinMark } from "./components/place-pin";
 import {
   PLACE_PIN_TYPE,
   describeUnplacedPlaces,
@@ -18,6 +18,10 @@ export default {
       describeUnplaced: describeUnplacedPlaces,
       emptyHint: "Add a /place block to see it on the map.",
     }),
-    GeoMap.Pin({ match: PLACE_PIN_TYPE, component: PlacePin }),
+    GeoMap.Pin({
+      match: PLACE_PIN_TYPE,
+      component: PlacePin,
+      mark: placePinMark,
+    }),
   ],
 } satisfies PluginDefinition;

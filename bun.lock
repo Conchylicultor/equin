@@ -3869,6 +3869,10 @@
         "@vis.gl/react-google-maps": "^1.10.1",
       },
     },
+    "plugins/map/plugins/pin-layer": {
+      "name": "@singularity/plugin-map-pin-layer",
+      "version": "0.0.1",
+    },
     "plugins/music": {
       "name": "@singularity/plugin-music",
       "version": "0.0.1",
@@ -8508,6 +8512,8 @@
     "@singularity/plugin-map": ["@singularity/plugin-map@workspace:plugins/map"],
 
     "@singularity/plugin-map-google": ["@singularity/plugin-map-google@workspace:plugins/map/plugins/google"],
+
+    "@singularity/plugin-map-pin-layer": ["@singularity/plugin-map-pin-layer@workspace:plugins/map/plugins/pin-layer"],
 
     "@singularity/plugin-music": ["@singularity/plugin-music@workspace:plugins/music"],
 

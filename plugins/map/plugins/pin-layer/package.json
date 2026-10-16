@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-map-pin-layer",
+  "description": "The map's pin layer, vendor-neutral: every pin at rest drawn from its mark on one surface (cached sprites, a swappable painter — Canvas 2D today), its plan (spots, clusters, stacking) and hit testing; a renderer hosts it on its map and lifts only the pins being interacted with into the DOM.",
+  "private": true,
+  "version": "0.0.1"
+}

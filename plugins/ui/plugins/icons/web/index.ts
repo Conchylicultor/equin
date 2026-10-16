@@ -13,6 +13,8 @@ export {
   useWantedSprites,
 } from "./internal/sprite-store";
 export { IconSpriteSheet } from "./internal/sprite-sheet";
+export { useIconMarkup } from "./internal/icon-markup";
+export type { IconMarkup, IconMarkupReader } from "./internal/icon-markup";
 export {
   hasRuntimeSymbol,
   installRuntimeSymbolLoader,

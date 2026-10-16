@@ -16,6 +16,7 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { clickPin, reachablePins } from "@plugins/map/e2e";
 
 const out = arg("out", "/tmp/places-click-away");
 
@@ -45,18 +46,23 @@ await withBrowser(async (h) => {
   };
 
   // Map pins: the saved-place drops, not the clusters (whose names are counts).
-  const pins = page.locator('[role="button"][aria-label]').filter({
-    has: page.locator('[role="img"]'),
-  });
-  const count = await pins.count();
-  if (count < 2) throw new Error(`need two visible pins, found ${count}`);
+  const names = [...new Set((await reachablePins(page)).map((p) => p.label))];
+  if (names.length < 2) {
+    throw new Error(`need two visible pins, found ${names.length}`);
+  }
+  const [first, second] = names;
+  if (first === undefined || second === undefined)
+    throw new Error("unreachable");
 
-  await pins.nth(0).click();
+  await clickPin(page, first);
   await expectCard(true, "selected");
 
   // A click inside the card (its hero) keeps it.
-  const hero = card.locator("xpath=..");
-  await hero.click({ position: { x: 4, y: 4 } });
+  // The hero photo, left of the Close button (whose own box is too small to
+  // hold a spot that is not the button).
+  const close = await card.boundingBox();
+  if (close === null) throw new Error("no Close button on the card");
+  await page.mouse.click(close.x - 150, close.y + 30);
   await expectCard(true, "click-in-card");
 
   // A pan of the map is a drag, not a click away.
@@ -71,7 +77,7 @@ await withBrowser(async (h) => {
   await expectCard(true, "after-pan");
 
   // Selecting another pin swaps the card's place; it stays open.
-  await pins.nth(1).click();
+  await clickPin(page, second);
   await expectCard(true, "other-pin");
 
   // A click on the bare map (bottom middle, away from the chrome) closes it.
@@ -79,7 +85,7 @@ await withBrowser(async (h) => {
   await expectCard(false, "click-away");
 
   // Esc closes it too.
-  await pins.nth(0).click();
+  await clickPin(page, first);
   await expectCard(true, "reselected");
   await page.keyboard.press("Escape");
   await expectCard(false, "escape");

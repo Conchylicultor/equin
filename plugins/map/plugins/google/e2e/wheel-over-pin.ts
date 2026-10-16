@@ -16,6 +16,7 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { hoverPin, pinsOnScreen, reachablePins } from "@plugins/map/e2e";
 
 const out = arg("out", "/tmp/map-wheel-over-pin");
 
@@ -30,23 +31,19 @@ await withBrowser(async (h) => {
     .waitFor({ timeout: 30_000 });
   await page.waitForTimeout(3000);
 
-  // Map pins and clusters: the overlay buttons inside Google's map.
-  const pins = page.locator('.gm-style [role="button"][aria-label]');
-  const count = await pins.count();
-  if (count < 2) throw new Error(`need two visible pins, found ${count}`);
+  // Two distinct map pins (not clusters) from the list of pins on screen.
+  const labels = [...new Set((await reachablePins(page)).map((p) => p.label))];
+  const [labelA, labelB] = labels;
+  if (labelA === undefined || labelB === undefined) {
+    throw new Error(`need two visible pins, found ${labels.length}`);
+  }
 
-  // Followed by label, not index: a zoom can re-cluster and reorder them.
-  const [labelA, labelB] = await Promise.all([
-    pins.nth(0).getAttribute("aria-label"),
-    pins.nth(1).getAttribute("aria-label"),
-  ]);
-  const centre = async (label: string | null) => {
-    const box = await page
-      .locator(`.gm-style [role="button"][aria-label="${label}"]`)
-      .first()
-      .boundingBox();
-    if (box === null) throw new Error(`pin "${label}" has no box`);
-    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  // Followed by label, not index: a zoom can re-cluster and reorder them. The
+  // list is rebuilt when the camera rests, so read it after the settle.
+  const centre = async (label: string) => {
+    const pin = (await pinsOnScreen(page)).find((p) => p.label === label);
+    if (pin === undefined) throw new Error(`pin "${label}" is not on screen`);
+    return pin;
   };
   const spread = async () => {
     const [a, b] = await Promise.all([centre(labelA), centre(labelB)]);
@@ -55,8 +52,9 @@ await withBrowser(async (h) => {
 
   await snap(page, out, "before");
   const before = await spread();
-  const first = await centre(labelA);
-  await page.mouse.move(first.x, first.y);
+  // Hover the pin so the map lifts it, then wheel with the cursor on the
+  // lifted pin: the pin keeps presses and clicks, never the wheel.
+  await hoverPin(page, labelA);
   await page.mouse.wheel(0, -600);
   await page.waitForTimeout(1500);
   await snap(page, out, "after");

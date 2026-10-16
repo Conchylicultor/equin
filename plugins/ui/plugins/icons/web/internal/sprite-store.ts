@@ -12,10 +12,13 @@ const listeners = new Set<() => void>();
 // eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: one sprite sheet per document serves every surface, and a sprite is the same bytes wherever it is drawn
 let snapshot: readonly (readonly [SpriteKey, string])[] = [];
 
-function subscribe(listener: () => void): () => void {
+/** Subscribe to every sprite landing (`provideSprite`). */
+export function subscribeSprites(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
+
+const subscribe = subscribeSprites;
 
 /** Hold `markup` (a whole `<svg>…</svg>`) as sprite `key`. A no-op when it is already there, byte for byte. */
 export function provideSprite(key: SpriteKey, markup: string): void {
@@ -27,6 +30,11 @@ export function provideSprite(key: SpriteKey, markup: string): void {
 
 export function hasSprite(key: SpriteKey): boolean {
   return sprites.has(key);
+}
+
+/** The whole `<svg>` sprite `key` is held as, or `undefined` while it is not here. */
+export function spriteMarkup(key: SpriteKey): string | undefined {
+  return sprites.get(key);
 }
 
 export function useSpriteLoaded(key: SpriteKey): boolean {

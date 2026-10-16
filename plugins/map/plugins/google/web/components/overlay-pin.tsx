@@ -10,10 +10,14 @@ import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import type { LatLng } from "@plugins/map/core";
 
 /**
- * Where the content sits on its point: a pin's tip (bottom centre, as an
- * Advanced Marker's), or a cluster disc's middle.
+ * Where the content sits on its point: the point's place in the content's box,
+ * in px from its top-left — a mark's `anchor`, so a pin lifted into the DOM
+ * lands exactly where its sprite was drawn.
  */
-export type OverlayAnchor = "bottom" | "center";
+export interface OverlayAnchor {
+  x: number;
+  y: number;
+}
 
 /**
  * The hovered pin's z-index: above every other pin, whatever their stack
@@ -21,15 +25,13 @@ export type OverlayAnchor = "bottom" | "center";
  */
 const HOVERED_Z_INDEX = 2_147_483_647;
 
-const ANCHOR_TRANSFORM: Record<OverlayAnchor, string> = {
-  bottom: "translate(-50%, -100%)",
-  center: "translate(-50%, -50%)",
-};
+function anchorTransform(anchor: OverlayAnchor): string {
+  return `translate(${-anchor.x}px, ${-anchor.y}px)`;
+}
 
 interface OverlayPinProps {
   position: LatLng;
-  /** Defaults to `bottom`. */
-  anchor?: OverlayAnchor;
+  anchor: OverlayAnchor;
   label: string | undefined;
   zIndex: number;
   onActivate: () => void;
@@ -44,15 +46,14 @@ interface OverlayPinProps {
  * Map ID makes Google ignore the inline `styles` the canvas uses to hide its own
  * places — so pins are placed by hand and the map needs no Map ID at all.
  *
- * The content is anchored at its bottom centre, as an Advanced Marker's is
- * (or at its centre, for a cluster), and the pin is a button: click, Enter or
+ * The content is anchored at `anchor` (its mark's), and the pin is a button: click, Enter or
  * Space activates it. While hovered it stacks above every other pin, so
  * whatever it reveals on hover (its name) draws over its neighbours. It sets
  * no `title`: pins show their own name, and the browser's tooltip would repeat it.
  */
 export function OverlayPin({
   position,
-  anchor = "bottom",
+  anchor,
   label,
   zIndex,
   onActivate,
@@ -82,9 +83,10 @@ export function OverlayPin({
     overlay?.stackAt(hovered ? HOVERED_Z_INDEX : zIndex);
   }, [overlay, zIndex, hovered]);
 
+  const { x: ax, y: ay } = anchor;
   useEffect(() => {
-    overlay?.anchorAt(anchor);
-  }, [overlay, anchor]);
+    overlay?.anchorAt({ x: ax, y: ay });
+  }, [overlay, ax, ay]);
 
   if (overlay === null) return null;
 
@@ -156,8 +158,6 @@ function createPinOverlay(maps: google.maps.MapsLibrary): PinOverlay {
     constructor() {
       super();
       this.container.style.position = "absolute";
-      // Bottom centre on the point, as an Advanced Marker anchors its content.
-      this.container.style.transform = ANCHOR_TRANSFORM.bottom;
       for (const type of PIN_OWNED_EVENTS) {
         this.container.addEventListener(type, stopPropagation);
       }
@@ -173,7 +173,7 @@ function createPinOverlay(maps: google.maps.MapsLibrary): PinOverlay {
     }
 
     anchorAt(anchor: OverlayAnchor) {
-      this.container.style.transform = ANCHOR_TRANSFORM[anchor];
+      this.container.style.transform = anchorTransform(anchor);
     }
 
     override onAdd() {

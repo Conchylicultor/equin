@@ -35,6 +35,20 @@ Plain data, no React:
   lead is its best pin; `pinStackOrder(pins, activeId)` is the z-order every
   renderer stacks pins in (rank, then id; the active pin on top).
 - `MapPin.rank` (default 0): a pin's importance among its neighbours.
+- **Marks** (`mark.ts`): a pin's look as data — `MapMark { key, svg, width,
+  height, anchor, labelAt, texts? }`, one standalone SVG image placed with its
+  `anchor` on the point. `key` names the look (equal keys = identical pixels:
+  the sprite cache key); the SVG holds concrete colours only, no `<use>`, no
+  `<text>` (`markSvgProblem`, enforced where it is rasterized AND where the DOM
+  draws it); text goes in `texts` (`beside` at `labelAt`, in map-label paint,
+  or `center` on the mark). `markSvg`, `markIdPrefix` (ids unique per look —
+  marks are also drawn inline), `markShadow` / `MARK_SHADOW_PAD` (`shadow-md`
+  inside the box), `MARK_PENDING` (an icon still loading: drawn once ready,
+  never a stand-in).
+- **The teardrop** (`drop.ts`): `dropHeadSvg` — the place-pin head every place
+  pin draws (a square with three round corners turned −45°, or a disc;
+  equal colour slices from the top, an optional pale veil, a 2px outline
+  inside the box, `shadow-md`, an upright glyph); `dropTipPx`, `sliceWedges`.
 
 ## Host and slots (`web/`)
 
@@ -72,25 +86,41 @@ Plain data, no React:
   state, never the set-up action, because a pending configuration is not a
   missing one.
 - The renderer component receives `MapRendererProps` (`overlays`,
-  `renderPin(pin, state)`, `onActivate`, `activeId`, `crowd`,
-  `renderCluster(pins)`, `focusId`, `fitPadding` — always set, zeros when
-  nothing floats — and the optional `pick`). **A renderer never styles
-  a pin**: it places the node that `renderPin` returns. That node is
-  `GeoMap.Pin.Dispatch`, already isolated by the slot middleware. A renderer
+  `renderPin(pin, state)`, `markPin(pin, scale)`, `onActivate`, `activeId`,
+  `crowd`, `renderCluster(pins)`, `markCluster(pins)`, `focusId`,
+  `fitPadding` — always set, zeros when nothing floats — and the optional
+  `pick`). **A renderer never styles a pin**: it draws every pin at rest from
+  its mark (`markPin` — the matched contribution's `mark`, via
+  `GeoMap.Pin.useMatch()`, the same match `.Dispatch` renders) on ONE surface
+  (`map/pin-layer`), and lifts only the pins being interacted with (hovered,
+  active) into the DOM as the node `renderPin` returns (`GeoMap.Pin.Dispatch`,
+  already isolated by the slot middleware), placed at the mark's anchor. Why:
+  one DOM subtree per pin made every zoom frame relayout and re-layerize ~1000
+  stacking contexts (~94 ms/frame at 957 pins; plan
+  `research/2026-10-15-map-canvas-pin-layer.md`). A renderer
   owns the camera, and **the camera is the user's**: it frames the overlays
   once (the first time there are any — fit-to-bounds, or the single-point
   zoom), then never moves on its own — a changed overlay set (a filter, an
   edit, a new pin) keeps the pan and zoom. Instead it offers a **Fit** control
   that flies (`flyPath`, never a jump) to frame the overlays showing now, on
   demand.
-- `GeoMap.Pin` — a dispatch slot keyed on `pin.pinType`. Its component gets
+- `GeoMap.Pin` — a dispatch slot keyed on `pin.pinType`. A contribution
+  carries a required pure `mark({ pin, scale }, env)` (`MapPinMarkFn`; `env`:
+  `icon` — `useIconMarkup`'s reader, `color` — any CSS colour resolved to its
+  computed value in the map's scope, `tiles`) and its `component`, which draws
+  the SAME mark through `<MapMarkImage mark/>` (`useMapMarkEnv(tiles)` gives
+  it the env) plus what only the DOM does: hover / active transitions, the
+  name on hover. Its box is the mark's box, so lifting a pin moves no pixel. The
+  host's `MarkHostProvider` (a hidden probe in the map's subtree) resolves the
+  colours and measures the label fonts (`useMapTextStyle`). Its component gets
   `{ pin, tiles }` and the renderer's `MapPinState`: `active`, `scale`
   (`near`: anchored at its bottom centre; `far`, spots mode only: anchored at
   its CENTRE, so draw centred) and `spot` (`{ count, hushed }`, on a far spot's
   lead only: draw the count beside the pin, faded while `hushed` — a pin of the
   spot is hovered). The fallback is a neutral dot (with the count beside it as
   a lead), so an unclaimed type is still visible.
-- `GeoMap.Cluster` — a dispatch slot keyed on `clusterPinType(pins)`. Its
+- `GeoMap.Cluster` — a dispatch slot keyed on `clusterPinType(pins)`, with a
+  `mark({ pins, count }, env)` beside its component like a pin's. Its
   component gets `{ pins, count, tiles }`. The fallback is a neutral count disc,
   which a mixed group always gets. A renderer places `renderCluster`'s node like
   a pin's, never the active pin (which is always drawn on its own), and a click
@@ -115,6 +145,7 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
   - Uses:
     - `primitives/css/center.Center`
     - `primitives/css/coords.Placed`
+    - `primitives/css/layer.Layer`
     - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
@@ -127,39 +158,39 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `primitives/persistent-draft.writeDraft`
     - `primitives/slot-render.defineDispatchSlot`
     - `primitives/slot-render.renderIsolated`
+    - `ui/icons.useIconMarkup`
   - Exports (types):
+    - `MapClusterMarkFn`
     - `MapClusterProps`
     - `MapLabelProps`
+    - `MapMarkEnv`
+    - `MapPinMarkFn`
+    - `MapPinMarkInput`
     - `MapPinProps`
     - `MapPinScale`
     - `MapPinState`
     - `MapRendererContribution`
     - `MapRendererProps`
     - `MapRendererReadiness`
+    - `MapTextStyle`
     - `MapViewProps`
   - Exports (values):
     - `GeoMap`
+    - `MAP_LABEL_HALO_PX`
+    - `MAP_LABEL_PAINT`
     - `MapLabel`
+    - `MapMarkImage`
     - `MapView`
-- Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --background`
-    - `ui/tokens/color-palette --primary`
-    - `ui/tokens/color-palette --primary-foreground`
-    - `ui/tokens/density --space-md`
-    - `ui/tokens/density --space-xs`
-    - `ui/tokens/shadow --shadow-md`
-    - `ui/tokens/shape --spacing`
-  - Imported by:
-    - `apps/places/places-map`
-    - `map/google`
-    - `page/map`
-    - `page/place/map-layer`
-    - `primitives/data-view/map`
+    - `useMapMarkEnv`
+    - `useMapTextStyle`
 - Core:
+  - Uses: `packages/string-hash.hash53`
   - Exports (types):
     - `CameraView`
     - `ClusterPoint`
+    - `DropHeadInput`
+    - `DropIcon`
+    - `DropShape`
     - `FlyPath`
     - `LatLng`
     - `MapArea`
@@ -167,6 +198,10 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `MapCamera`
     - `MapCrowd`
     - `MapCrowdRequest`
+    - `MapMark`
+    - `MapMarkPending`
+    - `MapMarkResult`
+    - `MapMarkText`
     - `MapOverlay`
     - `MapPadding`
     - `MapPath`
@@ -185,17 +220,44 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `DEFAULT_CLUSTER_RADIUS_PX`
     - `DEFAULT_SPOT_NEAR_ZOOM`
     - `DEFAULT_SPOT_RADIUS_PX`
+    - `dropHeadSvg`
+    - `dropTipPx`
+    - `escapeSvg`
     - `flyPath`
     - `groupSpots`
     - `MAP_TONE_TOKEN`
+    - `MARK_PENDING`
+    - `MARK_SHADOW_PAD`
+    - `markIdPrefix`
+    - `markShadow`
+    - `markSvg`
+    - `markSvgProblem`
     - `MIXED_PIN_TYPE`
     - `NO_MAP_PADDING`
     - `overlayPositions`
     - `pinStackOrder`
     - `resolveCrowd`
     - `SINGLE_POINT_ZOOM`
+    - `sliceWedges`
     - `viewFor`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --primary-foreground`
+    - `ui/tokens/density --space-md`
+    - `ui/tokens/shadow --shadow`
+    - `ui/tokens/shadow --shadow-md`
+    - `ui/tokens/shape --spacing`
+  - Imported by:
+    - `apps/places/places-map`
+    - `map/google`
+    - `map/pin-layer`
+    - `page/map`
+    - `page/place/map-layer`
+    - `primitives/data-view/map`
 - Sub-plugins:
   - **`google`** — Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons…
+  - **`pin-layer`** — The map's pin layer, vendor-neutral: PinLayer holds every pin at rest as a scene of marks and draws a frame from a projection — one sprite per pin on one surface (marks rasterized once per look, a…
 
 <!-- AUTOGENERATED:END -->

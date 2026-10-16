@@ -24,6 +24,7 @@ None defends against a forged collision; they tell contents apart.
 - Cross-plugin:
   - Imported by:
     - `framework/resource-runtime`
+    - `map`
     - `packages/resource-protocol`
     - `plugin-meta/token-usage`
 - Core:

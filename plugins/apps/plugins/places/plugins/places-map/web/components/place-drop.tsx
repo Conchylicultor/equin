@@ -1,9 +1,7 @@
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Icon } from "@plugins/ui/plugins/icons/web";
+import { dropHeadSvg } from "@plugins/map/core";
+import { useIconMarkup, type IconMarkup } from "@plugins/ui/plugins/icons/web";
 import type { PlaceVisual } from "../internal/place-visual";
-import { PALE_WASH, dropFill, washInk } from "../internal/pin-paint";
+import { PALE_VEIL_OPACITY, washInk } from "../internal/pin-paint";
 
 /**
  * The drop's head at its design size: a 30px square with three round corners,
@@ -18,23 +16,71 @@ const ICON_PX = { solid: 18, pale: 17 } as const;
 /** `drop`: the pin's head (one square corner for the tip). `disc`: a round badge. */
 export type PlaceHeadShape = "drop" | "disc";
 
-/**
- * Keeps a white icon readable where two slices of a multi-colour head meet.
- * A single colour needs none: the icon sits on one flat fill.
- */
-const MULTI_ICON_SHADOW =
-  "drop-shadow(0 0 1.5px rgb(0 0 0 / 0.45)) drop-shadow(0 1px 1px rgb(0 0 0 / 0.25))";
+/** The outline's colour: the categorical palette's foreground (white). */
+const DROP_OUTLINE = "var(--categorical-foreground)";
+
+export interface PlaceDropSvgInput {
+  visual: PlaceVisual;
+  shape: PlaceHeadShape;
+  /** The square box the head fills, px; the icon scales with it. */
+  sizePx: number;
+  /** The icon's markup (`useIconMarkup`); pending draws the head without it. */
+  icon: IconMarkup;
+  /**
+   * Every colour the head paints, as the SVG will hold it: identity in the DOM
+   * (an inline SVG resolves `var()` like any element), the map's resolver for
+   * a mark (an SVG drawn as an image sees no stylesheet).
+   */
+  paint: (css: string) => string;
+  /** Prefix for the ids the SVG defines — unique per look (`markIdPrefix`). */
+  id: string;
+}
 
 /**
- * The head of a saved place's drop pin, filling its (30px square) box: the
+ * The head of a saved place's drop pin as SVG markup (`dropHeadSvg`): the
  * place's tag colours as slices (one colour solid), a 2px white outline, and
  * its Material icon straight on the fill — white for a place marked Want to
- * go, else the same slices washed pale with the icon in a darker shade of the
- * main colour (Been or not: the map reads as what is still to do).
- * Shared by the map pin, the legend and the place card's hero.
+ * go, else the slices washed pale with the icon in a darker shade of the main
+ * colour (Been or not: the map reads as what is still to do).
  *
- * The colours are user data (tag hexes), so the fill is painted through
- * `style`; the geometry is the map-layer place pin's (`page/place/map-layer`).
+ * The ONE drawing of the head: the map's sprite of a pin, the pin lifted into
+ * the DOM, the legend and the place card's hero all draw this markup.
+ */
+export function placeDropSvg({
+  visual,
+  shape,
+  sizePx,
+  icon,
+  paint,
+  id,
+}: PlaceDropSvgInput): string {
+  const pale = !visual.want;
+  return dropHeadSvg({
+    shape,
+    sizePx,
+    fills: visual.colors.map(paint),
+    ...(pale ? { veil: PALE_VEIL_OPACITY } : {}),
+    ring: paint(DROP_OUTLINE),
+    ...(icon.kind === "pending"
+      ? {}
+      : {
+          icon: {
+            markup: icon,
+            sizePx: Math.round(
+              ((pale ? ICON_PX.pale : ICON_PX.solid) * sizePx) / DROP_HEAD_PX,
+            ),
+            ink: paint(pale ? washInk(visual.mainColor) : "white"),
+            shadow: !pale && visual.colors.length > 1,
+          },
+        }),
+    id,
+  });
+}
+
+/**
+ * The head of a saved place, drawn in the DOM at `sizePx` (filling its box):
+ * {@link placeDropSvg} inline, in this scope's icon style. For the legend and
+ * the place card; the map draws the same markup through its mark.
  */
 export function PlaceDropHead({
   visual,
@@ -43,47 +89,30 @@ export function PlaceDropHead({
 }: {
   visual: PlaceVisual;
   shape?: PlaceHeadShape;
-  /** The box the head fills, in px; the icon scales with it. */
   sizePx?: number;
 }) {
-  const pale = !visual.want;
-  const fill = dropFill(visual.colors);
-  const iconPx = Math.round(
-    ((pale ? ICON_PX.pale : ICON_PX.solid) * sizePx) / DROP_HEAD_PX,
-  );
+  const icon = useIconMarkup()(visual.icon, { active: true });
+  // The ids depend on the shape and size only, as do the definitions behind
+  // them: two heads of one shape and size define identical filters.
+  const markup = placeDropSvg({
+    visual,
+    shape,
+    sizePx,
+    icon,
+    paint: (css) => css,
+    id: `pdh-${shape}-${sizePx}`,
+  });
   return (
-    <>
-      {/* A teardrop is a circle with one square corner, turned 45° so that
-          corner becomes the tip. The disc keeps the turn, so its slices start
-          at the top exactly as the drop's do. */}
-      <Layer
-        className={cn(
-          "-rotate-45 rounded-full border-2 border-categorical-foreground shadow-md",
-          shape === "drop" && "rounded-bl-none",
-        )}
-        style={{ background: pale ? `${PALE_WASH}, ${fill}` : fill }}
-      />
-      <Center className="relative size-full">
-        <Icon
-          icon={visual.icon}
-          active
-          style={
-            pale
-              ? {
-                  color: washInk(visual.mainColor),
-                  width: iconPx,
-                  height: iconPx,
-                }
-              : {
-                  width: iconPx,
-                  height: iconPx,
-                  color: "white",
-                  filter:
-                    visual.colors.length > 1 ? MULTI_ICON_SHADOW : undefined,
-                }
-          }
-        />
-      </Center>
-    </>
+    <svg
+      aria-hidden
+      width={sizePx}
+      height={sizePx}
+      viewBox={`0 0 ${sizePx} ${sizePx}`}
+      overflow="visible"
+      className="block"
+      // Built above from the place's colours (escaped by dropHeadSvg) and the
+      // icon sprites' own symbols — never user markup.
+      dangerouslySetInnerHTML={{ __html: markup }}
+    />
   );
 }

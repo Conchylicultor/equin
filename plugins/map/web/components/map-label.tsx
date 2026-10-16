@@ -4,17 +4,20 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { MapTileScheme } from "../../core";
 
 /** How far the outline reaches past each glyph, in px. */
-const HALO_PX = 3;
+export const MAP_LABEL_HALO_PX = 3;
+const HALO_PX = MAP_LABEL_HALO_PX;
 
 /**
  * Ink and outline per tile scheme. Fixed black/white on purpose, like an image
  * scrim: the label sits on the TILES, which are not themed, so it follows the
- * renderer's tile scheme and never the app theme.
+ * renderer's tile scheme and never the app theme. Data, not classes: the map's
+ * canvas draws its labels (a spot's count) in the same paint.
  */
-const PAINT = {
-  light: { ink: "text-black/85", halo: "white" },
-  dark: { ink: "text-white", halo: "black" },
+export const MAP_LABEL_PAINT = {
+  light: { ink: "rgb(0 0 0 / 0.85)", halo: "white" },
+  dark: { ink: "white", halo: "black" },
 } as const satisfies Record<MapTileScheme, { ink: string; halo: string }>;
+const PAINT = MAP_LABEL_PAINT;
 
 /** Bold text outlined in the tile colour, the way a map labels its own places. */
 function haloShadow(color: string): string {
@@ -54,8 +57,11 @@ export function MapLabel({ tiles, children }: MapLabelProps) {
     <Line style={{ margin: -HALO_PX }}>
       <Text
         variant="label"
-        className={paint.ink}
-        style={{ textShadow: haloShadow(paint.halo), padding: HALO_PX }}
+        style={{
+          color: paint.ink,
+          textShadow: haloShadow(paint.halo),
+          padding: HALO_PX,
+        }}
       >
         {children}
       </Text>

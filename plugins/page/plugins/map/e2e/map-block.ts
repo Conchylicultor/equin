@@ -22,6 +22,7 @@ import {
   highlightedLines,
   openBlankPage,
 } from "@plugins/page/plugins/editor/e2e";
+import { clickPin, listedPins } from "@plugins/map/e2e";
 import type { Locator, Page } from "playwright";
 
 const OUT = "/tmp/map-block";
@@ -78,7 +79,7 @@ function mapRow(page: Page): Locator {
     .locator("[data-block-id]")
     .filter({
       has: page.locator(
-        'gmp-advanced-marker, button:has-text("Set up the live map")',
+        '[data-map-pins], button:has-text("Set up the live map")',
       ),
     })
     .last();
@@ -115,8 +116,11 @@ await withBrowser(async (h) => {
     return;
   }
 
-  const markers = row.locator("gmp-advanced-marker");
-  r.eq("two located places render two pins", await markers.count(), 2);
+  // Pins are drawn on one canvas; the map lists them in a hidden list.
+  await listedPins(page)
+    .first()
+    .waitFor({ state: "attached", timeout: 30_000 });
+  r.eq("two located places render two pins", await listedPins(page).count(), 2);
 
   // The first place sits 30 paragraphs above the map, off screen.
   const louvreRow = page
@@ -128,7 +132,7 @@ await withBrowser(async (h) => {
     !(await inViewport(page, louvreRow)),
   );
 
-  await row.locator(`gmp-advanced-marker[title="${PLACES[0]!.name}"]`).click();
+  await clickPin(page, PLACES[0]!.name);
   await page.waitForTimeout(1200); // smooth scroll
   await snap(page, OUT, "2-after-pin-click");
   r.ok(
@@ -150,7 +154,7 @@ await withBrowser(async (h) => {
   await snap(page, OUT, "3-after-reload");
   r.eq(
     "the map and its pins survive a reload",
-    await reloaded.locator("gmp-advanced-marker").count(),
+    await listedPins(page).count(),
     2,
   );
 });

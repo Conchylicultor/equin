@@ -19,6 +19,7 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { clickPin, listedPins } from "@plugins/map/e2e";
 
 const out = arg("out", "/tmp/places-custom-pin");
 const googleName = arg("place", "Rue Sainte-Anne");
@@ -26,17 +27,24 @@ const settle = Number(arg("wait", "20000"));
 const TITLE = "Japantown (e2e)";
 const CUSTOM = "E2E custom pin";
 
+// A pin on the map is an entry of the hidden pin list (rebuilt at camera rest).
 const pin = (page: Page, name: string) =>
-  page.locator(`[role="button"][aria-label="${name}"]`).first();
+  listedPins(page)
+    .and(page.locator(`[aria-label="${name}"]`))
+    .first();
 
 async function expectVisible(
   page: Page,
   what: string,
   locator: Locator,
   visible: boolean,
+  { listed = false }: { listed?: boolean } = {},
 ): Promise<void> {
   await page.waitForTimeout(1500);
-  const shown = await locator.isVisible();
+  // A listed pin is visually hidden: present, not visible.
+  const shown = listed
+    ? (await locator.count()) > 0
+    : await locator.isVisible();
   if (shown !== visible) {
     await snap(page, out, `fail-${what}`);
     throw new Error(`${what}: expected ${visible ? "shown" : "hidden"}`);
@@ -57,7 +65,7 @@ await withBrowser(async (h) => {
 
   const search = page.getByPlaceholder("Search places");
   const deletePlace = async (name: string) => {
-    await pin(page, name).click();
+    await clickPin(page, name);
     await page
       .getByRole("button", { name: "Delete place", exact: true })
       .click();
@@ -71,7 +79,7 @@ await withBrowser(async (h) => {
   // A pin an earlier, interrupted run left behind.
   await search.fill(CUSTOM);
   await page.waitForTimeout(3000);
-  while (await pin(page, CUSTOM).isVisible()) {
+  while ((await pin(page, CUSTOM).count()) > 0) {
     console.log(`deleting a leftover "${CUSTOM}"`);
     await deletePlace(CUSTOM);
   }
@@ -79,7 +87,7 @@ await withBrowser(async (h) => {
   // ── 1. A title over Google's name ──
   await search.fill(googleName);
   await page.waitForTimeout(3000);
-  await pin(page, googleName).click();
+  await clickPin(page, googleName);
   const nameInput = page.getByLabel("Place name", { exact: true });
   await nameInput.waitFor({ timeout: 30_000 });
   await nameInput.fill(TITLE);
@@ -90,7 +98,9 @@ await withBrowser(async (h) => {
     page.getByText(`On Google: ${googleName}`, { exact: true }),
     true,
   );
-  await expectVisible(page, "pin-shows-title", pin(page, TITLE), true);
+  await expectVisible(page, "pin-shows-title", pin(page, TITLE), true, {
+    listed: true,
+  });
   await snap(page, out, "titled");
 
   // Cleared: Google's name again.
@@ -107,6 +117,7 @@ await withBrowser(async (h) => {
     "pin-shows-google-name",
     pin(page, googleName),
     true,
+    { listed: true },
   );
   await snap(page, out, "title-cleared");
   await page.getByRole("button", { name: "Close", exact: true }).click();
@@ -130,7 +141,9 @@ await withBrowser(async (h) => {
     page.getByText("Custom pin — no Google place", { exact: true }),
     true,
   );
-  await expectVisible(page, "custom-pin-on-map", pin(page, CUSTOM), true);
+  await expectVisible(page, "custom-pin-on-map", pin(page, CUSTOM), true, {
+    listed: true,
+  });
   await snap(page, out, "custom-pin");
 
   // Move it: the next click on the map is its new position.
@@ -146,11 +159,15 @@ await withBrowser(async (h) => {
     page.getByText("Custom pin — no Google place", { exact: true }),
     true,
   );
-  await expectVisible(page, "moved-pin-on-map", pin(page, CUSTOM), true);
+  await expectVisible(page, "moved-pin-on-map", pin(page, CUSTOM), true, {
+    listed: true,
+  });
   await snap(page, out, "custom-moved");
 
   // Clean up: delete it.
   await deletePlace(CUSTOM);
-  await expectVisible(page, "custom-pin-deleted", pin(page, CUSTOM), false);
+  await expectVisible(page, "custom-pin-deleted", pin(page, CUSTOM), false, {
+    listed: true,
+  });
   await snap(page, out, "custom-deleted");
 });

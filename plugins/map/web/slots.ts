@@ -2,11 +2,13 @@ import type { ComponentType, ReactNode } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web";
+import type { IconMarkupReader } from "@plugins/ui/plugins/icons/web";
 import {
   clusterPinType,
   type CameraView,
   type LatLng,
   type MapCrowd,
+  type MapMarkResult,
   type MapOverlay,
   type MapPadding,
   type MapPin,
@@ -24,6 +26,14 @@ export interface MapRendererProps {
    * A renderer places it; it never draws a pin of its own.
    */
   renderPin: (pin: MapPin, state: MapPinState) => ReactNode;
+  /**
+   * The pin's mark at `scale` — `GeoMap.Pin`'s `mark`, the SAME look its
+   * component draws. A renderer draws every pin at rest from it (one surface,
+   * cached sprites) and lifts only the pins being interacted with (hovered,
+   * active) into the DOM through {@link renderPin}, placed so the mark's
+   * anchor sits on the point — so lifting a pin moves no pixel.
+   */
+  markPin: (pin: MapPin, scale: MapPinScale) => MapMarkResult;
   /** A pin was clicked. */
   onActivate: (id: string) => void;
   activeId: string | null;
@@ -47,6 +57,8 @@ export interface MapRendererProps {
    * cluster of its own.
    */
   renderCluster: (pins: readonly MapPin[]) => ReactNode;
+  /** A cluster's mark — `GeoMap.Cluster`'s `mark`, as {@link markPin} is a pin's. */
+  markCluster: (pins: readonly MapPin[]) => MapMarkResult;
   /**
    * The pin to bring into view. When it changes, the renderer pans to it if it
    * is off-screen — no refit and no zoom change, so the user's framing holds.
@@ -158,6 +170,42 @@ export interface MapClusterProps {
   tiles: MapTileScheme;
 }
 
+/**
+ * What a mark function is handed besides its pin: the readers a pure function
+ * cannot reach itself. Colours and icons are resolved in the map's own theme
+ * scope, so a mark matches what the DOM would paint there.
+ */
+export interface MapMarkEnv {
+  /** An icon as SVG markup, in this scope's icon style. */
+  icon: IconMarkupReader;
+  /**
+   * Any CSS colour — a token (`var(--primary)`), `color-mix(…)`, relative
+   * `oklch(from …)` — as the concrete colour the browser computes for it here.
+   * A mark's SVG may hold only concrete colours (`markSvgProblem`).
+   */
+  color: (css: string) => string;
+  /** The scheme of the tiles the mark is drawn on. */
+  tiles: MapTileScheme;
+}
+
+/** What a pin's mark depends on: its data, its scale and the tiles — never hover or selection, which the DOM draws. */
+export interface MapPinMarkInput {
+  pin: MapPin;
+  scale: MapPinScale;
+}
+
+/** A pin type's mark: pure — everything it reads comes in. */
+export type MapPinMarkFn = (
+  input: MapPinMarkInput,
+  env: MapMarkEnv,
+) => MapMarkResult;
+
+/** A cluster's mark. */
+export type MapClusterMarkFn = (
+  input: { pins: readonly MapPin[]; count: number },
+  env: MapMarkEnv,
+) => MapMarkResult;
+
 export const GeoMap = {
   /**
    * Map engines contribute here. First contribution wins; none at all is a
@@ -168,10 +216,12 @@ export const GeoMap = {
   }),
   /**
    * Pin appearance, keyed on `pin.pinType`. The layer that makes a pin picks
-   * its type; the plugin that owns that type contributes how it looks. An
-   * unclaimed type falls back to a neutral dot.
+   * its type; the plugin that owns that type contributes how it looks: its
+   * `mark` (the pin at rest, as an image) and its `component` (the pin lifted
+   * into the DOM while hovered or active), which draws the same mark through
+   * `MapMarkImage`. An unclaimed type falls back to a neutral dot.
    */
-  Pin: defineDispatchSlot<MapPinProps, string>({
+  Pin: defineDispatchSlot<MapPinProps, string, { mark: MapPinMarkFn }>({
     key: (props) => props.pin.pinType,
     fallback: DefaultPin,
   }),
@@ -181,7 +231,11 @@ export const GeoMap = {
    * mixes types (or a type with no cluster contribution) falls back to a
    * neutral count disc.
    */
-  Cluster: defineDispatchSlot<MapClusterProps, string>({
+  Cluster: defineDispatchSlot<
+    MapClusterProps,
+    string,
+    { mark: MapClusterMarkFn }
+  >({
     key: (props) => clusterPinType(props.pins),
     fallback: DefaultCluster,
   }),

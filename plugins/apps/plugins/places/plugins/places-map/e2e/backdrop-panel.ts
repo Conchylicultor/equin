@@ -20,24 +20,18 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { pinsOnScreen } from "@plugins/map/e2e";
 
 const out = arg("out", "/tmp/places-backdrop");
 const mapTab = arg("map", "All places");
 const galleryTab = arg("gallery", "Gallery");
 const listTab = arg("list", "List");
 
-/** Every visible map mark (pin or cluster) by its label, at its screen centre. */
+/** Every map mark (pin or cluster) drawn at the last camera rest, by its label, at its screen point. */
 async function marks(page: Page): Promise<Map<string, string>> {
   const found = new Map<string, string>();
-  const nodes = page.locator(".gm-style [role='button'][aria-label]");
-  for (const node of await nodes.all()) {
-    const label = await node.getAttribute("aria-label");
-    const box = await node.boundingBox();
-    if (label === null || box === null) continue;
-    found.set(
-      label,
-      `${Math.round(box.x + box.width / 2)},${Math.round(box.y + box.height / 2)}`,
-    );
+  for (const p of await pinsOnScreen(page, { atLeastOne: false })) {
+    found.set(p.label, `${Math.round(p.x)},${Math.round(p.y)}`);
   }
   return found;
 }

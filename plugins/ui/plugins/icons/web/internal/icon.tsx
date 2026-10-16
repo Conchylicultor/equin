@@ -1,22 +1,17 @@
-import { useEffect, type ComponentPropsWithRef } from "react";
 import {
-  DEFAULT_ICON_STYLE,
-  LUCIDE_SPRITE,
-  SETI_SPRITE,
-  brandId,
-  lucideId,
-  lucideNameOf,
-  runtimeSymbolId,
-  setiId,
-  styleKeyOf,
-  symbolId,
-  type IconRef,
-  type IconStyle,
-} from "../../core";
+  useEffect,
+  useSyncExternalStore,
+  type ComponentPropsWithRef,
+} from "react";
+import type { IconRef, IconStyle } from "../../core";
 import { useIconScope } from "./icon-scope";
 import { useScopeIconStyle } from "./style-store";
-import { useSpriteLoaded, wantSprite } from "./sprite-store";
-import { useRuntimeSymbolKey } from "./runtime-symbol-store";
+import { subscribeSprites, wantSprite } from "./sprite-store";
+import {
+  subscribeRuntimeSymbols,
+  wantRuntimeSymbol,
+} from "./runtime-symbol-store";
+import { resolveIconDrawing, type DrawingWant } from "./icon-drawing";
 
 export interface IconProps extends Omit<
   ComponentPropsWithRef<"svg">,
@@ -37,10 +32,32 @@ export function useIconStyle(): IconStyle {
   return useScopeIconStyle(useIconScope());
 }
 
+/** Subscribe to both icon stores: a sprite or a runtime-symbol chunk landing. */
+export function subscribeIconStores(listener: () => void): () => void {
+  const offSprites = subscribeSprites(listener);
+  const offRuntime = subscribeRuntimeSymbols(listener);
+  return () => {
+    offSprites();
+    offRuntime();
+  };
+}
+
+/** Hand one want to its loader. */
+export function askFor(want: DrawingWant): void {
+  if (want.kind === "sprite") wantSprite(want.key);
+  else wantRuntimeSymbol(want.styleKey, want.name);
+}
+
+function wantsKey(wants: readonly DrawingWant[]): string {
+  return wants
+    .map((w) => (w.kind === "sprite" ? w.key : `${w.styleKey}/${w.name}`))
+    .join(",");
+}
+
 /**
  * Draws an `IconRef`: an `<svg>` at 1em (so `className="size-4"` and every
  * `[&_svg]:…` rule size it as before) that `<use>`s the sprite symbol for the
- * icon in its theme scope's style.
+ * icon in its theme scope's style (`resolveIconDrawing`).
  *
  * Until that style's sprite has loaded it draws the DEFAULT style's symbol —
  * the same glyph in the global style, in the same box, which is resident from
@@ -62,45 +79,20 @@ export function useIconStyle(): IconStyle {
  */
 export function Icon({ icon, active = false, title, ...rest }: IconProps) {
   const style = useIconStyle();
-  const key = styleKeyOf(style, active);
-  const defaultKey = styleKeyOf(DEFAULT_ICON_STYLE, active);
-  const loaded = useSpriteLoaded(key);
-  const isSeti = icon.kind === "seti";
-  const setiLoaded = useSpriteLoaded(SETI_SPRITE);
-  useEffect(() => {
-    if (isSeti) wantSprite(SETI_SPRITE);
-  }, [isSeti]);
-  const isLucide =
-    style.family === "lucide" &&
-    icon.kind === "symbol" &&
-    lucideNameOf(icon.name) !== undefined;
-  const lucideLoaded = useSpriteLoaded(LUCIDE_SPRITE);
-  useEffect(() => {
-    if (isLucide) wantSprite(LUCIDE_SPRITE);
-  }, [isLucide]);
-  const runtimeKey = useRuntimeSymbolKey(
-    icon.kind === "runtime-symbol" ? icon.name : null,
-    key,
-    defaultKey,
+  // Plain strings out of the store: an icon re-renders only when what it
+  // draws, or what it waits for, changes.
+  const id = useSyncExternalStore(
+    subscribeIconStores,
+    () => resolveIconDrawing(icon, style, active).drawing?.id ?? null,
   );
-  let id: string | null;
-  switch (icon.kind) {
-    case "brand":
-      id = brandId(icon.name);
-      break;
-    case "seti":
-      id = setiLoaded ? setiId(icon.name) : null;
-      break;
-    case "runtime-symbol":
-      id = runtimeKey === null ? null : runtimeSymbolId(runtimeKey, icon.name);
-      break;
-    case "symbol":
-      id =
-        isLucide && lucideLoaded
-          ? lucideId(icon.name)
-          : symbolId(loaded ? key : defaultKey, icon.name);
-      break;
-  }
+  const wanted = useSyncExternalStore(subscribeIconStores, () =>
+    wantsKey(resolveIconDrawing(icon, style, active).wants),
+  );
+  useEffect(() => {
+    if (wanted === "") return;
+    for (const w of resolveIconDrawing(icon, style, active).wants) askFor(w);
+    // `wanted` is the trigger; the rest is what it was computed from.
+  }, [wanted, icon, style, active]);
   const named =
     title !== undefined ||
     rest["aria-label"] !== undefined ||

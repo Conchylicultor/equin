@@ -59,13 +59,13 @@
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-3xs`
     - `ui/tokens/type-scale --line-height-caption`
-  - Tokens used by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 61 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×22
     - `primitives` ×17
     - `framework` ×4
     - `ui` ×4
     - `apps-core` ×3
-    - `page` ×3
+    - `page` ×2
     - `screenshot` ×2
     - `tasks` ×2
     - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`

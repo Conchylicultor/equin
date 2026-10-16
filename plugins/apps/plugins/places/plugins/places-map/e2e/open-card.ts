@@ -13,6 +13,7 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { clickPin } from "@plugins/map/e2e";
 
 const out = arg("out", "/tmp/places-card");
 const name = arg("place", "");
@@ -32,7 +33,7 @@ await withBrowser(async (h) => {
 
   await page.getByPlaceholder("Search places").fill(name);
   await page.waitForTimeout(3000);
-  await page.locator(`[role="button"][aria-label="${name}"]`).first().click();
+  await clickPin(page, name);
   const note = page.getByLabel("Note", { exact: true });
   await note.waitFor({ timeout: 30_000 });
   console.log(`note:\n${await note.inputValue()}`);

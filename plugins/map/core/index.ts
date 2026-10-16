@@ -42,3 +42,24 @@ export {
   type SpotPoint,
 } from "./spots";
 export { resolveCrowd, type MapCrowd, type MapCrowdRequest } from "./crowd";
+export {
+  MARK_PENDING,
+  MARK_SHADOW_PAD,
+  escapeSvg,
+  markShadow,
+  markIdPrefix,
+  markSvg,
+  markSvgProblem,
+  type MapMark,
+  type MapMarkPending,
+  type MapMarkResult,
+  type MapMarkText,
+} from "./mark";
+export {
+  dropHeadSvg,
+  dropTipPx,
+  sliceWedges,
+  type DropHeadInput,
+  type DropIcon,
+  type DropShape,
+} from "./drop";

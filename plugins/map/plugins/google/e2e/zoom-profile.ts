@@ -25,6 +25,7 @@ import {
   pathUrl,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { listedPins } from "@plugins/map/e2e";
 
 const out = arg("out", "/tmp/map-zoom-profile");
 const steps = numArg("steps", 6);
@@ -68,12 +69,8 @@ await withBrowser(async (h) => {
   if (box === null) throw new Error("no map on /places");
   const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 
-  const overlays = () =>
-    page.evaluate(
-      () =>
-        document.querySelectorAll('.gm-style [role="button"][aria-label]')
-          .length,
-    );
+  // Pins drawn on screen: the entries of the hidden pin list.
+  const overlays = () => listedPins(page).count();
 
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Performance.enable");

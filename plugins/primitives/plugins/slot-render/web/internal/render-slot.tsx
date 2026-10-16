@@ -22,6 +22,7 @@ import {
   type SealedComponent,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import {
   getSlotItemAttrs,
@@ -534,6 +535,32 @@ export function defineWrapperSlot<P extends object = {}>(
   return wrapperSlot;
 }
 
+/**
+ * The ONE dispatch precedence — exact string → RegExp → predicate, each in
+ * registration order — shared by `.Dispatch` and `.useMatch`, so the component
+ * a dispatch renders and the contribution a reader looks up cannot disagree.
+ */
+function matchDispatchIndex<Props>(
+  items: readonly { match?: unknown }[],
+  key: string,
+  props: Props,
+): number {
+  let i = items.findIndex(
+    (c) => typeof c.match === "string" && c.match === key,
+  );
+  if (i < 0) {
+    i = items.findIndex((c) => c.match instanceof RegExp && c.match.test(key));
+  }
+  if (i < 0) {
+    i = items.findIndex(
+      (c) =>
+        typeof c.match === "function" &&
+        (c.match as (p: Props) => boolean)(props),
+    );
+  }
+  return i;
+}
+
 export interface DispatchContribution<Props, Key extends string> {
   /**
    * Plain string = exact match; RegExp = pattern match; predicate = arbitrary
@@ -564,6 +591,13 @@ export interface DispatchSlot<
   Extra extends object = {},
 > extends Slot<DispatchContribution<Props, Key> & Extra> {
   Dispatch: ComponentType<Props>;
+  /**
+   * A reader of the contribution `.Dispatch` would render for `props` — its
+   * `Extra` fields (what a contribution declares beside its component), or
+   * `undefined` when the fallback would render. For a host that needs a
+   * contribution's data without rendering it.
+   */
+  useMatch: Hook<() => (props: Props) => Extra | undefined>;
 }
 
 export function defineDispatchSlot<
@@ -582,26 +616,24 @@ export function defineDispatchSlot<
   // nothing to order. `defineOrderedDispatchSlot` overwrites this.
   dispatchSlot.meta = { kind: "dispatch", reorderable: false };
 
+  dispatchSlot.useMatch = function useDispatchMatch() {
+    const cleanItems = slot.useContributions();
+    return useCallback(
+      (props: Props) => {
+        const i = matchDispatchIndex(cleanItems, config.key(props), props);
+        return i < 0 ? undefined : (cleanItems[i] as unknown as Extra);
+      },
+      [cleanItems],
+    );
+  };
+
   dispatchSlot.Dispatch = function SlotDispatch(props: Props) {
     const rawContributions = useRawContributions(slot);
     const cleanItems = slot.useContributions();
 
     const key = config.key(props);
 
-    // Precedence: exact string → RegExp → predicate (registration order).
-    let matchedIndex = cleanItems.findIndex(
-      (c) => typeof c.match === "string" && c.match === key,
-    );
-    if (matchedIndex < 0) {
-      matchedIndex = cleanItems.findIndex(
-        (c) => c.match instanceof RegExp && c.match.test(key),
-      );
-    }
-    if (matchedIndex < 0) {
-      matchedIndex = cleanItems.findIndex(
-        (c) => typeof c.match === "function" && c.match(props),
-      );
-    }
+    const matchedIndex = matchDispatchIndex(cleanItems, key, props);
 
     const matchedItem =
       matchedIndex >= 0 ? cleanItems[matchedIndex] : undefined;

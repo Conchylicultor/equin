@@ -13,6 +13,7 @@ import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import {
+  MARK_PENDING,
   NO_MAP_PADDING,
   resolveCrowd,
   type CameraView,
@@ -20,14 +21,20 @@ import {
   type MapCrowdRequest,
   type MapOverlay,
   type MapPadding,
+  type MapMarkResult,
   type MapPin,
+  type MapTileScheme,
 } from "../../core";
 import {
   GeoMap,
+  type MapPinScale,
   type MapPinState,
   type MapRendererProps,
   type MapRendererReadiness,
 } from "../slots";
+import { defaultPinMark } from "./default-pin";
+import { defaultClusterMark } from "./default-cluster";
+import { MarkHostProvider, useMapMarkEnv } from "./mark-env";
 
 /** A renderer as the slot hands it back: `component` sealed, everything else readable. */
 type RendererItem = ReturnType<typeof GeoMap.Renderer.useContributions>[number];
@@ -167,7 +174,7 @@ export function MapView({
   const renderCluster = (pins: readonly MapPin[]) => (
     <GeoMap.Cluster.Dispatch pins={pins} count={pins.length} tiles={tiles} />
   );
-  const props: MapRendererProps = {
+  const props: UnmarkedProps = {
     overlays,
     renderPin,
     onActivate,
@@ -188,7 +195,61 @@ export function MapView({
         </Surface>
       </Pin>
     ) : null;
-  return <RendererGate renderer={renderer} props={props} notice={notice} />;
+  return (
+    <MarkHostProvider>
+      <MarkedRenderer
+        renderer={renderer}
+        props={props}
+        notice={notice}
+        tiles={tiles}
+      />
+    </MarkHostProvider>
+  );
+}
+
+type UnmarkedProps = Omit<MapRendererProps, "markPin" | "markCluster">;
+
+/**
+ * Hands the renderer every pin's and cluster's mark: the contribution
+ * `GeoMap.Pin` / `GeoMap.Cluster` dispatches to (`useMatch`, the same match
+ * its component is rendered from), else the fallback's. Inside the mark host,
+ * so marks resolve colours and icons in the map's scope; pending until it has
+ * mounted.
+ */
+function MarkedRenderer({
+  renderer,
+  props,
+  notice,
+  tiles,
+}: {
+  renderer: RendererItem;
+  props: UnmarkedProps;
+  notice: ReactNode;
+  tiles: MapTileScheme;
+}) {
+  const env = useMapMarkEnv(tiles);
+  const matchPin = GeoMap.Pin.useMatch();
+  const matchCluster = GeoMap.Cluster.useMatch();
+  const markPin = (pin: MapPin, scale: MapPinScale): MapMarkResult => {
+    if (env === null) return MARK_PENDING;
+    const mark =
+      matchPin({ pin, tiles, active: false, scale })?.mark ?? defaultPinMark;
+    return mark({ pin, scale }, env);
+  };
+  const markCluster = (pins: readonly MapPin[]): MapMarkResult => {
+    if (env === null) return MARK_PENDING;
+    const count = pins.length;
+    const mark =
+      matchCluster({ pins, count, tiles })?.mark ?? defaultClusterMark;
+    return mark({ pins, count }, env);
+  };
+  return (
+    <RendererGate
+      renderer={renderer}
+      props={{ ...props, markPin, markCluster }}
+      notice={notice}
+    />
+  );
 }
 
 interface GateProps {

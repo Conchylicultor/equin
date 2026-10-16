@@ -15,6 +15,7 @@ import {
   requirePage,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { hoverPin, pinsOnScreen } from "@plugins/map/e2e";
 
 const OUT = arg("out") ?? "/tmp/place-pin";
 
@@ -32,46 +33,48 @@ await withBrowser(async (h) => {
 
   const map = page.getByTestId("map");
   await map.scrollIntoViewIfNeeded({ timeout: 60_000 });
-  // The drop's head is the only element in a pin with a square bottom-left corner.
-  const heads = map.locator(".rounded-bl-none");
+  // Pins at rest are canvas pixels; hovering one lifts it into the DOM, so the
+  // look is inspected on each lifted pin in turn — its mark's inline SVG
+  // (the same markup the canvas sprite is drawn from).
   // Throws when no pin appears: a page with a map but no pin is the one failure.
-  await heads.first().waitFor({ state: "visible", timeout: 60_000 });
+  const onScreen = await pinsOnScreen(page);
   await page.waitForTimeout(1500); // tiles
 
-  const pins = await heads.evaluateAll((els) =>
-    els.map((el) => {
-      const cs = getComputedStyle(el);
-      const head = el.getBoundingClientRect();
-      const pinRoot = el.closest(".group\\/pin");
-      const label = pinRoot?.querySelector("[style*='translate']");
-      const lr = label?.getBoundingClientRect();
-      return {
-        label: label?.textContent ?? null,
-        // The map label's text element: it carries the outline, and it is the
-        // truncating box whose clip would cut that outline off.
-        ...(() => {
-          const text = label?.querySelector<HTMLElement>(
-            "[style*='text-shadow']",
-          );
-          if (!text) return { ink: null, haloRoom: null, truncated: null };
-          const ts = getComputedStyle(text);
-          return {
-            ink: ts.color,
-            haloRoom: `${ts.overflow} pad ${ts.paddingRight}`,
-            // An ellipsis on a name well under the label's max width is a bug.
-            truncated: text.scrollWidth > text.clientWidth,
-          };
-        })(),
-        fill: cs.backgroundColor,
-        ring: `${cs.borderTopWidth} ${cs.borderTopStyle} ${cs.borderTopColor}`,
-        radius: cs.borderRadius,
-        rotate: cs.rotate,
-        // Rotated 45°, the head's box is wider than the disc; its centre is still the disc's.
-        headCentreY: Math.round(head.top + head.height / 2),
-        labelCentreY: lr ? Math.round(lr.top + lr.height / 2) : null,
-      };
-    }),
-  );
+  const pins = [];
+  for (const { label: name } of onScreen) {
+    if (name.endsWith("zoom in")) continue;
+    const lifted = await hoverPin(page, name);
+    pins.push(
+      await lifted.evaluate((root) => {
+        // The head: the clipped group of the drop (its fill, veil and ring).
+        const head = root.querySelector("g[clip-path]");
+        const ring = head?.querySelector("path[fill='none']");
+        const label = root.querySelector("[style*='text-shadow']");
+        const hr = head?.getBoundingClientRect();
+        const lr = label?.getBoundingClientRect();
+        return {
+          label: label?.textContent ?? null,
+          ink: label ? getComputedStyle(label).color : null,
+          // An ellipsis on a name well under the label's max width is a bug.
+          truncated:
+            label instanceof HTMLElement
+              ? label.scrollWidth > label.clientWidth
+              : null,
+          fills: head
+            ? [...head.querySelectorAll("rect, path:not([fill='none'])")].map(
+                (el) => getComputedStyle(el).fill,
+              )
+            : null,
+          ring: ring
+            ? `${getComputedStyle(ring).strokeWidth} ${getComputedStyle(ring).stroke}`
+            : null,
+          headCentreY: hr ? Math.round(hr.top + hr.height / 2) : null,
+          labelCentreY: lr ? Math.round(lr.top + lr.height / 2) : null,
+        };
+      }),
+    );
+  }
+  if (pins.length === 0) throw new Error("the page shows no place pin");
   for (const p of pins) console.log(JSON.stringify(p));
 
   await map.screenshot({ path: `${OUT}-map.png` });

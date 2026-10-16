@@ -20,18 +20,37 @@ The only map-vendor code in the repo. Everything else draws maps through
   turns POI labels off with an inline map style (`BASEMAP_STYLES`), keeping
   streets, districts, transit and park greenery as context.
 - **No Map ID, so no Advanced Markers.** Google ignores inline `styles` on a map
-  that has a Map ID, and Advanced Markers require one. Pins are therefore placed
-  by `OverlayPin`: a plain `OverlayView` that portals the pin's React content
-  into the overlay pane, anchored at its bottom centre. It owns what the marker
-  used to give for free: click and Enter/Space activation (the container is a
-  `role="button"`), the stacking order, and stopping presses and clicks at the pin
-  so they do not pan the map or count as a map click. The wheel is NOT stopped
-  (unlike Google's `preventMapHitsAndGesturesFrom`): scrolling over a pin zooms
-  the map like anywhere else, instead of scrolling the page.
-- **Clustering** (`ClusteredPins`, only when `cluster` is set): pins are
-  projected to world pixels (`getProjection().fromLatLngToPoint` × 2^zoom),
-  which depend on the zoom alone, so only `zoom_changed` re-clusters, never a
-  pan. Clusters go through the same `OverlayPin`, anchored at the centre.
+  that has a Map ID, and Advanced Markers require one (and are a DOM element
+  per pin anyway — the cost below).
+- **Pins: one canvas** (`components/pin-canvas.tsx`). A single `OverlayView`
+  holds a viewport-sized `<canvas data-map-pin-canvas>` in the `overlayLayer`
+  pane and repaints it through `map/pin-layer`'s `PinLayer` on every `draw()`
+  (each frame of a zoom) and each `bounds_changed` (a drag, coalesced to one
+  frame): the canvas sits at the container's top-left in div pixels, each pin
+  is projected with `fromLatLngToContainerPixel`. The plan (`planPins`: spots,
+  clusters, stacking) is recomputed in world pixels on `zoom_changed`, never on
+  a pan; marks are cached per (pin, scale). **Lifting**: a `pointermove` on the
+  map div hit-tests the canvas; the hovered item and the active pin render as
+  `OverlayPin`s (`renderPin` / `renderCluster`) at their mark's anchor and are
+  left off the canvas — so a click always lands on a real button. A tap with
+  no hover (touch) is hit-tested on the map's own `click` (not in pick mode).
+  The pins on screen are listed in a visually hidden `[data-map-pins]` list of
+  buttons (`aria-label`, `data-x` / `data-y` = the point in map px), rebuilt on
+  `idle` and when a scene is swapped in — the keyboard / assistive-tech route
+  and what e2e drives (`@plugins/map/e2e`).
+- **`OverlayPin`** is the DOM mechanism for a lifted pin: a plain `OverlayView`
+  that portals the pin's React content into the `overlayMouseTarget` pane,
+  translated so its `anchor` (the mark's) sits on the point. It owns click and
+  Enter/Space activation (`role="button"`), the stacking order, and stopping
+  presses and clicks at the pin so they do not pan the map or count as a map
+  click. The wheel is NOT stopped (unlike Google's
+  `preventMapHitsAndGesturesFrom`): scrolling over a pin zooms the map like
+  anywhere else, instead of scrolling the page.
+- **Clustering** (`crowd.kind === "cluster"`): pins are projected to world
+  pixels (`getProjection().fromLatLngToPoint` × 2^zoom), which depend on the
+  zoom alone, so only `zoom_changed` re-clusters, never a pan. A cluster is
+  one more canvas item (its mark, with the count drawn in its middle); a click
+  on it frames its pins.
 - **Camera**: `FitCamera` frames once (the first time there are overlays,
   `moveCamera` straight there); `FitControl` — our `IconButton` on an overlay
   surface, placed with `MapControl` at `RIGHT_BOTTOM` above Google's camera
@@ -65,6 +84,11 @@ The only map-vendor code in the repo. Everything else draws maps through
     - `integrations/google-maps.useMapsAccess`
     - `integrations/google-maps.useMapsBrowserConfig`
     - `map.GeoMap`
+    - `map.MapRendererProps`
+    - `map.useMapTextStyle`
+    - `map/pin-layer.createCanvas2dPainter`
+    - `map/pin-layer.PinLayer`
+    - `map/pin-layer.SceneItem`
     - `primitives/css/center.Center`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`

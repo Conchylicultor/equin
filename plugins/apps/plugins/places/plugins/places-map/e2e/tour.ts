@@ -19,6 +19,7 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { clickPin, pinsOnScreen } from "@plugins/map/e2e";
 
 const out = arg("out", "/tmp/places");
 const queries = arg(
@@ -87,9 +88,9 @@ await withBrowser(async (h) => {
     .filter({ hasText: "Restaurants" })
     .first();
   const report = async (step: string) => {
-    const marks = await page
-      .locator('[role="img"][aria-label]')
-      .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
+    const marks = (await pinsOnScreen(page, { atLeastOne: false })).map(
+      (p) => p.label,
+    );
     const rows = await page
       .getByTitle("Click to include, again to exclude")
       .allInnerTexts();
@@ -106,9 +107,11 @@ await withBrowser(async (h) => {
     if (step !== "filter-clear") await snap(page, out, step);
   }
 
-  const pin = page.getByRole("img", { name: "Septime" }).first();
-  if ((await pin.count()) > 0) {
-    await pin.click();
+  const pin = (await pinsOnScreen(page, { atLeastOne: false })).find((p) =>
+    p.label.includes("Septime"),
+  );
+  if (pin !== undefined) {
+    await clickPin(page, pin.label);
     await page.waitForTimeout(1500);
     await snap(page, out, "selected");
   }

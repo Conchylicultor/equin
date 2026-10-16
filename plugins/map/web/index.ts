@@ -10,9 +10,24 @@ export type {
   MapPinScale,
   MapPinState,
   MapClusterProps,
+  MapMarkEnv,
+  MapPinMarkFn,
+  MapPinMarkInput,
+  MapClusterMarkFn,
 } from "./slots";
 export { MapView } from "./components/map-view";
-export { MapLabel, type MapLabelProps } from "./components/map-label";
+export {
+  MAP_LABEL_HALO_PX,
+  MAP_LABEL_PAINT,
+  MapLabel,
+  type MapLabelProps,
+} from "./components/map-label";
+export {
+  MapMarkImage,
+  useMapMarkEnv,
+  useMapTextStyle,
+  type MapTextStyle,
+} from "./components/mark-env";
 export type { MapViewProps } from "./components/map-view";
 
 export default {

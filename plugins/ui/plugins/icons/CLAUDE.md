@@ -259,7 +259,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
   - Imported by: 308 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×65
     - `conversations` ×59
-    - `page` ×41
+    - `page` ×40
     - `primitives` ×40
     - `fields` ×33
     - `debug` ×14
@@ -281,6 +281,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `infra/events-test`
     - `integrations/youtube`
     - `layouts/miller`
+    - `map`
     - `reports/launch-fix`
     - `screenshot`
 - Exemptions:
@@ -288,6 +289,8 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
   - Exempted by: `ui/icons` (0 debt)
 - Web:
   - Exports (types):
+    - `IconMarkup`
+    - `IconMarkupReader`
     - `IconProps`
     - `RuntimeSymbolEntry`
   - Exports (values):
@@ -299,6 +302,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `installRuntimeSymbolLoader`
     - `provideRuntimeSymbols`
     - `provideSprite`
+    - `useIconMarkup`
     - `useIconStyle`
     - `usePublishIconStyle`
     - `useWantedSprites`

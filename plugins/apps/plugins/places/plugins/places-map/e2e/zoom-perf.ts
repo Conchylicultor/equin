@@ -8,7 +8,7 @@
 //   ./singularity run plugins/apps/plugins/places/plugins/places-map/e2e/zoom-perf.ts \
 //     [--out /tmp/places-zoom] [--top 15] [--steps 8] [--hide-pins] [--no-profile] [--trace] [--css "<rules>"]
 //
-// `--hide-pins` hides every pin overlay (display: none) before zooming — the
+// `--hide-pins` hides every pin (the pin canvas and any lifted pin, display: none) before zooming — the
 // baseline of Google's map alone, so the pins' share of the cost reads as the
 // difference. Writes `<out>.cpuprofile` (Chrome DevTools → Performance).
 
@@ -18,6 +18,7 @@ import {
   pathUrl,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { listedPins, pinsOnScreen } from "@plugins/map/e2e";
 import { writeFileSync } from "node:fs";
 
 const out = arg("out", "/tmp/places-zoom");
@@ -119,23 +120,12 @@ await withBrowser(async (h) => {
     return Object.fromEntries(all.map((m) => [m.name, m.value]));
   };
 
-  const overlays = page.locator(".gm-style [role=button][aria-label]");
+  const overlays = listedPins(page);
   await page.goto(pathUrl("/places"), { waitUntil: "commit" });
-  await overlays.first().waitFor({ timeout: 120_000 });
+  await overlays.first().waitFor({ state: "attached", timeout: 120_000 });
   await page.waitForTimeout(5000);
   console.log(`[setup] pin overlays on map ${await overlays.count()}`);
-  const visible = await overlays.evaluateAll(
-    (els) =>
-      els.filter((el) => {
-        const r = el.getBoundingClientRect();
-        return (
-          r.right > 0 &&
-          r.bottom > 0 &&
-          r.left < innerWidth &&
-          r.top < innerHeight
-        );
-      }).length,
-  );
+  const visible = (await pinsOnScreen(page)).length;
   console.log(`[setup] of which in the viewport ${visible}`);
   const css = arg("css", "");
   if (css !== "") {
@@ -144,7 +134,8 @@ await withBrowser(async (h) => {
   }
   if (hidePins) {
     await page.addStyleTag({
-      content: ".gm-style [role=button][aria-label] { display: none }",
+      content:
+        ".gm-style canvas[data-map-pin-canvas], .gm-style [role=button][aria-label] { display: none }",
     });
     console.log("[setup] pins hidden (baseline)");
   }

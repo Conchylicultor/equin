@@ -20,6 +20,12 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  clickPin,
+  listedPins,
+  pinsOnScreen,
+  reachablePins,
+} from "@plugins/map/e2e";
 import { writeFileSync } from "node:fs";
 
 const out = arg("out", "/tmp/places-perf");
@@ -101,7 +107,7 @@ await withBrowser(async (h) => {
     writeFileSync(`${out}-${phase}.cpuprofile`, JSON.stringify(profile));
     printHeaviest(profile);
   };
-  const overlays = page.locator(".gm-style [role=button][aria-label]");
+  const overlays = listedPins(page);
 
   // Phase 1 — load: navigation → the chrome → the first pin.
   await cdp.send("Profiler.start");
@@ -111,7 +117,7 @@ await withBrowser(async (h) => {
     .getByRole("button", { name: "Add place", exact: true })
     .waitFor({ timeout: 120_000 });
   const tChrome = Date.now() - t0;
-  await overlays.first().waitFor({ timeout: 120_000 });
+  await overlays.first().waitFor({ state: "attached", timeout: 120_000 });
   const tPin = Date.now() - t0;
   // Where the time went, as the app marks it (perfs/boot-trace): the generic
   // boot (module eval → eager plugins → the route's content), then the map
@@ -139,24 +145,19 @@ await withBrowser(async (h) => {
   await snap(page, out, "loaded");
 
   // Phase 3 — zoom: click the biggest cluster (its pins framed), let it settle.
-  const biggest = await overlays.evaluateAll((els) => {
-    let best = -1;
-    let bestN = 0;
-    els.forEach((el, i) => {
-      const n = Number(
-        /^(\d+) pins/.exec(el.getAttribute("aria-label") ?? "")?.[1] ?? 0,
-      );
-      if (n > bestN) {
-        bestN = n;
-        best = i;
-      }
-    });
-    return best;
-  });
-  if (biggest >= 0) {
+  let biggest: string | null = null;
+  let bestN = 0;
+  for (const { label } of await pinsOnScreen(page)) {
+    const n = Number(/^(\d+) pins/.exec(label)?.[1] ?? 0);
+    if (n > bestN) {
+      bestN = n;
+      biggest = label;
+    }
+  }
+  if (biggest !== null) {
     await cdp.send("Profiler.start");
     const t1 = Date.now();
-    await overlays.nth(biggest).click();
+    await clickPin(page, biggest);
     await page.waitForTimeout(3000);
     console.log(
       `[zoom] ${Date.now() - t1} ms incl. 3 s settle; overlays ${await overlays.count()}`,
@@ -166,12 +167,11 @@ await withBrowser(async (h) => {
   }
 
   // Phase 4 — a saved-place drop (not a cluster) opens its card.
-  const drop = page
-    .locator('.gm-style [role=button][aria-label]:not([aria-label$="zoom in"])')
-    .first();
+  const [drop] = await reachablePins(page);
+  if (drop === undefined) throw new Error("no saved-place drop on screen");
   await cdp.send("Profiler.start");
   const t2 = Date.now();
-  await drop.click();
+  await clickPin(page, drop.label);
   await page
     .getByRole("button", { name: "Close", exact: true })
     .waitFor({ timeout: 60_000 });

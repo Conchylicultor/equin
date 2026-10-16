@@ -168,6 +168,17 @@ cell's layout role. `applyItemMiddlewares` mints the box itself (it has to be
 outermost), so `renderItem` returns a Fragment carrying the React key, which
 every caller mapping it over a list relies on.
 
+## Reading a dispatch's match: `useMatch()`
+
+`slot.useMatch()` returns `(props) => Extra | undefined`: the `Extra` fields
+(what a contribution declares beside its component —
+`defineDispatchSlot<Props, Key, Extra>`) of the contribution `.Dispatch` would
+render for those props, `undefined` for the fallback. Both run the ONE
+precedence (`matchDispatchIndex`: exact string → RegExp → predicate), so a host
+that needs a contribution's data without rendering it — the map reading every
+pin type's `mark` — can never pick a different contribution than the one its
+component is rendered from.
+
 ## Dispatch outcome
 
 `.Dispatch` publishes what it did, so a descendant can react to *"nothing handled

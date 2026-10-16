@@ -38,10 +38,13 @@ function entryKey(styleKey: StyleKey, name: string): string {
   return `${styleKey}\u0000${name}`;
 }
 
-function subscribe(listener: () => void): () => void {
+/** Subscribe to every runtime-symbol chunk landing (`provideRuntimeSymbols`). */
+export function subscribeRuntimeSymbols(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
+
+const subscribe = subscribeRuntimeSymbols;
 
 /**
  * Hold `markup` (a whole `<svg>` of `<symbol id="msr-<styleKey>-<name>">`s) as
@@ -88,7 +91,8 @@ export function installRuntimeSymbolLoader(listener: WantListener): () => void {
   };
 }
 
-function want(styleKey: StyleKey, name: string): void {
+/** Ask the installed loader for runtime symbol `name` in `styleKey` (a no-op once held or asked). */
+export function wantRuntimeSymbol(styleKey: StyleKey, name: string): void {
   const key = entryKey(styleKey, name);
   if (provided.has(key) || pendingWants.has(key)) return;
   const entry = { styleKey, name };
@@ -115,9 +119,14 @@ export function useRuntimeSymbolKey(
   });
   const missing = name !== null && drawn !== wanted;
   useEffect(() => {
-    if (missing) want(wanted, name);
+    if (missing) wantRuntimeSymbol(wanted, name);
   }, [missing, wanted, name]);
   return drawn;
+}
+
+/** Every chunk's markup, sorted by chunk id (the sheet's order). */
+export function runtimeSymbolChunks(): readonly (readonly [string, string])[] {
+  return snapshot;
 }
 
 export function useRuntimeSymbolChunks(): readonly (readonly [
