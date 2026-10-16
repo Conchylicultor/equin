@@ -6,7 +6,10 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  useDeferredLoadComplete,
+  type Contribution,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import {
   isHostedToolbar,
@@ -45,6 +48,7 @@ import {
 } from "../internal/use-sort-controller";
 import { useGroupingRegistry } from "../grouping-slot";
 import { useLiveSource, type SourceView } from "../internal/live-source";
+import { unavailableRules } from "../internal/live-filter";
 import { useCollectionItemActions } from "../internal/collection-item-actions";
 import {
   checkFieldColumns,
@@ -805,10 +809,19 @@ function DataViewBodyInner<TRow>(
     activeState,
     fold,
   );
+  // A rule the in-memory filter cannot resolve YET (its field or operator
+  // comes from a plugin still in the deferred tier) would be dropped — every
+  // row shown, then taken back. A live origin holds it in its own lowering.
+  const deferredComplete = useDeferredLoadComplete();
+  const rulesPending =
+    !deferredComplete &&
+    origin == null &&
+    unavailableRules(activeState.filter, fields, resolveOperatorSet).length > 0;
   const bodyState = resolveBodyState({
     server: origin,
     readiness,
     readFields,
+    rulesPending,
   });
 
   // A sections surface renders this view as one section, and a section whose

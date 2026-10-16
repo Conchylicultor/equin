@@ -17,6 +17,7 @@ describe("resolveBodyState", () => {
   test("a failed read renders the error state, not the view", () => {
     const state = resolveBodyState({
       readFields: [],
+      rulesPending: false,
       server: null,
       readiness: { status: "error", error: failure, refetch },
     });
@@ -30,6 +31,7 @@ describe("resolveBodyState", () => {
     expect(
       resolveBodyState({
         readFields: [],
+        rulesPending: false,
         server: null,
         readiness: { status: "loading" },
       }).kind,
@@ -37,16 +39,34 @@ describe("resolveBodyState", () => {
     expect(
       resolveBodyState({
         readFields: [],
+        rulesPending: false,
         server: null,
         readiness: { status: "ready" },
       }).kind,
     ).toBe("view");
   });
 
+  test("a filter rule not resolvable yet → loading, never every row", () => {
+    // The in-memory filter drops an unresolved rule; while its plugin is still
+    // loading, rendering would show the rows the view hides, then take them back.
+    expect(
+      resolveBodyState({
+        readFields: [],
+        rulesPending: true,
+        server: null,
+        readiness: { status: "ready" },
+      }).kind,
+    ).toBe("loading");
+  });
+
   test("without readiness, the rows are the view", () => {
     expect(
-      resolveBodyState({ server: null, readiness: undefined, readFields: [] })
-        .kind,
+      resolveBodyState({
+        server: null,
+        readiness: undefined,
+        readFields: [],
+        rulesPending: false,
+      }).kind,
     ).toBe("view");
   });
 
@@ -55,6 +75,7 @@ describe("resolveBodyState", () => {
     expect(
       resolveBodyState({
         readFields: [],
+        rulesPending: false,
         server: { loading: false, error: err, readError: null },
         readiness: { status: "loading" },
       }),
@@ -62,6 +83,7 @@ describe("resolveBodyState", () => {
     expect(
       resolveBodyState({
         readFields: [],
+        rulesPending: false,
         server: { loading: true, error: null, readError: null },
         readiness: undefined,
       }).kind,
@@ -73,6 +95,7 @@ describe("resolveBodyState", () => {
     expect(
       resolveBodyState({
         readFields: [],
+        rulesPending: false,
         server: { loading: false, error: null, readError },
         readiness: undefined,
       }),
@@ -82,6 +105,7 @@ describe("resolveBodyState", () => {
     expect(
       resolveBodyState({
         readFields: [],
+        rulesPending: false,
         server: { loading: false, error: err, readError },
         readiness: undefined,
       }).kind,
@@ -110,6 +134,7 @@ describe("a field the view is laid out by", () => {
         server: null,
         readiness: { status: "ready" },
         readFields: [known, pending],
+        rulesPending: false,
       }).kind,
     ).toBe("loading");
     expect(
@@ -117,6 +142,7 @@ describe("a field the view is laid out by", () => {
         server: { loading: false, error: null, readError: null },
         readiness: undefined,
         readFields: [pending],
+        rulesPending: false,
       }).kind,
     ).toBe("loading");
   });
@@ -126,6 +152,7 @@ describe("a field the view is laid out by", () => {
       server: null,
       readiness: { status: "ready" },
       readFields: [pending, failed],
+      rulesPending: false,
     });
     expect(state).toEqual({
       kind: "field-error",
@@ -141,6 +168,7 @@ describe("a field the view is laid out by", () => {
         server: null,
         readiness: { status: "error", error: failure, refetch },
         readFields: [failed],
+        rulesPending: false,
       }).kind,
     ).toBe("error");
   });
@@ -213,6 +241,7 @@ describe("a field the view is laid out by", () => {
         server: null,
         readiness: { status: "ready" },
         readFields,
+        rulesPending: false,
       }).kind,
     ).toBe("view");
     // …while the same fold IN effect holds it.
@@ -235,6 +264,7 @@ describe("a field the view is laid out by", () => {
         server: null,
         readiness: { status: "ready" },
         readFields: folded,
+        rulesPending: false,
       }).kind,
     ).toBe("loading");
   });

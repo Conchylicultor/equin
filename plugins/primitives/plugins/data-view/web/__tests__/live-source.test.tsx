@@ -467,6 +467,7 @@ function LiveBody(props: {
     server: origin,
     readiness: undefined,
     readFields: [],
+    rulesPending: false,
   });
   return state.kind === "view" ? (
     <ul>

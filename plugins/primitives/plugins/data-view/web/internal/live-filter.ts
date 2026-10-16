@@ -66,7 +66,7 @@ export type ViewFilterResult =
   | { kind: "error"; error: FilterError | UnavailableFilterRuleError };
 
 /** Every rule in `group` that does not resolve against `fields` (dangling field or operator). */
-function unavailableRules<TRow>(
+export function unavailableRules<TRow>(
   group: FilterGroup | null,
   fields: FieldDef<TRow>[],
   resolveOperatorSet: ResolveOperatorSet,

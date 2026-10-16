@@ -22,6 +22,13 @@ import type { FieldDef, FilterNode, FoldRule, ViewState } from "../../core";
  * a field with no values would put every row in its unset bucket (an enum's
  * "None"), sorting would order by nothing and a filter would match nothing —
  * each a claim about the rows that then reverses.
+ *
+ * `rulesPending`: the view's filter names a field or operator that does not
+ * resolve YET — the plugin contributing it is still in the deferred load
+ * tier. The in-memory filter drops an unresolved rule (it keeps every row), so
+ * rendering now would show rows the view hides, then take them back once the
+ * plugin lands (measured: the Pages sidebar's Favorites listing every page,
+ * then shrinking to the starred ones). Loading instead, like a pending field.
  */
 export type BodyState =
   | { kind: "server-error"; error: Error }
@@ -43,8 +50,9 @@ export function resolveBodyState(input: {
   } | null;
   readiness: ResourceReadiness | undefined;
   readFields: readonly FieldDef<unknown>[];
+  rulesPending: boolean;
 }): BodyState {
-  const { server, readiness, readFields } = input;
+  const { server, readiness, readFields, rulesPending } = input;
   const failedField = readFields.find((f) => f.readError !== undefined);
   const fieldFailure: BodyState | null =
     failedField?.readError !== undefined
@@ -68,7 +76,7 @@ export function resolveBodyState(input: {
   }
   if (readiness?.status === "error") return { kind: "error", error: readiness };
   if (fieldFailure) return fieldFailure;
-  return readiness?.status === "loading" || fieldPending
+  return readiness?.status === "loading" || fieldPending || rulesPending
     ? { kind: "loading" }
     : { kind: "view" };
 }

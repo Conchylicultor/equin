@@ -1954,6 +1954,11 @@ the ONE filter language (`network/live/plugins/filter`, design in
   filter clock-dependent without data-view naming the date type. Relative time is
   lowered HERE, on the client, to absolute ISO instants — the language has no
   clock.
+  In memory, a rule that does not resolve while the deferred plugin tier is
+  still loading (its field or operator set not contributed YET) holds the body
+  in its loading state instead (`resolveBodyState`'s `rulesPending`): dropping
+  it would show every row and then take them back. Measured on the Pages
+  sidebar, whose Favorites listed every page before `starred` registered.
 - **In memory** (`applyFilter`, `useRowFilter`): lower once, then
   `matchesFilter` per row over a record of just the columns the filter reads. The
   row value is `projectFieldValue` coerced to the set's domain by ONE adapter,
