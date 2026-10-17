@@ -53,8 +53,10 @@ import type {
   AgentWriteEntrySummary,
   AgentWriteLedgerSummary,
   AgentWritesRevertOutcome,
+  AgentWritesScope,
   AgentWritesStatus,
 } from "../../core";
+import { inAgentWritesScope } from "../../core";
 import { agentWriteLedgerDir } from "../../data-dirs";
 
 /** One file's state. `present: false` is "did not exist", not "empty". */
@@ -141,7 +143,7 @@ interface RegisteredLedger {
   id: string;
   label: string;
   list(): AgentWriteEntrySummary[];
-  revert(): Promise<AgentWritesRevertOutcome>;
+  revert(scope: AgentWritesScope): Promise<AgentWritesRevertOutcome>;
 }
 
 const ledgers = new Map<string, RegisteredLedger>();
@@ -353,7 +355,7 @@ export function defineAgentWriteLedger<K extends string>(
       );
     },
 
-    async revert() {
+    async revert(scope) {
       const ledger = load();
       const outcome: AgentWritesRevertOutcome = {
         reverted: [],
@@ -362,6 +364,8 @@ export function defineAgentWriteLedger<K extends string>(
       };
 
       for (const [key, entry] of Object.entries(ledger.entries)) {
+        // Another session's write: theirs to revert, whenever they end.
+        if (!inAgentWritesScope(scope, entry.source)) continue;
         try {
           // Divergence check FIRST. If the files moved since the agent's last
           // write, someone else owns them now — restoring would destroy their
@@ -430,21 +434,27 @@ export function listAgentWrites(): AgentWritesStatus {
 }
 
 /**
- * Restore every entry of every registered ledger and clear what was restored.
+ * Restore every entry in `scope`, across every registered ledger, and clear
+ * what was restored.
  *
- * Idempotent: empty ledgers return three empty arrays, which is what makes it
- * safe to call at the start of every run as a repair for a previous run that
- * was killed before its own revert. Ledgers run one after another, in the order
- * they were defined.
+ * Idempotent: nothing in scope returns three empty arrays, which is what makes
+ * it safe to call at the start of every run as a repair for a previous run
+ * that was killed before its own revert. Ledgers run one after another, in the
+ * order they were defined.
+ *
+ * An entry carries the source of the FIRST agent write to its key; a key two
+ * sessions both wrote is reverted with the first one.
  */
-export async function revertAllAgentWrites(): Promise<AgentWritesRevertOutcome> {
+export async function revertAgentWritesIn(
+  scope: AgentWritesScope,
+): Promise<AgentWritesRevertOutcome> {
   const outcome: AgentWritesRevertOutcome = {
     reverted: [],
     diverged: [],
     failed: [],
   };
   for (const ledger of ledgers.values()) {
-    const one = await ledger.revert();
+    const one = await ledger.revert(scope);
     outcome.reverted.push(...one.reverted);
     outcome.diverged.push(...one.diverged);
     outcome.failed.push(...one.failed);

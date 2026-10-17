@@ -46,8 +46,12 @@ picksLedger.noteComplete(writer, id);                           // AFTER it land
 
 ## What a revert does
 
-`POST /api/agent-writes/revert` walks every registered ledger, in the order they
-were defined:
+`POST /api/agent-writes/revert` takes a **required** scope — `{ scope: "source",
+source }` (one session: an agent's browser session, `mcp-browser:<conversationId>`)
+or `{ scope: "prefix", prefix }` (a family: the e2e harness reverts `e2e`). There
+is no "revert everything": several sessions write to one deploy at once, and an
+unscoped revert undoes the others' writes mid-session. It walks every registered
+ledger, in the order they were defined, over the entries in scope:
 
 - **Before** is the state before the agent's FIRST write. A second write never
   overwrites it, or the revert would restore the agent's own intermediate state.
@@ -93,8 +97,11 @@ needs.
 
 ## Known limits
 
-- **One run at a time.** Concurrent e2e runs against the same deploy share the
-  ledgers, so one run's end-revert can undo the other's writes mid-run.
+- **One e2e run at a time.** Concurrent e2e runs against the same deploy share
+  the `e2e` prefix, so one run's end-revert can undo the other's writes mid-run.
+  (An agent's browser session has a source of its own and is never touched.)
+- **One source per key.** An entry carries the source of the FIRST agent write
+  to its key; a key two sessions both wrote is reverted with the first one.
 - **Unmarked clients are invisible.** Raw `curl`, or a script's own Node-side
   `fetch` without `agentFetch`, carries no agent-origin header, so nothing is
   recorded (see [`request-origin`](../../CLAUDE.md)).
@@ -127,13 +134,16 @@ Design: [`research/2026-09-16-global-shared-prototype-option-picks.md`](../../..
     - `AgentWriteEntrySummary`
     - `AgentWriteLedgerSummary`
     - `AgentWritesRevertOutcome`
+    - `AgentWritesScope`
     - `AgentWritesStatus`
   - Exports (values):
     - `agentWriteEntrySummarySchema`
     - `agentWriteLedgerSummarySchema`
     - `agentWrites`
     - `agentWritesRevertOutcomeSchema`
+    - `agentWritesScopeSchema`
     - `agentWritesStatusSchema`
+    - `inAgentWritesScope`
     - `revertAgentWrites`
 - Cross-plugin:
   - Imported by:

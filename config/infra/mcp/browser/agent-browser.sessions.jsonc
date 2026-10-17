@@ -1,0 +1,18 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "all",
+      "name": "Sessions",
+      "icon": "tab",
+      // The session about to close first: that is the one worth a glance.
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "idleDeadline", "direction": "asc" }]
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

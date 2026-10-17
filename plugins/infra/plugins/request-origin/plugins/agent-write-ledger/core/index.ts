@@ -7,10 +7,13 @@ export {
   agentWriteLedgerSummarySchema,
   agentWritesStatusSchema,
   agentWritesRevertOutcomeSchema,
+  agentWritesScopeSchema,
+  inAgentWritesScope,
 } from "./internal/endpoints";
 export type {
   AgentWriteEntrySummary,
   AgentWriteLedgerSummary,
   AgentWritesStatus,
   AgentWritesRevertOutcome,
+  AgentWritesScope,
 } from "./internal/endpoints";

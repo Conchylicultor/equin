@@ -13,7 +13,7 @@
  * agent-origin header overwrites, in one ledger per domain (`withBrowser` stamps
  * that header on every context, so every script and every ad-hoc
  * `screenshot.ts --click` drive is marked). This module is the harness half:
- * ask for all of it back, at both ends of every run. It names no domain — the
+ * ask for every e2e run's writes back, at both ends of every run. It names no domain — the
  * two routes aggregate every registered ledger, so a new one is covered here
  * with no change.
  *
@@ -24,8 +24,16 @@ import type { Codec } from "@plugins/infra/plugins/endpoints/core";
 import {
   agentWrites,
   revertAgentWrites,
+  type AgentWritesScope,
 } from "@plugins/infra/plugins/request-origin/plugins/agent-write-ledger/core";
 import { agentFetch } from "./app-fetch";
+
+/**
+ * Every e2e run's writes — its sources are `e2e:<script>` (`originSource`) —
+ * and nothing else: an agent's live browser session writing to the same deploy
+ * (`mcp-browser:<conversationId>`) reverts its own when it closes.
+ */
+const E2E_WRITES: AgentWritesScope = { scope: "prefix", prefix: "e2e" };
 import { waitFor } from "./wait";
 import { pushDiagnostic } from "./diagnostics";
 
@@ -37,11 +45,20 @@ import { pushDiagnostic } from "./diagnostics";
  * — but the route still comes from the contract, so a renamed endpoint is a
  * type error here instead of a 404 at run time.
  */
-async function callEndpoint<T>(
+async function callEndpoint<T, B = never>(
   def: { method: string; path: string; responseCodec?: Codec<T> },
   phase: string,
+  body?: B,
 ): Promise<T> {
-  const res = await agentFetch(def.path, { method: def.method });
+  const res = await agentFetch(def.path, {
+    method: def.method,
+    ...(body === undefined
+      ? {}
+      : {
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        }),
+  });
   if (!res.ok) {
     const body = await res.text();
     throw new Error(
@@ -86,7 +103,7 @@ export async function settleAgentWrites(): Promise<void> {
 }
 
 /**
- * Restore everything this (or a previous) agent run overwrote, in every ledger.
+ * Restore everything this (or a previous) e2e run overwrote, in every ledger.
  *
  * Throws on `failed`, which is what stops a run going green having left the
  * user's data changed. `diverged` is NOT a failure: it means someone edited the
@@ -94,7 +111,11 @@ export async function settleAgentWrites(): Promise<void> {
  * the script did nothing wrong, and a diagnostic is the honest report.
  */
 export async function repairAgentWrites(phase: "start" | "end"): Promise<void> {
-  const out = await callEndpoint(revertAgentWrites, `${phase} revert`);
+  const out = await callEndpoint(
+    revertAgentWrites,
+    `${phase} revert`,
+    E2E_WRITES,
+  );
 
   if (out.failed.length > 0) {
     throw new Error(

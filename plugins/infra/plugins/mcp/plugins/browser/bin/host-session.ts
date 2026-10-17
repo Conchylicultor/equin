@@ -1,6 +1,5 @@
 import type { Browser, BrowserContext, Page } from "playwright";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
-import { requestDep } from "@plugins/infra/plugins/deps/server";
 import { launchChromium } from "@plugins/infra/plugins/deps/plugins/playwright-browser/deps";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
 import {
@@ -8,29 +7,39 @@ import {
   ORIGIN_HEADER,
   ORIGIN_SOURCE_HEADER,
 } from "@plugins/infra/plugins/request-origin/core";
-import { revertAgentWrites } from "@plugins/infra/plugins/request-origin/plugins/agent-write-ledger/core";
-import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import type { BrowserTarget } from "./target";
+import {
+  MAX_HOST_ERRORS,
+  MAX_SESSIONS,
+  MAX_TABS,
+  type AgentBrowserHostError,
+  type AgentBrowserSession,
+} from "../core";
+import { browserSessionSource, type HostTarget } from "../shared/protocol";
+import { revertSessionWrites } from "../shared/revert";
 
 /**
- * The shared headless browser every agent conversation drives.
+ * The sessions the host holds — the ONE Chromium, a `BrowserContext` per
+ * conversation, and each tab's console / network record.
  *
- * ONE Chromium per backend — and since MCP is served by the backend that
- * launched the agent (normally main), one for the machine in practice. Each
- * conversation gets its own `BrowserContext` (cookies, storage, viewport), so
+ * Each conversation gets its own context (cookies, storage, viewport), so
  * agents share the process, never the state. Tabs stay alive across tool
- * calls: that is the point — an agent iterates on one failing step instead of
- * relaunching, re-booting the app and replaying the whole flow.
+ * calls — and, because this lives in the host process rather than the backend,
+ * across backend restarts: that is the point. An agent iterates on one failing
+ * step instead of relaunching, re-booting the app and replaying the flow.
  *
  * Lifetimes are deadlines reset on use, not polling: a session closes after
- * {@link SESSION_IDLE_MS} untouched (and when its conversation ends — see
- * `conversation-ended.ts`), the browser after {@link BROWSER_IDLE_MS} with no
- * session.
+ * {@link SESSION_IDLE_MS} untouched (and when its conversation ends — the
+ * backend's trigger calls `/close`); the host exits {@link HOST_IDLE_MS} after
+ * its last session, taking Chromium with it.
  */
 
-const SESSION_IDLE_MS = 10 * 60_000;
-const BROWSER_IDLE_MS = 5 * 60_000;
-const MAX_TABS = 5;
+/**
+ * Longer than a build: the typical agent loop is look → change → build (~10
+ * min, which restarts the backend) → look again, and the tabs must still be
+ * there for the second look.
+ */
+export const SESSION_IDLE_MS = 30 * 60_000;
+export const HOST_IDLE_MS = 5 * 60_000;
 const LOG_CAP = 500;
 const BOUND_MS = 30_000;
 /**
@@ -40,8 +49,6 @@ const BOUND_MS = 30_000;
  */
 const ACTION_MS = 5_000;
 export const DEFAULT_VIEWPORT = { width: 1400, height: 900 };
-/** The request-origin source every request of a drive carries. */
-const ORIGIN_SOURCE = "mcp-browser";
 
 export interface ConsoleEntry {
   t: number;
@@ -62,33 +69,86 @@ export interface NetworkEntry {
 export interface Tab {
   id: string;
   page: Page;
+  /** The main frame's title as of its last navigation or load. */
+  title: string;
   console: ConsoleEntry[];
   network: NetworkEntry[];
 }
 
 export interface Session {
   conversationId: string;
-  target: BrowserTarget;
+  target: HostTarget;
   context: BrowserContext;
   tabs: Map<string, Tab>;
   /** The tab a call naming none acts on: the last one used. */
   current: string | null;
   nextTab: number;
+  openedAt: Date;
+  idleDeadline: Date;
   idle: ReturnType<typeof setTimeout> | null;
 }
 
 let browser: Promise<Browser> | null = null;
-let browserIdle: ReturnType<typeof setTimeout> | null = null;
 const sessions = new Map<string, Session>();
+const errors: AgentBrowserHostError[] = [];
+let hostIdleExitAt: Date | null = null;
+let hostIdle: ReturnType<typeof setTimeout> | null = null;
 
-/** Not installed yet is an answer, not a wait: ask for it and say so. */
-export class BrowserUnavailableError extends Error {}
+/** Wired by the entry: publish the status file, exit when idle. */
+let onChange: () => void = () => {};
+let onIdle: () => void = () => {};
+
+export function wireHost(hooks: {
+  onChange: () => void;
+  onIdle: () => void;
+}): void {
+  onChange = hooks.onChange;
+  onIdle = hooks.onIdle;
+  armHostIdle();
+}
+
+/**
+ * Keep a failure the host hit on its own (an idle close, a revert, a dialog
+ * dismissal) — nobody is waiting on those to read the error, so it goes into
+ * the published status, where the health report shows it, and to stderr.
+ */
+export function recordHostError(during: string, err: unknown): void {
+  const message =
+    err instanceof Error ? (err.stack ?? err.message) : String(err);
+  console.error(`[agent-browser] ${during}: ${message}`);
+  errors.push({ at: new Date().toISOString(), during, message });
+  if (errors.length > MAX_HOST_ERRORS) errors.shift();
+  onChange();
+}
+
+/** Run a piece of background work, keeping its failure. */
+function background(during: string, work: () => Promise<unknown>): void {
+  work().catch((err: unknown) => recordHostError(during, err));
+}
+
+export function hostSnapshot(): {
+  idleExitAt: string | null;
+  sessions: AgentBrowserSession[];
+  errors: AgentBrowserHostError[];
+} {
+  return {
+    idleExitAt: hostIdleExitAt?.toISOString() ?? null,
+    sessions: [...sessions.values()].map((s) => ({
+      conversationId: s.conversationId,
+      origin: s.target.origin,
+      openedAt: s.openedAt.toISOString(),
+      idleDeadline: s.idleDeadline.toISOString(),
+      tabs: [...s.tabs.values()].map((t) => ({
+        id: t.id,
+        url: t.page.url(),
+        title: t.title,
+      })),
+    })),
+    errors: [...errors],
+  };
+}
 
 async function getBrowser(): Promise<Browser> {
-  if (browserIdle) {
-    clearTimeout(browserIdle);
-    browserIdle = null;
-  }
   browser ??= launch();
   try {
     return await browser;
@@ -99,20 +159,12 @@ async function getBrowser(): Promise<Browser> {
 }
 
 async function launch(): Promise<Browser> {
-  // The backend never installs (a ~280 MB download on its event loop): it
-  // reads, and asks for the install when the browser is not there yet.
+  // The backend asked for the install before launching this host; reaching
+  // here without it is a dependency removed since — say so.
   const installed = await readyNow(chromium);
-  if (installed.kind === "failed") {
-    throw new BrowserUnavailableError(
-      `Chromium could not be installed: ${installed.message}. ` +
-        "Retry with `./singularity deps install chromium`.",
-    );
-  }
   if (installed.kind !== "ready") {
-    await requestDep(chromium);
-    throw new BrowserUnavailableError(
-      "Chromium is not installed yet — its install (~280 MB, once per machine) " +
-        "was requested. Retry in a minute, or run `./singularity deps install chromium`.",
+    throw new Error(
+      `Chromium is not installed (${installed.kind}). Run \`./singularity deps install chromium\`.`,
     );
   }
   const launched = await launchChromium(installed.ready, {
@@ -130,27 +182,32 @@ async function launch(): Promise<Browser> {
     browser = null;
     for (const s of sessions.values()) if (s.idle) clearTimeout(s.idle);
     sessions.clear();
+    armHostIdle();
+    onChange();
   });
   return launched;
 }
 
-function armBrowserIdle(): void {
-  if (sessions.size > 0 || browser === null || browserIdle) return;
-  browserIdle = setTimeout(() => {
-    browserIdle = null;
-    if (sessions.size > 0 || browser === null) return;
-    const closing = browser;
-    browser = null;
-    void runTracked("mcp-browser:close-idle-browser", async () =>
-      closeBounded((await closing).close(), "browser"),
-    );
-  }, BROWSER_IDLE_MS);
+function armHostIdle(): void {
+  if (sessions.size > 0) {
+    if (hostIdle) clearTimeout(hostIdle);
+    hostIdle = null;
+    hostIdleExitAt = null;
+    return;
+  }
+  if (hostIdle) return;
+  hostIdleExitAt = new Date(Date.now() + HOST_IDLE_MS);
+  hostIdle = setTimeout(() => {
+    hostIdle = null;
+    if (sessions.size === 0) onIdle();
+  }, HOST_IDLE_MS);
 }
 
 function touch(session: Session): void {
   if (session.idle) clearTimeout(session.idle);
+  session.idleDeadline = new Date(Date.now() + SESSION_IDLE_MS);
   session.idle = setTimeout(() => {
-    void runTracked("mcp-browser:close-idle-session", () =>
+    background("close-idle-session", () =>
       closeSession(session.conversationId),
     );
   }, SESSION_IDLE_MS);
@@ -159,27 +216,33 @@ function touch(session: Session): void {
 /** The conversation's session, opened (and the browser launched) on first use. */
 export async function getSession(
   conversationId: string,
-  target: () => Promise<BrowserTarget>,
+  target: HostTarget,
 ): Promise<Session> {
   const existing = sessions.get(conversationId);
   if (existing) {
     touch(existing);
+    onChange();
     return existing;
   }
-  const resolved = await target();
+  if (sessions.size >= MAX_SESSIONS) {
+    throw new Error(
+      `The agent browser already holds ${MAX_SESSIONS} sessions — close one (browser_close) or wait for an idle one to expire.`,
+    );
+  }
   const b = await getBrowser();
+  const source = browserSessionSource(conversationId);
   const context = await b.newContext({
     viewport: DEFAULT_VIEWPORT,
-    // Every request is marked as an agent's, so the durable writes a drive
-    // makes are attributable and reverted when the session closes.
-    extraHTTPHeaders: agentOriginHeaders(ORIGIN_SOURCE),
+    // Every request is marked as THIS conversation's, so the durable writes a
+    // drive makes are attributable and reverted alone when the session closes.
+    extraHTTPHeaders: agentOriginHeaders(source),
     serviceWorkers: "block",
   });
   context.setDefaultTimeout(ACTION_MS);
   context.setDefaultNavigationTimeout(BOUND_MS);
   // The headers belong to the target only; strip them from every other origin.
   await context.route(
-    (url) => url.origin !== new URL(resolved.origin).origin,
+    (url) => url.origin !== new URL(target.origin).origin,
     async (route) => {
       const headers = { ...route.request().headers() };
       delete headers[ORIGIN_HEADER];
@@ -194,17 +257,22 @@ export async function getSession(
     touch(raced);
     return raced;
   }
+  const now = new Date();
   const session: Session = {
     conversationId,
-    target: resolved,
+    target,
     context,
     tabs: new Map(),
     current: null,
     nextTab: 1,
+    openedAt: now,
+    idleDeadline: now,
     idle: null,
   };
   sessions.set(conversationId, session);
   touch(session);
+  armHostIdle();
+  onChange();
   return session;
 }
 
@@ -218,6 +286,7 @@ export async function openTab(session: Session): Promise<Tab> {
   const tab: Tab = {
     id: `t${session.nextTab++}`,
     page,
+    title: "",
     console: [],
     network: [],
   };
@@ -242,10 +311,10 @@ export async function openTab(session: Session): Promise<Tab> {
       type: "dialog",
       text: `${d.type()}: ${d.message()} (dismissed)`,
     });
-    void runTracked("mcp-browser:dismiss-dialog", () => d.dismiss());
+    background("dismiss-dialog", () => d.dismiss());
   });
   page.on("requestfinished", (req) => {
-    void runTracked("mcp-browser:record-request", async () => {
+    background("record-request", async () => {
       const res = await req.response();
       push(tab.network, {
         t: Date.now(),
@@ -268,14 +337,27 @@ export async function openTab(session: Session): Promise<Tab> {
       failure: req.failure()?.errorText ?? "failed",
     });
   });
+  // The status names each tab's url and title; refresh them as the page moves.
+  const retitle = () => {
+    background("read-title", async () => {
+      tab.title = await page.title();
+      onChange();
+    });
+  };
+  page.on("framenavigated", (frame) => {
+    if (frame === page.mainFrame()) retitle();
+  });
+  page.on("load", retitle);
   page.on("close", () => {
     session.tabs.delete(tab.id);
     if (session.current === tab.id) {
       session.current = [...session.tabs.keys()].at(-1) ?? null;
     }
+    onChange();
   });
   session.tabs.set(tab.id, tab);
   session.current = tab.id;
+  onChange();
   return tab;
 }
 
@@ -301,9 +383,10 @@ export async function closeTab(session: Session, id: string): Promise<void> {
 }
 
 /**
- * Close a conversation's session: revert the durable writes it made on its
- * target (the same ledger the e2e harness reverts), then drop its context.
- * Returns false when there was none.
+ * Close a conversation's session: drop its context, then revert the durable
+ * writes IT made on its target — its own request-origin source only, so
+ * another conversation's session or an e2e run on the same deploy keeps
+ * theirs. Returns false when there was none.
  */
 export async function closeSession(conversationId: string): Promise<boolean> {
   const session = sessions.get(conversationId);
@@ -312,30 +395,30 @@ export async function closeSession(conversationId: string): Promise<boolean> {
   if (session.idle) clearTimeout(session.idle);
   try {
     await closeBounded(session.context.close(), "context");
-    await revertWrites(session.target);
+    await revertSessionWrites(session.target.origin, conversationId);
   } finally {
-    armBrowserIdle();
+    armHostIdle();
+    onChange();
   }
   return true;
 }
 
-async function revertWrites(target: BrowserTarget): Promise<void> {
-  const res = await fetch(`${target.origin}${revertAgentWrites.path}`, {
-    method: revertAgentWrites.method,
-    headers: agentOriginHeaders(ORIGIN_SOURCE),
-    signal: AbortSignal.timeout(BOUND_MS),
-  });
-  if (!res.ok) {
-    throw new Error(
-      `[mcp-browser] reverting agent writes on ${target.origin} failed: HTTP ${res.status} ${await res.text()}`,
+/** Close every session (reverting each) and Chromium — the host is leaving. */
+export async function closeAll(): Promise<void> {
+  for (const id of [...sessions.keys()]) {
+    await closeSession(id).catch((err: unknown) =>
+      recordHostError(`close-session ${id}`, err),
     );
   }
+  const closing = browser;
+  browser = null;
+  if (closing) await closeBounded((await closing).close(), "browser");
 }
 
 /**
  * A close that never waits forever: `browser.close()` once wedged main's job
  * queue (see prototypes/thumbnails `closeBrowser`). A timed-out close is
- * logged and abandoned — the state is already dropped on this side.
+ * recorded and abandoned — the state is already dropped on this side.
  */
 async function closeBounded(p: Promise<void>, what: string): Promise<void> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -344,8 +427,9 @@ async function closeBounded(p: Promise<void>, what: string): Promise<void> {
   });
   try {
     if ((await Promise.race([p, timeout])) === "timeout") {
-      console.error(
-        `[mcp-browser] ${what} close did not return within ${BOUND_MS}ms`,
+      recordHostError(
+        `close ${what}`,
+        new Error(`did not return within ${BOUND_MS}ms`),
       );
     }
   } finally {

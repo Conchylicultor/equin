@@ -111,6 +111,7 @@ detail is rendered through `renderIsolated`.
     - `HealthReport.Row` ← `debug.sentinel`
     - `HealthReport.Row` ← `infra.claude-cli.availability`
     - `HealthReport.Row` ← `infra.health`
+    - `HealthReport.Row` ← `infra.mcp.browser`
     - `HealthReport.Row` ← `reports.resource-errors`
     - `HealthReport.Row` ← `tasks.worktree-identity`
   - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
@@ -162,6 +163,7 @@ detail is rendered through `renderIsolated`.
     - `debug/sentinel`
     - `infra/claude-cli/availability`
     - `infra/health`
+    - `infra/mcp/browser`
     - `reports/resource-errors`
     - `shell/global-action-bar`
     - `tasks/worktree-identity`

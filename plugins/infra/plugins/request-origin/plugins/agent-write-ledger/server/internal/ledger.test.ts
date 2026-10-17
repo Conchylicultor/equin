@@ -14,7 +14,7 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import {
   defineAgentWriteLedger,
   listAgentWrites,
-  revertAllAgentWrites,
+  revertAgentWritesIn,
   type AgentWriteLedgerEntry,
   type FileSnapshot,
 } from "./ledger";
@@ -24,7 +24,7 @@ import {
 // each ledger resolves its file on first use, which happens inside a test body,
 // after this line. The ledger registry is process-global and never cleared (a
 // duplicate id throws — that is the point), so every test uses ids of its own,
-// and every revert assertion filters to them: `revertAllAgentWrites` walks every
+// and every revert assertion filters to them: `revertAgentWritesIn` walks every
 // ledger this process ever defined.
 const ORIGINAL_DATA_ROOT = process.env.SINGULARITY_DIR;
 const dataRoot = mkdtempSync(join(tmpdir(), "agent-write-ledger-root-"));
@@ -39,6 +39,7 @@ afterAll(() => {
 });
 
 const agent: WriteOrigin = { kind: "agent", source: "e2e:ledger-test" };
+const E2E = { scope: "prefix", prefix: "e2e:" } as const;
 
 type Role = "main" | "side";
 
@@ -70,7 +71,7 @@ function entriesOf(id: string) {
 }
 
 async function revertOnly(id: string) {
-  const out = await revertAllAgentWrites();
+  const out = await revertAgentWritesIn(E2E);
   return {
     reverted: out.reverted.filter((r) => r.ledgerId === id),
     diverged: out.diverged.filter((r) => r.ledgerId === id),
@@ -262,7 +263,7 @@ test("one revert covers every registered ledger", async () => {
   writeFileSync(pathsTwo.side, "agent-two");
   two.noteComplete(agent, "second");
 
-  const out = await revertAllAgentWrites();
+  const out = await revertAgentWritesIn(E2E);
   const mine = out.reverted.filter((r) =>
     r.ledgerId.startsWith("test-aggregate-"),
   );
@@ -282,6 +283,41 @@ test("one revert covers every registered ledger", async () => {
   ]);
   expect(read(pathsOne.main)).toBeNull();
   expect(read(pathsTwo.side)).toBe("two-original");
+});
+
+test("a revert restores only the sessions it names", async () => {
+  const ledger = defineAgentWriteLedger<Role>({
+    id: "test-scoped",
+    label: "Scoped",
+    restore: async (entry) => putBack(entry),
+  });
+  const a: WriteOrigin = { kind: "agent", source: "mcp-browser:conv-a" };
+  const b: WriteOrigin = { kind: "agent", source: "mcp-browser:conv-ab" };
+  const pathsA = pathsFor("scoped-a");
+  const pathsB = pathsFor("scoped-b");
+
+  ledger.record(a, "a", pathsA, "op");
+  writeFileSync(pathsA.main, "agent-a");
+  ledger.noteComplete(a, "a");
+  ledger.record(b, "b", pathsB, "op");
+  writeFileSync(pathsB.main, "agent-b");
+  ledger.noteComplete(b, "b");
+
+  // Neither the e2e family nor an exact source that is a prefix of another.
+  const e2e = await revertAgentWritesIn(E2E);
+  expect(e2e.reverted.filter((r) => r.ledgerId === "test-scoped")).toEqual([]);
+  const onlyA = await revertAgentWritesIn({
+    scope: "source",
+    source: "mcp-browser:conv-a",
+  });
+  expect(
+    onlyA.reverted
+      .filter((r) => r.ledgerId === "test-scoped")
+      .map((r) => r.key),
+  ).toEqual(["a"]);
+  expect(read(pathsA.main)).toBeNull();
+  expect(read(pathsB.main)).toBe("agent-b");
+  expect(entriesOf("test-scoped").map((e) => e.key)).toEqual(["b"]);
 });
 
 test("a ledger id is unique and names a file", () => {

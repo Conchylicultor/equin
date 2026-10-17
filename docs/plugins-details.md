@@ -26002,10 +26002,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope.
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 27 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+        - Imported by: 28 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+          - `infra` ×7
           - `conversations` ×6
           - `debug` ×6
-          - `infra` ×6
           - `apps` ×2
           - `build`
           - `config_v2`
@@ -26996,16 +26996,34 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Shared:
         - Exports (values): `mcpRequest`
       - Plugins:
-        - **`browser`** — Agent browser: MCP tools (browser_navigate, browser_read_page, browser_act, browser_batch, browser_screenshot, browser_console, …) driving one shared headless Chromium, with an isolated session per conversation targeted at that conversation's own worktree build and tabs that stay open across calls.
+        - **`browser`** — The health report's Agent browser row: whether the machine's agent-browser host runs, its sessions (conversation, target, tabs) and when each closes if left idle, and a host that died without closing them — read from the agent-browser.status push value. Agent browser: MCP tools (browser_navigate, browser_read_page, browser_act, browser_batch, browser_screenshot, browser_console, …) forwarded to one detached host process per machine that owns the shared headless Chromium — an isolated session per conversation targeted at that conversation's own worktree build, tabs that stay open across calls and across backend restarts — plus the agent-browser.status value (host, sessions, tabs, deadlines) pushed from the host's status file.
+          - Web:
+            - Contributes: `HealthReport.Row` "Agent browser" → `AgentBrowserDetail`
+            - Uses:
+              - `network/live.useLive`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/data-view.DataView`
+              - `primitives/data-view.defineDataView`
+              - `primitives/data-view.FieldDef`
+              - `primitives/live-state.foldResource`
+              - `primitives/relative-time.useNow`
+              - `shell/health-report.HealthReport`
           - Server:
-            - Contributes: `trigger` "mcp-browser.conversation-ended"
+            - Contributes:
+              - `trigger` "mcp-browser.conversation-ended"
+              - `resource.declare` "agent-browser.status"
             - Uses:
               - `infra/deps.requestDep`
               - `infra/events.Trigger`
+              - `infra/file-watcher.defineFileWatcher`
+              - `infra/file-watcher.FileWatcher`
               - `infra/jobs.defineJob`
               - `infra/mcp.Mcp`
               - `infra/mcp.McpToolContext`
-              - `infra/mcp.McpToolResult`
+              - `infra/spawn/daemon.DaemonInstance`
+              - `infra/spawn/daemon.defineDaemon`
+              - `network/live.serveValue`
               - `tasks/tasks-core.conversationStatusChanged`
               - `tasks/tasks-core.getConversation`
             - Register:
@@ -27023,6 +27041,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mcpTool('browser_viewport')`
               - `mcpTool('browser_close')`
               - `defineJob('mcp-browser.conversation-ended')`
+              - `defineDaemon('mcp-browser.host')`
+              - `defineFileWatcher('mcp-browser.host-status')`
+            - Resources: `agent-browser.status` (push, notified)
+          - Core:
+            - Uses: `network/live.liveValue`
+            - Exports (types):
+              - `AgentBrowserHostError`
+              - `AgentBrowserHostStatus`
+              - `AgentBrowserSession`
+              - `AgentBrowserStatus`
+              - `AgentBrowserTab`
+            - Exports (values):
+              - `AgentBrowserHostStatusSchema`
+              - `agentBrowserStatus`
+              - `AgentBrowserStatusSchema`
+              - `MAX_HOST_ERRORS`
+              - `MAX_SESSIONS`
+              - `MAX_TABS`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/shape --spacing`
     - **`namespace`** — Canonical namespace identity: the branded Namespace type, the <composition>.<checkout> elision rule that mints one, and the URL/host encodings derived from it.
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
@@ -27386,13 +27424,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentWriteEntrySummary`
               - `AgentWriteLedgerSummary`
               - `AgentWritesRevertOutcome`
+              - `AgentWritesScope`
               - `AgentWritesStatus`
             - Exports (values):
               - `agentWriteEntrySummarySchema`
               - `agentWriteLedgerSummarySchema`
               - `agentWrites`
               - `agentWritesRevertOutcomeSchema`
+              - `agentWritesScopeSchema`
               - `agentWritesStatusSchema`
+              - `inAgentWritesScope`
               - `revertAgentWrites`
           - Cross-plugin:
             - Imported by:
@@ -27690,6 +27731,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/paging-probe`
               - `debug/sentinel`
               - `infra/launcher`
+              - `infra/mcp/browser`
               - `infra/spawn/daemon/background-arm`
               - `release`
           - Exemptions:
@@ -29002,13 +29044,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 237 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 238 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×68
           - `conversations` ×40
           - `tasks` ×27
           - `debug` ×24
           - `active-data` ×12
-          - `infra` ×11
+          - `infra` ×12
           - `page` ×10
           - `build` ×6
           - `primitives` ×5
@@ -35076,7 +35118,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 393 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 394 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×100
               - `conversations` ×63
               - `primitives` ×51
@@ -35090,8 +35132,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `stats` ×6
               - `build` ×5
               - `auth` ×4
+              - `infra` ×4
               - `review` ×4
-              - `infra` ×3
               - `reorder` ×3
               - `shell` ×3
               - `active-data` ×2
@@ -35298,7 +35340,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 366 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 367 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×97
               - `conversations` ×72
               - `primitives` ×42
@@ -35312,8 +35354,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `stats` ×6
               - `build` ×5
               - `auth` ×4
+              - `infra` ×4
               - `review` ×4
-              - `infra` ×3
               - `integrations` ×3
               - `reorder` ×3
               - `active-data` ×2
@@ -35802,8 +35844,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 72 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×64
+        - Contributes: 73 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×65
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
@@ -35996,8 +36038,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowFilter`
           - `useSortController`
       - Server:
-        - Contributes: 66 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×64
+        - Contributes: 67 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×65
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -36148,14 +36190,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-semibold`
-        - Imported by: 93 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 94 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×30
           - `apps` ×22
           - `debug` ×12
           - `primitives` ×8
           - `conversations` ×7
           - `tasks` ×4
-          - `infra` ×2
+          - `infra` ×3
           - `apps-core/app-launcher`
           - `config_v2/settings`
           - `history/dialog`
@@ -37866,7 +37908,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 240 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 241 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×67
           - `conversations` ×42
           - `tasks` ×22
@@ -37875,7 +37917,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page` ×12
           - `primitives` ×10
           - `active-data` ×7
-          - `infra` ×6
+          - `infra` ×7
           - `plugin-meta` ×5
           - `auth` ×4
           - `build` ×4
@@ -39617,13 +39659,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 63 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 64 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×23
           - `debug` ×13
           - `conversations` ×8
+          - `infra` ×4
           - `tasks` ×4
           - `build` ×3
-          - `infra` ×3
           - `active-data/commit-link`
           - `fields/date/table`
           - `framework/web-core`
@@ -42622,6 +42664,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthReport.Row` ← `debug.sentinel`
           - `HealthReport.Row` ← `infra.claude-cli.availability`
           - `HealthReport.Row` ← `infra.health`
+          - `HealthReport.Row` ← `infra.mcp.browser`
           - `HealthReport.Row` ← `reports.resource-errors`
           - `HealthReport.Row` ← `tasks.worktree-identity`
         - Uses: 25 symbols — full list in [`plugins/shell/plugins/health-report/REFERENCE.md`](../plugins/shell/plugins/health-report/REFERENCE.md)
@@ -42673,6 +42716,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/sentinel`
           - `infra/claude-cli/availability`
           - `infra/health`
+          - `infra/mcp/browser`
           - `reports/resource-errors`
           - `shell/global-action-bar`
           - `tasks/worktree-identity`
@@ -46650,7 +46694,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 659 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 660 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `apps` ×136
               - `primitives` ×124
               - `conversations` ×102
@@ -46658,7 +46702,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug` ×37
               - `ui` ×34
               - `framework` ×21
-              - `infra` ×19
+              - `infra` ×20
               - `tasks` ×19
               - `plugin-meta` ×17
               - `fields` ×16

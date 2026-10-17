@@ -74,9 +74,34 @@ export type AgentWritesRevertOutcome = z.infer<
 >;
 
 /**
- * Restore every entry of every ledger and clear what was restored. No body —
- * revert-all is the whole contract, and it is what lets a run repair one it did
- * not launch. Idempotent: empty ledgers return three empty arrays.
+ * Which automated sessions' writes a revert restores — always named, never
+ * "everything": several sessions write to one deploy at once (an agent's
+ * browser session per conversation, an e2e run), and a revert that is not
+ * scoped undoes the others' writes mid-session.
+ *
+ * - `source` — exactly one session (`mcp-browser:<conversationId>`).
+ * - `prefix` — a family of sessions (`e2e:`), which is what lets an e2e run
+ *   repair one it did not launch.
+ */
+export const agentWritesScopeSchema = z.discriminatedUnion("scope", [
+  z.object({ scope: z.literal("source"), source: z.string().min(1) }),
+  z.object({ scope: z.literal("prefix"), prefix: z.string().min(1) }),
+]);
+export type AgentWritesScope = z.infer<typeof agentWritesScopeSchema>;
+
+/** Whether an entry written by `source` falls in `scope`. */
+export function inAgentWritesScope(
+  scope: AgentWritesScope,
+  source: string,
+): boolean {
+  return scope.scope === "source"
+    ? source === scope.source
+    : source.startsWith(scope.prefix);
+}
+
+/**
+ * Restore every entry in `scope`, in every ledger, and clear what was
+ * restored. Idempotent: nothing in scope returns three empty arrays.
  *
  * The three arms are distinct outcomes, not degrees of failure. `diverged` is
  * an entry someone else wrote after the agent did — deliberately left alone,
@@ -85,5 +110,6 @@ export type AgentWritesRevertOutcome = z.infer<
  */
 export const revertAgentWrites = defineEndpoint({
   route: "POST /api/agent-writes/revert",
+  body: agentWritesScopeSchema,
   response: agentWritesRevertOutcomeSchema,
 });

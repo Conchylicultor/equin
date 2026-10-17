@@ -15,6 +15,7 @@ export interface DataViewEntry {
 }
 
 export const dataViews: DataViewEntry[] = [
+  { id: "agent-browser.sessions", pluginId: "infra.mcp.browser" },
   { id: "agent-launches", pluginId: "conversations.agents" },
   { id: "agents-list", pluginId: "conversations.agents" },
   { id: "all-conversations", pluginId: "conversations.all-conversations" },

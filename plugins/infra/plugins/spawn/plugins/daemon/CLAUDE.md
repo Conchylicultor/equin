@@ -92,6 +92,7 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
     - `debug/paging-probe`
     - `debug/sentinel`
     - `infra/launcher`
+    - `infra/mcp/browser`
     - `infra/spawn/daemon/background-arm`
     - `release`
 - Exemptions:

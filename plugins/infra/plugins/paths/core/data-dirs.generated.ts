@@ -46,6 +46,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/host/plugins/host-admission", id: "infra.host.host-admission", loader: () => import("@plugins/infra/plugins/host/plugins/host-admission/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/jobs", id: "infra.jobs", loader: () => import("@plugins/infra/plugins/jobs/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/launcher", id: "infra.launcher", loader: () => import("@plugins/infra/plugins/launcher/data-dirs"), dependsOn: [] },
+  { pluginPath: "infra/plugins/mcp/plugins/browser", id: "infra.mcp.browser", loader: () => import("@plugins/infra/plugins/mcp/plugins/browser/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/request-origin/plugins/agent-write-ledger", id: "infra.request-origin.agent-write-ledger", loader: () => import("@plugins/infra/plugins/request-origin/plugins/agent-write-ledger/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/secrets", id: "infra.secrets", loader: () => import("@plugins/infra/plugins/secrets/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/worktree", id: "infra.worktree", loader: () => import("@plugins/infra/plugins/worktree/data-dirs"), dependsOn: [] },
