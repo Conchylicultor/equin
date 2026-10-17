@@ -306,8 +306,8 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
   - Slots:
     - `Core.Root`
     - `Core.Boot`
-  - Slot contributors: 41 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Core.Root` ×39
+  - Slot contributors: 40 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Core.Root` ×38
     - `Core.Boot` ×2
 - Core:
   - Uses:
@@ -318,6 +318,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `framework/slot-declaration.slotIdFor`
     - `framework/tooling/collected-dir.defineCollectedDir`
   - Exports (types):
+    - `CompanionFlag`
     - `CompositionIdentity`
     - `Contribution`
     - `DeferredLoadState`
@@ -328,14 +329,18 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `PluginLoadError`
     - `PluginLoadReport`
     - `PluginRegistry`
+    - `RootContribution`
+    - `RootSlot`
     - `SealContributions`
     - `SealedComponent`
     - `SealedMeta`
     - `Slot`
+    - `SlotOptions`
     - `SlotReadDetail`
   - Exports (values):
     - `Core`
     - `createPluginRegistry`
+    - `defineRootSlot`
     - `defineSlot`
     - `defineSlotFacade`
     - `getDeferredLoadState`

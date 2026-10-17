@@ -24370,8 +24370,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 41 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×39
+        - Slot contributors: 40 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×38
           - `Core.Boot` ×2
       - Core:
         - Uses:
@@ -24382,6 +24382,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/slot-declaration.slotIdFor`
           - `framework/tooling/collected-dir.defineCollectedDir`
         - Exports (types):
+          - `CompanionFlag`
           - `CompositionIdentity`
           - `Contribution`
           - `DeferredLoadState`
@@ -24392,14 +24393,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PluginLoadError`
           - `PluginLoadReport`
           - `PluginRegistry`
+          - `RootContribution`
+          - `RootSlot`
           - `SealContributions`
           - `SealedComponent`
           - `SealedMeta`
           - `Slot`
+          - `SlotOptions`
           - `SlotReadDetail`
         - Exports (values):
           - `Core`
           - `createPluginRegistry`
+          - `defineRootSlot`
           - `defineSlot`
           - `defineSlotFacade`
           - `getDeferredLoadState`
@@ -37002,12 +37007,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Slots: `ErrorBoundary.Action`
         - Slot contributors: `ErrorBoundary.Action` ← `reports.launch-fix`
+        - Contributes: `SlotRender.ItemMiddleware`
         - Uses:
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
           - `primitives/css/text.Text`
           - `primitives/overlay/overlay-boundary.registerOverlayFallback`
-          - `primitives/slot-render.registerSlotItemMiddleware`
+          - `primitives/slot-render.SlotRender`
           - `primitives/ui-context.collectLineageMeta`
         - Exports (types): `BoundaryErrorReport`
         - Exports (values):
@@ -39066,7 +39072,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `Pane.Register`
         - Slot contributors: 92 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `Pane.Register` ×92
-        - Contributes: 116 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Contributes: 117 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `SlotRender.ItemMiddleware`
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountsPane.Actions` "title" → `PaneTitleItem`
           - `agentDetailPane.Actions` "title" → `PaneTitleItem`
@@ -39951,6 +39958,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempted by: `primitives/shortcuts` (0 debt)
     - **`slot-render`** — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
       - Web:
+        - Slots:
+          - `SlotRender.ListMiddleware`
+          - `SlotRender.ItemMiddleware`
+          - `SlotRender.ItemAttrs`
+        - Slot contributors:
+          - `SlotRender.ListMiddleware` ← `reorder.slot-middleware`
+          - `SlotRender.ItemMiddleware` ← `primitives.error-boundary`
+          - `SlotRender.ItemMiddleware` ← `primitives.pane`
+          - `SlotRender.ItemMiddleware` ← `primitives.ui-context.element-picker`
+          - `SlotRender.ItemMiddleware` ← `reorder.slot-middleware`
+          - `SlotRender.ItemAttrs` ← `primitives.ui-context.element-picker`
         - Uses:
           - `primitives/css/grow-relay.GrowRelay`
           - `primitives/css/ui-kit.ControlSize`
@@ -39983,12 +40001,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineOrderedDispatchSlot`
           - `defineRenderSlot`
           - `defineWrapperSlot`
-          - `registerSlotItemAttrs`
-          - `registerSlotItemMiddleware`
-          - `registerSlotListMiddleware`
           - `renderIsolated`
           - `RenderSlotSubIdContext`
           - `SlotItemLayout`
+          - `SlotRender`
           - `useDispatchOutcome`
       - Cross-plugin:
         - Uses tokens:
@@ -40009,7 +40025,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/google-maps`
           - `map`
           - `network/live`
-          - `reorder`
+          - `reorder/slot-middleware`
           - `reports`
           - `review/plugin-changes`
           - `runs`
@@ -40738,8 +40754,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`element-picker`** — Chrome-inspector-style element picker: <ElementPicker> arms a full-screen overlay, the user hovers and clicks any element, and onPick receives its <ui-context> metadata (plugin/slot lineage, selector, source). Also declares the <ui-context> inline chip, so whatever can make the token can display it, and stamps every slot contribution with its lineage while in the composition.
           - Web:
-            - Contributes: `InlineChip.Tag` "ui-context" → `UiContextTag`
-            - Uses: 33 symbols — full list in [`plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md`](../plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md)
+            - Contributes:
+              - `InlineChip.Tag` "ui-context" → `UiContextTag`
+              - `SlotRender.ItemAttrs`
+              - `SlotRender.ItemMiddleware`
+            - Uses: 32 symbols — full list in [`plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md`](../plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md)
               - `primitives/css/ui-kit` ×5
               - `primitives/ui-context` ×5
               - `primitives/css/coords` ×3
@@ -40747,7 +40766,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing` ×2
               - `primitives/icon-button` ×2
               - `primitives/overlay/tooltip` ×2
-              - `primitives/slot-render` ×2
               - `primitives/text-editor/inline-chip` ×2
               - `primitives/css/link-chip.LinkChip`
               - `primitives/css/pin.Pin`
@@ -40756,6 +40774,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/viewport-overlay.ViewportOverlay`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/overlay/popover.InlinePopover`
+              - `primitives/slot-render.SlotRender`
               - `ui/icons.Icon`
             - Exports (types): `ElementPickerProps`
             - Exports (values):
@@ -41168,18 +41187,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Web:
     - Contributes: 240 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
       - `ConfigV2.WebRegister` ×240
-    - Uses: 21 symbols — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `reorder/editor` ×5
-      - `config_v2` ×3
-      - `primitives/dom/layout-host` ×2
-      - `primitives/slot-render` ×2
+    - Uses:
+      - `config_v2.ConfigV2`
+      - `config_v2.useConfig`
+      - `config_v2.useSetConfig`
       - `primitives/css/badge.Badge`
       - `primitives/css/ui-kit.Button`
       - `primitives/dom/element-size.useResizeObserver`
+      - `primitives/dom/layout-host.flowAxis`
+      - `primitives/dom/layout-host.layoutHost`
       - `primitives/edit-mode-signal.useEditMode`
       - `primitives/latest-ref.useLatestRef`
       - `primitives/overlay/popover.InlinePopover`
       - `primitives/sortable-list.rectSortingStrategy`
+      - `reorder/editor.ReorderAreaContext`
+      - `reorder/editor.ReorderAreaCtxValue`
+      - `reorder/editor.ReorderEditor`
+      - `reorder/editor.ReorderEntry`
+      - `reorder/editor.SortableReorderItem`
       - `reorder/node-types.useReorderNodeTypes`
       - `ui/icons.Icon`
     - Exports (types):
@@ -41189,7 +41214,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `TopLevelEntry`
     - Exports (values):
       - `isNodeData`
+      - `ReorderItemMiddleware`
       - `ReorderLayoutContext`
+      - `ReorderListMiddleware`
       - `useReorderedEntries`
   - Server:
     - Contributes: 239 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
@@ -41213,6 +41240,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `conversations/conversation-view/artifacts`
       - `page/editor`
       - `primitives/collapsible-wrap`
+      - `reorder/slot-middleware`
   - Shared:
     - Exports (types): `ReorderableSlot`
     - Exports (values):
@@ -41371,6 +41399,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reorder/node-types.ReorderNodes`
           - Exemptions:
             - Exempted by: `apps/browser/shell` (0 debt)
+    - **`slot-middleware`** — Applies every render slot's committed layout (and hosts its drag surface): reorder's list and item middleware, contributed to slot-render as companions so they ship wherever slots render.
+      - Web:
+        - Contributes:
+          - `SlotRender.ListMiddleware`
+          - `SlotRender.ItemMiddleware`
+        - Uses:
+          - `primitives/slot-render.SlotRender`
+          - `reorder.ReorderItemMiddleware`
+          - `reorder.ReorderListMiddleware`
 
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
   - Web:
@@ -45162,6 +45199,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
+      - Web:
+        - Slots: `Icons.Root`
+        - Slot contributors:
+          - `Icons.Root` ← `ui.icons.sprites`
+          - `Icons.Root` ← `ui.tokens.icons`
+        - Contributes: `Core.Root`
+        - Exports (types):
+          - `IconMarkup`
+          - `IconMarkupReader`
+          - `IconProps`
+          - `RuntimeSymbolEntry`
+        - Exports (values):
+          - `hasRuntimeSymbol`
+          - `hasSprite`
+          - `Icon`
+          - `Icons`
+          - `IconScopeProvider`
+          - `IconSpriteSheet`
+          - `installRuntimeSymbolLoader`
+          - `provideRuntimeSymbols`
+          - `provideSprite`
+          - `useIconMarkup`
+          - `useIconStyle`
+          - `usePublishIconStyle`
+          - `useWantedSprites`
+          - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
@@ -45196,26 +45259,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
         - Exempted by: `ui/icons` (0 debt)
-      - Web:
-        - Exports (types):
-          - `IconMarkup`
-          - `IconMarkupReader`
-          - `IconProps`
-          - `RuntimeSymbolEntry`
-        - Exports (values):
-          - `hasRuntimeSymbol`
-          - `hasSprite`
-          - `Icon`
-          - `IconScopeProvider`
-          - `IconSpriteSheet`
-          - `installRuntimeSymbolLoader`
-          - `provideRuntimeSymbols`
-          - `provideSprite`
-          - `useIconMarkup`
-          - `useIconStyle`
-          - `usePublishIconStyle`
-          - `useWantedSprites`
-          - `useWantedStyleKeys`
       - Server:
         - Exports (types):
           - `IconBody`
@@ -45354,11 +45397,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SavedSymbolNameSchema`
         - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks. Builds the icon sprites from the Iconify JSON for the manifest's names — one <svg> of <symbol id="ms-<styleKey>-<name>"> per style key (material-symbols at 400, material-symbols-light at 300) plus a brands sprite — and serves the default style's as the resident icons.sprites value and every one at GET /api/icons/sprite/:hash/:key, immutable. Saved (user-picked) icons are runtime symbols: the resident icons.saved-sprites value draws every name a defineSavedIconSource source reports in the default style, and GET /api/icons/symbols/:hash/:key?names= serves any saved names in any style, immutable.
           - Web:
-            - Contributes: `Core.Root` → `IconSpriteHost`
+            - Contributes: `Icons.Root` → `IconSpriteHost`
             - Uses:
               - `infra/endpoints.fetchEndpoint`
               - `network/live.useLive`
               - `ui/icons.hasSprite`
+              - `ui/icons.Icons`
               - `ui/icons.IconSpriteSheet`
               - `ui/icons.installRuntimeSymbolLoader`
               - `ui/icons.provideRuntimeSymbols`
@@ -46365,9 +46409,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Tokens used by: `primitives/file-type`
         - **`font-family`** — Font-family token group (sans/serif/mono families, letter-spacing) with its customizer section.
           - Web:
+            - Slots: `FontFamily.Root`
+            - Slot contributors: `FontFamily.Root` ← `ui.tokens.font-family.google-fonts`
             - Contributes:
               - `ThemeEngine.TokenGroup` "Fonts"
               - `ThemeCustomizer.Section` "Fonts" → `FontFamilySection`
+              - `Core.Root`
             - Uses:
               - `primitives/collapsible.Collapsible`
               - `primitives/collapsible.CollapsibleContent`
@@ -46379,6 +46426,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
               - `ui/theme-engine/theme-customizer.TokenRows`
               - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+            - Exports (values): `FontFamily`
           - Core:
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `FontFamilyTokenValues`
@@ -46404,14 +46452,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/settings`
               - `music/chord-box`
               - `stats/cost`
+            - Imported by: `ui/tokens/font-family/google-fonts`
           - Plugins:
             - **`google-fonts`** — Loads the Google Fonts that the theme each scope selects asks for (the desktop's and every app's own), so a per-app font loads whether or not that app is focused.
               - Web:
-                - Contributes: `Core.Root` → `GoogleFontsLoader`
+                - Contributes: `FontFamily.Root` → `GoogleFontsLoader`
                 - Uses:
                   - `ui/theme-engine.ThemeEngine`
                   - `ui/theme-engine.useThemes`
                   - `ui/theme-engine.useThemeSelections`
+                  - `ui/tokens/font-family.FontFamily`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/font-family --font-sans`
         - **`icons`** — Icons token group (family — Material Symbols or their Lucide counterparts — and the shape, fill, active fill and stroke of the Material Symbols a scope draws; Material, outline, filled when active, by default) with its customizer section, and the bridge that publishes each painted theme scope's icon style to the icons primitive.
@@ -46419,7 +46469,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `ThemeEngine.TokenGroup` "Icons"
               - `ThemeCustomizer.Section` "Icons" → `IconsSection`
-              - `Core.Root` → `IconThemeBridge`
+              - `Icons.Root` → `IconThemeBridge`
             - Uses:
               - `apps-core.Apps`
               - `apps-core/theme-scope.useRootThemeScope`
@@ -46434,6 +46484,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/live-state.foldResource`
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
+              - `ui/icons.Icons`
               - `ui/icons.usePublishIconStyle`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.useResolvedColorMode`

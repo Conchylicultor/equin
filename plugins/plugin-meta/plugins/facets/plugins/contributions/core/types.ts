@@ -20,6 +20,13 @@ export interface Contribution {
    * Unset when the slot is self-defined or its owner can't be resolved.
    */
   definerPluginId?: string;
+  /**
+   * The contribution is a COMPANION of the slot's owner (`companion: true`,
+   * accepted only by a slot declared `companions: true`): it ships wherever the
+   * owner ships. Read from the inline literal; the closure engine turns it into
+   * a hard owner → contributor edge.
+   */
+  companion?: true;
 }
 
 /**
@@ -92,6 +99,8 @@ export interface DocMetaContribution {
    * runtime contributions (only optional structurally).
    */
   pluginId?: string;
+  /** The runtime contribution carries `companion: true` (see {@link Contribution.companion}). */
+  companion?: true;
 }
 
 export interface ContributionsFacetData {

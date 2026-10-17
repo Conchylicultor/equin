@@ -5,5 +5,7 @@ import { spacerNodeType } from "./internal/node-type";
 export default {
   description:
     "Spacer reorder node type: a blank draggable gap (leaf), with an 'Add Spacer' insert affordance.",
-  contributions: [ReorderNodes.NodeType({ nodeType: spacerNodeType })],
+  contributions: [
+    ReorderNodes.NodeType({ nodeType: spacerNodeType, companion: true }),
+  ],
 } satisfies PluginDefinition;

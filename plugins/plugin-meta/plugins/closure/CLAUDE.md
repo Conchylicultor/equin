@@ -80,6 +80,20 @@ Two edge kinds, both indexed forward + reverse:
   half — so without this edge a bundle silently ships the class and not the
   colour. `Edge.via` says which (`"import"` wins when both hold), so an
   inclusion path can name a token instead of a phantom import.
+  Also `A → B` when B is a **companion** of A: B contributes `companion: true`
+  to a slot A opened with `companions: true` (`defineSlot({ companions: true })`,
+  or a capability's root slot from `defineRootSlot()`). The edge runs owner →
+  contributor, the reverse of the soft contribution edge (which stays), so a
+  bundle holding the owner holds its companions. It is for what a capability
+  needs at runtime and cannot import, usually because the import would be a
+  cycle: the sprite sheet `<Icon>` draws from (`ui.icons` ← `ui.icons.sprites`),
+  the middleware every slot renders through (`primitives.slot-render` ←
+  `reorder.slot-middleware`, `primitives.error-boundary`). Every OTHER
+  contribution to the same slot stays an opt-in option — requiredness is per
+  contribution, with the owner's consent (an unflagged slot rejects the field
+  at the type level). `via` is `"companion"` (import > token > companion when
+  several hold). The flag is read from the inline literal only; the
+  `companions-visible` check fails on one built elsewhere.
 - **soft** (prunable) — `A → B` when A *contributes* to a slot **group** B owns.
   Slot ownership comes from the `slots` facet (`groupName`, first-writer-wins,
   `_runtimeOnly` slots skipped); contributions from `contributions.static`

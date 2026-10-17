@@ -25,9 +25,9 @@ import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import {
-  getSlotItemAttrs,
-  getSlotItemMiddlewares,
-  getSlotListMiddlewares,
+  useSlotItemAttrs,
+  useSlotItemMiddlewares,
+  useSlotListMiddlewares,
 } from "./registry";
 import { DispatchOutcomeContext } from "./dispatch-outcome";
 import { useSlotItemLayout } from "./item-layout";
@@ -75,7 +75,7 @@ import {
  *    slack with no such widget inside it, and reorder's own (block-axis) reading
  *    of the same flag for its edit-mode wrapper.
  *
- * 2. **Identity.** It is where `registerSlotItemAttrs` consumers stamp what this
+ * 2. **Identity.** It is where `SlotRender.ItemAttrs` contributors stamp what this
  *    contribution IS. The box is drawn by the slot but belongs to the
  *    contribution, and it is usually a little bigger than what the contribution
  *    paints inside it — so anything describing a contribution has to describe
@@ -109,7 +109,7 @@ function ContributionBox({
     cell && (declared !== null ? declared === "row" : cell.horizontal)
       ? cell
       : null;
-  const attrs = getSlotItemAttrs({ slotId, contribution, boxless: !rowCell });
+  const attrs = useSlotItemAttrs({ slotId, contribution, boxless: !rowCell });
   if (!cell && !attrs) return <>{children}</>;
   // A `display:contents` box generates none, so it has nothing to grow and stays
   // out of the chain entirely — an ask crosses it for free (context passes
@@ -169,9 +169,39 @@ export interface RenderSlotConfig<P> {
 }
 
 /**
- * Wraps a rendered node in the registered item middlewares (error-boundary
- * isolation, reorder item handle, …) and then in the contribution's own box.
- * Shared by `.Render`, `.Mount` and `.Dispatch`.
+ * The contributed item middlewares (`SlotRender.ItemMiddleware`: error-boundary
+ * isolation, reorder item handle, …) folded around one contribution, lowest
+ * priority outermost. A component rather than a loop in `applyItemMiddlewares`
+ * because the middlewares are slot contributions, read with a hook — and
+ * `applyItemMiddlewares` / `renderIsolated` are plain functions their callers
+ * use from anywhere in a render.
+ */
+function ItemMiddlewares({
+  slotId,
+  contribution,
+  children,
+}: {
+  slotId: string;
+  contribution: Contribution;
+  children: ReactNode;
+}) {
+  const itemMws = useSlotItemMiddlewares();
+  let node = children;
+  for (let i = itemMws.length - 1; i >= 0; i--) {
+    const Mw = itemMws[i]!.Component;
+    const captured = node;
+    node = (
+      <Mw slotId={slotId} contribution={contribution}>
+        {captured}
+      </Mw>
+    );
+  }
+  return <>{node}</>;
+}
+
+/**
+ * Wraps a rendered node in the contributed item middlewares and then in the
+ * contribution's own box. Shared by `.Render`, `.Mount` and `.Dispatch`.
  *
  * The box goes OUTSIDE the middlewares and is applied here rather than by the
  * caller, so that every contribution rendered anywhere in the app ends up with
@@ -184,19 +214,11 @@ export function applyItemMiddlewares(
   contribution: Contribution,
   cell?: { horizontal: boolean; fill: boolean },
 ): ReactNode {
-  const itemMws = getSlotItemMiddlewares();
-  for (let i = itemMws.length - 1; i >= 0; i--) {
-    const Mw = itemMws[i]!.Component;
-    const captured = node;
-    node = (
-      <Mw slotId={slotId} contribution={contribution}>
-        {captured}
-      </Mw>
-    );
-  }
   return (
     <ContributionBox slotId={slotId} contribution={contribution} cell={cell}>
-      {node}
+      <ItemMiddlewares slotId={slotId} contribution={contribution}>
+        {node}
+      </ItemMiddlewares>
     </ContributionBox>
   );
 }
@@ -277,6 +299,7 @@ export function defineRenderSlot<P>(
     const controlSize = hostControlSize ?? declaredControlSize;
     const rawContributions = useRawContributions(slot);
     const cleanItems = slot.useContributions();
+    const listMws = useSlotListMiddlewares();
 
     const cleanById = useMemo(
       () => new Map(cleanItems.map((item) => [item.id, item])),
@@ -341,7 +364,6 @@ export function defineRenderSlot<P>(
     const defaultRendering = <>{rawContributions.map((c) => renderItem(c))}</>;
 
     let result: ReactNode = defaultRendering;
-    const listMws = getSlotListMiddlewares();
     for (let i = listMws.length - 1; i >= 0; i--) {
       const Mw = listMws[i]!.Component;
       const captured = result;
@@ -737,7 +759,7 @@ export function defineOrderedDispatchSlot<
 }
 
 /**
- * Render one contribution's component wrapped in the registered item middlewares
+ * Render one contribution's component wrapped in the contributed item middlewares
  * (error-boundary isolation). For bespoke selection that `.Render`/`.Dispatch`
  * can't express (e.g. a tiered `supports()` probe). STILL ISOLATED — not an
  * escape from isolation.

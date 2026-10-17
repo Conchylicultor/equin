@@ -22,8 +22,9 @@ function pushUnique(
  * Build the hard/soft cross-plugin dependency graph from facet data already
  * serialized into the tree. Pure and browser-safe — reads only `node.facets`.
  *
- * Hard edges come from `cross-refs.apiUses` imports and `cross-refs.tokenUses`
- * (styling with a token another plugin's group supplies — see below). Imports are unioned across the runtimes
+ * Hard edges come from `cross-refs.apiUses` imports, `cross-refs.tokenUses`
+ * (styling with a token another plugin's group supplies) and companion
+ * contributions (a slot owner → the contributor it cannot work without) — see below. Imports are unioned across the runtimes
  * that SHIP (`SHIPPED_RUNTIME_FOLDERS` — the deployed app's own folders; `e2e`,
  * `provision` and `cli` are developer surfaces and are not reasons to bundle
  * anything), self-edges dropped — precise & nested-aware after the cross-refs
@@ -100,12 +101,14 @@ export function classifyEdges(tree: PluginTree): EdgeGraph {
   const viaImport = new Set<string>();
   for (const [from, tos] of hardForward)
     for (const to of tos) viaImport.add(`${from}\0${to}`);
+  const viaToken = new Set<string>();
   for (const node of tree.byDir.values()) {
     const crossRefs = getFacet(node, crossRefsFacetDef);
     if (!crossRefs) continue;
     for (const use of crossRefs.tokenUses) {
       if (use.plugin === node.id) continue; // self-edge
       if (!hardForward.has(use.plugin)) continue; // unknown target — inert
+      viaToken.add(`${node.id}\0${use.plugin}`);
       pushUnique(hardForward, node.id, use.plugin);
       pushUnique(hardReverse, use.plugin, node.id);
     }
@@ -140,6 +143,28 @@ export function classifyEdges(tree: PluginTree): EdgeGraph {
     }
   }
 
+  // ── Hard edges from companions: the slot's OWNER needs the contributor ──
+  //
+  // A contribution flagged `companion: true` (accepted only by a slot declared
+  // `companions: true`) is one its slot's owner cannot work without, though it
+  // never imports it — usually because it cannot: the sprite sheet `<Icon>`
+  // draws from sits above `ui.icons`, so the import would be a cycle. The edge
+  // runs owner → contributor, the reverse of the soft contribution edge (which
+  // stays): a bundle holding the owner holds its companions. Every other
+  // contribution to the same slot remains an opt-in option.
+  for (const node of tree.byDir.values()) {
+    const data = getFacet(node, contributionsFacetDef);
+    if (!data) continue;
+    for (const contribution of data.static) {
+      if (!contribution.companion) continue;
+      const head = contribution.slot.split(".")[0];
+      const owner = head ? groupOwner.get(head) : undefined;
+      if (!owner || owner === node.id) continue;
+      pushUnique(hardForward, owner, node.id);
+      pushUnique(hardReverse, node.id, owner);
+    }
+  }
+
   // ── Derived flat edge list ────────────────────────────────────────────
   const edges: Edge[] = [];
   for (const [from, tos] of hardForward)
@@ -148,7 +173,11 @@ export function classifyEdges(tree: PluginTree): EdgeGraph {
         from,
         to,
         kind: "hard",
-        via: viaImport.has(`${from}\0${to}`) ? "import" : "token",
+        via: viaImport.has(`${from}\0${to}`)
+          ? "import"
+          : viaToken.has(`${from}\0${to}`)
+            ? "token"
+            : "companion",
       });
   for (const [from, tos] of softForward)
     for (const to of tos) edges.push({ from, to, kind: "soft" });

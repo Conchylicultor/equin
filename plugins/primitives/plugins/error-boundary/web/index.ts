@@ -1,6 +1,6 @@
 import { createElement } from "react";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { registerSlotItemMiddleware } from "@plugins/primitives/plugins/slot-render/web";
+import { SlotRender } from "@plugins/primitives/plugins/slot-render/web";
 import { registerOverlayFallback } from "@plugins/primitives/plugins/overlay/plugins/overlay-boundary/web";
 import { ErrorBoundaryMiddleware } from "./internal/error-boundary-middleware";
 import { CrashFallback } from "./components/crash-fallback";
@@ -17,10 +17,6 @@ export default {
   register: [
     {
       register() {
-        registerSlotItemMiddleware({
-          priority: 100,
-          Component: ErrorBoundaryMiddleware,
-        });
         // Inject the rich CrashFallback into the overlay-boundary leaf so a crash
         // inside transient overlay content flows through the same reporting +
         // ErrorBoundary.Action infrastructure. The leaf sits below ui-kit, so
@@ -42,6 +38,14 @@ export default {
       },
     },
   ],
-  contributions: [],
+  contributions: [
+    // A companion: wherever slots render, a crashing contribution must stay
+    // contained to its own box rather than take the surface down with it.
+    SlotRender.ItemMiddleware({
+      priority: 100,
+      Component: ErrorBoundaryMiddleware,
+      companion: true,
+    }),
+  ],
   slots: ErrorBoundary,
 } satisfies PluginDefinition;

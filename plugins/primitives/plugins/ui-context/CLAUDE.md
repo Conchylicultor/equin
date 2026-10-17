@@ -36,7 +36,7 @@ split is deliberate:
   supplies only the grammar it stamps (`contributionNodeAttrs`,
   `appendLineage`).
 
-  It hands slot-render **attributes** (`registerSlotItemAttrs`), which slot-render
+  It hands slot-render **attributes** (a `SlotRender.ItemAttrs` contribution), which slot-render
   stamps on the one element it draws around each contribution. Not a wrapper: a
   wrapper lands wherever the plugin providing it sits, and this one sat inside the
   layout cell a row slot draws — so the slack around a small widget, most of what

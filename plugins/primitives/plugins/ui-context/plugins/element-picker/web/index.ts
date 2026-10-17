@@ -7,7 +7,11 @@ import { UI_CONTEXT_RE } from "@plugins/primitives/plugins/ui-context/core";
 import { UiContextTag } from "./components/ui-context-tag";
 // Side-effect: stamps every slot contribution with its lineage. Opt-in on
 // purpose — see the module — so it rides this barrel, never the parent's.
-import "./internal/marker-middleware";
+import { SlotRender } from "@plugins/primitives/plugins/slot-render/web";
+import {
+  markerAttrs,
+  PluginMarkerMiddleware,
+} from "./internal/marker-middleware";
 
 export { ElementPicker } from "./components/element-picker";
 export type { ElementPickerProps } from "./components/element-picker";
@@ -33,5 +37,12 @@ export default {
         component: UiContextTag,
       }),
     ),
+    // Stamp every slot contribution with its lineage — opt-in (not companions):
+    // the cost is paid only where something that can pick is in the composition.
+    SlotRender.ItemAttrs({ attrs: markerAttrs }),
+    SlotRender.ItemMiddleware({
+      priority: 50,
+      Component: PluginMarkerMiddleware,
+    }),
   ],
 } satisfies PluginDefinition;

@@ -1,4 +1,4 @@
-// @hash 42ec829e4e22
+// @hash 512cfd42e5e8
 {
   "manifests": [
     {
@@ -393,13 +393,8 @@
       "entryPoints": [
         "apps-core.layout.**",
         "infra.health.**",
-        "shell.toast.**",
-        "reorder.**",
         "ui.theme-engine.**",
-        "ui.tokens.font-family.google-fonts.**",
-        "primitives.dom.overscroll-hint.**",
-        "ui.icons.sprites.**",
-        "ui.tokens.icons.**"
+        "primitives.dom.overscroll-hint.**"
       ],
       "selectedContributors": [],
       "extends": [],

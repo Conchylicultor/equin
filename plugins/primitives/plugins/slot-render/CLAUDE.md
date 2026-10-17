@@ -136,6 +136,24 @@ middleware: ordering, hiding and spacers all silently ignored).
 Nothing about the value names `adaptive-bar`. Any host that owns its items'
 boxes says the same thing.
 
+## Middleware is contributed, not registered
+
+What every slot renders through is three declared slots this plugin owns —
+`SlotRender.ListMiddleware` (wraps a render slot's whole list),
+`SlotRender.ItemMiddleware` (wraps each contribution, on every path) and
+`SlotRender.ItemAttrs` (stamps the box, below) — read with hooks at render
+time, lowest `priority` outermost. They replaced an imperative module registry
+(`registerSlot*Middleware`), which no tool could see: `reorder` registered its
+layout middleware there, nothing imported it, and served compositions shipped
+without it — every slot in raw registration order.
+
+All three accept **companions** (`companions: true`): a contribution every slot
+needs says `companion: true` and ships wherever slot-render does (the error
+boundary, reorder's middleware via `reorder/plugins/slot-middleware`). One that
+only polishes or describes (the element picker's lineage marker, the pane title
+guard) is an ordinary contribution and ships with its own plugin. Reading them
+needs a `PluginProvider` — so does every slot.
+
 ## The contribution box, and stamping it
 
 Every contribution rendered by any path gets at most ONE element the slot owns —
@@ -143,7 +161,7 @@ its **box** (`ContributionBox`). On `.Render` that box is the layout cell
 described above; `.Mount` / `.Dispatch` draw no cell, so their box exists only if
 something is stamped on it, and otherwise no element is emitted at all.
 
-`registerSlotItemAttrs(fn)` is how a plugin describes contributions: it returns
+`SlotRender.ItemAttrs({ attrs: fn })` is how a plugin describes contributions: `fn` returns
 **DOM attributes**, and slot-render puts them on the box. `fn` is handed
 `{ slotId, contribution, boxless }` and must be pure — it runs once per
 contribution per render.
@@ -235,6 +253,17 @@ the outcome too, with no separate code path.
 - Description: Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
 - Load-bearing: yes
 - Web:
+  - Slots:
+    - `SlotRender.ListMiddleware`
+    - `SlotRender.ItemMiddleware`
+    - `SlotRender.ItemAttrs`
+  - Slot contributors:
+    - `SlotRender.ListMiddleware` ← `reorder.slot-middleware`
+    - `SlotRender.ItemMiddleware` ← `primitives.error-boundary`
+    - `SlotRender.ItemMiddleware` ← `primitives.pane`
+    - `SlotRender.ItemMiddleware` ← `primitives.ui-context.element-picker`
+    - `SlotRender.ItemMiddleware` ← `reorder.slot-middleware`
+    - `SlotRender.ItemAttrs` ← `primitives.ui-context.element-picker`
   - Uses:
     - `primitives/css/grow-relay.GrowRelay`
     - `primitives/css/ui-kit.ControlSize`
@@ -267,12 +296,10 @@ the outcome too, with no separate code path.
     - `defineOrderedDispatchSlot`
     - `defineRenderSlot`
     - `defineWrapperSlot`
-    - `registerSlotItemAttrs`
-    - `registerSlotItemMiddleware`
-    - `registerSlotListMiddleware`
     - `renderIsolated`
     - `RenderSlotSubIdContext`
     - `SlotItemLayout`
+    - `SlotRender`
     - `useDispatchOutcome`
 - Cross-plugin:
   - Uses tokens:
@@ -293,7 +320,7 @@ the outcome too, with no separate code path.
     - `integrations/google-maps`
     - `map`
     - `network/live`
-    - `reorder`
+    - `reorder/slot-middleware`
     - `reports`
     - `review/plugin-changes`
     - `runs`

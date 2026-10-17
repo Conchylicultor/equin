@@ -1,7 +1,5 @@
-import {
-  Core,
-  type PluginDefinition,
-} from "@plugins/framework/plugins/web-sdk/core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { Icons } from "@plugins/ui/plugins/icons/web";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { tokenGroupMatchesSearch } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
@@ -24,6 +22,6 @@ export default {
       component: IconsSection,
       useAvailable: ({ search }) => tokenGroupMatchesSearch(iconsGroup, search),
     }),
-    Core.Root({ component: IconThemeBridge }),
+    Icons.Root({ component: IconThemeBridge, companion: true }),
   ],
 } satisfies PluginDefinition;

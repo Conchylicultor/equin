@@ -1,6 +1,7 @@
 import type { ControlSize } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   defineRenderSlot,
+  SlotRender,
   type RenderSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
 import { subscribeSlotsDeclared } from "@plugins/framework/plugins/slot-declaration/core";
@@ -8,6 +9,7 @@ import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/cor
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { PaneHeaderItem } from "./components/pane-header-item";
 import { PaneTitleItem } from "./components/pane-title";
+import { paneTitleSlotGuard } from "./components/pane-title-guard";
 
 /**
  * A pane header: ONE reorderable render slot of {@link PaneHeaderItem}, rendered
@@ -89,10 +91,18 @@ export function definePaneHeaderSlot(
  */
 export const paneHeaderContributions: Contribution[] = [];
 
+// The runtime half of "the pane header is ONE slot": a render slot mounted
+// inside the title cell throws (see `pane-title-guard.tsx`). It lives in the
+// same live array, first, because that array IS this plugin's contributions.
+// Not a companion of slot-render: the guard only matters where panes exist,
+// and it ships with them.
+const titleGuard = SlotRender.ItemMiddleware(paneTitleSlotGuard);
+
 const titleItems = new Map<PaneHeaderSlot, Contribution>();
 
 subscribeSlotsDeclared((naming) => {
   paneHeaderContributions.length = 0;
+  paneHeaderContributions.push(titleGuard);
   const seen = new Set<PaneHeaderSlot>();
   for (const entry of naming.declarations()) {
     const header = headerSlots.get(entry.slot);

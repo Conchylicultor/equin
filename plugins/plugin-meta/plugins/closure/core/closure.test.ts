@@ -987,3 +987,56 @@ test("the website bundles the token groups it paints with, none listed by name",
   ])
     expect(comp.bundle.has(asPluginId(id))).toBe(true);
 });
+
+// ── Companion contributions ───────────────────────────────────────────────────
+//
+// A contribution flagged `companion: true` to a slot whose owner opened it with
+// `companions: true` ships wherever the owner does — a hard owner → contributor
+// edge. Asserted on the real tree: these are the plugins `served-baseline` used
+// to hand-list after equin.ai shipped without them (blank icons, slots ignoring
+// their committed layouts).
+test("a companion contribution is a hard edge from the slot's owner", () => {
+  const pairs: [string, string][] = [
+    ["ui.icons", "ui.icons.sprites"],
+    ["ui.icons", "ui.tokens.icons"],
+    ["ui.tokens.font-family", "ui.tokens.font-family.google-fonts"],
+    ["primitives.slot-render", "reorder.slot-middleware"],
+    ["primitives.slot-render", "primitives.error-boundary"],
+    ["reorder.node-types", "reorder.node-types.spacer"],
+  ];
+  for (const [owner, companion] of pairs) {
+    const from = asPluginId(owner);
+    const to = asPluginId(companion);
+    expect(graph.hardForward.get(from)).toContain(to);
+    expect(graph.hardReverse.get(to)).toContain(from);
+    const via = graph.edges.find(
+      (e) => e.from === from && e.to === to && e.kind === "hard",
+    )?.via;
+    expect(via).toBe("companion");
+  }
+});
+
+test("an ordinary contribution to a companion slot stays an opt-in option", () => {
+  // The element picker's lineage marker contributes to slot-render's middleware
+  // slots WITHOUT the flag: it is a soft option, never pulled in by slot-render.
+  const SLOT_RENDER = asPluginId("primitives.slot-render");
+  const PICKER = asPluginId("primitives.ui-context.element-picker");
+  expect(graph.hardForward.get(SLOT_RENDER)).not.toContain(PICKER);
+  expect(graph.softForward.get(PICKER)).toContain(SLOT_RENDER);
+});
+
+test("the website bundles its runtime companions, none listed by name", () => {
+  const comp = resolveComposition(graph, {
+    name: "website-probe",
+    entryPoints: [asPluginId("apps.website.**")],
+    selectedContributors: [],
+  });
+  for (const id of [
+    "ui.icons.sprites",
+    "ui.tokens.icons",
+    "reorder",
+    "reorder.slot-middleware",
+    "reorder.node-types.spacer",
+  ])
+    expect(comp.bundle.has(asPluginId(id))).toBe(true);
+});

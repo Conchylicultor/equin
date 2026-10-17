@@ -33,6 +33,16 @@ export interface SlotMeta {
    * Set through `defineRenderSlot({ partOfComponent: true })`.
    */
   partOfComponent?: boolean;
+  /**
+   * The slot's owner accepts COMPANIONS: a contribution here may say
+   * `companion: true`, and then it ships in every composition that ships the
+   * owner — the closure engine reads the flag statically and turns it into a
+   * hard owner → contributor edge. For runtime companions nothing imports (the
+   * sprite sheet `<Icon>` draws from, the middleware every slot renders
+   * through). Every other contribution to the slot stays opt-in. Set through
+   * `defineSlot({ companions: true })`.
+   */
+  companions?: true;
 }
 
 /**

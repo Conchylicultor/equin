@@ -1,6 +1,18 @@
 export { webCollectedDir } from "./collected-dir";
-export { defineSlot, defineSlotFacade, Core, slots } from "./slots";
-export type { Slot } from "./slots";
+export {
+  defineSlot,
+  defineSlotFacade,
+  defineRootSlot,
+  Core,
+  slots,
+} from "./slots";
+export type {
+  Slot,
+  SlotOptions,
+  CompanionFlag,
+  RootSlot,
+  RootContribution,
+} from "./slots";
 export { UNSAFE_unsealSlotComponent } from "./sealed-component";
 export type {
   SealedComponent,

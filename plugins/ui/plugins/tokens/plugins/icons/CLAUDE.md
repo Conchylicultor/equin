@@ -39,7 +39,7 @@ primitive.
   - Contributes:
     - `ThemeEngine.TokenGroup` "Icons"
     - `ThemeCustomizer.Section` "Icons" → `IconsSection`
-    - `Core.Root` → `IconThemeBridge`
+    - `Icons.Root` → `IconThemeBridge`
   - Uses:
     - `apps-core.Apps`
     - `apps-core/theme-scope.useRootThemeScope`
@@ -54,6 +54,7 @@ primitive.
     - `primitives/live-state.foldResource`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
+    - `ui/icons.Icons`
     - `ui/icons.usePublishIconStyle`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine.useResolvedColorMode`

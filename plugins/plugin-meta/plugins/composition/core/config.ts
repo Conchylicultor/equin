@@ -316,69 +316,40 @@ export const compositionsConfig = defineConfig({
         subsystem("design-system", ["primitives.css"]),
         subsystem("mcp", ["infra.mcp"]),
         // The reusable baseline EVERY gateway-served app composition `extends`:
-        // the mandatory Core.Root app SURFACE renderer (apps-core.layout —
-        // AppsLayout: the tab bar / rail / tab surface; without it a filtered app
-        // boots to a black screen, since it's a graph dead-end nothing hard-imports
-        // and so its Core.Root contribution silently vanishes — same "force it in"
-        // rationale as the toast host below), the liveness/readiness endpoint the
-        // gateway probes, the toast HOST (forced alongside health, whose Core.Root
-        // watchers dispatch toasts — without the host mounted those toasts would
-        // silently vanish), plus the runtime theme engine (its whole subtree: the
-        // quick-theme popover and the gallery a served app switches themes with),
-        // and the REORDER layer that applies each
-        // slot's committed layout (same dead-end shape again: reorder contributes
-        // middleware INTO slot-render, which never imports it back, so a soft-only
-        // reorder is left out of every bundle — and its absence does not remove a
-        // feature, it silently re-renders every slot in raw registration order and
-        // drops the authored `config/**/<slot>.jsonc` layouts; equin.ai shipped
-        // that way). Whole `reorder.**` subtree so the node-type renderers come
-        // too — a layout naming a spacer or a header group needs them to render.
-        // The cost is ~6 plugins on a lean app. It used to be ~41: reorder's list
-        // middleware hard-imported `config_v2/staging` to stage "everyone scope"
-        // edits, and that edge dragged `database`, `infra.jobs` and
-        // `infra.worktree` (staging landed a promoted default by spinning a
-        // worktree and pushing) into every served bundle — which is what made
-        // adding reorder here fail `composition-closure` against the
-        // `agent-runtime` exclusion. Staging is now deleted, so the taproot is
-        // gone. What remains is reorder's own DnD editing machinery
-        // (`reorder.editor`, `primitives.sortable-list`, dnd-kit): the list
-        // middleware both APPLIES a layout and hosts the drag surface, so a
-        // released app cannot take one without the other. Splitting those two
-        // layers is the filed follow-up.
+        // what BEING SERVED needs, and nothing a capability needs. Each entry is
+        // a dead end nothing hard-imports, mounted from Core.Root:
+        //
+        // - the app SURFACE renderer (apps-core.layout — AppsLayout: the tab bar
+        //   / rail / tab surface; without it a filtered app boots to a black
+        //   screen);
+        // - the liveness/readiness endpoint the gateway probes (infra.health,
+        //   which also brings the toast host it dispatches through, by import);
+        // - the runtime theme engine (its whole subtree: the quick-theme popover
+        //   and the gallery a served app switches themes with);
+        // - the app's own rubber-band (overscroll-hint). Left out, a served app
+        //   falls back to the browser's native bounce, which pulls the whole
+        //   document off the top and shows the `html` loading floor (`Canvas`,
+        //   near-black) above the page instead of the page's own top edge.
+        //   equin.ai shipped that way.
+        //
+        // What a CAPABILITY needs at runtime is never listed here: it is a
+        // derived edge. A plugin that paints with a token group's var gets a hard
+        // edge to the group (cross-refs `tokenUses`). A companion — contributed
+        // with `companion: true` to a slot its owner opened with
+        // `companions: true` — ships with that owner: the icon sprite sheet and
+        // style bridge with `ui.icons`, the Google Fonts loader with the
+        // font-family group, reorder's layout middleware, its node types and the
+        // error boundary with slot-render. Each of those used to be hand-listed
+        // here after equin.ai shipped without it (blank icons, slots ignoring
+        // their committed layouts).
+        //
         // Entry points (not contributors) so they're forced into the hard closure
         // unconditionally; the theme-customizer UI stays opt-in/soft.
         subsystem("served-baseline", [
           "apps-core.layout",
           "infra.health",
-          "shell.toast",
-          "reorder",
           "ui.theme-engine",
-          // No token group is listed: a plugin that paints with a group's var
-          // (a `var(--x)` or a Tailwind class compiling to one) has a hard edge
-          // to the group's plugin, derived from its source (cross-refs
-          // `tokenUses` → `classifyEdges`), so every group a bundle paints with
-          // ships with it. Hand-listing them is how `--chart-*` and
-          // `--categorical-*` went missing on equin.ai.
-          //
-          // Google Fonts is not a token: it loads the families a theme names,
-          // from Core.Root, imported by nobody — the same dead-end shape as the
-          // toast host.
-          "ui.tokens.font-family.google-fonts",
-          // The app's own rubber-band, installed from Core.Root and imported by
-          // nobody — the same dead-end shape as the toast host and reorder. Left
-          // out, a served app falls back to the browser's native bounce, which
-          // pulls the whole document off the top and shows the `html` loading
-          // floor (`Canvas`, near-black) above the page instead of the page's
-          // own top edge. equin.ai shipped that way.
           "primitives.dom.overscroll-hint",
-          // Icons: `<Icon>` draws `<use href>` into a sprite sheet that
-          // `ui.icons.sprites` mounts, and `ui.tokens.icons` publishes each
-          // scope's icon style. Both are wired into `ui.icons`, never imported
-          // by it, so a bundle that draws icons does not pull them in: without
-          // them every icon renders as an empty box. equin.ai shipped that way —
-          // the header's Improve sparkle was blank.
-          "ui.icons.sprites",
-          "ui.tokens.icons",
         ]),
 
         // ── Packs: reusable contributor sets apps opt into via `extends` ────────

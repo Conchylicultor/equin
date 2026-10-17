@@ -7,8 +7,7 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import { collectMeta } from "@plugins/primitives/plugins/ui-context/web";
-// Side effect: registers the picker's lineage attributes with slot-render.
-import "../internal/marker-middleware";
+import { pickerPlugin } from "./picker-plugin";
 
 afterEach(cleanup);
 
@@ -34,7 +33,7 @@ function plugin(slot: typeof rowSlot): LoadedPlugin {
 describe("a contribution's own box resolves to the contribution", () => {
   it("attributes the layout cell — the ring of slack around a small widget", () => {
     render(
-      <PluginProvider plugins={[plugin(rowSlot)]}>
+      <PluginProvider plugins={[pickerPlugin, plugin(rowSlot)]}>
         {/* Inline styles, not classes: jsdom computes these, and `.Render` only
             draws its flex cell when it MEASURES a flex-row host. */}
         <div style={{ display: "flex", flexDirection: "row" }}>
@@ -64,7 +63,7 @@ describe("a contribution's own box resolves to the contribution", () => {
 
   it("marks the box boxless when the slot draws no layout cell", () => {
     render(
-      <PluginProvider plugins={[plugin(listSlot)]}>
+      <PluginProvider plugins={[pickerPlugin, plugin(listSlot)]}>
         <div>
           <listSlot.Render />
         </div>

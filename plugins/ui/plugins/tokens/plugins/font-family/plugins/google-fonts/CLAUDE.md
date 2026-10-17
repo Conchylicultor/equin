@@ -6,11 +6,12 @@
 
 - Description: Loads the Google Fonts that the theme each scope selects asks for (the desktop's and every app's own), so a per-app font loads whether or not that app is focused.
 - Web:
-  - Contributes: `Core.Root` → `GoogleFontsLoader`
+  - Contributes: `FontFamily.Root` → `GoogleFontsLoader`
   - Uses:
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine.useThemes`
     - `ui/theme-engine.useThemeSelections`
+    - `ui/tokens/font-family.FontFamily`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/font-family --font-sans`
 

@@ -9,8 +9,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { Component, type ReactNode } from "react";
-import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { registerSlotItemMiddleware } from "@plugins/primitives/plugins/slot-render/web";
+import {
+  PluginProvider,
+  type Contribution,
+  type LoadedPlugin,
+} from "@plugins/framework/plugins/web-sdk/core";
+import { SlotRender } from "@plugins/primitives/plugins/slot-render/web";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
@@ -42,12 +46,26 @@ class Boundary extends Component<
     );
   }
 }
-registerSlotItemMiddleware({
-  priority: 100,
-  Component: ({ slotId, children }) => (
-    <Boundary slotId={slotId}>{children}</Boundary>
-  ),
-});
+// The error-boundary middleware's stand-in, contributed as the browser does.
+const boundaryPlugin = {
+  id: "test.boundary",
+  description: "boundary",
+  contributions: [
+    SlotRender.ItemMiddleware({
+      priority: 100,
+      Component: ({ slotId, children }) => (
+        <Boundary slotId={slotId}>{children}</Boundary>
+      ),
+    }),
+  ],
+  slots: SlotRender,
+} as unknown as LoadedPlugin;
+
+function renderWithBoundary(ui: ReactNode) {
+  return render(
+    <PluginProvider plugins={[boundaryPlugin]}>{ui}</PluginProvider>,
+  );
+}
 
 type Song = { id: string; title: string; fav: boolean };
 const songs = liveCollection("test.data-view.field-extension-check", {
@@ -117,7 +135,7 @@ describe("field-extension checks", () => {
         sortable: true,
       },
     ]);
-    render(
+    renderWithBoundary(
       <CollectFieldExtensions
         sources={[descriptor([good, bad])]}
         base={[]}
@@ -149,7 +167,7 @@ describe("field-extension checks", () => {
         value: (s) => (s as Song).title,
       },
     ]);
-    render(
+    renderWithBoundary(
       <CollectFieldExtensions
         sources={[descriptor([good])]}
         base={[]}

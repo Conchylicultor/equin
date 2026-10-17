@@ -498,7 +498,7 @@ export function readStaticCallId(
 
 export function parseDefineGroup<T>(
   src: string,
-  builder: "defineSlot" | "defineDispatchSlot",
+  builder: "defineSlot" | "defineRootSlot" | "defineDispatchSlot",
   // No `id` argument: a slot id is DERIVED from the declaring plugin and the
   // member name, so there is no literal in the source to read one from.
   make: (memberName: string, groupName: string) => T,

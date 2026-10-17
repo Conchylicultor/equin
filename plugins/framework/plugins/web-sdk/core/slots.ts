@@ -29,22 +29,46 @@ function sealed(list: readonly Contribution[]): readonly unknown[] {
 }
 
 /**
+ * What a contribution to a companion slot may add: `companion: true` makes it
+ * ship wherever the slot's owner ships (see `SlotMeta.companions`). Only a slot
+ * declared with `companions: true` accepts it — on any other slot the field is
+ * an excess property, so a plugin cannot make itself a companion of an owner
+ * that never agreed.
+ */
+export interface CompanionFlag {
+  companion?: true;
+}
+
+export interface SlotOptions<P> {
+  docLabel?: (props: P) => string | undefined;
+}
+
+/**
  * The one constructor every slot funnels through — `defineRenderSlot`,
  * `defineMountSlot`, `defineWrapperSlot` and `defineDispatchSlot` all call it,
  * and `defineOrderedDispatchSlot` wraps dispatch. So the `meta` stamped and the
  * created-set appended here cover EVERY slot that has ever been created, with
  * no registry to keep in sync. Each richer constructor overwrites `meta.kind`
  * (and `reorderable`) with its own.
+ *
+ * `companions: true` opts the slot into companion contributions
+ * ({@link CompanionFlag}).
  */
-export function defineSlot<P>(opts?: {
-  docLabel?: (props: P) => string | undefined;
-}): Slot<P> {
+export function defineSlot<P>(
+  opts: SlotOptions<P> & { companions: true },
+): Slot<P & CompanionFlag>;
+export function defineSlot<P>(opts?: SlotOptions<P>): Slot<P>;
+export function defineSlot<P>(
+  opts?: SlotOptions<P> & { companions?: true },
+): Slot<P> {
   const slot = ((props: P) => ({
     _slot: slot,
     _doc: { label: opts?.docLabel?.(props) },
     ...props,
   })) as unknown as Slot<P>;
-  slot.meta = { kind: "slot", reorderable: false };
+  slot.meta = opts?.companions
+    ? { kind: "slot", reorderable: false, companions: true }
+    : { kind: "slot", reorderable: false };
   // DERIVED, never given. There is no id parameter, so a computed id — the
   // `` `pane.${paneId}.actions` `` that build-time scanners could not read, and
   // that no rule could keep in step with its owner — has no spelling. Reading it
@@ -118,8 +142,33 @@ export function defineSlotFacade<F extends object, S extends SlotHandle>(
   return fn as F & S;
 }
 
+/**
+ * A capability's own root mount point: its companions contribute
+ * `{ component }` here (`companion: true`), and the owner hands the slot to
+ * `Core.Root({ slot })`, which mounts each one at the app root exactly like a
+ * `Core.Root` component — isolated one by one.
+ *
+ * Why not contribute to `Core.Root` directly: `Core.Root` belongs to the
+ * framework, so a mount there is reachable from no capability, and nothing
+ * ties it to the plugin that needs it. The icon sprite sheet shipped missing
+ * that way. Through its owner's root slot it ships whenever the owner does.
+ */
+export type RootSlot = Slot<{ component: ComponentType } & CompanionFlag>;
+
+export function defineRootSlot(): RootSlot {
+  return defineSlot<{ component: ComponentType }>({ companions: true });
+}
+
+/**
+ * One `Core.Root` entry: a component mounted at the app root, or a capability's
+ * {@link RootSlot}, whose contributions are mounted there in turn.
+ */
+export type RootContribution =
+  | { component: ComponentType; slot?: never }
+  | { slot: RootSlot; component?: never };
+
 export const Core = {
-  Root: defineSlot<{ component: ComponentType }>(),
+  Root: defineSlot<RootContribution>(),
   // Async boot-readiness tasks. App awaits every Core.Boot `run()` once, before
   // the first render, so plugins can hydrate caches (e.g. config) that the
   // initial paint depends on — replacing per-component Suspense fallbacks.

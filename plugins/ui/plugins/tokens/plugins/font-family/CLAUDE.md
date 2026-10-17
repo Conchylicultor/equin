@@ -6,9 +6,12 @@
 
 - Description: Font-family token group (sans/serif/mono families, letter-spacing) with its customizer section.
 - Web:
+  - Slots: `FontFamily.Root`
+  - Slot contributors: `FontFamily.Root` ← `ui.tokens.font-family.google-fonts`
   - Contributes:
     - `ThemeEngine.TokenGroup` "Fonts"
     - `ThemeCustomizer.Section` "Fonts" → `FontFamilySection`
+    - `Core.Root`
   - Uses:
     - `primitives/collapsible.Collapsible`
     - `primitives/collapsible.CollapsibleContent`
@@ -20,6 +23,7 @@
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`
     - `ui/theme-engine/theme-customizer.TokenRows`
     - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+  - Exports (values): `FontFamily`
 - Core:
   - Uses: `ui/theme-engine.defineTokenGroup`
   - Exports (types): `FontFamilyTokenValues`
@@ -45,6 +49,7 @@
     - `config_v2/settings`
     - `music/chord-box`
     - `stats/cost`
+  - Imported by: `ui/tokens/font-family/google-fonts`
 - Sub-plugins:
   - **`google-fonts`** — Loads the Google Fonts that the theme each scope selects asks for (the desktop's and every app's own), so a per-app font loads whether or not that app is focused.
 

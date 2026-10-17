@@ -8,10 +8,12 @@ export type { EntryPattern } from "./entry-pattern";
 export type EdgeKind = "hard" | "soft";
 
 /**
- * Why a hard edge exists: `from` imports `to`, or `from` styles with a token
- * `to`'s token group supplies (an import edge wins when both hold).
+ * Why a hard edge exists: `from` imports `to`; `from` styles with a token `to`'s
+ * token group supplies; or `to` is a COMPANION of `from` — it contributes
+ * `companion: true` to a slot `from` owns, so it ships wherever `from` does.
+ * When several hold, import wins over token, and token over companion.
  */
-export type HardEdgeVia = "import" | "token";
+export type HardEdgeVia = "import" | "token" | "companion";
 
 /** One directed cross-plugin edge `from → to` of a given kind. */
 export interface Edge {

@@ -52,9 +52,9 @@ mid-pick — a host that hid itself for the pick is never left hidden.
   stays `disabled` while armed on purpose: picking its own (non-hit-testable)
   button each e2e run is the live regression test for this.
 - **The contribution producer — opt-in.** `internal/marker-middleware.tsx`
-  registers `contributionNodeAttrs` (`data-lineage="contribution"` +
-  `data-plugin-id` / `data-slot-id` / `data-contribution-id`) with
-  `registerSlotItemAttrs`, and slot-render stamps them on the one box it draws
+  builds `contributionNodeAttrs` (`data-lineage="contribution"` +
+  `data-plugin-id` / `data-slot-id` / `data-contribution-id`), the barrel
+  contributes it as a `SlotRender.ItemAttrs` entry, and slot-render stamps them on the one box it draws
   around each contribution — see `slot-render`'s "The contribution box, and
   stamping it". Attributes, not a wrapper: a wrapper sat inside the layout cell a
   row slot draws, so a pick in the slack around a small widget climbed past the
@@ -97,8 +97,11 @@ every build — including a composition this plugin is not in.
 
 - Description: Chrome-inspector-style element picker: <ElementPicker> arms a full-screen overlay, the user hovers and clicks any element, and onPick receives its <ui-context> metadata (plugin/slot lineage, selector, source). Also declares the <ui-context> inline chip, so whatever can make the token can display it, and stamps every slot contribution with its lineage while in the composition.
 - Web:
-  - Contributes: `InlineChip.Tag` "ui-context" → `UiContextTag`
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes:
+    - `InlineChip.Tag` "ui-context" → `UiContextTag`
+    - `SlotRender.ItemAttrs`
+    - `SlotRender.ItemMiddleware`
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×5
     - `primitives/ui-context` ×5
     - `primitives/css/coords` ×3
@@ -106,7 +109,6 @@ every build — including a composition this plugin is not in.
     - `primitives/css/spacing` ×2
     - `primitives/icon-button` ×2
     - `primitives/overlay/tooltip` ×2
-    - `primitives/slot-render` ×2
     - `primitives/text-editor/inline-chip` ×2
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/pin.Pin`
@@ -115,6 +117,7 @@ every build — including a composition this plugin is not in.
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/overlay/popover.InlinePopover`
+    - `primitives/slot-render.SlotRender`
     - `ui/icons.Icon`
   - Exports (types): `ElementPickerProps`
   - Exports (values):

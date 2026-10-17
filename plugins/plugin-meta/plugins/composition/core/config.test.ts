@@ -115,54 +115,22 @@ test("the website app seed takes the whole site subtree", () => {
   expect(site.excludes).toContain("agent-runtime");
 });
 
-test("served-baseline forces the toast host alongside health", () => {
-  // The toast host must ship with every gateway-served app: health's Core.Root
-  // watchers dispatch toasts, and with no `<ToasterHost/>` mounted those toasts
-  // would silently vanish. Forcing `shell.toast` as a served-baseline entry keeps
-  // the "host ships with any served app" invariant enforced (facet-a regression
-  // guard) without relying on a runtime throw.
+test("served-baseline lists only what BEING SERVED needs", () => {
+  // Everything a capability needs at runtime is a derived edge — an import, a
+  // token use, or a companion contribution — never a line here. Each entry
+  // below is a requirement of being served at all: the app surface, the
+  // gateway's health probe (which brings the toast host by import), the runtime
+  // theme engine, and the rubber-band that keeps the near-black `html` floor
+  // from showing above the page (equin.ai shipped that way).
   const baseline = byName("served-baseline");
-  expect(baseline.entryPoints).toContain("infra.health.**");
-  expect(baseline.entryPoints).toContain("shell.toast.**");
-});
-
-test("served-baseline forces the reorder layer", () => {
-  // `reorder` registers its middleware INTO slot-render, which never imports it
-  // back — a soft-only edge, so it lands in the `available` frontier and drops
-  // out of every bundle unless forced. Unlike an ordinary contributor its absence
-  // does not remove a feature: every render slot silently falls back to raw
-  // registration order and the committed `config/**/<slot>.jsonc` layouts stop
-  // being read at all (equin.ai shipped that way — the landing sections rendered
-  // alphabetically). Forcing it as a served-baseline ENTRY keeps "a served app
-  // renders its authored slot order" true by construction.
-  const baseline = byName("served-baseline");
-  expect(baseline.entryPoints).toContain("reorder.**");
-});
-
-test("served-baseline forces the overscroll hint", () => {
-  // The rubber-band installs itself from Core.Root and nothing imports it, so a
-  // soft-only overscroll-hint drops out of every served bundle and the browser's
-  // native bounce takes over — revealing the near-black `html` floor above the
-  // page (equin.ai shipped that way).
-  const baseline = byName("served-baseline");
-  expect(baseline.entryPoints).toContain("primitives.dom.overscroll-hint.**");
-});
-
-test("served-baseline lists no token group — they are derived edges", () => {
-  // A token group ships because a bundled plugin paints with its vars
-  // (cross-refs `tokenUses` → a hard edge in `classifyEdges`), never because
-  // someone remembered to list it here (equin.ai shipped blank app tiles and an
-  // unpainted headline that way). Google Fonts is a loader, not a token group.
-  const baseline = byName("served-baseline");
-  const groups = baseline.entryPoints.filter(
-    (e) =>
-      e.startsWith("ui.tokens.") &&
-      e !== "ui.tokens.font-family.google-fonts.**" &&
-      // The icons group also mounts the bridge `<Icon>` reads its style from —
-      // a runtime companion, not a var.
-      e !== "ui.tokens.icons.**",
+  expect([...baseline.entryPoints].map(String).sort()).toEqual(
+    [
+      "apps-core.layout.**",
+      "infra.health.**",
+      "primitives.dom.overscroll-hint.**",
+      "ui.theme-engine.**",
+    ].sort(),
   );
-  expect(groups).toEqual([]);
 });
 
 test("every seed carries `excludes` and each ref resolves to a real bundle", () => {

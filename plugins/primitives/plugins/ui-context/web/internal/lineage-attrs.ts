@@ -40,7 +40,7 @@ export const LINEAGE_ATTR = "data-plugin-lineage";
 
 /** A type alias, NOT an interface: only an alias carries the implicit index
  *  signature that makes it assignable to the `Record<string, string | undefined>`
- *  a consumer hands to `registerSlotItemAttrs`. */
+ *  a consumer contributes to `SlotRender.ItemAttrs`. */
 export type ContributionNodeAttrs = {
   "data-lineage": "contribution";
   "data-plugin-id": string;

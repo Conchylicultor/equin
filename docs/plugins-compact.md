@@ -239,6 +239,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`edit-mode`** — Edit-layout switch in the action bar's view-options popover that toggles global edit mode for all reorderable slots; Esc exits edit mode.
     - **`editor`** [exempt] — Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers and dividers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
     - **`node-types`** [4 sub-plugins] — Reorder node-type registry: owns the reorder.node-type slot and the useReorderNodeTypes() read hook. Slot owner only — contributes no node types itself.
+    - **`slot-middleware`** [load-bearing] — Applies every render slot's committed layout (and hosts its drag surface): reorder's list and item middleware, contributed to slot-render as companions so they ship wherever slots render.
 
 - **`reports`** [exempt] [22 sub-plugins] — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config.…
 

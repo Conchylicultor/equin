@@ -7,7 +7,6 @@ import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import {
   defineRenderSlot,
-  registerSlotItemMiddleware,
   renderIsolated,
 } from "@plugins/primitives/plugins/slot-render/web";
 import {
@@ -18,10 +17,7 @@ import {
 import type { PaneTitle } from "../pane";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { paneHeaderContributions } from "../header-slot";
-import {
-  PANE_TITLE_SLOT_ERROR,
-  paneTitleSlotGuard,
-} from "../components/pane-title-guard";
+import { PANE_TITLE_SLOT_ERROR } from "../components/pane-title-guard";
 import { Pane as PaneSlots } from "../slots";
 import { createTestSurfaceStore, TestSurface } from "../testing";
 
@@ -31,11 +27,10 @@ import { createTestSurfaceStore, TestSurface } from "../testing";
 // what `Pane.define({ title })` declares, `titleOnly` keeps it while dropping
 // the ordinary items, and nothing can mount a second slot inside it.
 
-// The guard the pane plugin registers at boot, registered for the WHOLE suite:
-// every header below renders the title item — itself a render-slot
-// contribution — under it, so each case also pins that the title item is not
-// what trips it.
-registerSlotItemMiddleware(paneTitleSlotGuard);
+// The guard rides the pane plugin's own contributions (`paneHeaderContributions`,
+// below), exactly as in the browser: every header renders the title item —
+// itself a render-slot contribution — under it, so each case also pins that the
+// title item is not what trips it.
 
 function ActionWidget() {
   return <span>an-action</span>;

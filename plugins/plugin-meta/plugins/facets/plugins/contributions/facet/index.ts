@@ -79,6 +79,20 @@ export default createFacet<ContributionsFacetData>({
           const slot = `${displayHead}.${tail}`;
           const props = parsePropsBlock(call.argsBody);
           const contribution: Contribution = { slot, props };
+          if ("companion" in props) {
+            // The closure engine bundles a companion by this flag alone, so a
+            // value it cannot read is not "probably true" — it is a companion
+            // that would silently ship as an option, the incident the flag
+            // exists to prevent.
+            if (props["companion"] !== "true") {
+              throw new Error(
+                `${join(ctx.dir, "web", "index.ts")}: \`${call.callee}({ companion: ${props["companion"]} })\` — ` +
+                  "a contribution's `companion` must be the literal `true` (or absent): " +
+                  "the closure engine reads it statically to ship the contribution with its slot's owner.",
+              );
+            }
+            contribution.companion = true;
+          }
           if (slot === "Pane.Register" && props["pane"]) {
             // Record only where the registered pane variable COMES FROM; the id
             // itself is resolved in `relate()`. A barrel can register a pane
@@ -167,6 +181,7 @@ export default createFacet<ContributionsFacetData>({
               componentName,
               doc: c._doc ?? {},
               id: typeof c.id === "string" ? c.id : undefined,
+              ...(c.companion === true ? { companion: true as const } : {}),
             });
           } else if (typeof c._kind === "symbol" && c._kind.description) {
             // server registration (defineServerContribution): the `_kind` symbol's

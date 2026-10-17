@@ -252,6 +252,32 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
 ## Plugin reference
 
 - Description: Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
+- Web:
+  - Slots: `Icons.Root`
+  - Slot contributors:
+    - `Icons.Root` ← `ui.icons.sprites`
+    - `Icons.Root` ← `ui.tokens.icons`
+  - Contributes: `Core.Root`
+  - Exports (types):
+    - `IconMarkup`
+    - `IconMarkupReader`
+    - `IconProps`
+    - `RuntimeSymbolEntry`
+  - Exports (values):
+    - `hasRuntimeSymbol`
+    - `hasSprite`
+    - `Icon`
+    - `Icons`
+    - `IconScopeProvider`
+    - `IconSpriteSheet`
+    - `installRuntimeSymbolLoader`
+    - `provideRuntimeSymbols`
+    - `provideSprite`
+    - `useIconMarkup`
+    - `useIconStyle`
+    - `usePublishIconStyle`
+    - `useWantedSprites`
+    - `useWantedStyleKeys`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/shadow --shadow`
@@ -286,26 +312,6 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
 - Exemptions:
   - Exempts itself from: `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
   - Exempted by: `ui/icons` (0 debt)
-- Web:
-  - Exports (types):
-    - `IconMarkup`
-    - `IconMarkupReader`
-    - `IconProps`
-    - `RuntimeSymbolEntry`
-  - Exports (values):
-    - `hasRuntimeSymbol`
-    - `hasSprite`
-    - `Icon`
-    - `IconScopeProvider`
-    - `IconSpriteSheet`
-    - `installRuntimeSymbolLoader`
-    - `provideRuntimeSymbols`
-    - `provideSprite`
-    - `useIconMarkup`
-    - `useIconStyle`
-    - `usePublishIconStyle`
-    - `useWantedSprites`
-    - `useWantedStyleKeys`
 - Server:
   - Exports (types):
     - `IconBody`

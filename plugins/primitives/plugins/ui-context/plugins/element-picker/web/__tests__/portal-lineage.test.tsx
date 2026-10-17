@@ -15,6 +15,7 @@ import {
 } from "@plugins/primitives/plugins/ui-context/web";
 import { parseLineage } from "@plugins/primitives/plugins/ui-context/web/testing";
 import { PluginMarkerMiddleware } from "../internal/marker-middleware";
+import { pickerPlugin } from "./picker-plugin";
 
 afterEach(cleanup);
 
@@ -155,7 +156,7 @@ describe("plugin lineage survives a portal", () => {
       slots: { app: appSlot },
     } as unknown as LoadedPlugin;
     render(
-      <PluginProvider plugins={[plugin]}>
+      <PluginProvider plugins={[pickerPlugin, plugin]}>
         <appSlot.Render />
       </PluginProvider>,
     );

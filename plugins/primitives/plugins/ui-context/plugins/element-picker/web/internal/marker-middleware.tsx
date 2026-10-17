@@ -1,9 +1,6 @@
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { ReactNode } from "react";
-import {
-  registerSlotItemAttrs,
-  registerSlotItemMiddleware,
-} from "@plugins/primitives/plugins/slot-render/web";
+import type { SlotItemAttrsFn } from "@plugins/primitives/plugins/slot-render/web";
 import {
   PortalForwardProvider,
   usePortalForwardedAttrs,
@@ -44,15 +41,18 @@ function contributionNode(
  * row) climbed past the whole contribution and answered with the enclosing pane.
  * As data there is no placement to get right, here or in any future consumer.
  *
- * Registering here, in the picker sub-plugin, rather than in the `ui-context`
- * barrel keeps it opt-in: it describes *every* slot contribution repo-wide, and
+ * Contributed by the picker sub-plugin (a plain, non-companion contribution),
+ * rather than by the `ui-context` barrel, keeps it opt-in: it describes *every* slot contribution repo-wide, and
  * that cost should only be paid when something that can pick is actually in
  * the app composition. `<UiRegion>` — a handful of explicit call sites — has
  * no such constraint and lives in the parent primitive.
  */
-registerSlotItemAttrs(({ slotId, contribution, boxless }) =>
-  contributionNodeAttrs(contributionNode(slotId, contribution), { boxless }),
-);
+export const markerAttrs: SlotItemAttrsFn = ({
+  slotId,
+  contribution,
+  boxless,
+}) =>
+  contributionNodeAttrs(contributionNode(slotId, contribution), { boxless });
 
 /**
  * The portal half, which cannot be an attribute: a contribution that portals its
@@ -83,8 +83,3 @@ export function PluginMarkerMiddleware({
     </PortalForwardProvider>
   );
 }
-
-registerSlotItemMiddleware({
-  priority: 50,
-  Component: PluginMarkerMiddleware,
-});

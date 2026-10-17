@@ -1,9 +1,15 @@
-import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  Core,
+  type PluginDefinition,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { tokenGroupMatchesSearch } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { fontFamilyGroup } from "../core";
 import { FontFamilySection } from "./components/font-family-section";
+import { FontFamily } from "./slots";
+
+export { FontFamily } from "./slots";
 
 export default {
   description:
@@ -23,5 +29,7 @@ export default {
       useAvailable: ({ search }) =>
         tokenGroupMatchesSearch(fontFamilyGroup, search),
     }),
+    Core.Root({ slot: FontFamily.Root }),
   ],
+  slots: FontFamily,
 } satisfies PluginDefinition;

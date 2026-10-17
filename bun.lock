@@ -5510,6 +5510,10 @@
       "name": "@singularity/plugin-reorder-node-types-spacer",
       "version": "0.0.1",
     },
+    "plugins/reorder/plugins/slot-middleware": {
+      "name": "@singularity/plugin-reorder-slot-middleware",
+      "version": "0.0.1",
+    },
     "plugins/reports": {
       "name": "@singularity/plugin-reports",
       "version": "0.0.1",
@@ -9313,6 +9317,8 @@
     "@singularity/plugin-reorder-node-types-overflow": ["@singularity/plugin-reorder-node-types-overflow@workspace:plugins/reorder/plugins/node-types/plugins/overflow"],
 
     "@singularity/plugin-reorder-node-types-spacer": ["@singularity/plugin-reorder-node-types-spacer@workspace:plugins/reorder/plugins/node-types/plugins/spacer"],
+
+    "@singularity/plugin-reorder-slot-middleware": ["@singularity/plugin-reorder-slot-middleware@workspace:plugins/reorder/plugins/slot-middleware"],
 
     "@singularity/plugin-reports": ["@singularity/plugin-reports@workspace:plugins/reports"],
 

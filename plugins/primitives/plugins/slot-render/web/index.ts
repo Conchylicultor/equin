@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { SlotRender } from "./internal/slots";
 
 export {
   defineRenderSlot,
@@ -34,15 +35,12 @@ export type {
   SlotItemMiddleware,
   SlotListMiddleware,
 } from "./internal/types";
-export {
-  registerSlotItemAttrs,
-  registerSlotItemMiddleware,
-  registerSlotListMiddleware,
-} from "./internal/registry";
+export { SlotRender } from "./internal/slots";
 
 export default {
   description:
     "Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).",
   loadBearing: true,
   contributions: [],
+  slots: SlotRender,
 } satisfies PluginDefinition;

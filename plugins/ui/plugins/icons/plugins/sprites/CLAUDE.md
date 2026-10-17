@@ -43,11 +43,12 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
 
 - Description: Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks. Builds the icon sprites from the Iconify JSON for the manifest's names — one <svg> of <symbol id="ms-<styleKey>-<name>"> per style key (material-symbols at 400, material-symbols-light at 300) plus a brands sprite — and serves the default style's as the resident icons.sprites value and every one at GET /api/icons/sprite/:hash/:key, immutable. Saved (user-picked) icons are runtime symbols: the resident icons.saved-sprites value draws every name a defineSavedIconSource source reports in the default style, and GET /api/icons/symbols/:hash/:key?names= serves any saved names in any style, immutable.
 - Web:
-  - Contributes: `Core.Root` → `IconSpriteHost`
+  - Contributes: `Icons.Root` → `IconSpriteHost`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
     - `ui/icons.hasSprite`
+    - `ui/icons.Icons`
     - `ui/icons.IconSpriteSheet`
     - `ui/icons.installRuntimeSymbolLoader`
     - `ui/icons.provideRuntimeSymbols`

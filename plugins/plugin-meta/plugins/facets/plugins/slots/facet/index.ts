@@ -124,6 +124,19 @@ function parseSlotsFromSource(dir: string, pluginId: string): SlotDef[] {
           contributors: [],
         }),
       ),
+      // A capability's root slot (`defineRootSlot()`, web-sdk) — a plain slot
+      // under its own constructor name, so the group pass needs it spelled.
+      ...parseDefineGroup(
+        original,
+        "defineRootSlot",
+        (memberName, groupName): SlotDef => ({
+          memberName,
+          slotId: slotIdFor(pluginId, seg(memberName)),
+          groupName,
+          kind: "slot",
+          contributors: [],
+        }),
+      ),
       ...parseDefineGroup(
         original,
         "defineDispatchSlot",
