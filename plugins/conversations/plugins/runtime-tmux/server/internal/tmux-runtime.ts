@@ -749,6 +749,13 @@ export const tmuxRuntime: ConversationRuntime = {
       shellWord(claudeBin),
       cliFlag && `--model ${cliFlag}`,
       effortFlag && `--effort ${effortFlag}`,
+      // Pinned here rather than inherited from the user's `defaultMode`: auto
+      // mode's classifier refuses too many routine agent actions. Each agent
+      // already works in its own worktree; the repo's PreToolUse guards and
+      // `permissions.deny` rules still apply in bypass mode. A flag, not a
+      // `permissions` key in `--settings`, so it never collides with a
+      // workspace fragment's own `permissions` (scratch profiles).
+      "--permission-mode bypassPermissions",
       // Single-quoted JSON; settingsFlag throws on a value carrying a quote.
       settingsFlag(settings),
       // The workspace's own arguments, each its own shell word.
