@@ -169,8 +169,9 @@ export async function generateConfigGitLayer({
   // commit also dropped its `.gitignore` line, so a copy an older build left on
   // disk turned into an untracked source file the plugin-doc scan reads
   // (its `ui.tokens.shadow:shadow` made config_v2 a `--shadow` user, and docs
-  // drifted on main). Removed here because this generator wrote it. Delete
-  // these lines once no checkout can still hold one.
+  // drifted on main). Removed here because this generator wrote it; the path is
+  // gitignored again so a push cannot commit one. Delete these lines and that
+  // `.gitignore` entry once no checkout can still hold one.
   rmSync(join(root, "plugins/config_v2/web/internal/git-layer.generated.ts"), {
     force: true,
   });
