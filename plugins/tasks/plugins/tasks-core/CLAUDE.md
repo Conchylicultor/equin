@@ -502,18 +502,18 @@ serves them.
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 70 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 71 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×29
     - `tasks` ×17
     - `debug` ×6
     - `active-data` ×5
     - `page` ×3
     - `apps` ×2
+    - `infra` ×2
     - `stats` ×2
     - `backup/sources/transcripts`
     - `code-explorer`
     - `database/query`
-    - `infra/deps/updates`
     - `plugin-meta/plugin-health`
     - `review/plugin-changes`
   - Extended by:

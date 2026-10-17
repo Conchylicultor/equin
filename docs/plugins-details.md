@@ -25337,6 +25337,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/audio-analysis`
           - `infra/deps/build`
           - `infra/launcher`
+          - `infra/mcp/browser`
           - `infra/safe-fetch/browser-fetch`
           - `integrations/youtube`
           - `packages/signal-origin`
@@ -25877,12 +25878,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggerRowSchema`
           - `TriggersPayloadSchema`
       - Cross-plugin:
-        - Imported by: 29 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
+        - Imported by: 30 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
           - `apps` ×7
           - `conversations` ×7
           - `tasks` ×6
+          - `infra` ×4
           - `page` ×4
-          - `infra` ×3
           - `build`
           - `improve`
       - Exemptions:
@@ -26779,10 +26780,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 69 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 70 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×19
           - `conversations` ×14
-          - `infra` ×11
+          - `infra` ×12
           - `debug` ×9
           - `tasks` ×4
           - `database` ×3
@@ -27027,6 +27028,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/queue-health`
           - `debug/scratch-hello`
           - `debug/timeline`
+          - `infra/mcp/browser`
           - `page/annotations/agent-access`
           - `plugin-meta/plugin-health`
           - `tasks`
@@ -27044,6 +27046,34 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Routes: `POST /api/mcp/:conversationId`
       - Shared:
         - Exports (values): `mcpRequest`
+      - Plugins:
+        - **`browser`** — Agent browser: MCP tools (browser_navigate, browser_read_page, browser_act, browser_batch, browser_screenshot, browser_console, …) driving one shared headless Chromium, with an isolated session per conversation targeted at that conversation's own worktree build and tabs that stay open across calls.
+          - Server:
+            - Contributes: `trigger` "mcp-browser.conversation-ended"
+            - Uses:
+              - `infra/deps.requestDep`
+              - `infra/events.Trigger`
+              - `infra/jobs.defineJob`
+              - `infra/mcp.Mcp`
+              - `infra/mcp.McpToolContext`
+              - `infra/mcp.McpToolResult`
+              - `tasks/tasks-core.conversationStatusChanged`
+              - `tasks/tasks-core.getConversation`
+            - Register:
+              - `mcpTool('browser_tabs')`
+              - `mcpTool('browser_navigate')`
+              - `mcpTool('browser_read_page')`
+              - `mcpTool('browser_find')`
+              - `mcpTool('browser_get_page_text')`
+              - `mcpTool('browser_act')`
+              - `mcpTool('browser_batch')`
+              - `mcpTool('browser_javascript')`
+              - `mcpTool('browser_screenshot')`
+              - `mcpTool('browser_console')`
+              - `mcpTool('browser_network')`
+              - `mcpTool('browser_viewport')`
+              - `mcpTool('browser_close')`
+              - `defineJob('mcp-browser.conversation-ended')`
     - **`namespace`** — Canonical namespace identity: the branded Namespace type, the <composition>.<checkout> elision rule that mints one, and the URL/host encodings derived from it.
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
@@ -44986,18 +45016,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 70 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 71 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×29
           - `tasks` ×17
           - `debug` ×6
           - `active-data` ×5
           - `page` ×3
           - `apps` ×2
+          - `infra` ×2
           - `stats` ×2
           - `backup/sources/transcripts`
           - `code-explorer`
           - `database/query`
-          - `infra/deps/updates`
           - `plugin-meta/plugin-health`
           - `review/plugin-changes`
         - Extended by:

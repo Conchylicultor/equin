@@ -7,7 +7,11 @@ export interface McpToolContext {
 }
 
 export type McpToolResult = {
-  content: Array<{ type: "text"; text: string }>;
+  content: Array<
+    | { type: "text"; text: string }
+    /** Base64-encoded image bytes, e.g. a screenshot. */
+    | { type: "image"; data: string; mimeType: string }
+  >;
 };
 
 export interface McpTool<T extends z.ZodRawShape = z.ZodRawShape> {

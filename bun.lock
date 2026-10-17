@@ -3738,6 +3738,13 @@
         "@modelcontextprotocol/sdk": "^1.20.0",
       },
     },
+    "plugins/infra/plugins/mcp/plugins/browser": {
+      "name": "@singularity/plugin-infra-mcp-browser",
+      "version": "0.0.1",
+      "dependencies": {
+        "playwright": "^1.62.1",
+      },
+    },
     "plugins/infra/plugins/namespace": {
       "name": "@singularity/plugin-infra-namespace",
       "version": "0.0.1",
@@ -8504,6 +8511,8 @@
     "@singularity/plugin-infra-launcher": ["@singularity/plugin-infra-launcher@workspace:plugins/infra/plugins/launcher"],
 
     "@singularity/plugin-infra-mcp": ["@singularity/plugin-infra-mcp@workspace:plugins/infra/plugins/mcp"],
+
+    "@singularity/plugin-infra-mcp-browser": ["@singularity/plugin-infra-mcp-browser@workspace:plugins/infra/plugins/mcp/plugins/browser"],
 
     "@singularity/plugin-infra-namespace": ["@singularity/plugin-infra-namespace@workspace:plugins/infra/plugins/namespace"],
 

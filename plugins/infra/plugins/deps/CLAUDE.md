@@ -371,6 +371,7 @@ torch.
     - `infra/audio-analysis`
     - `infra/deps/build`
     - `infra/launcher`
+    - `infra/mcp/browser`
     - `infra/safe-fetch/browser-fetch`
     - `integrations/youtube`
     - `packages/signal-origin`

@@ -1,0 +1,8 @@
+{
+  "name": "@singularity/plugin-infra-mcp-browser",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "playwright": "^1.62.1"
+  }
+}
