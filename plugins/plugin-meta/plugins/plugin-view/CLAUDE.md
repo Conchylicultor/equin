@@ -114,10 +114,11 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `ui/tokens/density` ×5
     - `ui/tokens/color-palette` ×3
     - `ui/tokens/shape --spacing`
-  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta` ×19
     - `apps` ×2
     - `active-data/plugin-link`
+    - `debug/mcp-tools`
 - Sub-plugins:
   - **`dependencies`** — Deduped cargo-tree-style dependency trees in the plugin detail pane: 'Depends on' (recursive forward deps) and 'Used by' (recursive reverse dependents), each marking soft slot-contributions and…
   - **`file-tree`** — File tree explorer for the plugin's own files in the plugin detail pane.

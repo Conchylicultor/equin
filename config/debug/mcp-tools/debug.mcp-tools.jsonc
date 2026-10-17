@@ -1,0 +1,48 @@
+// @hash 6ec84829688d
+// Grouped by declaring plugin, the way the page answers "who gives agents
+// which tool?". Restricted lists the tools not every conversation sees (gated
+// by `when`, or reserved for scratch profiles).
+{
+  "views": [
+    {
+      "id": "by-plugin",
+      "name": "By plugin",
+      "icon": "extension",
+      "view": {
+        "type": "list",
+        "groupBy": { "fieldId": "plugin", "groupingId": "value" },
+        "sort": [{ "fieldId": "name", "direction": "asc" }]
+      }
+    },
+    {
+      "id": "restricted",
+      "name": "Restricted",
+      "icon": "lock",
+      "view": {
+        "type": "list",
+        "groupBy": { "fieldId": "visibility", "groupingId": "value" },
+        "sort": [{ "fieldId": "name", "direction": "asc" }],
+        "filter": {
+          "kind": "group",
+          "id": "f-restricted",
+          "conjunction": "and",
+          "children": [
+            { "kind": "rule", "id": "r-restricted", "fieldId": "visibility", "operatorId": "is-none-of", "value": ["everywhere"] }
+          ]
+        }
+      }
+    },
+    {
+      "id": "all",
+      "name": "A–Z",
+      "icon": "list",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "name", "direction": "asc" }]
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

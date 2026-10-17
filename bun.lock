@@ -2333,6 +2333,10 @@
       "name": "@singularity/plugin-debug-logs",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/mcp-tools": {
+      "name": "@singularity/plugin-debug-mcp-tools",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/memory": {
       "name": "@singularity/plugin-debug-memory",
       "version": "0.0.1",
@@ -7833,6 +7837,8 @@
     "@singularity/plugin-debug-live-state-health": ["@singularity/plugin-debug-live-state-health@workspace:plugins/debug/plugins/live-state-health"],
 
     "@singularity/plugin-debug-logs": ["@singularity/plugin-debug-logs@workspace:plugins/debug/plugins/logs"],
+
+    "@singularity/plugin-debug-mcp-tools": ["@singularity/plugin-debug-mcp-tools@workspace:plugins/debug/plugins/mcp-tools"],
 
     "@singularity/plugin-debug-memory": ["@singularity/plugin-debug-memory@workspace:plugins/debug/plugins/memory"],
 

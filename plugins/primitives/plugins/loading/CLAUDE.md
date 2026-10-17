@@ -73,12 +73,12 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
-  - Imported by: 188 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 189 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×62
     - `ui` ×19
     - `conversations` ×18
+    - `debug` ×17
     - `primitives` ×17
-    - `debug` ×16
     - `tasks` ×13
     - `page` ×8
     - `build` ×4

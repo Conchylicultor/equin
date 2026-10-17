@@ -14,12 +14,12 @@
     - `CopyButton`
     - `useCopyToClipboard`
 - Cross-plugin:
-  - Imported by: 26 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×8
     - `page` ×4
     - `primitives` ×4
     - `conversations` ×3
-    - `debug` ×2
+    - `debug` ×3
     - `review` ×2
     - `infra/claude-cli`
     - `plugin-meta/exhibits`

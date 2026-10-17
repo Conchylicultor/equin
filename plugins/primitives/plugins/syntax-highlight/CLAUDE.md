@@ -49,6 +49,7 @@
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/jsonl-viewer/tool-call/write`
+    - `debug/mcp-tools`
     - `debug/timeline`
     - `page/code-block`
     - `page/read-only-view`

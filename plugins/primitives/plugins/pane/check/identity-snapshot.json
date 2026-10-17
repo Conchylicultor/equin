@@ -277,6 +277,18 @@
       "parent": null
     },
     {
+      "paneId": "debug-mcp-tool",
+      "segment": "tool/:name",
+      "appIndex": false,
+      "parent": "debug-mcp-tools"
+    },
+    {
+      "paneId": "debug-mcp-tools",
+      "segment": "mcp-tools",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "debug-memory",
       "segment": "memory",
       "appIndex": false,

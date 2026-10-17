@@ -282,11 +282,11 @@ to reconcile them; they never needed reconciling.
     - `ui/tokens/color-palette` ×6
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --spacing`
-  - Imported by: 367 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 368 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×97
     - `conversations` ×72
     - `primitives` ×42
-    - `debug` ×33
+    - `debug` ×34
     - `page` ×21
     - `plugin-meta` ×14
     - `ui` ×14

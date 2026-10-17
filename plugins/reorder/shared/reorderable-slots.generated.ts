@@ -187,6 +187,8 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "debug.live-state-health.live-state-health.actions", pluginId: "debug.live-state-health", configName: "live-state-health.actions" },
   { slotId: "debug.logs.logs-channel.actions", pluginId: "debug.logs", configName: "logs-channel.actions" },
   { slotId: "debug.logs.logs.actions", pluginId: "debug.logs", configName: "logs.actions" },
+  { slotId: "debug.mcp-tools.mcp-tool.actions", pluginId: "debug.mcp-tools", configName: "mcp-tool.actions" },
+  { slotId: "debug.mcp-tools.mcp-tools.actions", pluginId: "debug.mcp-tools", configName: "mcp-tools.actions" },
   { slotId: "debug.memory.debug-memory.actions", pluginId: "debug.memory", configName: "debug-memory.actions" },
   { slotId: "debug.profiling.build.debug-profiling-build-detail.actions", pluginId: "debug.profiling.build", configName: "debug-profiling-build-detail.actions" },
   { slotId: "debug.profiling.debug-profiling.actions", pluginId: "debug.profiling", configName: "debug-profiling.actions" },

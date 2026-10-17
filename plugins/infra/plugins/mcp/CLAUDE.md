@@ -33,6 +33,15 @@ Both factories return a `Registration` token that goes in the plugin's server
   `render(ctx)` returns the section text, or `null` to contribute nothing for
   that conversation.
 
+## Catalog
+
+`mcp.catalog` (core, a `liveValue` fixed for the process) lists every tool,
+instructions section and the scope resolver with the plugin that declared each
+(recorded via `registeringPlugin()` at register time). Each tool's input schema
+is read off a real `tools/list` over an in-memory client (`server/internal/catalog.ts`),
+through the same `mountTool` the request path uses — so it is exactly what
+agents receive. Shown by Debug → MCP tools (`debug/mcp-tools`).
+
 ## Server instructions
 
 MCP clients receive server instructions once, in the `initialize` result, so a
@@ -53,8 +62,34 @@ client sees them at connect (Claude Code connects once per conversation).
 
 ## Plugin reference
 
-- Description: HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
+- Description: HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool, and serves the mcp.catalog live value: every tool, instructions section and the scope resolver with the plugin that declared each, each tool's input schema as tools/list sends it.
 - Load-bearing: yes
+- Server:
+  - Contributes: `resource.declare` "mcp.catalog"
+  - Uses: `network/live.serveValue`
+  - Exports (types):
+    - `McpInstructions`
+    - `McpScope`
+    - `McpScopeResolver`
+    - `McpTool`
+    - `McpToolContext`
+    - `McpToolResult`
+  - Exports (values): `Mcp`
+  - Resources: `mcp.catalog` (push, fixed)
+  - Routes: `POST /api/mcp/:conversationId`
+- Core:
+  - Uses: `network/live.liveValue`
+  - Exports (types):
+    - `McpCatalog`
+    - `McpCatalogInstructions`
+    - `McpCatalogTool`
+  - Exports (values):
+    - `agentToolName`
+    - `MCP_SERVER_NAME`
+    - `mcpCatalog`
+    - `McpCatalogInstructionsSchema`
+    - `McpCatalogSchema`
+    - `McpCatalogToolSchema`
 - Cross-plugin:
   - Imported by:
     - `apps/sonata/transcription`
@@ -73,16 +108,6 @@ client sees them at connect (Claude Code connects once per conversation).
     - `tasks`
     - `tasks/outcome-report`
   - Endpoint callers: `scratch`
-- Server:
-  - Exports (types):
-    - `McpInstructions`
-    - `McpScope`
-    - `McpScopeResolver`
-    - `McpTool`
-    - `McpToolContext`
-    - `McpToolResult`
-  - Exports (values): `Mcp`
-  - Routes: `POST /api/mcp/:conversationId`
 - Shared:
   - Exports (values): `mcpRequest`
 - Sub-plugins:

@@ -9,8 +9,8 @@
   - Slots:
     - `DebugApp.Sidebar`
     - `DebugApp.Toolbar`
-  - Slot contributors: 24 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `DebugApp.Sidebar` ×24
+  - Slot contributors: 25 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `DebugApp.Sidebar` ×25
   - Contributes: `Apps.App` "Debug" → `DebugLayout`
   - Uses:
     - `apps-core.Apps`
@@ -22,8 +22,8 @@
   - Uses: `primitives/pane.defineApp`
   - Exports (values): `debugApp`
 - Cross-plugin:
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `debug` ×18
+  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug` ×19
     - `backup`
     - `build`
     - `conversations/recover`

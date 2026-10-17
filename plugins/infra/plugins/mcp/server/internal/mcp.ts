@@ -1,6 +1,15 @@
 import type { z } from "zod";
-import type { Registration } from "@plugins/framework/plugins/server-core/core";
-import { instructionsRegistry, registry, scopeRegistry } from "./registry";
+import {
+  registeringPlugin,
+  type Registration,
+} from "@plugins/framework/plugins/server-core/core";
+import {
+  instructionsDeclaredIn,
+  instructionsRegistry,
+  registry,
+  scopeRegistry,
+  toolDeclaredIn,
+} from "./registry";
 
 export interface McpToolContext {
   conversationId: string;
@@ -95,6 +104,7 @@ export const Mcp = {
           throw new Error(`MCP tool "${tool.name}" already registered`);
         }
         registry.set(tool.name, tool as unknown as McpTool);
+        toolDeclaredIn.set(tool.name, registeringPlugin());
       },
     };
   },
@@ -112,6 +122,7 @@ export const Mcp = {
           throw new Error("MCP scope resolver already registered");
         }
         scopeRegistry.resolver = resolver;
+        scopeRegistry.declaredIn = registeringPlugin();
       },
     };
   },
@@ -132,6 +143,7 @@ export const Mcp = {
           );
         }
         instructionsRegistry.set(instructions.id, instructions);
+        instructionsDeclaredIn.set(instructions.id, registeringPlugin());
       },
     };
   },

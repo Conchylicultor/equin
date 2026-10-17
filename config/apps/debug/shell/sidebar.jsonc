@@ -1,4 +1,4 @@
-// @hash f056c759f224
+// @hash 78e79f592715
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -26,6 +26,7 @@
     "debug.live-state-churn.emit:live-state-emit",
     "debug.read-set:read-set",
     "debug.claude-cli-calls:claude-cli-calls",
+    "debug.mcp-tools:mcp-tools",
     "debug.broadcasts:broadcasts",
     "debug.memory:memory",
     "debug.worktree-cleanup:worktree-cleanup",

@@ -6,6 +6,7 @@ import {
   hasToolsList,
   renderInstructions,
 } from "./instructions";
+import { MCP_SERVER_NAME } from "../../core";
 import type { McpTool, McpToolContext } from "./mcp";
 import { registry, scopeRegistry } from "./registry";
 import { toolsInScope } from "./scope";
@@ -42,13 +43,7 @@ export async function handleMcpRequest(
     ? await renderDescriptions({ conversationId })
     : null;
 
-  const server = new McpServer(
-    {
-      name: "equin",
-      version: "0.0.1",
-    },
-    { instructions },
-  );
+  const server = newMcpServer(instructions);
 
   // Per-conversation visibility: first the scope, then each tool's own `when`.
   // A tool either says no to is never registered on this request's server, so
@@ -61,16 +56,11 @@ export async function handleMcpRequest(
 
   for (const [i, tool] of tools.entries()) {
     if (!visible[i]) continue;
-    server.registerTool(
-      tool.name,
-      {
-        description: descriptions?.get(tool.name) ?? tool.description,
-        inputSchema: tool.inputSchema,
-      },
-      async (args: Record<string, unknown>) => {
-        const result = await tool.handler(args, ctx);
-        return result;
-      },
+    mountTool(
+      server,
+      tool,
+      descriptions?.get(tool.name) ?? tool.description,
+      ctx,
     );
   }
 
@@ -86,6 +76,32 @@ export async function handleMcpRequest(
     // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget I/O cleanup (closing the MCP server in finally)
     void server.close();
   }
+}
+
+/** The server every MCP request (and the catalog's listing) runs on. */
+export function newMcpServer(instructions: string | undefined): McpServer {
+  return new McpServer(
+    { name: MCP_SERVER_NAME, version: "0.0.1" },
+    { instructions },
+  );
+}
+
+/** Registers one tool on a server, the one way both the request path and the
+ * catalog's listing do, so the catalog lists exactly what agents receive. */
+export function mountTool(
+  server: McpServer,
+  tool: McpTool,
+  description: string,
+  ctx: McpToolContext,
+): void {
+  server.registerTool(
+    tool.name,
+    { description, inputSchema: tool.inputSchema },
+    async (args: Record<string, unknown>) => {
+      const result = await tool.handler(args, ctx);
+      return result;
+    },
+  );
 }
 
 /**

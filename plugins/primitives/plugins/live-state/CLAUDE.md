@@ -1165,12 +1165,12 @@ keeps every row's identity rather than re-minting each moved row.
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --spacing`
-  - Imported by: 241 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 242 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×67
     - `conversations` ×42
+    - `debug` ×22
     - `tasks` ×22
     - `ui` ×22
-    - `debug` ×21
     - `page` ×12
     - `primitives` ×10
     - `active-data` ×7

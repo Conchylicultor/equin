@@ -29,6 +29,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "debug.config-orphans", pluginId: "debug.config-orphans" },
   { id: "debug.logs.catalog", pluginId: "debug.logs" },
   { id: "debug.logs.lines", pluginId: "debug.logs" },
+  { id: "debug.mcp-tools", pluginId: "debug.mcp-tools" },
   { id: "debug.memory", pluginId: "debug.memory" },
   { id: "debug.profiling.runtime", pluginId: "debug.profiling.runtime" },
   { id: "debug.queue.dead", pluginId: "debug.queue" },

@@ -84,6 +84,7 @@ Design rationale lives in:
     - `conversations/conversation-view/jsonl-viewer/tool-call/web-search`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/markdown-extensions`
+    - `debug/mcp-tools`
     - `debug/memory`
     - `primitives/file-viewer/markdown`
     - `tasks/outcome-report`

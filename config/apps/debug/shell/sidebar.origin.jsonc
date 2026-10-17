@@ -1,4 +1,4 @@
-// @hash f056c759f224
+// @hash 78e79f592715
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -21,6 +21,7 @@
     "debug.live-state-churn.emit:live-state-emit",
     "debug.live-state-health:live-state-health",
     "debug.logs:logs",
+    "debug.mcp-tools:mcp-tools",
     "debug.memory:memory",
     "debug.profiling:profiling",
     "debug.queue:queue",
