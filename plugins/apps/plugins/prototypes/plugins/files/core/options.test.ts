@@ -3,7 +3,9 @@ import {
   colorPickValue,
   describeOptionValues,
   foldOptions,
+  groupOptions,
   humanizeToken,
+  optionLabel,
   isOptionName,
   isOptionValue,
   parseOptionDeclaration,
@@ -89,6 +91,7 @@ describe("isOptionName / isOptionValue", () => {
 describe("foldOptions", () => {
   test("the default is the <html data-*> attribute", () => {
     const { options, problems } = foldOptions({
+      groups: [],
       declarations: ["pane: flush | floating", "palette: violet | azure"],
       htmlData: { pane: "floating", palette: "violet", other: "x" },
       htmlVars: {},
@@ -100,18 +103,21 @@ describe("foldOptions", () => {
         name: "pane",
         values: ["flush", "floating"],
         default: "floating",
+        group: null,
       },
       {
         kind: "choice",
         name: "palette",
         values: ["violet", "azure"],
         default: "violet",
+        group: null,
       },
     ]);
   });
 
   test("a broken line is dropped and reported", () => {
     const { options, problems } = foldOptions({
+      groups: [],
       declarations: [
         "pane: flush | floating",
         "pane: a | b",
@@ -136,12 +142,14 @@ const PANE: PrototypeOption = {
   name: "pane",
   values: ["flush", "floating", "soft-tray"],
   default: "flush",
+  group: null,
 };
 const PALETTE: PrototypeOption = {
   kind: "choice",
   name: "palette",
   values: ["violet", "azure"],
   default: "violet",
+  group: null,
 };
 
 describe("resolvePicks", () => {
@@ -227,6 +235,7 @@ describe("readOptionSource", () => {
         <meta name="prototype-option" content="palette: violet &#124; azure" />
       </head><body></body></html>`;
     expect(await readOptionSource(html)).toEqual({
+      groups: [],
       declarations: ["pane: flush | floating", "palette: violet | azure"],
       htmlData: { pane: "flush", palette: "azure" },
       htmlVars: {},
@@ -237,12 +246,14 @@ describe("readOptionSource", () => {
         name: "pane",
         values: ["flush", "floating"],
         default: "flush",
+        group: null,
       },
       {
         kind: "choice",
         name: "palette",
         values: ["violet", "azure"],
         default: "azure",
+        group: null,
       },
     ]);
   });
@@ -264,6 +275,7 @@ const ACCENT: ColorOption = {
     { name: "azure", color: "#3b82f6" },
   ],
   default: "#7c5cff",
+  group: null,
 };
 
 describe("color declarations", () => {
@@ -317,6 +329,7 @@ describe("color declarations", () => {
 describe("color defaults", () => {
   test("the default is --<name> in <html style>, normalised to #rrggbb", () => {
     const { options, problems } = foldOptions({
+      groups: [],
       declarations: ["accent: color violet=#7c5cff | azure=#3b82f6"],
       htmlData: {},
       htmlVars: { accent: "oklch(0.623 0.188 259.8)" },
@@ -327,6 +340,7 @@ describe("color defaults", () => {
 
   test("a missing or unreadable default is a problem, with a hint for data-*", () => {
     const { options, problems } = foldOptions({
+      groups: [],
       declarations: [
         "accent: color violet=#7c5cff",
         "surface: color",
@@ -344,6 +358,7 @@ describe("color defaults", () => {
 
   test("a malformed color line names the color syntax", () => {
     const { problems } = foldOptions({
+      groups: [],
       declarations: ["accent: color violet"],
       htmlData: {},
       htmlVars: {},
@@ -436,5 +451,59 @@ describe("humanizeToken", () => {
     expect(humanizeToken("soft-tray")).toBe("Soft tray");
     expect(humanizeToken("88-keys")).toBe("88 keys");
     expect(humanizeToken("azure")).toBe("Azure");
+  });
+});
+
+describe("option groups", () => {
+  const html = `<html data-pane="flush" data-mist-lead="icon" data-mist-code-block="12px" data-icons="lucide">
+<meta name="prototype-option" content="pane: flush | floating" />
+<meta name="prototype-option-group" content="Mist" />
+<meta name="prototype-option" content="mist-lead: icon | status" />
+<meta name="prototype-option" content="mist-code-block: 12px | 13px" />
+<meta name="prototype-option-group" content="Chrome" />
+<meta name="prototype-option" content="icons: lucide | material" />
+</html>`;
+
+  test("a group line puts every following option under it", async () => {
+    const { options, problems } = await readPrototypeOptions(html);
+    expect(problems).toEqual([]);
+    expect(options.map((o) => [o.name, o.group])).toEqual([
+      ["pane", null],
+      ["mist-lead", "Mist"],
+      ["mist-code-block", "Mist"],
+      ["icons", "Chrome"],
+    ]);
+    expect(
+      groupOptions(options).map((g) => [g.label, g.options.length]),
+    ).toEqual([
+      [null, 1],
+      ["Mist", 2],
+      ["Chrome", 1],
+    ]);
+  });
+
+  test("a grouped option's label drops the group's prefix", async () => {
+    const { options } = await readPrototypeOptions(html);
+    expect(options.map(optionLabel)).toEqual([
+      "Pane",
+      "Lead",
+      "Code block",
+      "Icons",
+    ]);
+  });
+
+  test("a group line without a label is a problem and starts no group", () => {
+    const { options, problems } = foldOptions({
+      groups: [
+        { at: 0, label: "Layout" },
+        { at: 1, label: "  " },
+      ],
+      declarations: ["pane: flush | floating", "density: cozy | compact"],
+      htmlData: { pane: "flush", density: "cozy" },
+      htmlVars: {},
+    });
+    expect(options.map((o) => o.group)).toEqual(["Layout", "Layout"]);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("has no label");
   });
 });

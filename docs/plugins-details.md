@@ -5098,9 +5098,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-            - Uses: 72 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
-              - `primitives/css/ui-kit` ×6
+            - Uses: 78 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+              - `primitives/css/ui-kit` ×7
               - `primitives/data-view` ×6
+              - `primitives/collapsible` ×5
               - `primitives/hover-reveal` ×3
               - `primitives/persistent-draft` ×3
               - `primitives/action-presentation` ×2
@@ -5207,6 +5208,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --ring`
               - `ui/tokens/color-palette --warning`
               - `ui/tokens/density --space-lg`
+              - `ui/tokens/density --space-xs`
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
@@ -5353,6 +5355,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ColorSuggestion`
               - `MocksDeclaration`
               - `OptionDeclaration`
+              - `OptionGroup`
               - `OptionPicks`
               - `OptionSource`
               - `PicksChange`
@@ -5376,6 +5379,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DEFAULT_PROTOTYPE_VIEWPORT`
               - `describeOptionValues`
               - `foldOptions`
+              - `groupOptions`
               - `HEADLESS_PRESET`
               - `humanizeToken`
               - `isHexColor`
@@ -5386,6 +5390,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MocksDeclarationSchema`
               - `mocksProblemDetail`
               - `NO_PROTOTYPE_STATUS`
+              - `optionLabel`
               - `parseMocks`
               - `parseOptionColor`
               - `parseOptionDeclaration`
@@ -33850,10 +33855,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-caption`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
-        - Imported by: 49 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+        - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
           - `conversations` ×11
+          - `apps` ×9
           - `ui` ×9
-          - `apps` ×8
           - `primitives` ×8
           - `plugin-meta` ×4
           - `review` ×3

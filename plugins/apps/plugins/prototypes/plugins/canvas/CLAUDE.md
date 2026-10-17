@@ -109,7 +109,11 @@ not declare is dropped from its URL.
   swatch per suggestion and a trailing custom swatch (the color on screen,
   ringed when it is no suggestion) that opens the color picker in its own
   popover above the swatch. The pill writes a color as a dot and its suggestion's
-  name, or its hex. Per row:
+  name, or its hex. Options the page declares under a group
+  (`<meta name="prototype-option-group">`, `files`' `groupOptions`) sit in one
+  collapsible section per group — folded, its header lists the group's picks —
+  and a grouped row drops the group's prefix from its label (`optionLabel`;
+  its radiogroup keeps the whole humanized name, so it stays unique). Per row:
   - **link** — keep this option the same in every frame; linking copies this
     frame's value everywhere, and later picks go to every frame;
   - **spread** — one frame per value of this option — for a color, per
@@ -353,9 +357,10 @@ navigation, so it starts from nothing remembered.
     - `PrototypeFrameActions` "close" → `CloseFrameAction`
     - `PrototypeVersionActions` "compare" → `CompareVersionAction`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-  - Uses: 72 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×6
+  - Uses: 78 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×7
     - `primitives/data-view` ×6
+    - `primitives/collapsible` ×5
     - `primitives/hover-reveal` ×3
     - `primitives/persistent-draft` ×3
     - `primitives/action-presentation` ×2
@@ -462,6 +467,7 @@ navigation, so it starts from nothing remembered.
     - `ui/tokens/color-palette --ring`
     - `ui/tokens/color-palette --warning`
     - `ui/tokens/density --space-lg`
+    - `ui/tokens/density --space-xs`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`

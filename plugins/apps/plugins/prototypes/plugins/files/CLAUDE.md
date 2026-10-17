@@ -520,6 +520,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `ColorSuggestion`
     - `MocksDeclaration`
     - `OptionDeclaration`
+    - `OptionGroup`
     - `OptionPicks`
     - `OptionSource`
     - `PicksChange`
@@ -543,6 +544,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `DEFAULT_PROTOTYPE_VIEWPORT`
     - `describeOptionValues`
     - `foldOptions`
+    - `groupOptions`
     - `HEADLESS_PRESET`
     - `humanizeToken`
     - `isHexColor`
@@ -553,6 +555,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `MocksDeclarationSchema`
     - `mocksProblemDetail`
     - `NO_PROTOTYPE_STATUS`
+    - `optionLabel`
     - `parseMocks`
     - `parseOptionColor`
     - `parseOptionDeclaration`

@@ -17,6 +17,10 @@ import { Color } from "@plugins/primitives/plugins/css/plugins/color-picker/core
  *   `--<name>` custom property in `<html style>`, and the page reads
  *   `var(--<name>)`.
  *
+ * Options may be grouped: `<meta name="prototype-option-group" content="Mist">`
+ * starts a group, and every option declared after it (up to the next group
+ * line) belongs to it — the picker draws it as one titled section.
+ *
  * Either way the page carries its default in every context — double-clicked
  * off disk, in the thumbnail render, in the app — and the app only ever
  * OVERWRITES it with the picked value (the server stamps it, see
@@ -38,6 +42,8 @@ export interface ChoiceOption {
   values: readonly [string, string, ...string[]];
   /** The value the page's own `<html data-<name>>` carries. One of `values`. */
   default: string;
+  /** The label of the group it is declared under, `null` before any group. */
+  group: string | null;
 }
 
 /** One named color an agent suggests for a color option. */
@@ -60,6 +66,8 @@ export interface ColorOption {
   suggestions: readonly ColorSuggestion[];
   /** The page's own `<html style="--<name>: …">`, as lowercase `#rrggbb`. */
   default: string;
+  /** The label of the group it is declared under, `null` before any group. */
+  group: string | null;
 }
 
 /** One option, valid against its declaration and its page's default. */
@@ -254,12 +262,15 @@ function parseColorSuggestions(
 
 /**
  * What the HTML says about options, before any judgement: every
- * `<meta name="prototype-option">` content in document order, the `data-*`
- * attributes on `<html>` (keyed WITHOUT the `data-` prefix) and the custom
- * properties in its `style` (keyed WITHOUT the `--`).
+ * `<meta name="prototype-option">` content in document order, every
+ * `<meta name="prototype-option-group">` with the index of the declaration it
+ * precedes, the `data-*` attributes on `<html>` (keyed WITHOUT the `data-`
+ * prefix) and the custom properties in its `style` (keyed WITHOUT the `--`).
  */
 export interface OptionSource {
   declarations: readonly string[];
+  /** Group lines: `at` is the index in `declarations` the group starts at. */
+  groups: readonly { at: number; label: string }[];
   htmlData: Readonly<Record<string, string>>;
   htmlVars: Readonly<Record<string, string>>;
 }
@@ -274,8 +285,18 @@ export function foldOptions(source: OptionSource): {
 } {
   const options: PrototypeOption[] = [];
   const problems: string[] = [];
+  let group: string | null = null;
 
-  for (const raw of source.declarations) {
+  for (const [i, raw] of source.declarations.entries()) {
+    for (const g of source.groups) {
+      if (g.at !== i) continue;
+      const label = g.label.trim();
+      if (label === "") {
+        problems.push(
+          `<meta name="prototype-option-group"> has no label — write it as content="<label>", e.g. content="Layout"`,
+        );
+      } else group = label;
+    }
     const d = parseOptionDeclaration(raw);
     if (d.kind === "malformed") {
       const syntax = COLOR_KEYWORD_RE.test(
@@ -305,6 +326,7 @@ export function foldOptions(source: OptionSource): {
         name: d.name,
         suggestions: d.suggestions,
         default: color.hex,
+        group,
       });
       continue;
     }
@@ -326,6 +348,7 @@ export function foldOptions(source: OptionSource): {
       name: d.name,
       values: d.values,
       default: def,
+      group,
     });
   }
 
@@ -510,4 +533,41 @@ export function picksFromQuery(
 export function humanizeToken(token: string): string {
   const spaced = token.replace(/-/g, " ");
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+/**
+ * The picker's label for an option: its name humanized, without its group's
+ * own prefix — `mist-code-block` under the group "Mist" is "Code block".
+ */
+export function optionLabel(option: PrototypeOption): string {
+  if (option.group === null) return humanizeToken(option.name);
+  const prefix = `${option.group
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")}-`;
+  return option.name.startsWith(prefix) && option.name.length > prefix.length
+    ? humanizeToken(option.name.slice(prefix.length))
+    : humanizeToken(option.name);
+}
+
+/** A run of consecutive options declared under one group (`null`: none). */
+export interface OptionGroup {
+  label: string | null;
+  options: readonly PrototypeOption[];
+}
+
+/**
+ * Options in picker order, cut into runs of one group each: the sections the
+ * picker draws. A group's run ends at the next group line.
+ */
+export function groupOptions(
+  options: readonly PrototypeOption[],
+): OptionGroup[] {
+  const groups: { label: string | null; options: PrototypeOption[] }[] = [];
+  for (const o of options) {
+    const last = groups.at(-1);
+    if (last !== undefined && last.label === o.group) last.options.push(o);
+    else groups.push({ label: o.group, options: [o] });
+  }
+  return groups;
 }

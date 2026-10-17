@@ -59,6 +59,8 @@ export {
   parseOptionColor,
   picksFromQuery,
   humanizeToken,
+  optionLabel,
+  groupOptions,
   isOptionName,
   isOptionValue,
   isHexColor,
@@ -89,5 +91,6 @@ export type {
   OptionDeclaration,
   OptionPicks,
   OptionSource,
+  OptionGroup,
 } from "./options";
 export { readOptionSource, readPrototypeOptions } from "./option-source";

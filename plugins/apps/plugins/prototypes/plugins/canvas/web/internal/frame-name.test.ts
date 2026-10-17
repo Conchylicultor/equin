@@ -10,6 +10,7 @@ const opt = (
   name,
   values,
   default: values[0],
+  group: null,
 });
 
 const options = [

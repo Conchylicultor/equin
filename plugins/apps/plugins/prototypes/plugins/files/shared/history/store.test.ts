@@ -251,6 +251,7 @@ describe("version options", () => {
         name: "palette",
         values: ["violet", "azure"],
         default: "violet",
+        group: null,
       },
     ]);
     expect(v1!.options).toEqual([
@@ -259,6 +260,7 @@ describe("version options", () => {
         name: "palette",
         values: ["amber", "azure"],
         default: "amber",
+        group: null,
       },
     ]);
   });

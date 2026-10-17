@@ -30,6 +30,7 @@ const design: PrototypeOption = {
   name: "design",
   values: ["mist", "slate", "paper"],
   default: "mist",
+  group: null,
 };
 
 const v3: PrototypeVersion = {
@@ -288,6 +289,7 @@ const accent: ColorOption = {
     { name: "azure", color: "#3b82f6" },
   ],
   default: "#7c5cff",
+  group: null,
 };
 
 describe("color preview", () => {

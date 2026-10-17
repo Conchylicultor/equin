@@ -12,4 +12,6 @@ export const OPTIONS_RULE = [
   "page for that. A color is a `color` option (`accent: color violet=#7c5cff |",
   'azure=#3b82f6`, default in `<html style="--accent: …">`, read with',
   "`var(--accent)`), never a palette enum — the reader can then pick any color.",
+  'Many options? Group them with `<meta name="prototype-option-group" content="Sidebar">`:',
+  "every option declared after it belongs to that group, drawn as one section.",
 ].join("\n");

@@ -225,6 +225,30 @@ There are two kinds: a **choice** (one of a fixed list of values) and a
   in JS. Read it once, at load: picking a value reloads the frame with the new
   attribute, so nothing has to listen for a change.
 
+### Many options? Group them
+
+Past a handful of options the picker becomes a wall of rows. Group them:
+a `<meta name="prototype-option-group" content="<label>">` line starts a group,
+and every option declared after it — up to the next group line — belongs to it.
+Options declared before the first group line stay ungrouped, on top.
+
+```html
+<meta name="prototype-option" content="pane: flush | floating" />
+<meta name="prototype-option-group" content="Sidebar" />
+<meta name="prototype-option" content="sidebar-nav: flat | grouped" />
+<meta name="prototype-option" content="sidebar-width: 246 | 264 | 280" />
+<meta name="prototype-option-group" content="Colors" />
+<meta name="prototype-option" content="accent: color violet=#7c5cff | azure=#3b82f6" />
+```
+
+The picker draws each group as a titled section the reader can fold (folded,
+it lists the group's picks). A grouped option whose name starts with the
+group's label drops it on screen — `sidebar-width` under "Sidebar" reads
+"Width" — so keep the prefix in the name (it is still the `data-*`
+attribute and the query key, and must stay unique) and let the group carry it.
+Group by what the reader compares together (one region of the screen, one
+component, the colors), not by kind.
+
 ### Colors are a `color` option, never a palette enum
 
 A color the reader might want to tune — an accent, a surface, a brand color —

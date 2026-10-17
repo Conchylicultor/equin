@@ -16,12 +16,14 @@ const design: ChoiceOption = {
   name: "design",
   values: ["mist", "slate", "paper"],
   default: "mist",
+  group: null,
 };
 const page: ChoiceOption = {
   kind: "choice",
   name: "page",
   values: ["home", "list"],
   default: "home",
+  group: null,
 };
 const v3: PrototypeVersion = {
   n: 3,

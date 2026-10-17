@@ -22,6 +22,7 @@ const design: PrototypeOption = {
   name: "design",
   values: ["mist", "slate", "paper"],
   default: "mist",
+  group: null,
 };
 
 const v3: PrototypeVersion = {

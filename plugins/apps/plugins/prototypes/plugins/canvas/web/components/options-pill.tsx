@@ -1,15 +1,26 @@
-import { useState, type ReactElement } from "react";
+import { useState, type ReactElement, type ReactNode } from "react";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  Collapsible,
+  CollapsibleChevron,
+  CollapsibleContent,
+  CollapsibleTrigger,
+  useCollapsibleContext,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import {
   Button,
   ControlSizeProvider,
+  Separator,
   cn,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -23,7 +34,9 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   colorPickValue,
+  groupOptions,
   humanizeToken,
+  optionLabel,
   parseOptionColor,
   pickedColor,
   pickedValue,
@@ -53,7 +66,9 @@ const paletteIcon = symbol("palette");
  * options popover: one row per declared option — value chips for a choice,
  * suggestion swatches plus a custom swatch (which opens a color picker in its
  * own popover beside it) for a color — plus per row a link (keep it the same in every
- * frame) and a spread (one frame per value, or per suggestion).
+ * frame) and a spread (one frame per value, or per suggestion). Options the
+ * page declares under a group (`<meta name="prototype-option-group">`) sit in
+ * one collapsible section per group, which names its picks when folded.
  *
  * A color drag previews (`previewPick`: the frame repaints every move, nothing
  * is written) and its end commits (`setPick`: one write). The pill and the
@@ -99,24 +114,43 @@ export function OptionsPill({
       <ControlSizeProvider size="xs">
         <Stack gap="sm" role="group" aria-label="Options">
           <PopoverHeading />
-          {options.map((option) => (
-            <OptionRow
-              key={option.name}
-              frame={frame}
-              option={option}
-              value={pickedValue(option, picks)}
-              shownValue={pickedValue(option, shown)}
-              onPick={(value) =>
-                dispatch({
-                  type: "setPick",
-                  id: frame.id,
-                  option: option.name,
-                  value,
-                })
-              }
-              onClose={() => setOpen(false)}
-            />
-          ))}
+          {groupOptions(options).map((group, i) => {
+            const rows = group.options.map((option) => (
+              <OptionRow
+                key={option.name}
+                frame={frame}
+                option={option}
+                value={pickedValue(option, picks)}
+                shownValue={pickedValue(option, shown)}
+                onPick={(value) =>
+                  dispatch({
+                    type: "setPick",
+                    id: frame.id,
+                    option: option.name,
+                    value,
+                  })
+                }
+                onClose={() => setOpen(false)}
+              />
+            ));
+            // A run is keyed by its place: two runs may share a label.
+            const key = `${String(i)}:${group.label ?? ""}`;
+            return group.label === null ? (
+              <Stack key={key} gap="sm">
+                {rows}
+              </Stack>
+            ) : (
+              <OptionGroupSection
+                key={key}
+                label={group.label}
+                summary={group.options
+                  .map((o) => valueLabel(pickedValue(o, shown)))
+                  .join(" · ")}
+              >
+                {rows}
+              </OptionGroupSection>
+            );
+          })}
           {Object.keys(picks).length > 0 ? (
             <Button
               variant="ghost"
@@ -186,6 +220,56 @@ function PillSummary({
   );
 }
 
+/**
+ * One group's options, under a header that folds them: the group's label and
+ * a rule while open; folded, the picks it holds ("Status · Flat · Button").
+ */
+function OptionGroupSection({
+  label,
+  summary,
+  children,
+}: {
+  label: string;
+  summary: string;
+  children: ReactNode;
+}): ReactElement {
+  return (
+    <Collapsible defaultOpen>
+      <Stack gap="xs">
+        <CollapsibleTrigger className="gap-xs text-muted-foreground hover:text-foreground">
+          <CollapsibleChevron className="size-3" />
+          <SectionLabel as="span" className={rigidClass()}>
+            {label}
+          </SectionLabel>
+          <GroupHeaderTail summary={summary} />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <Stack gap="sm">{children}</Stack>
+        </CollapsibleContent>
+      </Stack>
+    </Collapsible>
+  );
+}
+
+/** A group header's tail: a rule while open, the group's picks while folded. */
+function GroupHeaderTail({ summary }: { summary: string }): ReactElement {
+  const ctx = useCollapsibleContext();
+  if (ctx === null)
+    throw new Error("GroupHeaderTail renders inside a Collapsible");
+  const open = ctx.open;
+  return (
+    <Fill>
+      {open ? (
+        <Separator />
+      ) : (
+        <Text variant="caption" tone="faint">
+          {summary}
+        </Text>
+      )}
+    </Fill>
+  );
+}
+
 /** "Options" and the legend for the row actions. */
 function PopoverHeading(): ReactElement {
   const { canvas } = usePrototypeDetail();
@@ -228,7 +312,10 @@ function OptionRow({
   const multi = prototypeFrames(canvas.frames).length > 1;
   const linked = canvas.linked.has(option.name);
   const spread = canvas.spread === option.name;
+  // Under a group the row drops the group's prefix ("Code block" under
+  // "Mist"); its accessible name stays the whole name, unique in the popover.
   const label = humanizeToken(option.name);
+  const shownLabel = optionLabel(option);
   // The chip already on screen writes nothing: frame A's write would reach
   // every surface showing this prototype.
   const pick = (v: string) => {
@@ -243,7 +330,7 @@ function OptionRow({
           tone="muted"
           className={cn(rigidClass(), "w-20")}
         >
-          {label}
+          {shownLabel}
         </Text>
         <Fill>
           {option.kind === "choice" ? (

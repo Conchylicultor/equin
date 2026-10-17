@@ -22,6 +22,7 @@ const OPTIONS: PrototypeOption[] = [
     name: "pane",
     values: ["flush", "floating"],
     default: "flush",
+    group: null,
   },
   {
     kind: "color",
@@ -31,6 +32,7 @@ const OPTIONS: PrototypeOption[] = [
       { name: "azure", color: "#3b82f6" },
     ],
     default: "#7c5cff",
+    group: null,
   },
 ];
 
@@ -89,7 +91,15 @@ describe("stampPicks", () => {
     const html = `<html><head><meta name="prototype-option" content="accent: color" /></head></html>`;
     const out = await stampPicks(
       html,
-      [{ kind: "color", name: "accent", suggestions: [], default: "#000000" }],
+      [
+        {
+          kind: "color",
+          name: "accent",
+          suggestions: [],
+          default: "#000000",
+          group: null,
+        },
+      ],
       { accent: "#123456" },
     );
     expect(out).toContain('<html style="--accent: #123456">');

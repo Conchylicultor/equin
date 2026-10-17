@@ -14,7 +14,8 @@ export async function readPrototypeOptions(
 
 /**
  * Read the option declarations out of a prototype's HTML: every
- * `<meta name="prototype-option">` content, in document order, the `data-*`
+ * `<meta name="prototype-option">` content, in document order, every
+ * `<meta name="prototype-option-group">` and where it starts, the `data-*`
  * attributes on `<html>` (choice defaults) and the custom properties in its
  * `style` (color defaults). The ONE read — the gallery list, the
  * folder validator and the server's stamping all go through it, so none of them
@@ -24,6 +25,7 @@ export async function readPrototypeOptions(
  */
 export async function readOptionSource(html: string): Promise<OptionSource> {
   const declarations: string[] = [];
+  const groups: { at: number; label: string }[] = [];
   const htmlData: Record<string, string> = {};
   let htmlVars: Record<string, string> = {};
   let sawHtml = false;
@@ -46,14 +48,21 @@ export async function readOptionSource(html: string): Promise<OptionSource> {
     })
     .on("meta", {
       element(el) {
-        if (readHtmlAttr(el, "name") !== "prototype-option") return;
-        declarations.push(readHtmlAttr(el, "content") ?? "");
+        const name = readHtmlAttr(el, "name");
+        if (name === "prototype-option-group") {
+          groups.push({
+            at: declarations.length,
+            label: readHtmlAttr(el, "content") ?? "",
+          });
+        } else if (name === "prototype-option") {
+          declarations.push(readHtmlAttr(el, "content") ?? "");
+        }
       },
     });
 
   // The rewriter only runs its handlers as the body is consumed.
   await rewriter.transform(new Response(html)).text();
-  return { declarations, htmlData, htmlVars };
+  return { declarations, groups, htmlData, htmlVars };
 }
 
 /**

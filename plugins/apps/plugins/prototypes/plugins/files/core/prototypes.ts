@@ -28,6 +28,7 @@ export const PrototypeOptionSchema = z.discriminatedUnion("kind", [
     name: z.string(),
     values: z.tuple([z.string(), z.string()]).rest(z.string()).readonly(),
     default: z.string(),
+    group: z.string().nullable(),
   }),
   z.object({
     kind: z.literal("color"),
@@ -36,6 +37,7 @@ export const PrototypeOptionSchema = z.discriminatedUnion("kind", [
       .array(z.object({ name: z.string(), color: z.string() }))
       .readonly(),
     default: z.string(),
+    group: z.string().nullable(),
   }),
 ]) satisfies ZodParser<PrototypeOption>;
 
