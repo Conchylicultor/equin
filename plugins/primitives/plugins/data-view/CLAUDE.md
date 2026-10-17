@@ -2490,7 +2490,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `IdKinds.Kind` ×2
   - Uses: 102 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×18
-    - `primitives/css/ui-kit` ×11
+    - `primitives/css/ui-kit` ×12
     - `primitives/data-view/view-core` ×8
     - `primitives/live-state` ×5
     - `primitives/css/control-panel` ×4
@@ -2528,7 +2528,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `primitives/dom/in-view.createInViewWatcher`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/popover.InlinePopover`
-    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/row-actions.RowActions`
     - `shell/toast.showToast`
     - `ui/icons.Icon`

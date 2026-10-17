@@ -261,7 +261,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `Pane.Register` "build-detail"
     - `DebugApp.Sidebar` "Builds"
     - `ConfigV2.WebRegister` "config"
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×4
     - `primitives/live-state` ×4
     - `infra/endpoints` ×2
@@ -284,7 +284,6 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
-    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/relative-time.ElapsedTime`
     - `runs.RunsDataView`
     - `shell/action-bar.ActionBar`

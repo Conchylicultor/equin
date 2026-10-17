@@ -2945,9 +2945,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `EventSourceActions` "delete" → `SourceDeleteAction`
             - Uses: 39 symbols — full list in [`plugins/apps/plugins/events/plugins/sources/REFERENCE.md`](../plugins/apps/plugins/events/plugins/sources/REFERENCE.md)
               - `apps/events/events-core` ×7
+              - `primitives/css/ui-kit` ×5
               - `primitives/data-view` ×5
               - `primitives/pane` ×5
-              - `primitives/css/ui-kit` ×4
               - `apps/events/shell.Events`
               - `config_v2/fields.FieldRenderer`
               - `infra/endpoints.getEndpointErrorMessage`
@@ -2964,7 +2964,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/icon-button.IconButton`
               - `primitives/live-state.matchResource`
               - `primitives/overlay/imperative-dialog.openDialog`
-              - `primitives/overlay/tooltip.WithTooltip`
               - `ui/icons.Icon`
             - Exports (types):
               - `ConfigValues`
@@ -3460,6 +3459,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/status-dot.StatusDot`
+              - `primitives/css/ui-kit.WithTooltip`
               - `primitives/live-state.mapResource`
               - `primitives/live-state.ResourceError`
               - `primitives/live-state.ResourceResult`
@@ -4292,7 +4292,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
-              - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/relative-time.RelativeTime`
           - Server:
             - Contributes:
@@ -5098,7 +5097,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
             - Uses: 78 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
-              - `primitives/css/ui-kit` ×7
+              - `primitives/css/ui-kit` ×8
               - `primitives/data-view` ×6
               - `primitives/collapsible` ×5
               - `primitives/hover-reveal` ×3
@@ -5140,7 +5139,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/overlay/portal-host.PortalHost`
-              - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/relative-time.RelativeTime`
               - `primitives/shortcuts.useSurfaceShortcuts`
               - `primitives/slot-render.defineDispatchSlot`
@@ -6641,8 +6639,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/spacing.Inset`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/ui-kit.cn`
+                  - `primitives/css/ui-kit.WithTooltip`
                   - `primitives/css/yield.yieldClass`
-                  - `primitives/overlay/tooltip.WithTooltip`
                 - Exports (types): `ToolbarControlProps`
                 - Exports (values):
                   - `hoverExpandHost`
@@ -6945,7 +6943,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/ui-kit.Button`
                   - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
-                  - `primitives/overlay/tooltip.WithTooltip`
                 - Exports (types): `ChordBoxFace`
                 - Exports (values):
                   - `chordBoxFace`
@@ -6996,9 +6993,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/endpoints.useEndpointMutation`
                   - `network/live.useLiveRow`
                   - `primitives/css/switch.Switch`
+                  - `primitives/css/ui-kit.WithTooltip`
                   - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
-                  - `primitives/overlay/tooltip.WithTooltip`
                 - Exports (values):
                   - `ChordModeSwitch`
                   - `useChordModeAvailable`
@@ -7223,7 +7220,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ConfigV2.WebRegister` "groove-presets"
                   - `SonataDocument.SongSetting` "rhythm-sync" → `RhythmObserver`
                 - Uses: 56 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md)
-                  - `primitives/css/ui-kit` ×10
+                  - `primitives/css/ui-kit` ×11
                   - `apps/sonata/document` ×9
                   - `primitives/live-state` ×6
                   - `apps/sonata/primitives/rhythm-circle` ×3
@@ -7245,7 +7242,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/icon-button.IconButton`
                   - `primitives/latest-ref.useLatestRef`
                   - `primitives/loading.Loading`
-                  - `primitives/overlay/tooltip.WithTooltip`
                   - `ui/icons.Icon`
                 - Exports (types):
                   - `Groove`
@@ -7291,7 +7287,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Sonata.Hud` "swing-chip" → `SwingChip`
                 - Uses: 23 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/swing/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/swing/REFERENCE.md)
                   - `apps/sonata/document` ×8
-                  - `primitives/css/ui-kit` ×2
+                  - `primitives/css/ui-kit` ×3
                   - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
                   - `infra/endpoints.fetchEndpoint`
@@ -7304,7 +7300,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/toggle-chip.SegmentedControl`
                   - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
-                  - `primitives/overlay/tooltip.WithTooltip`
               - Server:
                 - Contributes: `resource.declare` "sonata-swing:rows"
                 - Uses:
@@ -9715,8 +9710,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.cn`
+          - `primitives/css/ui-kit.WithTooltip`
           - `primitives/link-gesture.activationProps`
-          - `primitives/overlay/tooltip.WithTooltip`
         - Exports (values): `AppRail`
       - Cross-plugin:
         - Uses tokens:
@@ -9922,7 +9917,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)"
               - `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
             - Uses: 54 symbols — full list in [`plugins/apps-core/plugins/surface/plugins/floating/REFERENCE.md`](../plugins/apps-core/plugins/surface/plugins/floating/REFERENCE.md)
-              - `primitives/css/ui-kit` ×9
+              - `primitives/css/ui-kit` ×10
               - `apps-core/surface` ×4
               - `apps-core/tabs` ×3
               - `config_v2` ×3
@@ -9946,7 +9941,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/element-size.useElementSize`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useLatestRef`
-              - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/scope/install-sink.defineInstallSink`
               - `ui/icons.Icon`
           - Server:
@@ -10103,7 +10097,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes: `Apps.TabBar` "Tab bar" → `AppTabBar`
         - Uses: 21 symbols — full list in [`plugins/apps-core/plugins/tab-bar/REFERENCE.md`](../plugins/apps-core/plugins/tab-bar/REFERENCE.md)
           - `apps-core/tabs` ×3
-          - `primitives/css/ui-kit` ×2
+          - `primitives/css/ui-kit` ×3
           - `primitives/sortable-list` ×2
           - `ui/tab-bar` ×2
           - `apps-core/chrome-theme.chromeThemeScope`
@@ -10117,7 +10111,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/theme-boundary.Theme`
           - `primitives/dom/scroll-reveal.useRevealOnActive`
           - `primitives/icon-button.IconButton`
-          - `primitives/overlay/tooltip.WithTooltip`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --background`
@@ -10953,7 +10946,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Pane.Register` "build-detail"
       - `DebugApp.Sidebar` "Builds"
       - `ConfigV2.WebRegister` "config"
-    - Uses: 37 symbols — full list in [`plugins/build/REFERENCE.md`](../plugins/build/REFERENCE.md)
+    - Uses: 36 symbols — full list in [`plugins/build/REFERENCE.md`](../plugins/build/REFERENCE.md)
       - `primitives/css/ui-kit` ×4
       - `primitives/live-state` ×4
       - `infra/endpoints` ×2
@@ -10976,7 +10969,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/link-gesture.activationProps`
       - `primitives/loading.Loading`
       - `primitives/overlay/popover.InlinePopover`
-      - `primitives/overlay/tooltip.WithTooltip`
       - `primitives/relative-time.ElapsedTime`
       - `runs.RunsDataView`
       - `shell/action-bar.ActionBar`
@@ -12002,7 +11994,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-view` ×4
           - `primitives/live-state` ×4
           - `primitives/pane` ×4
-          - `primitives/css/ui-kit` ×2
+          - `primitives/css/ui-kit` ×3
           - `apps-core/app-icon.AppIconView`
           - `apps-core.Apps`
           - `config_v2.useConfigRegistrations`
@@ -12027,7 +12019,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
-          - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/syntax-highlight.HighlightedCode`
           - `shell/toast.showToast`
@@ -12685,9 +12676,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/inline.Inline`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.WithTooltip`
           - `primitives/live-state.ResourceErrorInline`
           - `primitives/overlay/popover.InlinePopover`
-          - `primitives/overlay/tooltip.WithTooltip`
         - Exports (values): `useConversationPreprompt`
       - Server:
         - Contributes:
@@ -13013,7 +13004,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/badge.Badge`
               - `primitives/css/text.Text`
               - `primitives/live-state.ResourceErrorInline`
-              - `primitives/overlay/tooltip.WithTooltip`
               - `ui/icons.Icon`
           - Server:
             - Contributes: `resource.declare` "allow-files"
@@ -13528,8 +13518,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `conversations/conversation-view.Conversation`
               - `primitives/css/spacing.Stack`
+              - `primitives/css/ui-kit.WithTooltip`
               - `primitives/launch.LaunchControl`
-              - `primitives/overlay/tooltip.WithTooltip`
               - `ui/icons.Icon`
           - Cross-plugin:
             - Uses tokens:
@@ -15635,6 +15625,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view` ×2
               - `conversations` ×2
               - `primitives/css/fill` ×2
+              - `primitives/css/ui-kit` ×2
               - `primitives/relative-time` ×2
               - `conversations/conversation-ui/item.Item`
               - `debug/profiling/ops.opDetailPane`
@@ -15648,10 +15639,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/spinner.Spinner`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.cn`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.activationProps`
-              - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/pane.useOpenPane`
               - `ui/icons.Icon`
           - Cross-plugin:
@@ -34095,7 +34084,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.DensityControlled`
               - `primitives/css/ui-kit.textStepFor`
+              - `primitives/css/ui-kit.Tooltipped`
               - `primitives/css/ui-kit.useControlSize`
+              - `primitives/css/ui-kit.WithTooltip`
             - Exports (types):
               - `BadgeProps`
               - `BadgeShape`
@@ -34265,7 +34256,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`color-picker`** — Composable color picker primitive: a fitted (always-in-gamut) OKLCH ColorArea, HueSlider, AlphaSlider, per-channel ColorValueFields (HEX / OKLCH / HSL), SwatchGrid with named suggestions, and ColorPicker / ColorPickerPopover with before/after, Reset, eyedropper and a shared Recent row. The Color math (parse, convert, gamut) is in core.
           - Web:
             - Uses: 29 symbols — full list in [`plugins/primitives/plugins/css/plugins/color-picker/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/color-picker/REFERENCE.md)
-              - `primitives/css/ui-kit` ×5
+              - `primitives/css/ui-kit` ×6
               - `primitives/css/coords` ×2
               - `primitives/css/fill` ×2
               - `primitives/css/text` ×2
@@ -34284,7 +34275,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/latest-ref.useLatestRef`
               - `primitives/live-state.ResourceView`
               - `primitives/loading.Loading`
-              - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/persistent-draft.useDraft`
             - Exports (types):
               - `AlphaSliderProps`
@@ -34344,7 +34334,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
           - Web:
             - Uses: 23 symbols — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
-              - `primitives/css/ui-kit` ×11
+              - `primitives/css/ui-kit` ×12
               - `primitives/row-actions` ×2
               - `primitives/css/rail.useRailGuard`
               - `primitives/css/selection-indicator.CheckboxIndicator`
@@ -34354,7 +34344,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
-              - `primitives/overlay/tooltip.WithTooltip`
               - `ui/icons.Icon`
             - Exports (types):
               - `ControlPanelBlockProps`
@@ -34663,6 +34652,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.DensityControlled`
               - `primitives/css/ui-kit.textStepFor`
+              - `primitives/css/ui-kit.Tooltipped`
               - `primitives/css/ui-kit.useControlSize`
               - `primitives/link-gesture.activationProps`
             - Exports (types): `LinkChipProps`
@@ -35318,6 +35308,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSize`
               - `primitives/css/ui-kit.DensityControlled`
+              - `primitives/css/ui-kit.Tooltipped`
               - `primitives/css/ui-kit.useControlSize`
             - Exports (types):
               - `SegmentedControlProps`
@@ -35375,6 +35366,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SidebarToggleGlyph`
               - `SidebarToggleIcons`
               - `SurfaceLevel`
+              - `Tooltipped`
+              - `TooltipSide`
+              - `WithTooltipProps`
             - Exports (values):
               - `appThemeScope`
               - `Button`
@@ -35492,12 +35486,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TooltipTrigger`
               - `useControlSize`
               - `useMenuSurface`
+              - `usePinOnClick`
               - `usePortalForwardedAttrs`
               - `usePortalThemeScope`
               - `useRegionForwardedAttrs`
               - `useSidebar`
               - `useSidewaysScroll`
               - `useSingleLine`
+              - `WithTooltip`
           - Cross-plugin:
             - Uses tokens: 233 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `ui/tokens/density` ×70
@@ -35511,10 +35507,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 405 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `primitives` ×103
-              - `apps` ×82
-              - `conversations` ×54
+            - Imported by: 410 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `primitives` ×104
+              - `apps` ×84
+              - `conversations` ×56
               - `page` ×25
               - `debug` ×22
               - `ui` ×21
@@ -35733,7 +35729,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `IdKinds.Kind` ×2
         - Uses: 102 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×18
-          - `primitives/css/ui-kit` ×11
+          - `primitives/css/ui-kit` ×12
           - `primitives/data-view/view-core` ×8
           - `primitives/live-state` ×5
           - `primitives/css/control-panel` ×4
@@ -35771,7 +35767,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/in-view.createInViewWatcher`
           - `primitives/icon-button.IconButton`
           - `primitives/overlay/popover.InlinePopover`
-          - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/row-actions.RowActions`
           - `shell/toast.showToast`
           - `ui/icons.Icon`
@@ -37376,7 +37371,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.DensityControlled`
           - `primitives/overlay/tooltip.Kbd`
-          - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/shortcuts.formatShortcutLabel`
           - `ui/icons.Icon`
         - Exports (types): `IconButtonProps`
@@ -38604,7 +38598,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.Tooltip`
               - `primitives/css/ui-kit.TooltipCardContent`
               - `primitives/css/ui-kit.TooltipTrigger`
-              - `primitives/overlay/tooltip.usePinOnClick`
+              - `primitives/css/ui-kit.usePinOnClick`
             - Exports (types):
               - `HoverCardChip`
               - `HoverCardContent`
@@ -38650,13 +38644,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, a docked thumbnail strip, a grid of every image with a tile-size slider, a control-less full-screen slideshow, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
           - Web:
             - Uses: 43 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
-              - `primitives/css/ui-kit` ×5
+              - `primitives/css/ui-kit` ×6
               - `primitives/css/clip` ×2
               - `primitives/css/coords` ×2
               - `primitives/css/rigid` ×2
               - `primitives/css/spacing` ×2
               - `primitives/hover-reveal` ×2
-              - `primitives/overlay/tooltip` ×2
               - `primitives/persistent-draft` ×2
               - `primitives/announce.announce`
               - `primitives/css/badge.Badge`
@@ -38679,6 +38672,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/latest-ref.useEventCallback`
               - `primitives/loading.Loading`
               - `primitives/networking.probeUrlStatus`
+              - `primitives/overlay/tooltip.Kbd`
               - `primitives/scope/scoped-store.defineScopedStore`
               - `primitives/shortcuts.formatShortcutLabel`
               - `ui/icons.Icon`
@@ -38815,7 +38809,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/ui-kit.DialogTitle`
                   - `primitives/overlay/imperative-dialog.openDialog`
                   - `primitives/overlay/tooltip.Kbd`
-                  - `primitives/overlay/tooltip.WithTooltip`
                   - `primitives/shortcuts.formatShortcutLabel`
                 - Exports (types): `ConfirmDialogOptions`
                 - Exports (values): `confirmDialog`
@@ -38845,7 +38838,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.Popover`
               - `primitives/css/ui-kit.PopoverContent`
               - `primitives/css/ui-kit.PopoverTrigger`
-              - `primitives/overlay/tooltip.WithTooltip`
+              - `primitives/css/ui-kit.WithTooltip`
             - Exports (types): `InlinePopoverProps`
             - Exports (values): `InlinePopover`
           - Cross-plugin:
@@ -38903,25 +38896,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/present`
           - Exemptions:
             - Exempts itself from: `layout/no-adhoc-layout` — `web/internal/surface-overlay.tsx` (sanctioned)
-        - **`tooltip`** — WithTooltip wrapper, usePinOnClick (click pins a tooltip open — shared with the hover card), <TooltipDoc> documenting tooltip body (name + what it does), and <Kbd> keyboard shortcut badge.
+        - **`tooltip`** — <TooltipDoc> documenting tooltip body (name + what it does), and <Kbd> keyboard shortcut badge.
           - Web:
             - Uses:
               - `primitives/css/inline.Inline`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
-              - `primitives/css/ui-kit.Tooltip`
-              - `primitives/css/ui-kit.TooltipContent`
-              - `primitives/css/ui-kit.TooltipTrigger`
             - Exports (types):
               - `KbdProps`
               - `TooltipDocProps`
-              - `WithTooltipProps`
             - Exports (values):
               - `Kbd`
               - `TooltipDoc`
-              - `usePinOnClick`
-              - `WithTooltip`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`
@@ -38936,15 +38923,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-2xs`
               - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --line-height-2xs`
-            - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
-              - `primitives` ×16
-              - `apps` ×10
-              - `page` ×6
-              - `conversations` ×4
-              - `apps-core` ×3
-              - `tasks` ×3
-              - `build`
-              - `config_v2/settings`
+            - Imported by:
+              - `apps/chord/trainer`
+              - `apps/prototypes/present`
+              - `page/formatting/bold`
+              - `page/formatting/code`
+              - `page/formatting/italic`
+              - `page/formatting/link`
+              - `page/formatting/strikethrough`
+              - `page/formatting/underline`
+              - `primitives/action-presentation`
+              - `primitives/command-palette`
+              - `primitives/icon-button`
+              - `primitives/overlay/image-viewer`
+              - `primitives/overlay/imperative-dialog/confirm`
+              - `primitives/search`
+              - `primitives/text-editor/composer`
+              - `primitives/ui-context/element-picker`
+              - `tasks/launch-options`
+              - `tasks/task-description`
+              - `tasks/task-draft-form`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
@@ -39066,7 +39064,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `welcomePane.Actions` "title" → `PaneTitleItem`
           - `workflow-node.actions` "title" → `PaneTitleItem`
           - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
-        - Uses: 33 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Uses: 32 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `primitives/css/ui-kit` ×4
           - `primitives/live-state` ×3
           - `primitives/slot-render` ×3
@@ -39086,7 +39084,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/loading.Loading`
-          - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/scope/install-sink.defineInstallSink`
           - `primitives/scope/surface-id.SurfaceIdContext`
           - `primitives/select-scope.ContentScope`
@@ -39940,9 +39937,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/css/pin.Pin`
           - `primitives/css/spinner.Spinner`
+          - `primitives/css/ui-kit.WithTooltip`
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
-          - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/relative-time.RelativeTime`
           - `primitives/scope/scoped-store.defineScopedStore`
           - `ui/icons.Icon`
@@ -40174,7 +40171,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/overlay/tooltip.TooltipDoc`
-              - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/text-editor.TextEditor`
               - `primitives/text-editor.TextEditorProps`
               - `primitives/text-editor/composer/picker-pill.pillHighlightClass`
@@ -40213,9 +40209,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/ui-kit.DropdownMenuSeparator`
                   - `primitives/css/ui-kit.DropdownMenuTrigger`
                   - `primitives/css/ui-kit.MenuRowAction`
+                  - `primitives/css/ui-kit.WithTooltip`
                   - `primitives/overlay/hover-card.HoverCardContent`
                   - `primitives/overlay/hover-card.WithHoverCard`
-                  - `primitives/overlay/tooltip.WithTooltip`
                   - `ui/icons.Icon`
                 - Exports (types):
                   - `PickerPillCheckProps`
@@ -43983,12 +43979,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: 35 symbols — full list in [`plugins/tasks/plugins/task-description/REFERENCE.md`](../plugins/tasks/plugins/task-description/REFERENCE.md)
           - `primitives/text-editor/paste-images` ×5
           - `primitives/live-state` ×4
+          - `primitives/css/ui-kit` ×3
           - `tasks/task-detail` ×3
           - `network/live` ×2
           - `primitives/css/text` ×2
-          - `primitives/css/ui-kit` ×2
           - `primitives/hover-reveal` ×2
-          - `primitives/overlay/tooltip` ×2
           - `tasks/launch-options` ×2
           - `tasks` ×2
           - `infra/endpoints.fetchEndpoint`
@@ -43999,6 +43994,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/inline-text.InlineText`
           - `primitives/launch.LaunchControl`
           - `primitives/loading.Loading`
+          - `primitives/overlay/tooltip.TooltipDoc`
           - `primitives/text-editor.TextEditor`
       - Cross-plugin:
         - Uses tokens:
@@ -44071,14 +44067,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `TaskDraftFormSlots.Action`
         - Slot contributors: `TaskDraftFormSlots.Action` ← `improve.element-picker`
         - Contributes: `ConfigV2.WebRegister` "config"
-        - Uses: 40 symbols — full list in [`plugins/tasks/plugins/task-draft-form/REFERENCE.md`](../plugins/tasks/plugins/task-draft-form/REFERENCE.md)
+        - Uses: 39 symbols — full list in [`plugins/tasks/plugins/task-draft-form/REFERENCE.md`](../plugins/tasks/plugins/task-draft-form/REFERENCE.md)
           - `tasks/launch-options` ×5
           - `primitives/css/ui-kit` ×3
-          - `primitives/overlay/tooltip` ×3
           - `primitives/sortable-list` ×3
           - `primitives/text-editor/composer` ×3
           - `config_v2` ×2
           - `infra/endpoints` ×2
+          - `primitives/overlay/tooltip` ×2
           - `primitives/shortcuts` ×2
           - `apps-core.useCurrentAppId`
           - `network/live.useLive`
