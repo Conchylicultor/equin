@@ -32,7 +32,10 @@ await withBrowser(async (h) => {
   await row.click();
   await page.waitForURL((u) => u.pathname !== before, { timeout: 15_000 });
   const after = new URL(page.url()).pathname;
-  r.ok(`the URL moved to the ${kind} arm's pane (${after})`, after.includes(expect));
+  r.ok(
+    `the URL moved to the ${kind} arm's pane (${after})`,
+    after.includes(expect),
+  );
   await snap(page, out, "opened");
   return true;
 });
