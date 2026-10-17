@@ -225,6 +225,13 @@ export const LAYERS: readonly IcebergLayer[] = [
         kind: "component",
       },
       {
+        name: "Server in the browser",
+        weight: 2,
+        desc: "The server can be shipped along with the page and run inside the browser. An app can then be served as a plain web page, with no server to run, that works fully offline on local data.",
+        card: "pageserver",
+        kind: "component",
+      },
+      {
         name: "Optimistic updates",
         weight: 3,
         desc: "Your edit shows at once and the server confirms it after. Buttons show when they are waiting, and a cloud icon shows saving or saved.",

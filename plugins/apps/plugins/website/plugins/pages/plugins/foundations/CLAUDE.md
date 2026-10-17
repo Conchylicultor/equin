@@ -7,7 +7,7 @@ to the loop that built everything above it. Ported from the prototype
 picked on it: `finish: soft`, `header: sticky`, `split: icon`, `mark: wrench`.
 Re-check the picks (the prototype's options pill) before porting a change.
 
-- Every piece is a pill that opens **in place** into a card; 32 of them carry a
+- Every piece is a pill that opens **in place** into a card; 33 of them carry a
   live drawing (`web/internal/cards/`). The piece under the cursor holds still
   while its neighbours and the berg glide to where they land (FLIP).
 - A depth gauge (lines of code passed below the surface), a Components /

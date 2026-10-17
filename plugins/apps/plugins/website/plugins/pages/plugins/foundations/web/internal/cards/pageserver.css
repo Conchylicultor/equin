@@ -1,0 +1,14 @@
+/* the server and data are drawn once, inside the browser, and moved out to the cloud by the card's state (data-s on
+   the root), so the move is one slide, never a redraw */
+[data-card="pageserver"] .ps-move {
+  transition: transform 0.9s var(--k-ease);
+}
+[data-card="pageserver"] [data-s="0"] .ps-move {
+  transform: translate(164px, -30px);
+}
+[data-card="pageserver"] .ps-cloud {
+  transition: opacity var(--k-med);
+}
+[data-card="pageserver"] [data-s="1"] .ps-cloud {
+  opacity: 0.35;
+}

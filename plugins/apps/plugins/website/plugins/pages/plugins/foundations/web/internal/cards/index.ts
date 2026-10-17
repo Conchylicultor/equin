@@ -19,6 +19,7 @@ import { loopCard } from "./loop";
 import { mentionsCard } from "./mentions";
 import { migrationsCard } from "./migrations";
 import { optimisticCard } from "./optimistic";
+import { pageserverCard } from "./pageserver";
 import { pluginCard } from "./plugin";
 import { plugtreeCard } from "./plugtree";
 import { profilingCard } from "./profiling";
@@ -59,6 +60,7 @@ export const CARDS = {
   mentions: mentionsCard,
   migrations: migrationsCard,
   optimistic: optimisticCard,
+  pageserver: pageserverCard,
   plugin: pluginCard,
   plugtree: plugtreeCard,
   profiling: profilingCard,
