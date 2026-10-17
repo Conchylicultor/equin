@@ -25,20 +25,6 @@ export type ActiveDataSegment =
     };
 
 /**
- * Whether the match `[start, end)` stands on lines of its own: nothing but
- * whitespace between it and the line break (or text edge) on either side.
- */
-function standsAlone(text: string, start: number, end: number): boolean {
-  const lineStart = text.lastIndexOf("\n", start - 1) + 1;
-  const lineEndAt = text.indexOf("\n", end);
-  const lineEnd = lineEndAt === -1 ? text.length : lineEndAt;
-  return (
-    text.slice(lineStart, start).trim() === "" &&
-    text.slice(end, lineEnd).trim() === ""
-  );
-}
-
-/**
  * `text` with every code span and fenced code block blanked out (same length,
  * line breaks kept), so a tag written AS CODE — `` `</go>` `` in a sentence
  * about the tag — is not read as one. Markdown would render it as code, so the
@@ -82,13 +68,12 @@ export function buildSegments(
       end - m[1]!.length - 3,
     );
     const contrib = blockContribs.find((c) => c.tag === m![1])!;
-    // An inline-capable tag is a block only when it is one: on lines of its
-    // own AND in block form. Beside prose, or `<tag>one line</tag>` even
-    // standing alone, it stays in the markdown and renders through `inline`.
-    if (
-      contrib.inline &&
-      (!standsAlone(rawText, m.index, end) || !isBlockForm(inner))
-    ) {
+    // An inline-capable tag is a block exactly when its body is in block form
+    // — the one shape rule the draft and the sent message read too. Where it
+    // sits does not matter: `Pick one: <go>` ending a line of prose is a block,
+    // the prose before it its own markdown; `<tag>one line</tag>` stays in the
+    // markdown and renders through `inline`.
+    if (contrib.inline && !isBlockForm(inner)) {
       continue;
     }
     if (m.index > cursor) {

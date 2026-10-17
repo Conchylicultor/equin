@@ -17,11 +17,11 @@ export interface ActiveDataBlockContribution {
     attrs: Record<string, string>;
   }>;
   /**
-   * The same tag rendered in a paragraph's flow instead of as a block:
-   * written beside prose (`Done. <go>Push it</go>`), or a single line even on
-   * a line of its own. With it, only an occurrence that stands on lines of its
-   * own AND spans lines is a block (`component`); the rest stay in the
-   * markdown, where the host pairs the open and close tags into one element
+   * The same tag rendered in a paragraph's flow instead of as a block: a
+   * body on the open tag's line (`Done. <go>Push it</go>`), wherever it is
+   * written. With it, only an occurrence in block form (`isBlockForm`: the
+   * open tag ends its line, even when prose precedes it on that line) is a
+   * block (`component`); the rest stay in the markdown, where the host pairs the open and close tags into one element
    * and renders this with `children` = the rendered markdown between them and
    * `content` = that markdown's source. Without it, every occurrence is a
    * block, wherever it is written.

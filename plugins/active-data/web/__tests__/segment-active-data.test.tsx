@@ -48,4 +48,17 @@ describe("buildSegments", () => {
       { type: "markdown", text: "<go>Implement it</go>" },
     ]);
   });
+
+  test("block form opened at the end of a prose line is a block after that prose", () => {
+    const text = [
+      "Want me to file any of these? <go>",
+      "- [x] A",
+      "- [ ] B",
+      "</go>",
+    ].join("\n");
+    expect(buildSegments(text, contribs)).toMatchObject([
+      { type: "markdown", text: "Want me to file any of these? " },
+      { type: "block", tag: "go", content: "- [x] A\n- [ ] B" },
+    ]);
+  });
 });

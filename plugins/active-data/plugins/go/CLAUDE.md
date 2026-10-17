@@ -41,7 +41,9 @@ pattern (`GO_PICK_RE`) is built from the same bullet spelling in
 I've done the change. Should I <go>implement it</go>? Or <go>file a task</go>?
 ```
 
-**Block** — a multi-line `<go>` on lines of its own. A `- [ ]` checklist
+**Block** — a multi-line `<go>`: the open tag ends its line (prose before it
+on that line, `Want me to file any of these? <go>`, renders as its own
+paragraph above the card). A `- [ ]` checklist
 inside becomes pickable rows; `- [x]` pre-picks the ones the agent recommends:
 
 ```
@@ -127,8 +129,8 @@ Rules for agents are in the root `CLAUDE.md`.
 ## How the reply renders
 
 The tag is an `ActiveData.Tag` block contribution with an `inline` renderer.
-active-data extracts an occurrence standing on lines of its own and in block
-form (`isBlockForm`) as a block (`GoBlock`); everything else stays in the markdown, where
+active-data extracts an occurrence in block form (`isBlockForm`), wherever it
+sits on its line, as a block (`GoBlock`); everything else stays in the markdown, where
 active-data's remark pass pairs `<go>` / `</go>` into one element rendered by
 `GoInline` (see `active-data/web/internal/remark-inline-tags.ts`).
 
