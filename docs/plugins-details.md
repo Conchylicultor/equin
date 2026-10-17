@@ -11843,9 +11843,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Uses tokens:
-      - `ui/tokens/shadow --shadow`
-      - `ui/tokens/shape --spacing`
+    - Uses tokens: `ui/tokens/shape --spacing`
     - Imported by: 104 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×23
       - `debug` ×14
@@ -27960,13 +27958,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `GMAIL_SCOPES`
           - `GOOGLE_PROVIDER_ID`
-    - **`google-maps`** — Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup pane (browser key, plus the optional vector-map Map ID, checked against how Google actually drew the map). Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key) as a live value, with its write/clear endpoints for the key and the vector map's Map ID.
+    - **`google-maps`** — Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup pane (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the pane's LiveMapSetup.MapIdPreview slot). Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key) as a live value, with its write/clear endpoints for the key and the vector map's Map ID.
       - Web:
-        - Slots: `google-maps-live-map-setup.actions`
-        - Slot contributors: `google-maps-live-map-setup.actions` ← `primitives.pane`
+        - Slots:
+          - `google-maps-live-map-setup.actions`
+          - `LiveMapSetup.MapIdPreview`
+        - Slot contributors:
+          - `google-maps-live-map-setup.actions` ← `primitives.pane`
+          - `LiveMapSetup.MapIdPreview` ← `map.google`
         - Contributes: `Pane.Register` "google-maps-live-map-setup"
-        - Uses: 25 symbols — full list in [`plugins/integrations/plugins/google-maps/REFERENCE.md`](../plugins/integrations/plugins/google-maps/REFERENCE.md)
-          - `primitives/setup-steps` ×7
+        - Uses: 30 symbols — full list in [`plugins/integrations/plugins/google-maps/REFERENCE.md`](../plugins/integrations/plugins/google-maps/REFERENCE.md)
+          - `primitives/setup-steps` ×10
           - `primitives/live-state` ×3
           - `primitives/pane` ×3
           - `auth` ×2
@@ -27975,21 +27977,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/tabs.appLinkProps`
           - `auth/google-maps/setup-wizard.googleMapsSetupPane`
           - `network/live.useLive`
+          - `primitives/css/clip.Clip`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/loading.Loading`
+          - `primitives/slot-render.defineDispatchSlot`
         - Exports (types):
+          - `MapIdPreviewProps`
+          - `MapIdPreviewResult`
           - `MapRendering`
           - `MapsAccess`
           - `MapsAccessBlocker`
           - `MapsAccessCapability`
           - `MapsBrowserConfigState`
         - Exports (values):
+          - `LiveMapSetup`
           - `MapIdRasterNotice`
           - `MAPS_BLOCKER_BODY`
           - `MapsAccessAction`
           - `MapsMapAccessAction`
-          - `reportMapRendering`
           - `useMapsAccess`
           - `useMapsBrowserConfig`
       - Server:
@@ -28035,6 +28041,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/density --space-lg`
+          - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/places/place-details`
@@ -28522,24 +28529,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `page/place/map-layer`
       - `primitives/data-view/map`
   - Plugins:
-    - **`google`** — Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them once and then only from its Fit control, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Lazily loaded off the boot wave.
+    - **`google`** — Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them once and then only from its Fit control, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Draws the Live map setup's Map ID preview map. Lazily loaded off the boot wave.
       - Web:
-        - Contributes: `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
-        - Uses:
-          - `integrations/google-maps.MapIdRasterNotice`
-          - `integrations/google-maps.MapsMapAccessAction`
-          - `integrations/google-maps.reportMapRendering`
-          - `integrations/google-maps.useMapsAccess`
-          - `integrations/google-maps.useMapsBrowserConfig`
-          - `map.GeoMap`
-          - `map.MapRendererProps`
-          - `map.useMapTextStyle`
-          - `map/pin-layer.createCanvas2dPainter`
-          - `map/pin-layer.PinLayer`
-          - `map/pin-layer.SceneItem`
+        - Contributes:
+          - `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
+          - `LiveMapSetup.MapIdPreview` → `MapIdPreview`
+        - Uses: 21 symbols — full list in [`plugins/map/plugins/google/REFERENCE.md`](../plugins/map/plugins/google/REFERENCE.md)
+          - `integrations/google-maps` ×6
+          - `map/pin-layer` ×3
+          - `map` ×3
+          - `primitives/css/spacing` ×2
           - `primitives/css/center.Center`
-          - `primitives/css/spacing.Inset`
-          - `primitives/css/spacing.Stack`
           - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
           - `primitives/icon-button.IconButton`
@@ -34180,7 +34180,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+            - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
               - `apps` ×18
               - `primitives` ×10
               - `conversations` ×7
@@ -34192,6 +34192,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/surface`
               - `build/build-logs`
               - `config_v2/settings`
+              - `integrations/google-maps`
               - `plugin-meta/plugin-view/file-tree`
               - `screenshot`
               - `tasks/task-graph`
@@ -39663,7 +39664,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ContentScope`
           - `scopeSelectAllKeyDown`
           - `selectScopeProps`
-    - **`setup-steps`** — Guided setup-flow primitive: <Steps> ordered container auto-numbering <Step> items (upcoming/active/done states, dimmed-and-inert future steps, check-on-done, connecting rail), plus StepLink (open-external), StepDone (success line), StepNote (muted hint) and StepCommand (copyable command row) affordances.
+    - **`setup-steps`** — Guided setup-flow primitive: <Steps> ordered container auto-numbering <Step> items (upcoming/active/done states, dimmed-and-inert future steps, check-on-done, connecting rail), plus StepLink (open-external), StepDone (success line), StepNote (muted hint) and StepCommand (copyable command row) affordances, and StepActions/StepAction/StepKey (a numbered click-path in full-contrast body text, with the exact UI labels emphasised).
       - Web:
         - Uses:
           - `primitives/copy-to-clipboard.CopyButton`
@@ -39680,8 +39681,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `StepState`
         - Exports (values):
           - `Step`
+          - `StepAction`
+          - `StepActions`
           - `StepCommand`
           - `StepDone`
+          - `StepKey`
           - `StepLink`
           - `StepNote`
           - `Steps`
@@ -39698,6 +39702,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-medium`
+          - `ui/tokens/type-scale --font-weight-semibold`
         - Imported by:
           - `apps/deploy/health`
           - `apps/deploy/remote-deploy`
@@ -39785,7 +39790,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/density --control-height-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 81 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+        - Imported by: 82 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
           - `apps` ×25
           - `conversations` ×13
           - `primitives` ×13
@@ -39797,6 +39802,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug` ×2
           - `page` ×2
           - `improve`
+          - `integrations/google-maps`
           - `map`
           - `network/live`
           - `reorder`
@@ -46307,7 +46313,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 62 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 61 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×22
               - `primitives` ×17
               - `framework` ×4
@@ -46316,7 +46322,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×2
               - `screenshot` ×2
               - `tasks` ×2
-              - `config_v2`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `database/derived-tables`
               - `map`
