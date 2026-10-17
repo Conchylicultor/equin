@@ -23,8 +23,8 @@ The panel body is assembled from three generic sources, naming no contributor:
    theme a scope selects.
 3. A footer that navigates to `themeCustomizerRoute` in the active app.
 
-Each of the three is a BAND of a `ControlPanelPopover` (`size="picker"` — a
-panel whose body is a grid of theme swatches). The panel paints no surface of
+Each of the three is a BAND of a `ControlPanelPopover` (the theme gallery's
+section declares `needs: "picker"` — a grid of theme swatches). The panel paints no surface of
 its own, so this plugin no longer hand-builds one: no `Inset pad="md"` (the
 panel owns the single content inset, which is why the search field and the cards
 finally line up with the `THEME` heading above them), no `Scroll max-h-[60vh]`

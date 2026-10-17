@@ -151,7 +151,6 @@ export function PageKindControl() {
     <ControlPanelPopover
       // `described`: every row carries its meaning as a visible line, and the
       // role's width decides how many lines that wraps to.
-      size="described"
       align="end"
       label="Page kind"
       trigger={

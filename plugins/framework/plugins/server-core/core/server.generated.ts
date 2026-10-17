@@ -435,6 +435,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "reports/plugins/outbox", id: "reports.outbox", loader: () => import("@plugins/reports/plugins/outbox/server"), dependsOn: ["infra/plugins/file-watcher", "infra/plugins/paths", "infra/plugins/runtime-profiler", "infra/plugins/spawn", "reports"] },
   { pluginPath: "reports/plugins/page-doc-rank-drift", id: "reports.page-doc-rank-drift", loader: () => import("@plugins/reports/plugins/page-doc-rank-drift/server"), dependsOn: ["page/plugins/editor", "reports"] },
   { pluginPath: "reports/plugins/page-undo-conflict", id: "reports.page-undo-conflict", loader: () => import("@plugins/reports/plugins/page-undo-conflict/server"), dependsOn: ["reports"] },
+  { pluginPath: "reports/plugins/panel-overflow", id: "reports.panel-overflow", loader: () => import("@plugins/reports/plugins/panel-overflow/server"), dependsOn: ["reports"] },
   { pluginPath: "reports/plugins/render-loop", id: "reports.render-loop", loader: () => import("@plugins/reports/plugins/render-loop/server"), dependsOn: ["reports"] },
   { pluginPath: "reports/plugins/resource-errors", id: "reports.resource-errors", loader: () => import("@plugins/reports/plugins/resource-errors/server"), dependsOn: ["reports"] },
   { pluginPath: "reports/plugins/theme-resolution", id: "reports.theme-resolution", loader: () => import("@plugins/reports/plugins/theme-resolution/server"), dependsOn: ["reports"] },

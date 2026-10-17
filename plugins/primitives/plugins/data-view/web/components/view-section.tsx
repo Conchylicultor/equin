@@ -202,7 +202,6 @@ function SectionOptions(props: {
         // builders open INSIDE this panel as pages that declare their own
         // `builder` width (`CompactRootPanel`), so the panel widens only while
         // one of them is showing.
-        size="menu"
         label="Section options"
         trigger={
           <IconButton icon={moreIcon} label="Section options" variant="ghost" />
@@ -264,7 +263,6 @@ function SectionRootPanel(props: {
           push={{
             key: "section-settings",
             title: "Section settings",
-            size: "inherit",
             render: () => (
               <ViewSettingsPopover
                 instance={instance}
@@ -281,7 +279,6 @@ function SectionRootPanel(props: {
           push={{
             key: "add-section",
             title: "Add section",
-            size: "inherit",
             render: () => <AddSectionPanel actions={actions} onDone={close} />,
           }}
         >

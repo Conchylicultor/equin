@@ -31,7 +31,7 @@ export interface AvatarPickerProps {
 /**
  * Colour swatches over the icon grid, with a Clear footer once either is set.
  *
- * It is a `ControlPanelPopover size="picker"` rather than a hand-rolled popover:
+ * It is a `ControlPanelPopover` whose grid section declares `needs="picker"` rather than a hand-rolled popover:
  * the swatch cluster, the icon block's own label / search / grid, and the Clear
  * row all land on one left edge because the panel owns the content inset, and
  * the rule between the colour band, the icon band and the footer is drawn by the
@@ -52,7 +52,6 @@ export function AvatarPicker({
     <ControlPanelPopover
       open={open}
       onOpenChange={setOpen}
-      size="picker"
       align="start"
       label={triggerLabel ?? "Pick avatar"}
       trigger={
@@ -68,7 +67,7 @@ export function AvatarPicker({
         </button>
       }
     >
-      <ControlPanel.Section label="Color">
+      <ControlPanel.Section needs="picker" label="Color">
         <Cluster gap="xs">
           {AVATAR_COLOR_KEYS.map((key) => (
             <button
@@ -89,7 +88,7 @@ export function AvatarPicker({
       </ControlPanel.Section>
 
       {/* No section label: the icon block renders its own header (label + count). */}
-      <ControlPanel.Section>
+      <ControlPanel.Section needs="picker">
         <IconPicker
           value={value.icon}
           onSelect={(icon) => void onChange({ ...value, icon })}

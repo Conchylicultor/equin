@@ -170,7 +170,6 @@ function TransposePopover({
   return (
     <ControlPanelPopover
       align="end"
-      size="picker"
       label="Transpose"
       trigger={
         <span
@@ -239,7 +238,7 @@ function TransposePopover({
         </Stack>
       </ControlPanel.Section>
 
-      <ControlPanel.Section label="Play in">
+      <ControlPanel.Section needs="picker" label="Play in">
         <PlayInGrid
           originalKey={originalKey}
           semitones={semitones}

@@ -111,14 +111,11 @@ export function CompactControls({
       open={open}
       onOpenChange={setOpen}
       align="end"
-      // `menu`: the root page is a search field and one row per control — a
-      // list of choices. The pages it pushes declare their own width role
-      // (`control.size`, below): filter and sort open at `builder`, because a
-      // six-track rule row squeezed into menu width would be the
-      // measurement-driven width this vocabulary exists to remove; settings
-      // declares none and keeps `menu`, the width it opens at on its own
-      // trigger. Every role clamps itself to the available width.
-      size="menu"
+      // No width: the root page is a search field and one row per control — a
+      // list of choices, so it opens menu-wide. A pushed page is as wide as its
+      // content declares: filter and sort widen to `builder` because their
+      // rule rows (and their empty field pickers) say so; settings declares
+      // nothing and keeps `menu`, the width it opens at on its own trigger.
       label="View options"
       // Idle it is an `IconButton`, which carries the tooltip — the popover has
       // no `tooltip` prop of its own, by design: the trigger owns it, and a
@@ -194,10 +191,6 @@ export function CompactRootPanel({
                 key: control.id,
                 title: control.label,
                 render: () => <DataViewControlPanel control={control} />,
-                // The page takes the control's own width role — a builder
-                // opened from a menu-wide panel widens it — and a control
-                // with none keeps the panel's.
-                size: control.size ?? "inherit",
               }}
             >
               {control.label}

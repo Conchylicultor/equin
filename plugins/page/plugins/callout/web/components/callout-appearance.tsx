@@ -108,7 +108,7 @@ export function CalloutAppearance({
       </ControlPanel.Section>
 
       {/* The picker draws its own "Icon" heading, so this band takes no label. */}
-      <ControlPanel.Section>
+      <ControlPanel.Section needs="picker">
         <IconPicker
           value={icon}
           onSelect={(name) => {

@@ -1,10 +1,14 @@
 import type { ComponentType } from "react";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
+import type { ControlPanelWidthNeed } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 
 export interface QuickThemeSectionContribution {
   /** Short heading rendered above the section inside the popover. */
   label: string;
   component: ComponentType;
+  /** The width the section's content needs — `picker` for a swatch grid. The
+   *  popover is as wide as the widest need among the sections it shows. */
+  needs?: ControlPanelWidthNeed;
 }
 
 /**

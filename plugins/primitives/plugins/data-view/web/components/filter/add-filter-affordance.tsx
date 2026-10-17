@@ -32,7 +32,6 @@ export function AddFilterRow({ groupId }: { groupId: string }): ReactNode {
         push({
           key: `add-filter:${groupId}`,
           title: "Add filter",
-          size: "inherit",
           render: () => <AddFilterPanel groupId={groupId} />,
         })
       }
@@ -52,7 +51,7 @@ function AddFilterPanel({ groupId }: { groupId: string }): ReactNode {
   const { pop } = usePanelStack();
 
   return (
-    <ControlPanel.Section>
+    <ControlPanel.Section needs="builder">
       <FieldSearchList
         fields={editor.fields}
         onPick={(fieldId) => {

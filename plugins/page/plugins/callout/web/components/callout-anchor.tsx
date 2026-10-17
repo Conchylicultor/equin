@@ -25,9 +25,9 @@ const lightbulbIcon = symbol("lightbulb");
  * reachable from both.
  *
  * The static-vs-interactive branch on `editor`, the `preventDefault`ed trigger
- * and the popover all still belong to `ContainerAnchor`; `panel="picker"` is the
- * callout's own, because its sections are a control panel whose body hosts the
- * full icon picker's grid.
+ * and the popover all still belong to `ContainerAnchor`; `panel` is the
+ * callout's own, because its sections are a control panel (whose icon section
+ * declares the `picker` width it needs).
  */
 export function CalloutAnchor({ data, editor }: BlockAnchorProps) {
   const { icon, color } = readCalloutAppearance(data);
@@ -36,9 +36,9 @@ export function CalloutAnchor({ data, editor }: BlockAnchorProps) {
     <ContainerAnchor
       editor={editor}
       triggerLabel="Callout icon and color"
-      // Its sections are a CONTROL PANEL whose body is an icon grid — the
-      // `picker` role (320px, the width this popover already had as `xl`).
-      panel="picker"
+      // Its sections are a CONTROL PANEL; the icon grid's section declares the
+      // `picker` width it needs.
+      panel
       glyph={
         // The callout's icon is a saved Material Symbols name (unlike a
         // page's, which is an emoji), drawn as a runtime symbol.

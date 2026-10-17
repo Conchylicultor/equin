@@ -36,7 +36,6 @@ export function AddSortRow(): ReactNode {
       push={{
         key: "add-sort",
         title: "Add sort",
-        size: "inherit",
         render: () => <AddSortPanel />,
       }}
     >
@@ -55,7 +54,7 @@ function AddSortPanel(): ReactNode {
   const { sort, addable } = useAddableFields();
 
   return (
-    <ControlPanel.Section>
+    <ControlPanel.Section needs="builder">
       <FieldSearchList
         fields={addable}
         placeholder="Sort by…"

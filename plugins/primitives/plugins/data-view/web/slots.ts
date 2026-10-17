@@ -18,7 +18,6 @@ import type {
   LiveArm,
   LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
-import type { ControlPanelSize } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import type { DataViewControlsContextValue } from "./components/controls/controls-context";
@@ -163,9 +162,6 @@ export interface DataViewControlContribution {
   icon: IconRef;
   /** Reading order in the toolbar (ascending; default 0). */
   order?: number;
-  /** Width ROLE of this control's panel — `menu` for a list of choices,
-   *  `builder` for a rule row. Not a measurement, and there is no third option. */
-  size?: ControlPanelSize;
   /** Whether this control applies at all to the active view + schema. Absent =
    *  always applicable. Pure: it is asked before any panel mounts. */
   isApplicable?: (ctx: DataViewControlsContextValue) => boolean;

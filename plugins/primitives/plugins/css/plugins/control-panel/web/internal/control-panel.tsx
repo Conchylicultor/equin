@@ -7,6 +7,9 @@ import { useRailGuard } from "@plugins/primitives/plugins/css/plugins/rail/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type React from "react";
 
+import { usePanelOverflowGuard } from "./overflow-guard";
+import type { ControlPanelWidthNeed } from "./width-need";
+
 export interface ControlPanelProps {
   /**
    * Names the panel for assistive tech. `role="group"` carries no child
@@ -89,6 +92,7 @@ export function ControlPanel({
   // box. Attached one level down it would compare children against a rail whose
   // origin it could not see.
   const rootRef = useRailGuard<HTMLDivElement>("ControlPanel");
+  usePanelOverflowGuard(rootRef, ariaLabel);
   return (
     <div
       ref={rootRef}
@@ -120,6 +124,15 @@ export interface ControlPanelSectionProps {
    * above it by doing nothing at all.
    */
   description?: React.ReactNode;
+  /**
+   * The width this band's content needs, for content the vocabulary cannot see
+   * into — a foreign icon / emoji / swatch grid (`picker`), or a builder page
+   * before its first rule row exists (`builder`). Declared HERE, beside the
+   * content it is justified by, never by the code that opens the panel. A
+   * `RuleRow` and a `Row` with a `description` state theirs themselves. See
+   * `width-need.ts`.
+   */
+  needs?: ControlPanelWidthNeed;
   className?: string;
   children: React.ReactNode;
 }
@@ -146,11 +159,12 @@ export interface ControlPanelSectionProps {
 export function ControlPanelSection({
   label,
   description,
+  needs,
   className,
   children,
 }: ControlPanelSectionProps) {
   return (
-    <div className={cn("cp-band", className)}>
+    <div data-cp-needs={needs} className={cn("cp-band", className)}>
       {label != null ? (
         <Text
           as="div"

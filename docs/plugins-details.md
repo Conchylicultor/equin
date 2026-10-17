@@ -21345,7 +21345,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Inset`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
               - `primitives/data-view.DataViewSlots`
               - `primitives/date-picker.Calendar`
               - `ui/icons.Icon`
@@ -24334,8 +24333,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 39 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×37
+        - Slot contributors: 40 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×38
           - `Core.Boot` ×2
       - Core:
         - Uses:
@@ -30019,7 +30018,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.useFrameHovered`
           - `primitives/css/center.Center`
           - `primitives/css/control-panel.ControlPanelPopover`
-          - `primitives/css/control-panel.ControlPanelSize`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.Popover`
           - `primitives/css/ui-kit.PopoverContent`
@@ -34063,11 +34061,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 167 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 168 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
               - `debug` ×36
               - `conversations` ×24
-              - `reports` ×11
+              - `reports` ×12
               - `primitives` ×10
               - `tasks` ×9
               - `plugin-meta` ×8
@@ -34296,7 +34294,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `history/dialog`
         - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
           - Web:
-            - Uses: 21 symbols — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Uses: 23 symbols — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `primitives/css/ui-kit` ×11
               - `primitives/row-actions` ×2
               - `primitives/css/rail.useRailGuard`
@@ -34304,7 +34302,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/switch.SwitchIndicator`
               - `primitives/css/text.Text`
+              - `primitives/dom/element-size.useResizeObserver`
               - `primitives/icon-button.IconButton`
+              - `primitives/latest-ref.useEventCallback`
               - `primitives/overlay/tooltip.WithTooltip`
               - `ui/icons.Icon`
             - Exports (types):
@@ -34327,25 +34327,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ControlPanelRuleRowProps`
               - `ControlPanelSectionProps`
               - `ControlPanelSettingProps`
-              - `ControlPanelSize`
               - `ControlPanelStackProps`
               - `ControlPanelSubheadProps`
+              - `ControlPanelWidthNeed`
+              - `PanelOverflowFault`
               - `PanelStackApi`
               - `PanelStackEntry`
             - Exports (values):
               - `ControlPanel`
               - `ControlPanelPane`
               - `ControlPanelPopover`
+              - `panelOverflowReportSink`
               - `useControlPanelHost`
               - `usePanelStack`
           - Cross-plugin:
-            - Uses tokens: 25 vars — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Uses tokens: 29 vars — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `ui/tokens/color-palette` ×11
+              - `ui/tokens/density` ×8
               - `ui/tokens/type-scale` ×7
-              - `ui/tokens/density` ×4
               - `ui/tokens/shape` ×2
               - `ui/tokens/shadow --shadow`
-            - Imported by: 36 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Imported by: 37 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `apps` ×14
               - `page` ×5
               - `primitives` ×4
@@ -34356,6 +34358,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/surface`
               - `fullscreen`
               - `reorder/edit-mode`
+              - `reports/panel-overflow`
               - `shell/global-action-bar`
           - Exemptions:
             - Exempts itself from: `control-panel/no-adhoc-panel-body` — `web/internal/control-panel-popover.tsx` (sanctioned)
@@ -34482,10 +34485,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `Inline`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 87 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×16
               - `debug` ×16
-              - `reports` ×12
+              - `reports` ×13
               - `conversations` ×9
               - `primitives` ×8
               - `page` ×7
@@ -35459,7 +35462,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 406 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 405 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×103
               - `apps` ×82
               - `conversations` ×54
@@ -35468,7 +35471,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×21
               - `tasks` ×15
               - `apps-core` ×14
-              - `fields` ×12
+              - `fields` ×11
               - `plugin-meta` ×9
               - `build` ×5
               - `review` ×5
@@ -36735,8 +36738,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useElementSize`
               - `useResizeObserver`
           - Cross-plugin:
-            - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
-              - `primitives` ×17
+            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+              - `primitives` ×18
               - `apps` ×7
               - `shell` ×2
               - `active-data/go`
@@ -37434,8 +37437,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SortDirection`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
-          - `primitives` ×31
+        - Imported by: 67 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+          - `primitives` ×32
           - `apps` ×20
           - `page` ×4
           - `apps-core` ×2
@@ -41198,8 +41201,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 29 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×29
+    - Slot contributors: 30 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×30
     - Contributes:
       - `IdKinds.Kind` "report"
       - `ConfigV2.WebRegister` "reports"
@@ -41307,8 +41310,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reportsRootRoute`
       - `SERVER_REPORT_SOURCES`
   - Cross-plugin:
-    - Imported by: 56 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `reports` ×20
+    - Imported by: 57 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `reports` ×21
       - `debug` ×17
       - `conversations` ×7
       - `database` ×3
@@ -41598,6 +41601,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `pageUndoConflictFingerprint`
           - `PageUndoConflictPayloadSchema`
+    - **`panel-overflow`** — Panel-overflow collector: drains the control-panel primitive's panelOverflowReportSink into a deduped report whenever a popover panel's showing page is wider than the panel — content needing a width bucket (picker, builder, described) nothing on the page declared — plus the Debug → Reports summary view. Panel-overflow report kind: validates the control-panel overflow guard's fault payloads (a popover panel whose showing page is wider than the panel, because its content needs a width bucket nothing on the page declared), fingerprints by panel label + page (excluding widths, which vary with theme and viewport), and renders a task naming the overflowing element and the `needs` declaration to add. Re-arms periodically (6h) since the page overflows on every open.
+      - Web:
+        - Contributes:
+          - `Core.Root` → `PanelOverflowCollector`
+          - `Reports.KindView` → `PanelOverflowKindView`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/control-panel.panelOverflowReportSink`
+          - `primitives/css/inline.Inline`
+          - `reports.report`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "panel-overflow"
+        - Uses: `reports.ReportKind`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/color-palette --muted-foreground`
+      - Core:
+        - Exports (types): `PanelOverflowPayload`
+        - Exports (values):
+          - `panelOverflowFingerprint`
+          - `PanelOverflowPayloadSchema`
     - **`plugin-load-errors`** — Files crash tasks for plugins whose chunk failed to load in the deferred tier.
       - Web:
         - Contributes: `Core.Root` → `PluginLoadErrorReporter`
@@ -46033,7 +46057,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 478 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 479 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×101
               - `conversations` ×87
               - `primitives` ×75
@@ -46043,7 +46067,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×21
               - `tasks` ×14
               - `fields` ×12
-              - `reports` ×11
+              - `reports` ×12
               - `apps-core` ×7
               - `active-data` ×6
               - `build` ×6

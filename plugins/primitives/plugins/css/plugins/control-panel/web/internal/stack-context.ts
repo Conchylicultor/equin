@@ -7,8 +7,6 @@ import {
 } from "react";
 import type React from "react";
 
-import type { ControlPanelSize } from "./size";
-
 // The stack's contract — entry, state, the context and its reader — apart from
 // the stack COMPONENT, because a row reads it too (`ControlPanel.Row push`) and
 // the stack component renders a row (its back header): one file each way would
@@ -20,22 +18,11 @@ export interface PanelStackEntry {
   /** Shown in the back header, so the user knows what popping returns to. */
   title: string;
   render: () => React.ReactNode;
-  /**
-   * The width role this page needs. REQUIRED, because the surface takes the
-   * showing page's role (`ControlPanelPopover`) and the page is the only thing
-   * that knows it: a filter builder pushed from a 248px menu needs the 524px
-   * builder, and an omitted role once drew the fold editor's builder rows inside
-   * a menu-wide panel. `"inherit"` keeps the role of the page it is pushed FROM
-   * (the nearest entry below that names one, else the panel's own) — a drill-down
-   * inside a builder stays builder-wide. A host with no width of its own to
-   * change (a pane) ignores it.
-   */
-  size: ControlPanelSize | "inherit";
 }
 
 /**
- * The stack's state, for the one host that has to read it from OUTSIDE the
- * stack: `ControlPanelPopover`, whose surface width follows the showing page.
+ * The stack's state, for the one host that has to own it from OUTSIDE the
+ * stack: `ControlPanelPopover`, which resets it once the panel has closed.
  */
 export interface PanelStackState {
   entries: readonly PanelStackEntry[];

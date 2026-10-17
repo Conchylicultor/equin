@@ -55,7 +55,6 @@ export function FxToggle() {
         side="bottom"
         // A list of on/off choices — the `menu` role. The panel owns its own
         // inset and the hairline between the two tiers; this file draws neither.
-        size="menu"
         label="Visual effects"
         trigger={
           <ToggleChip

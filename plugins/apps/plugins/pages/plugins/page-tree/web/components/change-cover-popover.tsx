@@ -20,7 +20,7 @@ const uploadIcon = symbol("upload");
  * commits a new {@link PageCover} via `onPick` and closes the popover. Mirrors
  * the image-block upload funnel (mime-validate → uploadAttachment).
  *
- * A `ControlPanelPopover size="picker"`: the gradient tiles — a five-column
+ * A `ControlPanelPopover` whose grid section declares `needs="picker"`: the gradient tiles — a five-column
  * grid under a "Gradient" group head — land on the same left edge as that head
  * because the panel owns the content inset, and Upload is a FOOTER ROW rather than a button in the body,
  * with a leading `icon` like every footer in the vocabulary (invariant #4). It
@@ -70,12 +70,11 @@ export function ChangeCoverPopover({
     <ControlPanelPopover
       open={open}
       onOpenChange={setOpen}
-      size="picker"
       align="start"
       label="Change cover"
       trigger={trigger}
     >
-      <ControlPanel.Section label="Gradient">
+      <ControlPanel.Section needs="picker" label="Gradient">
         {/* Five to a row, each swatch filling its column, so the ten presets
             are two even rows at any picker width. */}
         <Grid cols={5} gap="xs" className="pb-sm pt-2xs">

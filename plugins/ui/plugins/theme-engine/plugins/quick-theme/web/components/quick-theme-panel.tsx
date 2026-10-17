@@ -111,7 +111,7 @@ export function QuickThemePanel({
           stay reachable. */}
       <QuickTheme.Section.Render>
         {(s) => (
-          <ControlPanel.Section label={s.label}>
+          <ControlPanel.Section label={s.label} needs={s.needs}>
             <s.component />
           </ControlPanel.Section>
         )}

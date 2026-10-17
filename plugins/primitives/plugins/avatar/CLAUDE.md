@@ -85,7 +85,7 @@ a colour without importing web code.
   a clear row. Calls `onChange` immediately on selection (no submit). The
   trigger is whatever you pass as children (typically an `<Avatar>`).
 
-  It is a `ControlPanelPopover size="picker"`, not a hand-rolled `Popover`: the
+  It is a `ControlPanelPopover` whose grid section declares `needs="picker"`, not a hand-rolled `Popover`: the
   swatch cluster, the icon block and the Clear row inherit ONE content inset
   from the panel, and the rules between the three bands are the container's —
   there is no `h-px bg-border` here to place, forget or double. The swatch grid

@@ -82,7 +82,6 @@ export default function MenuSheetExhibit() {
               field, at the same `menu` width role. */}
           <ControlPanelPopover
             open
-            size="menu"
             align="start"
             label="View options"
             trigger={
@@ -108,7 +107,6 @@ export default function MenuSheetExhibit() {
                   key: "filter",
                   title: "Filter",
                   render: () => null,
-                  size: "builder",
                 }}
               >
                 Filter
@@ -120,7 +118,6 @@ export default function MenuSheetExhibit() {
                   key: "sort",
                   title: "Sort",
                   render: () => null,
-                  size: "builder",
                 }}
               >
                 Sort
@@ -130,7 +127,6 @@ export default function MenuSheetExhibit() {
                 push={{
                   key: "settings",
                   title: "View settings",
-                  size: "inherit",
                   render: () => null,
                 }}
               >

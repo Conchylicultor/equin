@@ -66,7 +66,6 @@ export function SizeChip({
     <ControlPanelPopover
       side="top"
       align="end"
-      size="menu"
       label="Size and zoom"
       trigger={
         <Button variant="floating" aria-label="Size and zoom">

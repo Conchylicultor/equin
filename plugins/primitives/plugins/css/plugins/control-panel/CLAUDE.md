@@ -35,12 +35,14 @@ than any one field.
    indents their labels by 26px. Exempting footers from the track scan would be
    a lie about the markup (this invariant says they ARE rows), so the uniformity
    is a convention — the only one in the vocabulary not held by construction.
-5. **Width is a role, not a measurement.** A panel never resizes as its content
-   changes.
+5. **Width is a role, not a measurement — and the CONTENT picks the role.** A
+   panel's width is one of four buckets (menu, described, picker, builder),
+   sized by the theme, chosen by what the showing page renders. It never
+   tracks a measured width, so it does not grow as rows are added.
 
 They hold by construction, not by discipline: the row is a grid so #1 survives a
 row with no icon, `RowProps` is a discriminated union so #3 is a type error, and
-`ControlPanelPopover` has no width prop so #5 has nothing to override. The one
+nothing that opens a panel can name a width, so #5 has nothing to override. The one
 exception is the sentence added to #4, and it is marked as such.
 
 ## The panel paints no surface
@@ -485,29 +487,66 @@ The three trailing tracks are floors (`minmax(<token>, auto)`) with the same
 caveat `cp-rule` records for its own trailing track: **keep a panel's `status`
 and `actions` uniform, or the value column steps between rows.**
 
-## `ControlPanelPopover` has no `width`, `padding` or `contentClassName`
+## `ControlPanelPopover` has no `width`, `size`, `padding` or `contentClassName`
 
-That absence is the feature — those are exactly the props that let three panels
-in one toolbar end up 481, 384 and 256px wide, each set by whatever was widest
-inside it. `size` maps to a width **role** (`menu` = a list of choices,
-`described` = choices that each carry a visible description line, `builder` = a
-six-track rule row, `picker` = a panel whose body is a grid — each a density
-token, `popoverWidth*`, so a theme sizes them), the padding is the body's, and
-there is nowhere to smuggle a measurement through.
+That absence is the feature — a width prop is how three panels in one toolbar
+ended up 481, 384 and 256px wide, each set by whatever was widest inside it.
+The padding is the body's, and there is nowhere to smuggle a measurement
+through.
 
-**The width is the SHOWING page's role.** Every page pushed onto the stack
-declares its `size` (`PanelStackEntry.size`, **required**): a menu whose Filter
-row opens the filter builder is drawn menu-wide, and widens to `builder` only
-while that page shows. `"inherit"` takes the role of the page it is pushed
-from (the nearest entry below naming one, else the root's), so a drill-down
-inside a builder stays builder-wide. It is required because it used to be
-optional with "omitted = the ROOT panel's role": the view-settings menu's Fold
-rows page (the filter builder) silently opened menu-wide, its rule rows
-overflowing the panel, and every filter sub-page (nested group, Add filter)
-snapped back to menu width when opened from a menu. The popover owns the stack's state (`usePanelStackState`) for
-exactly this — the width is the surface's, so the showing page's role has to
-reach `PopoverContent` in the same render that shows the page — and returns to
-the root once the panel has finished closing. A pane ignores the field.
+### The content declares its width; the surface collects it
+
+The width is a **bucket** — `menu` (a list of choices, the baseline),
+`described` (choices that each carry a visible description line), `picker` (a
+body that is a grid), `builder` (a six-track rule row) — each a density token,
+`popoverWidth*`, so a theme sizes them. **The bucket is chosen by the content,
+never by the code that opens the panel** (`width-need.ts`):
+
+- **Members state their own need.** `RuleRow` stamps `data-cp-needs="builder"`;
+  a `Row` with a visible `description` stamps `described`.
+- **Content the vocabulary cannot see into declares it on its band:**
+  `ControlPanel.Section needs="picker"` around an icon / emoji / swatch grid or
+  a calendar; `needs="builder"` on a builder page that has no rule row yet (the
+  empty filter's field picker, Add filter, Add sort), so the panel does not
+  widen under the pointer when the first rule appears. A slot whose
+  contributions render sections carries the need in its contribution
+  (`QuickTheme.Section`'s `needs`).
+- **The surface collects.** `ControlPanelPopover`'s popup is `cp-surface`
+  (`app.css`): CSS `:has()` rules, in rank order menu < described < picker <
+  builder, pick the highest need on the **showing** level (`data-cp-showing`,
+  which `ControlPanelStack` puts on the page on screen — the levels below stay
+  mounted, hidden, and must not count). Rank, not `max()` of pixels:
+  `described` is a wrap width, not a minimum — the default theme draws it
+  narrower than a menu, the Pages theme wider. Pure CSS, so the width is right
+  in the frame the page first paints.
+
+**Why not the opener.** The width used to be declared where a panel is opened
+(`ControlPanelPopover size`, then `PanelStackEntry.size`, then a required
+`size` with `"inherit"`). Each one let the opener say a width it only knows by
+convention: the view-settings menu's Fold rows page renders the whole filter
+builder, declared nothing, and drew its rule rows overflowing a menu-wide
+panel. Requiring the field only moved the guess — `"inherit"` type-checked and
+still overflowed. Only the content knows what it needs, so only the content
+says it.
+
+### The measured backstop: `panel-overflow`
+
+A need nobody declared (a foreign grid in a `Section` without `needs`, a new
+wide control) still leaves content wider than its bucket. `ControlPanel`'s
+overflow guard (`overflow-guard.ts`, on every panel inside a `cp-surface`)
+watches the panel — a `ResizeObserver` plus a subtree `MutationObserver`,
+one measurement per frame, no polling — and when content does not fit while
+the surface is not capped by the viewport, it fails loudly. Content does not
+fit in two shapes, and the guard measures both: past the PANEL's edge
+(`scrollWidth` beyond its width), or out of a grid CELL — the row grids'
+tracks are `min-w-0`, so a builder row in a menu-wide panel does not push the
+panel at all; its tracks squeeze and each control spills over its neighbour
+inside the row (measured: the panel-level check alone reads 0px there). Only a
+cell whose overflow is visible counts — one that clips is truncating on
+purpose. Then: it emits a `PanelOverflowFault` to `panelOverflowReportSink`, which
+`reports/panel-overflow` files as a report (panel label, showing page, the
+needs it declares, both widths, the first element past the edge), and throws in
+dev. The declarations choose the width; the measurement verifies them.
 
 `maxHeight` **is** here, and is not that escape reopened: it is a passthrough of
 `OverlayPanel`'s closed `PopoverMaxHeight` scale, invariant #5 is about *width*,
@@ -518,8 +557,8 @@ failure a `width` prop caused has no height analogue.
 `picker` (320px) exists because three shipped panels — the avatar picker, the
 page icon button, the change-cover popover — arrived at that width
 independently; one panel at a width is a measurement, three unrelated ones is a
-role. Invariant #5 is enforceable because the
-escape is absent from the type, not defaulted in it.
+role. Invariant #5 is enforceable because the escape is absent from the type,
+not defaulted in it.
 
 No `tooltip` prop either: the caller's trigger (typically an `IconButton`)
 already owns its tooltip.
@@ -627,7 +666,7 @@ The primitive needs **no** new lint exemptions: it inherits the
 
 - Description: The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
 - Web:
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×11
     - `primitives/row-actions` ×2
     - `primitives/css/rail.useRailGuard`
@@ -635,7 +674,9 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `primitives/css/spacing.Stack`
     - `primitives/css/switch.SwitchIndicator`
     - `primitives/css/text.Text`
+    - `primitives/dom/element-size.useResizeObserver`
     - `primitives/icon-button.IconButton`
+    - `primitives/latest-ref.useEventCallback`
     - `primitives/overlay/tooltip.WithTooltip`
     - `ui/icons.Icon`
   - Exports (types):
@@ -658,25 +699,27 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `ControlPanelRuleRowProps`
     - `ControlPanelSectionProps`
     - `ControlPanelSettingProps`
-    - `ControlPanelSize`
     - `ControlPanelStackProps`
     - `ControlPanelSubheadProps`
+    - `ControlPanelWidthNeed`
+    - `PanelOverflowFault`
     - `PanelStackApi`
     - `PanelStackEntry`
   - Exports (values):
     - `ControlPanel`
     - `ControlPanelPane`
     - `ControlPanelPopover`
+    - `panelOverflowReportSink`
     - `useControlPanelHost`
     - `usePanelStack`
 - Cross-plugin:
-  - Uses tokens: 25 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 29 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×11
+    - `ui/tokens/density` ×8
     - `ui/tokens/type-scale` ×7
-    - `ui/tokens/density` ×4
     - `ui/tokens/shape` ×2
     - `ui/tokens/shadow --shadow`
-  - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×14
     - `page` ×5
     - `primitives` ×4
@@ -687,6 +730,7 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `apps-core/surface`
     - `fullscreen`
     - `reorder/edit-mode`
+    - `reports/panel-overflow`
     - `shell/global-action-bar`
 - Exemptions:
   - Exempts itself from: `control-panel/no-adhoc-panel-body` — `web/internal/control-panel-popover.tsx` (sanctioned)

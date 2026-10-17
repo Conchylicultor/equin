@@ -43,7 +43,6 @@ export function TagColorButton({
     <ControlPanelPopover
       open={open}
       onOpenChange={setOpen}
-      size="picker"
       align="start"
       label={`Colour of ${tag.name}`}
       trigger={
@@ -69,7 +68,7 @@ export function TagColorButton({
         />
       }
     >
-      <ControlPanel.Section label="Colour">
+      <ControlPanel.Section needs="picker" label="Colour">
         <Grid cols={6} gap="xs">
           {TAG_PALETTE.map((color) => (
             <button

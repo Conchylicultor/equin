@@ -84,8 +84,8 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 - Description: Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
 - Web:
   - Slots: `Reports.KindView`
-  - Slot contributors: 29 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Reports.KindView` ×29
+  - Slot contributors: 30 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Reports.KindView` ×30
   - Contributes:
     - `IdKinds.Kind` "report"
     - `ConfigV2.WebRegister` "reports"
@@ -193,8 +193,8 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `reportsRootRoute`
     - `SERVER_REPORT_SOURCES`
 - Cross-plugin:
-  - Imported by: 56 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `reports` ×20
+  - Imported by: 57 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `reports` ×21
     - `debug` ×17
     - `conversations` ×7
     - `database` ×3
@@ -224,6 +224,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
   - **`outbox`** — Report outbox drain: on main only, records every report a process with no server (a CLI run, a supervised child) wrote into the host-global outbox — once at boot, then on each file change (no…
   - **`page-doc-rank-drift`** — Page doc-rank drift report kind: files the page editor's docRankDriftSink — a boot reconcile that had to re-mint `page_blocks.doc_rank` the structural-write chokepoint should already have kept in…
   - **`page-undo-conflict`** — Page-undo-conflict collector: drains the page editor's undoConflictReportSink into a report whenever a data-based text undo entry meets a second writer — a replay that found text other than what the…
+  - **`panel-overflow`** — Panel-overflow collector: drains the control-panel primitive's panelOverflowReportSink into a deduped report whenever a popover panel's showing page is wider than the panel — content needing a width…
   - **`plugin-load-errors`** — Files crash tasks for plugins whose chunk failed to load in the deferred tier.
   - **`render-loop`** — Render-loop detector: a single invisible global controller (mounted via Core.Root) that installs one MutationObserver and files a deduped render-loop report when a subtree is rebuilt/re-mutated at a…
   - **`resource-errors`** — Resource-error collector: drains the live-state primitive's resourceErrorReportSink (one body per failing live read, however many hooks observe it) into a deduped resource-error report for the…

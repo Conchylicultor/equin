@@ -76,6 +76,7 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["anchor-floating-bar-band"], standalone: true, reason: "Names this box as an anchor; no built-in group sets anchor-name." },
   { classes: ["floating-bar-band"], standalone: true, reason: "Anchor-derived top + height pair for one fixed band; splitting them into top/h groups would let a later top-* silently detach it from its anchor." },
   { classes: ["cp-panel"], extend: "p" },
+  { classes: ["cp-surface"], extend: "w" },
   { classes: ["cp-body"], standalone: true, reason: "Composite band container (flex column + gap + the positioned first-rule mask); no single-value built-in group to conflict with." },
   { classes: ["cp-band"], standalone: true, reason: "Composite band marker (positioning context + the full-bleed ::before hairline); no single-value built-in group to conflict with." },
   { classes: ["cp-row"], standalone: true, reason: "Composite row grid (display + tracks + gap + min-height + inline padding + radius); not a single-property utility another class should selectively override." },

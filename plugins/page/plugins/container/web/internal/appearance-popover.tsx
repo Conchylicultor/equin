@@ -5,10 +5,7 @@ import {
   PopoverTrigger,
   type PopoverWidth,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  ControlPanelPopover,
-  type ControlPanelSize,
-} from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import type { BlockEditorAPI } from "@plugins/page/plugins/editor/web";
 
 /**
@@ -53,8 +50,9 @@ export type ContainerAppearanceSections =
        * vocabulary (`ControlPanel.Section` / `.Row` / …). Those members need a
        * `cp-panel` ancestor to inherit their inset and hang their hairlines
        * from, and the panel body owns its own padding — so this arm opens a
-       * `ControlPanelPopover` instead of a raw padded `PopoverContent`, and the
-       * value is the panel's width ROLE rather than a t-shirt size.
+       * `ControlPanelPopover` instead of a raw padded `PopoverContent`. It
+       * carries no width: a panel is as wide as its content declares
+       * (`ControlPanel.Section needs`).
        *
        * Mutually exclusive with `width` by type: a panel has no width to pick.
        */
@@ -63,7 +61,7 @@ export type ContainerAppearanceSections =
         close: () => void;
       }) => ReactNode;
       triggerLabel: string;
-      panel: ControlPanelSize;
+      panel: true;
       width?: never;
     };
 
@@ -114,7 +112,7 @@ export function ContainerAppearancePopover({
   triggerClass: string;
   triggerLabel: string;
   width?: PopoverWidth;
-  panel?: ControlPanelSize;
+  panel?: true;
   sections: (ctx: { editor: BlockEditorAPI; close: () => void }) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -123,12 +121,11 @@ export function ContainerAppearancePopover({
   // Panel-shaped sections open through the vocabulary's own surface: the body
   // brings its own inset and its bands draw their own hairlines, so a
   // `PopoverContent padding="sm"` around it would be a second padding role.
-  if (panel !== undefined) {
+  if (panel) {
     return (
       <ControlPanelPopover
         open={open}
         onOpenChange={setOpen}
-        size={panel}
         label={triggerLabel}
         align="start"
         trigger={

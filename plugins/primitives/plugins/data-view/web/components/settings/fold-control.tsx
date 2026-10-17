@@ -46,9 +46,6 @@ export function FoldControl(): ReactNode {
         push={{
           key: "fold-rows",
           title: "Fold rows",
-          // The fold rule is edited with the filter builder, so the page is
-          // builder-wide even though the settings menu it opens from is not.
-          size: "builder",
           render: () => (
             <FoldFilterScope>
               <FilterEditorPanel presets={false} clearLabel="Clear fold" />

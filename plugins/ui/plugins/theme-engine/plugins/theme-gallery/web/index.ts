@@ -32,6 +32,8 @@ export default {
       id: "themes",
       label: "Theme",
       component: QuickThemePicker,
+      // A grid of theme swatches.
+      needs: "picker",
     }),
     ThemeItemActions({ id: "rename", component: RenameThemeAction }),
     ThemeItemActions({ id: "delete", component: DeleteThemeAction }),

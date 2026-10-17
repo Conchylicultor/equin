@@ -138,7 +138,6 @@ function PresetPicker({
     <Stack direction="row" gap="xs" align="center">
       <Fill>
         <ControlPanelPopover
-          size="described"
           maxHeight="lg"
           label="Groove presets"
           open={open}

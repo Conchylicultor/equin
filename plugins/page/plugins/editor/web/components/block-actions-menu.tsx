@@ -149,14 +149,12 @@ export function BlockActionsMenu({
       }}
       align={align}
       side={side}
-      // Contributed sections host arbitrary controls — today a full icon picker
-      // — so a menu carrying them takes the `picker` role (a panel whose body is
-      // a grid); the structural actions and the turn-into list are a list of
-      // choices, which is `menu`. There is no width prop to smuggle a
-      // measurement through, and no `padding` either: the panel body owns its
-      // own inset, and each zone below is a BAND, so the hairlines between them
-      // are the container's rather than two hand-drawn `h-px` divs.
-      size={ContainerMenu ? "picker" : "menu"}
+      // No width: contributed sections host arbitrary controls — today a full
+      // icon picker — and declare the width they need on their own section
+      // (`needs="picker"`), so the menu widens exactly when one is showing.
+      // No `padding` either: the panel body owns its own inset, and each zone
+      // below is a BAND, so the hairlines between them are the container's
+      // rather than two hand-drawn `h-px` divs.
       // The SAME comfort cap the `/` menu takes (`CaretTriggerMenu`'s
       // `maxHeight="lg"`) — the two render the same `BlockTypeList` and must
       // open the same size. Fitting the viewport is already unconditional; the

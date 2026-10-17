@@ -76,6 +76,9 @@ export const CLIENT_REPORT_SOURCES = [
   "client-caret-flight",
   "client-adaptive-bar",
   "client-viewport-escape",
+  // A popover control panel whose page is wider than the panel
+  // (reports/panel-overflow).
+  "client-panel-overflow",
   "client-collab-hydration",
   "client-page-undo-conflict",
   "client-theme-resolution",

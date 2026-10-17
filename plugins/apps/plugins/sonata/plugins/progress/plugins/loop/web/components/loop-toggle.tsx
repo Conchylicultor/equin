@@ -63,8 +63,6 @@ export function LoopToggle() {
         onOpenChange={setOpen}
         align="end"
         side="bottom"
-        // Two switches, each with a description line.
-        size="described"
         label="Loop options"
         trigger={
           <IconButton

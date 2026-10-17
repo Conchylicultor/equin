@@ -30,7 +30,6 @@ const IconRenderer = defineFieldShape({
         <ControlPanelPopover
           open={open}
           onOpenChange={setOpen}
-          size="picker"
           align="start"
           label="Pick icon"
           trigger={
@@ -44,7 +43,7 @@ const IconRenderer = defineFieldShape({
           }
         >
           {/* No section label: the icon block renders its own header. */}
-          <ControlPanel.Section>
+          <ControlPanel.Section needs="picker">
             <IconPicker
               value={value}
               onSelect={(name) => {

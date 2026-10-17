@@ -58,7 +58,6 @@ export function TagPicker({
         setOpen(next);
         if (!next) setQuery("");
       }}
-      size="menu"
       maxHeight="lg"
       align="start"
       label="Add a tag"

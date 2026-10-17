@@ -454,6 +454,11 @@ export function ControlPanelRow({
   const toneAttr =
     tone === "danger" ? { "data-variant": "destructive" } : undefined;
 
+  // A visible description wraps to the panel's width, so the row states the
+  // `described` width need itself (`width-need.ts`): the surface it lands in
+  // widens to that bucket without the opener having to know it holds one.
+  const needsAttr = described ? { "data-cp-needs": "described" } : undefined;
+
   // The description hangs off the HOST, so assistive tech reads the row's name
   // and then its hint. The node it points at is a zero-box `sr-only` sibling
   // inside the label cell, which is why the hint opens no track.
@@ -531,7 +536,7 @@ export function ControlPanelRow({
   // focus nomination — and everything that describes the ROW stays on the box.
   if (hasActions) {
     return (
-      <div ref={hostRef} className={rowClass} {...toneAttr}>
+      <div ref={hostRef} className={rowClass} {...toneAttr} {...needsAttr}>
         <SelectRegion
           href={href}
           onSelect={onSelect}
@@ -583,6 +588,7 @@ export function ControlPanelRow({
         onClick={onSelect}
         className={rowClass}
         {...toneAttr}
+        {...needsAttr}
         {...selection}
         {...describedBy}
       >
@@ -600,6 +606,7 @@ export function ControlPanelRow({
         {...press}
         className={rowClass}
         {...toneAttr}
+        {...needsAttr}
         {...selection}
         {...describedBy}
       >
@@ -609,7 +616,13 @@ export function ControlPanelRow({
     );
   }
   return (
-    <div ref={hostRef} className={rowClass} {...toneAttr} {...describedBy}>
+    <div
+      ref={hostRef}
+      className={rowClass}
+      {...toneAttr}
+      {...needsAttr}
+      {...describedBy}
+    >
       {leadingCells}
       {trailingCell}
     </div>

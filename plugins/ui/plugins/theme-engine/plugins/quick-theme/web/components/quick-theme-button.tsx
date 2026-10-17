@@ -39,10 +39,10 @@ export function QuickThemeButton() {
       onOpenChange={setOpen}
       align="end"
       side="bottom"
-      // The body is a GRID of theme swatches — the `picker` role. There is no
-      // width prop to smuggle a measurement through, which is the point: the
-      // panel used to be 480px because that is what the catalog gallery wanted.
-      size="picker"
+      // No width: the theme-swatch grid's section declares the `picker` need
+      // itself. There is no width prop to smuggle a measurement through, which
+      // is the point: the panel used to be 480px because that is what the
+      // catalog gallery wanted.
       label="Theme"
       trigger={
         <IconButton

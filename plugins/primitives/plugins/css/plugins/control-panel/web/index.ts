@@ -5,7 +5,11 @@ export {
   ControlPanelPopover,
   type ControlPanelPopoverProps,
 } from "./internal/control-panel-popover";
-export { type ControlPanelSize } from "./internal/size";
+export { type ControlPanelWidthNeed } from "./internal/width-need";
+export {
+  panelOverflowReportSink,
+  type PanelOverflowFault,
+} from "./internal/overflow-guard";
 export {
   usePanelStack,
   type PanelStackApi,

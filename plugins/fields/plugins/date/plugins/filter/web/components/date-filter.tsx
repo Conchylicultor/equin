@@ -9,7 +9,6 @@ import {
   Inset,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   fromISODay,
   toISODay,
@@ -26,7 +25,6 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const calendarTodayIcon = symbol("calendar-today");
-const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 
 // Shared native-control chrome (matches the prior date-filter inputs and the
 // Input primitive's border/bg/radius — native inputs are exempt from
@@ -142,24 +140,21 @@ function AnchorChooser({
     <ControlPanelPopover
       open={open}
       onOpenChange={setOpen}
-      // The body is a month GRID — the `picker` role, at a fixed 320px. It used
-      // to be `fit`, which sized the panel to whichever operand row was showing:
-      // the panel resized under the user as the operator changed, which is
-      // exactly what a width ROLE exists to delete.
-      size="picker"
+      // No width: the month grid's section declares `picker` (a fixed 320px).
+      // It used to be `fit`, which sized the panel to whichever operand row was
+      // showing: the panel resized under the user as the operator changed,
+      // which is exactly what a width ROLE exists to delete.
       label="Choose a date"
+      // The rule row's one control shape: it fills its value cell and
+      // truncates its label. A hand-built outline button here was rigid — wider
+      // than the builder's value track, it reached into the next cell (and, in
+      // a menu-wide panel, drew over the remove button).
       trigger={
-        <Button variant="outline">
-          <Icon icon={calendarTodayIcon} />
-          {label ? (
-            <Text variant="body">{label}</Text>
-          ) : (
-            <Text variant="body" tone="muted">
-              {placeholder}
-            </Text>
-          )}
-          <Icon icon={keyboardArrowDownIcon} />
-        </Button>
+        <ControlPanel.Field
+          icon={<Icon icon={calendarTodayIcon} />}
+          label={label || null}
+          placeholder={placeholder}
+        />
       }
     >
       <ControlPanel.Section label="Relative">
@@ -174,7 +169,7 @@ function AnchorChooser({
           <RelativeAnchorBuilder anchor={anchor} onChange={onChange} />
         </Inset>
       </ControlPanel.Section>
-      <ControlPanel.Section label="Exact date">
+      <ControlPanel.Section needs="picker" label="Exact date">
         {/*
           `toISODay` is local-midnight, so the emitted operand stays the bare
           `yyyy-mm-dd` calendar day `resolveAnchorDay` (and its server

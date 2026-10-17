@@ -5559,6 +5559,10 @@
       "name": "@singularity/plugin-reports-page-undo-conflict",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/panel-overflow": {
+      "name": "@singularity/plugin-reports-panel-overflow",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/plugin-load-errors": {
       "name": "@singularity/plugin-reports-plugin-load-errors",
       "version": "0.0.1",
@@ -9320,6 +9324,8 @@
     "@singularity/plugin-reports-page-doc-rank-drift": ["@singularity/plugin-reports-page-doc-rank-drift@workspace:plugins/reports/plugins/page-doc-rank-drift"],
 
     "@singularity/plugin-reports-page-undo-conflict": ["@singularity/plugin-reports-page-undo-conflict@workspace:plugins/reports/plugins/page-undo-conflict"],
+
+    "@singularity/plugin-reports-panel-overflow": ["@singularity/plugin-reports-panel-overflow@workspace:plugins/reports/plugins/panel-overflow"],
 
     "@singularity/plugin-reports-plugin-load-errors": ["@singularity/plugin-reports-plugin-load-errors@workspace:plugins/reports/plugins/plugin-load-errors"],
 

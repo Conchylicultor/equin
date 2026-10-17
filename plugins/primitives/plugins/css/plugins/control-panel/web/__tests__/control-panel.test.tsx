@@ -963,7 +963,6 @@ describe("ControlPanel.Row — push", () => {
                   key: "sort",
                   title: "Sort",
                   render: () => <div>Sort page</div>,
-                  size: "inherit",
                 }}
               >
                 Sort
@@ -994,7 +993,6 @@ describe("ControlPanel.Row — push", () => {
               key: "x",
               title: "Nowhere",
               render: () => null,
-              size: "inherit",
             }}
           >
             Nowhere
@@ -1022,47 +1020,61 @@ describe("ControlPanel.Section — label", () => {
   });
 });
 
-// The surface takes the width of the page that is SHOWING: a menu-wide root
-// widens to the builder role only while a builder page is pushed.
-describe("ControlPanelPopover — the showing page's width role", () => {
-  it("widens for a pushed page that declares its own size", async () => {
-    render(
-      <ControlPanelPopover
-        open
-        onOpenChange={vi.fn()}
-        size="menu"
-        label="Section options"
-        trigger={<button type="button">More</button>}
-      >
-        <ControlPanel.Section>
-          <ControlPanel.Row
-            push={{
-              key: "filter",
-              title: "Filter",
-              size: "builder",
-              render: () => <div>Filter builder</div>,
-            }}
-          >
-            Filter
-          </ControlPanel.Row>
-        </ControlPanel.Section>
-      </ControlPanelPopover>,
+// The surface's width is its CONTENT's need: elements stamp `data-cp-needs`,
+// the stack marks the showing level, and `cp-surface` (app.css) picks the
+// highest-ranked need on that level. jsdom cannot lay out, so these pin the
+// attributes the CSS keys on; the widths themselves are measured in a browser.
+describe("ControlPanelPopover — width from the showing page's content", () => {
+  it("stamps the builder need on every rule row", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.RuleList>
+          <ControlPanel.RuleRow prefix="Where" field="Status" value="Done" />
+        </ControlPanel.RuleList>
+      </ControlPanel>,
     );
-    const row = await screen.findByRole("button", { name: /Filter/ });
-    const panel = row.closest('[data-slot="popover-content"]')!;
-    expect(panel.className).toContain("w-(--popover-width-menu-max)");
-
-    fireEvent.click(row);
-    await screen.findByText("Filter builder");
-    expect(panel.className).toContain("w-(--popover-width-builder)");
+    expect(
+      container.querySelector(".cp-rule")!.getAttribute("data-cp-needs"),
+    ).toBe("builder");
   });
 
-  it("keeps the pushing page's role for an inherit sub-page", async () => {
+  it("stamps the described need on a row with a visible description", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Section>
+          <ControlPanel.Row
+            description="Read before picking"
+            onSelect={vi.fn()}
+          >
+            Kind
+          </ControlPanel.Row>
+          <ControlPanel.Row onSelect={vi.fn()}>Plain</ControlPanel.Row>
+        </ControlPanel.Section>
+      </ControlPanel>,
+    );
+    const needs = [...container.querySelectorAll("[data-cp-needs]")].map((el) =>
+      el.getAttribute("data-cp-needs"),
+    );
+    expect(needs).toEqual(["described"]);
+  });
+
+  it("stamps a section's declared need, and none by default", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Section needs="picker">grid</ControlPanel.Section>
+        <ControlPanel.Section>list</ControlPanel.Section>
+      </ControlPanel>,
+    );
+    const bands = container.querySelectorAll(".cp-band");
+    expect(bands[0]!.getAttribute("data-cp-needs")).toBe("picker");
+    expect(bands[1]!.hasAttribute("data-cp-needs")).toBe(false);
+  });
+
+  it("is a cp-surface with no width role, and marks only the showing level", async () => {
     render(
       <ControlPanelPopover
         open
         onOpenChange={vi.fn()}
-        size="menu"
         label="Section options"
         trigger={<button type="button">More</button>}
       >
@@ -1071,20 +1083,10 @@ describe("ControlPanelPopover — the showing page's width role", () => {
             push={{
               key: "filter",
               title: "Filter",
-              size: "builder",
               render: () => (
-                <ControlPanel.Section>
-                  <ControlPanel.Row
-                    push={{
-                      key: "group",
-                      title: "Filter group",
-                      size: "inherit",
-                      render: () => <div>Nested group</div>,
-                    }}
-                  >
-                    Open group
-                  </ControlPanel.Row>
-                </ControlPanel.Section>
+                <ControlPanel.RuleList>
+                  <ControlPanel.RuleRow prefix="Where" field="Status" />
+                </ControlPanel.RuleList>
               ),
             }}
           >
@@ -1095,10 +1097,22 @@ describe("ControlPanelPopover — the showing page's width role", () => {
     );
     const row = await screen.findByRole("button", { name: /Filter/ });
     const panel = row.closest('[data-slot="popover-content"]')!;
+    expect(panel.classList.contains("cp-surface")).toBe(true);
+    expect(panel.className).not.toContain("popover-width");
+    const showing = () =>
+      [...panel.querySelectorAll("[data-cp-showing]")].map((el) =>
+        el.getAttribute("data-cp-level"),
+      );
+    expect(showing()).toEqual(["0"]);
+
     fireEvent.click(row);
-    fireEvent.click(await screen.findByRole("button", { name: /Open group/ }));
-    await screen.findByText("Nested group");
-    expect(panel.className).toContain("w-(--popover-width-builder)");
+    await screen.findByText("Status");
+    expect(showing()).toEqual(["1"]);
+    expect(
+      panel
+        .querySelector('[data-cp-showing] [data-cp-needs="builder"]')
+        ?.classList.contains("cp-rule"),
+    ).toBe(true);
   });
 });
 

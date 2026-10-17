@@ -46,7 +46,7 @@ export type PageIconFooterActions = (ctx: { close: () => void }) => ReactNode;
  * page icon or a small "Add icon" affordance — so both entry points share one
  * picker.
  *
- * It is a `ControlPanelPopover size="picker"`, so the emoji block's search
+ * It is a `ControlPanelPopover` whose grid section declares `needs="picker"`, so the emoji block's search
  * field and grid inherit the panel's one content inset, and the rule above the
  * footer is drawn by the container rather than placed here. The grid is the
  * emoji picker's `panel` variant, led by a "Recent" row (see
@@ -71,13 +71,12 @@ export function PageIconPicker({
     <ControlPanelPopover
       open={open}
       onOpenChange={setOpen}
-      size="picker"
       align="start"
       label="Page icon"
       trigger={trigger}
     >
       {/* No section label: the picker's search field leads the panel. */}
-      <ControlPanel.Section>
+      <ControlPanel.Section needs="picker">
         <PageEmojiPicker
           value={value.icon}
           onPick={(icon) => {

@@ -43,7 +43,6 @@ export function TagIconButton({
     <ControlPanelPopover
       open={open}
       onOpenChange={setOpen}
-      size="picker"
       align="start"
       label={`Icon of ${tag.name}`}
       trigger={
@@ -67,7 +66,7 @@ export function TagIconButton({
     >
       {/* The picker draws its own "Icon" heading, so this band takes no label.
           Mounted only while open: it loads its metadata on first mount. */}
-      <ControlPanel.Section>
+      <ControlPanel.Section needs="picker">
         {open && <IconPicker value={tag.icon} onSelect={pick} />}
       </ControlPanel.Section>
       {tag.icon !== null && (

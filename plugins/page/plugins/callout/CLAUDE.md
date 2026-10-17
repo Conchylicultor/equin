@@ -104,8 +104,9 @@ is the only one — the swatch cluster and the picker land on the same left edge
 as the band labels by doing nothing. Reset is a band and NOT a `Footer`, because
 these sections also render as the top half of the rail's block-actions panel,
 where a sticky footer in the middle would pin over the structural actions below
-it. `panel="picker"` is the callout's own width role (320px — what this popover
-already measured as `xl`): a panel whose body is a grid.
+it. `panel` says its sections are a control panel; the icon grid's section
+declares `needs="picker"` (320px — what this popover already measured as
+`xl`), so the rail's block-actions menu widens to it too.
 
 ## What is deliberately NOT here
 

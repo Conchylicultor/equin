@@ -91,6 +91,9 @@ export function ControlPanelRuleRow({
       ref={ref}
       style={style}
       data-span={operator != null ? undefined : "field"}
+      // Every builder line needs the builder's width; the row states it
+      // (`width-need.ts`), so whatever page renders one is drawn builder-wide.
+      data-cp-needs="builder"
       className={cn(
         "group/cp-rule cp-rule text-body transition-colors hover:bg-hover-fill/50",
         // The row-actions primitive brings its OWN hover group rather than

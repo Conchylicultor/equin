@@ -1241,6 +1241,46 @@
   }
 }
 
+@utility cp-surface {
+  /* twmerge: extend w */
+  /* THE POPOVER SURFACE OF A CONTROL PANEL — its width is its CONTENT's need.
+     An element states the width bucket it needs as `data-cp-needs`
+     (`control-panel/web/internal/width-need.ts`): a `RuleRow` says `builder`, a
+     `Row` with a visible description says `described`, and a `Section`
+     holding content the vocabulary cannot see into (an icon / emoji / swatch
+     grid) declares it with `needs`. Nothing that OPENS a panel names a width.
+
+     The surface takes the highest-ranked need on the SHOWING page —
+     menu < described < picker < builder — by source order: the four rules
+     share one specificity, so the last one matching wins. Rank, not `max()` of
+     pixels: `described` is a WRAP width, not a minimum (the default theme
+     draws it narrower than a menu, the Pages theme wider), so the bucket must
+     be the one the content asked for, sized by the theme's `popoverWidth*`
+     density token.
+
+     `[data-cp-showing]` scopes the scan to the page on screen: the stack keeps
+     every level below it mounted (`display: none`), and a builder two levels
+     down must not hold a menu page builder-wide. Pure CSS on purpose — the
+     width is right in the frame the page first paints, with no registration
+     state and no second render. `max-width` keeps the viewport cap every
+     popover width role carries; the panel's overflow guard
+     (`overflow-guard.ts`) reports a page that is wider than this anyway. */
+  width: var(--popover-width-menu-max);
+  /* The positioner publishes `--available-width` once it has placed the
+     popup; until then the viewport is the cap (same in-var fallback the
+     `anchor-min` role carries). */
+  max-width: var(--available-width, 100vw);
+  &:has([data-cp-showing] [data-cp-needs="described"]) {
+    width: var(--popover-width-described);
+  }
+  &:has([data-cp-showing] [data-cp-needs="picker"]) {
+    width: var(--popover-width-picker);
+  }
+  &:has([data-cp-showing] [data-cp-needs="builder"]) {
+    width: var(--popover-width-builder);
+  }
+}
+
 @utility cp-body {
   /* twmerge: standalone -- Composite band container (flex column + gap + the positioned first-rule mask); no single-value built-in group to conflict with. */
   /* THE BAND CONTAINER — half one of the separator mechanism (half two is

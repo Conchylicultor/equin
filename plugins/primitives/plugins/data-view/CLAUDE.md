@@ -1256,7 +1256,6 @@ DataViewSlots.Control({
   label: "Filter",              // tooltip + accessible name, compact-fold row
   icon: MdFilterList,           // label, and a pushed sub-panel's back title
   order: 0,
-  size: "builder",              // the panel's WIDTH ROLE — menu | builder
   isApplicable: (ctx) => ctx.filter.filterableFields.length > 0,
   summary: (ctx) => summarizeFilter(…),   // pure; see below
   component: FilterControlPanel,           // prop-less; reads useDataViewControls()
@@ -1350,8 +1349,10 @@ the wide bar and the compact fold mount it through the same
 `DataViewControlPanel({ control })` host with nothing left to diverge on. Panels
 are drawn with the `control-panel` vocabulary
 (`@plugins/primitives/plugins/css/plugins/control-panel/web`) — the panel body
-never paints its own surface or picks its own width; `size` is a role
-(`menu` | `builder`) and there is no third option.
+never paints its own surface, and a control declares no width: its panel is
+as wide as its content needs (filter / sort rule rows, and their empty field
+pickers, state `builder` — see control-panel's "The content declares its
+width").
 
 One capability was traded away: a `Control`'s `isApplicable` is pure and cannot
 read another slot, so the settings control can no longer self-hide when no

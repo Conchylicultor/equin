@@ -69,7 +69,6 @@ rule), mirroring the scalar operators.
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
     - `primitives/data-view.DataViewSlots`
     - `primitives/date-picker.Calendar`
     - `ui/icons.Icon`

@@ -10,9 +10,9 @@ export interface ControlPanelPaneProps {
   children: React.ReactNode;
   // NO width. NO padding. NO size. The same absences as `ControlPanelPopover`,
   // for the same reason — the escape is MISSING from the type, not defaulted in
-  // it. A pane's width is the pane system's (`Pane.define({ width })`), which is
-  // the surface's role exactly as `size="menu"` is the popover's, and it does not
-  // move as the content changes. Invariant #5 survives intact; what must never
+  // it. A pane's width is the pane system's (`Pane.define({ width })`) — a pane
+  // does not read its content's `data-cp-needs` the way the popover surface
+  // does — and it does not move as the content changes. Invariant #5 survives intact; what must never
   // appear is a width prop on the panel BODY, and there is none here.
 }
 

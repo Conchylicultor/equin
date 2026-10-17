@@ -57,7 +57,6 @@ export function MetronomeButton() {
   return (
     <ControlPanelPopover
       align="end"
-      size="menu"
       label="Metronome"
       trigger={
         // The trigger owns its own tooltip (`label`), which is why the panel has

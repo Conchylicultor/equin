@@ -116,6 +116,10 @@ export function ControlPanelStack({
     <div
       key={key}
       data-cp-level={index}
+      // The surface reads its width from the SHOWING page's content only
+      // (`[data-cp-surface]` in `app.css`): a level below, hidden but still
+      // mounted, must not keep the panel builder-wide.
+      data-cp-showing={index === depth ? "" : undefined}
       style={{ display: index === depth ? "contents" : "none" }}
     >
       {content}

@@ -469,7 +469,6 @@ function ChoicePicker({
             key: entryKey,
             title,
             render: () => rows(stack.pop),
-            size: "inherit",
           })
         }
       />
@@ -481,7 +480,6 @@ function ChoicePicker({
       open={open}
       onOpenChange={setOpen}
       trigger={trigger}
-      size="menu"
       label={title}
     >
       {rows(() => setOpen(false))}

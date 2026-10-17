@@ -62,7 +62,6 @@ export function ControlTrigger({
       open={open}
       onOpenChange={setOpen}
       align="end"
-      size={control.size}
       label={control.label}
       trigger={
         <IconButton

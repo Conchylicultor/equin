@@ -35,7 +35,7 @@ export function FilterGroupPanel({ groupId }: { groupId: string }): ReactNode {
     editor.setConjunction(group.id, c);
 
   return (
-    <ControlPanel.Section>
+    <ControlPanel.Section needs="builder">
       {group.children.length === 0 ? (
         <ControlPanel.Empty>No filters yet</ControlPanel.Empty>
       ) : (
@@ -109,7 +109,6 @@ function NestedGroupRow(props: {
             push({
               key: group.id,
               title: "Filter group",
-              size: "inherit",
               render: () => <FilterGroupPanel groupId={group.id} />,
             })
           }

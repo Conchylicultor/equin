@@ -10,8 +10,7 @@ import type { ComponentProps } from "react";
 import { ControlPanel } from "./control-panel";
 import { ControlPanelHostProvider, type ControlPanelHost } from "./host";
 import { ControlPanelStack } from "./panel-stack";
-import { usePanelStackState, type PanelStackEntry } from "./stack-context";
-import type { ControlPanelSize } from "./size";
+import { usePanelStackState } from "./stack-context";
 
 type Positioning = Pick<
   ComponentProps<typeof PopoverContent>,
@@ -46,27 +45,17 @@ export type ControlPanelPopoverProps = Positioning &
 
 interface ControlPanelPopoverOwnProps {
   /**
-   * The ROOT page's width role: `menu` for a list of choices, `described` for
-   * choices with visible description lines, `builder` for a rule row, `picker`
-   * for a panel whose body is a grid (swatches, icons, covers). A page pushed
-   * onto the panel's stack may declare its own (`PanelStackEntry.size`) — a
-   * 248px menu whose Filter row opens the 524px builder — and the panel takes
-   * the width of whichever page is showing. There is no width, padding or
-   * content-class prop — see below.
-   */
-  size?: ControlPanelSize;
-  /**
    * Comfort cap on the panel's HEIGHT, from `OverlayPanel`'s closed scale;
    * default `viewport`. A long list wants `lg` so it does not open as a
    * viewport-tall wall.
    *
-   * This is not the width prop wearing a hat. Invariant #5 is about WIDTH, and
+   * This is not a width prop wearing a hat. Invariant #5 is about WIDTH, and
    * the reason there is no `width` here — three panels in one toolbar at 481,
    * 384 and 256px, each set by whatever was widest inside it — has no height
    * analogue: fitting the viewport and scrolling is already unconditional in
    * `OverlayPanel`, so this only ever makes a panel SHORTER than the space it
-   * has. It is a closed scale for the same reason `size` is: there is nowhere to
-   * smuggle a measurement through.
+   * has. It is a closed scale so there is nowhere to smuggle a measurement
+   * through.
    */
   maxHeight?: PopoverMaxHeight;
   /** Names the panel for assistive tech. */
@@ -84,10 +73,11 @@ interface ControlPanelPopoverOwnProps {
  * measurement, and the panel already fits the viewport unconditionally; see the
  * prop.) Those are exactly the props that let three panels in one
  * toolbar end up 481, 384 and 256 pixels wide — each set by whatever was widest
- * inside it. `size` maps to a width ROLE, the padding is the panel body's, and
- * there is nowhere to smuggle a measurement through. That is what makes "width
- * is a role" enforceable rather than aspirational: the escape is absent from the
- * type, not defaulted in it.
+ * inside it. The width is the bucket the showing page's CONTENT needs
+ * (`width-need.ts`), the padding is the panel body's, and there is nowhere to
+ * smuggle a measurement through. That is what makes "width is a role"
+ * enforceable rather than aspirational: the escape is absent from the type, not
+ * defaulted in it.
  *
  * There is no `tooltip` prop either — the caller's trigger (typically an
  * `IconButton`) already owns its tooltip, and a second one here would be a
@@ -105,7 +95,6 @@ interface ControlPanelPopoverOwnProps {
 export function ControlPanelPopover({
   trigger,
   anchor,
-  size = "menu",
   maxHeight,
   label,
   align = "start",
@@ -114,13 +103,10 @@ export function ControlPanelPopover({
   onOpenChange,
   children,
 }: ControlPanelPopoverProps) {
-  // The stack's state lives HERE rather than inside the stack, because the
-  // width is the SURFACE's and the surface is this component's: the showing
-  // page's role has to reach `PopoverContent` in the same render that shows
-  // the page. It returns to the root once the panel has finished closing —
-  // the same fresh start `resetOnClose` gave the stack when it owned its state.
+  // The stack's state lives HERE rather than inside the stack so it returns to
+  // the root once the panel has finished closing — the same fresh start
+  // `resetOnClose` gave the stack when it owned its state.
   const stack = usePanelStackState();
-  const width = showingSize(stack.entries, size);
   return (
     <Popover
       open={open}
@@ -135,7 +121,12 @@ export function ControlPanelPopover({
         anchor={anchor}
         align={align}
         side={side}
-        width={width}
+        // NO width role: the surface's width is its CONTENT's need, collected
+        // in CSS from the showing page (`cp-surface` in `app.css`, see
+        // `width-need.ts`) — so a page is drawn at the width it needs whoever
+        // opened it.
+        width="content"
+        className="cp-surface"
         maxHeight={maxHeight}
         padding="none"
       >
@@ -154,17 +145,3 @@ const POPOVER_HOST: ControlPanelHost = {
   inlineDepth: 0,
   descriptions: "hint",
 };
-
-/** The showing page's width role: the top entry's, where an `"inherit"` entry
- *  takes the role of the page it was pushed from — so a sub-page of a builder
- *  stays builder-wide instead of snapping back to the root panel's role. */
-function showingSize(
-  entries: readonly PanelStackEntry[],
-  root: ControlPanelSize,
-): ControlPanelSize {
-  for (let i = entries.length - 1; i >= 0; i--) {
-    const size = entries[i]!.size;
-    if (size !== "inherit") return size;
-  }
-  return root;
-}

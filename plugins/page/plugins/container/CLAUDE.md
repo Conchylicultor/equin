@@ -200,7 +200,7 @@ are the two users today.
   with a plain `group/frame`. One component reads both.
 
   The width is one of TWO mutually exclusive props, and which one a consumer
-  passes says what its sections ARE. `panel: ControlPanelSize` means they are
+  passes says what its sections ARE. `panel: true` means they are
   built from the control-panel vocabulary (`ControlPanel.Section` / `.Row` / …),
   which the shell then opens with a `ControlPanelPopover`: those members need a
   `cp-panel` ancestor to inherit their inset from and hang their hairlines off,
@@ -319,7 +319,6 @@ they describe.
     - `page/editor.useFrameHovered`
     - `primitives/css/center.Center`
     - `primitives/css/control-panel.ControlPanelPopover`
-    - `primitives/css/control-panel.ControlPanelSize`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.Popover`
     - `primitives/css/ui-kit.PopoverContent`

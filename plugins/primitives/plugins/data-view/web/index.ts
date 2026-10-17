@@ -235,7 +235,6 @@ export default {
       label: "Filter",
       icon: symbol("filter-list"),
       order: 0,
-      size: "builder",
       // A literal transcription of the host's old `hasFilters`.
       isApplicable: (ctx) => ctx.filter.filterableFields.length > 0,
       summary: (ctx) =>
@@ -251,7 +250,6 @@ export default {
       label: "Sort",
       icon: symbol("swap-vert"),
       order: 1,
-      size: "builder",
       // A literal transcription of the host's old `hasSort`.
       isApplicable: (ctx) =>
         ctx.activeSupportsSort && ctx.sort.sortableFields.length > 0,

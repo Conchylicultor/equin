@@ -40,7 +40,7 @@ export function SortControlPanel(): ReactNode {
       <SortPresetSection />
 
       {hasRules ? (
-        <ControlPanel.Section>
+        <ControlPanel.Section needs="builder">
           <ControlPanel.RuleList>
             {/* Pinned rules are a prefix (`pinned-sort.ts`), so each segment is
                 its own sortable list: a drag reorders within its segment and
@@ -84,7 +84,7 @@ export function SortControlPanel(): ReactNode {
           <AddSortRow />
         </ControlPanel.Section>
       ) : (
-        <ControlPanel.Section>
+        <ControlPanel.Section needs="builder">
           <ControlPanel.Empty>
             No sorts yet — pick a field to sort by.
           </ControlPanel.Empty>
@@ -101,7 +101,7 @@ export function SortControlPanel(): ReactNode {
           is where the remedy (Clear sort) already lives. It gets its own section
           so the panel's own hairline sets it off. */}
       {manualOrderOverridden ? (
-        <ControlPanel.Section>
+        <ControlPanel.Section needs="builder">
           <ControlPanel.Empty>
             Manual drag order is overridden while a sort is set. Clear the sort
             to reorder.
@@ -116,7 +116,6 @@ export function SortControlPanel(): ReactNode {
             push={{
               key: "save-sort-preset",
               title: "Save as preset",
-              size: "inherit",
               render: () => <SortSavePresetPanel />,
             }}
           >

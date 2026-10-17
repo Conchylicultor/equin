@@ -64,7 +64,6 @@ export function FilterEditorPanel({
                   push({
                     key: "save-filter-preset",
                     title: "Save as preset",
-                    size: "inherit",
                     render: () => <FilterSavePresetPanel />,
                   })
                 }
@@ -87,7 +86,10 @@ export function FilterEditorPanel({
           </ControlPanel.Footer>
         </>
       ) : (
-        <ControlPanel.Section>
+        // The field picker is the builder's first step, so it is drawn at the
+        // builder's width: picking a field must not widen the panel under the
+        // pointer. Its rule rows state the same need themselves.
+        <ControlPanel.Section needs="builder">
           <FieldSearchList
             fields={editor.fields}
             onPick={(fieldId) =>

@@ -79,7 +79,6 @@ export function ViewOptionsToggle() {
         side="bottom"
         // A list of display choices — the `menu` role. The panel owns its inset,
         // so nothing here pads itself.
-        size="menu"
         label="Display options"
         trigger={
           <ToggleChip

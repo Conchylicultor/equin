@@ -51,7 +51,6 @@ export function AddPlaceButton({
     <ControlPanelPopover
       open={open}
       onOpenChange={setOpen}
-      size="described"
       maxHeight="lg"
       align="end"
       label="Add place"
