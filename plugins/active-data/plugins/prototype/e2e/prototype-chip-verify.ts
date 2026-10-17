@@ -53,7 +53,9 @@ await withBrowser(async (h) => {
 
   const chip = chips.first();
   const label = (await chip.innerText()).trim();
-  r.note(`label="${label}" tooltip="${await chip.getAttribute("data-tooltip")}"`);
+  r.note(
+    `label="${label}" tooltip="${await chip.getAttribute("data-tooltip")}"`,
+  );
   // The whole point of resolving: the chip says what the mock IS, not what the
   // model typed. An opaque id showing through means it did not resolve.
   r.ok(

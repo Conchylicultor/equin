@@ -162,7 +162,9 @@ await withBrowser(async (h) => {
   const readView = async (): Promise<SongView> => {
     const text = await readout.getAttribute(READOUT_ATTR);
     if (text === null) throw new Error("transpose trigger has no offset");
-    const on = await page.locator(`[data-tooltip^="${CHORD_ON_TITLE}"]`).count();
+    const on = await page
+      .locator(`[data-tooltip^="${CHORD_ON_TITLE}"]`)
+      .count();
     return {
       transpose: parseTranspose(text),
       // No chip at all = the card is not offered: no detected chords and the

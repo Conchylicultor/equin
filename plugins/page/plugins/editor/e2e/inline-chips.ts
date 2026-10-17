@@ -192,7 +192,9 @@ await withBrowser(async (h) => {
   );
 
   const chip = block.locator(`button[data-tooltip*="${ATTEMPT}"]`).first();
-  const chipCount = await block.locator(`button[data-tooltip*="${ATTEMPT}"]`).count();
+  const chipCount = await block
+    .locator(`button[data-tooltip*="${ATTEMPT}"]`)
+    .count();
   r.ok(
     "1. paste: the decorator rendered the attempt chip",
     chipCount === 1,
@@ -440,7 +442,9 @@ await withBrowser(async (h) => {
     .locator(`button[data-tooltip*="${ATTEMPT}"]`)
     .first();
   if (
-    (await reloadedBlock.locator(`button[data-tooltip*="${ATTEMPT}"]`).count()) === 0
+    (await reloadedBlock
+      .locator(`button[data-tooltip*="${ATTEMPT}"]`)
+      .count()) === 0
   ) {
     r.fail("5. click: no chip to click after the reload");
   } else {

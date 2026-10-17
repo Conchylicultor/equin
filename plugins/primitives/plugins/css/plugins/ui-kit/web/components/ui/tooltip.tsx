@@ -197,9 +197,7 @@ export function WithTooltip({
   children,
 }: WithTooltipProps) {
   if (!hasTooltip(content)) return children;
-  const body = (
-<TooltipContent side={side}>{content}</TooltipContent>
-  );
+  const body = <TooltipContent side={side}>{content}</TooltipContent>;
   if (pinOnClick)
     return (
       <PinnableTooltip body={body} attr={tooltipAttr(content)}>
