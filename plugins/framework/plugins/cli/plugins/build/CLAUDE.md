@@ -38,6 +38,20 @@ unrewritten and unburied.
   (`hermetic-build`), the experimental marker, and the legacy in-checkout dist
   reaper.
 
+## Main's build writes nothing git sees
+
+On the main checkout (`checkoutRef(root).kind === "main"`, i.e. the auto-build),
+`cli/internal/main-tree-guard.ts` snapshots `git status` before the first writer
+and compares after the last one (the formatter). Every generated file on main
+was already checked in sync by the push that landed it, so a difference means
+main read an input no worktree had: a stray untracked file, typically. The build
+**fails**, names every path it changed and every untracked suspect, and restores
+the paths that were clean before the build and are generated artifacts by
+`.gitattributes` (`merge=regen-*`). Anything else stays as it is, untracked
+files included. Left dirty, main's checkout made every push's `git merge
+--ff-only` abort (2026-10-17;
+[`research/2026-10-17-global-main-checkout-read-only-build.md`](../../../../../../research/2026-10-17-global-main-checkout-read-only-build.md)).
+
 `build` is deliberately **not** `detachable`: the orphan guard exiting it when
 its invoking shell dies is what stops an abandoned build from sitting on the
 build lock and a host grant. The detached self-restart build exempts itself

@@ -21,6 +21,10 @@ import {
 } from "./internal/hermetic-build";
 import { reapLegacyCheckoutDist } from "./internal/legacy-dist-reap";
 import {
+  assertMainTreeUntouched,
+  snapshotTree,
+} from "./internal/main-tree-guard";
+import {
   WEB_CORE_RELATIVE,
   actAsCheckoutNamespace,
   checkoutRef,
@@ -1021,6 +1025,12 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     recordFootprint,
   };
 
+  // Main's tree as git sees it BEFORE the first writer below — compared after
+  // the last one (the formatter), because main's build may write nothing git
+  // tracks. See ./internal/main-tree-guard.ts.
+  const mainTreeBefore =
+    checkout.kind === "main" ? await snapshotTree(root) : null;
+
   // Stage 1 — dependencies + registry-level codegen + every target's
   // filtered registry. Runs before central is spawned below (its
   // plugins.generated.ts must be in sync). See ./internal/app-artifacts.ts.
@@ -1202,6 +1212,18 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     for (const f of formatPass.formatted) console.log(`  ${f}`);
   }
   endSpan();
+
+  // 4b'''. Every writer to the repo tree has run. On main none of them may
+  //        have changed a path git sees — ./internal/main-tree-guard.ts.
+  if (mainTreeBefore !== null) {
+    endSpan = buildProfilerStart(
+      "mainTreeGuard",
+      "build:codegen",
+      "main tree untouched",
+    );
+    await assertMainTreeUntouched(root, mainTreeBefore);
+    endSpan();
+  }
 
   // 4c. Config propagation is PER TARGET now — each namespace gets its own
   //     `~/.singularity/state/config/<namespace>/` — so it lives inside

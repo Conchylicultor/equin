@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from "fs";
+import { existsSync, readdirSync, rmSync } from "fs";
 import { join } from "path";
 import {
   APP_SCOPE_DIR,
@@ -165,6 +165,15 @@ export async function generateConfigGitLayer({
 }: {
   root: string;
 }): Promise<void> {
+  // The layer's location before 25df26786e moved it under `/.generated/`. That
+  // commit also dropped its `.gitignore` line, so a copy an older build left on
+  // disk turned into an untracked source file the plugin-doc scan reads
+  // (its `ui.tokens.shadow:shadow` made config_v2 a `--shadow` user, and docs
+  // drifted on main). Removed here because this generator wrote it. Delete
+  // these lines once no checkout can still hold one.
+  rmSync(join(root, "plugins/config_v2/web/internal/git-layer.generated.ts"), {
+    force: true,
+  });
   for (const { name, file } of residentWebRegistries(root)) {
     const scope = await scopeOfRegistry(root, file);
     await writeGenerated({

@@ -53,7 +53,13 @@ mutex the order is load-bearing:
 
 1. commit (only with `-m`) — a dirty tree without a message is refused
 2. consume any merge marker this push did **not** produce
-3. fetch + ff `main` (publish mode only), then put the branch in landable shape
+3. fetch (publish mode only), then **refuse if a local change in main's
+   checkout collides with a path the merge will rewrite** (`assertNoMainCollision`:
+   dirty or untracked paths ∩ (main → target ∪ target...branch)). This happens
+   before anything reaches the remote. Unchecked, git's "local changes would
+   be overwritten" abort came at the final ff, after the branch was already
+   pushed. Dirt elsewhere does not refuse. Then ff `main` (publish mode only)
+   and put the branch in landable shape
    — three arms, decided by `main..HEAD`:
    - **contains main** → *no rebase at all*; only the tip is amended with the
      trailer. The rebase exists only to make step 7's ff-merge possible, already

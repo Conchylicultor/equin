@@ -274,6 +274,71 @@ async function getMainWorktree(): Promise<string> {
   return match[1]!;
 }
 
+const nulList = (out: string): string[] => out.split("\0").filter(Boolean);
+
+// Refuse, before anything reaches the remote, when the main checkout holds a
+// local change on a path this push's fast-forward will rewrite. Left to git, the
+// collision surfaces as a bare "Your local changes … would be overwritten by
+// merge" abort at the LAST step — after the branch was already pushed — and
+// looks like this push's failure. It is not: main's checkout is nobody's
+// workspace, so a change there is a stray (e.g. a build that wrote a tracked
+// file — main's build now fails rather than doing so, see build's
+// `main-tree-guard.ts`).
+//
+// Only a COLLISION refuses, not any dirt: a change on a path the merge does not
+// touch never blocked a push and still doesn't. `target` is what main will
+// fast-forward to before the branch lands (`<remote>/main` once fetched, or
+// main itself in local mode); the merge touches every path that differs from
+// main's HEAD to it, plus every path the branch changes from it.
+async function assertNoMainCollision(
+  mainWorktree: string,
+  target: string,
+  branch: string,
+): Promise<void> {
+  const dirty = new Set([
+    ...nulList(
+      await run(["git", "diff", "--name-only", "-z", "HEAD"], mainWorktree),
+    ),
+    ...nulList(
+      await run(
+        ["git", "ls-files", "--others", "--exclude-standard", "-z"],
+        mainWorktree,
+      ),
+    ),
+  ]);
+  if (dirty.size === 0) return;
+  const touched = new Set([
+    ...nulList(
+      await run(
+        ["git", "diff", "--name-only", "-z", "HEAD", target],
+        mainWorktree,
+      ),
+    ),
+    ...nulList(
+      await run(
+        ["git", "diff", "--name-only", "-z", `${target}...${branch}`],
+        mainWorktree,
+      ),
+    ),
+  ]);
+  const collisions = [...dirty].filter((p) => touched.has(p)).sort();
+  if (collisions.length === 0) return;
+  console.error(
+    [
+      `ERROR: the main checkout (${mainWorktree}) has local changes on paths this`,
+      "push would merge, so the merge into main would abort. Nothing was pushed.",
+      "",
+      ...collisions.map((p) => `  ${p}`),
+      "",
+      "These changes were not made by this push. Agents must not edit or clean the",
+      "main checkout: STOP and report this to the user. If they are generated files,",
+      "main's last auto-build is the likely writer — its failed run names the stray",
+      "input.",
+    ].join("\n"),
+  );
+  process.exit(1);
+}
+
 /**
  * Refuse to land on a `main` that is not this checkout's own repository's.
  *
@@ -710,7 +775,18 @@ const pushAction: CliAction<
           console.log("Pulling main...");
           await exec(["git", "fetch", publish.remote, "main"], mainWorktree);
           profiler.stepEnd("fetch");
+        }
 
+        // 2a. Before main's checkout is touched or anything reaches the
+        //     remote: refuse if a local change in main's checkout collides
+        //     with what this push will merge there.
+        await assertNoMainCollision(
+          mainWorktree,
+          publish.kind === "publish" ? `${publish.remote}/main` : "HEAD",
+          branch,
+        );
+
+        if (publish.kind === "publish") {
           profiler.stepStart("ff-main");
           await exec(
             ["git", "merge", "--ff-only", `${publish.remote}/main`],
