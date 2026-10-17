@@ -53,12 +53,15 @@ function resolveLink(
   lexical: LexicalEditor,
   element: HTMLAnchorElement,
 ): HoveredLink | null {
-  return lexical.read(() => {
-    const link = $linkAbove($getNearestNodeFromDOMNode(element));
-    if (link === null) return null;
-    const key = link.getKey();
-    return lexical.getElementByKey(key) === element ? { key, element } : null;
-  });
+  return lexical.getEditorState().read(
+    () => {
+      const link = $linkAbove($getNearestNodeFromDOMNode(element));
+      if (link === null) return null;
+      const key = link.getKey();
+      return lexical.getElementByKey(key) === element ? { key, element } : null;
+    },
+    { editor: lexical },
+  );
 }
 
 /**

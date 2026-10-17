@@ -707,9 +707,9 @@ export function linearOffsetAtPoint(
   const root = editor.getRootElement();
   const hit = caretFromPoint(x, y);
   if (!root || !hit || !root.contains(hit.node)) return null;
-  // `editor.read`, not `getEditorState().read`: the DOM → node lookup needs
-  // this editor ACTIVE, and only the former makes it so.
-  return editor.read(() => {
+  // `{ editor }` makes this editor ACTIVE, which the DOM → node lookup needs.
+  return editor.getEditorState().read(
+    () => {
     const node = $getNearestNodeFromDOMNode(hit.node);
     if (!node || $isRootNode(node)) return null;
     const point = $createRangeSelection().anchor;
@@ -738,7 +738,9 @@ export function linearOffsetAtPoint(
     const index = node.getIndexWithinParent() + (after ? 1 : 0);
     point.set(parent.getKey(), index, "element");
     return $linearOffsetOfPoint(point);
-  });
+    },
+    { editor },
+  );
 }
 
 /**
@@ -746,7 +748,7 @@ export function linearOffsetAtPoint(
  * ANCHOR, or null when it holds no range selection. Reads only.
  */
 export function nativeAnchorLinearOffset(editor: LexicalEditor): number | null {
-  return editor.read(() => {
+  return editor.getEditorState().read(() => {
     const selection = $getSelection();
     if (!$isRangeSelection(selection)) return null;
     return $linearOffsetOfPoint(selection.anchor);
@@ -771,7 +773,13 @@ export function linearDomRange(
 ): Range | null {
   const root = editor.getRootElement();
   if (!root) return null;
-  return editor.read(() => {
+  // The COMMITTED state, and never `editor.read()`: this runs inside
+  // `readCaretContext`, i.e. inside a key command listener, where a flush
+  // would commit the keystroke's update before its handler has applied it.
+  // It is also the right basis — the DOM this Range points into is the
+  // committed state's reconciliation.
+  return editor.getEditorState().read(
+    () => {
     const total = $paragraphsPlainLength();
     const lo = Math.max(0, Math.min(from, to, total));
     const hi = Math.max(lo, Math.min(Math.max(from, to), total));
@@ -782,7 +790,9 @@ export function linearDomRange(
     range.setStart(start.node, start.offset);
     range.setEnd(end.node, end.offset);
     return range;
-  });
+    },
+    { editor },
+  );
 }
 
 /** The DOM position of an already-clamped linear `offset`, inside a read. */

@@ -177,12 +177,15 @@ function resolveAnchor(
   expect(domSelection.anchorNode).toBe(node);
   expect(domSelection.anchorOffset).toBe(offset);
 
-  return editor.read(() => {
-    const selection = $createRangeSelectionFromDom(domSelection, editor);
-    if (!selection) throw new Error("the DOM selection resolved to nothing");
-    const { key, offset: resolved, type } = selection.anchor;
-    return { key, offset: resolved, type };
-  });
+  return editor.getEditorState().read(
+    () => {
+      const selection = $createRangeSelectionFromDom(domSelection, editor);
+      if (!selection) throw new Error("the DOM selection resolved to nothing");
+      const { key, offset: resolved, type } = selection.anchor;
+      return { key, offset: resolved, type };
+    },
+    { editor },
+  );
 }
 
 // ---------------------------------------------------------------------------
