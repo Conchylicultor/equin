@@ -35,6 +35,13 @@ why `getRequest` names either an existing task or the category a new one is
 filed under, titled with the form's `title`: a fork or attempt launch, which
 must not mint a task, has no spelling here and uses `LaunchControl`.
 
+A host that sets some launch options on the task itself — `getRequest` prepared
+the task and pinned them, like Sonata's Transcribe pinning its scratch
+workspace — lists them in `ownedOptions`: their pills are not drawn and their
+values are not sent, since sending the user's value (or its default) would
+overwrite the host's. `textRequired` keeps Launch disabled while the field is
+empty, for a launch whose prompt IS the typed text.
+
 Picking Off on the run pill files the task without starting it, so
 `onSubmitted` gets `{ started: false, taskId }` — an outcome, not a failure.
 
@@ -96,6 +103,7 @@ started" notification confirms it), so its props are the form's minus
     - `apps/agent-manager/welcome`
     - `apps/home/app-cards`
     - `apps/prototypes/gallery`
+    - `apps/sonata/transcription`
     - `config_v2/settings/conflict-agent`
     - `conversations/conversation-view/branch`
     - `conversations/conversation-view/fork-conversation`

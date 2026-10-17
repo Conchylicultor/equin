@@ -15,6 +15,7 @@ import {
   LaunchOptionPills,
   type LaunchOptionValues,
 } from "@plugins/tasks/plugins/launch-options/web";
+import type { LaunchOptionDef } from "@plugins/tasks/plugins/launch-options/core";
 import { type LaunchTaskResponse } from "@plugins/tasks/core";
 import type { TaskSubject } from "@plugins/tasks/plugins/task-subject/core";
 import { useClaudeCodeLaunchBlock } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
@@ -96,6 +97,18 @@ export type LaunchAgentFormProps = {
   openAfterLaunch?: boolean;
   /** Where that conversation opens, when it does. */
   openMode?: PaneOpenMode;
+  /**
+   * Launch options this launch decides itself — typically set on the task
+   * `getRequest` prepares (a flow that always runs in its own scratch
+   * workspace owns `workspaceLaunchOption`). Their pills are not drawn and
+   * their values are not sent, so the task keeps the host's.
+   */
+  ownedOptions?: readonly LaunchOptionDef<unknown>[];
+  /**
+   * The typed text IS the request (there is no base prompt to launch without
+   * it): Launch stays disabled while the field is empty.
+   */
+  textRequired?: boolean;
 };
 
 /**
@@ -124,6 +137,8 @@ export function LaunchAgentForm({
   onSubmitted,
   openAfterLaunch = false,
   openMode = "push",
+  ownedOptions,
+  textRequired = false,
 }: LaunchAgentFormProps) {
   const [draft, setDraft, clearDraft] = useDraft<LaunchDraft>(
     `launch-agent:${draftKey}`,
@@ -135,7 +150,9 @@ export function LaunchAgentForm({
   const { resolveOptions, launch } = useTaskLaunch({
     openAfterLaunch,
     openMode,
+    ownedOptions,
   });
+  const omit = ownedOptions?.map((o) => o.id);
   const options = resolveOptions(picked);
   // Same read-through for toggles: the draft holds only flipped ones.
   const toggleValues: Record<string, boolean> = {
@@ -155,7 +172,10 @@ export function LaunchAgentForm({
   // spinner for a keyboard launch too.
   const inFlight = useRef(false);
   const [submitting, setSubmitting] = useState(false);
-  const blocked = disabled || claudeBlock !== null;
+  const blocked =
+    disabled ||
+    claudeBlock !== null ||
+    (textRequired && text.trim().length === 0);
   const trySubmit = async () => {
     if (inFlight.current || blocked) return;
     inFlight.current = true;
@@ -203,6 +223,7 @@ export function LaunchAgentForm({
         barStart={
           <LaunchOptionPills
             side="start"
+            omit={omit}
             values={options}
             onChange={setPickedOptions}
             disabled={disabled ?? false}
@@ -211,6 +232,7 @@ export function LaunchAgentForm({
         barEnd={
           <LaunchOptionPills
             side="end"
+            omit={omit}
             values={options}
             onChange={setPickedOptions}
             disabled={disabled ?? false}

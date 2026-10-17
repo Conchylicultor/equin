@@ -22,8 +22,7 @@ import { songTranscriptionShape } from "../../shared/shape";
 const transcription = exposedColumns(songTranscriptionShape.exposure);
 
 function OpenConversation({ convId }: { convId: string | null }) {
-  // Null only between the row's insert and the launch, which one request
-  // spans; there is nothing to open yet.
+  // Null until the task's first conversation appears; nothing to open yet.
   if (convId === null) return null;
   return (
     <Button
@@ -67,8 +66,9 @@ export function TranscriptionBody({ songId }: { songId: string }) {
           <Inline gap="sm">
             <Spinner className="size-4" />
             <Text variant="body">
-              An agent is reading the sheet music and writing it out. It shows
-              up here when it is done.
+              {t.conversationId === null
+                ? "Waiting for the transcribing agent to start."
+                : "An agent is reading the sheet music and writing it out. It shows up here when it is done."}
             </Text>
           </Inline>
           <OpenConversation convId={t.conversationId} />

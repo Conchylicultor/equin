@@ -5,12 +5,19 @@ Sonata transcription (design: `research/2026-10-13-global-agent-workspaces-and-s
 
 ## The flow
 
-1. **Transcribe…** (library "+" menu, `web/components/transcribe-dialog.tsx`): a link, or page images
-   / PDFs uploaded as attachments → `POST /api/sonata/transcribe`.
-2. The handler (`server/internal/routes.ts`) creates the song (`musicxml` source, placeholder title),
-   its `sonata_songs_ext_transcription` row (`status`, `input`, `taskId`, `conversationId`, `error`), a
-   task in the **Sonata** category, and launches the agent (`launch.ts`) with
-   `workspace: { kind: "scratch", profile: "sonata.transcription", input: { songId, source } }`.
+1. **Transcribe…** (library "+" menu, `web/components/transcribe-dialog.tsx`): the standard
+   `LaunchAgentForm` — free text (a link, instructions, page photos / PDFs pasted or dropped inline as
+   attachment refs) plus the usual launch-option pills. The transcription decides where its agent runs, so
+   the dialog declares `ownedOptions={[workspaceLaunchOption]}` (no Workspace pill, never sent), and
+   `textRequired`.
+2. Its `getRequest` calls `POST /api/sonata/transcription/prepare` (`server/internal/routes.ts`): the
+   song (`musicxml` source, placeholder title), its `sonata_songs_ext_transcription` row (`status`,
+   `input` = `{kind:"prompt", prompt, attachmentIds}`, `taskId`, `conversationId`, `error`), a task in
+   the **Sonata** category whose workspace (`setTaskWorkspace`) is
+   `{ kind: "scratch", profile: "sonata.transcription", input: { songId, source } }`. The form then
+   launches that task through the standard `POST /api/tasks/launch` with the user's options, so a task
+   filed with Run Off still launches into the transcription workspace later.
+   `conversation-status.ts` records each new conversation of the task on the song.
 3. The profile (`profile.ts`) writes the agent's CLAUDE.md (`instructions.ts` — THE product: the
    render → side-by-side → fix loop and the MusicXML conventions), waits for `transcriptionDep`
    (`dep-ready.ts`: `requestDep` + `onDepInstallSettled`, since the spawn job has no `ExecContext`),
@@ -23,8 +30,9 @@ Sonata transcription (design: `research/2026-10-13-global-agent-workspaces-and-s
    back to the agent as the tool's error — then status `ready` and `recordScratchDelivery` (tasks-core's
    `attempt_deliveries` fact, which counts like a push). The agent then calls `exit_clean`.
 5. A conversation closed (`done`) while still transcribing marks the song `failed`
-   (`conversation-ended.ts`, on `conversation.statusChanged`); **Retry** relaunches on the same
-   task and song.
+   (`conversation-status.ts`, on `conversation.statusChanged`); **Retry** relaunches on the same
+   task and song (`launchTranscription`, the stored input's prompt and the default model). `url` /
+   `files` inputs are the earlier dialog's rows, still decoded and retried.
 
 Every status write stamps the song row (`updateSongMeta`), which is what re-hydrates an open player.
 The extension EXPOSES the run state (`status`, `conversationId`, `error`) on the songs entity
@@ -66,7 +74,6 @@ Manual check: `scripts/smoke.sh` (needs the dep installed).
     - `apps-core/tabs.appLinkProps`
     - `apps/sonata/library.Library`
     - `apps/sonata/library.openSongImperative`
-    - `infra/attachments.uploadAttachment`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.FieldPresentation`
     - `network/live.useLiveRow`
@@ -75,10 +82,8 @@ Manual check: `scripts/smoke.sh` (needs the dep installed).
     - `primitives/css/spinner.Spinner`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.DialogDescription`
     - `primitives/css/ui-kit.DialogTitle`
-    - `primitives/css/ui-kit.Input`
+    - `primitives/launch.LaunchAgentForm`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `ui/icons.Icon`
@@ -86,8 +91,8 @@ Manual check: `scripts/smoke.sh` (needs the dep installed).
   - Contributes:
     - `live.columns.expose` "sonata_songs ← sonata_songs_ext_transcription"
     - `taskCategory` "sonata"
-    - `trigger` "sonata.transcription.conversation-ended"
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `trigger` "sonata.transcription.conversation-status"
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/library` ×4
     - `apps/sonata/sources/musicxml` ×3
     - `conversations/workspace` ×3
@@ -96,6 +101,7 @@ Manual check: `scripts/smoke.sh` (needs the dep installed).
     - `infra/endpoints` ×2
     - `tasks/task-category` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
+    - `conversations/workspace/launch-option.setTaskWorkspace`
     - `conversations.createConversation`
     - `database.db`
     - `infra/attachments.getAttachment`
@@ -108,10 +114,10 @@ Manual check: `scripts/smoke.sh` (needs the dep installed).
   - DB schema: `plugins/apps/plugins/sonata/plugins/transcription/server/internal/tables.ts`
   - Entity extension of: `apps/sonata/library` (table `library_ext_transcription`)
   - Register:
-    - `defineJob('sonata.transcription.conversation-ended')`
+    - `defineJob('sonata.transcription.conversation-status')`
     - `mcpTool('sonata_submit_transcription')`
   - Routes:
-    - `POST /api/sonata/transcribe`
+    - `POST /api/sonata/transcription/prepare`
     - `POST /api/sonata/songs/:id/transcription/retry`
     - `GET /api/sonata/songs/:id/transcription`
 - Deps:
@@ -120,15 +126,7 @@ Manual check: `scripts/smoke.sh` (needs the dep installed).
     - `infra/deps/python.pythonEnv`
   - Exports (values): `transcriptionDep`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --border`
-    - `ui/tokens/color-palette --muted`
-    - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/color-palette --primary`
-    - `ui/tokens/density --space-lg`
-    - `ui/tokens/density --space-xl`
-    - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
+  - Uses tokens: `ui/tokens/shape --spacing`
 - Core:
   - Exports (types): `TranscriptionStatus`
   - Exports (values): `TRANSCRIPTION_STATUSES`

@@ -9,12 +9,21 @@ export const SUBMIT_TOOL = "sonata_submit_transcription";
 
 /**
  * What the profile is launched with (the workspace spec's `input`): the song
- * the score goes to, and the source as the agent's directory holds it — a link
- * it fetches itself, or uploaded files (copied into `input/` by `prepare`).
+ * the score goes to, and the source as the agent's directory holds it — the
+ * user's message (with its files), a link it fetches itself, or uploaded files
+ * (files are copied into `input/` by `prepare`).
  */
 export const ProfileInputSchema = z.object({
   songId: z.string().min(1),
   source: z.discriminatedUnion("kind", [
+    // The request is the user's message; its attached files (possibly none)
+    // are copied into `input/` like uploads.
+    z.object({
+      kind: z.literal("prompt"),
+      files: z.array(
+        z.object({ attachmentId: z.string().min(1), name: z.string() }),
+      ),
+    }),
     z.object({ kind: z.literal("url"), url: z.string().url() }),
     z.object({
       kind: z.literal("files"),

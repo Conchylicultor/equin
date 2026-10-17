@@ -18,7 +18,37 @@ you need is here. Accuracy beats speed: a wrong note is worse than a slow
 transcription. Transcribe what is printed — never invent music that is not
 in the source.`;
 
+/** One line per input file: where it is, and how to read it. */
+function fileLines(files: readonly { name: string }[]): string {
+  return files
+    .map((f, i) => {
+      const path = inputFilePath(i, f.name);
+      if (!/\.pdf$/i.test(path))
+        return `- \`${path}\` — an image: one page, read it directly`;
+      const out = `frames/${String(i + 1).padStart(2, "0")}`;
+      return `- \`${path}\` — a PDF: \`./bin/st pages ${path} --out ${out}\`, then read \`${out}/NN.png\``;
+    })
+    .join("\n");
+}
+
 function sourceSection(source: ProfileInput["source"]): string {
+  if (source.kind === "prompt") {
+    const files =
+      source.files.length > 0
+        ? `\n\nThe files attached to it are copied here, in the order given:\n\n${fileLines(source.files)}`
+        : "";
+    return `## Your source
+
+The user's message says what to transcribe, and may add instructions (which
+pages, which part, a title) — follow them. A link to a video or post: fetch it,
+then extract the score frames:
+
+    ./bin/st fetch '<url>' --out input
+    ./bin/st frames input/video.mp4 --out frames
+
+\`input/meta.json\` holds the post's title and caption (often the song's name,
+tempo and style).${files}`;
+  }
   if (source.kind === "url") {
     return `## Your source
 
@@ -32,20 +62,11 @@ Fetch it, then extract the score frames:
 \`input/meta.json\` holds the post's title and caption (often the song's name,
 tempo and style).`;
   }
-  const files = source.files
-    .map((f, i) => {
-      const path = inputFilePath(i, f.name);
-      if (!/\.pdf$/i.test(path))
-        return `- \`${path}\` — an image: one page, read it directly`;
-      const out = `frames/${String(i + 1).padStart(2, "0")}`;
-      return `- \`${path}\` — a PDF: \`./bin/st pages ${path} --out ${out}\`, then read \`${out}/NN.png\``;
-    })
-    .join("\n");
   return `## Your source
 
 Uploaded files, in this order:
 
-${files}`;
+${fileLines(source.files)}`;
 }
 
 const TOOLS = `## Tools

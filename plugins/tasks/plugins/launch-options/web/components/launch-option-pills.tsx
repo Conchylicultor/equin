@@ -41,6 +41,12 @@ export interface LaunchOptionPillsProps {
    * bare icon (a crowded bar). See `PickerPill`'s `unset`.
    */
   unset?: "placeholder" | "icon";
+  /**
+   * Ids of options the HOST decides for this launch (e.g. a flow that always
+   * runs in its own workspace): their pills are not drawn, so the user is never
+   * offered a choice the host will not honour.
+   */
+  omit?: readonly string[];
 }
 
 /**
@@ -64,9 +70,16 @@ export function LaunchOptionPills({
   disabled,
   side,
   unset,
+  omit,
 }: LaunchOptionPillsProps) {
   const options = TaskLaunch.Option.useContributions();
-  const groups = useMemo(() => groupOptions(options), [options]);
+  const groups = useMemo(
+    () =>
+      groupOptions(
+        omit ? options.filter((o) => !omit.includes(o.id)) : options,
+      ),
+    [options, omit],
+  );
   return (
     <>
       {groups

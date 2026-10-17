@@ -10,6 +10,7 @@ import {
   useLaunchOptionDefaults,
   type LaunchOptionValues,
 } from "@plugins/tasks/plugins/launch-options/web";
+import type { LaunchOptionDef } from "@plugins/tasks/plugins/launch-options/core";
 import { launchTask, type LaunchTaskResponse } from "@plugins/tasks/core";
 import type { TaskSubject } from "@plugins/tasks/plugins/task-subject/core";
 
@@ -22,6 +23,12 @@ export interface UseTaskLaunchOptions {
   openAfterLaunch?: boolean;
   /** Where that conversation opens, when it does. Default `"push"`. */
   openMode?: PaneOpenMode;
+  /**
+   * Launch options the HOST sets on the task itself (before the launch), so
+   * they are never sent: sending the user's value — or its default — would
+   * overwrite the host's. See `LaunchAgentFormProps.ownedOptions`.
+   */
+  ownedOptions?: readonly LaunchOptionDef<unknown>[];
 }
 
 /**
@@ -38,9 +45,13 @@ export interface UseTaskLaunchOptions {
 export function useTaskLaunch({
   openAfterLaunch = false,
   openMode = "push",
+  ownedOptions = [],
 }: UseTaskLaunchOptions = {}) {
   const defaults = useLaunchOptionDefaults();
-  const registered = TaskLaunch.Option.useContributions();
+  const owned = new Set(ownedOptions.map((o) => o.id));
+  const registered = TaskLaunch.Option.useContributions().filter(
+    (o) => !owned.has(o.id),
+  );
   const openPane = useOpenPane();
 
   const resolveOptions = (picked: LaunchOptionValues): LaunchOptionValues => ({

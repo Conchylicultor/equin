@@ -11,7 +11,6 @@ import {
   ProfileInputSchema,
   SUBMIT_TOOL,
   TRANSCRIPTION_PROFILE_ID,
-  type ProfileInput,
 } from "./profile-input";
 
 /** The `st` executable in this checkout (the wrapper's target). */
@@ -37,7 +36,7 @@ ST_PYTHON=${shellQuote(python)} exec ${shellQuote(ST_BIN)} "$@"
 
 async function copyInputs(
   dir: string,
-  files: Extract<ProfileInput["source"], { kind: "files" }>["files"],
+  files: readonly { attachmentId: string; name: string }[],
 ): Promise<void> {
   for (const [i, f] of files.entries()) {
     const att = await getAttachment(f.attachmentId);
@@ -74,7 +73,6 @@ export const transcriptionProfile = defineScratchProfile({
     await mkdir(dirname(st), { recursive: true });
     await writeFile(st, stWrapper(join(ready.dir, "bin/python")));
     await chmod(st, 0o755);
-    if (input.source.kind === "files")
-      await copyInputs(dir, input.source.files);
+    if (input.source.kind !== "url") await copyInputs(dir, input.source.files);
   },
 });

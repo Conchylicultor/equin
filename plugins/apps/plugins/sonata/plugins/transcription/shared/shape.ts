@@ -34,7 +34,9 @@ export const songTranscriptionShape = defineExtensionShape({
     // The task the transcription runs under (a retry adds an attempt to it).
     taskId: textField(),
     // The latest conversation transcribing it: what "Open conversation"
-    // opens. Null only between the row's insert and the launch.
+    // opens. Null until the task's first conversation appears (the launch is
+    // the standard task launch, recorded by `conversation-status.ts`) — or
+    // for as long as the task was filed without starting.
     conversationId: nullable(textField()),
     // Why the latest run failed; null unless `status` is `failed`.
     error: nullable(textField()),

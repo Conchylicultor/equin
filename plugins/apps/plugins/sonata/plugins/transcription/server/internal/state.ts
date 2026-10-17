@@ -5,6 +5,7 @@ import {
   songIdKind,
   type SongId,
 } from "@plugins/apps/plugins/sonata/plugins/library/core";
+import type { TranscriptionStatus } from "../../core";
 import { songTranscription } from "./tables";
 
 // Every status write stamps the song row (`updateSongMeta` with no field), so
@@ -37,17 +38,23 @@ export async function markFailed(songId: SongId, error: string): Promise<void> {
 }
 
 /**
- * The song whose transcription `conversationId` is still running, if any —
- * how a conversation ending is matched to its song.
+ * The transcription running under `taskId`, if any — how a conversation is
+ * matched to its song: by its task, whoever launched it.
  */
-export async function transcribingSongOf(
-  conversationId: string,
-): Promise<SongId | null> {
+export async function transcriptionOfTask(taskId: string): Promise<{
+  songId: SongId;
+  status: TranscriptionStatus;
+  conversationId: string | null;
+} | null> {
   const t = songTranscription.table;
   const [row] = await db
-    .select({ songId: t.songId, status: t.status })
+    .select({
+      songId: t.songId,
+      status: t.status,
+      conversationId: t.conversationId,
+    })
     .from(t)
-    .where(eq(t.conversationId, conversationId))
+    .where(eq(t.taskId, taskId))
     .limit(1);
-  return row?.status === "transcribing" ? songIdKind.key(row.songId) : null;
+  return row ? { ...row, songId: songIdKind.key(row.songId) } : null;
 }

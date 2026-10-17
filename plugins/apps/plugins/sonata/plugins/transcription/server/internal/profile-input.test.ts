@@ -96,3 +96,26 @@ describe("transcriptionInstructions", () => {
     expect(md).not.toContain("./bin/st fetch '");
   });
 });
+
+describe("a typed request", () => {
+  test("decodes, and the instructions list its attached files", () => {
+    expect(
+      TranscriptionInputSchema.parse({
+        kind: "prompt",
+        prompt: "the left hand only",
+        attachmentIds: [],
+      }).kind,
+    ).toBe("prompt");
+    const md = transcriptionInstructions(
+      ProfileInputSchema.parse({
+        songId: "song-1",
+        source: {
+          kind: "prompt",
+          files: [{ attachmentId: "a", name: "score.pdf" }],
+        },
+      }),
+    );
+    expect(md).toContain("The user's message says what to transcribe");
+    expect(md).toContain("input/01-score.pdf");
+  });
+});

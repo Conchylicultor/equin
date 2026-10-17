@@ -53,6 +53,7 @@ default, stored as no row) or one registered scratch profile. Design:
   - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_workspace`)
   - Exports (values):
     - `getTaskWorkspace`
+    - `setTaskWorkspace`
     - `tasksWorkspace`
   - Resources: `task-workspaces:rows` (keyed, point)
   - Routes:
@@ -68,7 +69,9 @@ default, stored as no row) or one registered scratch profile. Design:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/shape --spacing`
-  - Imported by: `conversations`
+  - Imported by:
+    - `apps/sonata/transcription`
+    - `conversations`
 - Shared:
   - Exports (types): `TaskWorkspace`
   - Exports (values):

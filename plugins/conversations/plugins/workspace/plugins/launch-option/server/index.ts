@@ -10,7 +10,7 @@ import { putTaskWorkspace, deleteTaskWorkspace } from "../shared/endpoints";
 import { workspaceLaunchOption } from "../core";
 
 export { tasksWorkspace } from "./internal/tables";
-export { getTaskWorkspace } from "./internal/mutations";
+export { getTaskWorkspace, setTaskWorkspace } from "./internal/mutations";
 
 export default {
   description:

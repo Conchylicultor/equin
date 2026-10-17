@@ -8284,7 +8284,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/tabs.appLinkProps`
               - `apps/sonata/library.Library`
               - `apps/sonata/library.openSongImperative`
-              - `infra/attachments.uploadAttachment`
               - `infra/endpoints.fetchEndpoint`
               - `network/live.FieldPresentation`
               - `network/live.useLiveRow`
@@ -8293,10 +8292,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spinner.Spinner`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
-              - `primitives/css/ui-kit.cn`
-              - `primitives/css/ui-kit.DialogDescription`
               - `primitives/css/ui-kit.DialogTitle`
-              - `primitives/css/ui-kit.Input`
+              - `primitives/launch.LaunchAgentForm`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `ui/icons.Icon`
@@ -8304,8 +8301,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `live.columns.expose` "sonata_songs ← sonata_songs_ext_transcription"
               - `taskCategory` "sonata"
-              - `trigger` "sonata.transcription.conversation-ended"
-            - Uses: 29 symbols — full list in [`plugins/apps/plugins/sonata/plugins/transcription/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/transcription/REFERENCE.md)
+              - `trigger` "sonata.transcription.conversation-status"
+            - Uses: 30 symbols — full list in [`plugins/apps/plugins/sonata/plugins/transcription/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/transcription/REFERENCE.md)
               - `apps/sonata/library` ×4
               - `apps/sonata/sources/musicxml` ×3
               - `conversations/workspace` ×3
@@ -8314,6 +8311,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints` ×2
               - `tasks/task-category` ×2
               - `conversations/model-provider/catalog.getModelCatalog`
+              - `conversations/workspace/launch-option.setTaskWorkspace`
               - `conversations.createConversation`
               - `database.db`
               - `infra/attachments.getAttachment`
@@ -8326,10 +8324,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - DB schema: `plugins/apps/plugins/sonata/plugins/transcription/server/internal/tables.ts`
             - Entity extension of: `apps/sonata/library` (table `library_ext_transcription`)
             - Register:
-              - `defineJob('sonata.transcription.conversation-ended')`
+              - `defineJob('sonata.transcription.conversation-status')`
               - `mcpTool('sonata_submit_transcription')`
             - Routes:
-              - `POST /api/sonata/transcribe`
+              - `POST /api/sonata/transcription/prepare`
               - `POST /api/sonata/songs/:id/transcription/retry`
               - `GET /api/sonata/songs/:id/transcription`
           - Deps:
@@ -8338,15 +8336,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/python.pythonEnv`
             - Exports (values): `transcriptionDep`
           - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --border`
-              - `ui/tokens/color-palette --muted`
-              - `ui/tokens/color-palette --muted-foreground`
-              - `ui/tokens/color-palette --primary`
-              - `ui/tokens/density --space-lg`
-              - `ui/tokens/density --space-xl`
-              - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
+            - Uses tokens: `ui/tokens/shape --spacing`
           - Core:
             - Exports (types): `TranscriptionStatus`
             - Exports (values): `TRANSCRIPTION_STATUSES`
@@ -17510,6 +17500,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_workspace`)
             - Exports (values):
               - `getTaskWorkspace`
+              - `setTaskWorkspace`
               - `tasksWorkspace`
             - Resources: `task-workspaces:rows` (keyed, point)
             - Routes:
@@ -17525,7 +17516,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/shape --spacing`
-            - Imported by: `conversations`
+            - Imported by:
+              - `apps/sonata/transcription`
+              - `conversations`
           - Shared:
             - Exports (types): `TaskWorkspace`
             - Exports (values):
@@ -37642,6 +37635,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/agent-manager/welcome`
           - `apps/home/app-cards`
           - `apps/prototypes/gallery`
+          - `apps/sonata/transcription`
           - `config_v2/settings/conflict-agent`
           - `conversations/conversation-view/branch`
           - `conversations/conversation-view/fork-conversation`
@@ -46230,8 +46224,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 480 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
-              - `apps` ×101
+            - Tokens used by: 479 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×100
               - `conversations` ×87
               - `primitives` ×75
               - `debug` ×33
@@ -46290,9 +46284,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 313 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 312 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×65
-              - `apps` ×64
+              - `apps` ×63
               - `conversations` ×47
               - `debug` ×25
               - `page` ×20
