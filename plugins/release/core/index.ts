@@ -40,6 +40,8 @@ export {
 export type { ReleaseCandidate } from "./candidate";
 export {
   ReleaseRunSchema,
+  releaseRunFields,
+  releaseRunsEntityRef,
   releaseRuns,
   releaseHistory,
   PreviewSchema,

@@ -75,9 +75,6 @@ const tasksEntity = defineEntity(tasksEntityRef, {
     // label is a representative id, not a reference — a cluster's representative
     // can be a dropped task, and an FK would add a cascade we do not want.
     index("tasks_cluster_id_idx").on(t.clusterId),
-    // Backs the activity list's task arm keyset (updatedAt DESC, id ASC
-    // tiebreaker — plugins/tasks/plugins/activity-arm).
-    index("tasks_updated_id_idx").on(t.updatedAt, t.id),
   ],
 });
 export const _tasks = tasksEntity.table;
@@ -225,9 +222,6 @@ const conversationsEntity = defineEntity(conversationsEntityRef, {
     // Backs the All-conversations DataView's default keyset (createdAt DESC, id
     // ASC tiebreaker) so the global list pages index-only at scale.
     index("conversations_created_id_idx").on(t.createdAt, t.id),
-    // Backs the activity list's conversation arm keyset (updatedAt DESC, id
-    // ASC — plugins/conversations/plugins/activity-arm).
-    index("conversations_updated_id_idx").on(t.updatedAt, t.id),
     // Which conversation a written transcript belongs to: the live session id
     // (the chain's floor) looked up from a transcript-write event's session id
     // (conversations/usage).

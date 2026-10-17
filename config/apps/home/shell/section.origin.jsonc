@@ -1,4 +1,4 @@
-// @hash f1b2db4ff3d9
+// @hash fca88b7a1afe
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,7 +7,6 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "apps.home.app-cards:apps",
-    "apps.home.recent-activity:recent-activity"
+    "apps.home.app-cards:apps"
   ]
 }

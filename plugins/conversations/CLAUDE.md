@@ -197,7 +197,6 @@
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts` (debt)
 - Sub-plugins:
-  - **`activity-arm`** — The conversation arm's presence in every list of activity: its rows open the conversation in the agent manager; its picked fields wear the entity's labels and options. The conversation arm of the…
   - **`agents`** — Named agent definitions that launch conversations.
   - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the…
   - **`commit-conversation`** — The commit row action that opens the conversation which wrote a commit (its Singularity-Conversation trailer) in a new browser tab.

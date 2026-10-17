@@ -1,28 +1,22 @@
 import { z } from "zod";
-import { fieldsToZodObject, nullable } from "@plugins/fields/core";
-import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
-import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
-import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
-import {
-  enumTextField,
-  textField,
-} from "@plugins/fields/plugins/text/plugins/config/core";
+import { fieldsToZodObject } from "@plugins/fields/core";
+import { buildRunFields } from "@plugins/build/plugins/run-ledger/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 
-// One build run as the client sees it. `ledger.pid` is internal and absent.
-// All carried: the build surfaces read rows by id / newest-first, none filters.
+// One build run as the client sees it: the ledger's fields (run-ledger's
+// `buildRunFields`) but `namespace`, which the server scopes the collection by.
+// `ledger.pid` is internal and no field at all. All carried: the build
+// surfaces read rows by id / newest-first, none filters.
+const { id, trigger, commitHash, targets, startedAt, finishedAt, exitCode } =
+  buildRunFields;
 const BUILD_RUN_FIELDS = {
-  id: textField(),
-  trigger: enumTextField(["manual", "auto"] as const),
-  commitHash: nullable(textField()),
-  // WHICH COMPOSITIONS this one invocation built: `[MAIN_COMPOSITION_ID]` for a
-  // plain deploy, or the composition ids of a `build --composition a b` run. One
-  // invocation is one shared build (one install, codegen, checks pass,
-  // transcript, profile and verdict), so it is one row with N target chips.
-  targets: stringListField(),
-  startedAt: dateField(),
-  finishedAt: nullable(dateField()),
-  exitCode: nullable(intField()),
+  id,
+  trigger,
+  commitHash,
+  targets,
+  startedAt,
+  finishedAt,
+  exitCode,
 };
 export const BuildRunSchema = fieldsToZodObject(BUILD_RUN_FIELDS);
 

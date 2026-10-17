@@ -476,15 +476,16 @@ remote is built here.
     - `POST /api/release/runs/:id/preview/stop`
 - Core:
   - Uses:
+    - `fields.FieldOptionMeta`
     - `fields.fieldsToZodObject`
     - `fields.nullable`
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
     - `fields/int/config.intField`
     - `fields/text/config.enumTextField`
-    - `fields/text/config.parsedTextField`
     - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `network/live.liveValue`
     - `release/bundles.ReleaseManifestSchema`
@@ -521,9 +522,11 @@ remote is built here.
     - `ReleaseIntentSchema`
     - `ReleaseLogsResponseSchema`
     - `releasePreviews`
+    - `releaseRunFields`
     - `releaseRunLogs`
     - `releaseRuns`
     - `ReleaseRunSchema`
+    - `releaseRunsEntityRef`
     - `releaseTargetById`
     - `STAGED_INTENT`
     - `StalenessSchema`

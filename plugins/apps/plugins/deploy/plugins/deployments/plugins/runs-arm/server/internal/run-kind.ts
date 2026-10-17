@@ -69,14 +69,7 @@ export const deployRunKind = runsServed.arm(deployRunArm, {
     namespace: null,
     message: j.base.message,
   }),
-  extra: (j) => ({
-    verb: j.base.verb,
-    phaseFailed: j.base.phaseFailed,
-    serverId: j.base.serverId,
-    deploymentId: j.base.deploymentId,
-    compositionId: j.base.compositionId,
-    commitSha: j.base.commitSha,
-    releaseRunId: j.base.releaseRunId,
-    exitCode: j.base.exitCode,
-  }),
+  // Every arm field is picked from the entity and binds to its column by name
+  // (`verb` and `phaseFailed` are `parsedText` columns of their closed sets).
+  extra: () => ({}),
 });

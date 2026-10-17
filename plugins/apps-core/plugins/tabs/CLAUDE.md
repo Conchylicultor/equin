@@ -198,14 +198,13 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `useSurfaceMode`
     - `useTabs`
 - Cross-plugin:
-  - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core` ×10
     - `apps` ×7
     - `debug` ×7
     - `primitives` ×2
     - `shell` ×2
     - `active-data/song`
-    - `activity`
     - `build`
     - `config_v2/config-link`
     - `integrations/google-maps`

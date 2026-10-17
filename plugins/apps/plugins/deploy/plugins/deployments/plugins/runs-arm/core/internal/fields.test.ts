@@ -23,4 +23,11 @@ describe("Deploy arm fields", () => {
     ]);
     expect(deployRunArm.label).toBe("Deploy");
   });
+
+  test("picks every field from the deploy-run entity, with its labels", () => {
+    expect(deployRunArm.reaches?.name).toBe("deploy_runs");
+    expect(deployRunArm.listed["deploy.releaseRunId"]?.label).toBe(
+      "Release run",
+    );
+  });
 });

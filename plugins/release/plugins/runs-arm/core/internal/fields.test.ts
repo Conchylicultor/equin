@@ -22,4 +22,11 @@ describe("Release arm fields", () => {
     ]);
     expect(releaseRunArm.label).toBe("Release");
   });
+
+  test("picks every field from the release-run entity, with its labels", () => {
+    expect(releaseRunArm.reaches?.name).toBe("release_runs");
+    expect(releaseRunArm.listed["release.kind"]?.label).toBe("Release kind");
+    // The entity's title, but one field among the arm's in its band.
+    expect(releaseRunArm.listed["release.target"]?.primary).toBe(false);
+  });
 });

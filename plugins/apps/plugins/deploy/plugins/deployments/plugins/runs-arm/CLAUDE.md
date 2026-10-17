@@ -97,12 +97,7 @@ windows recompute FULL). A subquery over an undeclared table cannot be written
   - Register: `serveArm('runs:deploy')`
 - Core:
   - Uses:
-    - `apps/deploy/deployments.DeployPhaseSchema`
-    - `apps/deploy/deployments.DeployVerbSchema`
-    - `fields.FieldOptionMeta`
-    - `fields.nullable`
-    - `fields/int/config.intField`
-    - `fields/text/config.textField`
+    - `apps/deploy/deployments.deployRunsEntityRef`
     - `network/live.liveArm`
     - `runs.runs`
   - Exports (types): `DeployRunStatus`

@@ -42,15 +42,8 @@ export const releaseRunKind = runsServed.arm(releaseRunArm, {
     namespace: j.base.namespace,
     message: j.base.error,
   }),
-  extra: (j) => ({
-    kind: j.base.kind,
-    composition: j.base.composition,
-    target: j.base.target,
-    platform: j.base.platform,
-    commitSha: j.base.commitSha,
-    commitDirty: j.base.commitDirty,
-    artifactPath: j.base.artifactPath,
-  }),
+  // Every arm field is picked from the entity and binds to its column by name.
+  extra: () => ({}),
   // THIS WORKTREE'S releases only — a worktree DB inherits main's rows, and
   // `release_runs` carries its producing namespace for exactly that reason.
   where: (j) => eq(j.base.namespace, runtimeNamespace()),

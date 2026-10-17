@@ -437,7 +437,7 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `resource.declare` "deploy.run-history:groups"
     - `resource.declare` "deploy.run-history:rows"
     - `resource.declare` "deploy.runs"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/jobs` ×3
     - `ids` ×2
     - `infra/endpoints` ×2
@@ -450,6 +450,7 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `apps/deploy/servers._deployServers`
     - `config_v2.getConfig`
     - `database/derived-updated-at.deriveUpdatedAt`
+    - `database/sql-column.parsedText`
     - `database.db`
     - `infra/retention.defineRetention`
     - `primitives/log-channels.defineLogSink`
@@ -487,6 +488,7 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `ids.defineIdKind`
     - `ids.IdOf`
     - `infra/endpoints.defineEndpoint`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `network/live.liveValue`
     - `primitives/pane.defineRoute`
@@ -515,11 +517,13 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `deployments`
     - `DeploymentSchema`
     - `DeployPhaseSchema`
+    - `deployRunFields`
     - `deployRunHistory`
     - `deployRunIdKind`
     - `DeployRunRecordSchema`
     - `deployRuns`
     - `DeployRunSchema`
+    - `deployRunsEntityRef`
     - `DeployVerbSchema`
     - `deriveInstall`
     - `getDeployment`

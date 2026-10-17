@@ -1,40 +1,16 @@
-import { nullable, type FieldOptionMeta } from "@plugins/fields/core";
-import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
-import {
-  enumTextField,
-  textField,
-} from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveArm } from "@plugins/network/plugins/live/core";
-import { RELEASE_RUN_KIND, type ReleaseRun } from "@plugins/release/core";
+import { RELEASE_RUN_KIND, releaseRunsEntityRef } from "@plugins/release/core";
 import { runs } from "@plugins/runs/core";
-
-/**
- * The two ways a release run is cut, and how each reads.
- *
- * A `Record<ReleaseRun["kind"], …>` rather than a hand-written value list, so
- * a third kind is a `tsc` error here rather than a value that filters to
- * nothing because the dropdown never offered it.
- */
-const RELEASE_KIND_OPTIONS = {
-  staged: {
-    label: "Staged",
-    hint: "A --dev run: previewable, claiming no latest-<platform> pointer.",
-  },
-  candidate: {
-    label: "Candidate",
-    hint: "Packed and built for a named platform — a bundle `ship` can pick.",
-  },
-} as const satisfies Record<ReleaseRun["kind"], FieldOptionMeta>;
-
-const RELEASE_KINDS = Object.keys(RELEASE_KIND_OPTIONS) as [
-  ReleaseRun["kind"],
-  ...ReleaseRun["kind"][],
-];
 
 /**
  * The fields only a release row has — its slice of the `runs` union
  * (`$columns.release`), ids and wire names `release.<field>`, listed under
  * the "Release" band of every list of the union.
+ *
+ * Declared FROM the release-run entity (`releaseRunsEntityRef`): every field
+ * is a stored one, picked by name with the entity's labels and options, and
+ * every field a plugin exposes on a release run is listed in this band with
+ * no code here.
  *
  * **`kind` is why the ids are prefixed.** `release_runs` has a `kind`
  * column of its own — `staged` (a `--dev` run, previewable only) vs
@@ -50,17 +26,15 @@ export const releaseRunArm = liveArm(runs, RELEASE_RUN_KIND, {
   label: "Release",
   // After build: the shipping pair, in pipeline order (`runs` core, "Arm order").
   order: 20,
-  fields: {
-    kind: enumTextField(RELEASE_KINDS, {
-      label: "Release kind",
-      options: RELEASE_KIND_OPTIONS,
-    }),
-    composition: textField({ label: "Composition" }),
-    target: textField({ label: "Target" }),
-    platform: nullable(textField({ label: "Platform" })),
-    commitSha: nullable(textField({ label: "Commit" })),
-    commitDirty: nullable(boolField({ label: "Dirty tree" })),
-    artifactPath: nullable(textField({ label: "Artifact" })),
-  },
+  from: releaseRunsEntityRef,
+  pick: [
+    "kind",
+    "composition",
+    "target",
+    "platform",
+    "commitSha",
+    "commitDirty",
+    "artifactPath",
+  ],
   sortable: ["kind", "composition", "target", "platform"],
 });

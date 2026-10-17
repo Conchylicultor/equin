@@ -25,6 +25,8 @@ export {
   DeployPhaseSchema,
   deployRuns,
   deployRunHistory,
+  deployRunFields,
+  deployRunsEntityRef,
 } from "./runs";
 export type {
   DeployRun,

@@ -234,8 +234,9 @@ shows ONE source at a time. What every list of it gets, with no list code:
   sources. An arm declared `from` an entity picks its fields by name, with the
   entity's labels and options — and lists every field an extension EXPOSES on
   that entity in the same band (ids `<arm>.<id>`, presented by the exposure's
-  own registration), bound to its column, so a task's Track filters, sorts and
-  groups the activity list on the server with no code naming it.
+  own registration), bound to its column, so a field an extension exposes on
+  a build run filters, sorts and groups the runs list on the server with no
+  code naming it.
 - **The source field** — the discriminator: an enum whose options are the
   registered arms (value: the kind, label: the arm's), derived by
   `deriveFields` from the arms' `FieldPresentation.Register` registrations —
@@ -246,9 +247,10 @@ shows ONE source at a time. What every list of it gets, with no list code:
   owner: arm, useActivation })`: each row is dispatched to its own source's
   destination (*Row activation is PER ROW*, below).
 
-`runs` is the reference over raw ledgers (`plugins/runs`); `activity`
-(`plugins/activity`: tasks, conversations, pages) the reference over
-entities, its arms' bands made of their entities' exposures.
+`runs` (`plugins/runs`) is the reference: its build, release and deploy arms
+are declared from their ledgers' entity refs, picking their stored fields and
+folding any exposure on them; only computed fields (a build's status, every
+arm's label and outcome) are written per arm.
 
 ## Multi-source surfaces (`DataViewSwitcher`)
 
@@ -2467,13 +2469,13 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.ValueCodec`
     - `DataViewSlots.Grouping`
     - `DataViewSlots.ColumnConfig`
-  - Slot contributors: 53 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 50 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `DataViewSlots.Cell` ×10
-    - `DataViewSlots.CollectionRowActivation` ×7
     - `DataViewSlots.Filter` ×7
     - `DataViewSlots.CellEditor` ×6
     - `DataViewSlots.CollectionItemAction` ×6
     - `DataViewSlots.View` ×5
+    - `DataViewSlots.CollectionRowActivation` ×4
     - `DataViewSlots.Grouping` ×3
     - `DataViewSlots.ValueCodec` ×3
     - `DataViewSlots.Setting` ×2
@@ -2481,8 +2483,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 72 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×64
+  - Contributes: 71 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×63
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
@@ -2676,8 +2678,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `useRowFilter`
     - `useSortController`
 - Server:
-  - Contributes: 66 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×64
+  - Contributes: 65 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×63
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getConfig`
@@ -2827,7 +2829,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`
-  - Imported by: 93 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 92 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×30
     - `apps` ×22
     - `debug` ×12
@@ -2835,7 +2837,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `conversations` ×7
     - `tasks` ×4
     - `infra` ×2
-    - `activity`
     - `apps-core/app-launcher`
     - `config_v2/settings`
     - `history/dialog`

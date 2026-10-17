@@ -129,11 +129,8 @@ quiet absence of a predicate.
     - `build/build-status.BUILD_STATUS_OPTIONS_META`
     - `build/build-status.BuildStatus`
     - `build/run-ledger.BUILD_RUN_KIND`
-    - `fields.nullable`
-    - `fields/int/config.intField`
-    - `fields/string-list/config.stringListField`
+    - `build/run-ledger.buildRunsEntityRef`
     - `fields/text/config.enumTextField`
-    - `fields/text/config.textField`
     - `network/live.liveArm`
     - `runs.runs`
   - Exports (values):

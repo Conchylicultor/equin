@@ -6,41 +6,24 @@ import {
   enumTextField,
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import {
+  DEPLOY_PHASES,
+  DEPLOY_VERBS,
+  DeployPhaseSchema,
+  DeployVerbSchema,
+} from "./verbs";
 
-/**
- * The verbs over a deployment, as the app launches them.
- *
- * **The CLI is the engine; this is only a launcher.** `./singularity deploy
- * converge|ship` owns every refusal, every host mutation and the health gate —
- * the endpoint spawns exactly that command and streams its output. Nothing about
- * converge or ship is re-implemented server-side, which is the same split
- * `release` (CLI) / Studio (UI) already uses.
- *
- * `update` is the exception that proves it: it is **not** a CLI subcommand but a
- * sequence of the two real ones with an engine release between them —
- * `converge → [build a candidate, unless one is already current] → ship
- * --release <runId>`. It re-implements no refusal, no host mutation and no
- * health gate; it only orders things the caller would otherwise have to order by
- * hand. It is the app's one primary action; `converge` and `ship` stay because
- * the row actions and scripted callers still name them individually.
- */
-export const DEPLOY_VERBS = ["converge", "ship", "update"] as const;
-export const DeployVerbSchema = z.enum(DEPLOY_VERBS);
-export type DeployVerb = z.infer<typeof DeployVerbSchema>;
-
-/**
- * Which leg of an `update` is running.
- *
- * Reported as a field rather than parsed out of the log, because the log is the
- * CLI's prose and a UI that scraped it would break the first time a message
- * changed. Null for `converge` and `ship`, whose verb already names their only
- * phase — so "a single-verb run has no phase" is a fact of the type, not a
- * convention.
- */
-export const DEPLOY_PHASES = ["converge", "build", "ship"] as const;
-export const DeployPhaseSchema = z.enum(DEPLOY_PHASES);
-export type DeployPhase = z.infer<typeof DeployPhaseSchema>;
+// The verb and phase sets live in `./verbs` (zod only), so the ledger table can
+// type its columns by them without loading this module's field / live graph.
+export {
+  DEPLOY_PHASES,
+  DEPLOY_VERBS,
+  DeployPhaseSchema,
+  DeployVerbSchema,
+} from "./verbs";
+export type { DeployPhase, DeployVerb } from "./verbs";
 
 /**
  * The durable log channel every CLI spawn streams into — the shape release uses
@@ -215,6 +198,73 @@ export const DeployRunRecordSchema = z.object({
 export type DeployRunRecord = z.infer<typeof DeployRunRecordSchema>;
 
 /**
+ * A deploy run's fields — the one record of them: the history list's listed
+ * and carried fields, and the `deploy_runs` entity the runs union's deploy arm
+ * picks from. The supervised-run bookkeeping (`pid`, `leg_run_id`,
+ * `launched_from`) is no field: it never reaches the wire.
+ */
+export const deployRunFields = {
+  id: textField(),
+  /** The (composition × server) install this run belongs to. */
+  deploymentId: textField({ label: "Deployment" }),
+  /** The remote box. An opaque id — a dimension to filter by, not a name. */
+  serverId: textField({ label: "Server" }),
+  compositionId: textField({ label: "Composition" }),
+  /**
+   * `converge` / `ship` / `update` — what the run was asked to do. The closed
+   * set, declared (not derived from the loaded rows, a server-paginated window
+   * that would offer only the verbs on the page).
+   */
+  verb: enumTextField(DEPLOY_VERBS, {
+    label: "Verb",
+    options: {
+      update: { label: "Update" },
+      converge: { label: "Converge" },
+      ship: { label: "Ship" },
+    },
+  }),
+  /** The `release_runs.id` this `ship` pinned. Null on a converge, or a bare ship. */
+  releaseRunId: nullable(textField({ label: "Release run" })),
+  /** The commit the shipped bundle was built from. Null where genuinely unknown. */
+  commitSha: nullable(textField({ label: "Commit" })),
+  status: enumTextField(DEPLOY_RUN_STATUSES, {
+    label: "Outcome",
+    primary: true,
+    options: {
+      running: { label: "Running" },
+      succeeded: { label: "Succeeded" },
+      failed: { label: "Failed" },
+    },
+  }),
+  /** Which leg of an `update` died. Null on a success, and on a single-verb run. */
+  phaseFailed: nullable(
+    enumTextField(DEPLOY_PHASES, {
+      label: "Failed phase",
+      options: {
+        converge: { label: "Converge" },
+        build: { label: "Build" },
+        ship: { label: "Ship" },
+      },
+    }),
+  ),
+  startedAt: dateField({ label: "Started" }),
+  finishedAt: nullable(dateField({ label: "Finished" })),
+  /** The CLI's exit code. Null while running, and when it could not be spawned. */
+  exitCode: nullable(intField({ label: "Exit code" })),
+  /** On failure: the CLI's own words, stored and rendered verbatim. */
+  message: nullable(textField({ label: "Message" })),
+};
+
+/**
+ * The `deploy_runs` entity, by reference — what a browser-safe declaration
+ * names a deploy run WITH (the runs union's deploy arm `from`, an extension
+ * shape's `exposes.parent`). The table stays a raw `pgTable`
+ * (`server/internal/tables.ts`: a branded id, a cascading FK, a partial unique
+ * index), bound to these fields by name.
+ */
+export const deployRunsEntityRef = entityRef("deploy_runs", deployRunFields);
+
+/**
  * The deploy history DataView's id (its `storageKey`): the surface
  * `deployRunHistory` is listed on, whose custom columns sort and filter it.
  * The DataView declares the same literal with `defineDataView` (a web-only
@@ -235,45 +285,29 @@ export const deployRunHistory = liveCollection("deploy.run-history", {
   // Declared by FIELDS: the run record's listed fields (label, type, options,
   // filter domain) are derived into the History DataView, which names none of
   // them. The row is `DeployRunRecord` (the ledger's columns by name): what no
-  // list shows rides in `carry`.
+  // list shows rides in `carry`. Each is the ledger's own field
+  // (`deployRunFields`).
   fields: {
-    status: enumTextField(DEPLOY_RUN_STATUSES, {
-      label: "Outcome",
-      primary: true,
-      options: {
-        running: { label: "Running" },
-        succeeded: { label: "Succeeded" },
-        failed: { label: "Failed" },
-      },
-    }),
-    // The closed verb set, declared (not derived from the loaded rows, a
-    // server-paginated window that would offer only the verbs on the page).
-    verb: enumTextField(DEPLOY_VERBS, {
-      label: "Verb",
-      options: {
-        update: { label: "Update" },
-        converge: { label: "Converge" },
-        ship: { label: "Ship" },
-      },
-    }),
-    commitSha: nullable(textField({ label: "Commit" })),
-    releaseRunId: nullable(textField({ label: "Release" })),
-    startedAt: dateField({ label: "Started" }),
-    message: nullable(textField({ label: "Message" })),
+    status: deployRunFields.status,
+    verb: deployRunFields.verb,
+    commitSha: deployRunFields.commitSha,
+    releaseRunId: deployRunFields.releaseRunId,
+    startedAt: deployRunFields.startedAt,
+    message: deployRunFields.message,
     // Filterable (and, for `finishedAt`, sortable) without being a column the
     // History shows: `deploymentId` is the scope every window states
     // (`scoped({ where: { deploymentId } })`), which can only name a listed
     // field.
-    deploymentId: textField({ label: "Deployment" }),
-    finishedAt: nullable(dateField({ label: "Finished" })),
+    deploymentId: deployRunFields.deploymentId,
+    finishedAt: deployRunFields.finishedAt,
   },
   carry: {
     fields: {
-      id: textField(),
-      serverId: textField(),
-      compositionId: textField(),
-      phaseFailed: nullable(enumTextField(DEPLOY_PHASES)),
-      exitCode: nullable(intField()),
+      id: deployRunFields.id,
+      serverId: deployRunFields.serverId,
+      compositionId: deployRunFields.compositionId,
+      phaseFailed: deployRunFields.phaseFailed,
+      exitCode: deployRunFields.exitCode,
     },
   },
   id: "id",

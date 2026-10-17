@@ -20,6 +20,20 @@ never overwrites the CLI's authoritative close — it still runs, because the be
 and the convergence reconcile hang off it, but the row it finds is already
 stamped.
 
+## The entity is a ref beside the table
+
+`buildRunsEntityRef` (`core/internal/entity.ts`) is the `build_runs` entity by
+reference — the one record of a build run's fields (`build.history` carries
+its fields from it; the runs union's build arm is declared `from` it and picks
+`targets`, `commitHash`, `exitCode`). The table stays a raw `pgTable`, not a
+`defineEntity`: that is server-only and loads the field-storage manifest,
+which the regenerating CLI that imports this leaf may not load
+(`cli:codegen-manifests-not-frozen`); `targets` is a `text[]`, which no field
+storage produces; and the id is branded. The ref is core-only (`entities/core`
+plus field config cores), so the CLI's import graph gains nothing heavy. Keep
+the record's keys the table's property names: the arm binds picks by name, and
+one with no column of that name and type must be bound in its `extra` (tsc).
+
 ## One invocation is one row, with N targets
 
 `targets text[]` — `./singularity build --composition sonata website` is ONE
@@ -154,13 +168,23 @@ from `build`, so both sides of an otherwise-cyclic edge can reach them.
     - `settleDeadInflightRun`
 - Core:
   - Uses:
+    - `fields.FieldsRecord`
+    - `fields.nullable`
+    - `fields/date/config.dateField`
+    - `fields/int/config.intField`
+    - `fields/string-list/config.stringListField`
+    - `fields/text/config.enumTextField`
+    - `fields/text/config.textField`
     - `ids.defineIdKind`
     - `ids.IdOf`
+    - `infra/entities.entityRef`
   - Exports (types): `BuildRunId`
   - Exports (values):
     - `BUILD_RUN_KIND`
     - `BUILD_RUN_KIND_ID`
+    - `buildRunFields`
     - `buildRunIdKind`
+    - `buildRunsEntityRef`
 - Cross-plugin:
   - Imported by:
     - `active-data/build-run`

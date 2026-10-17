@@ -541,7 +541,10 @@ export function liveArm<
           label: field.meta.label!,
           typeId: field.type.id,
           options: field.meta.optionMeta ?? null,
-          primary: field.meta.primary === true,
+          // Never the row's title: that is the union's own base field (a
+          // picked entity field may be its entity's title — a release's
+          // target — but in a band it is one field among the arm's).
+          primary: false,
           domain: filterable[name]?.domain ?? null,
           sortable: (sortable as readonly string[]).includes(name),
         });

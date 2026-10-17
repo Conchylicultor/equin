@@ -478,50 +478,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (values): `TASK_CHIP_SURFACES`
 
-- **`activity`** — The Recent activity surface: <ActivityDataView> over the `activity` union window (base fields presented once here; each kind's fields derived from its arm and its entity's exposures, with no list code), and activityLinks — where an arm's rows go (data-view's CollectionRowActivation over the arm, an app-rooted link into the record's own app). Recent activity as ONE routed union window (a Meta-DataView): activityServed serves the `activity` collection's window, `:rows` and `:groups` from every arm bound through activityServed.arm — each kind of record's own table, its entity's exposed extension fields folded into its band. Names no kind.
-  - Web:
-    - Contributes: `FieldPresentation.Register` "collection:activity"
-    - Uses:
-      - `apps-core/tabs.appLink`
-      - `network/live.FieldPresentation`
-      - `primitives/data-view.DataView`
-      - `primitives/data-view.DataViewDensity`
-      - `primitives/data-view.DataViewSlots`
-      - `primitives/data-view.defineDataView`
-      - `primitives/data-view.liveDataSource`
-      - `primitives/relative-time.RelativeTime`
-    - Exports (types): `ActivityDataViewProps`
-    - Exports (values):
-      - `ActivityDataView`
-      - `activityLinks`
-  - Server:
-    - Contributes:
-      - `resource.declare` "activity"
-      - `resource.declare` "activity:groups"
-      - `resource.declare` "activity:rows"
-    - Uses: `network/live.serveUnionCollection`
-    - Exports (values): `activityServed`
-    - Resources:
-      - `activity` (keyed, window)
-      - `activity:groups` (push)
-      - `activity:rows` (keyed, point)
-  - Core:
-    - Uses:
-      - `fields.nullable`
-      - `fields/date/config.dateField`
-      - `fields/text/config.textField`
-      - `network/live.liveCollection`
-      - `network/live.LiveRowsCollection`
-    - Exports (types): `ActivityRow`
-    - Exports (values): `activity`
-  - Cross-plugin:
-    - Uses tokens: `ui/tokens/color-palette --muted-foreground`
-    - Imported by:
-      - `apps/home/recent-activity`
-      - `apps/pages/activity-arm`
-      - `conversations/activity-arm`
-      - `tasks/activity-arm`
-
 - **`apps`** — Container for the installed apps (agent-manager, pages, settings, …). The switcher infrastructure lives in apps-core.
   - Plugins:
     - **`agent-manager`** — Agent manager app shell and layout.
@@ -2052,7 +2008,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "deploy.run-history:groups"
               - `resource.declare` "deploy.run-history:rows"
               - `resource.declare` "deploy.runs"
-            - Uses: 24 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
               - `infra/jobs` ×3
               - `ids` ×2
               - `infra/endpoints` ×2
@@ -2065,6 +2021,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/servers._deployServers`
               - `config_v2.getConfig`
               - `database/derived-updated-at.deriveUpdatedAt`
+              - `database/sql-column.parsedText`
               - `database.db`
               - `infra/retention.defineRetention`
               - `primitives/log-channels.defineLogSink`
@@ -2102,6 +2059,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ids.defineIdKind`
               - `ids.IdOf`
               - `infra/endpoints.defineEndpoint`
+              - `infra/entities.entityRef`
               - `network/live.liveCollection`
               - `network/live.liveValue`
               - `primitives/pane.defineRoute`
@@ -2130,11 +2088,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `deployments`
               - `DeploymentSchema`
               - `DeployPhaseSchema`
+              - `deployRunFields`
               - `deployRunHistory`
               - `deployRunIdKind`
               - `DeployRunRecordSchema`
               - `deployRuns`
               - `DeployRunSchema`
+              - `deployRunsEntityRef`
               - `DeployVerbSchema`
               - `deriveInstall`
               - `getDeployment`
@@ -2186,12 +2146,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Register: `serveArm('runs:deploy')`
               - Core:
                 - Uses:
-                  - `apps/deploy/deployments.DeployPhaseSchema`
-                  - `apps/deploy/deployments.DeployVerbSchema`
-                  - `fields.FieldOptionMeta`
-                  - `fields.nullable`
-                  - `fields/int/config.intField`
-                  - `fields/text/config.textField`
+                  - `apps/deploy/deployments.deployRunsEntityRef`
                   - `network/live.liveArm`
                   - `runs.runs`
                 - Exports (types): `DeployRunStatus`
@@ -3658,18 +3613,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.Icon`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-        - **`recent-activity`** — Home's Recent activity section: tasks, conversations and pages in one list, newest activity first (the activity Meta-DataView), each row opening its record in its own app.
-          - Web:
-            - Contributes: `Home.Section` "Recent activity" → `RecentActivity`
-            - Uses:
-              - `activity.ActivityDataView`
-              - `apps/home/shell.Home`
         - **`shell`** — App shell for Home. Registers the /home app entry, defines the Home.Section slot, and contributes Home's own theme (a black page and the ocean tile palette), which the home app selects.
           - Web:
             - Slots: `Home.Section`
-            - Slot contributors:
-              - `Home.Section` ← `apps.home.app-cards`
-              - `Home.Section` ← `apps.home.recent-activity`
+            - Slot contributors: `Home.Section` ← `apps.home.app-cards`
             - Contributes:
               - `Apps.App` "Home" → `HomeLayout`
               - `ThemeEngine.Theme` "Home"
@@ -3690,9 +3637,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --background`
               - `ui/tokens/type-scale --font-weight-semibold`
-            - Imported by:
-              - `apps/home/app-cards`
-              - `apps/home/recent-activity`
+            - Imported by: `apps/home/app-cards`
         - **`usage-fields`** — Declares per-app usage stats as client fields of the installed-app row kind: opens and active time over 7 days and all time, and when the app was last opened — sortable, filterable fields shown as columns of the Home grid's table view.
           - Web:
             - Contributes:
@@ -4210,25 +4155,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-semibold`
     - **`pages`** — Notion-like pages app.
       - Plugins:
-        - **`activity-arm`** — The page arm's presence in every list of activity: its rows open the page in Pages. Its band's fields are its entity's exposures, presented by their own plugins. The page arm of the activity space: binds the live page rows of `page_blocks` into the activity union (title from the page's data, last change of its row); every field exposed on a page folds into its band.
-          - Web:
-            - Contributes:
-              - `FieldPresentation.Register` "arm:activity:page"
-              - `DataViewSlots.CollectionRowActivation` "activity:open"
-            - Uses:
-              - `activity.activityLinks`
-              - `network/live.FieldPresentation`
-          - Server:
-            - Uses:
-              - `activity.activityServed`
-              - `page/editor._blocks`
-            - Register: `serveArm('activity:page')`
-          - Core:
-            - Uses:
-              - `activity.activity`
-              - `network/live.liveArm`
-              - `page/block-entity.pagesEntityRef`
-            - Exports (values): `pageActivityArm`
         - **`agent-origin`** — Agent-origin provenance for pages: presents the exposed `origin` field (Private / Scratch) of the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (x-singularity-origin: agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and a 24h retention sweep trashes the marked pages.
           - Web:
             - Contributes: `FieldPresentation.Register` "exposure:page_blocks_ext_origin"
@@ -10275,14 +10201,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 35 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Imported by: 34 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `apps-core` ×10
           - `apps` ×7
           - `debug` ×7
           - `primitives` ×2
           - `shell` ×2
           - `active-data/song`
-          - `activity`
           - `build`
           - `config_v2/config-link`
           - `integrations/google-maps`
@@ -11107,13 +11032,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `POST /api/build/serve`
   - Core:
     - Uses:
+      - `build/run-ledger.buildRunFields`
       - `fields.fieldsToZodObject`
-      - `fields.nullable`
-      - `fields/date/config.dateField`
-      - `fields/int/config.intField`
-      - `fields/string-list/config.stringListField`
-      - `fields/text/config.enumTextField`
-      - `fields/text/config.textField`
       - `infra/endpoints.defineEndpoint`
       - `infra/namespace.MAIN_COMPOSITION_ID`
       - `network/live.liveCollection`
@@ -11480,13 +11400,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `settleDeadInflightRun`
       - Core:
         - Uses:
+          - `fields.FieldsRecord`
+          - `fields.nullable`
+          - `fields/date/config.dateField`
+          - `fields/int/config.intField`
+          - `fields/string-list/config.stringListField`
+          - `fields/text/config.enumTextField`
+          - `fields/text/config.textField`
           - `ids.defineIdKind`
           - `ids.IdOf`
+          - `infra/entities.entityRef`
         - Exports (types): `BuildRunId`
         - Exports (values):
           - `BUILD_RUN_KIND`
           - `BUILD_RUN_KIND_ID`
+          - `buildRunFields`
           - `buildRunIdKind`
+          - `buildRunsEntityRef`
       - Cross-plugin:
         - Imported by:
           - `active-data/build-run`
@@ -11520,11 +11450,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/build-status.BUILD_STATUS_OPTIONS_META`
           - `build/build-status.BuildStatus`
           - `build/run-ledger.BUILD_RUN_KIND`
-          - `fields.nullable`
-          - `fields/int/config.intField`
-          - `fields/string-list/config.stringListField`
+          - `build/run-ledger.buildRunsEntityRef`
           - `fields/text/config.enumTextField`
-          - `fields/text/config.textField`
           - `network/live.liveArm`
           - `runs.runs`
         - Exports (values):
@@ -12369,25 +12296,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Exemptions:
     - Exempts itself from: `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts` (debt)
   - Plugins:
-    - **`activity-arm`** — The conversation arm's presence in every list of activity: its rows open the conversation in the agent manager; its picked fields wear the entity's labels and options. The conversation arm of the activity space: binds the `conversations` table into the activity union (system conversations left out), its status / model / kind picked from the entity; every field exposed on a conversation folds into its band.
-      - Web:
-        - Contributes:
-          - `FieldPresentation.Register` "arm:activity:conversation"
-          - `DataViewSlots.CollectionRowActivation` "activity:open"
-        - Uses:
-          - `activity.activityLinks`
-          - `network/live.FieldPresentation`
-      - Server:
-        - Uses:
-          - `activity.activityServed`
-          - `tasks/tasks-core._conversations`
-        - Register: `serveArm('activity:conversation')`
-      - Core:
-        - Uses:
-          - `activity.activity`
-          - `network/live.liveArm`
-          - `tasks/tasks-core.conversationsEntityRef`
-        - Exports (values): `conversationActivityArm`
     - **`agents`** — Named agent definitions that launch conversations.
       - Web:
         - Slots:
@@ -18208,8 +18116,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 30 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
-          - `apps` ×5
+        - Imported by: 31 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+          - `apps` ×6
           - `conversations` ×5
           - `fields` ×4
           - `infra` ×4
@@ -21100,9 +21008,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×26
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 92 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 89 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×48
-      - `apps` ×12
+      - `apps` ×11
       - `infra` ×5
       - `debug` ×4
       - `page` ×3
@@ -21110,14 +21018,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `build` ×2
       - `conversations` ×2
       - `primitives` ×2
-      - `release` ×2
-      - `activity`
       - `backup/runs-arm`
       - `config_v2`
       - `history/engine`
       - `ids`
       - `network/live`
       - `plugin-meta/plugin-health`
+      - `release`
       - `reports`
       - `runs`
   - Core:
@@ -21253,16 +21160,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 31 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 30 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `debug` ×13
               - `apps` ×6
               - `conversations` ×3
-              - `release` ×2
               - `tasks` ×2
               - `apps-core/surface/floating`
               - `history/engine`
               - `infra/host/duress`
               - `page/block-entity`
+              - `release`
               - `reports`
         - **`data-view-codec`** — Boolean field type: data-view custom-column value codec (native boolean ↔ canonical text).
           - Web:
@@ -21394,15 +21301,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 36 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+            - Imported by: 35 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
               - `apps` ×9
               - `infra` ×5
               - `debug` ×4
               - `page` ×4
               - `conversations` ×3
               - `tasks` ×3
-              - `activity`
-              - `build`
+              - `build/run-ledger`
               - `history/engine`
               - `plugin-meta/plugin-health`
               - `primitives/usage-rank`
@@ -21915,14 +21821,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 34 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+            - Imported by: 32 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
               - `debug` ×12
-              - `apps` ×8
+              - `apps` ×7
               - `infra` ×4
-              - `build` ×2
               - `conversations` ×2
               - `apps-core/surface/floating/wallpaper`
               - `backup/runs-arm`
+              - `build/run-ledger`
               - `fields/object/config`
               - `release`
               - `reports`
@@ -22503,8 +22409,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/deploy/deployments`
-              - `build`
-              - `build/runs-arm`
+              - `build/run-ledger`
               - `page/links`
               - `plugin-meta/composition`
               - `tasks/automations`
@@ -22648,8 +22553,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 57 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
-              - `apps` ×17
+            - Imported by: 54 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+              - `apps` ×16
               - `conversations` ×5
               - `infra` ×5
               - `page` ×5
@@ -22659,11 +22564,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build` ×2
               - `fields` ×2
               - `plugin-meta` ×2
-              - `release` ×2
-              - `activity`
               - `backup/runs-arm`
               - `history/engine`
               - `primitives/usage-rank`
+              - `release`
               - `reports`
               - `runs`
         - **`filter`** — Text field type: data-view filter operator set (contains / is / is-empty …).
@@ -23974,7 +23878,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 166 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 165 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×50
               - `primitives` ×26
               - `page` ×24
@@ -23988,7 +23892,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell` ×3
               - `ui` ×3
               - `reorder` ×2
-              - `activity`
               - `build`
               - `database/admin`
               - `improve/element-picker`
@@ -25703,26 +25606,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `entityRef`
           - `wireSchema`
       - Cross-plugin:
-        - Imported by:
-          - `apps/browser/bookmarks`
-          - `apps/deploy/servers`
-          - `apps/events/events-core`
-          - `apps/mail/mail-core`
-          - `apps/places/places-core`
-          - `apps/sonata/library`
-          - `apps/sonata/track-mixer`
-          - `conversations/conversation-view/turn-summary`
-          - `conversations/session-chain`
-          - `conversations/summary`
-          - `debug/boot-profile`
-          - `debug/slow-ops`
-          - `debug/trace/engine`
-          - `infra/claude-cli`
-          - `infra/entity-extensions`
-          - `infra/events`
-          - `page/block-entity`
-          - `page/tags`
+        - Imported by: 23 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
+          - `apps` ×8
+          - `conversations` ×3
+          - `debug` ×3
+          - `infra` ×3
+          - `page` ×2
+          - `build/run-ledger`
           - `plugin-meta/plugin-health`
+          - `release`
           - `tasks/tasks-core`
     - **`entity-extensions`** — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
       - Server:
@@ -28786,8 +28678,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `FieldPresentation.Register`
           - `ClientFields.Resolve`
-        - Slot contributors: 35 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `FieldPresentation.Register` ×32
+        - Slot contributors: 31 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `FieldPresentation.Register` ×28
           - `ClientFields.Resolve` ×3
         - Uses:
           - `primitives/live-state.PagedResourceResult`
@@ -29050,10 +28942,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 241 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×69
-          - `conversations` ×41
-          - `tasks` ×28
+        - Imported by: 237 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×68
+          - `conversations` ×40
+          - `tasks` ×27
           - `debug` ×24
           - `active-data` ×12
           - `infra` ×11
@@ -29070,7 +28962,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `history` ×2
           - `release` ×2
           - `search` ×2
-          - `activity`
           - `backup/runs-arm`
           - `database/query-deadline`
           - `fields/secret/config`
@@ -29973,7 +29864,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `rankWireField`
       - Cross-plugin:
         - Imported by:
-          - `apps/pages/activity-arm`
           - `page/editor`
           - `page/tags`
     - **`block-text-write`** — Server-side text writes for a block's content doc — read a stored doc's true runs, splice it to target runs (or seed it first-writer-wins), then write the row's data.text projection: the one text channel every server-side content writer goes through.
@@ -30719,9 +30609,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×2
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 76 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Imported by: 75 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `page` ×57
-          - `apps` ×9
+          - `apps` ×8
           - `reports` ×4
           - `active-data` ×3
           - `primitives` ×2
@@ -35822,13 +35712,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.ValueCodec`
           - `DataViewSlots.Grouping`
           - `DataViewSlots.ColumnConfig`
-        - Slot contributors: 53 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Slot contributors: 50 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `DataViewSlots.Cell` ×10
-          - `DataViewSlots.CollectionRowActivation` ×7
           - `DataViewSlots.Filter` ×7
           - `DataViewSlots.CellEditor` ×6
           - `DataViewSlots.CollectionItemAction` ×6
           - `DataViewSlots.View` ×5
+          - `DataViewSlots.CollectionRowActivation` ×4
           - `DataViewSlots.Grouping` ×3
           - `DataViewSlots.ValueCodec` ×3
           - `DataViewSlots.Setting` ×2
@@ -35836,8 +35726,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 72 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×64
+        - Contributes: 71 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×63
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
@@ -36031,8 +35921,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowFilter`
           - `useSortController`
       - Server:
-        - Contributes: 66 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×64
+        - Contributes: 65 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×63
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -36182,7 +36072,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-semibold`
-        - Imported by: 93 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 92 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×30
           - `apps` ×22
           - `debug` ×12
@@ -36190,7 +36080,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations` ×7
           - `tasks` ×4
           - `infra` ×2
-          - `activity`
           - `apps-core/app-launcher`
           - `config_v2/settings`
           - `history/dialog`
@@ -39605,7 +39494,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 64 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 63 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×23
           - `debug` ×13
           - `conversations` ×8
@@ -39613,7 +39502,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build` ×3
           - `infra` ×3
           - `active-data/commit-link`
-          - `activity`
           - `fields/date/table`
           - `framework/web-core`
           - `history/dialog`
@@ -41012,15 +40900,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `POST /api/release/runs/:id/preview/stop`
   - Core:
     - Uses:
+      - `fields.FieldOptionMeta`
       - `fields.fieldsToZodObject`
       - `fields.nullable`
       - `fields/bool/config.boolField`
       - `fields/date/config.dateField`
       - `fields/int/config.intField`
       - `fields/text/config.enumTextField`
-      - `fields/text/config.parsedTextField`
       - `fields/text/config.textField`
       - `infra/endpoints.defineEndpoint`
+      - `infra/entities.entityRef`
       - `network/live.liveCollection`
       - `network/live.liveValue`
       - `release/bundles.ReleaseManifestSchema`
@@ -41057,9 +40946,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReleaseIntentSchema`
       - `ReleaseLogsResponseSchema`
       - `releasePreviews`
+      - `releaseRunFields`
       - `releaseRunLogs`
       - `releaseRuns`
       - `ReleaseRunSchema`
+      - `releaseRunsEntityRef`
       - `releaseTargetById`
       - `STAGED_INTENT`
       - `StalenessSchema`
@@ -41133,14 +41024,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `serveArm('runs:release')`
       - Core:
         - Uses:
-          - `fields.FieldOptionMeta`
-          - `fields.nullable`
-          - `fields/bool/config.boolField`
-          - `fields/text/config.enumTextField`
-          - `fields/text/config.textField`
           - `network/live.liveArm`
           - `release.RELEASE_RUN_KIND`
-          - `release.ReleaseRun`
+          - `release.releaseRunsEntityRef`
           - `runs.runs`
         - Exports (values): `releaseRunArm`
       - Cross-plugin:
@@ -43292,25 +43178,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/task-header`
       - `tasks/task-list`
   - Plugins:
-    - **`activity-arm`** — The task arm's presence in every list of activity: its rows open the task's detail pane in the agent manager. Its band's fields are its entity's exposures, presented by their own plugins. The task arm of the activity space: binds the `tasks` table into the activity union (title, last change, creation); every field exposed on a task folds into its band.
-      - Web:
-        - Contributes:
-          - `FieldPresentation.Register` "arm:activity:task"
-          - `DataViewSlots.CollectionRowActivation` "activity:open"
-        - Uses:
-          - `activity.activityLinks`
-          - `network/live.FieldPresentation`
-      - Server:
-        - Uses:
-          - `activity.activityServed`
-          - `tasks/tasks-core._tasks`
-        - Register: `serveArm('activity:task')`
-      - Core:
-        - Uses:
-          - `activity.activity`
-          - `network/live.liveArm`
-          - `tasks/tasks-core.tasksEntityRef`
-        - Exports (values): `taskActivityArm`
     - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge tint, dot tint and sentence-case label, so a chip and a badge for the same attempt cannot disagree.
       - Web:
         - Uses:
@@ -45016,9 +44883,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 71 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×29
-          - `tasks` ×17
+        - Imported by: 69 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×28
+          - `tasks` ×16
           - `debug` ×6
           - `active-data` ×5
           - `page` ×3
@@ -46251,7 +46118,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 479 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 478 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×100
               - `conversations` ×87
               - `primitives` ×75
@@ -46277,7 +46144,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations` ×2
               - `runs` ×2
               - `screenshot` ×2
-              - `activity`
               - `config_v2/settings`
               - `database/query-deadline`
               - `framework/web-core`

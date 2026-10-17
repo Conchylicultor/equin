@@ -42,7 +42,6 @@ Entry-point app: a phone-home-screen launcher of every installed app, shown at
   - Exports (values): `APPS_CATEGORY_ID`
 - Sub-plugins:
   - **`app-cards`** — Launcher grid of one card per installed app (a DataView of the installedApp row kind; plugins add fields to it as client fields of that kind), plus the new-app placeholder.
-  - **`recent-activity`** — Home's Recent activity section: tasks, conversations and pages in one list, newest activity first (the activity Meta-DataView), each row opening its record in its own app.
   - **`shell`** — App shell for Home. Registers the /home app entry, defines the Home.Section slot, and contributes Home's own theme (a black page and the ocean tile palette), which the home app selects.
   - **`usage-fields`** — Declares per-app usage stats as client fields of the installed-app row kind: opens and active time over 7 days and all time, and when the app was last opened — sortable, filterable fields shown as…
 

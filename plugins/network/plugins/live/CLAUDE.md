@@ -1174,7 +1174,8 @@ source field the discriminator.
 - **Entity arms fold their entity's exposures** (fields declared once, phase
   4 — `research/2026-10-17-global-fields-declared-once-phase4-entity-meta-dataview.md`).
   An arm declared `from` an ENTITY (`liveArm({ from: entityRef })` — its
-  `reaches`; a raw-ledger or extension-shape arm reaches none) folds every
+  `reaches`; an arm with no `from`, or `from` an extension shape, reaches
+  none) folds every
   served exposure (`LiveColumns.Expose`) of that entity, as a direct
   `liveCollection({ from })` folds `exposes.base`: at the deferred bind
   `compileUnion` runs `exposureFolds({ base: reaches }, …)` per arm, appends
@@ -1190,9 +1191,15 @@ source field the discriminator.
   fields. The codec of a union lets an exposed set through (its arms are
   declared after it, in other plugins), and the server's decode — over the
   sets it folds — is the authority. Data-view lists them in the arm's band,
-  ids `<arm>.<id>` (a task's and a page's `origin` do not collide). Test:
+  ids `<arm>.<id>` (two entities' `origin` fields do not collide). Test:
   `server/internal/serve-union-entity-arms.test.ts`. The reference is
-  `activity` (tasks, conversations, pages).
+  `runs`: its build, release and deploy arms are declared `from` their
+  ledgers' entity refs (`buildRunsEntityRef`, `releaseRunsEntityRef`,
+  `deployRunsEntityRef`) — each an `entityRef` beside a raw `pgTable`, as
+  `pagesEntityRef` is beside `_blocks` — so an extension exposing a field on a
+  ledger lands in that arm's band. An arm field is never the row's title
+  (`primary: false`, even when picked from an entity whose title it is): the
+  union's own base field is.
 - **Groups by a column set.** A union's `:groups` decodes with its arms'
   and exposures' sets (its `validateParams` replaces the descriptor's, as the
   window's), so a list groups by an arm field (`build.status`) or an exposed
@@ -1217,7 +1224,10 @@ source field the discriminator.
   and nullability), or an `ExprField` of the field's value type, or `null`
   ("no such notion") for a nullable field (all tsc, T9); `extra(j)` binds the
   arm's own fields the same way — a field it `pick`s from its entity binds by
-  name unless bound here; `where(j)` is its always-on scope.
+  name unless bound here, and must be bound here when `from` has no column of
+  that name whose value is the field's type (tsc: an entity ref beside a raw
+  table, a `text` column under an enum field — decode it with an `expr`);
+  `where(j)` is its always-on scope.
   - **`derive`** — base fields the union computes for EVERY arm, so no arm
     supplies one and no two arms can disagree: `{ reads, bind(reads, { id }) }`
     — `reads` names the base fields it is computed from, each of which every
@@ -1760,8 +1770,8 @@ never add one.
   - Slots:
     - `FieldPresentation.Register`
     - `ClientFields.Resolve`
-  - Slot contributors: 35 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `FieldPresentation.Register` ×32
+  - Slot contributors: 31 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `FieldPresentation.Register` ×28
     - `ClientFields.Resolve` ×3
   - Uses:
     - `primitives/live-state.PagedResourceResult`
@@ -2024,10 +2034,10 @@ never add one.
     - `serveValueOn`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 241 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×69
-    - `conversations` ×41
-    - `tasks` ×28
+  - Imported by: 237 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×68
+    - `conversations` ×40
+    - `tasks` ×27
     - `debug` ×24
     - `active-data` ×12
     - `infra` ×11
@@ -2044,7 +2054,6 @@ never add one.
     - `history` ×2
     - `release` ×2
     - `search` ×2
-    - `activity`
     - `backup/runs-arm`
     - `database/query-deadline`
     - `fields/secret/config`

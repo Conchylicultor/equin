@@ -25,7 +25,6 @@
     - `rankWireField`
 - Cross-plugin:
   - Imported by:
-    - `apps/pages/activity-arm`
     - `page/editor`
     - `page/tags`
 

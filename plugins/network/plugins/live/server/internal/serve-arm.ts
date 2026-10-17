@@ -113,6 +113,22 @@ export type ArmBase<
   readonly [K in Omitted & keyof Row]?: never;
 };
 
+/**
+ * The picked fields (`Pk`) the binding may leave to the by-name bind: those
+ * whose same-named column of `T` reads as the field's type. A picked field
+ * with no such column (an entity ref stating a field its raw table lacks, or
+ * types apart) stays required in `extra` — the by-name bind would fail at boot.
+ */
+type ByName<T extends PgTable, CRow, Pk extends string> = {
+  [K in Pk & keyof CRow & string]: K extends keyof T["_"]["columns"]
+    ? T["_"]["columns"][K] extends PgColumn
+      ? [ColumnValue<T["_"]["columns"][K]>] extends [CRow[K]]
+        ? K
+        : never
+      : never
+    : never;
+}[Pk & keyof CRow & string];
+
 /** What an arm hands `served.arm(columns, spec)`. */
 export interface ArmSpec<
   Row,
@@ -132,12 +148,17 @@ export interface ArmSpec<
   /**
    * Every field of the arm's column set (`liveArm`) → its binding. A field
    * the arm picks from its entity (`liveArm({ from, pick })`) binds by name —
-   * to the `from` column of the same name — unless bound here.
+   * to the `from` column of the same name — unless bound here; a picked field
+   * `from` has no column of that name and type for must be bound here (tsc).
    */
   extra: (j: ArmRefs<T, J>) => {
-    [K in Exclude<keyof CRow & string, Pk>]-?: ArmFieldBinding<T, J, CRow[K]>;
+    [K in Exclude<keyof CRow & string, ByName<T, CRow, Pk>>]-?: ArmFieldBinding<
+      T,
+      J,
+      CRow[K]
+    >;
   } & {
-    [K in Pk & keyof CRow & string]?: ArmFieldBinding<T, J, CRow[K]>;
+    [K in ByName<T, CRow, Pk>]?: ArmFieldBinding<T, J, CRow[K]>;
   };
   /** Always-on scope for this arm — a namespace, a soft-delete flag. */
   where?: (j: JoinColumns<T, J>) => SQL;

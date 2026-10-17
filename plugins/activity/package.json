@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-activity",
-  "description": "Recent activity: one Meta-DataView over the records people and agents work on (tasks, conversations, pages), newest activity first, federated at read time through arms bound by activityServed.arm.",
-  "private": true,
-  "version": "0.0.1"
-}

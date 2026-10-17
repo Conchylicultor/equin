@@ -1,13 +1,17 @@
 import { z } from "zod";
-import { fieldsToZodObject, nullable } from "@plugins/fields/core";
+import {
+  fieldsToZodObject,
+  nullable,
+  type FieldOptionMeta,
+} from "@plugins/fields/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import {
   enumTextField,
-  parsedTextField,
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { ReleaseLogsResponseSchema } from "./endpoints";
 import { RELEASE_TARGETS } from "./targets";
@@ -19,6 +23,27 @@ import { RELEASE_TARGETS } from "./targets";
 // (see server/internal/tables.ts) — an outsider is a bug, not a value to widen
 // for.
 export const ReleaseRunKindSchema = z.enum(["staged", "candidate"]);
+
+/**
+ * The two ways a release run is cut, and how each reads.
+ *
+ * A `Record` over the kinds rather than a hand-written value list, so a third
+ * kind is a `tsc` error here rather than a value that filters to nothing
+ * because the dropdown never offered it.
+ */
+const RELEASE_KIND_OPTIONS = {
+  staged: {
+    label: "Staged",
+    hint: "A --dev run: previewable, claiming no latest-<platform> pointer.",
+  },
+  candidate: {
+    label: "Candidate",
+    hint: "Packed and built for a named platform — a bundle `ship` can pick.",
+  },
+} as const satisfies Record<
+  z.infer<typeof ReleaseRunKindSchema>,
+  FieldOptionMeta
+>;
 
 // Where a run stands. Same closed-set policy as `ReleaseRunKindSchema`, and it
 // likewise decodes the `release_runs.status` column.
@@ -62,21 +87,43 @@ const RELEASE_RUN_CARRIED = {
   // Stamped from the request's `ReleaseIntent` at claim time. Never null:
   // pre-existing rows read `staged` through the column default, which is what
   // they were.
-  kind: parsedTextField(ReleaseRunKindSchema, { default: "staged" }),
+  // "Release kind", not "Kind": in a list of every kind of run (`runs`), the
+  // run's own kind is another field entirely.
+  kind: enumTextField(ReleaseRunKindSchema.options, {
+    label: "Release kind",
+    default: "staged",
+    options: RELEASE_KIND_OPTIONS,
+  }),
   exitCode: nullable(intField()),
-  artifactPath: nullable(textField()),
+  artifactPath: nullable(textField({ label: "Artifact" })),
   port: nullable(intField()),
   // Provenance of the source tree this run was cut from. Null on runs that never
   // wrote a manifest, and on rows predating provenance. `commitDirty` forces
   // `Staleness.unknown` — the sha names the parent commit, not the bytes.
-  commitSha: nullable(textField()),
-  commitDirty: nullable(boolField()),
+  commitSha: nullable(textField({ label: "Commit" })),
+  commitDirty: nullable(boolField({ label: "Dirty tree" })),
   error: nullable(textField()),
 };
-export const ReleaseRunSchema = fieldsToZodObject({
+/**
+ * A release run's fields — the one record of them: the history list's listed
+ * and carried fields, the by-id lookup's row, and the `release_runs` entity
+ * the runs union's release arm picks from.
+ */
+export const releaseRunFields = {
   ...RELEASE_RUN_CARRIED,
   ...RELEASE_RUN_LISTED,
-});
+};
+
+/**
+ * The `release_runs` entity, by reference — what a browser-safe declaration
+ * names a release run WITH (the runs union's release arm `from`, an extension
+ * shape's `exposes.parent`). The table stays a raw `pgTable`
+ * (`server/internal/tables.ts`: a branded id, `parsedText` status / kind
+ * columns, a partial unique index), bound to these fields by name.
+ */
+export const releaseRunsEntityRef = entityRef("release_runs", releaseRunFields);
+
+export const ReleaseRunSchema = fieldsToZodObject(releaseRunFields);
 
 export type ReleaseRun = z.infer<typeof ReleaseRunSchema>;
 
@@ -93,7 +140,7 @@ export type ReleaseRun = z.infer<typeof ReleaseRunSchema>;
 // deep in Studio, not first paint). The server projects exactly this schema's
 // keys, so `pid` — absent here — never reaches the wire.
 export const releaseRuns = liveCollection("release.runs", {
-  carry: { fields: { ...RELEASE_RUN_CARRIED, ...RELEASE_RUN_LISTED } },
+  carry: { fields: releaseRunFields },
   id: "id",
 });
 

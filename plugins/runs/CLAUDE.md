@@ -56,6 +56,15 @@ and options, its filter domain derived. Arm fields ride their rows under
 kind's row), and their wire / field ids are `<kind>.<field>` — `release.kind`
 never shadows the discriminator.
 
+An arm over a ledger the domain declared as an entity (`entityRef` beside its
+raw table — build, release, deploy) is declared `from` it: it `pick`s its
+stored fields by name, with the entity's labels and options, and declares
+only what it computes (a build's `status`) as its own `fields`. Every field an
+extension exposes on that ledger then lands in the arm's band with no code
+here or in the arm. The server binds the picks by name; one whose column's
+value is not the field's type (a `text[]`, a `text` under an enum) is bound in
+`extra` (tsc).
+
 The base fields are the collection's own (`liveCollection("runs", { fields,
 carry, arms })`, core), presented once against it
 (`FieldPresentation.Register({ owner: runs })`, `web/internal/presentation.tsx`:
@@ -109,8 +118,8 @@ column vocabulary is its arms' static handles (no `columnScope`).
 ## Adding an arm
 
 Its own `{core,server,web}` under the owning domain plugin — never here; `runs`
-names no kind. `core`: `liveArm(runs, kind, { label, fields, carry?, sortable
-})` — `label` is the kind's human name and the band ("Build", "Deploy", …)
+names no kind. `core`: `liveArm(runs, kind, { label, from?, pick?, fields?,
+carry?, sortable })` — `label` is the kind's human name and the band ("Build", "Deploy", …)
 its fields are listed under in the filter picker, the Properties list and the
 group-by band, beside the "Common" band of base fields (data-view's CLAUDE.md,
 "Field sections"). `server`: `runsServed.arm(arm, { … })` in

@@ -54,15 +54,15 @@ export const buildRunKind = runsServed.arm(buildRunArm, {
       sqlType: "text",
       notNull: true,
     }),
-    // The ledger's `text[]` as a jsonb string array: the `tags` field filters
-    // in the `stringArray` domain, whose containment ops are jsonb ops.
+    // Picked from the entity, but bound here, not by name: the ledger's
+    // `text[]` as a jsonb string array — the `tags` field filters in the
+    // `stringArray` domain, whose containment ops are jsonb ops. (The other
+    // picks, `commitHash` and `exitCode`, bind to their columns by name.)
     targets: expr(sql`to_jsonb(${j.base.targets})`, {
       decoder: parsed(z.array(z.string()), "runs.build.targets"),
       sqlType: "jsonb",
       notNull: true,
     }),
-    commitHash: j.base.commitHash,
-    exitCode: j.base.exitCode,
   }),
   // THIS WORKTREE'S builds only. A worktree DB is FORKED from main, so it
   // inherits every row main had at fork time; unscoped, the merged list would

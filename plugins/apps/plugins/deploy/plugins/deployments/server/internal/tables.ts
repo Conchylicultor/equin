@@ -14,7 +14,10 @@ import { _deployServers } from "@plugins/apps/plugins/deploy/plugins/servers/ser
 // build the schema, and `core/derive.ts` is plain strings with no imports at all.
 import { DEFAULT_LOOPBACK_PORT } from "../../core/derive";
 import { idColumn } from "@plugins/ids/server";
+import { parsedText } from "@plugins/database/plugins/sql-column/server";
 import { deploymentIdKind, deployRunIdKind } from "../../core/id-kinds";
+// The specific module too: `core/verbs.ts` is zod alone.
+import { DeployPhaseSchema, DeployVerbSchema } from "../../core/verbs";
 
 // Where a composition is served and under what URL: `(composition × server) →
 // { hostnames, loopbackPort }`. Runtime data, deliberately not repo state — the
@@ -112,7 +115,9 @@ export const _deployRuns = pgTable(
     // filters by deployment.
     serverId: text("server_id").notNull(),
     compositionId: text("composition_id").notNull(),
-    verb: text("verb").notNull(), // converge|ship|update
+    // Decoded by its closed set on every read and write, so the runs list's
+    // `deploy.verb` binds to it by name as the enum it is.
+    verb: parsedText("verb", DeployVerbSchema).notNull(),
     // The pinned release run id (`ship --release <id>`). Null where there is
     // genuinely none: a converge, or a bare ship that let the CLI follow
     // `latest-<platform>` inside its own process.
@@ -162,7 +167,7 @@ export const _deployRuns = pgTable(
     pid: integer("pid"),
     // The leg an `update` died on. Null unless the run failed on one — a
     // succeeded run has no failing phase, and a single-verb run has no phases.
-    phaseFailed: text("phase_failed"),
+    phaseFailed: parsedText("phase_failed", DeployPhaseSchema),
     startedAt: timestamp("started_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

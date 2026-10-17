@@ -93,14 +93,9 @@ quiet absence of a predicate.
   - Register: `serveArm('runs:release')`
 - Core:
   - Uses:
-    - `fields.FieldOptionMeta`
-    - `fields.nullable`
-    - `fields/bool/config.boolField`
-    - `fields/text/config.enumTextField`
-    - `fields/text/config.textField`
     - `network/live.liveArm`
     - `release.RELEASE_RUN_KIND`
-    - `release.ReleaseRun`
+    - `release.releaseRunsEntityRef`
     - `runs.runs`
   - Exports (values): `releaseRunArm`
 - Cross-plugin:
