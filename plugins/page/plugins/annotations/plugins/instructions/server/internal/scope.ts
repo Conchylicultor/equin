@@ -252,3 +252,49 @@ export async function globalInstructions(
   });
   return rows.map(refOf);
 }
+
+/**
+ * The live instructions blocks among `ids`, in the order given — for a caller
+ * that knows WHICH blocks it wants (the ones a conversation had received) rather
+ * than a page they must cover. Ids that are no longer a live instructions block,
+ * or now sit inside a human-audience subtree, are dropped.
+ *
+ * `covers` is the block's own placement (a card's page, an instructions page's
+ * parent), not the page an agent reached it from: an instructions page reached
+ * through a link covered the link's page, which only that read knew.
+ */
+export async function instructionsByIds(
+  ids: readonly string[],
+  executor: DbExecutor = db,
+): Promise<InstructionsRef[]> {
+  if (ids.length === 0) return [];
+  const rows = await executeRows(executor, {
+    label: "instructions.by-ids",
+    row: RowSchema,
+    query: sql`
+      WITH RECURSIVE candidates AS (
+        SELECT b.id, b.type, b.parent_id, b.page_id, b.data,
+          ${COVERS_PAGE_ID} AS covers_page_id
+        FROM page_blocks b
+        WHERE b.id IN (${sql.join(
+          ids.map((id) => sql`${id}`),
+          sql`, `,
+        )})
+          AND b.deleted_at IS NULL
+          AND (b.type = ${instructionsBlock.type} OR ${IS_INSTRUCTIONS_PAGE})
+      ),
+      placements AS (SELECT id, parent_id, page_id FROM candidates),
+      ${hiddenCandidates()}
+      SELECT c.id, c.type,
+        COALESCE(c.data->>'global' = 'true', false) AS global,
+        c.data->>'title' AS title,
+        c.covers_page_id,
+        cov.data->>'title' AS covers_title
+      FROM candidates c
+      JOIN page_blocks cov ON cov.id = c.covers_page_id AND cov.deleted_at IS NULL
+      WHERE c.id NOT IN (SELECT id FROM hidden)
+    `,
+  });
+  const byId = new Map(rows.map((r) => [r.id, refOf(r)]));
+  return ids.flatMap((id) => byId.get(id) ?? []);
+}

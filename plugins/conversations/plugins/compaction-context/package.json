@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-conversations-compaction-context",
+  "description": "Hands an agent back, right after its context is compacted, what plugins had put in it that the summary dropped: a SessionStart(compact) hook asks the backend, and every CompactionContext contribution answers for its own part.",
+  "private": true,
+  "version": "0.0.1"
+}

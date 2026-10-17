@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { resolveEffortSettings } from "@plugins/conversations/plugins/effort-provider/core";
+import type { CompactionHookEntry } from "@plugins/conversations/plugins/compaction-context/core";
 import type { RelayHookEntry } from "@plugins/conversations/plugins/question-relay/core";
 import type { PromptSubmitHookEntry } from "@plugins/conversations/plugins/turn-ledger/server";
 import {
@@ -25,11 +26,19 @@ const PROMPT_SUBMIT: PromptSubmitHookEntry = {
   command: 'cat > "/srv/data/state/prompt-submits/x.json"; exit 0',
 };
 
+// The entry as compaction-context builds it (its own tests pin the builder).
+const COMPACTION: CompactionHookEntry = {
+  type: "command",
+  command: 'bun "/srv/checkout/plugins/c/bin/compaction-context.ts"',
+  timeout: 60,
+};
+
 function hooks(signalDir = DIR) {
   return launchHookSettings({
     signalDir,
     relay: RELAY,
     promptSubmit: PROMPT_SUBMIT,
+    compaction: COMPACTION,
   });
 }
 
@@ -56,6 +65,7 @@ describe("launch settings", () => {
       "PostToolUse",
       "PostToolUseFailure",
       "PreToolUse",
+      "SessionStart",
       "UserPromptSubmit",
     ]);
     expect(h.PostToolUse).toEqual([
@@ -78,6 +88,13 @@ describe("launch settings", () => {
           },
         ],
       },
+    ]);
+  });
+
+  test("the compaction hook runs on SessionStart's compact source only", () => {
+    const h = hooks().hooks as Record<string, unknown[]>;
+    expect(h.SessionStart).toEqual([
+      { matcher: "compact", hooks: [COMPACTION] },
     ]);
   });
 

@@ -122,6 +122,9 @@ new is that they are **delivered**, not just readable. See
   The refusal counts as the delivery, so the retry goes through.
 - **At conversation start.** Instructions marked global go into the MCP server
   instructions: cards in full, pages as a pointer to read.
+- **After a compaction.** Everything a read or a refusal had handed over is
+  handed back by the SessionStart(compact) hook, at its current version — the
+  summary would otherwise drop it while the record still said "received".
 
 Delivery is recorded per conversation at a hash of the rendered markdown, so
 editing the instructions makes every conversation receive them again.

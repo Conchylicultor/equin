@@ -12,17 +12,6 @@
   },
   "enableAllProjectMcpServers": true,
   "hooks": {
-    "PreCompact": [
-      {
-        "matcher": "auto",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo '{\"continue\": false, \"stopReason\": \"Context window full — session stopped (auto-compaction disabled)\"}'"
-          }
-        ]
-      }
-    ],
     "PreToolUse": [
       {
         "matcher": "Bash|Write|Edit|Read|NotebookEdit|Agent",

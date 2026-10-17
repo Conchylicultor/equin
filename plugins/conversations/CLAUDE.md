@@ -193,13 +193,16 @@
     - `debug/profiling/ops`
     - `improve`
     - `page/annotations/agent-notes/agent-page`
-  - Endpoint callers: `transcript-api`
+  - Endpoint callers:
+    - `compaction-context`
+    - `transcript-api`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts` (debt)
 - Sub-plugins:
   - **`agents`** — Named agent definitions that launch conversations.
   - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the…
   - **`commit-conversation`** — The commit row action that opens the conversation which wrote a commit (its Singularity-Conversation trailer) in a new browser tab.
+  - **`compaction-context`** — The compaction-context backend: the CompactionContext contribution (a plugin's restore(conversationId) — re-record what the compacted agent no longer holds, return the text to hand back) and the…
   - **`conversation-category`** [exempt] — Per-conversation categories: the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn. Classifies each conversation along a user-defined set of…
   - **`conversation-preprompt`** — Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Sidebar rows show the preprompt's icon (resolved live from the library, with…
   - **`conversation-progress`** — 4-step progress bar (started → designed → implemented → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation →…

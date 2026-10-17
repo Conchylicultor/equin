@@ -1,7 +1,10 @@
 import { db, type DbExecutor } from "@plugins/database/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
+  deliveredInstructionIds,
+  forgetInstructionsDeliveries,
   globalInstructions,
+  instructionsByIds,
   instructionsInScope,
   markInstructionsDelivered,
   renderForDelivery,
@@ -28,6 +31,10 @@ import {
  *   The refusal is the delivery, so the retry goes through.
  * - **Conversation start** carries the GLOBAL ones ({@link renderGlobalSection}):
  *   cards in full, pages as pointers to read.
+ *
+ * A compaction takes back what a read or a refusal handed over: the summary
+ * folds the tool result carrying them away, while the record still says
+ * "received". {@link restoreAfterCompaction} hands them over again.
  */
 
 /** An attribute value, escaped for the pseudo-XML the tools emit. */
@@ -49,6 +56,26 @@ function formatBlock(block: RenderedInstructions): string {
   return (
     `<instructions-from id="${block.id}" form="${kind}"${title} ` +
     `covers-page-id="${block.covers.pageId}" covers-page-title="${attr(block.covers.title)}">\n` +
+    `${body}\n` +
+    `</instructions-from>`
+  );
+}
+
+/**
+ * One instructions block handed back after a compaction. Like {@link formatBlock}
+ * without `covers-*`: an instructions page reached through a link covered the
+ * link's page, which only the read that reached it knew — the summary carries
+ * where the agent was working.
+ */
+function formatRestoredBlock(block: RenderedInstructions): string {
+  const kind = block.form === "page" ? "page" : "card";
+  const title =
+    block.form === "page" && block.title !== null
+      ? ` title="${attr(block.title)}"`
+      : "";
+  const body = block.markdown.replace(/\n+$/, "");
+  return (
+    `<instructions-from id="${block.id}" form="${kind}"${title}>\n` +
     `${body}\n` +
     `</instructions-from>`
   );
@@ -213,4 +240,53 @@ export async function renderGlobalSection(
     );
   }
   return parts.join("\n\n");
+}
+
+/**
+ * The compaction-context contribution: everything the conversation had received
+ * through a read or a refusal, handed back — `""` when there is nothing.
+ *
+ * The compaction took them out of the agent's context, so their deliveries stop
+ * counting: forgotten, then each one still live (and not withheld) is rendered
+ * at its CURRENT version and recorded as received again, because this text is
+ * now how the agent holds it. One transaction, so a read racing the compaction
+ * never sees them half-forgotten.
+ *
+ * Global CARDS are left alone: they ride the MCP server instructions, which are
+ * part of the system prompt and survive a compaction. (An edit to one since the
+ * conversation connected was handed over by a later read or refusal, and is
+ * lost with it — the rare case this leaves.)
+ */
+export async function restoreAfterCompaction(
+  conversationId: string,
+  executor: DbExecutor = db,
+): Promise<string> {
+  return executor.transaction(async (tx) => {
+    const ids = await deliveredInstructionIds(conversationId, tx);
+    const live = await instructionsByIds(ids, tx);
+    const inSystemPrompt = new Set(
+      live.filter((b) => b.global && b.form === "card").map((b) => b.id),
+    );
+    await forgetInstructionsDeliveries(
+      conversationId,
+      ids.filter((id) => !inSystemPrompt.has(id)),
+      tx,
+    );
+    const rendered = await renderInstructions(
+      live.filter((b) => !inSystemPrompt.has(b.id)),
+      tx,
+    );
+    await markInstructionsDelivered(conversationId, rendered, tx);
+    if (rendered.length === 0) return "";
+    return (
+      `<received-instructions>\n` +
+      `Your context was just compacted. Before that, page authors had handed ` +
+      `you the instructions below (they cover the pages you were reading or ` +
+      `writing, and every page below them), and the summary does not carry ` +
+      `them. They are shown as they read now. Keep following them. They are not ` +
+      `part of any page's content: do not copy them into an edit.\n\n` +
+      rendered.map(formatRestoredBlock).join("\n\n") +
+      `\n</received-instructions>`
+    );
+  });
 }

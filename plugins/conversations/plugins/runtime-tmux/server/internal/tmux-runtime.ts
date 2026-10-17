@@ -34,6 +34,7 @@ import { recordReport } from "@plugins/reports/server";
 import { basename } from "node:path";
 import { userInfo } from "node:os";
 import { runtimeShimsDir } from "@plugins/infra/plugins/launcher/core";
+import { compactionHookEntry } from "@plugins/conversations/plugins/compaction-context/server";
 import { relayHookEntry } from "@plugins/conversations/plugins/question-relay/server";
 import {
   promptSubmitHookEntry,
@@ -741,6 +742,7 @@ export const tmuxRuntime: ConversationRuntime = {
         signalDir: tmuxSignalsDir.ensure(),
         relay: relayHookEntry(),
         promptSubmit: promptSubmitHookEntry(),
+        compaction: compactionHookEntry(),
       }),
       launch.settings,
     );

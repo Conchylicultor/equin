@@ -1,3 +1,7 @@
+import {
+  COMPACTION_HOOK_MATCHER,
+  type CompactionHookEntry,
+} from "@plugins/conversations/plugins/compaction-context/core";
 import type { RelayHookEntry } from "@plugins/conversations/plugins/question-relay/core";
 import type { PromptSubmitHookEntry } from "@plugins/conversations/plugins/turn-ledger/server";
 import { signalDirForCommands } from "./tmux-hooks";
@@ -28,6 +32,11 @@ import { signalDirForCommands } from "./tmux-hooks";
 // the touch: its entry writes the hook's stdin — the prompt the CLI just
 // submitted, verbatim — into the ledger's mailbox, which is how a typed turn is
 // confirmed by the CLI itself rather than guessed from the transcript.
+//
+// The compaction hook (conversations/compaction-context) rides `SessionStart`
+// on the `compact` source: right after the CLI compacts the agent's context, it
+// hands back what plugins had given the agent through tool results and the
+// summary dropped (a page's instructions), as `additionalContext`.
 
 const QUESTION_TOOL = "AskUserQuestion";
 
@@ -50,7 +59,8 @@ export const LAUNCH_CLI_SETTINGS: Record<string, unknown> = {
  * `signalDir`, with the question relay's entry (`relay`, from
  * `relayHookEntry()`) beside the PreToolUse touch and the turn ledger's
  * (`promptSubmit`, from `promptSubmitHookEntry()`) beside the
- * UserPromptSubmit one.
+ * UserPromptSubmit one, and the compaction hook's (`compaction`, from
+ * `compactionHookEntry()`) on SessionStart's `compact` source.
  * `$SINGULARITY_CONVERSATION_ID` is expanded by the shell Claude Code runs the
  * hook in — the pane delivers it (see agent-session-env.ts), so the command is
  * the same string for every conversation.
@@ -59,10 +69,12 @@ export function launchHookSettings({
   signalDir,
   relay,
   promptSubmit,
+  compaction,
 }: {
   signalDir: string;
   relay: RelayHookEntry;
   promptSubmit: PromptSubmitHookEntry;
+  compaction: CompactionHookEntry;
 }): Record<string, unknown> {
   const touch = {
     type: "command",
@@ -76,6 +88,7 @@ export function launchHookSettings({
       PostToolUseFailure: onQuestion,
       UserPromptSubmit: [{ hooks: [touch, promptSubmit] }],
       Notification: [{ hooks: [touch] }],
+      SessionStart: [{ matcher: COMPACTION_HOOK_MATCHER, hooks: [compaction] }],
     },
   };
 }

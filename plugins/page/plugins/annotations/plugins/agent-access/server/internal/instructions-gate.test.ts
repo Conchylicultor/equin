@@ -34,6 +34,7 @@ import {
   assertInstructionsReceived,
   deliverWithRead,
   renderGlobalSection,
+  restoreAfterCompaction,
 } from "./instructions-gate";
 import { redactHumanAudience } from "./policy";
 
@@ -313,5 +314,54 @@ describe("the connect-time section", () => {
     const refusal = await writeVerdict("conv", "TRACK");
     expect(refusal?.message).toContain("track rules");
     expect(refusal?.message).not.toContain("root rule");
+  });
+});
+
+describe("after a compaction", () => {
+  const restore = (conversationId: string) =>
+    t.db.transaction((tx) => restoreAfterCompaction(conversationId, tx));
+
+  test("nothing received, nothing restored", async () => {
+    expect(await restore("conv")).toBe("");
+  });
+
+  test("hands back everything received, at its current version, and it still counts", async () => {
+    await read("conv", "TRACK", "TRACK");
+    await setData("IR-1", text("root rule, revised"));
+
+    const restored = await restore("conv");
+    expect(restored.startsWith("<received-instructions>")).toBe(true);
+    expect(restored).toContain("compacted");
+    expect(restored).toContain('id="IR" form="card"');
+    expect(restored).toContain("root rule, revised");
+    expect(restored).toContain('id="TI" form="page"');
+    expect(restored).toContain("track rules");
+    // Where an instructions page applied is only known to the read that reached it.
+    expect(restored).not.toContain("covers-page-id");
+
+    // Received again: no refusal, no repeat on the next read.
+    expect(await writeVerdict("conv", "TRACK")).toBeNull();
+    expect((await read("conv", "TRACK", "TRACK")).preamble).toBe("");
+    // Another conversation is untouched.
+    expect(await restore("other")).toBe("");
+  });
+
+  test("a block no longer instructions since it was received is forgotten, not restored", async () => {
+    await read("conv", "TRACK", "TRACK");
+    await setData("TI", { title: "Track instructions", icon: null });
+    const restored = await restore("conv");
+    expect(restored).toContain('id="IR"');
+    expect(restored).not.toContain('id="TI"');
+  });
+
+  test("global cards ride the system prompt, which survives: not repeated", async () => {
+    await setData("IR", { global: true });
+    await t.db.transaction((tx) => renderGlobalSection("conv", tx));
+    await read("conv", "TRACK", "TRACK");
+
+    const restored = await restore("conv");
+    expect(restored).not.toContain('id="IR"');
+    expect(restored).toContain('id="TI"');
+    expect(await writeVerdict("conv", "ROOT")).toBeNull();
   });
 });

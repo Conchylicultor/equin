@@ -438,6 +438,17 @@ agent gets them, in `server/internal/instructions-gate.ts`:
   global instructions, because scoped instructions still refuse writes. Each
   render logs its length to the `mcp-page-instructions` channel, since a client
   may truncate long server instructions.
+- **After a compaction**, the instructions a read or a refusal handed over are
+  gone from the agent's context while their deliveries still say "received".
+  `restoreAfterCompaction` — this plugin's `CompactionContext` contribution
+  ([`conversations/compaction-context`](../../../../../conversations/plugins/compaction-context/CLAUDE.md),
+  whose SessionStart(compact) hook calls it) — forgets them, then re-renders
+  every one still live at its current version, records it as received again and
+  returns it in a `<received-instructions>` block the hook injects. One
+  transaction. Global cards are skipped: they ride the MCP server instructions,
+  part of the system prompt, which a compaction keeps. A restored block carries
+  no `covers-*`: an instructions page reached through a link covered the link's
+  page, which only that read knew.
 
 The section lives here rather than in `instructions` because it describes these
 three tools by name; `instructions` stays free of MCP, and the import stays one
@@ -521,12 +532,14 @@ Spec: `e2e/agent-access-verify.ts`.
 
 - Description: The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page). The policy over page/markdown-apply's audience-and-author-agnostic engine.
 - Server:
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `page/annotations/instructions` ×6
+  - Contributes: `conversations.compaction-context` "page-instructions"
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/annotations/instructions` ×9
     - `page/markdown-apply` ×5
     - `page/editor` ×3
     - `page/tags` ×3
     - `database` ×2
+    - `conversations/compaction-context.CompactionContext`
     - `infra/endpoints.HttpError`
     - `infra/mcp.Mcp`
     - `page/annotations/agent-notes/authorship.recordAgentNotesAuthor`

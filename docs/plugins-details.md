@@ -12316,7 +12316,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `debug/profiling/ops`
       - `improve`
       - `page/annotations/agent-notes/agent-page`
-    - Endpoint callers: `transcript-api`
+    - Endpoint callers:
+      - `compaction-context`
+      - `transcript-api`
   - Exemptions:
     - Exempts itself from: `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts` (debt)
   - Plugins:
@@ -12613,6 +12615,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `build/build-commits`
           - `build/deployment`
+    - **`compaction-context`** — The compaction-context backend: the CompactionContext contribution (a plugin's restore(conversationId) — re-record what the compacted agent no longer holds, return the text to hand back) and the POST /api/conversations/:id/compaction-context endpoint the SessionStart(compact) hook calls, joining every contribution's part.
+      - Server:
+        - Uses: `infra/endpoints.implement`
+        - Exports (types): `CompactionContextSource`
+        - Exports (values):
+          - `CompactionContext`
+          - `compactionHookEntry`
+        - Routes: `POST /api/conversations/:id/compaction-context`
+      - Core:
+        - Uses: `infra/endpoints.defineEndpoint`
+        - Exports (types):
+          - `CompactionContextResponse`
+          - `CompactionHookEntry`
+        - Exports (values):
+          - `COMPACTION_HOOK_MATCHER`
+          - `COMPACTION_HOOK_TIMEOUT_S`
+          - `compactionContext`
+          - `compactionContextHook`
+          - `CompactionContextResponseSchema`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/shape --spacing`
+        - Imported by:
+          - `conversations/runtime-tmux`
+          - `page/annotations/agent-access`
     - **`conversation-category`** — Per-conversation categories: the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn. Classifies each conversation along a user-defined set of categories using Haiku, one item per category. Paints the sidebar avatar from the category chosen for it.
       - Web:
         - Contributes:
@@ -16939,27 +16965,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: `conversations.Runtime`
     - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
       - Server:
-        - Uses:
-          - `conversations.InputNotEmptyError`
-          - `conversations.Runtime`
+        - Uses: 21 symbols — full list in [`plugins/conversations/plugins/runtime-tmux/REFERENCE.md`](../plugins/conversations/plugins/runtime-tmux/REFERENCE.md)
+          - `infra/file-watcher` ×3
+          - `infra/paths` ×3
+          - `infra/worktree` ×3
+          - `reports` ×3
+          - `conversations/turn-ledger` ×2
+          - `conversations` ×2
+          - `conversations/compaction-context.compactionHookEntry`
           - `conversations/question-relay.relayHookEntry`
-          - `conversations/turn-ledger.promptSubmitHookEntry`
-          - `conversations/turn-ledger.recordPromptHookLaunch`
           - `infra/claude-cli/availability.requireClaudeBin`
-          - `infra/file-watcher.defineFileWatcher`
-          - `infra/file-watcher.FileChangeEvent`
-          - `infra/file-watcher.FileWatcher`
           - `infra/jobs.defineJob`
-          - `infra/paths.CLAUDE_SESSIONS_DIR`
-          - `infra/paths.PS`
-          - `infra/paths.TMUX`
-          - `infra/worktree.ensureMainWorktreeRoot`
-          - `infra/worktree.isCanonicalWorktreePath`
-          - `infra/worktree.isWorktreeOpActive`
           - `packages/spawn-priority.backgroundPrefix`
-          - `reports.DEFAULT_REPORT_DEBOUNCE_MS`
-          - `reports.recordReport`
-          - `reports.recordReportDebounced`
         - Exports (types):
           - `PaneRef`
           - `ProcessLister`
@@ -25607,9 +25624,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `multipart`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 203 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 204 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×53
-          - `conversations` ×28
+          - `conversations` ×29
           - `debug` ×17
           - `infra` ×16
           - `page` ×14
@@ -29578,12 +29595,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page). The policy over page/markdown-apply's audience-and-author-agnostic engine.
           - Server:
-            - Uses: 24 symbols — full list in [`plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md`](../plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md)
-              - `page/annotations/instructions` ×6
+            - Contributes: `conversations.compaction-context` "page-instructions"
+            - Uses: 28 symbols — full list in [`plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md`](../plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md)
+              - `page/annotations/instructions` ×9
               - `page/markdown-apply` ×5
               - `page/editor` ×3
               - `page/tags` ×3
               - `database` ×2
+              - `conversations/compaction-context.CompactionContext`
               - `infra/endpoints.HttpError`
               - `infra/mcp.Mcp`
               - `page/annotations/agent-notes/authorship.recordAgentNotesAuthor`
@@ -29743,7 +29762,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RenderedInstructions`
             - Exports (values):
               - `_pageInstructionsDeliveries`
+              - `deliveredInstructionIds`
+              - `forgetInstructionsDeliveries`
               - `globalInstructions`
+              - `instructionsByIds`
               - `instructionsContentHash`
               - `instructionsInScope`
               - `markInstructionsDelivered`
@@ -46758,10 +46780,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 661 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 662 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `apps` ×136
               - `primitives` ×124
-              - `conversations` ×102
+              - `conversations` ×103
               - `page` ×46
               - `debug` ×38
               - `ui` ×34

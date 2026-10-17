@@ -52,6 +52,9 @@ renderInstructions(refs, executor?): Promise<RenderedInstructions[]>
 renderForDelivery(conversationId, refs, executor?): Promise<InstructionsDelivery>
   // { rendered, pending, markDelivered() }
 markInstructionsDelivered(conversationId, blocks, executor?): Promise<void>
+deliveredInstructionIds(conversationId, executor?): Promise<string[]>   // oldest first
+forgetInstructionsDeliveries(conversationId, blockIds, executor?): Promise<void>
+instructionsByIds(ids, executor?): Promise<InstructionsRef[]>   // live, not withheld; own placement as covers
 instructionsContentHash(markdown): string
 
 InstructionsRef = { id, form: "card" | "page", global, title (page only),
@@ -84,6 +87,11 @@ RenderedInstructions = InstructionsRef & { markdown, contentHash }
   or a different hash is `pending`. Nothing is recorded until the caller runs
   `markDelivered()` — rendering is not handing over. A text edit inside a redacted
   private card does not change the hash, because it is not in the markdown.
+- **A compaction un-delivers.** A delivery means "the agent's context holds
+  this"; a compaction summarizes the tool result that carried it away.
+  `deliveredInstructionIds` + `forgetInstructionsDeliveries` +
+  `instructionsByIds` are what `agent-access`'s compaction restore is built
+  from (forget, re-render, re-record — see its doc).
 - **The table** follows `page_blocks_agent_authors`: composite PK as the upsert
   target, `block_id` cascades, no FK on `conversation_id`. It grows with
   conversations, so a 30-day TTL sweep bounds it; a swept row only means a
@@ -136,7 +144,10 @@ at a time; exclusivity with `author`, and `global` requiring `instructions`, is
     - `RenderedInstructions`
   - Exports (values):
     - `_pageInstructionsDeliveries`
+    - `deliveredInstructionIds`
+    - `forgetInstructionsDeliveries`
     - `globalInstructions`
+    - `instructionsByIds`
     - `instructionsContentHash`
     - `instructionsInScope`
     - `markInstructionsDelivered`

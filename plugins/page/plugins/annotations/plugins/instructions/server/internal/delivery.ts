@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db, type DbExecutor } from "@plugins/database/server";
 import { readBlockAsMarkdown } from "@plugins/page/plugins/markdown-apply/server";
 import { humanAudienceTypes } from "@plugins/page/plugins/annotations/server";
@@ -166,4 +166,46 @@ export async function renderForDelivery(
     markDelivered: () =>
       markInstructionsDelivered(conversationId, pending, executor),
   };
+}
+
+/**
+ * The ids of every instructions block `conversationId` has received, oldest
+ * delivery first — whatever their hash, and whether or not they still exist as
+ * instructions (the caller resolves them, e.g. through `instructionsByIds`).
+ */
+export async function deliveredInstructionIds(
+  conversationId: string,
+  executor: DbExecutor = db,
+): Promise<string[]> {
+  const rows = await executor
+    .select({ blockId: _pageInstructionsDeliveries.blockId })
+    .from(_pageInstructionsDeliveries)
+    .where(eq(_pageInstructionsDeliveries.conversationId, conversationId))
+    .orderBy(
+      asc(_pageInstructionsDeliveries.deliveredAt),
+      asc(_pageInstructionsDeliveries.blockId),
+    );
+  return rows.map((r) => r.blockId);
+}
+
+/**
+ * Forget that `conversationId` received `blockIds`: each becomes pending again,
+ * so the next read hands it over and the next write under it is refused until
+ * then. For a conversation whose context no longer holds what it was handed —
+ * a compaction summarized the tool results that carried them away.
+ */
+export async function forgetInstructionsDeliveries(
+  conversationId: string,
+  blockIds: readonly string[],
+  executor: DbExecutor = db,
+): Promise<void> {
+  if (blockIds.length === 0) return;
+  await executor
+    .delete(_pageInstructionsDeliveries)
+    .where(
+      and(
+        eq(_pageInstructionsDeliveries.conversationId, conversationId),
+        inArray(_pageInstructionsDeliveries.blockId, [...blockIds]),
+      ),
+    );
 }

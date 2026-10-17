@@ -6,6 +6,7 @@ import { instructionsDeliveriesRetention } from "./internal/growth-bound";
 export { _pageInstructionsDeliveries } from "./internal/tables";
 export {
   instructionsInScope,
+  instructionsByIds,
   globalInstructions,
   type InstructionsRef,
 } from "./internal/scope";
@@ -13,6 +14,8 @@ export {
   renderInstructions,
   renderForDelivery,
   markInstructionsDelivered,
+  deliveredInstructionIds,
+  forgetInstructionsDeliveries,
   instructionsContentHash,
   type RenderedInstructions,
   type InstructionsDelivery,

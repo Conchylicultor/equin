@@ -205,6 +205,12 @@ The signal directory is touched by two kinds of hook:
   (`recordPromptHookLaunch`) so the ledger knows this session reports its
   prompts; a session launched before the hook existed is `hookless` until it is
   resumed.
+- **Compaction context** (`conversations/compaction-context`) rides
+  `SessionStart` on the `compact` source: `compactionHookEntry()` asks the
+  backend, right after the CLI compacts the agent's context, for what plugins had
+  handed the agent through tool results (a page's instructions), and hands it
+  back as `additionalContext`. A session launched before the hook existed gets
+  it once it is resumed.
 
 Because a question can now be known before its menu is painted,
 `flushInteractivePrompt` / `answerPrompt` first wait (up to 3 s) for a menu to
@@ -302,27 +308,18 @@ may be a real command (`/compact`).
 
 - Description: Runs Claude CLI sessions inside tmux panes.
 - Server:
-  - Uses:
-    - `conversations.InputNotEmptyError`
-    - `conversations.Runtime`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/file-watcher` ×3
+    - `infra/paths` ×3
+    - `infra/worktree` ×3
+    - `reports` ×3
+    - `conversations/turn-ledger` ×2
+    - `conversations` ×2
+    - `conversations/compaction-context.compactionHookEntry`
     - `conversations/question-relay.relayHookEntry`
-    - `conversations/turn-ledger.promptSubmitHookEntry`
-    - `conversations/turn-ledger.recordPromptHookLaunch`
     - `infra/claude-cli/availability.requireClaudeBin`
-    - `infra/file-watcher.defineFileWatcher`
-    - `infra/file-watcher.FileChangeEvent`
-    - `infra/file-watcher.FileWatcher`
     - `infra/jobs.defineJob`
-    - `infra/paths.CLAUDE_SESSIONS_DIR`
-    - `infra/paths.PS`
-    - `infra/paths.TMUX`
-    - `infra/worktree.ensureMainWorktreeRoot`
-    - `infra/worktree.isCanonicalWorktreePath`
-    - `infra/worktree.isWorktreeOpActive`
     - `packages/spawn-priority.backgroundPrefix`
-    - `reports.DEFAULT_REPORT_DEBOUNCE_MS`
-    - `reports.recordReport`
-    - `reports.recordReportDebounced`
   - Exports (types):
     - `PaneRef`
     - `ProcessLister`
