@@ -24,3 +24,22 @@ export function placePhotoUrl(name: string, width: number): string {
   const q = new URLSearchParams({ name, w: String(Math.round(width)) });
   return `/api/places/photo?${q}`;
 }
+
+/** A Google place id as the thumbnail route accepts it — also its cache file name. */
+export const GOOGLE_PLACE_ID_PATTERN = /^[A-Za-z0-9_-]+$/;
+
+/**
+ * A Google place's gallery thumbnail: its first photo at thumbnail width,
+ * fetched once and kept on disk. A raw `blob()` handler. 404 when Google has
+ * no photo of the place (or no longer knows it), 503 without a Places key.
+ */
+export const placeThumbnail = defineEndpoint({
+  route: "GET /api/places/thumbnail",
+  query: z.object({ id: z.string().regex(GOOGLE_PLACE_ID_PATTERN) }),
+  response: blob(),
+});
+
+/** The `<img src>` of a Google place's gallery thumbnail. */
+export function placeThumbnailUrl(googlePlaceId: string): string {
+  return `/api/places/thumbnail?${new URLSearchParams({ id: googlePlaceId })}`;
+}

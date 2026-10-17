@@ -92,6 +92,7 @@ is correct here — do not "fix" it later.
     - `PLACE_DETAILS_FIELD_MASK`
     - `PLACE_RICH_DETAILS_FIELD_MASK`
     - `placeDetails`
+    - `placeFirstPhotoName`
     - `placePhoto`
     - `placeRichDetails`
     - `searchText`

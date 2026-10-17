@@ -42,6 +42,20 @@ max-age=86400`, so the browser asks once a day per photo and width. 404 when
 Google refuses the name (expired), 503 without a key. The card must show each
 photo's author (Google's terms): `PlacePhoto.authors`.
 
+## Gallery thumbnails
+
+`GET /api/places/thumbnail?id=<googlePlaceId>` (`placeThumbnail`, raw handler
+in `server/internal/thumbnail.ts`) is the Places gallery's cover: the place's
+first photo at 480 px, **kept on disk** in the host-global
+`cache/places-thumbnails` data dir (`<id>.jpg`; an empty `<id>.none` when
+Google has no photo of it, re-asked after 7 days). A miss costs one free call
+(`placeFirstPhotoName`, the IDs Only `photos` mask) plus one Place Photo call —
+once per place, ever, shared by every checkout; a hit is served with a 30-day
+immutable browser cache. Storing photo bytes goes past Google's short-term
+caching terms — a deliberate choice for this one-user instance, so a gallery
+of hundreds of places does not bill hundreds of photos per view. Concurrent
+asks for one place share one fetch (`packages/inflight`).
+
 Cost per card open: at most one Enterprise Place Details call per place per
 day, plus one Place Photo call per photo shown.
 
@@ -49,17 +63,20 @@ day, plus one Place Photo call per photo shown.
 
 ## Plugin reference
 
-- Description: Reads Google's rich details of a saved place (usePlaceDetails) for the place card. Serves Google's rich details of a saved place (photos, opening hours, rating, price level, phone, website, summary) as the places.details value — one Enterprise Place Details call per place per day, kept in memory, never stored — and proxies its photos (GET /api/places/photo) so the Places key stays on the server.
+- Description: Reads Google's rich details of a saved place (usePlaceDetails) for the place card. Serves Google's rich details of a saved place (photos, opening hours, rating, price level, phone, website, summary) as the places.details value — one Enterprise Place Details call per place per day, kept in memory, never stored — and proxies its photos (GET /api/places/photo) so the Places key stays on the server; and serves each Google place's gallery thumbnail (its first photo, fetched once and cached on disk; GET /api/places/thumbnail).
 - Server:
   - Contributes: `resource.declare` "places.details"
   - Uses:
     - `integrations/google-maps.getMapsKey`
+    - `integrations/google-maps/places-api.placeFirstPhotoName`
     - `integrations/google-maps/places-api.placePhoto`
     - `integrations/google-maps/places-api.placeRichDetails`
     - `network/live.serveValue`
     - `primitives/log-channels.Log`
   - Resources: `places.details` (invalidate, fixed)
-  - Routes: `GET /api/places/photo`
+  - Routes:
+    - `GET /api/places/photo`
+    - `GET /api/places/thumbnail`
 - Web:
   - Uses: `network/live.useLive`
   - Exports (values): `usePlaceDetails`
@@ -75,12 +92,15 @@ day, plus one Place Photo call per photo shown.
     - `PlaceDetailsQuery`
     - `PlaceDetailsResult`
   - Exports (values):
+    - `GOOGLE_PLACE_ID_PATTERN`
     - `PHOTO_WIDTH`
     - `placeDetails`
     - `PlaceDetailsQuerySchema`
     - `PlaceDetailsResultSchema`
     - `placePhoto`
     - `placePhotoUrl`
+    - `placeThumbnail`
+    - `placeThumbnailUrl`
 - Cross-plugin:
   - Imported by: `apps/places/places-map`
 

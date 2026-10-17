@@ -58,3 +58,12 @@ export const PLACE_RICH_DETAILS_FIELD_MASK = [
   "websiteUri",
   "editorialSummary",
 ].join(",");
+
+/**
+ * The PHOTOS-ONLY Place Details field mask — what a gallery thumbnail needs:
+ * the place's photo names, nothing else. `photos` sits in the **IDs Only**
+ * tier (no charge), so asking it for every saved place is free; only the
+ * Place Photo call that follows is billed. Re-check Google's SKU table before
+ * relying on this tier.
+ */
+export const PLACE_PHOTOS_FIELD_MASK = ["id", "photos"].join(",");

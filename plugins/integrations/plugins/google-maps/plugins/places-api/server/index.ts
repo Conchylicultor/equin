@@ -8,7 +8,7 @@ export {
   type SearchTextOptions,
 } from "./internal/search-text";
 export { placeRichDetails } from "./internal/rich-details";
-export { placePhoto } from "./internal/photo";
+export { placePhoto, placeFirstPhotoName } from "./internal/photo";
 export {
   PLACE_DETAILS_FIELD_MASK,
   PLACE_RICH_DETAILS_FIELD_MASK,

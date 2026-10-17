@@ -198,7 +198,12 @@ function PlacesSurface({
       gallery: {
         cover: (p: Place) => ({
           kind: "node" as const,
-          node: <PlaceCover visual={placeVisual(p, tags)} />,
+          node: (
+            <PlaceCover
+              visual={placeVisual(p, tags)}
+              googlePlaceId={p.googlePlaceId}
+            />
+          ),
         }),
       },
       list: {

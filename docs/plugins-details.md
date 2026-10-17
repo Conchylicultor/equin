@@ -4740,17 +4740,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`mapstr-import`** — `./singularity places import-mapstr <export>` — matches a Mapstr export's places to Google places (Text Search, scored by name, distance and area extent; hand decisions via --overrides and the search-place lookup verb) into a reviewable mapstr-matches.json, then with --apply replaces every place and tag with the seed tree and the matched places (Mapstr tags mapped onto seed tags, comments as notes, original save dates), in one transaction.
           - Cli:
             - Uses: `framework/server-core.runExec`
-        - **`place-details`** — Reads Google's rich details of a saved place (usePlaceDetails) for the place card. Serves Google's rich details of a saved place (photos, opening hours, rating, price level, phone, website, summary) as the places.details value — one Enterprise Place Details call per place per day, kept in memory, never stored — and proxies its photos (GET /api/places/photo) so the Places key stays on the server.
+        - **`place-details`** — Reads Google's rich details of a saved place (usePlaceDetails) for the place card. Serves Google's rich details of a saved place (photos, opening hours, rating, price level, phone, website, summary) as the places.details value — one Enterprise Place Details call per place per day, kept in memory, never stored — and proxies its photos (GET /api/places/photo) so the Places key stays on the server; and serves each Google place's gallery thumbnail (its first photo, fetched once and cached on disk; GET /api/places/thumbnail).
           - Server:
             - Contributes: `resource.declare` "places.details"
             - Uses:
               - `integrations/google-maps.getMapsKey`
+              - `integrations/google-maps/places-api.placeFirstPhotoName`
               - `integrations/google-maps/places-api.placePhoto`
               - `integrations/google-maps/places-api.placeRichDetails`
               - `network/live.serveValue`
               - `primitives/log-channels.Log`
             - Resources: `places.details` (invalidate, fixed)
-            - Routes: `GET /api/places/photo`
+            - Routes:
+              - `GET /api/places/photo`
+              - `GET /api/places/thumbnail`
           - Web:
             - Uses: `network/live.useLive`
             - Exports (values): `usePlaceDetails`
@@ -4766,12 +4769,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PlaceDetailsQuery`
               - `PlaceDetailsResult`
             - Exports (values):
+              - `GOOGLE_PLACE_ID_PATTERN`
               - `PHOTO_WIDTH`
               - `placeDetails`
               - `PlaceDetailsQuerySchema`
               - `PlaceDetailsResultSchema`
               - `placePhoto`
               - `placePhotoUrl`
+              - `placeThumbnail`
+              - `placeThumbnailUrl`
           - Cross-plugin:
             - Imported by: `apps/places/places-map`
         - **`places-core`** — Contract layer for the Places app, web half: the live places and tag-tree hooks, the Google Places search read, and the place and tag mutations. Contract layer for the Places app: the places / place_tags entities, the starter tag tree seeded on an empty install, the live places and tags collections, Google Places search and save (auto-tagged from the place's Google types, tagged Want to go), custom places (a named pin with no Google place behind it), the user's own title over Google's name, place and tag CRUD (a deleted tag's children and places move to its parent), the Haiku job that picks each place's Material Symbols icon, and the monthly job that re-fetches each place's Google details (whether it is still open).
@@ -28053,6 +28059,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PLACE_DETAILS_FIELD_MASK`
               - `PLACE_RICH_DETAILS_FIELD_MASK`
               - `placeDetails`
+              - `placeFirstPhotoName`
               - `placePhoto`
               - `placeRichDetails`
               - `searchText`
