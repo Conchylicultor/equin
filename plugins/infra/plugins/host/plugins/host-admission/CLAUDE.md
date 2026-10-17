@@ -33,6 +33,7 @@ pool says can move any other pool's capacity:
 | `browser-fetch` | 2 | inherit | concurrent headless-Chromium page fetches |
 | `layout-geometry` | 1 | inherit | the geometry suite's Vite build + Chromium launch |
 | `push` | 1 | foreground | the global push mutex |
+| `e2e` | 2 | inherit | concurrent e2e script runs (`./singularity run …/e2e/x.ts`) — their own cap, so a 20 s screenshot never queues in `cpu`'s background window behind 40-min builds |
 | `type-check-worker` | 2 | foreground | live repo-program type-check workers (7–14 GB each); laned by its owner (`type-check/server`): background may hold 1 |
 
 The `holder` column is declared at each `defineHostPool` call (see *A scarce
@@ -303,10 +304,12 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
   - Exports (values):
     - `cpuPool`
     - `defineHostPool`
+    - `e2ePool`
     - `hostOccupancy`
     - `inheritedGrant`
     - `pushPool`
     - `repoPushLock`
+    - `withE2eGrant`
     - `withHostGrant`
 - Cross-plugin:
   - Imported by:

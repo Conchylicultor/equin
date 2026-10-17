@@ -87,6 +87,15 @@ function makeHarness(
         events.push("release");
       }
     },
+    withE2eGrant: async (o, fn) => {
+      events.push(`acquire-e2e:${o.lane}:${o.max}`);
+      try {
+        return await fn(fakeGrant(1, o.lane));
+      } finally {
+        events.push("release");
+      }
+    },
+    describeQueue: (pool) => `queue:${pool}`,
     identity: async () => ({ slug, branch: "feature" }),
     checkBroadcasts: async (kind) => {
       events.push(`broadcasts:${kind}`);
@@ -182,6 +191,9 @@ describe("withDirectOp — top-level path", () => {
       "log:requested",
       "signals:armed",
       "acquire:background:4",
+      // The wait is announced on both ends, so a queued run never reads as hung.
+      "log-line:Waiting for a host c",
+      "log-line:Got a host cpu slot ",
       "release",
       "log:completed",
       "marker:test:release",
@@ -200,11 +212,27 @@ describe("withDirectOp — top-level path", () => {
     expect(h.events.filter((e) => e === "marker:test:release")).toHaveLength(1);
   });
 
+  test("an e2e op takes the e2e pool, never a cpu grant", async () => {
+    const h = makeHarness();
+    const outcome = await withDirectOp(
+      "e2e",
+      { max: 1 },
+      async (grant) => {
+        expect(grant.units).toBe(1);
+        return "success";
+      },
+      h.deps,
+    );
+    expect(outcome).toBe("success");
+    expect(h.events).toContain("acquire-e2e:background:1");
+    expect(h.events.some((e) => e.startsWith("acquire:"))).toBe(false);
+  });
+
   test("the main worktree is the interactive origin", async () => {
     const h = makeHarness({ slug: "singularity" });
     await withDirectOp("e2e", { max: 1 }, async () => "success", h.deps);
     expect(h.events).toContain("lane:interactive");
-    expect(h.events).toContain("acquire:interactive:1");
+    expect(h.events).toContain("acquire-e2e:interactive:1");
   });
 
   test("a failed body is stamped failed; a throwing body still writes its terminal, then releases", async () => {

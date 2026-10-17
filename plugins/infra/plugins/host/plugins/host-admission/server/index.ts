@@ -8,7 +8,13 @@ export type {
   PoolHolder,
   Slot,
 } from "./internal/slot";
-export { cpuPool, withHostGrant, inheritedGrant } from "./internal/grant";
+export {
+  cpuPool,
+  e2ePool,
+  withHostGrant,
+  withE2eGrant,
+  inheritedGrant,
+} from "./internal/grant";
 export { pushPool, repoPushLock } from "./internal/push";
 export type { RepoPushLock } from "./internal/push";
 // The pure `Grant` TYPE lives in `../core` (both runtimes share it); consumers

@@ -26231,10 +26231,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `cpuPool`
               - `defineHostPool`
+              - `e2ePool`
               - `hostOccupancy`
               - `inheritedGrant`
               - `pushPool`
               - `repoPushLock`
+              - `withE2eGrant`
               - `withHostGrant`
           - Cross-plugin:
             - Imported by:

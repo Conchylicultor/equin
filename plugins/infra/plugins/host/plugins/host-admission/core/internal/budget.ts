@@ -138,6 +138,16 @@ export const HOST_POOLS = {
   // holder, main — keeps the other). See
   // research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md.
   "type-check-worker": { size: 2 },
+  // One e2e script run (`./singularity run plugins/…/e2e/x.ts`): one bun
+  // process driving one Chromium against a deployed app, held p50 21 s / p90
+  // 82 s. It used to take a 1-unit `cpu` grant, which put a 20 s screenshot in
+  // the same 6-slot background window as builds holding theirs for 30–60 min:
+  // over 2026-10-09..16, 23 % of 1,492 e2e runs waited ≥ 100 s for that grant
+  // (p95 755 s, worst 2,502 s), and 61 of the 64 agent screenshot calls that hit
+  // the 120 s Bash cap were grant-queue time, not work. Two covers 99 % of the
+  // measured concurrent-e2e time (3+ at once 1.1 %). A CONSTANT: a browser costs
+  // the same on every box, and the size names the slot files.
+  e2e: { size: 2 },
 } as const satisfies Record<string, HostPoolEntry>;
 
 /**

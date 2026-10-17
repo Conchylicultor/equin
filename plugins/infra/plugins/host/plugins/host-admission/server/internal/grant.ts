@@ -1,6 +1,7 @@
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   cpuBudget,
+  HOST_POOLS,
   HOST_GRANT_ENV,
   HOST_LANE_ENV,
   type Grant,
@@ -104,6 +105,48 @@ export async function withHostGrant<T>(
     return opts.lane === "interactive"
       ? await withForegroundPriority(() => fn(grant))
       : await fn(grant);
+  } finally {
+    await share.release();
+  }
+}
+
+/**
+ * The e2e pool: how many e2e script runs may drive a browser at once,
+ * host-wide. Its own cardinality cap rather than a unit of `cpu`, so a
+ * short browser run never queues behind the builds that fill the fleet's
+ * background window for tens of minutes (see `HOST_POOLS.e2e`).
+ */
+export const e2ePool = defineHostPool({
+  id: "e2e",
+  size: HOST_POOLS.e2e.size,
+  // `inherit`: decided from measured waits, like `browser-fetch` — with two
+  // slots for a 21 s median hold, the queue behind a holder is short.
+  holder: "inherit",
+});
+
+/**
+ * `withHostGrant`'s twin for an e2e script run: acquire ONE `e2e` slot, run
+ * `fn`, release. Same signature, so a direct op picks the pool without
+ * changing shape. The grant it hands `fn` carries one unit for the holder's own
+ * fan-out but **no env**: it holds no `cpu` units, so a child must not inherit
+ * a `SINGULARITY_HOST_GRANT` claiming some — a `./singularity check` an e2e
+ * script spawns acquires its own `cpu` grant like any top-level op.
+ */
+export async function withE2eGrant<T>(
+  opts: { lane: Lane; max: number; hooks?: GrantHooks },
+  fn: (grant: Grant) => Promise<T>,
+): Promise<T> {
+  const share = await e2ePool.acquireShare(1, opts.hooks);
+  const sem = createSemaphore(1);
+  const grant: Grant = {
+    units: 1,
+    lane: opts.lane,
+    run: (body, runOpts) =>
+      sem.run(body, { weight: spendOf(runOpts?.units, 1) }),
+    env: () => ({}),
+  };
+  try {
+    return await fn(grant);
   } finally {
     await share.release();
   }

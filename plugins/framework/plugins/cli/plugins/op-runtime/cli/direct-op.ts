@@ -1,5 +1,6 @@
 import {
   withHostGrant,
+  withE2eGrant,
   inheritedGrant,
 } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import type {
@@ -29,6 +30,7 @@ import type { OpKind } from "@plugins/infra/plugins/worktree/core";
 import { markWorktreeOpStart } from "@plugins/infra/plugins/worktree/server";
 import {
   createOpProfiler,
+  readOpStates,
   type OpProfiler,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import type { OutcomeByKind } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
@@ -157,16 +159,67 @@ export interface DirectOpOptions<K extends OpKind = OpKind> {
   flight?: DirectOpFlight<K>;
 }
 
+type GrantAcquire = <T>(
+  opts: { lane: Lane; max: number; hooks?: GrantHooks },
+  fn: (grant: Grant) => Promise<T>,
+) => Promise<T>;
+
+/**
+ * The host pool a direct op's grant comes from. An `e2e` run — one browser,
+ * p50 21 s — has a pool of its own: in `cpu` it shared the 6-slot background
+ * window with builds holding theirs for 30–60 min, and 23 % of e2e runs waited
+ * ≥ 100 s for a 20 s screenshot (`HOST_POOLS.e2e`).
+ */
+type GrantPool = "cpu" | "e2e";
+
+function poolFor(kind: OpKind): GrantPool {
+  return kind === "e2e" ? "e2e" : "cpu";
+}
+
+/**
+ * `in flight: build att-… (12m), test att-… (3m); 2 more queued` — the ops on
+ * `pool` other than this one, from the folded op log. A HOLDER is an open op
+ * past `granted` that is not itself parked on a host grant; that is an
+ * approximation (a build's `granted` is its build lock, and it takes `cpu`
+ * units per stage), which is why the line says "in flight", not "held by".
+ */
+function describeQueueFromOpLog(pool: GrantPool, selfOpId: string): string {
+  const now = Date.now();
+  const holders: string[] = [];
+  let queued = 0;
+  for (const st of readOpStates().values()) {
+    const id = st.identity;
+    if (st.opId === selfOpId || st.closedBy !== null || !id) continue;
+    if (poolFor(id.kind) !== pool) continue;
+    const who = `${id.kind} ${id.opSlug ?? "?"}`;
+    if (st.openWait?.kind === "host-grant") queued++;
+    else if (st.grantedAt !== null) {
+      const mins = Math.round((now - Date.parse(st.grantedAt)) / 60_000);
+      holders.push(`${who} (${mins}m)`);
+    }
+  }
+  const shown = holders.slice(0, 6).join(", ");
+  const more = holders.length > 6 ? ` and ${holders.length - 6} more` : "";
+  const ahead = queued > 0 ? `; ${queued} other(s) queued` : "";
+  return holders.length > 0 || queued > 0
+    ? `in flight: ${shown || "none recorded"}${more}${ahead}`
+    : "no holder recorded in the op log";
+}
+
 /**
  * The seams a test injects. Every one defaults to the real thing; nothing here
  * is a mock in production. The shape follows `ValveDeps` in admission-valve.ts.
  */
 export interface DirectOpDeps {
   inheritedGrant: () => Grant | undefined;
-  withHostGrant: <T>(
-    opts: { lane: Lane; max: number; hooks?: GrantHooks },
-    fn: (grant: Grant) => Promise<T>,
-  ) => Promise<T>;
+  withHostGrant: GrantAcquire;
+  /** The `e2e` pool's grant — what an `e2e` op acquires instead of `cpu`. */
+  withE2eGrant: GrantAcquire;
+  /**
+   * What this op is queued behind, for the line printed when its grant wait
+   * starts: the other ops in flight on the same pool. Read from the op log.
+   */
+  describeQueue: (pool: GrantPool, selfOpId: string) => string;
   identity: () => Promise<{ slug: Namespace; branch: string }>;
   checkBroadcasts: (kind: OpKind) => Promise<void>;
   reportInterruptedPredecessor: (slug: Namespace) => void;
@@ -215,6 +268,8 @@ async function getWorktreeIdentity(): Promise<{
 const realDeps: DirectOpDeps = {
   inheritedGrant,
   withHostGrant,
+  withE2eGrant,
+  describeQueue: describeQueueFromOpLog,
   identity: getWorktreeIdentity,
   checkBroadcasts,
   reportInterruptedPredecessor,
@@ -345,15 +400,38 @@ export async function withDirectOp<K extends OpKind>(
       profiler?.complete(outcome);
       return outcome;
     };
+    const pool = poolFor(kind);
+    const acquire = pool === "e2e" ? deps.withE2eGrant : deps.withHostGrant;
+    // `grantHooks()` is what makes this queue visible as a `host-grant` wait
+    // in the op log — the wait that made a direct check an invisible
+    // contender. The two lines are the same wait made visible to whoever ran
+    // the command: before them a run queued for 30 min printed nothing, so an
+    // agent could not tell a queue from a hang.
+    const grantHooks = (): GrantHooks => {
+      const recorded = profiler?.grantHooks();
+      let waited = false;
+      return {
+        ...recorded,
+        onWaitStart: () => {
+          recorded?.onWaitStart?.();
+          waited = true;
+          deps.log(
+            `Waiting for a host ${pool} slot (every slot is taken — ${deps.describeQueue(pool, opId)}). This is a queue, not a hang; the ${kind} starts as soon as a slot frees.`,
+          );
+        },
+        onAcquired: (waitMs) => {
+          recorded?.onAcquired?.(waitMs);
+          if (waited)
+            deps.log(
+              `Got a host ${pool} slot after ${Math.round(waitMs / 1000)}s — starting the ${kind}.`,
+            );
+        },
+      };
+    };
     const run = async (): Promise<OutcomeByKind[K]> =>
       inherited
         ? await runUnder(inherited)
-        : // `grantHooks()` is what makes this queue visible as a `host-grant`
-          // wait — the wait that made a direct check an invisible contender.
-          await deps.withHostGrant(
-            { lane, max: opts.max, hooks: profiler?.grantHooks() },
-            runUnder,
-          );
+        : await acquire({ lane, max: opts.max, hooks: grantHooks() }, runUnder);
     const { flight } = opts;
     if (!flight) return await run();
 
