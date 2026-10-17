@@ -164,6 +164,8 @@ For a checkout cloned from someone else's repo, that repo is **upstream** (read-
 
 `./singularity build` first: every script resolves its target from the deploy registry THIS checkout's build wrote, and refuses when there is none. Never hand-write `http://<worktree>.localhost:9000` — in an agent session the name comes out as `singularity` and the run drives main. Chromium is an on-demand dependency (`infra/deps`), installed on the first browser run (~280 MB).
 
+**Verify with the headless scripts below, not Claude-in-Chrome** — that is one shared Chrome on the user's screen with their real accounts. Use it only for what needs the user's browser: their sign-ins, a state they have open, a demo they watch.
+
 **Snapshot / verify behavior** (click, confirm state) with [`screenshot.ts`](plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts) — prints the resolved deploy and the matched button's state, writes `-before.png` / `-after.png`:
 
 ```bash
