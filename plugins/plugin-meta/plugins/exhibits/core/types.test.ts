@@ -91,6 +91,38 @@ describe("isExhibit", () => {
   });
 });
 
+describe("exhibit home", () => {
+  const app = {
+    id: "pages",
+    name: "Pages",
+    basePath: "/pages",
+    iconKey: "description",
+  } as const;
+  it("carries an app ref or the chrome through the factory, and validates", () => {
+    const inApp = appExhibit({ id: "g/a", label: "A", home: app, load });
+    expect(inApp.home).toBe(app);
+    expect(isExhibit(inApp)).toBe(true);
+    expect(
+      isExhibit(appExhibit({ id: "g/c", label: "C", home: "chrome", load })),
+    ).toBe(true);
+    expect(isExhibit(appExhibit({ id: "g/n", label: "N", load }))).toBe(true);
+  });
+  it("rejects a home that is neither", () => {
+    expect(
+      isExhibit({ runtime: "app", id: "g/a", label: "A", load, home: "pages" }),
+    ).toBe(false);
+    expect(
+      isExhibit({
+        runtime: "app",
+        id: "g/a",
+        label: "A",
+        load,
+        home: { id: "pages" },
+      }),
+    ).toBe(false);
+  });
+});
+
 describe("exhibitGroupOf", () => {
   it("is the id prefix", () => {
     expect(exhibitGroupOf("task-draft/composer")).toBe("task-draft");

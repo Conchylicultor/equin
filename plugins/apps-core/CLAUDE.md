@@ -86,11 +86,12 @@ keeps reading the old location until then.
     - `useHomeApp`
     - `usePathname`
 - Cross-plugin:
-  - Imported by: 42 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×21
     - `apps-core` ×12
     - `ui` ×5
     - `config_v2` ×2
+    - `plugin-meta/exhibits`
     - `shell/global-action-bar`
     - `tasks/task-draft-form`
 - Exemptions:

@@ -24,6 +24,7 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import { useCaptureUrlDefault } from "../use-capture-url-default";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { TASK_DRAFT_FORM_WIDTH } from "../../core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const addIcon = symbol("add");
@@ -206,7 +207,11 @@ export function TaskDraftForm({
   return (
     <Stack
       gap="sm"
-      className={`w-[536px] ${isAgentWorktree ? "rounded-lg border-2 border-destructive/60 p-md" : ""}`}
+      // Fixed px: the form is the popover's one column, shared with its exhibit.
+      style={{ width: TASK_DRAFT_FORM_WIDTH }}
+      className={
+        isAgentWorktree ? "rounded-lg border-2 border-destructive/60 p-md" : ""
+      }
     >
       {isAgentWorktree && (
         <Stack

@@ -219,6 +219,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "page.editor.turn-into", pluginId: "page.editor", configName: "turn-into" },
   { slotId: "page.page-reference.actions", pluginId: "page.page-reference", configName: "actions" },
   { slotId: "page.page-reference.trailing", pluginId: "page.page-reference", configName: "trailing" },
+  { slotId: "plugin-meta.exhibits.exhibit.actions", pluginId: "plugin-meta.exhibits", configName: "exhibit.actions" },
   { slotId: "plugin-meta.exhibits.exhibits.actions", pluginId: "plugin-meta.exhibits", configName: "exhibits.actions" },
   { slotId: "plugin-meta.plugin-view.plugin-view.actions", pluginId: "plugin-meta.plugin-view", configName: "plugin-view.actions" },
   { slotId: "plugin-meta.plugin-view.section", pluginId: "plugin-meta.plugin-view", configName: "section" },

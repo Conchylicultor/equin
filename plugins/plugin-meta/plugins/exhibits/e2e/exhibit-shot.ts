@@ -1,13 +1,19 @@
-// Screenshots one exhibit's entry in Debug → Exhibits — its label row and one
-// frame per declared width — cropped to the entry, so a component can be
-// looked at populated without data in the worktree DB.
+// Screenshots one exhibit — every width frame, inside the theme it is viewed
+// in — by opening its viewer pane directly (`/debug/exhibits/x/<id>;theme=…`),
+// so a component can be looked at populated without data in the worktree DB
+// and without scrolling a gallery.
 //
 // Usage:
 //   ./singularity run plugins/plugin-meta/plugins/exhibits/e2e/exhibit-shot.ts \
-//     --id <group/name> [--id <group/name> …] [--out /tmp/exhibit] \
-//     [--color-scheme light|dark]
+//     --id <group/name> [--id <group/name> …] [--theme <app-id>|chrome] \
+//     [--out /tmp/exhibit] [--color-scheme light|dark]
 //
-// Writes `<out>-<group>_<name>-<scheme>.png` per id.
+// Find ids with `rg -n 'id: "' -g '**/exhibits/**' plugins`, or in Debug →
+// Exhibits. `--theme` is an app id (`agent-manager`, `pages`, …) or `chrome`;
+// absent, the frames wear the exhibit's declared `home` (else Debug's, the
+// viewer pane's own app).
+//
+// Writes `<out>-<group>_<name>[-<theme>]-<scheme>.png` per id.
 
 import {
   arg,
@@ -21,30 +27,43 @@ const ids = process.argv.flatMap((a, i, all) =>
 );
 if (ids.length === 0) {
   usage(
-    "exhibit-shot.ts --id <group/name> [--id …] [--out <prefix>] [--color-scheme light|dark]",
+    "exhibit-shot.ts --id <group/name> [--id …] [--theme <app-id>|chrome] [--out <prefix>] [--color-scheme light|dark]",
   );
 }
 const out = arg("out", "/tmp/exhibit");
+const theme = arg("theme");
 const colorScheme = arg("color-scheme", "light") === "dark" ? "dark" : "light";
 
+/** The viewer pane's path: the id spelled as path segments, like the route's `:id*`. */
+function exhibitPath(id: string): string {
+  const segments = id.split("/").map(encodeURIComponent).join("/");
+  const keyed =
+    theme === undefined ? "" : `;theme=${encodeURIComponent(theme)}`;
+  return `/debug/exhibits/x/${segments}${keyed}`;
+}
+
 await withBrowser(async (h) => {
-  // Wide and tall enough that the widest frame of an entry fits unscrolled.
+  // Wide and tall enough that the list pane plus the widest frame fit.
   const { page } = await h.session({
     viewport: { width: 1800, height: 1400 },
     colorScheme,
   });
-  await page.goto(pathUrl("/debug/exhibits"));
   for (const id of ids) {
-    // The gallery prints each exhibit's id as a caption in its label row; the
-    // entry is that row's parent stack (label row, then the width frames).
-    const caption = page.getByText(id, { exact: true });
-    await caption.waitFor({ state: "visible", timeout: 45_000 });
-    const entry = caption.locator("xpath=../..");
-    await entry.scrollIntoViewIfNeeded();
+    await page.goto(pathUrl(exhibitPath(id)));
+    const frames = page.locator("[data-exhibit-frames]");
+    const missing = page.getByText(`No exhibit is called “${id}”`);
+    await frames
+      .or(missing)
+      .first()
+      .waitFor({ state: "visible", timeout: 45_000 });
+    if (await missing.isVisible()) {
+      throw new Error(`no exhibit "${id}" in this build`);
+    }
     // App exhibits load their component lazily; let the frames settle.
     await page.waitForTimeout(4000);
-    const path = `${out}-${id.replace(/\//g, "_")}-${colorScheme}.png`;
-    await entry.screenshot({ path });
+    const suffix = theme === undefined ? "" : `-${theme}`;
+    const path = `${out}-${id.replace(/\//g, "_")}${suffix}-${colorScheme}.png`;
+    await frames.screenshot({ path });
     console.log(`wrote ${path}`);
   }
 });

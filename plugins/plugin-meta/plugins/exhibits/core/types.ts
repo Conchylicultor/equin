@@ -1,5 +1,6 @@
 import type { ComponentType, ReactElement, ReactNode } from "react";
 import type { GeometrySpec } from "@plugins/primitives/plugins/css/plugins/layout-harness/plugins/geometry/core";
+import type { AppRef } from "@plugins/primitives/plugins/pane/core";
 
 // ── The exhibit ────────────────────────────────────────────────────
 //
@@ -21,6 +22,15 @@ import type { GeometrySpec } from "@plugins/primitives/plugins/css/plugins/layou
 // app), self-contained state seeded from the real host's defaults, and an
 // exhibit rather than a working copy — it never submits, navigates or writes.
 
+/**
+ * Where the component really lives, so a viewer shows it in that place's theme
+ * by default rather than in the viewer's own: an app (its `defineApp` ref —
+ * data, never a restated id), or `"chrome"`, the app chrome's fixed theme (the
+ * rail, tab bar, action bar and the popovers they open). Absent = it lives in
+ * no one app (a primitive), and the viewer's own theme is as good as any.
+ */
+export type ExhibitHome = AppRef | "chrome";
+
 /** Container widths (px) the exhibit has something to say about. */
 export type ExhibitWidths = readonly [number, ...number[]];
 
@@ -30,6 +40,7 @@ interface ExhibitBase {
   /** What a person calls it: "Task composer (Improve)". */
   label: string;
   description?: string;
+  home?: ExhibitHome;
 }
 
 export interface IsolatedExhibit extends ExhibitBase {
@@ -92,13 +103,14 @@ export interface AppExhibitSpec extends ExhibitBase {
 }
 
 export function appExhibit(spec: AppExhibitSpec): AppExhibit {
-  const { id, label, description, widths, load } = spec;
+  const { id, label, description, home, widths, load } = spec;
   return {
     runtime: "app",
     id,
     label,
     load,
     ...(description === undefined ? {} : { description }),
+    ...(home === undefined ? {} : { home }),
     ...(widths === undefined ? {} : { widths }),
   };
 }
@@ -106,6 +118,16 @@ export function appExhibit(spec: AppExhibitSpec): AppExhibit {
 // ── Validation (the registry loader's `isItem`) ────────────────────
 
 const ID_RE = /^[^/\s]+\/\S+$/;
+
+function isHome(v: unknown): v is ExhibitHome {
+  return (
+    v === "chrome" ||
+    (typeof v === "object" &&
+      v !== null &&
+      typeof (v as Partial<AppRef>).id === "string" &&
+      typeof (v as Partial<AppRef>).name === "string")
+  );
+}
 
 function isWidths(v: unknown): v is ExhibitWidths {
   return (
@@ -129,6 +151,7 @@ export function isExhibit(v: unknown): v is Exhibit {
   if (typeof e.label !== "string" || e.label === "") return false;
   if (e.description !== undefined && typeof e.description !== "string")
     return false;
+  if (e.home !== undefined && !isHome(e.home)) return false;
   switch (e.runtime) {
     case "isolated":
       return (

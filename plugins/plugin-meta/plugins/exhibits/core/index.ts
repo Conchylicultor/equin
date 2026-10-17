@@ -13,6 +13,7 @@ export type {
   AppExhibit,
   AppExhibitSpec,
   Exhibit,
+  ExhibitHome,
   ExhibitRuntime,
   ExhibitWidths,
   IsolatedExhibit,

@@ -207,6 +207,7 @@ the code:
     - `apps/website/pages/apps`
     - `apps/website/shell`
     - `layouts/miller`
+    - `plugin-meta/exhibits`
     - `primitives/pane`
     - `shell/global-action-bar`
     - `shell/toast`

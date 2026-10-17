@@ -9588,11 +9588,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useHomeApp`
       - `usePathname`
   - Cross-plugin:
-    - Imported by: 42 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+    - Imported by: 43 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
       - `apps` ×21
       - `apps-core` ×12
       - `ui` ×5
       - `config_v2` ×2
+      - `plugin-meta/exhibits`
       - `shell/global-action-bar`
       - `tasks/task-draft-form`
   - Exemptions:
@@ -9837,6 +9838,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-launcher`
           - `apps-core/app-rail`
           - `apps-core/tab-bar`
+          - `plugin-meta/exhibits`
           - `shell/global-action-bar`
           - `shell/toast`
     - **`layout`** — Apps layout: the Core.Root composition wiring the tab bar, rail framing, and surface together, with the default-app redirect and document-title sync.
@@ -32327,29 +32329,35 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/facets/routes/render-contributions`
           - `plugin-meta/facets/slots/render-contributions`
           - `plugin-meta/facets/structure/render-contributions`
-    - **`exhibits`** — Exhibit catalog: a plugin shows one of its REAL components standalone from an exhibits/ folder (isolatedExhibit / regionExhibit / appExhibit), collected into one generated registry. useExhibits() / useExhibit(id) answer loading / found / missing / ambiguous; <ExhibitView exhibit width?/> renders any arm inside its own error boundary. Debug → Exhibits is the gallery: every exhibit grouped by id prefix, at each of its widths, badged by runtime (isolated / region / app) and geometry.
+    - **`exhibits`** — Exhibit catalog: a plugin shows one of its REAL components standalone from an exhibits/ folder (isolatedExhibit / regionExhibit / appExhibit), collected into one generated registry. useExhibits() / useExhibit(id) answer loading / found / missing / ambiguous; <ExhibitView exhibit width?/> renders any arm inside its own error boundary. Debug → Exhibits lists the catalog as a DataView (searchable, grouped by id prefix, badged by runtime and geometry); a row opens the viewer pane (/debug/exhibits/x/<id>;theme=<app>) rendering that one exhibit at each of its widths inside an explicit, switchable theme boundary.
       - Web:
-        - Slots: `exhibits.actions`
-        - Slot contributors: `exhibits.actions` ← `primitives.pane`
+        - Slots:
+          - `exhibits.actions`
+          - `exhibit.actions`
+        - Slot contributors:
+          - `exhibits.actions` ← `primitives.pane`
+          - `exhibit.actions` ← `primitives.pane`
         - Contributes:
+          - `Pane.Register` "exhibit"
           - `Pane.Register` "exhibits"
           - `DebugApp.Sidebar` "Exhibits"
-        - Uses:
+        - Uses: 28 symbols — full list in [`plugins/plugin-meta/plugins/exhibits/REFERENCE.md`](../plugins/plugin-meta/plugins/exhibits/REFERENCE.md)
+          - `primitives/css/ui-kit` ×6
+          - `primitives/pane` ×4
+          - `primitives/data-view` ×3
+          - `primitives/css/badge` ×2
+          - `primitives/css/spacing` ×2
+          - `apps-core/chrome-theme.chromeThemeScope`
+          - `apps-core.Apps`
           - `apps/debug/shell.DebugApp`
-          - `primitives/css/badge.Badge`
-          - `primitives/css/badge.BadgeVariant`
+          - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/card.Card`
           - `primitives/css/scroll.Scroll`
-          - `primitives/css/spacing.Inset`
-          - `primitives/css/spacing.Stack`
-          - `primitives/css/text.SectionLabel`
           - `primitives/css/text.Text`
+          - `primitives/css/theme-boundary.Theme`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/live-state.useQueryResource`
           - `primitives/loading.Loading`
-          - `primitives/pane.defineRoute`
-          - `primitives/pane.Pane`
-          - `primitives/pane.PaneChrome`
         - Exports (types):
           - `ExhibitResult`
           - `ExhibitsResult`
@@ -32365,6 +32373,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AppExhibit`
           - `AppExhibitSpec`
           - `Exhibit`
+          - `ExhibitHome`
           - `ExhibitLookup`
           - `ExhibitRuntime`
           - `ExhibitWidths`
@@ -34046,7 +34055,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CopyButton`
           - `useCopyToClipboard`
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
+        - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
           - `apps` ×8
           - `page` ×4
           - `primitives` ×4
@@ -34054,6 +34063,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug` ×2
           - `review` ×2
           - `infra/claude-cli`
+          - `plugin-meta/exhibits`
           - `tasks/worktree-identity`
     - **`css`** — Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
       - Cross-plugin:
@@ -35308,6 +35318,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/apps`
               - `apps/website/shell`
               - `layouts/miller`
+              - `plugin-meta/exhibits`
               - `primitives/pane`
               - `shell/global-action-bar`
               - `shell/toast`
@@ -35520,7 +35531,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 411 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 412 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×105
               - `apps` ×84
               - `conversations` ×56
@@ -35530,7 +35541,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×15
               - `apps-core` ×14
               - `fields` ×11
-              - `plugin-meta` ×9
+              - `plugin-meta` ×10
               - `build` ×5
               - `review` ×5
               - `auth` ×4
@@ -35735,8 +35746,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 71 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×63
+        - Contributes: 72 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×64
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
@@ -35929,8 +35940,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowFilter`
           - `useSortController`
       - Server:
-        - Contributes: 65 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×63
+        - Contributes: 66 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×64
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -36080,7 +36091,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-semibold`
-        - Imported by: 92 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 93 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×30
           - `apps` ×22
           - `debug` ×12
@@ -36092,6 +36103,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2/settings`
           - `history/dialog`
           - `page/links`
+          - `plugin-meta/exhibits`
           - `runs`
           - `shell/notifications`
           - `ui/theme-engine/theme-gallery`
@@ -39002,7 +39014,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `Pane.Register`
         - Slot contributors: 92 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `Pane.Register` ×92
-        - Contributes: 115 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Contributes: 116 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountsPane.Actions` "title" → `PaneTitleItem`
           - `agentDetailPane.Actions` "title" → `PaneTitleItem`
@@ -39054,6 +39066,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `eventSourcesPane.Actions` "title" → `PaneTitleItem`
           - `events-root.actions` "title" → `PaneTitleItem`
           - `eventsTestPane.Actions` "title" → `PaneTitleItem`
+          - `exhibit.actions` "title" → `PaneTitleItem`
           - `exhibits.actions` "title" → `PaneTitleItem`
           - `explorerPane.Actions` "title" → `PaneTitleItem`
           - `filePeekPane.Actions` "title" → `PaneTitleItem`
@@ -41099,8 +41112,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 239 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×239
+    - Contributes: 240 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×240
     - Uses: 21 symbols — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
       - `reorder/editor` ×5
       - `config_v2` ×3
@@ -41125,8 +41138,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 238 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×238
+    - Contributes: 239 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×239
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -44183,6 +44196,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `improve`
           - `improve/element-picker`
           - `tasks/task-dependencies`
+      - Core:
+        - Exports (values): `TASK_DRAFT_FORM_WIDTH`
     - **`task-effort`** — Per-task thinking-mode (effort) picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is applied to Claude Code on launch. Owns the tasks_ext_effort side-table: the per-task thinking mode (effort level), applied to Claude Code at launch via --effort / --settings ultracode.
       - Web:
         - Contributes: `TaskLaunch.Option` "Thinking mode" → `EffortLaunchControl`

@@ -838,7 +838,7 @@ See "Open questions" in the design doc.
   - Slots: `Pane.Register`
   - Slot contributors: 92 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Pane.Register` ×92
-  - Contributes: 115 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 116 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountsPane.Actions` "title" → `PaneTitleItem`
     - `agentDetailPane.Actions` "title" → `PaneTitleItem`
@@ -890,6 +890,7 @@ See "Open questions" in the design doc.
     - `eventSourcesPane.Actions` "title" → `PaneTitleItem`
     - `events-root.actions` "title" → `PaneTitleItem`
     - `eventsTestPane.Actions` "title" → `PaneTitleItem`
+    - `exhibit.actions` "title" → `PaneTitleItem`
     - `exhibits.actions` "title" → `PaneTitleItem`
     - `explorerPane.Actions` "title" → `PaneTitleItem`
     - `filePeekPane.Actions` "title" → `PaneTitleItem`

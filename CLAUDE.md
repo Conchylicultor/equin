@@ -174,6 +174,8 @@ For a checkout cloned from someone else's repo, that repo is **upstream** (read-
   --path /agents/c/<id> --click "Artifacts" --out /tmp/artifacts
 ```
 
+**One component on its own** (an exhibit — `plugins/plugin-meta/plugins/exhibits`): `./singularity run plugins/plugin-meta/plugins/exhibits/e2e/exhibit-shot.ts --id <group/name> [--theme <app-id>|chrome]` screenshots its viewer pane (`/debug/exhibits/x/<group>/<name>`) at every width — never scroll Debug → Exhibits for it.
+
 Flags: `--path <route>`, `--viewport 1280x900`, `--wait <ms>`, `--color-scheme dark|light`, `--composition <id>` (a composition this checkout built), `--url http://<namespace>.localhost:9000` (escape hatch for a deploy you didn't build — skips the is-this-my-build check).
 
 **Compare a prototype against the real app** it mocks (`<meta name="mocks">`: a route, the whole app, or `exhibit:<id>`) with [`compare-diff.ts`](plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts): captures both frames at one size and 100% zoom, writes a red-on-grey diff and side-by-side sheet, logs the differing-pixel ratio, a per-cell heatmap and a colour report (dominant colours, region means, luminance profiles):

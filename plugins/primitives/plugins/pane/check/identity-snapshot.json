@@ -367,6 +367,12 @@
       "parent": null
     },
     {
+      "paneId": "exhibit",
+      "segment": "x/:id*;theme",
+      "appIndex": false,
+      "parent": "exhibits"
+    },
+    {
       "paneId": "exhibits",
       "segment": "exhibits",
       "appIndex": false,

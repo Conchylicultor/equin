@@ -1,0 +1,29 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "all",
+      "name": "All exhibits",
+      "icon": "grid-view",
+      // Grouped by the id's prefix (the owning area), alphabetical inside.
+      // The group header already names the group; the description column
+      // would only squeeze the name, and the runtime is already a badge beside
+      // it (the Runtime field stays, as a filter).
+      "view": {
+        "type": "table",
+        "groupBy": "group",
+        "visibleFields": ["label", "widths"],
+        "sort": [{ "fieldId": "label", "direction": "asc" }]
+      }
+    },
+    {
+      "id": "list",
+      "name": "List",
+      "icon": "list",
+      "view": { "type": "list", "groupBy": "group" }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

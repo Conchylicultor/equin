@@ -18,6 +18,7 @@ export default [
   appExhibit({
     id: "task-draft/composer",        // `<group>/<name>`, globally unique
     label: "Task composer (Improve)",
+    home: "chrome",                   // optional: where it lives (an AppRef, or "chrome")
     widths: [360, 480, 640, 900],     // optional for app exhibits
     load: () => import("./internal/composer"),
   }),
@@ -89,12 +90,40 @@ plugin with `exhibits/` and no `web/` fails the build.
   `<meta name="mocks">` (`apps/prototypes/compare/exhibit`).
 - The layout-geometry harness: `isolated` exhibits that carry `geometry`, plus
   region exhibits.
-- **Debug → Exhibits** (`web/components/exhibits-gallery.tsx`, this plugin):
-  every exhibit grouped by id prefix (`exhibitGroupOf`), each at each of its
-  widths (an app exhibit without widths at 360 / 640 / 960) — the width cells
-  wrap onto further lines rather than run past the pane — badged by runtime
-  (`isolated` / `region` / `app`) and `geometry` when the harness measures it.
-  It replaced the harness's Layout Lab.
+- **Debug → Exhibits** (`web/components/exhibits-pane.tsx`, this plugin): two
+  Miller panes. The list (`exhibits-list.tsx`) is a DataView over the catalog
+  (`plugin-meta.exhibits.catalog`: search, group by id prefix, filter by
+  runtime / geometry) that renders no exhibit. A row opens the viewer
+  (`exhibit-detail.tsx`) at `/debug/exhibits/x/<group>/<name>;theme=<app>`:
+  that one exhibit at each of its widths (an app exhibit without widths at
+  360 / 640 / 960), badged by runtime and `geometry`. It replaced the
+  harness's Layout Lab, and the all-at-once gallery that followed it.
+
+### Looking at one exhibit (agents)
+
+```bash
+./singularity run plugins/plugin-meta/plugins/exhibits/e2e/exhibit-shot.ts \
+  --id task-draft/composer [--theme agent-manager|chrome] [--color-scheme dark]
+```
+
+It opens the viewer pane by URL and screenshots the frames element
+(`[data-exhibit-frames]`) — no scrolling, no hunting. Ids:
+`rg -n 'id: "' -g '**/exhibits/**' plugins`.
+
+### Which theme an exhibit wears
+
+A pane wears its home app's theme (`paneThemeScope`), so before the viewer
+every exhibit silently wore **Debug's** theme, wherever the component lives.
+The viewer wraps all frames in ONE explicit `<Theme name surface="canvas">`
+boundary picked from the Theme select — any installed app (`app:<id>`) or the
+app chrome's fixed theme (`chrome`) — and the pick rides the URL (`;theme`), so
+a link or a screenshot names the theme it shows.
+
+With no pick, the frames wear the exhibit's **`home`**: where the component
+really lives, declared on the exhibit as data — an app's `defineApp` ref
+(`home: agentManagerApp`, never a restated id) or `"chrome"` for what the app
+chrome opens (the Improve popover). An exhibit without one lives in no one app
+(a primitive) and opens in Debug's theme. The list's Home column shows it.
 
 The catalog replaced two predecessors — layout-harness `fixtures/` folders and
 the `Specimens.Specimen` dispatch slot — so there is one id namespace for both.
@@ -103,29 +132,35 @@ the `Specimens.Specimen` dispatch slot — so there is one id namespace for both
 
 ## Plugin reference
 
-- Description: Exhibit catalog: a plugin shows one of its REAL components standalone from an exhibits/ folder (isolatedExhibit / regionExhibit / appExhibit), collected into one generated registry. useExhibits() / useExhibit(id) answer loading / found / missing / ambiguous; <ExhibitView exhibit width?/> renders any arm inside its own error boundary. Debug → Exhibits is the gallery: every exhibit grouped by id prefix, at each of its widths, badged by runtime (isolated / region / app) and geometry.
+- Description: Exhibit catalog: a plugin shows one of its REAL components standalone from an exhibits/ folder (isolatedExhibit / regionExhibit / appExhibit), collected into one generated registry. useExhibits() / useExhibit(id) answer loading / found / missing / ambiguous; <ExhibitView exhibit width?/> renders any arm inside its own error boundary. Debug → Exhibits lists the catalog as a DataView (searchable, grouped by id prefix, badged by runtime and geometry); a row opens the viewer pane (/debug/exhibits/x/<id>;theme=<app>) rendering that one exhibit at each of its widths inside an explicit, switchable theme boundary.
 - Web:
-  - Slots: `exhibits.actions`
-  - Slot contributors: `exhibits.actions` ← `primitives.pane`
+  - Slots:
+    - `exhibits.actions`
+    - `exhibit.actions`
+  - Slot contributors:
+    - `exhibits.actions` ← `primitives.pane`
+    - `exhibit.actions` ← `primitives.pane`
   - Contributes:
+    - `Pane.Register` "exhibit"
     - `Pane.Register` "exhibits"
     - `DebugApp.Sidebar` "Exhibits"
-  - Uses:
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×6
+    - `primitives/pane` ×4
+    - `primitives/data-view` ×3
+    - `primitives/css/badge` ×2
+    - `primitives/css/spacing` ×2
+    - `apps-core/chrome-theme.chromeThemeScope`
+    - `apps-core.Apps`
     - `apps/debug/shell.DebugApp`
-    - `primitives/css/badge.Badge`
-    - `primitives/css/badge.BadgeVariant`
+    - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/card.Card`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
+    - `primitives/css/theme-boundary.Theme`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/live-state.useQueryResource`
     - `primitives/loading.Loading`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
   - Exports (types):
     - `ExhibitResult`
     - `ExhibitsResult`
@@ -141,6 +176,7 @@ the `Specimens.Specimen` dispatch slot — so there is one id namespace for both
     - `AppExhibit`
     - `AppExhibitSpec`
     - `Exhibit`
+    - `ExhibitHome`
     - `ExhibitLookup`
     - `ExhibitRuntime`
     - `ExhibitWidths`
